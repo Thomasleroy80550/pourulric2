@@ -132,14 +132,21 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
       if (checkIn && checkOut) {
-        // A day is blocked for arrival if it's within the occupied period of another reservation.
-        // The occupied period is from check-in day up to (but not including) check-out day.
-        // For a 1-night stay (checkIn=X, checkOut=X+1), day X is blocked.
-        // For a 0-night stay (checkIn=X, checkOut=X), day X is blocked.
+        // A day is blocked for arrival if it falls within the *occupied nights* of another reservation.
+        // The occupied nights are from check-in day up to (but not including) check-out day.
+        // So, for a reservation from CI to CO, the nights occupied are CI, CI+1, ..., CO-1.
         const occupiedStart = startOfDay(checkIn);
-        const occupiedEnd = subDays(startOfDay(checkOut), 0); // This makes it inclusive of check-out day for 0-night stays, and exclusive for >0 night stays
+        
+        let effectiveOccupiedEnd: Date;
+        if (isSameDay(checkIn, checkOut)) {
+          // For a 0-night stay (checkIn === checkOut), the room is occupied for that single day.
+          effectiveOccupiedEnd = startOfDay(checkIn); 
+        } else {
+          // For multi-night stays, the room is occupied until the day before check-out.
+          effectiveOccupiedEnd = subDays(startOfDay(checkOut), 1); 
+        }
 
-        if (isWithinInterval(date, { start: occupiedStart, end: occupiedEnd })) {
+        if (isWithinInterval(date, { start: occupiedStart, end: effectiveOccupiedEnd })) {
           return true;
         }
       }
@@ -162,26 +169,30 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       (initialBooking ? res.id !== initialBooking.id : true) // Exclude the current booking if editing
     );
 
+    const newBookingLastNight = subDays(startOfDay(date), 1); // The last night the new booking occupies
+
     for (const res of roomReservations) {
-      const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-      const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+      const existingCheckIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+      const existingCheckOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
-      if (checkIn && checkOut) {
-        // A day is blocked for departure if it falls *strictly between* another reservation's check-in and check-out.
-        // This means the check-in day of another reservation *can* be selected as a departure day.
-        // Example: Res A: 25-27. New Res: Arrive 24. Departure 25 is allowed. Departure 26 is NOT allowed.
-        const blockStart = addDays(startOfDay(checkIn), 0); // Start of blocking interval for departure
-        const blockEnd = subDays(startOfDay(checkOut), 1); // End of blocking interval for departure
+      if (existingCheckIn && existingCheckOut) {
+        const existingBookingFirstNight = startOfDay(existingCheckIn);
+        const existingBookingLastNight = subDays(startOfDay(existingCheckOut), 1); // The last night the existing booking occupies
 
-        if (isBefore(blockEnd, blockStart)) { // Handles 0 or 1 night stays where blockEnd would be before blockStart
-          // For 0 or 1 night stays, there's no "middle" to block.
-          // The only blocking is if the departure date is the same as the check-in date of another reservation,
-          // but this is allowed as per the user's request (can depart on the day another arrives).
-          continue; 
-        }
+        const newBookingFirstNight = startOfDay(selectedArrivalDate);
 
-        if (isWithinInterval(date, { start: blockStart, end: blockEnd })) {
-          return true;
+        // Check for overlap between the new booking's nights and the existing booking's nights
+        // Overlap occurs if (newStart <= existingEnd) AND (newEnd >= existingStart)
+        const isOverlap = (
+          newBookingFirstNight <= existingBookingLastNight &&
+          newBookingLastNight >= existingBookingFirstNight
+        );
+
+        // If there's an overlap of nights, and the proposed departure date is NOT the check-in day of an existing reservation,
+        // then it's a true conflict and should be blocked.
+        // If the proposed departure date IS the check-in day of an existing reservation, it's allowed.
+        if (isOverlap && !isSameDay(date, existingCheckIn)) {
+             return true; // Block if there's an actual night overlap and it's not just departing on check-in day
         }
       }
     }

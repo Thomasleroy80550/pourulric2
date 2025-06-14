@@ -35,7 +35,11 @@ const getTaskIcon = (status: string) => {
   }
 };
 
-const CalendarGridMobile: React.FC = () => {
+interface CalendarGridMobileProps {
+  refreshTrigger: number; // New prop
+}
+
+const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
@@ -88,7 +92,7 @@ const CalendarGridMobile: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [currentMonth]); // Re-fetch when month changes
+  }, [currentMonth, refreshTrigger]); // Re-fetch when month changes or refreshTrigger changes
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -150,7 +154,7 @@ const CalendarGridMobile: React.FC = () => {
     const uniqueEvents = Array.from(new Map(events.map(item => {
       if (item.type === 'task') return [`task-${(item.data as KrossbookingHousekeepingTask).id_task}-${item.roomName}`, item];
       return [`${item.type}-${(item.data as KrossbookingReservation).id}-${item.roomName}`, item];
-    })).values());
+    })).values()));
 
     // Sort events for better display: check-in, check-in_out, check-out, task, then stay
     uniqueEvents.sort((a, b) => {

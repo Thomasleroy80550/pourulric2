@@ -80,6 +80,22 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate with Supabase to get the user's session
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+    if (authError || !user) {
+      console.error("Authentication error:", authError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 
@@ -133,34 +149,58 @@ serve(async (req) => {
     let krossbookingMethod = 'POST'; 
     let krossbookingBody: string | undefined;
 
-    if (action === 'get_reservations') {
-      const payload: any = {
-        with_rooms: true, 
-      };
-      if (requestBody.id_room) { 
-        payload.id_room = requestBody.id_room; 
-      }
-      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
-      krossbookingBody = JSON.stringify(payload);
-    } else if (action === 'get_housekeeping_tasks') {
-      const { date_from, date_to, id_property, id_room } = requestBody;
-      if (!date_from || !date_to) {
-        throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
-      }
-      const payload: any = {
-        date_from,
-        date_to,
-      };
-      if (id_property) {
-        payload.id_property = id_property;
-      }
-      if (id_room) {
-        payload.id_room = id_room;
-      }
-      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
-      krossbookingBody = JSON.stringify(payload);
-    } else {
-      throw new Error(`Unsupported action: ${action}`);
+    switch (action) {
+      case 'get_reservations':
+        const getReservationsPayload: any = {
+          with_rooms: true, 
+        };
+        if (requestBody.id_room) { 
+          getReservationsPayload.id_room = requestBody.id_room; 
+        }
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
+        krossbookingBody = JSON.stringify(getReservationsPayload);
+        break;
+
+      case 'get_housekeeping_tasks':
+        const { date_from, date_to, id_property } = requestBody; // Removed id_room from destructuring
+        if (!date_from || !date_to) {
+          throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
+        }
+        const getTasksPayload: any = {
+          date_from,
+          date_to,
+        };
+        if (id_property) {
+          getTasksPayload.id_property = id_property;
+        }
+        if (requestBody.id_room) { // Access id_room directly from requestBody
+          getTasksPayload.id_room = requestBody.id_room;
+        }
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
+        krossbookingBody = JSON.stringify(getTasksPayload);
+        break;
+
+      case 'save_reservation':
+        const { label, arrival, departure, email, phone, cod_reservation_status } = requestBody; // Removed id_room from destructuring
+        if (!label || !arrival || !departure || !cod_reservation_status || !requestBody.id_room) { // Access id_room directly
+          throw new Error("Missing required parameters for save_reservation.");
+        }
+        const saveReservationPayload = {
+          label,
+          arrival,
+          departure,
+          email: email || '',
+          phone: phone || '',
+          cod_reservation_status,
+          id_room: requestBody.id_room, // Access id_room directly from requestBody
+        };
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/save`;
+        krossbookingMethod = 'POST';
+        krossbookingBody = JSON.stringify(saveReservationPayload);
+        break;
+
+      default:
+        throw new Error(`Unsupported action: ${action}`);
     }
 
     console.log(`Calling Krossbooking API with URL: ${krossbookingUrl}, Method: ${krossbookingMethod}, Body: ${krossbookingBody || 'N/A'}`);

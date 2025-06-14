@@ -1,9 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 interface KrossbookingReservation {
-  id: string;
+  id: string; // id_reservation from Krossbooking
   guest_name: string;
   property_name: string; // This will now be the actual room name from Krossbooking
+  krossbooking_room_id: string; // Add this to store the actual Krossbooking room ID
   check_in_date: string;
   check_out_date: string;
   status: string;
@@ -25,14 +26,15 @@ export interface KrossbookingHousekeepingTask {
   assigned_to?: string;
 }
 
-// Define the payload for saving a reservation
+// Define the payload for saving a reservation (create or update)
 export interface SaveReservationPayload {
+  id_reservation?: string; // Optional: for updating an existing reservation
   label: string;
   arrival: string; // yyyy-mm-dd
   departure: string; // yyyy-mm-dd
   email: string;
   phone: string;
-  cod_reservation_status: 'PROP0' | 'PROPRI';
+  cod_reservation_status: 'PROP0' | 'PROPRI' | 'CANC'; // Added 'CANC' for cancellation
   id_room: string; // Krossbooking room ID
 }
 
@@ -109,10 +111,12 @@ export async function fetchKrossbookingReservations(roomIds: string[]): Promise<
       if (Array.isArray(data)) {
         const roomReservations = data.map((res: any) => {
           const roomLabel = res.rooms?.[0]?.label || res.rooms?.[0]?.id_room?.toString() || 'N/A';
+          const krossbookingRoomId = res.rooms?.[0]?.id_room?.toString() || ''; // Capture the room ID
           return {
             id: res.id_reservation.toString(), 
             guest_name: res.label || 'N/A', 
             property_name: roomLabel,
+            krossbooking_room_id: krossbookingRoomId, // Populate it
             check_in_date: res.arrival || '', 
             check_out_date: res.departure || '', 
             status: res.cod_reservation_status, 
@@ -183,7 +187,8 @@ export async function fetchKrossbookingHousekeepingTasks(
 
 /**
  * Saves a reservation (including owner blocks) to Krossbooking API via the Supabase Edge Function proxy.
- * @param payload The reservation data to save.
+ * Can also update an existing reservation if id_reservation is provided.
+ * @param payload The reservation data to save/update.
  * @returns A promise that resolves to the response data from the Edge Function.
  */
 export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {

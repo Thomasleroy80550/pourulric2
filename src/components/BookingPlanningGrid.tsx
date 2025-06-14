@@ -7,13 +7,14 @@ import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle,
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } => '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { UserRoom } from '@/lib/user-room-api'; // Import user room API
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
 import ReservationActionsDialog from './ReservationActionsDialog'; // Import the new dialog
 import OwnerReservationDialog from './OwnerReservationDialog'; // Import OwnerReservationDialog
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -28,9 +29,10 @@ interface BookingPlanningGridProps {
   refreshTrigger: number;
   userRooms: UserRoom[]; // Now received as prop
   reservations: KrossbookingReservation[]; // Now received as prop
+  onReservationChange: () => void; // New prop for triggering refresh
 }
 
-const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations }) => {
+const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
   const [loadingTasks, setLoadingTasks] = useState<boolean>(true); // Separate loading for tasks
@@ -137,9 +139,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false); // Close actions dialog
-      // Trigger refresh in parent (CalendarPage)
-      // This component no longer directly calls loadData for reservations, it relies on parent's refreshTrigger
-      // The parent's refreshTrigger will cause this component to re-render with updated props.
+      onReservationChange(); // Trigger refresh in parent
     } catch (err: any) {
       toast.error(`Erreur lors de l'annulation de la réservation : ${err.message}`);
       console.error("Error deleting reservation:", err);
@@ -163,7 +163,13 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         </div>
       </CardHeader>
       <CardContent className="p-4 overflow-x-auto">
-        {(loadingTasks && reservations.length === 0) && <p className="text-gray-500">Chargement des réservations et tâches...</p>}
+        {(loadingTasks && reservations.length === 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        )}
         {error && (
           <Alert variant="destructive" className="mb-4">
             <Terminal className="h-4 w-4" />
@@ -171,12 +177,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {!loadingTasks && !error && userRooms.length === 0 && (
+        {!loadingTasks && !error && userRooms.length === 0 ? (
           <p className="text-gray-500">
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
-        )}
-        {!loadingTasks && !error && userRooms.length > 0 && (
+        ) : !loadingTasks && !error && userRooms.length > 0 ? (
           <div className="grid-container" style={{
             gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
             minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
@@ -376,7 +381,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               </React.Fragment>
             ))}
           </div>
-        )}
+        ) : null} {/* Render null if not loading and no rooms */}
 
         {/* Legend for OTA Platforms */}
         <div className="mt-8 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
@@ -440,11 +445,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
         allReservations={reservations} // Pass all reservations
-        onReservationCreated={() => {
-          setIsOwnerReservationDialogOpen(false); // Close dialog
-          // This component doesn't need to trigger refresh directly,
-          // the parent (CalendarPage) will handle it via its own refreshTrigger.
-        }}
+        onReservationCreated={onReservationChange} // Use the new handler
         initialBooking={bookingToEdit} // Pass the booking to edit
       />
     </Card>

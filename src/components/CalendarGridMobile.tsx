@@ -154,8 +154,8 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
     const uniqueEvents = Array.from(new Map(events.map(item => {
       if (item.type === 'task') return [`task-${(item.data as KrossbookingHousekeepingTask).id_task}-${item.roomName}`, item];
       return [`${item.type}-${(item.data as KrossbookingReservation).id}-${item.roomName}`, item];
-    })).values()));
-
+    })).values())); // Added semicolon here
+    
     // Sort events for better display: check-in, check-in_out, check-out, task, then stay
     uniqueEvents.sort((a, b) => {
       const order = { 'check_in': 1, 'check_in_out': 2, 'check_out': 3, 'task': 4, 'stay': 5 };

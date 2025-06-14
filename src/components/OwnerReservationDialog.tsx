@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid } from 'date-fns'; // Added isValid
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import {
@@ -132,17 +132,28 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
       if (checkIn && checkOut) {
-        // A date is disabled if it falls within an existing reservation's check-in to check-out-1 day range
-        // Or if it's the check-out day of a reservation (to prevent new check-ins on that day)
-        const intervalStart = startOfDay(checkIn);
-        const intervalEnd = subDays(endOfDay(checkOut), 1); // Block up to the day before check-out
+        // If it's a single-day booking (check-in and check-out are the same day),
+        // then only that single day should be blocked.
+        if (isSameDay(checkIn, checkOut)) {
+          if (isSameDay(date, checkIn)) {
+            return true; // Block the single day
+          }
+        } else {
+          // For multi-day bookings, block the interval from check-in to day before check-out.
+          // This means the check-out day itself is available for a new check-in.
+          const blockStart = startOfDay(checkIn);
+          const blockEnd = subDays(startOfDay(checkOut), 1); 
 
-        if (isWithinInterval(date, { start: intervalStart, end: intervalEnd })) {
-          return true;
-        }
-        // Also block the check-out day itself if it's not a same-day booking, to prevent new arrivals
-        if (isSameDay(date, checkOut) && !isSameDay(checkIn, checkOut)) {
-          return true;
+          // Only block if the blockEnd is not before the blockStart (handles 1-night stays correctly)
+          if (blockEnd >= blockStart) {
+            if (isWithinInterval(date, { start: blockStart, end: blockEnd })) {
+              return true;
+            }
+          } else { // This case handles 1-night stays where blockEnd is before blockStart (e.g., checkIn=18, checkOut=19, blockEnd=18)
+            if (isSameDay(date, blockStart)) { // Only block the check-in day for 1-night stays
+              return true;
+            }
+          }
         }
       }
     }

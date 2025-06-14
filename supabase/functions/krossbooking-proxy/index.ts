@@ -25,15 +25,13 @@ async function getAuthToken(): Promise<string> {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
   }
 
-  // Explicitly attempt to parse KROSSBOOKING_HOTEL_ID as a number
-  const KROSSBOOKING_HOTEL_ID = parseInt(KROSSBOOKING_HOTEL_ID_STR);
-  if (isNaN(KROSSBOOKING_HOTEL_ID)) {
-    throw new Error("KROSSBOOKING_HOTEL_ID is not a valid number. Please ensure it's a numeric ID in your Supabase secrets.");
-  }
+  // IMPORTANT: Based on Krossbooking documentation, hotel_id is a string.
+  // We will pass it as a string directly.
+  const KROSSBOOKING_HOTEL_ID = KROSSBOOKING_HOTEL_ID_STR;
 
   const authPayload = {
     api_key: KROSSBOOKING_API_KEY,
-    hotel_id: KROSSBOOKING_HOTEL_ID, // Now explicitly a number
+    hotel_id: KROSSBOOKING_HOTEL_ID, // Now explicitly a string
     username: KROSSBOOKING_USERNAME,
     password: KROSSBOOKING_PASSWORD,
   };

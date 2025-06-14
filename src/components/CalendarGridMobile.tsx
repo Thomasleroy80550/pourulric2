@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Home, LogIn, LogOut, Sparkles, CheckCircle, Clock, XCircle, CalendarDays } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
-import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
+import { UserRoom } from '@/lib/user-room-api';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ReservationActionsDialog from './ReservationActionsDialog'; // Import the new dialog
@@ -37,14 +37,14 @@ const getTaskIcon = (status: string) => {
 
 interface CalendarGridMobileProps {
   refreshTrigger: number; // New prop
+  userRooms: UserRoom[]; // Now received as prop
+  reservations: KrossbookingReservation[]; // Now received as prop
 }
 
-const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger }) => {
+const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger, userRooms, reservations }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
-  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingTasks, setLoadingTasks] = useState<boolean>(true); // Separate loading for tasks
   const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date>(new Date()); // Default to today
 
@@ -54,28 +54,17 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadHousekeepingTasks = async () => {
+    setLoadingTasks(true);
     setError(null);
     try {
-      const fetchedUserRooms = await getUserRooms();
-      setUserRooms(fetchedUserRooms);
+      const roomIdsAsNumbers = userRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
 
-      const roomIds = fetchedUserRooms.map(room => room.room_id);
-      const roomIdsAsNumbers = fetchedUserRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
-
-      if (roomIds.length === 0) {
-        setReservations([]);
+      if (roomIdsAsNumbers.length === 0) {
         setHousekeepingTasks([]);
-        setLoading(false);
+        setLoadingTasks(false);
         return;
       }
-
-      // Fetch reservations for a wider range to cover month transitions
-      const fetchStart = subMonths(currentMonth, 1); // Fetch from previous month
-      const fetchEnd = addMonths(currentMonth, 1);   // Fetch to next month
-      const fetchedReservations = await fetchKrossbookingReservations(roomIds);
-      setReservations(fetchedReservations);
 
       const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
@@ -83,16 +72,16 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
       setHousekeepingTasks(fetchedTasks);
 
     } catch (err: any) {
-      setError(`Erreur lors du chargement des données : ${err.message}`);
-      console.error("Error in CalendarGridMobile loadData:", err);
+      setError(`Erreur lors du chargement des tâches de ménage : ${err.message}`);
+      console.error("Error in CalendarGridMobile loadHousekeepingTasks:", err);
     } finally {
-      setLoading(false);
+      setLoadingTasks(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, [currentMonth, refreshTrigger]); // Re-fetch when month changes or refreshTrigger changes
+    loadHousekeepingTasks();
+  }, [currentMonth, userRooms, refreshTrigger]); // Re-fetch when month changes or refreshTrigger changes
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -206,7 +195,9 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false); // Close actions dialog
-      loadData(); // Refresh data
+      // Trigger refresh in parent (CalendarPage)
+      // This component no longer directly calls loadData for reservations, it relies on parent's refreshTrigger.
+      // The parent's refreshTrigger will cause this component to re-render with updated props.
     } catch (err: any) {
       toast.error(`Erreur lors de l'annulation de la réservation : ${err.message}`);
       console.error("Error deleting reservation:", err);
@@ -230,7 +221,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
         </div>
       </CardHeader>
       <CardContent className="p-2">
-        {loading && <p className="text-gray-500 text-center py-4">Chargement du calendrier...</p>}
+        {loadingTasks && <p className="text-gray-500 text-center py-4">Chargement du calendrier...</p>}
         {error && (
           <Alert variant="destructive" className="mb-4">
             <Terminal className="h-4 w-4" />
@@ -238,12 +229,12 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {!loading && !error && userRooms.length === 0 && (
+        {!loadingTasks && !error && userRooms.length === 0 && (
           <p className="text-gray-500 text-center py-4">
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
         )}
-        {!loading && !error && userRooms.length > 0 && (
+        {!loadingTasks && !error && userRooms.length > 0 && (
           <div className="grid grid-cols-7 gap-1 text-center">
             {weekDays.map((day) => (
               <div key={day} className="text-sm font-semibold text-gray-600 dark:text-gray-400 py-2">
@@ -396,7 +387,12 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
         isOpen={isOwnerReservationDialogOpen}
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
-        onReservationCreated={loadData} // Reload data after create/edit
+        allReservations={reservations} // Pass all reservations
+        onReservationCreated={() => {
+          setIsOwnerReservationDialogOpen(false); // Close dialog
+          // This component doesn't need to trigger refresh directly,
+          // the parent (CalendarPage) will handle it via its own refreshTrigger.
+        }}
         initialBooking={bookingToEdit} // Pass the booking to edit
       />
     </Card>

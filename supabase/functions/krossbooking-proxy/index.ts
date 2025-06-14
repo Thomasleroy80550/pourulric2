@@ -181,11 +181,11 @@ serve(async (req) => {
         break;
 
       case 'save_reservation':
-        const { label, arrival, departure, email, phone, cod_reservation_status, id_room } = requestBody; 
+        const { id_reservation, label, arrival, departure, email, phone, cod_reservation_status, id_room } = requestBody; 
         if (!label || !arrival || !departure || !cod_reservation_status || !id_room) { 
           throw new Error("Missing required parameters for save_reservation.");
         }
-        const saveReservationPayload = {
+        const saveReservationPayload: any = { // Use any to allow id_reservation
           label,
           arrival,
           departure,
@@ -200,6 +200,10 @@ serve(async (req) => {
             }
           ]
         };
+
+        if (id_reservation) {
+          saveReservationPayload.id_reservation = Number(id_reservation); // Add id_reservation for updates
+        }
 
         console.log("DEBUG (Edge Function): Payload sent to Krossbooking reservations/save:", JSON.stringify(saveReservationPayload));
 

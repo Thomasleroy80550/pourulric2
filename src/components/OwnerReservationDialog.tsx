@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import {
@@ -28,7 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { saveKrossbookingReservation } from '@/lib/krossbooking';
+import { saveKrossbookingReservation, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 
@@ -37,6 +37,7 @@ interface OwnerReservationDialogProps {
   onOpenChange: (open: boolean) => void;
   userRooms: UserRoom[];
   onReservationCreated: () => void;
+  initialBooking?: KrossbookingReservation | null; // New prop for editing
 }
 
 const blockTypes = [
@@ -63,6 +64,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   onOpenChange,
   userRooms,
   onReservationCreated,
+  initialBooking, // Destructure new prop
 }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,10 +78,39 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   });
 
   React.useEffect(() => {
-    if (!isOpen) {
-      form.reset(); // Reset form when dialog closes
+    if (isOpen) {
+      if (initialBooking) {
+        // Pre-fill form for editing
+        // Determine blockType from label, if label contains one of the known block types
+        let blockTypeFound = '';
+        for (const type of blockTypes) {
+          if (initialBooking.guest_name?.includes(type.value)) {
+            blockTypeFound = type.value;
+            break;
+          }
+        }
+
+        form.reset({
+          roomId: initialBooking.krossbooking_room_id,
+          blockType: blockTypeFound,
+          arrivalDate: parseISO(initialBooking.check_in_date),
+          departureDate: parseISO(initialBooking.check_out_date),
+          foreseeCleaning: initialBooking.status === 'PROPRI', // PROPRI means cleaning is foreseen
+          email: initialBooking.email || '', // Assuming email/phone might be part of KrossbookingReservation if available
+          phone: initialBooking.phone || '',
+        });
+      } else {
+        // Reset for new creation
+        form.reset({
+          roomId: '',
+          blockType: '',
+          foreseeCleaning: false,
+          email: '',
+          phone: '',
+        });
+      }
     }
-  }, [isOpen, form]);
+  }, [isOpen, initialBooking, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const formattedArrival = format(values.arrivalDate, 'yyyy-MM-dd');
@@ -89,7 +120,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     const cleaningSuffix = values.foreseeCleaning ? ' avec ménage' : ' sans ménage';
     const label = `${values.blockType}${cleaningSuffix}`;
 
-    const payload = {
+    const payload: any = { // Use 'any' for now to allow id_reservation
       label: label,
       arrival: formattedArrival,
       departure: formattedDeparture,
@@ -99,14 +130,18 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       id_room: values.roomId,
     };
 
+    if (initialBooking && initialBooking.id) {
+      payload.id_reservation = initialBooking.id; // Add id_reservation for updates
+    }
+
     try {
       await saveKrossbookingReservation(payload);
-      toast.success("Réservation propriétaire créée avec succès !");
+      toast.success(initialBooking ? "Réservation mise à jour avec succès !" : "Réservation propriétaire créée avec succès !");
       onReservationCreated(); // Trigger refresh in parent
       onOpenChange(false); // Close dialog
     } catch (error: any) {
-      toast.error(`Erreur lors de la création de la réservation : ${error.message}`);
-      console.error("Error creating owner reservation:", error);
+      toast.error(`Erreur lors de la ${initialBooking ? 'mise à jour' : 'création'} de la réservation : ${error.message}`);
+      console.error("Error saving owner reservation:", error);
     }
   };
 
@@ -114,9 +149,9 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Créer une Réservation Propriétaire</DialogTitle>
+          <DialogTitle>{initialBooking ? 'Modifier la Réservation' : 'Créer une Réservation Propriétaire'}</DialogTitle>
           <DialogDescription>
-            Bloquez des dates pour un séjour propriétaire, une fermeture ou un entretien.
+            {initialBooking ? 'Modifiez les détails de cette réservation.' : 'Bloquez des dates pour un séjour propriétaire, une fermeture ou un entretien.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -127,7 +162,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Chambre</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une chambre" />
@@ -152,7 +187,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type de blocage</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner un type" />
@@ -305,7 +340,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                 Annuler
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Création...' : 'Créer la Réservation'}
+                {form.formState.isSubmitting ? (initialBooking ? 'Mise à jour...' : 'Création...') : (initialBooking ? 'Mettre à jour la Réservation' : 'Créer la Réservation')}
               </Button>
             </DialogFooter>
           </form>

@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import {
@@ -80,6 +80,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   });
 
   const selectedRoomId = form.watch('roomId');
+  const selectedArrivalDate = form.watch('arrivalDate');
 
   React.useEffect(() => {
     if (isOpen) {
@@ -116,11 +117,10 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
   }, [isOpen, initialBooking, form]);
 
-  // Function to determine disabled dates
-  const disabledDates = React.useCallback((date: Date) => {
-    if (!selectedRoomId) return false; // No room selected, no dates disabled
+  // Function to determine disabled dates for ARRIVAL
+  const getDisabledDatesForArrival = React.useCallback((date: Date) => {
+    if (!selectedRoomId) return false;
 
-    // Filter reservations for the currently selected room, excluding the current booking if editing
     const roomReservations = allReservations.filter(res =>
       res.krossbooking_room_id === selectedRoomId &&
       res.status !== 'CANC' && // Do not consider cancelled reservations as blocking
@@ -132,33 +132,61 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
       if (checkIn && checkOut) {
-        // If it's a single-day booking (check-in and check-out are the same day),
-        // then only that single day should be blocked.
-        if (isSameDay(checkIn, checkOut)) {
-          if (isSameDay(date, checkIn)) {
-            return true; // Block the single day
-          }
-        } else {
-          // For multi-day bookings, block the interval from check-in to day before check-out.
-          // This means the check-out day itself is available for a new check-in.
-          const blockStart = startOfDay(checkIn);
-          const blockEnd = subDays(startOfDay(checkOut), 1); 
+        // A day is blocked for arrival if it's within the occupied period of another reservation.
+        // The occupied period is from check-in day up to (but not including) check-out day.
+        // For a 1-night stay (checkIn=X, checkOut=X+1), day X is blocked.
+        // For a 0-night stay (checkIn=X, checkOut=X), day X is blocked.
+        const occupiedStart = startOfDay(checkIn);
+        const occupiedEnd = subDays(startOfDay(checkOut), 0); // This makes it inclusive of check-out day for 0-night stays, and exclusive for >0 night stays
 
-          // Only block if the blockEnd is not before the blockStart (handles 1-night stays correctly)
-          if (blockEnd >= blockStart) {
-            if (isWithinInterval(date, { start: blockStart, end: blockEnd })) {
-              return true;
-            }
-          } else { // This case handles 1-night stays where blockEnd is before blockStart (e.g., checkIn=18, checkOut=19, blockEnd=18)
-            if (isSameDay(date, blockStart)) { // Only block the check-in day for 1-night stays
-              return true;
-            }
-          }
+        if (isWithinInterval(date, { start: occupiedStart, end: occupiedEnd })) {
+          return true;
         }
       }
     }
     return false;
   }, [selectedRoomId, allReservations, initialBooking]);
+
+  // Function to determine disabled dates for DEPARTURE
+  const getDisabledDatesForDeparture = React.useCallback((date: Date) => {
+    if (!selectedRoomId) return false;
+
+    // A departure date cannot be before the selected arrival date
+    if (selectedArrivalDate && isBefore(date, selectedArrivalDate)) {
+      return true;
+    }
+
+    const roomReservations = allReservations.filter(res =>
+      res.krossbooking_room_id === selectedRoomId &&
+      res.status !== 'CANC' && // Do not consider cancelled reservations as blocking
+      (initialBooking ? res.id !== initialBooking.id : true) // Exclude the current booking if editing
+    );
+
+    for (const res of roomReservations) {
+      const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+      const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+
+      if (checkIn && checkOut) {
+        // A day is blocked for departure if it falls *strictly between* another reservation's check-in and check-out.
+        // This means the check-in day of another reservation *can* be selected as a departure day.
+        // Example: Res A: 25-27. New Res: Arrive 24. Departure 25 is allowed. Departure 26 is NOT allowed.
+        const blockStart = addDays(startOfDay(checkIn), 0); // Start of blocking interval for departure
+        const blockEnd = subDays(startOfDay(checkOut), 1); // End of blocking interval for departure
+
+        if (isBefore(blockEnd, blockStart)) { // Handles 0 or 1 night stays where blockEnd would be before blockStart
+          // For 0 or 1 night stays, there's no "middle" to block.
+          // The only blocking is if the departure date is the same as the check-in date of another reservation,
+          // but this is allowed as per the user's request (can depart on the day another arrives).
+          continue; 
+        }
+
+        if (isWithinInterval(date, { start: blockStart, end: blockEnd })) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }, [selectedRoomId, allReservations, initialBooking, selectedArrivalDate]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const formattedArrival = format(values.arrivalDate, 'yyyy-MM-dd');
@@ -286,7 +314,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                         onSelect={field.onChange}
                         initialFocus
                         locale={fr}
-                        disabled={disabledDates} // Apply disabled dates logic
+                        disabled={getDisabledDatesForArrival} // Apply disabled dates logic for arrival
                       />
                     </PopoverContent>
                   </Popover>
@@ -327,7 +355,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                         onSelect={field.onChange}
                         initialFocus
                         locale={fr}
-                        disabled={disabledDates} // Apply disabled dates logic
+                        disabled={getDisabledDatesForDeparture} // Apply disabled dates logic for departure
+                        min={selectedArrivalDate || new Date()} // Ensure departure is not before arrival
                       />
                     </PopoverContent>
                   </Popover>

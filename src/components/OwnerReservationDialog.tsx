@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid, isBefore } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid, isBefore, isAfter } from 'date-fns'; // Added isAfter
 import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import {
@@ -145,14 +145,15 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
       if (checkIn && checkOut) {
-        // A day is blocked if it falls within the *occupied nights* of another reservation.
-        // The occupied nights are from check-in day up to (but not including) check-out day.
-        // So, for a reservation from CI to CO, the nights occupied are CI, CI+1, ..., CO-1.
-        // If CI == CO (0-night stay), only CI is occupied.
-        const occupiedStart = startOfDay(checkIn);
-        const occupiedEnd = isSameDay(checkIn, checkOut) ? startOfDay(checkIn) : subDays(startOfDay(checkOut), 1);
-
-        if (isWithinInterval(date, { start: occupiedStart, end: occupiedEnd })) {
+        // A date is disabled if it's a night that is strictly within an existing reservation.
+        // This means the date is > checkIn and < checkOut.
+        // Example: CI=15, CO=17. Only 16 is disabled. 15 and 17 are NOT disabled.
+        if (isAfter(date, checkIn) && isBefore(date, checkOut)) {
+          return true;
+        }
+        // Special case for 0-night stays: if CI == CO, then that single day is occupied.
+        // If a reservation is 15-15 (0 nights), then 15 is occupied.
+        if (isSameDay(checkIn, checkOut) && isSameDay(date, checkIn)) {
           return true;
         }
       }

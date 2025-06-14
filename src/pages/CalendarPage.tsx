@@ -9,6 +9,7 @@ import { PlusCircle } from 'lucide-react'; // Import PlusCircle icon
 import OwnerReservationDialog from '@/components/OwnerReservationDialog'; // Import the new dialog
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
@@ -38,15 +39,34 @@ const CalendarPage: React.FC = () => {
     fetchData();
   }, [refreshTrigger]); // Re-fetch all data if refreshTrigger changes
 
-  const handleReservationCreated = () => {
+  const handleReservationChange = () => {
     setRefreshTrigger(prev => prev + 1); // Increment to trigger data refresh
   };
 
   if (loadingData) {
     return (
       <MainLayout>
-        <div className="container mx-auto py-6 text-center">
-          <p className="text-gray-500">Chargement des données du calendrier...</p>
+        <div className="container mx-auto py-6">
+          <div className="flex justify-between items-center mb-6">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-10 w-48" />
+          </div>
+          <Card className="shadow-md">
+            <CardHeader>
+              <Skeleton className="h-6 w-64" />
+            </CardHeader>
+            <CardContent className="p-4">
+              <Skeleton className="h-[400px] w-full" />
+            </CardContent>
+          </Card>
+          <Card className="shadow-md mt-6">
+            <CardHeader>
+              <Skeleton className="h-6 w-56" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-20 w-full" />
+            </CardContent>
+          </Card>
         </div>
       </MainLayout>
     );
@@ -67,13 +87,15 @@ const CalendarPage: React.FC = () => {
           <CalendarGridMobile 
             refreshTrigger={refreshTrigger} 
             userRooms={userRooms} 
-            reservations={reservations} 
+            reservations={reservations}
+            onReservationChange={handleReservationChange}
           />
         ) : (
           <BookingPlanningGrid 
             refreshTrigger={refreshTrigger} 
             userRooms={userRooms} 
-            reservations={reservations} 
+            reservations={reservations}
+            onReservationChange={handleReservationChange}
           />
         )}
         
@@ -100,7 +122,7 @@ const CalendarPage: React.FC = () => {
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
         allReservations={reservations} // Pass all reservations
-        onReservationCreated={handleReservationCreated}
+        onReservationCreated={handleReservationChange} // Use the new handler
       />
     </MainLayout>
   );

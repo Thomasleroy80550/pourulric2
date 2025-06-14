@@ -6,24 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
+import ReservationActionsDialog from './ReservationActionsDialog'; // Import the new dialog
+import OwnerReservationDialog from './OwnerReservationDialog'; // Import OwnerReservationDialog
+import { toast } from 'sonner';
 
-interface KrossbookingReservation {
-  id: string;
-  guest_name: string;
-  property_name: string;
-  check_in_date: string;
-  check_out_date: string;
-  status: string;
-  amount: string;
-  cod_channel?: string;
-  ota_id?: string;
-  channel_identifier?: string;
-}
+// KrossbookingReservation interface is now imported from krossbooking.ts
+// interface KrossbookingReservation { ... }
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -43,44 +36,50 @@ const BookingPlanningGrid: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile(); // Use the hook to detect mobile
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const fetchedUserRooms = await getUserRooms();
-        setUserRooms(fetchedUserRooms);
+  const [isActionsDialogOpen, setIsActionsDialogOpen] = useState(false);
+  const [selectedBookingForActions, setSelectedBookingForActions] = useState<KrossbookingReservation | null>(null);
 
-        const roomIds = fetchedUserRooms.map(room => room.room_id);
-        const roomIdsAsNumbers = fetchedUserRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
+  const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
+  const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
 
-        if (roomIds.length === 0) {
-          setReservations([]);
-          setHousekeepingTasks([]);
-          setLoading(false);
-          return;
-        }
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fetchedUserRooms = await getUserRooms();
+      setUserRooms(fetchedUserRooms);
 
-        console.log(`DEBUG: Fetching reservations for room IDs: ${roomIds.join(', ')}`);
-        const fetchedReservations = await fetchKrossbookingReservations(roomIds);
-        setReservations(fetchedReservations);
-        console.log("DEBUG: Fetched reservations for user rooms:", fetchedReservations); 
+      const roomIds = fetchedUserRooms.map(room => room.room_id);
+      const roomIdsAsNumbers = fetchedUserRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
 
-        const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-        const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-        console.log(`DEBUG: Fetching housekeeping tasks for room IDs: ${roomIdsAsNumbers.join(', ')} from ${monthStartFormatted} to ${monthEndFormatted}`);
-        const fetchedTasks = await fetchKrossbookingHousekeepingTasks(monthStartFormatted, monthEndFormatted, roomIdsAsNumbers);
-        setHousekeepingTasks(fetchedTasks);
-        console.log("DEBUG: Fetched housekeeping tasks:", fetchedTasks);
-
-      } catch (err: any) {
-        setError(`Erreur lors du chargement des données : ${err.message}`);
-        console.error("DEBUG: Error in loadData:", err);
-      } finally {
+      if (roomIds.length === 0) {
+        setReservations([]);
+        setHousekeepingTasks([]);
         setLoading(false);
+        return;
       }
-    };
 
+      console.log(`DEBUG: Fetching reservations for room IDs: ${roomIds.join(', ')}`);
+      const fetchedReservations = await fetchKrossbookingReservations(roomIds);
+      setReservations(fetchedReservations);
+      console.log("DEBUG: Fetched reservations for user rooms:", fetchedReservations); 
+
+      const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+      console.log(`DEBUG: Fetching housekeeping tasks for room IDs: ${roomIdsAsNumbers.join(', ')} from ${monthStartFormatted} to ${monthEndFormatted}`);
+      const fetchedTasks = await fetchKrossbookingHousekeepingTasks(monthStartFormatted, monthEndFormatted, roomIdsAsNumbers);
+      setHousekeepingTasks(fetchedTasks);
+      console.log("DEBUG: Fetched housekeeping tasks:", fetchedTasks);
+
+    } catch (err: any) {
+      setError(`Erreur lors du chargement des données : ${err.message}`);
+      console.error("DEBUG: Error in loadData:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, [currentMonth]);
 
@@ -108,6 +107,42 @@ const BookingPlanningGrid: React.FC = () => {
       case 'pending': return <Clock className="h-3 w-3 text-yellow-500" />;
       case 'cancelled': return <XCircle className="h-3 w-3 text-red-500" />;
       default: return <Sparkles className="h-3 w-3 text-purple-500" />;
+    }
+  };
+
+  const handleReservationClick = (booking: KrossbookingReservation) => {
+    setSelectedBookingForActions(booking);
+    setIsActionsDialogOpen(true);
+  };
+
+  const handleEditReservation = (booking: KrossbookingReservation) => {
+    setBookingToEdit(booking);
+    setIsOwnerReservationDialogOpen(true);
+    setIsActionsDialogOpen(false); // Close actions dialog
+  };
+
+  const handleDeleteReservation = async (bookingId: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir annuler cette réservation ?")) {
+      return;
+    }
+    try {
+      // Call saveKrossbookingReservation with CANC status
+      await saveKrossbookingReservation({
+        id_reservation: bookingId,
+        label: "Annulation", // A generic label for cancellation
+        arrival: format(new Date(), 'yyyy-MM-dd'), // Dummy dates, as they might not be used for CANC status
+        departure: format(new Date(), 'yyyy-MM-dd'),
+        email: "",
+        phone: "",
+        cod_reservation_status: "CANC",
+        id_room: selectedBookingForActions?.krossbooking_room_id || '', // Use the room ID from the selected booking
+      });
+      toast.success("Réservation annulée avec succès !");
+      setIsActionsDialogOpen(false); // Close actions dialog
+      loadData(); // Refresh data
+    } catch (err: any) {
+      toast.error(`Erreur lors de l'annulation de la réservation : ${err.message}`);
+      console.error("Error deleting reservation:", err);
     }
   };
 
@@ -200,7 +235,7 @@ const BookingPlanningGrid: React.FC = () => {
                           <TooltipTrigger asChild>
                             <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20">
                               {tasksForThisDay.length > 1 ? (
-                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisL.length}</span>
+                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
                               ) : (
                                 getTaskIcon(tasksForThisDay[0].status)
                               )}
@@ -223,7 +258,7 @@ const BookingPlanningGrid: React.FC = () => {
 
                 {/* Reservation Bars (Overlay) for this room */}
                 {reservations
-                  .filter(res => res.property_name === room.room_name || res.property_name === room.room_id) // Filter reservations for the current room
+                  .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id) // Filter reservations for the current room using krossbooking_room_id
                   .map((reservation) => {
                     const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
                     const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
@@ -308,6 +343,7 @@ const BookingPlanningGrid: React.FC = () => {
                               justifyContent: 'space-between', // Distribute items
                               alignItems: 'center',
                             }}
+                            onClick={() => handleReservationClick(reservation)} // Add click handler here
                           >
                             {/* Render LogIn icon at the start of the bar if it's the check-in day */}
                             {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
@@ -390,6 +426,22 @@ const BookingPlanningGrid: React.FC = () => {
           </div>
         </div>
       </CardContent>
+
+      <ReservationActionsDialog
+        isOpen={isActionsDialogOpen}
+        onOpenChange={setIsActionsDialogOpen}
+        booking={selectedBookingForActions}
+        onEdit={handleEditReservation}
+        onDelete={handleDeleteReservation}
+      />
+
+      <OwnerReservationDialog
+        isOpen={isOwnerReservationDialogOpen}
+        onOpenChange={setIsOwnerReservationDialogOpen}
+        userRooms={userRooms}
+        onReservationCreated={loadData} // Reload data after create/edit
+        initialBooking={bookingToEdit} // Pass the booking to edit
+      />
     </Card>
   );
 };

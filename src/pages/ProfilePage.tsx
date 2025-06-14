@@ -11,6 +11,7 @@ import { addUserRoom, getUserRooms, deleteUserRoom, UserRoom } from '@/lib/user-
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api'; // Import profile API
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider'; // Import useSession
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const ProfilePage: React.FC = () => {
   const { session } = useSession(); // Get session to access user email
@@ -128,67 +129,82 @@ const ProfilePage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Informations du Profil</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">Prénom</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  placeholder="Votre prénom"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Nom</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  placeholder="Votre nom"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={session?.user?.email || ''}
-                disabled // Email is read-only from Supabase Auth
-                className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="googleSheetId">ID du Google Sheet</Label>
-              <Input
-                id="googleSheetId"
-                type="text"
-                placeholder="Ex: 1ABC...xyz"
-                value={googleSheetId}
-                onChange={(e) => setGoogleSheetId(e.target.value)}
-                disabled={loading}
-              />
-              <p className="text-sm text-gray-500">L'ID se trouve dans l'URL de votre feuille Google (après '/d/' et avant '/edit').</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="googleSheetTab">Nom de l'onglet Google Sheet</Label>
-              <Input
-                id="googleSheetTab"
-                type="text"
-                placeholder="Ex: COUNTER"
-                value={googleSheetTab}
-                onChange={(e) => setGoogleSheetTab(e.target.value)}
-                disabled={loading}
-              />
-              <p className="text-sm text-gray-500">Le nom de l'onglet à lire (par défaut 'COUNTER').</p>
-            </div>
-            <Button onClick={handleUpdateProfile} disabled={loading}>
-              {loading ? 'Sauvegarde en cours...' : 'Mettre à jour le Profil'}
-            </Button>
+            {loading ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-10 w-48" />
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Prénom</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Votre prénom"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Nom</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Votre nom"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={session?.user?.email || ''}
+                    disabled // Email is read-only from Supabase Auth
+                    className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="googleSheetId">ID du Google Sheet</Label>
+                  <Input
+                    id="googleSheetId"
+                    type="text"
+                    placeholder="Ex: 1ABC...xyz"
+                    value={googleSheetId}
+                    onChange={(e) => setGoogleSheetId(e.target.value)}
+                    disabled={loading}
+                  />
+                  <p className="text-sm text-gray-500">L'ID se trouve dans l'URL de votre feuille Google (après '/d/' et avant '/edit').</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="googleSheetTab">Nom de l'onglet Google Sheet</Label>
+                  <Input
+                    id="googleSheetTab"
+                    type="text"
+                    placeholder="Ex: COUNTER"
+                    value={googleSheetTab}
+                    onChange={(e) => setGoogleSheetTab(e.target.value)}
+                    disabled={loading}
+                  />
+                  <p className="text-sm text-gray-500">Le nom de l'onglet à lire (par défaut 'COUNTER').</p>
+                </div>
+                <Button onClick={handleUpdateProfile} disabled={loading}>
+                  {loading ? 'Sauvegarde en cours...' : 'Mettre à jour le Profil'}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -198,34 +214,46 @@ const ProfilePage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Ajouter une Nouvelle Chambre</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="newRoomId">ID de la Chambre (Krossbooking)</Label>
-                <Input
-                  id="newRoomId"
-                  type="text"
-                  placeholder="Ex: 36"
-                  value={newRoomId}
-                  onChange={(e) => setNewRoomId(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newRoomName">Nom de la Chambre (pour affichage)</Label>
-                <Input
-                  id="newRoomName"
-                  type="text"
-                  placeholder="Ex: Appartement Paris 1"
-                  value={newRoomName}
-                  onChange={(e) => setNewRoomName(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-            <Button onClick={handleAddRoom} disabled={loading}>
-              <PlusCircle className="h-4 w-4 mr-2" />
-              {loading ? 'Ajout en cours...' : 'Ajouter la Chambre'}
-            </Button>
+            {loading ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+                <Skeleton className="h-10 w-48" />
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newRoomId">ID de la Chambre (Krossbooking)</Label>
+                    <Input
+                      id="newRoomId"
+                      type="text"
+                      placeholder="Ex: 36"
+                      value={newRoomId}
+                      onChange={(e) => setNewRoomId(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newRoomName">Nom de la Chambre (pour affichage)</Label>
+                    <Input
+                      id="newRoomName"
+                      type="text"
+                      placeholder="Ex: Appartement Paris 1"
+                      value={newRoomName}
+                      onChange={(e) => setNewRoomName(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleAddRoom} disabled={loading}>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  {loading ? 'Ajout en cours...' : 'Ajouter la Chambre'}
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -235,8 +263,12 @@ const ProfilePage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Mes Chambres Configurées</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading && rooms.length === 0 ? (
-              <p className="text-gray-500">Chargement de vos chambres...</p>
+            {loading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
             ) : rooms.length === 0 ? (
               <p className="text-gray-500">Vous n'avez pas encore configuré de chambres. Ajoutez-en une ci-dessus !</p>
             ) : (

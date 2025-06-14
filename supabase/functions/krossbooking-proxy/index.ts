@@ -161,14 +161,14 @@ serve(async (req) => {
           with_rooms: true, 
         };
         if (requestBody.id_room) { 
-          getReservationsPayload.id_room = requestBody.id_room; 
+          getReservationsPayload.id_room = Number(requestBody.id_room); // Ensure it's a number
         }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
         krossbookingBody = JSON.stringify(getReservationsPayload);
         break;
 
       case 'get_housekeeping_tasks':
-        const { date_from, date_to, id_property } = requestBody; 
+        const { date_from, date_to } = requestBody; 
         if (!date_from || !date_to) {
           throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
         }
@@ -176,11 +176,11 @@ serve(async (req) => {
           date_from,
           date_to,
         };
-        if (id_property) {
-          getTasksPayload.id_property = id_property;
+        if (requestBody.id_property) { // Use requestBody.id_property directly
+          getTasksPayload.id_property = Number(requestBody.id_property); // Ensure it's a number
         }
         if (requestBody.id_room) { 
-          getTasksPayload.id_room = requestBody.id_room;
+          getTasksPayload.id_room = Number(requestBody.id_room); // Ensure it's a number
         }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
         krossbookingBody = JSON.stringify(getTasksPayload);
@@ -198,9 +198,12 @@ serve(async (req) => {
           email: email || '',
           phone: phone || '',
           cod_reservation_status,
-          id_room: requestBody.id_room, 
-          id_property: KROSSBOOKING_HOTEL_ID, // Added id_property from environment variable
+          id_room: Number(requestBody.id_room), // Convert to number
+          id_property: Number(KROSSBOOKING_HOTEL_ID), // Convert to number
         };
+
+        console.log("DEBUG (Edge Function): Payload sent to Krossbooking reservations/save:", JSON.stringify(saveReservationPayload));
+
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/save`;
         krossbookingMethod = 'POST';
         krossbookingBody = JSON.stringify(saveReservationPayload);

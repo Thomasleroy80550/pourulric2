@@ -23,6 +23,7 @@ import { callGSheetProxy } from "@/lib/gsheets";
 import { toast } from "sonner";
 import ObjectiveDialog from "@/components/ObjectiveDialog"; // Import the new dialog component
 import { getProfile } from "@/lib/profile-api"; // Import getProfile
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
@@ -217,7 +218,18 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingFinancialData ? (
-                <p className="text-gray-500">Chargement des données financières...</p>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-2 w-full" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
               ) : financialDataError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
@@ -265,37 +277,61 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-xl font-bold">11 juin à 15h</p>
-                <p className="text-sm text-gray-500">Prochaine arrivée</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xl font-bold">28</p>
-                  <p className="text-sm text-gray-500">Réservations sur l'année</p>
+              {loadingActivityData ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-8 w-1/2" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                  <Skeleton className="h-4 w-1/3" />
                 </div>
-                <div>
-                  <p className="text-xl font-bold">3</p>
-                  <p className="text-sm text-gray-500">Nuits sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">5</p>
-                  <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">62.82%</p>
-                  <p className="text-sm text-gray-500">Occupation sur l'année</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">4398€</p>
-                  <p className="text-sm text-gray-500">Prix net / nuit</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold">4.4/5</p>
-                  <p className="text-sm text-gray-500">Votre note</p>
-                </div>
-              </div>
-              <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes avis -&gt;</Button>
+              ) : activityDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{activityDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xl font-bold">11 juin à 15h</p>
+                    <p className="text-sm text-gray-500">Prochaine arrivée</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xl font-bold">28</p>
+                      <p className="text-sm text-gray-500">Réservations sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">3</p>
+                      <p className="text-sm text-gray-500">Nuits sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">5</p>
+                      <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">62.82%</p>
+                      <p className="text-sm text-gray-500">Occupation sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">4398€</p>
+                      <p className="text-sm text-gray-500">Prix net / nuit</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">4.4/5</p>
+                      <p className="text-sm text-gray-500">Votre note</p>
+                    </div>
+                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes avis -&gt;</Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -306,7 +342,14 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="flex flex-col p-4">
               {loadingActivityData ? (
-                <p className="text-gray-500">Chargement des données d'activité...</p>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
+                  <Skeleton className="w-full md:w-3/5 h-[280px]" />
+                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-4 w-full" />
+                    ))}
+                  </div>
+                </div>
               ) : activityDataError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
@@ -362,7 +405,7 @@ const DashboardPage = () => {
             </CardHeader>
             <CardContent className="h-64">
               {loadingMonthlyFinancialData ? (
-                <p className="text-gray-500">Chargement des statistiques mensuelles...</p>
+                <Skeleton className="h-full w-full" />
               ) : monthlyFinancialDataError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />

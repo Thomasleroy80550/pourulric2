@@ -22,7 +22,7 @@ async function getAuthToken(): Promise<string> {
   console.log(`DEBUG: KROSSBOOKING_PASSWORD (set?): ${!!KROSSBOOKING_PASSWORD}`);
 
   if (!KROSSBOOKING_API_KEY || !KROSSBOOKING_HOTEL_ID_STR || !KROSSBOOKING_USERNAME || !KROSSBOOKING_PASSWORD) {
-    throw new Error("Missing Krossbooking API credentials in environment variables.");
+    throw new Error("Missing Krossbooking API credentials in environment variables. Please ensure KROSSBOOKING_API_KEY, KROSSBOOKING_HOTEL_ID, KROSSBOOKING_USERNAME, and KROSSBOOKING_PASSWORD are set as Supabase secrets.");
   }
 
   // IMPORTANT: Based on Krossbooking documentation, hotel_id is a string.
@@ -80,6 +80,22 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate with Supabase to get the user's session
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+    if (authError || !user) {
+      console.error("Authentication error:", authError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 

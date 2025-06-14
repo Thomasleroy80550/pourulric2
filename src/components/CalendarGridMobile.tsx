@@ -13,6 +13,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import ReservationActionsDialog from './ReservationActionsDialog'; // Import the new dialog
 import OwnerReservationDialog from './OwnerReservationDialog'; // Import OwnerReservationDialog
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Corrected import syntax
 
 // KrossbookingReservation interface is now imported from krossbooking.ts
 // interface KrossbookingReservation { ... }
@@ -39,9 +41,10 @@ interface CalendarGridMobileProps {
   refreshTrigger: number; // New prop
   userRooms: UserRoom[]; // Now received as prop
   reservations: KrossbookingReservation[]; // Now received as prop
+  onReservationChange: () => void; // New prop for triggering refresh
 }
 
-const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger, userRooms, reservations }) => {
+const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
   const [loadingTasks, setLoadingTasks] = useState<boolean>(true); // Separate loading for tasks
@@ -195,9 +198,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false); // Close actions dialog
-      // Trigger refresh in parent (CalendarPage)
-      // This component no longer directly calls loadData for reservations, it relies on parent's refreshTrigger.
-      // The parent's refreshTrigger will cause this component to re-render with updated props.
+      onReservationChange(); // Trigger refresh in parent (CalendarPage)
     } catch (err: any) {
       toast.error(`Erreur lors de l'annulation de la réservation : ${err.message}`);
       console.error("Error deleting reservation:", err);
@@ -221,20 +222,26 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
         </div>
       </CardHeader>
       <CardContent className="p-2">
-        {loadingTasks && <p className="text-gray-500 text-center py-4">Chargement du calendrier...</p>}
-        {error && (
+        {loadingTasks ? (
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {weekDays.map((day) => (
+              <Skeleton key={day} className="h-8 w-full" />
+            ))}
+            {Array.from({ length: 35 }).map((_, index) => ( // 5 rows * 7 days
+              <Skeleton key={index} className="h-20 w-full" />
+            ))}
+          </div>
+        ) : error ? (
           <Alert variant="destructive" className="mb-4">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Erreur</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        )}
-        {!loadingTasks && !error && userRooms.length === 0 && (
+        ) : userRooms.length === 0 ? (
           <p className="text-gray-500 text-center py-4">
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
-        )}
-        {!loadingTasks && !error && userRooms.length > 0 && (
+        ) : (
           <div className="grid grid-cols-7 gap-1 text-center">
             {weekDays.map((day) => (
               <div key={day} className="text-sm font-semibold text-gray-600 dark:text-gray-400 py-2">
@@ -250,7 +257,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
               const isSelected = isSameDay(day, selectedDay);
               const eventsForCell = getEventsForDay(day);
 
-              // Prioritize display: check-in, check-out, task, then others
+              // Prioritize display: check-in, check-in_out, check-out, task, then stay
               const displayEvents = eventsForCell.slice(0, 3); // Show up to 3 indicators
               const remainingEventsCount = eventsForCell.length - displayEvents.length;
 
@@ -273,9 +280,18 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
                       if (event.type === 'task') {
                         const task = event.data as KrossbookingHousekeepingTask;
                         return (
-                          <div key={`cell-task-${task.id_task}-${event.roomName}-${idx}`} className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600">
-                            {getTaskIcon(task.status)}
-                          </div>
+                          <Tooltip key={`cell-task-${task.id_task}-${event.roomName}-${idx}`}>
+                            <TooltipTrigger asChild>
+                              <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600">
+                                {getTaskIcon(task.status)}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="p-2 text-sm">
+                              <p className="font-bold">{event.roomName}: Tâche {task.task_type.replace('_', ' ')}</p>
+                              <p>Statut: {task.status}</p>
+                              {task.notes && <p>Notes: {task.notes}</p>}
+                            </TooltipContent>
+                          </Tooltip>
                         );
                       } else {
                         const reservation = event.data as KrossbookingReservation;
@@ -286,9 +302,19 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
                         else if (event.type === 'stay') icon = <CalendarDays className="h-3 w-3" />; // Generic icon for stay
 
                         return (
-                          <div key={`cell-res-${reservation.id}-${event.type}-${event.roomName}-${idx}`} className={cn("w-4 h-4 flex items-center justify-center rounded-full", channelInfo.bgColor, channelInfo.textColor)}>
-                            {icon}
-                          </div>
+                          <Tooltip key={`cell-res-${reservation.id}-${event.type}-${event.roomName}-${idx}`}>
+                            <TooltipTrigger asChild>
+                              <div className={cn("w-4 h-4 flex items-center justify-center rounded-full", channelInfo.bgColor, channelInfo.textColor)}>
+                                {icon}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="p-2 text-sm">
+                              <p className="font-bold">{reservation.guest_name}</p>
+                              <p>{event.roomName}</p>
+                              <p>Statut: {reservation.status}</p>
+                              <p>Canal: {channelInfo.name}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         );
                       }
                     })}
@@ -308,71 +334,79 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
       {/* Section for selected day's events */}
       <CardContent className="p-4 border-t mt-4">
         <h3 className="text-lg font-bold mb-3">Événements du {format(selectedDay, 'EEEE dd MMMM yyyy', { locale: fr })}</h3>
-        <ScrollArea className="h-[200px] pr-4">
+        {loadingTasks ? (
           <div className="space-y-3">
-            {eventsForSelectedDay.length === 0 ? (
-              <p className="text-gray-500">Aucun événement pour ce jour.</p>
-            ) : (
-              eventsForSelectedDay.map((event, index) => {
-                if (event.type === 'task') {
-                  const task = event.data as KrossbookingHousekeepingTask;
-                  return (
-                    <div key={`detail-task-${task.id_task}-${event.roomName}-${index}`} className="flex items-center p-2 border rounded-md bg-gray-100 dark:bg-gray-700">
-                      {getTaskIcon(task.status)}
-                      <div className="ml-3 text-sm">
-                        <p className="font-semibold">{event.roomName}: Tâche {task.task_type.replace('_', ' ')}</p>
-                        <p className="text-gray-600 dark:text-gray-400">Statut: {task.status}</p>
-                        {task.notes && <p className="text-gray-600 dark:text-gray-400">Notes: {task.notes}</p>}
-                      </div>
-                    </div>
-                  );
-                } else {
-                  const reservation = event.data as KrossbookingReservation;
-                  const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                  const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
-                  const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
-                  const numberOfNights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
-
-                  let icon = null;
-                  let eventLabel = '';
-
-                  if (event.type === 'check_in') {
-                    icon = <LogIn className="h-5 w-5 flex-shrink-0" />;
-                    eventLabel = `Arrivée de ${reservation.guest_name}`;
-                  } else if (event.type === 'check_out') {
-                    icon = <LogOut className="h-5 w-5 flex-shrink-0" />;
-                    eventLabel = `Départ de ${reservation.guest_name}`;
-                  } else if (event.type === 'check_in_out') {
-                    icon = <Sparkles className="h-5 w-5 flex-shrink-0" />;
-                    eventLabel = `Arrivée & Départ de ${reservation.guest_name}`;
-                  } else if (event.type === 'stay') {
-                    icon = <CalendarDays className="h-5 w-5 flex-shrink-0" />;
-                    eventLabel = `Séjour de ${reservation.guest_name}`;
-                  }
-
-                  return (
-                    <div
-                      key={`detail-res-${reservation.id}-${event.type}-${event.roomName}-${index}`}
-                      className={cn(
-                        `flex items-center p-2 rounded-md text-sm font-medium ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`
-                      )}
-                      onClick={() => handleReservationClick(reservation)} // Add click handler here
-                    >
-                      {icon && <span className="mr-3">{icon}</span>}
-                      <div className="flex-grow">
-                        <p className="font-semibold">{event.roomName}: {eventLabel}</p>
-                        <p className="text-xs opacity-90">
-                          Du {checkIn ? format(checkIn, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} au {checkOut ? format(checkOut, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} ({numberOfNights} nuit(s))
-                        </p>
-                        <p className="text-xs opacity-90">Statut: {reservation.status} | Montant: {reservation.amount} | Canal: {channelInfo.name}</p>
-                      </div>
-                    </div>
-                  );
-                }
-              })
-            )}
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
           </div>
-        </ScrollArea>
+        ) : (
+          <ScrollArea className="h-[200px] pr-4">
+            <div className="space-y-3">
+              {eventsForSelectedDay.length === 0 ? (
+                <p className="text-gray-500">Aucun événement pour ce jour.</p>
+              ) : (
+                eventsForSelectedDay.map((event, index) => {
+                  if (event.type === 'task') {
+                    const task = event.data as KrossbookingHousekeepingTask;
+                    return (
+                      <div key={`detail-task-${task.id_task}-${event.roomName}-${index}`} className="flex items-center p-2 border rounded-md bg-gray-100 dark:bg-gray-700">
+                        {getTaskIcon(task.status)}
+                        <div className="ml-3 text-sm">
+                          <p className="font-semibold">{event.roomName}: Tâche {task.task_type.replace('_', ' ')}</p>
+                          <p className="text-gray-600 dark:text-gray-400">Statut: {task.status}</p>
+                          {task.notes && <p className="text-gray-600 dark:text-gray-400">Notes: {task.notes}</p>}
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    const reservation = event.data as KrossbookingReservation;
+                    const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                    const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
+                    const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
+                    const numberOfNights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
+
+                    let icon = null;
+                    let eventLabel = '';
+
+                    if (event.type === 'check_in') {
+                      icon = <LogIn className="h-5 w-5 flex-shrink-0" />;
+                      eventLabel = `Arrivée de ${reservation.guest_name}`;
+                    } else if (event.type === 'check_out') {
+                      icon = <LogOut className="h-5 w-5 flex-shrink-0" />;
+                      eventLabel = `Départ de ${reservation.guest_name}`;
+                    } else if (event.type === 'check_in_out') {
+                      icon = <Sparkles className="h-5 w-5 flex-shrink-0" />;
+                      eventLabel = `Arrivée & Départ de ${reservation.guest_name}`;
+                    } else if (event.type === 'stay') {
+                      icon = <CalendarDays className="h-5 w-5 flex-shrink-0" />;
+                      eventLabel = `Séjour de ${reservation.guest_name}`;
+                    }
+
+                    return (
+                      <div
+                        key={`detail-res-${reservation.id}-${event.type}-${event.roomName}-${index}`}
+                        className={cn(
+                          `flex items-center p-2 rounded-md text-sm font-medium ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`
+                        )}
+                        onClick={() => handleReservationClick(reservation)} // Add click handler here
+                      >
+                        {icon && <span className="mr-3">{icon}</span>}
+                        <div className="flex-grow">
+                          <p className="font-semibold">{event.roomName}: {eventLabel}</p>
+                          <p className="text-xs opacity-90">
+                            Du {checkIn ? format(checkIn, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} au {checkOut ? format(checkOut, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} ({numberOfNights} nuit(s))
+                          </p>
+                          <p className="text-xs opacity-90">Statut: {reservation.status} | Montant: {reservation.amount} | Canal: {channelInfo.name}</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                })
+              )}
+            </div>
+          </ScrollArea>
+        )}
       </CardContent>
 
       <ReservationActionsDialog
@@ -390,8 +424,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
         allReservations={reservations} // Pass all reservations
         onReservationCreated={() => {
           setIsOwnerReservationDialogOpen(false); // Close dialog
-          // This component doesn't need to trigger refresh directly,
-          // the parent (CalendarPage) will handle it via its own refreshTrigger.
+          onReservationChange(); // Trigger refresh in parent
         }}
         initialBooking={bookingToEdit} // Pass the booking to edit
       />

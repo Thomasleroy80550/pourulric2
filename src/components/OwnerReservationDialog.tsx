@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid } from 'date-fns'; // Added isValid
 import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import {

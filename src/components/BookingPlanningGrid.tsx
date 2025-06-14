@@ -15,9 +15,6 @@ import ReservationActionsDialog from './ReservationActionsDialog'; // Import the
 import OwnerReservationDialog from './OwnerReservationDialog'; // Import OwnerReservationDialog
 import { toast } from 'sonner';
 
-// KrossbookingReservation interface is now imported from krossbooking.ts
-// interface KrossbookingReservation { ... }
-
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
   'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
@@ -131,14 +128,16 @@ const BookingPlanningGrid: React.FC = () => {
         return;
       }
 
+      console.log("DEBUG: Booking object before cancellation payload creation:", bookingToCancel);
+
       // Call saveKrossbookingReservation with CANC status, using original booking details
       await saveKrossbookingReservation({
         id_reservation: bookingToCancel.id,
-        label: bookingToCancel.guest_name || "Annulation", // Use original guest name or generic label
+        label: bookingToCancel.guest_name, // Use original guest name
         arrival: bookingToCancel.check_in_date,
         departure: bookingToCancel.check_out_date,
-        email: "", // Krossbooking API might not require email/phone for cancellation
-        phone: "", // Krossbooking API might not require email/phone for cancellation
+        email: bookingToCancel.email || '', // Use original email or empty string
+        phone: bookingToCancel.phone || '', // Use original phone or empty string
         cod_reservation_status: "CANC",
         id_room: bookingToCancel.krossbooking_room_id,
       });

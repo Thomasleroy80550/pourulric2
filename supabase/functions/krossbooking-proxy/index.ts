@@ -133,34 +133,57 @@ serve(async (req) => {
     let krossbookingMethod = 'POST'; 
     let krossbookingBody: string | undefined;
 
-    if (action === 'get_reservations') {
-      const payload: any = {
-        with_rooms: true, 
-      };
-      if (requestBody.id_room) { 
-        payload.id_room = requestBody.id_room; 
-      }
-      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
-      krossbookingBody = JSON.stringify(payload);
-    } else if (action === 'get_housekeeping_tasks') {
-      const { date_from, date_to, id_property, id_room } = requestBody;
-      if (!date_from || !date_to) {
-        throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
-      }
-      const payload: any = {
-        date_from,
-        date_to,
-      };
-      if (id_property) {
-        payload.id_property = id_property;
-      }
-      if (id_room) {
-        payload.id_room = id_room;
-      }
-      krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
-      krossbookingBody = JSON.stringify(payload);
-    } else {
-      throw new Error(`Unsupported action: ${action}`);
+    switch (action) {
+      case 'get_reservations':
+        const payloadGetReservations: any = {
+          with_rooms: true, 
+        };
+        if (requestBody.id_room) { 
+          payloadGetReservations.id_room = requestBody.id_room; 
+        }
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
+        krossbookingBody = JSON.stringify(payloadGetReservations);
+        break;
+
+      case 'get_housekeeping_tasks':
+        const { date_from, date_to, id_property, id_room } = requestBody;
+        if (!date_from || !date_to) {
+          throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
+        }
+        const payloadGetTasks: any = {
+          date_from,
+          date_to,
+        };
+        if (id_property) {
+          payloadGetTasks.id_property = id_property;
+        }
+        if (id_room) {
+          payloadGetTasks.id_room = id_room;
+        }
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
+        krossbookingBody = JSON.stringify(payloadGetTasks);
+        break;
+
+      case 'save_reservation':
+        const { label, arrival, departure, email, phone, cod_reservation_status, id_room } = requestBody;
+        if (!label || !arrival || !departure || !cod_reservation_status || !id_room) {
+          throw new Error("Missing required parameters for save_reservation: label, arrival, departure, cod_reservation_status, id_room.");
+        }
+        const payloadSaveReservation = {
+          label,
+          arrival,
+          departure,
+          email: email || '', // Ensure email and phone are strings, even if empty
+          phone: phone || '',
+          cod_reservation_status,
+          id_room: parseInt(id_room), // Krossbooking expects id_room as number for save
+        };
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/save`;
+        krossbookingBody = JSON.stringify(payloadSaveReservation);
+        break;
+
+      default:
+        throw new Error(`Unsupported action: ${action}`);
     }
 
     console.log(`Calling Krossbooking API with URL: ${krossbookingUrl}, Method: ${krossbookingMethod}, Body: ${krossbookingBody || 'N/A'}`);

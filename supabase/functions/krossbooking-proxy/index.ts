@@ -11,23 +11,29 @@ const corsHeaders = {
 // Function to get the authentication token from Krossbooking
 async function getAuthToken(): Promise<string> {
   const KROSSBOOKING_API_KEY = Deno.env.get('KROSSBOOKING_API_KEY');
-  const KROSSBOOKING_HOTEL_ID = Deno.env.get('KROSSBOOKING_HOTEL_ID');
+  const KROSSBOOKING_HOTEL_ID_STR = Deno.env.get('KROSSBOOKING_HOTEL_ID'); // Get as string
   const KROSSBOOKING_USERNAME = Deno.env.get('KROSSBOOKING_USERNAME');
   const KROSSBOOKING_PASSWORD = Deno.env.get('KROSSBOOKING_PASSWORD');
 
   console.log("--- Krossbooking Auth Attempt ---");
-  console.log(`API Key (first 5 chars): ${KROSSBOOKING_API_KEY ? KROSSBOOKING_API_KEY.substring(0, 5) + '...' : 'NOT SET'}`);
-  console.log(`Hotel ID: ${KROSSBOOKING_HOTEL_ID || 'NOT SET'}`);
-  console.log(`Username: ${KROSSBOOKING_USERNAME || 'NOT SET'}`);
-  console.log(`Password (first 5 chars): ${KROSSBOOKING_PASSWORD ? KROSSBOOKING_PASSWORD.substring(0, 5) + '...' : 'NOT SET'}`);
+  console.log(`DEBUG: KROSSBOOKING_API_KEY (set?): ${!!KROSSBOOKING_API_KEY}`);
+  console.log(`DEBUG: KROSSBOOKING_HOTEL_ID_STR (value): '${KROSSBOOKING_HOTEL_ID_STR}'`);
+  console.log(`DEBUG: KROSSBOOKING_USERNAME (set?): ${!!KROSSBOOKING_USERNAME}`);
+  console.log(`DEBUG: KROSSBOOKING_PASSWORD (set?): ${!!KROSSBOOKING_PASSWORD}`);
 
-  if (!KROSSBOOKING_API_KEY || !KROSSBOOKING_HOTEL_ID || !KROSSBOOKING_USERNAME || !KROSSBOOKING_PASSWORD) {
+  if (!KROSSBOOKING_API_KEY || !KROSSBOOKING_HOTEL_ID_STR || !KROSSBOOKING_USERNAME || !KROSSBOOKING_PASSWORD) {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
+  }
+
+  // Explicitly attempt to parse KROSSBOOKING_HOTEL_ID as a number
+  const KROSSBOOKING_HOTEL_ID = parseInt(KROSSBOOKING_HOTEL_ID_STR);
+  if (isNaN(KROSSBOOKING_HOTEL_ID)) {
+    throw new Error("KROSSBOOKING_HOTEL_ID is not a valid number. Please ensure it's a numeric ID in your Supabase secrets.");
   }
 
   const authPayload = {
     api_key: KROSSBOOKING_API_KEY,
-    hotel_id: KROSSBOOKING_HOTEL_ID,
+    hotel_id: KROSSBOOKING_HOTEL_ID, // Now explicitly a number
     username: KROSSBOOKING_USERNAME,
     password: KROSSBOOKING_PASSWORD,
   };

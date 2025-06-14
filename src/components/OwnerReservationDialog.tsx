@@ -50,14 +50,19 @@ const blockTypes = [
 const formSchema = z.object({
   roomId: z.string().min(1, { message: 'Veuillez sélectionner une chambre.' }),
   blockType: z.string().min(1, { message: 'Veuillez sélectionner un type de blocage.' }),
-  arrivalDate: z.date({ required_error: 'La date d\'arrivée est requise.' }),
-  departureDate: z.date({ required_error: 'La date de départ est requise.' }),
+  dateRange: z.object({
+    from: z.date({ required_error: 'La date d\'arrivée est requise.' }),
+    to: z.date().optional(), // 'to' can be optional initially for range picker
+  }).refine(data => data.to !== undefined, {
+    message: 'La date de départ est requise.',
+    path: ['to'],
+  }).refine(data => data.to! >= data.from, {
+    message: 'La date de départ ne peut pas être antérieure à la date d\'arrivée.',
+    path: ['to'],
+  }),
   foreseeCleaning: z.boolean().default(false),
   email: z.string().email({ message: 'Email invalide.' }).optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
-}).refine((data) => data.departureDate >= data.arrivalDate, {
-  message: 'La date de départ ne peut pas être antérieure à la date d\'arrivée.',
-  path: ['departureDate'],
 });
 
 const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
@@ -73,6 +78,10 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     defaultValues: {
       roomId: '',
       blockType: '',
+      dateRange: {
+        from: undefined,
+        to: undefined,
+      },
       foreseeCleaning: false,
       email: '',
       phone: '',
@@ -80,13 +89,11 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   });
 
   const selectedRoomId = form.watch('roomId');
-  const selectedArrivalDate = form.watch('arrivalDate');
 
   React.useEffect(() => {
     if (isOpen) {
       if (initialBooking) {
         // Pre-fill form for editing
-        // Determine blockType from label, if label contains one of the known block types
         let blockTypeFound = '';
         for (const type of blockTypes) {
           if (initialBooking.guest_name?.includes(type.value)) {
@@ -98,10 +105,12 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
         form.reset({
           roomId: initialBooking.krossbooking_room_id,
           blockType: blockTypeFound,
-          arrivalDate: parseISO(initialBooking.check_in_date),
-          departureDate: parseISO(initialBooking.check_out_date),
-          foreseeCleaning: initialBooking.status === 'PROPRI', // PROPRI means cleaning is foreseen
-          email: initialBooking.email || '', // Assuming email/phone might be part of KrossbookingReservation if available
+          dateRange: {
+            from: parseISO(initialBooking.check_in_date),
+            to: parseISO(initialBooking.check_out_date),
+          },
+          foreseeCleaning: initialBooking.status === 'PROPRI',
+          email: initialBooking.email || '',
           phone: initialBooking.phone || '',
         });
       } else {
@@ -109,6 +118,10 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
         form.reset({
           roomId: '',
           blockType: '',
+          dateRange: {
+            from: undefined,
+            to: undefined,
+          },
           foreseeCleaning: false,
           email: '',
           phone: '',
@@ -117,8 +130,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
   }, [isOpen, initialBooking, form]);
 
-  // Function to determine disabled dates for ARRIVAL
-  const getDisabledDatesForArrival = React.useCallback((date: Date) => {
+  // Function to determine disabled dates for the range picker
+  const getDisabledDates = React.useCallback((date: Date) => {
     if (!selectedRoomId) return false;
 
     const roomReservations = allReservations.filter(res =>
@@ -132,21 +145,14 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
       if (checkIn && checkOut) {
-        // A day is blocked for arrival if it falls within the *occupied nights* of another reservation.
+        // A day is blocked if it falls within the *occupied nights* of another reservation.
         // The occupied nights are from check-in day up to (but not including) check-out day.
         // So, for a reservation from CI to CO, the nights occupied are CI, CI+1, ..., CO-1.
+        // If CI == CO (0-night stay), only CI is occupied.
         const occupiedStart = startOfDay(checkIn);
-        
-        let effectiveOccupiedEnd: Date;
-        if (isSameDay(checkIn, checkOut)) {
-          // For a 0-night stay (checkIn === checkOut), the room is occupied for that single day.
-          effectiveOccupiedEnd = startOfDay(checkIn); 
-        } else {
-          // For multi-night stays, the room is occupied until the day before check-out.
-          effectiveOccupiedEnd = subDays(startOfDay(checkOut), 1); 
-        }
+        const occupiedEnd = isSameDay(checkIn, checkOut) ? startOfDay(checkIn) : subDays(startOfDay(checkOut), 1);
 
-        if (isWithinInterval(date, { start: occupiedStart, end: effectiveOccupiedEnd })) {
+        if (isWithinInterval(date, { start: occupiedStart, end: occupiedEnd })) {
           return true;
         }
       }
@@ -154,60 +160,15 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     return false;
   }, [selectedRoomId, allReservations, initialBooking]);
 
-  // Function to determine disabled dates for DEPARTURE
-  const getDisabledDatesForDeparture = React.useCallback((date: Date) => {
-    if (!selectedRoomId) return false;
-
-    // A departure date cannot be before the selected arrival date
-    if (selectedArrivalDate && isBefore(date, selectedArrivalDate)) {
-      return true;
-    }
-
-    const roomReservations = allReservations.filter(res =>
-      res.krossbooking_room_id === selectedRoomId &&
-      res.status !== 'CANC' && // Do not consider cancelled reservations as blocking
-      (initialBooking ? res.id !== initialBooking.id : true) // Exclude the current booking if editing
-    );
-
-    const newBookingLastNight = subDays(startOfDay(date), 1); // The last night the new booking occupies
-
-    for (const res of roomReservations) {
-      const existingCheckIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-      const existingCheckOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
-
-      if (existingCheckIn && existingCheckOut) {
-        const existingBookingFirstNight = startOfDay(existingCheckIn);
-        const existingBookingLastNight = subDays(startOfDay(existingCheckOut), 1); // The last night the existing booking occupies
-
-        const newBookingFirstNight = startOfDay(selectedArrivalDate);
-
-        // Check for overlap between the new booking's nights and the existing booking's nights
-        // Overlap occurs if (newStart <= existingEnd) AND (newEnd >= existingStart)
-        const isOverlap = (
-          newBookingFirstNight <= existingBookingLastNight &&
-          newBookingLastNight >= existingBookingFirstNight
-        );
-
-        // If there's an overlap of nights, and the proposed departure date is NOT the check-in day of an existing reservation,
-        // then it's a true conflict and should be blocked.
-        // If the proposed departure date IS the check-in day of an existing reservation, it's allowed.
-        if (isOverlap && !isSameDay(date, existingCheckIn)) {
-             return true; // Block if there's an actual night overlap and it's not just departing on check-in day
-        }
-      }
-    }
-    return false;
-  }, [selectedRoomId, allReservations, initialBooking, selectedArrivalDate]);
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const formattedArrival = format(values.arrivalDate, 'yyyy-MM-dd');
-    const formattedDeparture = format(values.departureDate, 'yyyy-MM-dd');
+    const formattedArrival = format(values.dateRange.from, 'yyyy-MM-dd');
+    const formattedDeparture = format(values.dateRange.to!, 'yyyy-MM-dd'); // 'to' is guaranteed to be defined by schema refine
 
     const cod_reservation_status = values.foreseeCleaning ? 'PROPRI' : 'PROP0';
     const cleaningSuffix = values.foreseeCleaning ? ' avec ménage' : ' sans ménage';
     const label = `${values.blockType}${cleaningSuffix}`;
 
-    const payload: any = { // Use 'any' for now to allow id_reservation
+    const payload: any = {
       label: label,
       arrival: formattedArrival,
       departure: formattedDeparture,
@@ -218,14 +179,14 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     };
 
     if (initialBooking && initialBooking.id) {
-      payload.id_reservation = initialBooking.id; // Add id_reservation for updates
+      payload.id_reservation = initialBooking.id;
     }
 
     try {
       await saveKrossbookingReservation(payload);
       toast.success(initialBooking ? "Réservation mise à jour avec succès !" : "Réservation propriétaire créée avec succès !");
-      onReservationCreated(); // Trigger refresh in parent
-      onOpenChange(false); // Close dialog
+      onReservationCreated();
+      onOpenChange(false);
     } catch (error: any) {
       toast.error(`Erreur lors de la ${initialBooking ? 'mise à jour' : 'création'} de la réservation : ${error.message}`);
       console.error("Error saving owner reservation:", error);
@@ -295,79 +256,47 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
 
             <FormField
               control={form.control}
-              name="arrivalDate"
+              name="dateRange"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Date d'arrivée</FormLabel>
+                  <FormLabel>Dates d'arrivée et de départ</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
+                          id="date"
                           variant={"outline"}
                           className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
+                            "w-full justify-start text-left font-normal",
+                            !field.value.from && "text-muted-foreground"
                           )}
                         >
-                          {field.value ? (
-                            format(field.value, "PPP", { locale: fr })
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {field.value.from ? (
+                            field.value.to ? (
+                              <>
+                                {format(field.value.from, "PPP", { locale: fr })} -{" "}
+                                {format(field.value.to, "PPP", { locale: fr })}
+                              </>
+                            ) : (
+                              format(field.value.from, "PPP", { locale: fr })
+                            )
                           ) : (
-                            <span>Choisir une date</span>
+                            <span>Choisir une plage de dates</span>
                           )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
-                        mode="single"
+                        initialFocus
+                        mode="range"
+                        defaultMonth={field.value.from}
                         selected={field.value}
                         onSelect={field.onChange}
-                        initialFocus
+                        numberOfMonths={1}
                         locale={fr}
-                        disabled={getDisabledDatesForArrival} // Apply disabled dates logic for arrival
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="departureDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Date de départ</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP", { locale: fr })
-                          ) : (
-                            <span>Choisir une date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        locale={fr}
-                        disabled={getDisabledDatesForDeparture} // Apply disabled dates logic for departure
-                        min={selectedArrivalDate || new Date()} // Ensure departure is not before arrival
+                        disabled={getDisabledDates} // Apply disabled dates logic
                       />
                     </PopoverContent>
                   </Popover>

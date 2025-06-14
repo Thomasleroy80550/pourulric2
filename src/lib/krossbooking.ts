@@ -25,12 +25,23 @@ export interface KrossbookingHousekeepingTask {
   assigned_to?: string;
 }
 
+// Define the payload for saving a reservation
+export interface SaveReservationPayload {
+  label: string;
+  arrival: string; // yyyy-mm-dd
+  departure: string; // yyyy-mm-dd
+  email: string;
+  phone: string;
+  cod_reservation_status: 'PROP0' | 'PROPRI';
+  id_room: string; // Krossbooking room ID
+}
+
 // Define the base URL for your Supabase Edge Function
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
 /**
  * Calls the Supabase Edge Function proxy for Krossbooking API.
- * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks').
+ * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation').
  * @param payload The data payload for the action.
  * @returns A promise that resolves to the response data from the Edge Function.
  */
@@ -168,4 +179,13 @@ export async function fetchKrossbookingHousekeepingTasks(
     }
   }
   return allTasks;
+}
+
+/**
+ * Saves a reservation (including owner blocks) to Krossbooking API via the Supabase Edge Function proxy.
+ * @param payload The reservation data to save.
+ * @returns A promise that resolves to the response data from the Edge Function.
+ */
+export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {
+  return callKrossbookingProxy('save_reservation', payload);
 }

@@ -43,9 +43,9 @@ const CalendarPage: React.FC = () => {
         </div>
         
         {isMobile ? (
-          <CalendarGridMobile />
+          <CalendarGridMobile refreshTrigger={refreshTrigger} />
         ) : (
-          <BookingPlanningGrid />
+          <BookingPlanningGrid refreshTrigger={refreshTrigger} />
         )}
         
         <Card className="shadow-md mt-6">

@@ -181,16 +181,24 @@ const CalendarGridMobile: React.FC = () => {
       return;
     }
     try {
-      // Call saveKrossbookingReservation with CANC status
+      const bookingToCancel = reservations.find(b => b.id === bookingId);
+      if (!bookingToCancel) {
+        toast.error("Réservation introuvable pour annulation.");
+        return;
+      }
+
+      console.log("DEBUG: Booking object before cancellation payload creation (CalendarGridMobile):", bookingToCancel);
+
+      // Call saveKrossbookingReservation with CANC status, using original booking details
       await saveKrossbookingReservation({
-        id_reservation: bookingId,
-        label: "Annulation", // A generic label for cancellation
-        arrival: format(new Date(), 'yyyy-MM-dd'), // Dummy dates, as they might not be used for CANC status
-        departure: format(new Date(), 'yyyy-MM-dd'),
-        email: "",
-        phone: "",
+        id_reservation: bookingToCancel.id,
+        label: bookingToCancel.guest_name || "Annulation", // Use original guest name or generic label
+        arrival: bookingToCancel.check_in_date,
+        departure: bookingToCancel.check_out_date,
+        email: bookingToCancel.email || '', // Use original email or empty string
+        phone: bookingToCancel.phone || '', // Use original phone or empty string
         cod_reservation_status: "CANC",
-        id_room: selectedBookingForActions?.krossbooking_room_id || '', // Use the room ID from the selected booking
+        id_room: bookingToCancel.krossbooking_room_id,
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false); // Close actions dialog

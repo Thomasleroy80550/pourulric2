@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingReservations, fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
+import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
+import { UserRoom } from '@/lib/user-room-api'; // Import user room API
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
 import ReservationActionsDialog from './ReservationActionsDialog'; // Import the new dialog
 import OwnerReservationDialog from './OwnerReservationDialog'; // Import OwnerReservationDialog
@@ -24,12 +24,16 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
 
-const BookingPlanningGrid: React.FC = () => {
+interface BookingPlanningGridProps {
+  refreshTrigger: number;
+  userRooms: UserRoom[]; // Now received as prop
+  reservations: KrossbookingReservation[]; // Now received as prop
+}
+
+const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
-  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingTasks, setLoadingTasks] = useState<boolean>(true); // Separate loading for tasks
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile(); // Use the hook to detect mobile
 
@@ -39,27 +43,17 @@ const BookingPlanningGrid: React.FC = () => {
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadHousekeepingTasks = async () => {
+    setLoadingTasks(true);
     setError(null);
     try {
-      const fetchedUserRooms = await getUserRooms();
-      setUserRooms(fetchedUserRooms);
+      const roomIdsAsNumbers = userRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
 
-      const roomIds = fetchedUserRooms.map(room => room.room_id);
-      const roomIdsAsNumbers = fetchedUserRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
-
-      if (roomIds.length === 0) {
-        setReservations([]);
+      if (roomIdsAsNumbers.length === 0) {
         setHousekeepingTasks([]);
-        setLoading(false);
+        setLoadingTasks(false);
         return;
       }
-
-      console.log(`DEBUG: Fetching reservations for room IDs: ${roomIds.join(', ')}`);
-      const fetchedReservations = await fetchKrossbookingReservations(roomIds);
-      setReservations(fetchedReservations);
-      console.log("DEBUG: Fetched reservations for user rooms:", fetchedReservations); 
 
       const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
@@ -68,16 +62,16 @@ const BookingPlanningGrid: React.FC = () => {
       setHousekeepingTasks(fetchedTasks);
 
     } catch (err: any) {
-      setError(`Erreur lors du chargement des données : ${err.message}`);
-      console.error("DEBUG: Error in loadData:", err);
+      setError(`Erreur lors du chargement des tâches de ménage : ${err.message}`);
+      console.error("DEBUG: Error in loadHousekeepingTasks:", err);
     } finally {
-      setLoading(false);
+      setLoadingTasks(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-  }, [currentMonth]);
+    loadHousekeepingTasks();
+  }, [currentMonth, userRooms, refreshTrigger]); // Re-fetch tasks when month, rooms, or refreshTrigger changes
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -133,7 +127,7 @@ const BookingPlanningGrid: React.FC = () => {
       // Call saveKrossbookingReservation with CANC status, using original booking details
       await saveKrossbookingReservation({
         id_reservation: bookingToCancel.id,
-        label: bookingToCancel.guest_name, // Use original guest name
+        label: bookingToCancel.guest_name || "Annulation", // Use original guest name
         arrival: bookingToCancel.check_in_date,
         departure: bookingToCancel.check_out_date,
         email: bookingToCancel.email || '', // Use original email or empty string
@@ -143,7 +137,9 @@ const BookingPlanningGrid: React.FC = () => {
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false); // Close actions dialog
-      loadData(); // Refresh data
+      // Trigger refresh in parent (CalendarPage)
+      // This component no longer directly calls loadData for reservations, it relies on parent's refreshTrigger
+      // The parent's refreshTrigger will cause this component to re-render with updated props.
     } catch (err: any) {
       toast.error(`Erreur lors de l'annulation de la réservation : ${err.message}`);
       console.error("Error deleting reservation:", err);
@@ -167,7 +163,7 @@ const BookingPlanningGrid: React.FC = () => {
         </div>
       </CardHeader>
       <CardContent className="p-4 overflow-x-auto">
-        {loading && <p className="text-gray-500">Chargement des réservations et tâches...</p>}
+        {(loadingTasks && reservations.length === 0) && <p className="text-gray-500">Chargement des réservations et tâches...</p>}
         {error && (
           <Alert variant="destructive" className="mb-4">
             <Terminal className="h-4 w-4" />
@@ -175,12 +171,12 @@ const BookingPlanningGrid: React.FC = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {!loading && !error && userRooms.length === 0 && (
+        {!loadingTasks && !error && userRooms.length === 0 && (
           <p className="text-gray-500">
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
         )}
-        {!loading && !error && userRooms.length > 0 && (
+        {!loadingTasks && !error && userRooms.length > 0 && (
           <div className="grid-container" style={{
             gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
             minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
@@ -443,7 +439,12 @@ const BookingPlanningGrid: React.FC = () => {
         isOpen={isOwnerReservationDialogOpen}
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
-        onReservationCreated={loadData} // Reload data after create/edit
+        allReservations={reservations} // Pass all reservations
+        onReservationCreated={() => {
+          setIsOwnerReservationDialogOpen(false); // Close dialog
+          // This component doesn't need to trigger refresh directly,
+          // the parent (CalendarPage) will handle it via its own refreshTrigger.
+        }}
         initialBooking={bookingToEdit} // Pass the booking to edit
       />
     </Card>

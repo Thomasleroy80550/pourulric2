@@ -1,0 +1,1 @@
+export const CURRENT_CGUV_VERSION = "v1.0";

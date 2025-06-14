@@ -1,1 +1,1 @@
-export const CURRENT_CGUV_VERSION = "v1.0";
+export const CURRENT_CGUV_VERSION = "2024.0.0.2";

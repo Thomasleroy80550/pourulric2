@@ -8,28 +8,49 @@ import { Button } from '@/components/ui/button'; // Import Button
 import { PlusCircle } from 'lucide-react'; // Import PlusCircle icon
 import OwnerReservationDialog from '@/components/OwnerReservationDialog'; // Import the new dialog
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
 
 const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [loadingData, setLoadingData] = useState(true); // New loading state for all data
   const [refreshTrigger, setRefreshTrigger] = useState(0); // State to trigger data refresh
 
   useEffect(() => {
-    const fetchRooms = async () => {
+    const fetchData = async () => {
+      setLoadingData(true);
       try {
-        const rooms = await getUserRooms();
-        setUserRooms(rooms);
+        const fetchedUserRooms = await getUserRooms();
+        setUserRooms(fetchedUserRooms);
+
+        const roomIds = fetchedUserRooms.map(room => room.room_id);
+        const fetchedReservations = await fetchKrossbookingReservations(roomIds);
+        setReservations(fetchedReservations);
       } catch (error) {
-        console.error("Error fetching user rooms for CalendarPage:", error);
+        console.error("Error fetching data for CalendarPage:", error);
+        // Optionally, show a toast error here
+      } finally {
+        setLoadingData(false);
       }
     };
-    fetchRooms();
-  }, [refreshTrigger]); // Re-fetch rooms if refreshTrigger changes
+    fetchData();
+  }, [refreshTrigger]); // Re-fetch all data if refreshTrigger changes
 
   const handleReservationCreated = () => {
-    setRefreshTrigger(prev => prev + 1); // Increment to trigger data refresh in BookingPlanningGrid/CalendarGridMobile
+    setRefreshTrigger(prev => prev + 1); // Increment to trigger data refresh
   };
+
+  if (loadingData) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-6 text-center">
+          <p className="text-gray-500">Chargement des données du calendrier...</p>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -43,9 +64,17 @@ const CalendarPage: React.FC = () => {
         </div>
         
         {isMobile ? (
-          <CalendarGridMobile refreshTrigger={refreshTrigger} />
+          <CalendarGridMobile 
+            refreshTrigger={refreshTrigger} 
+            userRooms={userRooms} 
+            reservations={reservations} 
+          />
         ) : (
-          <BookingPlanningGrid refreshTrigger={refreshTrigger} />
+          <BookingPlanningGrid 
+            refreshTrigger={refreshTrigger} 
+            userRooms={userRooms} 
+            reservations={reservations} 
+          />
         )}
         
         <Card className="shadow-md mt-6">
@@ -70,6 +99,7 @@ const CalendarPage: React.FC = () => {
         isOpen={isOwnerReservationDialogOpen}
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
+        allReservations={reservations} // Pass all reservations
         onReservationCreated={handleReservationCreated}
       />
     </MainLayout>

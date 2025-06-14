@@ -99,13 +99,7 @@ serve(async (req) => {
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 
-    // Retrieve KROSSBOOKING_HOTEL_ID from environment variables for use in payloads
-    const KROSSBOOKING_HOTEL_ID_ENV = Deno.env.get('KROSSBOOKING_HOTEL_ID');
-    console.log(`DEBUG (Edge Function): Raw KROSSBOOKING_HOTEL_ID from env: '${KROSSBOOKING_HOTEL_ID_ENV}'`);
-
-    if (!KROSSBOOKING_HOTEL_ID_ENV) {
-      throw new Error("KROSSBOOKING_HOTEL_ID environment variable is not set. Please set it to '1' in Supabase secrets.");
-    }
+    // Removed KROSSBOOKING_HOTEL_ID_ENV retrieval here as it's not needed for id_property in save_reservation
 
     let action: string | undefined;
     let requestBody: any = {}; // Initialize requestBody
@@ -201,7 +195,7 @@ serve(async (req) => {
           phone: phone || '',
           cod_reservation_status,
           id_room: Number(requestBody.id_room), // Convert to number
-          id_property: Number(KROSSBOOKING_HOTEL_ID_ENV), // Convert to number
+          id_property: 1, // Hardcoded to 1 as per clarification
         };
 
         console.log("DEBUG (Edge Function): Payload sent to Krossbooking reservations/save:", JSON.stringify(saveReservationPayload));

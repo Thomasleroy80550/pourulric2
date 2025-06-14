@@ -12,6 +12,8 @@ interface KrossbookingReservation {
   cod_channel?: string; // Nouveau champ pour le code du canal (ex: 'AIRBNB', 'BOOKING')
   ota_id?: string;      // Nouveau champ pour l'ID de référence du canal
   channel_identifier?: string; // Utilisé pour la logique de couleur dans le calendrier
+  email?: string; // Added for owner reservations
+  phone?: string; // Added for owner reservations
 }
 
 // Define interface for Housekeeping Task
@@ -110,6 +112,7 @@ export async function fetchKrossbookingReservations(roomIds: string[]): Promise<
       const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
       if (Array.isArray(data)) {
         const roomReservations = data.map((res: any) => {
+          console.log(`DEBUG: Raw Krossbooking reservation data for room ${roomId}:`, res); // Log raw data
           const roomLabel = res.rooms?.[0]?.label || res.rooms?.[0]?.id_room?.toString() || 'N/A';
           const krossbookingRoomId = res.rooms?.[0]?.id_room?.toString() || ''; // Capture the room ID
           return {
@@ -124,6 +127,8 @@ export async function fetchKrossbookingReservations(roomIds: string[]): Promise<
             cod_channel: res.cod_channel,
             ota_id: res.ota_id,
             channel_identifier: res.cod_channel || 'UNKNOWN',
+            email: res.email || '', // Include email
+            phone: res.phone || '', // Include phone
           };
         });
         allReservations = allReservations.concat(roomReservations);

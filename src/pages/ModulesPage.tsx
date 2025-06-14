@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plug, Settings, TrendingUp, MessageSquare } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const modules = [
   {
@@ -32,6 +33,17 @@ const modules = [
 ];
 
 const ModulesPage: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate data fetching
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500); // Simulate 1.5 seconds loading
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
@@ -39,29 +51,38 @@ const ModulesPage: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-8">Gérez et découvrez de nouveaux modules pour étendre les fonctionnalités de votre application.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.map((module, index) => (
-            <Card key={index} className="shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold">{module.name}</CardTitle>
-                <module.icon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{module.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${
-                    module.status === 'Activé' ? 'text-green-600' :
-                    module.status === 'Bientôt disponible' ? 'text-yellow-600' :
-                    'text-blue-600'
-                  }`}>
-                    {module.status}
-                  </span>
-                  <Button variant="outline" size="sm">
-                    {module.status === 'Activé' ? 'Désactiver' : 'Activer'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {loading ? (
+            <>
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </>
+          ) : (
+            modules.map((module, index) => (
+              <Card key={index} className="shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-semibold">{module.name}</CardTitle>
+                  <module.icon className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{module.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-medium ${
+                      module.status === 'Activé' ? 'text-green-600' :
+                      module.status === 'Bientôt disponible' ? 'text-yellow-600' :
+                      'text-blue-600'
+                    }`}>
+                      {module.status}
+                    </span>
+                    <Button variant="outline" size="sm">
+                      {module.status === 'Activé' ? 'Désactiver' : 'Activer'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </MainLayout>

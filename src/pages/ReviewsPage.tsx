@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const reviews = [
   {
@@ -32,6 +33,17 @@ const reviews = [
 ];
 
 const ReviewsPage: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate data fetching
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500); // Simulate 1.5 seconds loading
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
@@ -41,28 +53,49 @@ const ReviewsPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Vos avis et notes</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {reviews.map((review) => (
-                <div key={review.id} className="border-b pb-4 last:border-b-0 last:pb-0">
-                  <div className="flex items-center mb-2">
-                    <Avatar className="h-9 w-9 mr-3">
-                      <AvatarImage src={review.avatar} alt={review.author} />
-                      <AvatarFallback>{review.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{review.author}</p>
-                      <div className="flex items-center text-sm text-yellow-500">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
-                        ))}
-                        <span className="ml-2 text-gray-500 dark:text-gray-400">{review.date}</span>
+            {loading ? (
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-16 w-full" />
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {reviews.map((review) => (
+                  <div key={review.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                    <div className="flex items-center mb-2">
+                      <Avatar className="h-9 w-9 mr-3">
+                        <AvatarImage src={review.avatar} alt={review.author} />
+                        <AvatarFallback>{review.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{review.author}</p>
+                        <div className="flex items-center text-sm text-yellow-500">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+                          ))}
+                          <span className="ml-2 text-gray-500 dark:text-gray-400">{review.date}</span>
+                        </div>
                       </div>
                     </div>
+                    <p className="text-gray-700 dark:text-gray-300">{review.comment}</p>
                   </div>
-                  <p className="text-gray-700 dark:text-gray-300">{review.comment}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

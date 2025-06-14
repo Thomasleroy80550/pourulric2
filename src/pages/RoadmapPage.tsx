@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Clock, Rocket } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const roadmapItems = [
   {
@@ -43,6 +44,17 @@ const roadmapItems = [
 ];
 
 const RoadmapPage: React.FC = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate data fetching
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500); // Simulate 1.5 seconds loading
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
@@ -50,22 +62,30 @@ const RoadmapPage: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-8">Découvrez les fonctionnalités à venir et suivez l'évolution de votre plateforme de gestion locative.</p>
 
         <div className="space-y-8">
-          {roadmapItems.map((item, index) => (
-            <Card key={index} className="shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xl font-semibold">{item.title}</CardTitle>
-                <item.icon className={`h-7 w-7 ${item.iconColor}`} />
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{item.date} - <span className="font-medium">{item.status}</span></p>
-                <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
-                  {item.features.map((feature, fIndex) => (
-                    <li key={fIndex}>{feature}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ))}
+          {loading ? (
+            <>
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </>
+          ) : (
+            roadmapItems.map((item, index) => (
+              <Card key={index} className="shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-xl font-semibold">{item.title}</CardTitle>
+                  <item.icon className={`h-7 w-7 ${item.iconColor}`} />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{item.date} - <span className="font-medium">{item.status}</span></p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+                    {item.features.map((feature, fIndex) => (
+                      <li key={fIndex}>{feature}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </MainLayout>

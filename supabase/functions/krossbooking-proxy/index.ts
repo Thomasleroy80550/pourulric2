@@ -99,8 +99,6 @@ serve(async (req) => {
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 
-    // Removed KROSSBOOKING_HOTEL_ID_ENV retrieval here as it's not needed for id_property in save_reservation
-
     let action: string | undefined;
     let requestBody: any = {}; // Initialize requestBody
 
@@ -183,8 +181,8 @@ serve(async (req) => {
         break;
 
       case 'save_reservation':
-        const { label, arrival, departure, email, phone, cod_reservation_status } = requestBody; 
-        if (!label || !arrival || !departure || !cod_reservation_status || !requestBody.id_room) { 
+        const { label, arrival, departure, email, phone, cod_reservation_status, id_room } = requestBody; 
+        if (!label || !arrival || !departure || !cod_reservation_status || !id_room) { 
           throw new Error("Missing required parameters for save_reservation.");
         }
         const saveReservationPayload = {
@@ -194,8 +192,13 @@ serve(async (req) => {
           email: email || '',
           phone: phone || '',
           cod_reservation_status,
-          id_room: Number(requestBody.id_room), // Convert to number
           id_property: 1, // Hardcoded to 1 as per clarification
+          rooms: [ // Room details now in an array
+            {
+              id_room_type: Number(id_room), // Use id_room from requestBody as id_room_type
+              guests: 1 // Default guests to 1 for owner reservations
+            }
+          ]
         };
 
         console.log("DEBUG (Edge Function): Payload sent to Krossbooking reservations/save:", JSON.stringify(saveReservationPayload));

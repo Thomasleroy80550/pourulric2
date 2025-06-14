@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle,
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
-import { Tooltip, TooltipContent, TooltipTrigger } => '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Corrected import syntax
 import { cn } from '@/lib/utils';
 import { UserRoom } from '@/lib/user-room-api'; // Import user room API
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
@@ -240,7 +240,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                           <TooltipTrigger asChild>
                             <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20">
                               {tasksForThisDay.length > 1 ? (
-                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
+                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisSkelton.length}</span>
                               ) : (
                                 getTaskIcon(tasksForThisDay[0].status)
                               )}

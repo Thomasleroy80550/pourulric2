@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 interface Booking {
   id: string;
@@ -187,76 +188,89 @@ const BookingsPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="filterRoom">Chambre</Label>
-              <Select value={filterRoomId} onValueChange={setFilterRoomId}>
-                <SelectTrigger id="filterRoom">
-                  <SelectValue placeholder="Toutes les chambres" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les chambres</SelectItem> {/* Changed value to 'all' */}
-                  {userRooms.map(room => (
-                    <SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {loading ? (
+              <>
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-10 w-48 col-span-full justify-self-end" />
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="filterRoom">Chambre</Label>
+                  <Select value={filterRoomId} onValueChange={setFilterRoomId}>
+                    <SelectTrigger id="filterRoom">
+                      <SelectValue placeholder="Toutes les chambres" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes les chambres</SelectItem> {/* Changed value to 'all' */}
+                      {userRooms.map(room => (
+                        <SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="filterStatus">Statut</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger id="filterStatus">
-                  <SelectValue placeholder="Tous les statuts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem> {/* Changed value to 'all' */}
-                  {commonStatuses.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filterStatus">Statut</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger id="filterStatus">
+                      <SelectValue placeholder="Tous les statuts" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les statuts</SelectItem> {/* Changed value to 'all' */}
+                      {commonStatuses.map(status => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="filterChannel">Canal</Label>
-              <Select value={filterChannel} onValueChange={setFilterChannel}>
-                <SelectTrigger id="filterChannel">
-                  <SelectValue placeholder="Tous les canaux" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les canaux</SelectItem> {/* Changed value to 'all' */}
-                  {commonChannels.map(channel => (
-                    <SelectItem key={channel} value={channel}>{channel}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filterChannel">Canal</Label>
+                  <Select value={filterChannel} onValueChange={setFilterChannel}>
+                    <SelectTrigger id="filterChannel">
+                      <SelectValue placeholder="Tous les canaux" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous les canaux</SelectItem> {/* Changed value to 'all' */}
+                      {commonChannels.map(channel => (
+                        <SelectItem key={channel} value={channel}>{channel}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="filterStartDate">Date d'arrivée (début)</Label>
-              <Input
-                id="filterStartDate"
-                type="date"
-                value={filterStartDate}
-                onChange={(e) => setFilterStartDate(e.target.value)}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filterStartDate">Date d'arrivée (début)</Label>
+                  <Input
+                    id="filterStartDate"
+                    type="date"
+                    value={filterStartDate}
+                    onChange={(e) => setFilterStartDate(e.target.value)}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="filterEndDate">Date d'arrivée (fin)</Label>
-              <Input
-                id="filterEndDate"
-                type="date"
-                value={filterEndDate}
-                onChange={(e) => setFilterEndDate(e.target.value)}
-              />
-            </div>
-            <div className="col-span-1 md:col-span-2 lg:col-span-4 flex justify-end">
-              <Button variant="outline" onClick={handleResetFilters} className="flex items-center">
-                <XCircle className="h-4 w-4 mr-2" />
-                Réinitialiser les filtres
-              </Button>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filterEndDate">Date d'arrivée (fin)</Label>
+                  <Input
+                    id="filterEndDate"
+                    type="date"
+                    value={filterEndDate}
+                    onChange={(e) => setFilterEndDate(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-1 md:col-span-2 lg:col-span-4 flex justify-end">
+                  <Button variant="outline" onClick={handleResetFilters} className="flex items-center">
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -265,23 +279,27 @@ const BookingsPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Liste de vos réservations</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading && <p className="text-gray-500">Chargement des réservations...</p>}
-            {error && (
+            {loading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : error ? (
               <Alert variant="destructive" className="mb-4">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Erreur</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
-            )}
-            {!loading && !error && userRooms.length === 0 && (
+            ) : userRooms.length === 0 ? (
               <p className="text-gray-500">
                 Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
               </p>
-            )}
-            {!loading && !error && userRooms.length > 0 && filteredBookings.length === 0 && (
+            ) : filteredBookings.length === 0 ? (
               <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear} avec les filtres actuels.</p>
-            )}
-            {!loading && !error && filteredBookings.length > 0 && (
+            ) : (
               <>
                 {/* Desktop Table View */}
                 {!isMobile && (

@@ -99,6 +99,12 @@ serve(async (req) => {
     const authToken = await getAuthToken();
     console.log("Successfully obtained Krossbooking auth token.");
 
+    // Retrieve KROSSBOOKING_HOTEL_ID from environment variables for use in payloads
+    const KROSSBOOKING_HOTEL_ID = Deno.env.get('KROSSBOOKING_HOTEL_ID');
+    if (!KROSSBOOKING_HOTEL_ID) {
+      throw new Error("KROSSBOOKING_HOTEL_ID environment variable is not set.");
+    }
+
     let action: string | undefined;
     let requestBody: any = {}; // Initialize requestBody
 
@@ -162,7 +168,7 @@ serve(async (req) => {
         break;
 
       case 'get_housekeeping_tasks':
-        const { date_from, date_to, id_property } = requestBody; // Removed id_room from destructuring
+        const { date_from, date_to, id_property } = requestBody; 
         if (!date_from || !date_to) {
           throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
         }
@@ -173,7 +179,7 @@ serve(async (req) => {
         if (id_property) {
           getTasksPayload.id_property = id_property;
         }
-        if (requestBody.id_room) { // Access id_room directly from requestBody
+        if (requestBody.id_room) { 
           getTasksPayload.id_room = requestBody.id_room;
         }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
@@ -181,8 +187,8 @@ serve(async (req) => {
         break;
 
       case 'save_reservation':
-        const { label, arrival, departure, email, phone, cod_reservation_status } = requestBody; // Removed id_room from destructuring
-        if (!label || !arrival || !departure || !cod_reservation_status || !requestBody.id_room) { // Access id_room directly
+        const { label, arrival, departure, email, phone, cod_reservation_status } = requestBody; 
+        if (!label || !arrival || !departure || !cod_reservation_status || !requestBody.id_room) { 
           throw new Error("Missing required parameters for save_reservation.");
         }
         const saveReservationPayload = {
@@ -192,7 +198,8 @@ serve(async (req) => {
           email: email || '',
           phone: phone || '',
           cod_reservation_status,
-          id_room: requestBody.id_room, // Access id_room directly from requestBody
+          id_room: requestBody.id_room, 
+          id_property: KROSSBOOKING_HOTEL_ID, // Added id_property from environment variable
         };
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/save`;
         krossbookingMethod = 'POST';

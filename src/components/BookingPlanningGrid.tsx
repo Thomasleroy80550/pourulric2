@@ -69,7 +69,6 @@ const BookingPlanningGrid: React.FC = () => {
       console.log(`DEBUG: Fetching housekeeping tasks for room IDs: ${roomIdsAsNumbers.join(', ')} from ${monthStartFormatted} to ${monthEndFormatted}`);
       const fetchedTasks = await fetchKrossbookingHousekeepingTasks(monthStartFormatted, monthEndFormatted, roomIdsAsNumbers);
       setHousekeepingTasks(fetchedTasks);
-      console.log("DEBUG: Fetched housekeeping tasks:", fetchedTasks);
 
     } catch (err: any) {
       setError(`Erreur lors du chargement des données : ${err.message}`);
@@ -126,16 +125,22 @@ const BookingPlanningGrid: React.FC = () => {
       return;
     }
     try {
-      // Call saveKrossbookingReservation with CANC status
+      const bookingToCancel = reservations.find(b => b.id === bookingId);
+      if (!bookingToCancel) {
+        toast.error("Réservation introuvable pour annulation.");
+        return;
+      }
+
+      // Call saveKrossbookingReservation with CANC status, using original booking details
       await saveKrossbookingReservation({
-        id_reservation: bookingId,
-        label: "Annulation", // A generic label for cancellation
-        arrival: format(new Date(), 'yyyy-MM-dd'), // Dummy dates, as they might not be used for CANC status
-        departure: format(new Date(), 'yyyy-MM-dd'),
-        email: "",
-        phone: "",
+        id_reservation: bookingToCancel.id,
+        label: bookingToCancel.guest_name || "Annulation", // Use original guest name or generic label
+        arrival: bookingToCancel.check_in_date,
+        departure: bookingToCancel.check_out_date,
+        email: "", // Krossbooking API might not require email/phone for cancellation
+        phone: "", // Krossbooking API might not require email/phone for cancellation
         cod_reservation_status: "CANC",
-        id_room: selectedBookingForActions?.krossbooking_room_id || '', // Use the room ID from the selected booking
+        id_room: bookingToCancel.krossbooking_room_id,
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false); // Close actions dialog

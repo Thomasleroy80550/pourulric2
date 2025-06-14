@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import {
@@ -36,6 +36,7 @@ interface OwnerReservationDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   userRooms: UserRoom[];
+  allReservations: KrossbookingReservation[]; // New prop: all reservations to check for conflicts
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null; // New prop for editing
 }
@@ -63,6 +64,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   isOpen,
   onOpenChange,
   userRooms,
+  allReservations, // Destructure new prop
   onReservationCreated,
   initialBooking, // Destructure new prop
 }) => {
@@ -76,6 +78,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       phone: '',
     },
   });
+
+  const selectedRoomId = form.watch('roomId');
 
   React.useEffect(() => {
     if (isOpen) {
@@ -111,6 +115,39 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       }
     }
   }, [isOpen, initialBooking, form]);
+
+  // Function to determine disabled dates
+  const disabledDates = React.useCallback((date: Date) => {
+    if (!selectedRoomId) return false; // No room selected, no dates disabled
+
+    // Filter reservations for the currently selected room, excluding the current booking if editing
+    const roomReservations = allReservations.filter(res =>
+      res.krossbooking_room_id === selectedRoomId &&
+      res.status !== 'CANC' && // Do not consider cancelled reservations as blocking
+      (initialBooking ? res.id !== initialBooking.id : true) // Exclude the current booking if editing
+    );
+
+    for (const res of roomReservations) {
+      const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+      const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+
+      if (checkIn && checkOut) {
+        // A date is disabled if it falls within an existing reservation's check-in to check-out-1 day range
+        // Or if it's the check-out day of a reservation (to prevent new check-ins on that day)
+        const intervalStart = startOfDay(checkIn);
+        const intervalEnd = subDays(endOfDay(checkOut), 1); // Block up to the day before check-out
+
+        if (isWithinInterval(date, { start: intervalStart, end: intervalEnd })) {
+          return true;
+        }
+        // Also block the check-out day itself if it's not a same-day booking, to prevent new arrivals
+        if (isSameDay(date, checkOut) && !isSameDay(checkIn, checkOut)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }, [selectedRoomId, allReservations, initialBooking]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const formattedArrival = format(values.arrivalDate, 'yyyy-MM-dd');
@@ -238,6 +275,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                         onSelect={field.onChange}
                         initialFocus
                         locale={fr}
+                        disabled={disabledDates} // Apply disabled dates logic
                       />
                     </PopoverContent>
                   </Popover>
@@ -278,6 +316,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                         onSelect={field.onChange}
                         initialFocus
                         locale={fr}
+                        disabled={disabledDates} // Apply disabled dates logic
                       />
                     </PopoverContent>
                   </Popover>

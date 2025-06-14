@@ -151,10 +151,10 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger 
     });
 
     // Filter unique events for display in the cell
-    const uniqueEvents = Array.from(new Map(events.map(item => {
+    const uniqueEvents = [...new Map(events.map(item => {
       if (item.type === 'task') return [`task-${(item.data as KrossbookingHousekeepingTask).id_task}-${item.roomName}`, item];
       return [`${item.type}-${(item.data as KrossbookingReservation).id}-${item.roomName}`, item];
-    })).values())); // Added semicolon here
+    })).values()];
     
     // Sort events for better display: check-in, check-in_out, check-out, task, then stay
     uniqueEvents.sort((a, b) => {

@@ -5,25 +5,24 @@ import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
 import { cn } from "@/lib/utils"
 
-// Extend props to include onScroll and viewportRef
 interface ScrollAreaProps extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
-  onScroll?: React.UIEventHandler<HTMLDivElement>; // Add onScroll prop
-  viewportRef?: React.Ref<HTMLDivElement>; // Add viewportRef prop
+  onScroll?: React.UIEventHandler<HTMLDivElement>;
+  viewportRef?: React.Ref<HTMLDivElement>;
 }
 
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  ScrollAreaProps // Use the extended props interface
->(({ className, children, onScroll, viewportRef, ...props }, ref) => ( // Destructure new props
+  ScrollAreaProps
+>(({ className, children, onScroll, viewportRef, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
     <ScrollAreaPrimitive.Viewport
-      ref={viewportRef} // Pass viewportRef here
-      className="h-full w-full rounded-[inherit] overflow-y-auto" // Added overflow-y-auto here
-      onScroll={onScroll} // Pass onScroll here
+      ref={viewportRef}
+      className="h-full w-full rounded-[inherit] overflow-y-auto"
+      onScroll={onScroll}
     >
       {children}
     </ScrollAreaPrimitive.Viewport>
@@ -42,15 +41,13 @@ const ScrollBar = React.forwardRef<
     orientation={orientation}
     className={cn(
       "flex touch-none select-none transition-colors",
-      orientation === "vertical" &&
-        "h-full w-3 border-l border-l-transparent p-[1px]", // Increased width to w-3
-      orientation === "horizontal" &&
-        "h-2.5 flex-col border-t border-t-transparent p-[1px]",
+      orientation === "vertical" && "h-full w-2.5", // Largeur fixe, pas de padding
+      orientation === "horizontal" && "h-2.5 flex-col", // Hauteur fixe, pas de padding
       className
     )}
     {...props}
   >
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-muted-foreground" /> {/* Changed to bg-muted-foreground for better contrast */}
+    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-gray-400 dark:bg-gray-600" /> {/* Couleur très visible pour le débogage */}
   </ScrollAreaPrimitive.ScrollAreaScrollbar>
 ))
 ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName

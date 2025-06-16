@@ -11,10 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils'; // Import cn for conditional classNames
+import { cn } from '@/lib/utils';
 
-// Import the CGUV HTML content directly
-import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw'; // Use ?raw to import as a string
+import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
 
 interface CGUVModalProps {
   isOpen: boolean;
@@ -24,26 +23,24 @@ interface CGUVModalProps {
 
 const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept }) => {
   const [hasAccepted, setHasAccepted] = useState(false);
-  const [scrolledToBottom, setScrolledToBottom] = useState(false); // New state for scroll tracking
-  const viewportRef = useRef<HTMLDivElement>(null); // Ref for the scrollable viewport
+  const [scrolledToBottom, setScrolledToBottom] = useState(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
-  // Reset checkbox and scroll state when dialog opens
   useEffect(() => {
     if (isOpen) {
       setHasAccepted(false);
-      setScrolledToBottom(false); // Reset scroll state
-      // Reset scroll position to top when modal opens
+      setScrolledToBottom(false);
       if (viewportRef.current) {
         viewportRef.current.scrollTop = 0;
+        // Re-check scroll position after resetting to top, in case content is short
+        handleScroll();
       }
     }
   }, [isOpen]);
 
-  // Check scroll position
   const handleScroll = () => {
     if (viewportRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
-      // Add a small tolerance (e.g., 1px) for floating point inaccuracies
       if (scrollHeight - scrollTop <= clientHeight + 1) {
         setScrolledToBottom(true);
       } else {
@@ -54,7 +51,7 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept })
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-4xl max-h-[90vh] flex flex-col"> {/* Increased max-width */}
+      <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Conditions Générales d'Utilisation (CGUV)</DialogTitle>
           <DialogDescription>
@@ -62,9 +59,9 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept })
           </DialogDescription>
         </DialogHeader>
         <ScrollArea
-          className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed max-h-[calc(90vh-250px)]" // Adjusted max-height for larger modal
-          viewportRef={viewportRef} // Pass the ref to the viewport
-          onScroll={handleScroll} // Attach the scroll handler
+          className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[400px]" // Changement de max-h à h fixe pour le test
+          viewportRef={viewportRef}
+          onScroll={handleScroll}
         >
           <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: CGUV_HTML_CONTENT }} />
         </ScrollArea>
@@ -78,11 +75,11 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept })
             id="cguv-accept"
             checked={hasAccepted}
             onCheckedChange={(checked) => setHasAccepted(!!checked)}
-            disabled={!scrolledToBottom} // Disable checkbox until scrolled to bottom
+            disabled={!scrolledToBottom}
           />
           <Label htmlFor="cguv-accept" className={cn(
             "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-            !scrolledToBottom && "text-gray-400 dark:text-gray-600" // Dim label if not scrolled
+            !scrolledToBottom && "text-gray-400 dark:text-gray-600"
           )}>
             J'ai lu et j'accepte les Conditions Générales d'Utilisation.
           </Label>

@@ -62,7 +62,7 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept })
           </DialogDescription>
         </DialogHeader>
         <ScrollArea
-          className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed max-h-[calc(90vh-200px)]"
+          className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[400px]" // Changed to fixed height for testing
           viewportRef={viewportRef} // Pass the ref to the viewport
           onScroll={handleScroll} // Attach the scroll handler
         >

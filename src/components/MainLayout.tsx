@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet } from 'lucide-react'; // Added FileSpreadsheet icon
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { toast } from 'sonner'; // Import toast for notifications
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -89,10 +91,25 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handleLinkClick = () => {
     if (isMobile) {
       setIsSheetOpen(false); // Close the sheet on link click in mobile
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      toast.success("Déconnexion réussie !");
+      navigate('/login'); // Redirect to login page after successful logout
+    } catch (error: any) {
+      toast.error(`Erreur lors de la déconnexion : ${error.message}`);
+      console.error("Logout error:", error);
     }
   };
 
@@ -166,7 +183,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}> {/* Added onClick handler */}
                   Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>

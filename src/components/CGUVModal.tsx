@@ -54,7 +54,7 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept })
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] md:max-w-[700px] lg:max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-4xl max-h-[90vh] flex flex-col"> {/* Increased max-width */}
         <DialogHeader>
           <DialogTitle>Conditions Générales d'Utilisation (CGUV)</DialogTitle>
           <DialogDescription>
@@ -62,7 +62,7 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept })
           </DialogDescription>
         </DialogHeader>
         <ScrollArea
-          className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[400px]" // Changed to fixed height for testing
+          className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed max-h-[calc(90vh-250px)]" // Adjusted max-height for larger modal
           viewportRef={viewportRef} // Pass the ref to the viewport
           onScroll={handleScroll} // Attach the scroll handler
         >

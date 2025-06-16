@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal'; // Import the new CGUVModal
+import OnboardingConfettiDialog from './OnboardingConfettiDialog'; // Import the new OnboardingConfettiDialog
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api'; // Import getProfile and updateProfile
 import { CURRENT_CGUV_VERSION } from '@/lib/constants'; // Import the CGUV version constant
 import { toast } from 'sonner'; // Import toast for notifications
@@ -22,6 +23,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [profile, setProfile] = useState<UserProfile | null>(null); // State for user profile
   const [loading, setLoading] = useState(true);
   const [showCguvModal, setShowCguvModal] = useState(false); // State to control CGUV modal visibility
+  const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false); // New state for confetti modal
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -50,6 +52,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setProfile(prev => prev ? { ...prev, cguv_accepted_at: new Date().toISOString(), cguv_version: CURRENT_CGUV_VERSION } : null);
       setShowCguvModal(false);
       toast.success("Conditions Générales d'Utilisation acceptées !");
+      setShowOnboardingConfetti(true); // Show confetti after CGUV accepted
     } catch (error: any) {
       console.error("Error accepting CGUV:", error);
       toast.error(`Erreur lors de l'acceptation des CGUV : ${error.message}`);
@@ -66,6 +69,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         console.log('User signed out, redirecting to /login');
         setProfile(null); // Clear profile on sign out
         setShowCguvModal(false); // Hide CGUV modal on sign out
+        setShowOnboardingConfetti(false); // Hide confetti modal on sign out
         navigate('/login');
       } else if (currentSession) {
         const userProfile = await fetchUserProfile(currentSession);
@@ -91,6 +95,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         console.log('No session and not on login page, redirecting to /login');
         setProfile(null);
         setShowCguvModal(false);
+        setShowOnboardingConfetti(false);
         navigate('/login');
       }
     });
@@ -186,6 +191,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
             }
           }}
           onAccept={handleAcceptCguv}
+        />
+      )}
+      {showOnboardingConfetti && (
+        <OnboardingConfettiDialog
+          isOpen={showOnboardingConfetti}
+          onClose={() => setShowOnboardingConfetti(false)}
         />
       )}
     </SessionContext.Provider>

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import MagicLoginButton from '@/components/MagicLoginButton'; // Import the new component
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -224,6 +225,8 @@ const Login = () => {
               )}
             </form>
           </Form>
+          {/* Magic Login Button for development */}
+          <MagicLoginButton />
         </div>
       </div>
 

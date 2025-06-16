@@ -24,6 +24,10 @@ import { toast } from "sonner";
 import ObjectiveDialog from "@/components/ObjectiveDialog"; // Import the new dialog component
 import { getProfile } from "@/lib/profile-api"; // Import getProfile
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
+import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
+import { parseISO, isAfter, isSameDay, format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
@@ -55,6 +59,10 @@ const DashboardPage = () => {
 
   const [isObjectiveDialogOpen, setIsObjectiveDialogOpen] = useState(false);
   const [userObjectiveAmount, setUserObjectiveAmount] = useState(0); // User's target objective in Euros
+
+  const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
+  const [loadingNextArrival, setLoadingNextArrival] = useState(true);
+  const [nextArrivalError, setNextArrivalError] = useState<string | null>(null);
 
   const fetchData = async () => {
     // Fetch Activity Data
@@ -158,8 +166,48 @@ const DashboardPage = () => {
     }
   };
 
+  const fetchNextArrival = async () => {
+    setLoadingNextArrival(true);
+    setNextArrivalError(null);
+    try {
+      const fetchedUserRooms = await getUserRooms();
+      const roomIds = fetchedUserRooms.map(room => room.room_id);
+
+      if (roomIds.length === 0) {
+        setNextArrival(null);
+        setLoadingNextArrival(false);
+        return;
+      }
+
+      const allReservations = await fetchKrossbookingReservations(roomIds);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
+
+      const upcomingReservations = allReservations.filter(res => {
+        const checkIn = parseISO(res.check_in_date);
+        // Check if check-in is today or in the future
+        return isSameDay(checkIn, today) || isAfter(checkIn, today);
+      }).sort((a, b) => {
+        // Sort by check-in date
+        return parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime();
+      });
+
+      if (upcomingReservations.length > 0) {
+        setNextArrival(upcomingReservations[0]);
+      } else {
+        setNextArrival(null);
+      }
+    } catch (err: any) {
+      setNextArrivalError(`Erreur lors du chargement de la prochaine arrivée : ${err.message}`);
+      console.error("Error fetching next arrival:", err);
+    } finally {
+      setLoadingNextArrival(false);
+    }
+  };
+
   useEffect(() => {
-    fetchData();
+    fetchData(); // Existing function
+    fetchNextArrival(); // New function
   }, []); // Empty dependency array means this runs once on mount
 
   const reservationPerMonthData = [
@@ -196,7 +244,7 @@ const DashboardPage = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le 8 juin 2025</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
 
         <div className="flex space-x-2 mb-8">
           {years.map((year) => (
@@ -277,7 +325,7 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loadingActivityData ? (
+              {loadingActivityData || loadingNextArrival ? (
                 <div className="space-y-4">
                   <Skeleton className="h-8 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
@@ -291,17 +339,26 @@ const DashboardPage = () => {
                   </div>
                   <Skeleton className="h-4 w-1/3" />
                 </div>
-              ) : activityDataError ? (
+              ) : activityDataError || nextArrivalError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{activityDataError}</AlertDescription>
+                  <AlertDescription>{activityDataError || nextArrivalError}</AlertDescription>
                 </Alert>
               ) : (
                 <>
                   <div>
-                    <p className="text-xl font-bold">11 juin à 15h</p>
-                    <p className="text-sm text-gray-500">Prochaine arrivée</p>
+                    {nextArrival ? (
+                      <p className="text-xl font-bold">
+                        {format(parseISO(nextArrival.check_in_date), 'dd MMMM', { locale: fr })}
+                      </p>
+                    ) : (
+                      <p className="text-xl font-bold">Aucune</p>
+                    )}
+                    <p className="text-sm text-gray-500">
+                      Prochaine arrivée
+                      {nextArrival && ` (${nextArrival.property_name})`}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>

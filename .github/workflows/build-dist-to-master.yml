@@ -37,7 +37,7 @@ jobs:
 
       - name: Push to main
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.hellokeys }}
         run: |
           git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Thomasleroy80550/pourulric2.git
           git push origin main

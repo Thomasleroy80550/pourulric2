@@ -35,9 +35,9 @@ jobs:
           git add dist
           git commit -m "chore: update dist" || echo "No changes to commit"
 
-      - name: Push to master
+      - name: Push to main
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Thomasleroy80550/pourulric2.git
-          git push origin master
+          git push origin main

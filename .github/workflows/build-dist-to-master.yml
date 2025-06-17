@@ -3,7 +3,7 @@ name: Build and commit dist to master
 on:
   push:
     branches:
-      - master
+      - main
 
   workflow_dispatch:  # 👈 ajoute cette ligne pour exécution manuelle
 

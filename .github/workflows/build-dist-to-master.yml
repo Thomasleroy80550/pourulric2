@@ -1,11 +1,11 @@
-name: Build and commit dist to master
+name: Build and commit dist to main
 
 on:
   push:
     branches:
       - main
 
-  workflow_dispatch:  # 👈 ajoute cette ligne pour exécution manuelle
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,7 +23,7 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build project
         run: npm run build

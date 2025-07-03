@@ -21,7 +21,7 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Initialement à true
   const [showCguvModal, setShowCguvModal] = useState(false);
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
   const navigate = useNavigate();
@@ -65,10 +65,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
   useEffect(() => {
     console.log("SessionContextProvider useEffect running.");
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    let isMounted = true; // Flag pour éviter les mises à jour d'état sur un composant démonté
+
+    const handleAuthChange = async (event: string, currentSession: Session | null) => {
+      if (!isMounted) return;
+
       console.log('Auth state changed:', event, currentSession);
       setSession(currentSession);
-      setLoading(false);
 
       if (event === 'SIGNED_OUT') {
         console.log('User signed out, redirecting to /login');
@@ -76,9 +79,14 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         setShowCguvModal(false);
         setShowOnboardingConfetti(false);
         navigate('/login');
+        setLoading(false); // Assurez-vous que loading est false après la déconnexion
       } else if (currentSession) {
         console.log('User signed in or updated. Fetching profile...');
+        setLoading(true); // Définir loading à true pendant le chargement du profil
         const userProfile = await fetchUserProfile(currentSession);
+        if (!isMounted) return; // Vérifier l'état de montage après l'opération asynchrone
+        setLoading(false); // Définir loading à false après le chargement du profil
+
         if (location.pathname === '/login') {
           console.log('User signed in and on login page, redirecting to /');
           navigate('/');
@@ -102,17 +110,29 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         setShowCguvModal(false);
         setShowOnboardingConfetti(false);
         navigate('/login');
+        setLoading(false); // Assurez-vous que loading est false après la redirection
+      } else {
+        // Si pas de session et déjà sur la page de connexion, arrêtez simplement le chargement
+        setLoading(false);
       }
-    });
+    };
 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+
+    // Vérification initiale de la session
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (!isMounted) return;
+
       console.log("Initial getSession result:", initialSession);
       setSession(initialSession);
-      setLoading(false);
 
       if (initialSession) {
         console.log('Initial session found. Fetching profile...');
+        setLoading(true); // Définir loading à true pendant le chargement du profil
         const userProfile = await fetchUserProfile(initialSession);
+        if (!isMounted) return; // Vérifier l'état de montage après l'opération asynchrone
+        setLoading(false); // Définir loading à false après le chargement du profil
+
         if (location.pathname === '/login') {
           navigate('/');
         }
@@ -132,10 +152,17 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       } else if (!initialSession && location.pathname !== '/login') {
         console.log('No initial session and not on login page, redirecting to /login');
         navigate('/login');
+        setLoading(false); // Assurez-vous que loading est false après la redirection
+      } else {
+        // Si pas de session initiale et déjà sur la page de connexion, arrêtez simplement le chargement
+        setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false; // Nettoyage du flag
+      subscription.unsubscribe();
+    };
   }, [navigate, location.pathname]);
 
   console.log("SessionContextProvider - Before return. Loading:", loading, "showCguvModal:", showCguvModal, "showOnboardingConfetti:", showOnboardingConfetti);

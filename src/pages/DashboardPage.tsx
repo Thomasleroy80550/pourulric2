@@ -190,7 +190,8 @@ const DashboardPage = () => {
       }
 
       const allReservations = await fetchKrossbookingReservations(roomIds);
-      console.log("DEBUG: Raw Krossbooking Reservations fetched:", allReservations);
+      console.log("DEBUG: Total Krossbooking Reservations fetched:", allReservations.length);
+      console.log("DEBUG: Raw Krossbooking Reservations data:", allReservations);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
@@ -198,7 +199,7 @@ const DashboardPage = () => {
       const currentYearStart = startOfYear(today);
       const daysInCurrentYear = differenceInDays(endOfYear(today), currentYearStart) + 1; // Still need for total available nights
 
-      console.log("DEBUG: Current Year Start:", format(currentYearStart, 'yyyy-MM-dd'));
+      console.log("DEBUG: Current Year Start (normalized):", format(currentYearStart, 'yyyy-MM-dd'));
       console.log("DEBUG: Today (normalized):", format(today, 'yyyy-MM-dd'));
 
       let nextArrivalCandidate: KrossbookingReservation | null = null;
@@ -224,15 +225,18 @@ const DashboardPage = () => {
         const isFinished = isBefore(checkOut, addDays(today, 1)); // checkOut must be before or on today
         const isCheckInInCurrentYearToToday = isWithinInterval(checkIn, { start: currentYearStart, end: today });
 
+        console.log(`DEBUG: Reservation ID: ${res.id}, Guest: ${res.guest_name}, Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}, Status: ${res.status}`);
+        console.log(`DEBUG:   isFinished: ${isFinished}, isCheckInInCurrentYearToToday: ${isCheckInInCurrentYearToToday}`);
+
         if (isFinished && isCheckInInCurrentYearToToday) {
           reservationsCount++;
           nightsCount += differenceInDays(checkOut, checkIn);
           if (res.guest_name) {
             uniqueGuests.add(res.guest_name);
           }
-          console.log(`DEBUG: Including FINISHED reservation ${res.id} (Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}) in current year count.`);
+          console.log(`DEBUG:   INCLUDING reservation ${res.id} in current year count.`);
         } else {
-          console.log(`DEBUG: Excluding reservation ${res.id} (Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}). Finished: ${isFinished}, Check-in in range: ${isCheckInInCurrentYearToToday}`);
+          console.log(`DEBUG:   EXCLUDING reservation ${res.id}.`);
         }
       });
 

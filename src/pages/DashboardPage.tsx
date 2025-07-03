@@ -26,7 +26,7 @@ import { getProfile } from "@/lib/profile-api"; // Import getProfile
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { parseISO, isAfter, isSameDay, format } from 'date-fns';
+import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isBefore, isValid, isWithinInterval, addDays } from 'date-fns'; // Added addDays for inclusive comparison
 import { fr } from 'date-fns/locale';
 
 const DashboardPage = () => {
@@ -61,8 +61,13 @@ const DashboardPage = () => {
   const [userObjectiveAmount, setUserObjectiveAmount] = useState(0); // User's target objective in Euros
 
   const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
-  const [loadingNextArrival, setLoadingNextArrival] = useState(true);
-  const [nextArrivalError, setNextArrivalError] = useState<string | null>(null);
+  const [totalReservationsCurrentYear, setTotalReservationsCurrentYear] = useState(0);
+  const [totalNightsCurrentYear, setTotalNightsCurrentYear] = useState(0);
+  const [totalGuestsCurrentYear, setTotalGuestsCurrentYear] = useState(0);
+  const [occupancyRateCurrentYear, setOccupancyRateCurrentYear] = useState(0);
+  const [netPricePerNight, setNetPricePerNight] = useState(0);
+  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true); // Combined loading for Krossbooking related stats
+  const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
 
   const fetchData = async () => {
     // Fetch Activity Data
@@ -166,49 +171,108 @@ const DashboardPage = () => {
     }
   };
 
-  const fetchNextArrival = async () => {
-    setLoadingNextArrival(true);
-    setNextArrivalError(null);
+  const fetchKrossbookingStats = async () => {
+    setLoadingKrossbookingStats(true);
+    setKrossbookingStatsError(null);
     try {
       const fetchedUserRooms = await getUserRooms();
       const roomIds = fetchedUserRooms.map(room => room.room_id);
 
       if (roomIds.length === 0) {
         setNextArrival(null);
-        setLoadingNextArrival(false);
+        setTotalReservationsCurrentYear(0);
+        setTotalNightsCurrentYear(0);
+        setTotalGuestsCurrentYear(0);
+        setOccupancyRateCurrentYear(0);
+        setNetPricePerNight(0);
+        setLoadingKrossbookingStats(false);
         return;
       }
 
       const allReservations = await fetchKrossbookingReservations(roomIds);
+      console.log("DEBUG: Raw Krossbooking Reservations fetched:", allReservations);
+
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
 
-      const upcomingReservations = allReservations.filter(res => {
-        const checkIn = parseISO(res.check_in_date);
-        // Check if check-in is today or in the future
-        return isSameDay(checkIn, today) || isAfter(checkIn, today);
-      }).sort((a, b) => {
-        // Sort by check-in date
-        return parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime();
+      const currentYearStart = startOfYear(today);
+      const daysInCurrentYear = differenceInDays(endOfYear(today), currentYearStart) + 1; // Still need for total available nights
+
+      console.log("DEBUG: Current Year Start:", format(currentYearStart, 'yyyy-MM-dd'));
+      console.log("DEBUG: Today (normalized):", format(today, 'yyyy-MM-dd'));
+
+      let nextArrivalCandidate: KrossbookingReservation | null = null;
+      let reservationsCount = 0;
+      let nightsCount = 0;
+      const uniqueGuests = new Set<string>();
+
+      allReservations.forEach(res => {
+        const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+        const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+
+        if (!checkIn || !checkOut) {
+          console.warn(`DEBUG: Skipping reservation ${res.id} due to invalid dates: check_in_date=${res.check_in_date}, check_out_date=${res.check_out_date}`);
+          return; // Skip invalid dates
+        }
+
+        // Calculate next arrival (today or in the future)
+        if ((isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
+          nextArrivalCandidate = res;
+        }
+
+        // Filter for current year's reservations that are *finished* and whose check-in date is within the interval from Jan 1st of the current year up to today.
+        const isFinished = isBefore(checkOut, addDays(today, 1)); // checkOut must be before or on today
+        const isCheckInInCurrentYearToToday = isWithinInterval(checkIn, { start: currentYearStart, end: today });
+
+        if (isFinished && isCheckInInCurrentYearToToday) {
+          reservationsCount++;
+          nightsCount += differenceInDays(checkOut, checkIn);
+          if (res.guest_name) {
+            uniqueGuests.add(res.guest_name);
+          }
+          console.log(`DEBUG: Including FINISHED reservation ${res.id} (Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}) in current year count.`);
+        } else {
+          console.log(`DEBUG: Excluding reservation ${res.id} (Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}). Finished: ${isFinished}, Check-in in range: ${isCheckInInCurrentYearToToday}`);
+        }
       });
 
-      if (upcomingReservations.length > 0) {
-        setNextArrival(upcomingReservations[0]);
-      } else {
-        setNextArrival(null);
-      }
+      setNextArrival(nextArrivalCandidate);
+      setTotalReservationsCurrentYear(reservationsCount);
+      setTotalNightsCurrentYear(nightsCount);
+      setTotalGuestsCurrentYear(uniqueGuests.size);
+
+      console.log("DEBUG: Final reservationsCount for current year (FINISHED):", reservationsCount);
+      console.log("DEBUG: Final nightsCount for current year (from FINISHED):", nightsCount);
+      console.log("DEBUG: Final uniqueGuests for current year (from FINISHED):", uniqueGuests.size);
+
+
+      // Calculate occupancy rate
+      const totalAvailableNights = fetchedUserRooms.length * daysInCurrentYear;
+      const calculatedOccupancyRate = totalAvailableNights > 0 ? (nightsCount / totalAvailableNights) * 100 : 0;
+      setOccupancyRateCurrentYear(calculatedOccupancyRate);
+
     } catch (err: any) {
-      setNextArrivalError(`Erreur lors du chargement de la prochaine arrivée : ${err.message}`);
-      console.error("Error fetching next arrival:", err);
+      setKrossbookingStatsError(`Erreur lors du chargement des statistiques Krossbooking : ${err.message}`);
+      console.error("Error fetching Krossbooking stats:", err);
     } finally {
-      setLoadingNextArrival(false);
+      setLoadingKrossbookingStats(false);
     }
   };
 
   useEffect(() => {
-    fetchData(); // Existing function
-    fetchNextArrival(); // New function
-  }, []); // Empty dependency array means this runs once on mount
+    fetchData(); // Fetches GSheet data and profile
+    fetchKrossbookingStats(); // Fetches Krossbooking related stats
+  }, []);
+
+  // Effect to calculate Net Price Per Night once financialData and totalNightsCurrentYear are available
+  useEffect(() => {
+    if (!loadingFinancialData && !loadingKrossbookingStats && financialData.resultatAnnee !== undefined && totalNightsCurrentYear > 0) {
+      const calculatedNetPricePerNight = financialData.resultatAnnee / totalNightsCurrentYear;
+      setNetPricePerNight(calculatedNetPricePerNight);
+    } else if (!loadingFinancialData && !loadingKrossbookingStats && totalNightsCurrentYear === 0) {
+      setNetPricePerNight(0); // Avoid division by zero if no nights
+    }
+  }, [financialData.resultatAnnee, totalNightsCurrentYear, loadingFinancialData, loadingKrossbookingStats]);
 
   const reservationPerMonthData = [
     { name: 'Jan', reservations: 10 },
@@ -325,7 +389,7 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loadingActivityData || loadingNextArrival ? (
+              {loadingActivityData || loadingKrossbookingStats ? (
                 <div className="space-y-4">
                   <Skeleton className="h-8 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
@@ -339,11 +403,11 @@ const DashboardPage = () => {
                   </div>
                   <Skeleton className="h-4 w-1/3" />
                 </div>
-              ) : activityDataError || nextArrivalError ? (
+              ) : activityDataError || krossbookingStatsError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{activityDataError || nextArrivalError}</AlertDescription>
+                  <AlertDescription>{activityDataError || krossbookingStatsError}</AlertDescription>
                 </Alert>
               ) : (
                 <>
@@ -362,23 +426,23 @@ const DashboardPage = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xl font-bold">28</p>
+                      <p className="text-xl font-bold">{totalReservationsCurrentYear}</p>
                       <p className="text-sm text-gray-500">Réservations sur l'année</p>
                     </div>
                     <div>
-                      <p className="text-xl font-bold">3</p>
+                      <p className="text-xl font-bold">{totalNightsCurrentYear}</p>
                       <p className="text-sm text-gray-500">Nuits sur l'année</p>
                     </div>
                     <div>
-                      <p className="text-xl font-bold">5</p>
+                      <p className="text-xl font-bold">{totalGuestsCurrentYear}</p>
                       <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
                     </div>
                     <div>
-                      <p className="text-xl font-bold">62.82%</p>
+                      <p className="text-xl font-bold">{occupancyRateCurrentYear.toFixed(2)}%</p>
                       <p className="text-sm text-gray-500">Occupation sur l'année</p>
                     </div>
                     <div>
-                      <p className="text-xl font-bold">4398€</p>
+                      <p className="text-xl font-bold">{netPricePerNight.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">Prix net / nuit</p>
                     </div>
                     <div>

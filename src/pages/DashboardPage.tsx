@@ -26,7 +26,7 @@ import { getProfile } from "@/lib/profile-api"; // Import getProfile
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isBefore, isValid, isWithinInterval, addDays } from 'date-fns'; // Added addDays for inclusive comparison
+import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isBefore, isValid, isWithinInterval, addDays, max, min } from 'date-fns'; // Added max, min for intersection calculation
 import { fr } from 'date-fns/locale';
 
 const DashboardPage = () => {
@@ -223,31 +223,34 @@ const DashboardPage = () => {
           nextArrivalCandidate = res;
         }
 
-        // NEW LOGIC for "Réservations sur l'année": Count if check-out date is within the current calendar year
-        const isCheckOutInCurrentCalendarYear = isWithinInterval(checkOut, { start: currentYearStart, end: currentYearEnd });
+        // Condition for "Réservations sur l'année", "Nuits sur l'année" and "Voyageurs sur l'année"
+        // A reservation is counted if its check-out date falls within the current calendar year.
+        const isRelevantForCurrentYearStats = isWithinInterval(checkOut, { start: currentYearStart, end: currentYearEnd });
 
         console.log(`DEBUG: Reservation ID: ${res.id}, Guest: ${res.guest_name}, Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}, Status: ${res.status}`);
-        console.log(`DEBUG:   isCheckOutInCurrentCalendarYear: ${isCheckOutInCurrentCalendarYear}`);
+        console.log(`DEBUG:   isRelevantForCurrentYearStats (check_out in current year): ${isRelevantForCurrentYearStats}`);
 
-        if (isCheckOutInCurrentCalendarYear) {
-          reservationsCount++;
-          // For nights and guests, we might still want to count only finished ones or adjust based on definition
-          // For now, let's keep nights and guests based on finished bookings for consistency with financial reporting
-          const isFinished = isBefore(checkOut, addDays(today, 1)); // checkOut must be before or on today
-          const isCheckInInCurrentYearToToday = isWithinInterval(checkIn, { start: currentYearStart, end: today });
+        if (isRelevantForCurrentYearStats) {
+          reservationsCount++; // Count this reservation for the year
 
-          if (isFinished && isCheckInInCurrentYearToToday) {
-            nightsCount += differenceInDays(checkOut, checkIn);
-            if (res.guest_name) {
-              uniqueGuests.add(res.guest_name);
-            }
-            console.log(`DEBUG:   INCLUDING nights/guests for finished reservation ${res.id}.`);
+          // Calculate nights that fall within the current year for this reservation
+          const intersectionStart = max([checkIn, currentYearStart]);
+          const intersectionEnd = min([checkOut, addDays(currentYearEnd, 1)]); // Add 1 day to currentYearEnd for inclusive range in differenceInDays
+
+          if (isBefore(intersectionStart, intersectionEnd)) { // Ensure the interval is valid
+            const nightsInCurrentYear = differenceInDays(intersectionEnd, intersectionStart);
+            nightsCount += nightsInCurrentYear;
+            console.log(`DEBUG:   Nights for ${res.id} within current year: ${nightsInCurrentYear}. Total nights so far: ${nightsCount}`);
           } else {
-            console.log(`DEBUG:   EXCLUDING nights/guests for reservation ${res.id} (not finished or not started in current year up to today).`);
+            console.log(`DEBUG:   No nights for ${res.id} within current year's interval.`);
           }
-          console.log(`DEBUG:   INCLUDING reservation ${res.id} in total reservations count.`);
+
+          if (res.guest_name) {
+            uniqueGuests.add(res.guest_name); // Add guest for this reservation
+          }
+          console.log(`DEBUG:   INCLUDING reservation ${res.id} in total reservations count, nights, and guests.`);
         } else {
-          console.log(`DEBUG:   EXCLUDING reservation ${res.id} from total reservations count (check-out not in current calendar year).`);
+          console.log(`DEBUG:   EXCLUDING reservation ${res.id} from current year's stats (check-out not in current calendar year).`);
         }
       });
 
@@ -257,8 +260,8 @@ const DashboardPage = () => {
       setTotalGuestsCurrentYear(uniqueGuests.size);
 
       console.log("DEBUG: Final totalReservationsCurrentYear (Check-out in current calendar year):", reservationsCount);
-      console.log("DEBUG: Final nightsCount for current year (from FINISHED bookings):", nightsCount);
-      console.log("DEBUG: Final uniqueGuests for current year (from FINISHED bookings):", uniqueGuests.size);
+      console.log("DEBUG: Final nightsCount for current year (from bookings with check-out in current year, only nights within current year):", nightsCount);
+      console.log("DEBUG: Final uniqueGuests for current year (from bookings with check-out in current year):", uniqueGuests.size);
 
 
       // Calculate occupancy rate

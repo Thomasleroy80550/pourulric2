@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -21,7 +21,7 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true); // Initialement à true
+  const [loading, setLoading] = useState(true);
   const [showCguvModal, setShowCguvModal] = useState(false);
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
   console.log("SessionContextProvider rendering. Loading:", loading, "Path:", location.pathname);
 
-  const fetchUserProfile = async (userSession: Session) => {
+  const fetchUserProfile = useCallback(async (userSession: Session) => {
     console.log("Fetching user profile...");
     try {
       const userProfile = await getProfile();
@@ -41,7 +41,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       toast.error("Erreur lors du chargement de votre profil.");
       return null;
     }
-  };
+  }, []);
 
   const handleAcceptCguv = async () => {
     if (!session?.user) {
@@ -63,107 +63,91 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
   };
 
+  // This function will handle the core logic of checking session and profile
+  const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
+    setLoading(true); // Start loading
+    if (currentSession) {
+      setSession(currentSession);
+      const userProfile = await fetchUserProfile(currentSession);
+
+      if (location.pathname === '/login') {
+        navigate('/');
+      }
+
+      if (userProfile && location.pathname !== '/login') {
+        const cguvAccepted = userProfile.cguv_accepted_at;
+        const cguvVersion = userProfile.cguv_version;
+
+        if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
+          console.log("CGUV not accepted or version mismatch. Showing modal.");
+          setShowCguvModal(true);
+        } else {
+          console.log("CGUV already accepted and up to date.");
+          setShowCguvModal(false);
+        }
+      } else if (!userProfile && location.pathname !== '/login') {
+        // If session exists but profile couldn't be fetched, or is null,
+        // it might indicate a problem or a new user without a profile entry yet.
+        // For now, we'll assume it's a new user or an error and keep them on login or redirect.
+        // If a profile is mandatory for all pages, they should be redirected.
+        // Given the current flow, if profile is null, it might be a new user who needs to accept CGUV.
+        // The CGUV modal logic already handles this.
+        console.log("Session exists but profile not found or error fetching. Checking CGUV status.");
+        // The CGUV modal will be shown if profile is null or CGUV not accepted.
+        // No explicit redirect here, let the CGUV modal handle it.
+      }
+    } else {
+      // No session
+      setSession(null);
+      setProfile(null);
+      setShowCguvModal(false);
+      setShowOnboardingConfetti(false);
+      if (location.pathname !== '/login') {
+        console.log('No session and not on login page, redirecting to /login');
+        navigate('/login');
+      }
+    }
+    setLoading(false); // End loading
+  }, [fetchUserProfile, location.pathname, navigate]);
+
+
   useEffect(() => {
     console.log("SessionContextProvider useEffect running.");
-    let isMounted = true; // Flag pour éviter les mises à jour d'état sur un composant démonté
+    let isMounted = true;
 
-    const handleAuthChange = async (event: string, currentSession: Session | null) => {
+    // Supabase auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
-
       console.log('Auth state changed:', event, currentSession);
-      setSession(currentSession);
-
-      if (event === 'SIGNED_OUT') {
-        console.log('User signed out, redirecting to /login');
-        setProfile(null);
-        setShowCguvModal(false);
-        setShowOnboardingConfetti(false);
-        navigate('/login');
-        setLoading(false); // Assurez-vous que loading est false après la déconnexion
-      } else if (currentSession) {
-        console.log('User signed in or updated. Fetching profile...');
-        setLoading(true); // Définir loading à true pendant le chargement du profil
-        const userProfile = await fetchUserProfile(currentSession);
-        if (!isMounted) return; // Vérifier l'état de montage après l'opération asynchrone
-        setLoading(false); // Définir loading à false après le chargement du profil
-
-        if (location.pathname === '/login') {
-          console.log('User signed in and on login page, redirecting to /');
-          navigate('/');
-        }
-
-        if (userProfile && location.pathname !== '/login') {
-          const cguvAccepted = userProfile.cguv_accepted_at;
-          const cguvVersion = userProfile.cguv_version;
-
-          if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
-            console.log("CGUV not accepted or version mismatch. Showing modal.");
-            setShowCguvModal(true);
-          } else {
-            console.log("CGUV already accepted and up to date.");
-            setShowCguvModal(false);
-          }
-        }
-      } else if (!currentSession && location.pathname !== '/login') {
-        console.log('No session and not on login page, redirecting to /login');
-        setProfile(null);
-        setShowCguvModal(false);
-        setShowOnboardingConfetti(false);
-        navigate('/login');
-        setLoading(false); // Assurez-vous que loading est false après la redirection
-      } else {
-        // Si pas de session et déjà sur la page de connexion, arrêtez simplement le chargement
-        setLoading(false);
-      }
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
-
-    // Vérification initiale de la session
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      if (!isMounted) return;
-
-      console.log("Initial getSession result:", initialSession);
-      setSession(initialSession);
-
-      if (initialSession) {
-        console.log('Initial session found. Fetching profile...');
-        setLoading(true); // Définir loading à true pendant le chargement du profil
-        const userProfile = await fetchUserProfile(initialSession);
-        if (!isMounted) return; // Vérifier l'état de montage après l'opération asynchrone
-        setLoading(false); // Définir loading à false après le chargement du profil
-
-        if (location.pathname === '/login') {
-          navigate('/');
-        }
-
-        if (userProfile && location.pathname !== '/login') {
-          const cguvAccepted = userProfile.cguv_accepted_at;
-          const cguvVersion = userProfile.cguv_version;
-
-          if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
-            console.log("Initial check: CGUV not accepted or version mismatch. Showing modal.");
-            setShowCguvModal(true);
-          } else {
-            console.log("Initial check: CGUV already accepted and up to date.");
-            setShowCguvModal(false);
-          }
-        }
-      } else if (!initialSession && location.pathname !== '/login') {
-        console.log('No initial session and not on login page, redirecting to /login');
-        navigate('/login');
-        setLoading(false); // Assurez-vous que loading est false après la redirection
-      } else {
-        // Si pas de session initiale et déjà sur la page de connexion, arrêtez simplement le chargement
-        setLoading(false);
-      }
+      // When auth state changes, revalidate everything
+      revalidateSessionAndProfile(currentSession);
     });
 
-    return () => {
-      isMounted = false; // Nettoyage du flag
-      subscription.unsubscribe();
+    // Initial session check on mount
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (!isMounted) return;
+      console.log("Initial getSession result:", initialSession);
+      revalidateSessionAndProfile(initialSession);
+    });
+
+    // Handle tab visibility change (alt-tab scenario)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Tab became visible. Re-checking session...');
+        const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        revalidateSessionAndProfile(refreshedSession);
+      }
     };
-  }, [navigate, location.pathname]);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [revalidateSessionAndProfile]);
 
   console.log("SessionContextProvider - Before return. Loading:", loading, "showCguvModal:", showCguvModal, "showOnboardingConfetti:", showOnboardingConfetti);
 

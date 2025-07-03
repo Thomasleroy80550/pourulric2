@@ -10,12 +10,12 @@ import {
   PieChart,
   Pie,
   Cell,
+  Tooltip,
   LineChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   Legend,
 } from "recharts";
 import React, { useState, useEffect } from "react";
@@ -26,22 +26,26 @@ import { getProfile } from "@/lib/profile-api"; // Import getProfile
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isBefore, isValid, isWithinInterval, addDays } from 'date-fns'; // Added addDays for inclusive comparison
+import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isBefore, isValid, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+const DONUT_CATEGORIES = [
+  { name: 'Airbnb', color: '#1e40af' },
+  { name: 'Booking', color: '#ef4444' },
+  { name: 'Abritel', color: '#3b82f6' },
+  { name: 'Hello Keys', color: '#0e7490' },
+  { name: 'Proprio', color: '#4f46e5' }, // This will aggregate PROP0, PROPRI, DIRECT
+  { name: 'Autre', color: '#6b7280' }, // For UNKNOWN or other unmapped channels
+];
 
 const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
 
-  const [activityData, setActivityData] = useState([
-    { name: 'Airbnb', value: 0, color: '#1e40af' }, // blue-800
-    { name: 'Booking', value: 0, color: '#ef4444' }, // red-500
-    { name: 'Abritel', value: 0, color: '#3b82f6' }, // blue-500
-    { name: 'Hello Keys', value: 0, color: '#0e7490' }, // cyan-700
-    { name: 'Proprio', value: 0, color: '#4f46e5' }, // indigo-600 for PROPRIO
-  ]);
-  const [loadingActivityData, setLoadingActivityData] = useState(true);
-  const [activityDataError, setActivityDataError] = useState<string | null>(null);
+  const [activityData, setActivityData] = useState(
+    DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))
+  );
+  // Removed loadingActivityData and activityDataError as they are now part of loadingKrossbookingStats
 
   const [financialData, setFinancialData] = useState({
     venteAnnee: 0,
@@ -70,30 +74,8 @@ const DashboardPage = () => {
   const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
 
   const fetchData = async () => {
-    // Fetch Activity Data
-    setLoadingActivityData(true);
-    setActivityDataError(null);
-    try {
-      const data = await callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' });
-      if (data && data.length > 0 && data[0].length >= 5) {
-        const [bookingValue, airbnbValue, abritelValue, helloKeysValue, proprioValue] = data[0].map(Number);
-        setActivityData([
-          { name: 'Airbnb', value: isNaN(airbnbValue) ? 0 : airbnbValue, color: '#1e40af' },
-          { name: 'Booking', value: isNaN(bookingValue) ? 0 : bookingValue, color: '#ef4444' },
-          { name: 'Abritel', value: isNaN(abritelValue) ? 0 : abritelValue, color: '#3b82f6' },
-          { name: 'Hello Keys', value: isNaN(helloKeysValue) ? 0 : helloKeysValue, color: '#0e7490' },
-          { name: 'Proprio', value: isNaN(proprioValue) ? 0 : proprioValue, color: '#4f46e5' },
-        ]);
-        console.log("DEBUG: Activity Data fetched:", data);
-      } else {
-        setActivityDataError("Format de données inattendu pour l'activité de location.");
-      }
-    } catch (err: any) {
-      setActivityDataError(`Erreur lors du chargement des données d'activité : ${err.message}`);
-      console.error("Error fetching activity data:", err);
-    } finally {
-      setLoadingActivityData(false);
-    }
+    // Removed activity data fetching from GSheet here
+    // It will now be calculated from Krossbooking reservations in fetchKrossbookingStats
 
     // Fetch Financial Data and User Profile
     setLoadingFinancialData(true);
@@ -185,6 +167,7 @@ const DashboardPage = () => {
         setTotalGuestsCurrentYear(0);
         setOccupancyRateCurrentYear(0);
         setNetPricePerNight(0);
+        setActivityData(DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))); // Reset activity data
         setLoadingKrossbookingStats(false);
         return;
       }
@@ -208,6 +191,8 @@ const DashboardPage = () => {
       let reservationsCount = 0;
       let nightsCount = 0;
       const uniqueGuests = new Set<string>();
+      const channelCounts: { [key: string]: number } = {};
+      DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name] = 0); // Initialize counts for donut
 
       allReservations.forEach(res => {
         const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
@@ -216,6 +201,11 @@ const DashboardPage = () => {
         if (!checkIn || !checkOut) {
           console.warn(`DEBUG: Skipping reservation ${res.id} due to invalid dates: check_in_date=${res.check_in_date}, check_out_date=${res.check_out_date}`);
           return; // Skip invalid dates
+        }
+
+        // Calculate next arrival (today or in the future) - this logic remains separate
+        if ((isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
+          nextArrivalCandidate = res;
         }
 
         // Condition for "Réservations sur l'année", "Nuits sur l'année" and "Voyageurs sur l'année"
@@ -236,13 +226,20 @@ const DashboardPage = () => {
             uniqueGuests.add(res.guest_name); // Add guest for this reservation
           }
           console.log(`DEBUG:   INCLUDING reservation ${res.id} in total reservations count, nights, and guests.`);
+
+          // Update channel counts for donut chart
+          const channel = res.cod_channel || 'UNKNOWN';
+          let categoryName = 'Autre'; // Default to 'Autre'
+
+          if (channel === 'AIRBNB') categoryName = 'Airbnb';
+          else if (channel === 'BOOKING') categoryName = 'Booking';
+          else if (channel === 'ABRITEL') categoryName = 'Abritel';
+          else if (channel === 'HELLOKEYS') categoryName = 'Hello Keys';
+          else if (channel === 'PROP0' || channel === 'PROPRI' || channel === 'DIRECT') categoryName = 'Proprio'; // Aggregate these
+
+          channelCounts[categoryName]++;
         } else {
           console.log(`DEBUG:   EXCLUDING reservation ${res.id} from current year's stats (check-out not in current calendar year).`);
-        }
-
-        // Calculate next arrival (today or in the future) - this logic remains separate
-        if ((isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
-          nextArrivalCandidate = res;
         }
       });
 
@@ -255,6 +252,14 @@ const DashboardPage = () => {
       console.log("DEBUG: Final nightsCount for current year (from bookings with check-out in current year):", nightsCount);
       console.log("DEBUG: Final uniqueGuests for current year (from bookings with check-out in current year):", uniqueGuests.size);
 
+      // Update activityData for the donut chart
+      const newActivityData = DONUT_CATEGORIES.map(cat => ({
+        name: cat.name,
+        value: channelCounts[cat.name],
+        color: cat.color
+      }));
+      setActivityData(newActivityData);
+      console.log("DEBUG: Donut Activity Data calculated:", newActivityData);
 
       // Calculate occupancy rate
       const totalAvailableNights = fetchedUserRooms.length * daysInCurrentYear;
@@ -399,7 +404,7 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loadingActivityData || loadingKrossbookingStats ? (
+              {loadingKrossbookingStats ? (
                 <div className="space-y-4">
                   <Skeleton className="h-8 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
@@ -413,11 +418,11 @@ const DashboardPage = () => {
                   </div>
                   <Skeleton className="h-4 w-1/3" />
                 </div>
-              ) : activityDataError || krossbookingStatsError ? (
+              ) : krossbookingStatsError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{activityDataError || krossbookingStatsError}</AlertDescription>
+                  <AlertDescription>{krossbookingStatsError}</AlertDescription>
                 </Alert>
               ) : (
                 <>
@@ -472,7 +477,7 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col p-4">
-              {loadingActivityData ? (
+              {loadingKrossbookingStats ? (
                 <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
                   <Skeleton className="w-full md:w-3/5 h-[280px]" />
                   <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
@@ -481,11 +486,11 @@ const DashboardPage = () => {
                     ))}
                   </div>
                 </div>
-              ) : activityDataError ? (
+              ) : krossbookingStatsError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{activityDataError}</AlertDescription>
+                  <AlertDescription>{krossbookingStatsError}</AlertDescription>
                 </Alert>
               ) : (
                 <>

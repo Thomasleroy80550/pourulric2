@@ -223,13 +223,13 @@ const DashboardPage = () => {
           nextArrivalCandidate = res;
         }
 
-        // NEW LOGIC for "Réservations sur l'année": Count if check-in date is within the current calendar year
-        const isCheckInInCurrentCalendarYear = isWithinInterval(checkIn, { start: currentYearStart, end: currentYearEnd });
+        // NEW LOGIC for "Réservations sur l'année": Count if check-out date is within the current calendar year
+        const isCheckOutInCurrentCalendarYear = isWithinInterval(checkOut, { start: currentYearStart, end: currentYearEnd });
 
         console.log(`DEBUG: Reservation ID: ${res.id}, Guest: ${res.guest_name}, Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}, Status: ${res.status}`);
-        console.log(`DEBUG:   isCheckInInCurrentCalendarYear: ${isCheckInInCurrentCalendarYear}`);
+        console.log(`DEBUG:   isCheckOutInCurrentCalendarYear: ${isCheckOutInCurrentCalendarYear}`);
 
-        if (isCheckInInCurrentCalendarYear) {
+        if (isCheckOutInCurrentCalendarYear) {
           reservationsCount++;
           // For nights and guests, we might still want to count only finished ones or adjust based on definition
           // For now, let's keep nights and guests based on finished bookings for consistency with financial reporting
@@ -247,7 +247,7 @@ const DashboardPage = () => {
           }
           console.log(`DEBUG:   INCLUDING reservation ${res.id} in total reservations count.`);
         } else {
-          console.log(`DEBUG:   EXCLUDING reservation ${res.id} from total reservations count (check-in not in current calendar year).`);
+          console.log(`DEBUG:   EXCLUDING reservation ${res.id} from total reservations count (check-out not in current calendar year).`);
         }
       });
 
@@ -256,7 +256,7 @@ const DashboardPage = () => {
       setTotalNightsCurrentYear(nightsCount);
       setTotalGuestsCurrentYear(uniqueGuests.size);
 
-      console.log("DEBUG: Final totalReservationsCurrentYear (Check-in in current calendar year):", reservationsCount);
+      console.log("DEBUG: Final totalReservationsCurrentYear (Check-out in current calendar year):", reservationsCount);
       console.log("DEBUG: Final nightsCount for current year (from FINISHED bookings):", nightsCount);
       console.log("DEBUG: Final uniqueGuests for current year (from FINISHED bookings):", uniqueGuests.size);
 

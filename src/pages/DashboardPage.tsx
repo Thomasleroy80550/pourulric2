@@ -180,11 +180,11 @@ const DashboardPage = () => {
       today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
 
       const currentYearStart = startOfYear(today);
-      const currentYearEnd = endOfYear(today); // Get end of current year
-      const daysInCurrentYear = differenceInDays(endOfYear(today), currentYearStart) + 1; // Still need for total available nights
+      const currentYearEndForStats = today; // Data up to today
+      const daysInCurrentYearToDate = differenceInDays(today, currentYearStart) + 1; // Number of days from Jan 1st to today
 
       console.log("DEBUG: Current Year Start (normalized):", format(currentYearStart, 'yyyy-MM-dd'));
-      console.log("DEBUG: Current Year End (normalized):", format(currentYearEnd, 'yyyy-MM-dd'));
+      console.log("DEBUG: Current Year End For Stats (normalized):", format(currentYearEndForStats, 'yyyy-MM-dd'));
       console.log("DEBUG: Today (normalized):", format(today, 'yyyy-MM-dd'));
 
       let nextArrivalCandidate: KrossbookingReservation | null = null;
@@ -209,16 +209,16 @@ const DashboardPage = () => {
         }
 
         // Condition for "Réservations sur l'année", "Nuits sur l'année" and "Voyageurs sur l'année"
-        // A reservation is counted if its check-out date falls within the current calendar year.
-        const isRelevantForCurrentYearStats = isWithinInterval(checkOut, { start: currentYearStart, end: currentYearEnd });
+        // A reservation is counted if its check-out date falls within the current year up to today.
+        const isRelevantForCurrentYearStats = isWithinInterval(checkOut, { start: currentYearStart, end: currentYearEndForStats });
 
         console.log(`DEBUG: Reservation ID: ${res.id}, Guest: ${res.guest_name}, Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}, Status: ${res.status}`);
-        console.log(`DEBUG:   isRelevantForCurrentYearStats (check_out in current year): ${isRelevantForCurrentYearStats}`);
+        console.log(`DEBUG:   isRelevantForCurrentYearStats (check_out in current year up to today): ${isRelevantForCurrentYearStats}`);
 
         if (isRelevantForCurrentYearStats) {
           reservationsCount++; // Count this reservation for the year
           
-          // Add all nights of this booking if its check-out is in the current year
+          // Add all nights of this booking if its check-out is in the current year up to today
           nightsCount += differenceInDays(checkOut, checkIn);
           console.log(`DEBUG:   Adding all nights (${differenceInDays(checkOut, checkIn)}) for reservation ${res.id}. Total nights so far: ${nightsCount}`);
 
@@ -239,7 +239,7 @@ const DashboardPage = () => {
 
           channelCounts[categoryName]++;
         } else {
-          console.log(`DEBUG:   EXCLUDING reservation ${res.id} from current year's stats (check-out not in current calendar year).`);
+          console.log(`DEBUG:   EXCLUDING reservation ${res.id} from current year's stats (check-out not in current calendar year up to today).`);
         }
       });
 
@@ -248,9 +248,9 @@ const DashboardPage = () => {
       setTotalNightsCurrentYear(nightsCount);
       setTotalGuestsCurrentYear(uniqueGuests.size);
 
-      console.log("DEBUG: Final totalReservationsCurrentYear (Check-out in current calendar year):", reservationsCount);
-      console.log("DEBUG: Final nightsCount for current year (from bookings with check-out in current year):", nightsCount);
-      console.log("DEBUG: Final uniqueGuests for current year (from bookings with check-out in current year):", uniqueGuests.size);
+      console.log("DEBUG: Final totalReservationsCurrentYear (Check-out in current calendar year up to today):", reservationsCount);
+      console.log("DEBUG: Final nightsCount for current year (from bookings with check-out in current year up to today):", nightsCount);
+      console.log("DEBUG: Final uniqueGuests for current year (from bookings with check-out in current year up to today):", uniqueGuests.size);
 
       // Update activityData for the donut chart
       const newActivityData = DONUT_CATEGORIES.map(cat => ({
@@ -261,8 +261,8 @@ const DashboardPage = () => {
       setActivityData(newActivityData);
       console.log("DEBUG: Donut Activity Data calculated:", newActivityData);
 
-      // Calculate occupancy rate
-      const totalAvailableNights = fetchedUserRooms.length * daysInCurrentYear;
+      // Calculate occupancy rate based on days up to today
+      const totalAvailableNights = fetchedUserRooms.length * daysInCurrentYearToDate;
       const calculatedOccupancyRate = totalAvailableNights > 0 ? (nightsCount / totalAvailableNights) * 100 : 0;
       setOccupancyRateCurrentYear(calculatedOccupancyRate);
 

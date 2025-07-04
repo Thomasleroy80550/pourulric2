@@ -67,7 +67,7 @@ const DashboardPage = () => {
   const [userObjectiveAmount, setUserObjectiveAmount] = useState(0); // User's target objective in Euros
 
   const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
-  const [totalReservationsCurrentYear, setTotalReservationsCurrentYear] = useState(0);
+  const [totalReservationsCurrentYear, setTotalReservationsCurrentYear] = useState(0); // This will now come from GSheet B2
   const [totalNightsCurrentYear, setTotalNightsCurrentYear] = useState(0);
   const [totalGuestsCurrentYear, setTotalGuestsCurrentYear] = useState(0);
   const [occupancyRateCurrentYear, setOccupancyRateCurrentYear] = useState(0);
@@ -83,9 +83,10 @@ const DashboardPage = () => {
     setLoadingFinancialData(true);
     setFinancialDataError(null);
     try {
-      const [financialSheetData, userProfile] = await Promise.all([
+      const [financialSheetData, userProfile, reservationsSheetData] = await Promise.all([
         callGSheetProxy({ action: 'read_sheet', range: 'C2:F2' }),
         getProfile(),
+        callGSheetProxy({ action: 'read_sheet', range: 'B2' }), // New call for B2
       ]);
 
       let currentResultatAnnee = 0;
@@ -102,6 +103,14 @@ const DashboardPage = () => {
         }));
       } else {
         setFinancialDataError("Format de données inattendu pour le bilan financier.");
+      }
+
+      // Set total reservations from Google Sheet B2
+      if (reservationsSheetData && reservationsSheetData.length > 0 && reservationsSheetData[0].length > 0) {
+        const reservationsCountFromSheet = Number(reservationsSheetData[0][0]);
+        setTotalReservationsCurrentYear(isNaN(reservationsCountFromSheet) ? 0 : reservationsCountFromSheet);
+      } else {
+        setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les réservations annuelles." : "Format de données inattendu pour les réservations annuelles.");
       }
 
       if (userProfile) {
@@ -164,7 +173,7 @@ const DashboardPage = () => {
 
       if (roomIds.length === 0) {
         setNextArrival(null);
-        setTotalReservationsCurrentYear(0);
+        // setTotalReservationsCurrentYear(0); // This is now handled by fetchData from GSheet
         setTotalNightsCurrentYear(0);
         setTotalGuestsCurrentYear(0);
         setOccupancyRateCurrentYear(0);
@@ -192,7 +201,7 @@ const DashboardPage = () => {
       console.log("DEBUG: Today (normalized):", format(today, 'yyyy-MM-dd'));
 
       let nextArrivalCandidate: KrossbookingReservation | null = null;
-      let reservationsCount = 0;
+      // let reservationsCount = 0; // Removed: now comes from GSheet B2
       let nightsCount = 0;
       const uniqueGuests = new Set<string>();
       const channelCounts: { [key: string]: number } = {};
@@ -220,7 +229,7 @@ const DashboardPage = () => {
         console.log(`DEBUG:   overlapsWithPeriod: ${overlapsWithPeriod}`);
 
         if (overlapsWithPeriod) {
-          reservationsCount++; // Count this reservation if it overlaps with the year-to-date period
+          // reservationsCount++; // Removed: now comes from GSheet B2
 
           // Calculate nights *within* the current year-to-date period
           const effectiveCheckIn = max([checkIn, periodStart]);
@@ -237,7 +246,7 @@ const DashboardPage = () => {
           if (res.guest_name) {
             uniqueGuests.add(res.guest_name); // Add guest for this reservation
           }
-          console.log(`DEBUG:   INCLUDING reservation ${res.id} in total reservations count, nights, and guests.`);
+          console.log(`DEBUG:   INCLUDING reservation ${res.id} in total nights and guests.`);
 
           // Update channel counts for donut chart
           const channel = res.cod_channel || 'UNKNOWN';
@@ -256,12 +265,11 @@ const DashboardPage = () => {
       });
 
       setNextArrival(nextArrivalCandidate);
-      setTotalReservationsCurrentYear(reservationsCount);
+      // setTotalReservationsCurrentYear(reservationsCount); // Removed: now comes from GSheet B2
       setTotalNightsCurrentYear(nightsCount);
       setTotalGuestsCurrentYear(uniqueGuests.size);
 
-      console.log("DEBUG: Final totalReservationsCurrentYear (overlapping with year-to-date):", reservationsCount);
-      console.log("DEBUG: Final nightsCount for current year (within year-to-date period):", nightsCount);
+      console.log("DEBUG: Final totalNightsCurrentYear (within year-to-date period):", nightsCount);
       console.log("DEBUG: Final uniqueGuests for current year (from bookings overlapping year-to-date):", uniqueGuests.size);
 
       // Update activityData for the donut chart

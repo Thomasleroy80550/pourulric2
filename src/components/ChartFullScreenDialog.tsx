@@ -1,14 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter, // Import DialogFooter
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button'; // Import Button
-import { Loader2, Download } from 'lucide-react'; // Import icons
+import { Button } from '@/components/ui/button';
+import { Loader2, Download } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -26,6 +26,8 @@ import { fr } from 'date-fns/locale';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { toast } from 'sonner';
+import useWindowSize from 'react-use/lib/useWindowSize'; // Import useWindowSize
+import Confetti from 'react-confetti'; // Import Confetti
 
 interface ChartFullScreenDialogProps {
   isOpen: boolean;
@@ -50,6 +52,15 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false); // State for confetti
+  const { width, height } = useWindowSize(); // Get window size for confetti
+
+  useEffect(() => {
+    if (showConfetti) {
+      const timer = setTimeout(() => setShowConfetti(false), 3000); // Confetti for 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showConfetti]);
 
   const handleExportPdf = async () => {
     if (!chartContainerRef.current) {
@@ -86,6 +97,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
 
       pdf.save(`${title.replace(/\s/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`);
       toast.success("PDF généré avec succès !", { id: 'pdf-export' });
+      setShowConfetti(true); // Trigger confetti on success
     } catch (error: any) {
       console.error("Error generating PDF:", error);
       toast.error(`Erreur lors de la génération du PDF : ${error.message}`, { id: 'pdf-export' });
@@ -96,7 +108,17 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[90vw] md:max-w-[1000px] h-[80vh] flex flex-col p-6 rounded-lg shadow-xl"> {/* Changed rounded-xl to rounded-lg */}
+      {isOpen && showConfetti && (
+        <Confetti
+          width={width}
+          height={height}
+          recycle={false}
+          numberOfPieces={200}
+          gravity={0.1}
+          tweenDuration={5000}
+        />
+      )}
+      <DialogContent className="sm:max-w-[90vw] md:max-w-[1000px] h-[80vh] flex flex-col p-6 rounded-md shadow-xl"> {/* Changed rounded-lg to rounded-md for more rectangular */}
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

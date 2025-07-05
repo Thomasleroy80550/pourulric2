@@ -32,8 +32,6 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
 
-    --radius: 0.5rem;
-
     /* Custom Sidebar Colors based on screenshot */
     --sidebar-background: 200 60% 95%; /* Light blue */
     --sidebar-foreground: 220 10% 20%; /* Dark blue/grey text */
@@ -128,4 +126,13 @@
   font-size: 0.875rem; /* text-sm */
   height: 40px; /* Fixed height for property name cells */
   justify-content: flex-start; /* Align text to start */
+}
+
+/* Override shadcn/ui DialogOverlay default opacity */
+.fixed.inset-0.z-50.bg-black\/80 {
+  background-color: rgba(0, 0, 0, 0.4) !important; /* Lighter overlay for light mode */
+}
+
+.dark .fixed.inset-0.z-50.bg-black\/80 {
+  background-color: rgba(0, 0, 0, 0.6) !important; /* Slightly darker for dark mode, but still lighter than default */
 }

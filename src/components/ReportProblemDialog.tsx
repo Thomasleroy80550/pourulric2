@@ -53,12 +53,11 @@ const problemTypes = [
 const formSchema = z.object({
   problemType: z.string().min(1, { message: 'Veuillez sélectionner un type de problème.' }),
   description: z.string().min(10, { message: 'Veuillez décrire le problème (minimum 10 caractères).' }).max(500, { message: 'La description est trop longue (maximum 500 caractères).' }),
-  contactEmail: z.string().email({ message: 'Email invalide.' }).optional().or(z.literal('')),
-  contactPhone: z.string().optional().or(z.literal('')),
+  contactEmail: z.string().email({ message: 'Email invalide.' }).min(1, { message: 'Veuillez fournir une adresse email.' }), // Email is now required
 });
 
 const REPORT_PROBLEM_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/report-problem-proxy";
-const PHP_EMAIL_ENDPOINT = "/api/send_report_email.php"; // <-- Chemin vers votre script PHP
+const MAKE_WEBHOOK_URL = "YOUR_MAKE_WEBHOOK_URL_HERE"; // <-- REMPLACEZ CECI PAR L'URL DE VOTRE WEBHOOK MAKE.COM
 
 const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
   isOpen,
@@ -72,7 +71,6 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
       problemType: '',
       description: '',
       contactEmail: booking?.email || '', // Pre-fill with booking email if available
-      contactPhone: booking?.phone || '', // Pre-fill with booking phone if available
     },
   });
 
@@ -83,7 +81,6 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
         problemType: '',
         description: '',
         contactEmail: booking.email || '',
-        contactPhone: booking.phone || '',
       });
     }
   }, [isOpen, booking, form]);
@@ -102,11 +99,12 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
       }
 
       const supabasePayload = {
+        user_id: session.user.id, // Ensure user_id is passed
         reservation_id: booking.id,
         problem_type: values.problemType,
         description: values.description,
-        contact_email: values.contactEmail || null,
-        contact_phone: values.contactPhone || null,
+        contact_email: values.contactEmail,
+        contact_phone: booking.phone || null, // Keep phone for DB if it exists on booking, but not in form
       };
 
       const supabaseResponse = await fetch(REPORT_PROBLEM_PROXY_URL, {
@@ -124,33 +122,36 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
         throw new Error(supabaseData.error || "Erreur inconnue lors de l'enregistrement du signalement.");
       }
 
-      // Step 2: Send email via PHP endpoint
-      const emailPayload = {
-        reservation_id: booking.id,
-        problem_type: values.problemType,
-        description: values.description,
-        contact_email: values.contactEmail || '',
-        contact_phone: values.contactPhone || '',
-        guest_name: booking.guest_name,
-        property_name: booking.property_name,
-      };
-
-      const emailResponse = await fetch(PHP_EMAIL_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailPayload),
-      });
-
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        console.error("Error sending email via PHP:", emailResponse.status, errorText);
-        // Do not throw a hard error here, as the report is already saved to DB.
-        // Just inform the user that the email failed.
-        toast.warning("Signalement enregistré, mais l'e-mail de notification n'a pas pu être envoyé.");
+      // Step 2: Send data to Make.com webhook for email
+      if (MAKE_WEBHOOK_URL === "YOUR_MAKE_WEBHOOK_URL_HERE") {
+        toast.warning("Veuillez configurer l'URL du webhook Make.com pour l'envoi d'e-mails.");
       } else {
-        toast.success("Signalement envoyé avec succès !");
+        const makePayload = {
+          reservation_id: booking.id,
+          problem_type: values.problemType,
+          description: values.description,
+          contact_email: values.contactEmail,
+          contact_phone: booking.phone || '', // Pass phone from booking if available
+          guest_name: booking.guest_name,
+          property_name: booking.property_name,
+          user_email: session.user.email, // User's email from session
+        };
+
+        const makeResponse = await fetch(MAKE_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(makePayload),
+        });
+
+        if (!makeResponse.ok) {
+          const errorText = await makeResponse.text();
+          console.error("Error sending data to Make.com webhook:", makeResponse.status, errorText);
+          toast.warning("Signalement enregistré, mais l'e-mail de notification n'a pas pu être envoyé via Make.com.");
+        } else {
+          toast.success("Signalement envoyé avec succès !");
+        }
       }
       
       onReportSubmitted(); // Trigger callback to refresh/close
@@ -224,7 +225,7 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
               name="contactEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email de contact (optionnel)</FormLabel>
+                  <FormLabel>Email de contact</FormLabel> {/* Label changed */}
                   <FormControl>
                     <Input type="email" placeholder="votre.email@example.com" {...field} />
                   </FormControl>
@@ -233,19 +234,7 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="contactPhone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Téléphone de contact (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="+33612345678" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Removed Phone Field */}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

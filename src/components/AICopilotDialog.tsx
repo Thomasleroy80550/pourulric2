@@ -10,11 +10,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Sparkles, Loader2, CalendarDays, MessageSquare } from 'lucide-react'; // Added CalendarDays, MessageSquare
 import { toast } from 'sonner';
 import { format, parse, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'; // Ensure cn is imported
 
 interface AICopilotDialogProps {
   isOpen: boolean;
@@ -32,12 +32,14 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [conversationMode, setConversationMode] = useState<'initial' | 'chat' | 'block_room_prompt'>('initial'); // New state for conversation mode
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setMessages([{ id: 'ai-welcome', sender: 'ai', text: "Bonjour ! Je suis votre assistant IA. Comment puis-je vous aider aujourd'hui ?" }]);
       setInput('');
+      setConversationMode('initial'); // Reset mode when dialog opens
     }
   }, [isOpen]);
 
@@ -83,6 +85,11 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
       responseText = "Bonjour ! Comment puis-je vous assister ?";
     } else if (lowerCommand.includes("aide") || lowerCommand.includes("help")) {
       responseText = "Je peux vous aider à bloquer des dates pour votre logement. Essayez une phrase comme : 'Bloquer mon logement du 01/01/2025 au 05/01/2025 avec ménage'.";
+    } else {
+      // If in block_room_prompt mode and input doesn't match, provide specific guidance
+      if (conversationMode === 'block_room_prompt') {
+        responseText = "Veuillez me donner les dates au format 'du JJ/MM/AAAA au JJ/MM/AAAA avec ménage' ou 'sans ménage'.";
+      }
     }
 
     return { text: responseText, data: parsedData };
@@ -111,19 +118,39 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
     }
   };
 
+  const handleInitialAction = (actionType: 'block_room' | 'general_question') => {
+    setIsThinking(true);
+    setTimeout(() => {
+      if (actionType === 'block_room') {
+        setConversationMode('block_room_prompt');
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString() + '-ai-prompt', sender: 'ai', text: "D'accord. Pour bloquer votre logement, veuillez me donner les dates d'arrivée et de départ, et si vous souhaitez prévoir le ménage. Par exemple : 'du 01/01/2025 au 05/01/2025 avec ménage'." }
+        ]);
+      } else if (actionType === 'general_question') {
+        setConversationMode('chat');
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString() + '-ai-prompt', sender: 'ai', text: "Je suis prêt à répondre à vos questions. Que souhaitez-vous savoir ?" }
+        ]);
+      }
+      setIsThinking(false);
+    }, 500); // Small delay for button click
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] flex flex-col h-[80vh]">
+      <DialogContent className="sm:max-w-[500px] flex flex-col max-h-[60vh]"> {/* Reduced height */}
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Sparkles className="h-5 w-5 mr-2 text-blue-500" />
             Assistant IA
           </DialogTitle>
           <DialogDescription>
-            Posez-moi des questions sur la gestion de votre logement.
+            Posez-moi des questions sur la gestion de votre logement ou initiez une action.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed">
+        <ScrollArea className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[calc(100%-120px)]"> {/* Adjusted height */}
           <div className="space-y-4">
             {messages.map((msg) => (
               <div
@@ -154,17 +181,32 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
           </div>
         </ScrollArea>
         <DialogFooter className="flex-row items-center gap-2 pt-4">
-          <Input
-            placeholder="Tapez votre message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={isThinking}
-            className="flex-grow"
-          />
-          <Button onClick={handleSendMessage} disabled={isThinking || input.trim() === ''}>
-            <Send className="h-4 w-4" />
-          </Button>
+          {conversationMode === 'initial' ? (
+            <div className="flex flex-col w-full space-y-2">
+              <Button onClick={() => handleInitialAction('block_room')} disabled={isThinking} className="w-full">
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Bloquer mon logement
+              </Button>
+              <Button onClick={() => handleInitialAction('general_question')} disabled={isThinking} variant="outline" className="w-full">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Poser une question générale
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Input
+                placeholder="Tapez votre message..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isThinking}
+                className="flex-grow"
+              />
+              <Button onClick={handleSendMessage} disabled={isThinking || input.trim() === ''}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

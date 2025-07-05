@@ -137,22 +137,30 @@
   background-color: rgba(0, 0, 0, 0.6) !important; /* Slightly darker for dark mode, but still lighter than default */
 }
 
-/* New keyframes for a playful wiggle/celebration effect */
-@keyframes wiggle-celebration {
+/* New keyframes for a fire-like glow effect */
+@keyframes fire-glow {
   0%, 100% {
-    transform: translateY(-50%) translateX(-50%) rotate(0deg) scale(1);
+    transform: translateY(-50%) translateX(-50%) scale(1);
     opacity: 0.9;
+    filter: drop-shadow(0 0 4px rgba(255, 165, 0, 0.7)); /* Orange glow */
+    color: #FFD700; /* Gold */
   }
   25% {
-    transform: translateY(-50%) translateX(-50%) rotate(5deg) scale(1.1);
+    transform: translateY(-50%) translateX(-50%) scale(1.1);
     opacity: 1;
+    filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.9)); /* Red-orange glow */
+    color: #FFA500; /* Orange */
   }
   50% {
-    transform: translateY(-50%) translateX(-50%) rotate(-5deg) scale(1.05);
-    opacity: 0.95;
+    transform: translateY(-50%) translateX(-50%) scale(1);
+    opacity: 0.9;
+    filter: drop-shadow(0 0 6px rgba(255, 140, 0, 0.8)); /* Dark orange glow */
+    color: #FF4500; /* Red-orange */
   }
   75% {
-    transform: translateY(-50%) translateX(-50%) rotate(5deg) scale(1.1);
+    transform: translateY(-50%) translateX(-50%) scale(1.05);
     opacity: 1;
+    filter: drop-shadow(0 0 7px rgba(255, 99, 71, 0.9)); /* Tomato glow */
+    color: #FF8C00; /* Dark Orange */
   }
 }

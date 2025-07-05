@@ -189,8 +189,8 @@ const DashboardPage = () => {
       if (monthlyFinancialSheetData && monthlyFinancialSheetData.length >= 4) {
         const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
         const caValues = monthlyFinancialSheetData[0] || [];
-        const montantVerseValues = monthlyFinancialSheetData[1] || [];
-        const fraisValues = monthlyFinancialSheetData[2] || [];
+        const montantVerseValues = monthlyFinancialData[1] || [];
+        const fraisValues = monthlyFinancialData[2] || [];
         const benefValues = monthlyFinancialSheetData[3] || [];
 
         const formattedData = months.map((month, index) => ({
@@ -385,7 +385,7 @@ const DashboardPage = () => {
                     <Progress value={financialData.currentAchievementPercentage} className="h-2" />
                     {financialData.currentAchievementPercentage >= 80 && (
                       <Sparkles
-                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-yellow-400 animate-wiggle-celebration z-10"
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-orange-500 animate-fire-glow z-10"
                         style={{ left: `${financialData.currentAchievementPercentage}%` }}
                       />
                     )}

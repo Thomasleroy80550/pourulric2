@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
+import { Terminal, Sparkles } from "lucide-react"; // Import Sparkles
 import {
   ResponsiveContainer,
   PieChart,
@@ -173,11 +173,15 @@ const DashboardPage = () => {
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
         setUserObjectiveAmount(objectiveAmount);
-        const calculatedAchievement = (objectiveAmount === 0) ? 0 : (financialData.resultatAnnee / objectiveAmount) * 100;
-        setFinancialData(prev => ({
-          ...prev,
-          currentAchievementPercentage: calculatedAchievement,
-        }));
+        // Update financialData with the latest result before calculating achievement
+        setFinancialData(prev => {
+          const currentResultatAnnee = isNaN(Number(financialSheetData?.[0]?.[3])) ? 0 : Number(financialSheetData?.[0]?.[3]);
+          const calculatedAchievement = (objectiveAmount === 0) ? 0 : (currentResultatAnnee / objectiveAmount) * 100;
+          return {
+            ...prev,
+            currentAchievementPercentage: calculatedAchievement,
+          };
+        });
       } else {
         setFinancialDataError("Impossible de charger le profil utilisateur.");
       }
@@ -208,7 +212,7 @@ const DashboardPage = () => {
       setLoadingFinancialData(false);
       setLoadingMonthlyFinancialData(false);
     }
-  }, [financialData.resultatAnnee]);
+  }, []);
 
   const fetchKrossbookingStats = useCallback(async (totalNightsFromGSheet: number) => {
     setLoadingKrossbookingStats(true);
@@ -376,14 +380,14 @@ const DashboardPage = () => {
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
                     <Button variant="outline" onClick={handleShowForecast}>Prévision</Button>
                   </div>
-                  <div className="space-y-2 mt-2 relative"> {/* Added relative here */}
+                  <div className="space-y-2 mt-2 relative">
                     <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
                     <Progress value={financialData.currentAchievementPercentage} className="h-2" />
                     {financialData.currentAchievementPercentage >= 80 && (
-                      <div
-                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-yellow-400 animate-flame-flicker z-10"
+                      <Sparkles
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-yellow-400 animate-wiggle-celebration z-10"
                         style={{ left: `${financialData.currentAchievementPercentage}%` }}
-                      ></div>
+                      />
                     )}
                     <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" onClick={() => setIsObjectiveDialogOpen(true)}>

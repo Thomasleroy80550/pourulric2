@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Import useRef
 import {
   Dialog,
   DialogContent,
@@ -20,10 +20,54 @@ interface ForecastDialogProps {
 }
 
 const ForecastDialog: React.FC<ForecastDialogProps> = ({ isOpen, onOpenChange, forecastAmount, year }) => {
+  const [displayedForecastAmount, setDisplayedForecastAmount] = useState(0);
+  const animationRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+
   // Simple data for a bar chart showing forecast amount
   const data = [
     { name: `Prévision ${year}`, amount: forecastAmount },
   ];
+
+  useEffect(() => {
+    if (isOpen) {
+      setDisplayedForecastAmount(0); // Reset to 0 when dialog opens
+      startTimeRef.current = null; // Reset start time
+
+      const duration = 1500; // Animation duration in milliseconds
+
+      const animate = (currentTime: number) => {
+        if (!startTimeRef.current) {
+          startTimeRef.current = currentTime;
+        }
+        const progress = (currentTime - startTimeRef.current) / duration;
+
+        if (progress < 1) {
+          const easedProgress = 0.5 - Math.cos(progress * Math.PI) / 2; // Ease-in-out effect
+          setDisplayedForecastAmount(forecastAmount * easedProgress);
+          animationRef.current = requestAnimationFrame(animate);
+        } else {
+          setDisplayedForecastAmount(forecastAmount); // Ensure it hits the exact target
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+          }
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animate);
+    } else {
+      // Clean up animation frame when dialog closes
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isOpen, forecastAmount]); // Re-run effect when dialog opens or forecastAmount changes
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -41,7 +85,7 @@ const ForecastDialog: React.FC<ForecastDialogProps> = ({ isOpen, onOpenChange, f
           </DialogDescription>
         </DialogHeader>
         <div className="text-center text-4xl font-extrabold text-green-700 dark:text-green-400 mt-6 mb-6">
-          {forecastAmount.toFixed(2)}€
+          {displayedForecastAmount.toFixed(2)}€
         </div>
         <div className="w-full h-48">
           <ResponsiveContainer width="100%" height="100%">

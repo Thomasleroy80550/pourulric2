@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import AICopilotDialog from './AICopilotDialog'; // Import the new AI Copilot Dialog
+import AICopilotDialog from './AICopilotDialog';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -44,7 +44,7 @@ const bottomNavigationItems = [
 // Reusable Sidebar content
 const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
   const [activeSection, setActiveSection] = useState<'gestion' | 'decouvrir'>('gestion');
-  const location = useLocation(); // Use useLocation hook here
+  const location = useLocation();
 
   const currentNavigationItems = activeSection === 'gestion' ? gestionNavigationItems : decouvrirNavigationItems;
 
@@ -93,7 +93,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
       </div>
 
       <nav className="flex-grow">
-        <ul className=""> {/* Removed space-y-2 */}
+        <ul className="">
           {currentNavigationItems.map((item) => (
             <li key={item.name} className="mt-3.5 first:mt-0">
               <Link
@@ -114,7 +114,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
       </nav>
 
       <nav className="mt-auto pt-4 border-t border-sidebar-border">
-        <ul className=""> {/* Removed space-y-2 */}
+        <ul className="">
           {bottomNavigationItems.map((item) => (
             <li key={item.name} className="mt-3.5 first:mt-0">
               <Link
@@ -136,7 +136,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
-  const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false); // State for AI Copilot dialog
+  const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleLinkClick = () => {
@@ -249,7 +249,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <AICopilotDialog
         isOpen={isAICopilotDialogOpen}
         onOpenChange={setIsAICopilotDialogOpen}
-        navigate={navigate} {/* Pass navigate prop */}
+        navigate={navigate}
       />
     </div>
   );

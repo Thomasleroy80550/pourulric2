@@ -165,3 +165,175 @@
   animation: progress-fire-glow 2s infinite alternate ease-in-out;
   background-color: #FF4500 !important; /* Ensure it's a fiery red-orange */
 }
+
+/* CSS for SpatialTunnelLoader */
+.spatial-tunnel-container {
+  perspective: 1000px;
+  background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+}
+
+.tunnel-stars {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  animation: move-stars 3s linear infinite;
+  opacity: 0;
+}
+
+@keyframes move-stars {
+  0% {
+    transform: translateZ(-1000px) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateZ(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Random positioning for stars */
+.tunnel-stars:nth-child(odd) {
+  left: calc(var(--random-x, 0) * 100vw);
+  top: calc(var(--random-y, 0) * 100vh);
+}
+
+.tunnel-stars:nth-child(even) {
+  right: calc(var(--random-x, 0) * 100vw);
+  bottom: calc(var(--random-y, 0) * 100vh);
+}
+
+/* Generate random positions for stars using CSS variables */
+/* This is a trick to simulate random positions with static CSS.
+   In a real app, you might generate these with JS for more variety. */
+.tunnel-stars:nth-child(1) { --random-x: 0.1; --random-y: 0.2; }
+.tunnel-stars:nth-child(2) { --random-x: 0.9; --random-y: 0.8; }
+.tunnel-stars:nth-child(3) { --random-x: 0.3; --random-y: 0.7; }
+.tunnel-stars:nth-child(4) { --random-x: 0.7; --random-y: 0.1; }
+.tunnel-stars:nth-child(5) { --random-x: 0.5; --random-y: 0.5; }
+.tunnel-stars:nth-child(6) { --random-x: 0.2; --random-y: 0.9; }
+.tunnel-stars:nth-child(7) { --random-x: 0.8; --random-y: 0.3; }
+.tunnel-stars:nth-child(8) { --random-x: 0.4; --random-y: 0.6; }
+.tunnel-stars:nth-child(9) { --random-x: 0.6; --random-y: 0.4; }
+.tunnel-stars:nth-child(10) { --random-x: 0.05; --random-y: 0.15; }
+.tunnel-stars:nth-child(11) { --random-x: 0.95; --random-y: 0.85; }
+.tunnel-stars:nth-child(12) { --random-x: 0.25; --random-y: 0.75; }
+.tunnel-stars:nth-child(13) { --random-x: 0.75; --random-y: 0.05; }
+.tunnel-stars:nth-child(14) { --random-x: 0.45; --random-y: 0.55; }
+.tunnel-stars:nth-child(15) { --random-x: 0.1; --random-y: 0.9; }
+.tunnel-stars:nth-child(16) { --random-x: 0.8; --random-y: 0.2; }
+.tunnel-stars:nth-child(17) { --random-x: 0.3; --random-y: 0.6; }
+.tunnel-stars:nth-child(18) { --random-x: 0.7; --random-y: 0.4; }
+.tunnel-stars:nth-child(19) { --random-x: 0.5; --random-y: 0.0; }
+.tunnel-stars:nth-child(20) { --random-x: 0.0; --random-y: 0.5; }
+.tunnel-stars:nth-child(21) { --random-x: 0.12; --random-y: 0.22; }
+.tunnel-stars:nth-child(22) { --random-x: 0.88; --random-y: 0.78; }
+.tunnel-stars:nth-child(23) { --random-x: 0.32; --random-y: 0.68; }
+.tunnel-stars:nth-child(24) { --random-x: 0.68; --random-y: 0.12; }
+.tunnel-stars:nth-child(25) { --random-x: 0.48; --random-y: 0.52; }
+.tunnel-stars:nth-child(26) { --random-x: 0.22; --random-y: 0.88; }
+.tunnel-stars:nth-child(27) { --random-x: 0.78; --random-y: 0.32; }
+.tunnel-stars:nth-child(28) { --random-x: 0.38; --random-y: 0.62; }
+.tunnel-stars:nth-child(29) { --random-x: 0.62; --random-y: 0.48; }
+.tunnel-stars:nth-child(30) { --random-x: 0.08; --random-y: 0.18; }
+.tunnel-stars:nth-child(31) { --random-x: 0.92; --random-y: 0.82; }
+.tunnel-stars:nth-child(32) { --random-x: 0.28; --random-y: 0.72; }
+.tunnel-stars:nth-child(33) { --random-x: 0.72; --random-y: 0.08; }
+.tunnel-stars:nth-child(34) { --random-x: 0.42; --random-y: 0.58; }
+.tunnel-stars:nth-child(35) { --random-x: 0.18; --random-y: 0.92; }
+.tunnel-stars:nth-child(36) { --random-x: 0.82; --random-y: 0.28; }
+.tunnel-stars:nth-child(37) { --random-x: 0.35; --random-y: 0.65; }
+.tunnel-stars:nth-child(38) { --random-x: 0.65; --random-y: 0.45; }
+.tunnel-stars:nth-child(39) { --random-x: 0.55; --random-y: 0.05; }
+.tunnel-stars:nth-child(40) { --random-x: 0.05; --random-y: 0.55; }
+.tunnel-stars:nth-child(41) { --random-x: 0.11; --random-y: 0.21; }
+.tunnel-stars:nth-child(42) { --random-x: 0.89; --random-y: 0.79; }
+.tunnel-stars:nth-child(43) { --random-x: 0.31; --random-y: 0.69; }
+.tunnel-stars:nth-child(44) { --random-x: 0.69; --random-y: 0.11; }
+.tunnel-stars:nth-child(45) { --random-x: 0.49; --random-y: 0.51; }
+.tunnel-stars:nth-child(46) { --random-x: 0.21; --random-y: 0.89; }
+.tunnel-stars:nth-child(47) { --random-x: 0.79; --random-y: 0.31; }
+.tunnel-stars:nth-child(48) { --random-x: 0.39; --random-y: 0.61; }
+.tunnel-stars:nth-child(49) { --random-x: 0.61; --random-y: 0.49; }
+.tunnel-stars:nth-child(50) { --random-x: 0.09; --random-y: 0.19; }
+
+
+/* Animation delays for a staggered effect */
+.tunnel-stars.delay-1 { animation-delay: 0.1s; }
+.tunnel-stars.delay-2 { animation-delay: 0.2s; }
+.tunnel-stars.delay-3 { animation-delay: 0.3s; }
+.tunnel-stars.delay-4 { animation-delay: 0.4s; }
+.tunnel-stars.delay-5 { animation-delay: 0.5s; }
+.tunnel-stars.delay-6 { animation-delay: 0.6s; }
+.tunnel-stars.delay-7 { animation-delay: 0.7s; }
+.tunnel-stars.delay-8 { animation-delay: 0.8s; }
+.tunnel-stars.delay-9 { animation-delay: 0.9s; }
+.tunnel-stars.delay-10 { animation-delay: 1.0s; }
+.tunnel-stars.delay-11 { animation-delay: 1.1s; }
+.tunnel-stars.delay-12 { animation-delay: 1.2s; }
+.tunnel-stars.delay-13 { animation-delay: 1.3s; }
+.tunnel-stars.delay-14 { animation-delay: 1.4s; }
+.tunnel-stars.delay-15 { animation-delay: 1.5s; }
+.tunnel-stars.delay-16 { animation-delay: 1.6s; }
+.tunnel-stars.delay-17 { animation-delay: 1.7s; }
+.tunnel-stars.delay-18 { animation-delay: 1.8s; }
+.tunnel-stars.delay-19 { animation-delay: 1.9s; }
+.tunnel-stars.delay-20 { animation-delay: 2.0s; }
+.tunnel-stars.delay-21 { animation-delay: 2.1s; }
+.tunnel-stars.delay-22 { animation-delay: 2.2s; }
+.tunnel-stars.delay-23 { animation-delay: 2.3s; }
+.tunnel-stars.delay-24 { animation-delay: 2.4s; }
+.tunnel-stars.delay-25 { animation-delay: 2.5s; }
+.tunnel-stars.delay-26 { animation-delay: 2.6s; }
+.tunnel-stars.delay-27 { animation-delay: 2.7s; }
+.tunnel-stars.delay-28 { animation-delay: 2.8s; }
+.tunnel-stars.delay-29 { animation-delay: 2.9s; }
+.tunnel-stars.delay-30 { animation-delay: 3.0s; }
+.tunnel-stars.delay-31 { animation-delay: 3.1s; }
+.tunnel-stars.delay-32 { animation-delay: 3.2s; }
+.tunnel-stars.delay-33 { animation-delay: 3.3s; }
+.tunnel-stars.delay-34 { animation-delay: 3.4s; }
+.tunnel-stars.delay-35 { animation-delay: 3.5s; }
+.tunnel-stars.delay-36 { animation-delay: 3.6s; }
+.tunnel-stars.delay-37 { animation-delay: 3.7s; }
+.tunnel-stars.delay-38 { animation-delay: 3.8s; }
+.tunnel-stars.delay-39 { animation-delay: 3.9s; }
+.tunnel-stars.delay-40 { animation-delay: 4.0s; }
+.tunnel-stars.delay-41 { animation-delay: 4.1s; }
+.tunnel-stars.delay-42 { animation-delay: 4.2s; }
+.tunnel-stars.delay-43 { animation-delay: 4.3s; }
+.tunnel-stars.delay-44 { animation-delay: 4.4s; }
+.tunnel-stars.delay-45 { animation-delay: 4.5s; }
+.tunnel-stars.delay-46 { animation-delay: 4.6s; }
+.tunnel-stars.delay-47 { animation-delay: 4.7s; }
+.tunnel-stars.delay-48 { animation-delay: 4.8s; }
+.tunnel-stars.delay-49 { animation-delay: 4.9s; }
+.tunnel-stars.delay-50 { animation-delay: 5.0s; }
+
+/* Keyframes for fade-in-up animation (for landing page content) */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+.animate-fade-in-up.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animate-fade-in-up.delay-400 {
+  animation-delay: 0.4s;
+}

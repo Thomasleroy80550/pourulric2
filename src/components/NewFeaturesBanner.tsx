@@ -4,23 +4,13 @@ import { Button } from '@/components/ui/button';
 import { XCircle, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const BANNER_DISMISSED_KEY = 'newFeaturesBannerDismissed';
-const CURRENT_BANNER_VERSION = 'v1.0'; // Increment this to show the banner again for new updates
+// Removed BANNER_DISMISSED_KEY and CURRENT_BANNER_VERSION to make it always visible
 
 const NewFeaturesBanner: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  // Set isVisible to true by default, and remove any dismissal logic
+  const [isVisible, setIsVisible] = useState(true); 
 
-  useEffect(() => {
-    const dismissedVersion = localStorage.getItem(BANNER_DISMISSED_KEY);
-    if (dismissedVersion !== CURRENT_BANNER_VERSION) {
-      setIsVisible(true);
-    }
-  }, []);
-
-  const handleDismiss = () => {
-    setIsVisible(false);
-    localStorage.setItem(BANNER_DISMISSED_KEY, CURRENT_BANNER_VERSION);
-  };
+  // No useEffect for localStorage check, no handleDismiss function
 
   if (!isVisible) {
     return null;
@@ -38,14 +28,12 @@ const NewFeaturesBanner: React.FC = () => {
         </p>
       </div>
       <div className="flex items-center space-x-3">
-        <Link to="/new-owner-site" onClick={handleDismiss}>
+        <Link to="/new-owner-site"> {/* Removed onClick={handleDismiss} */}
           <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-gray-100">
             Voir les nouveautés
           </Button>
         </Link>
-        <Button variant="ghost" size="icon" onClick={handleDismiss} className="text-white hover:bg-white hover:text-blue-600">
-          <XCircle className="h-5 w-5" />
-        </Button>
+        {/* Removed the dismiss button */}
       </div>
     </div>
   );

@@ -23,7 +23,8 @@ import ContentPage from "./pages/ContentPage";
 import ProfilePage from "./pages/ProfilePage";
 import GoogleSheetDataPage from "./pages/GoogleSheetDataPage";
 import BlogPage from "./pages/BlogPage";
-import NewOwnerSitePage from "./pages/NewOwnerSitePage"; // Import the new page
+import NewOwnerSitePage from "./pages/NewOwnerSitePage";
+import PromotionPage from "./pages/PromotionPage"; // Import the new page
 import { SessionContextProvider } from "./components/SessionContextProvider";
 
 const queryClient = new QueryClient();
@@ -43,7 +44,8 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
             <Route path="/blog" element={<BlogPage />} />
-            <Route path="/new-owner-site" element={<NewOwnerSitePage />} /> {/* New route */}
+            <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
+            <Route path="/promotion" element={<PromotionPage />} /> {/* New route for promotion page */}
             <Route path="/" element={<DashboardPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/bookings" element={<BookingsPage />} />

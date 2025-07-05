@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter, // Import DialogFooter
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button'; // Import Button
+import { Loader2, Download } from 'lucide-react'; // Import icons
 import {
   ResponsiveContainer,
   LineChart,
@@ -20,6 +23,9 @@ import {
 } from 'recharts';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import { toast } from 'sonner';
 
 interface ChartFullScreenDialogProps {
   isOpen: boolean;
@@ -42,14 +48,60 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
   dataKeys,
   yAxisUnit,
 }) => {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!chartContainerRef.current) {
+      toast.error("Impossible de capturer le graphique. Élément non trouvé.");
+      return;
+    }
+
+    setIsExporting(true);
+    toast.loading("Génération du PDF...", { id: 'pdf-export' });
+
+    try {
+      const canvas = await html2canvas(chartContainerRef.current, {
+        scale: 2, // Increase scale for better resolution
+        useCORS: true, // Important for images loaded from other origins
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`${title.replace(/\s/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`);
+      toast.success("PDF généré avec succès !", { id: 'pdf-export' });
+    } catch (error: any) {
+      console.error("Error generating PDF:", error);
+      toast.error(`Erreur lors de la génération du PDF : ${error.message}`, { id: 'pdf-export' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[90vw] md:max-w-[1000px] h-[80vh] flex flex-col p-6 rounded-xl shadow-xl">
+      <DialogContent className="sm:max-w-[90vw] md:max-w-[1000px] h-[80vh] flex flex-col p-6 rounded-lg shadow-xl"> {/* Changed rounded-xl to rounded-lg */}
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <div className="flex-grow w-full h-full mt-4">
+        <div ref={chartContainerRef} className="flex-grow w-full h-full mt-4">
           <ResponsiveContainer width="100%" height="100%">
             {chartType === 'line' ? (
               <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -103,6 +155,21 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
             )}
           </ResponsiveContainer>
         </div>
+        <DialogFooter className="mt-4">
+          <Button onClick={handleExportPdf} disabled={isExporting}>
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exportation...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Exporter en PDF
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

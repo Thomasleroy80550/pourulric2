@@ -20,7 +20,7 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react"; // Added useCallback
 import { callGSheetProxy } from "@/lib/gsheets";
 import { toast } from "sonner";
 import ObjectiveDialog from "@/components/ObjectiveDialog"; // Import the new dialog component
@@ -47,14 +47,13 @@ const DashboardPage = () => {
   const [activityData, setActivityData] = useState(
     DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))
   );
-  // Removed loadingActivityData and activityDataError as they are now part of loadingKrossbookingStats
 
   const [financialData, setFinancialData] = useState({
     venteAnnee: 0,
     rentreeArgentAnnee: 0,
     fraisAnnee: 0,
     resultatAnnee: 0,
-    currentAchievementPercentage: 0, // Renamed for clarity
+    currentAchievementPercentage: 0,
   });
   const [loadingFinancialData, setLoadingFinancialData] = useState(true);
   const [financialDataError, setFinancialDataError] = useState<string | null>(null);
@@ -64,29 +63,35 @@ const DashboardPage = () => {
   const [monthlyFinancialDataError, setMonthlyFinancialDataError] = useState<string | null>(null);
 
   const [isObjectiveDialogOpen, setIsObjectiveDialogOpen] = useState(false);
-  const [userObjectiveAmount, setUserObjectiveAmount] = useState(0); // User's target objective in Euros
+  const [userObjectiveAmount, setUserObjectiveAmount] = useState(0);
 
   const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
-  const [totalReservationsCurrentYear, setTotalReservationsCurrentYear] = useState(0); // This will now come from GSheet B2
+  const [totalReservationsCurrentYear, setTotalReservationsCurrentYear] = useState(0);
   const [totalNightsCurrentYear, setTotalNightsCurrentYear] = useState(0);
   const [totalGuestsCurrentYear, setTotalGuestsCurrentYear] = useState(0);
   const [occupancyRateCurrentYear, setOccupancyRateCurrentYear] = useState(0);
   const [netPricePerNight, setNetPricePerNight] = useState(0);
-  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true); // Combined loading for Krossbooking related stats
+  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
   const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    // Removed activity data fetching from GSheet here
-    // It will now be calculated from Krossbooking reservations in fetchKrossbookingStats
-
-    // Fetch Financial Data and User Profile
+  const fetchData = useCallback(async () => {
     setLoadingFinancialData(true);
     setFinancialDataError(null);
     try {
-      const [financialSheetData, userProfile, reservationsSheetData] = await Promise.all([
+      const [
+        financialSheetData,
+        userProfile,
+        reservationsCountData,
+        guestsCountData,
+        nightsCountData,
+        channelData,
+      ] = await Promise.all([
         callGSheetProxy({ action: 'read_sheet', range: 'C2:F2' }),
         getProfile(),
-        callGSheetProxy({ action: 'read_sheet', range: 'B2' }), // New call for B2
+        callGSheetProxy({ action: 'read_sheet', range: 'B2' }), // Total Reservations
+        callGSheetProxy({ action: 'read_sheet', range: 'K2' }), // Total Guests
+        callGSheetProxy({ action: 'read_sheet', range: 'L2' }), // Total Nights
+        callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' }), // Channel Reservations
       ]);
 
       let currentResultatAnnee = 0;
@@ -105,19 +110,49 @@ const DashboardPage = () => {
         setFinancialDataError("Format de données inattendu pour le bilan financier.");
       }
 
-      // Set total reservations from Google Sheet B2
-      if (reservationsSheetData && reservationsSheetData.length > 0 && reservationsSheetData[0].length > 0) {
-        const reservationsCountFromSheet = Number(reservationsSheetData[0][0]);
-        setTotalReservationsCurrentYear(isNaN(reservationsCountFromSheet) ? 0 : reservationsCountFromSheet);
+      // Update total reservations from Google Sheet B2
+      if (reservationsCountData && reservationsCountData.length > 0 && reservationsCountData[0].length > 0) {
+        const count = Number(reservationsCountData[0][0]);
+        setTotalReservationsCurrentYear(isNaN(count) ? 0 : count);
       } else {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les réservations annuelles." : "Format de données inattendu pour les réservations annuelles.");
+      }
+
+      // Update total guests from Google Sheet K2
+      if (guestsCountData && guestsCountData.length > 0 && guestsCountData[0].length > 0) {
+        const count = Number(guestsCountData[0][0]);
+        setTotalGuestsCurrentYear(isNaN(count) ? 0 : count);
+      } else {
+        setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les voyageurs annuels." : "Format de données inattendu pour les voyageurs annuels.");
+      }
+
+      // Update total nights from Google Sheet L2
+      if (nightsCountData && nightsCountData.length > 0 && nightsCountData[0].length > 0) {
+        const count = Number(nightsCountData[0][0]);
+        setTotalNightsCurrentYear(isNaN(count) ? 0 : count);
+      } else {
+        setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les nuits annuelles." : "Format de données inattendu pour les nuits annuelles.");
+      }
+
+      // Update activityData (donut chart) from Google Sheet DG2:DK2
+      if (channelData && channelData.length > 0 && channelData[0].length >= 5) {
+        const [airbnb, booking, abritel, hellokeys, proprio] = channelData[0].map(Number);
+        const newActivityData = DONUT_CATEGORIES.map(cat => {
+          if (cat.name === 'Airbnb') return { ...cat, value: isNaN(airbnb) ? 0 : airbnb };
+          if (cat.name === 'Booking') return { ...cat, value: isNaN(booking) ? 0 : booking };
+          if (cat.name === 'Abritel') return { ...cat, value: isNaN(abritel) ? 0 : abritel };
+          if (cat.name === 'Hello Keys') return { ...cat, value: isNaN(hellokeys) ? 0 : hellokeys };
+          if (cat.name === 'Proprio') return { ...cat, value: isNaN(proprio) ? 0 : proprio };
+          return { ...cat, value: 0 }; // 'Autre' will be 0 if not explicitly provided
+        });
+        setActivityData(newActivityData);
+      } else {
+        setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les canaux de réservation." : "Format de données inattendu pour les canaux de réservation.");
       }
 
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
         setUserObjectiveAmount(objectiveAmount);
-
-        // Calculate achievement percentage based on 'resultatAnnee' and 'objective_amount'
         const calculatedAchievement = (objectiveAmount === 0) ? 0 : (currentResultatAnnee / objectiveAmount) * 100;
         setFinancialData(prev => ({
           ...prev,
@@ -133,7 +168,7 @@ const DashboardPage = () => {
       setLoadingFinancialData(false);
     }
 
-    // Fetch Monthly Financial Data
+    // Fetch Monthly Financial Data (remains unchanged, still from BU2:CF5)
     setLoadingMonthlyFinancialData(true);
     setMonthlyFinancialDataError(null);
     try {
@@ -162,9 +197,9 @@ const DashboardPage = () => {
     } finally {
       setLoadingMonthlyFinancialData(false);
     }
-  };
+  }, []); // No dependencies for fetchData, it's a one-time fetch of static sheet data
 
-  const fetchKrossbookingStats = async () => {
+  const fetchKrossbookingStats = useCallback(async (currentTotalNights: number) => {
     setLoadingKrossbookingStats(true);
     setKrossbookingStatsError(null);
     try {
@@ -173,117 +208,34 @@ const DashboardPage = () => {
 
       if (roomIds.length === 0) {
         setNextArrival(null);
-        // setTotalReservationsCurrentYear(0); // This is now handled by fetchData from GSheet
-        setTotalNightsCurrentYear(0);
-        setTotalGuestsCurrentYear(0);
         setOccupancyRateCurrentYear(0);
-        setNetPricePerNight(0);
-        setActivityData(DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))); // Reset activity data
         setLoadingKrossbookingStats(false);
         return;
       }
 
       const allReservations = await fetchKrossbookingReservations(roomIds);
       console.log("DEBUG: Total Krossbooking Reservations fetched:", allReservations.length);
-      console.log("DEBUG: Raw Krossbooking Reservations data:", allReservations);
 
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Normalize today to start of day for comparison
-
-      const currentYearStart = startOfYear(today);
-      const periodStart = currentYearStart;
-      const periodEnd = today; // Data up to today
-
-      const daysInCurrentYearToDate = differenceInDays(periodEnd, periodStart) + 1; // Number of days from Jan 1st to today
-
-      console.log("DEBUG: Current Year Start (normalized):", format(currentYearStart, 'yyyy-MM-dd'));
-      console.log("DEBUG: Period End (normalized):", format(periodEnd, 'yyyy-MM-dd'));
-      console.log("DEBUG: Today (normalized):", format(today, 'yyyy-MM-dd'));
+      today.setHours(0, 0, 0, 0);
 
       let nextArrivalCandidate: KrossbookingReservation | null = null;
-      // let reservationsCount = 0; // Removed: now comes from GSheet B2
-      let nightsCount = 0;
-      const uniqueGuests = new Set<string>();
-      const channelCounts: { [key: string]: number } = {};
-      DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name] = 0); // Initialize counts for donut
 
       allReservations.forEach(res => {
         const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-        const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
-
-        if (!checkIn || !checkOut) {
-          console.warn(`DEBUG: Skipping reservation ${res.id} due to invalid dates: check_in_date=${res.check_in_date}, check_out_date=${res.check_out_date}`);
-          return; // Skip invalid dates
-        }
-
-        // Calculate next arrival (today or in the future) - this logic remains separate
-        if ((isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
+        if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
           nextArrivalCandidate = res;
-        }
-
-        // Determine if the reservation overlaps with the current year-to-date period
-        // Overlap condition: (start1 <= end2) AND (end1 >= start2)
-        const overlapsWithPeriod = checkIn <= periodEnd && checkOut >= periodStart;
-
-        console.log(`DEBUG: Reservation ID: ${res.id}, Guest: ${res.guest_name}, Check-in: ${format(checkIn, 'yyyy-MM-dd')}, Check-out: ${format(checkOut, 'yyyy-MM-dd')}, Status: ${res.status}`);
-        console.log(`DEBUG:   overlapsWithPeriod: ${overlapsWithPeriod}`);
-
-        if (overlapsWithPeriod) {
-          // reservationsCount++; // Removed: now comes from GSheet B2
-
-          // Calculate nights *within* the current year-to-date period
-          const effectiveCheckIn = max([checkIn, periodStart]);
-          const effectiveCheckOut = min([checkOut, periodEnd]);
-
-          // Ensure effectiveCheckOut is not before effectiveCheckIn for night calculation
-          if (effectiveCheckOut > effectiveCheckIn) {
-            nightsCount += differenceInDays(effectiveCheckOut, effectiveCheckIn);
-          } else if (isSameDay(effectiveCheckIn, effectiveCheckOut)) {
-            // If it's a 0-night stay (check-in and check-out on same day) and it falls within the period,
-            // it doesn't add to nightsCount as differenceInDays would be 0. This is correct.
-          }
-
-          if (res.guest_name) {
-            uniqueGuests.add(res.guest_name); // Add guest for this reservation
-          }
-          console.log(`DEBUG:   INCLUDING reservation ${res.id} in total nights and guests.`);
-
-          // Update channel counts for donut chart
-          const channel = res.cod_channel || 'UNKNOWN';
-          let categoryName = 'Autre'; // Default to 'Autre'
-
-          if (channel === 'AIRBNB') categoryName = 'Airbnb';
-          else if (channel === 'BOOKING') categoryName = 'Booking';
-          else if (channel === 'ABRITEL') categoryName = 'Abritel';
-          else if (channel === 'HELLOKEYS') categoryName = 'Hello Keys';
-          else if (channel === 'PROP0' || channel === 'PROPRI' || channel === 'DIRECT') categoryName = 'Proprio'; // Aggregate these
-
-          channelCounts[categoryName]++;
-        } else {
-          console.log(`DEBUG:   EXCLUDING reservation ${res.id} from current year's stats (no overlap with year-to-date period).`);
         }
       });
 
       setNextArrival(nextArrivalCandidate);
-      // setTotalReservationsCurrentYear(reservationsCount); // Removed: now comes from GSheet B2
-      setTotalNightsCurrentYear(nightsCount);
-      setTotalGuestsCurrentYear(uniqueGuests.size);
 
-      console.log("DEBUG: Final totalNightsCurrentYear (within year-to-date period):", nightsCount);
-      console.log("DEBUG: Final uniqueGuests for current year (from bookings overlapping year-to-date):", uniqueGuests.size);
-
-      // Update activityData for the donut chart
-      const newActivityData = DONUT_CATEGORIES.map(cat => ({
-        name: cat.name,
-        value: channelCounts[cat.name],
-        color: cat.color
-      }));
-      setActivityData(newActivityData);
-      console.log("DEBUG: Donut Activity Data calculated:", newActivityData);
-
-      // Calculate occupancy rate based on days up to today
+      // Calculate occupancy rate using totalNightsCurrentYear from GSheet
+      const currentYearStart = startOfYear(today);
+      const periodEnd = today;
+      const daysInCurrentYearToDate = differenceInDays(periodEnd, currentYearStart) + 1;
       const totalAvailableNightsInPeriod = fetchedUserRooms.length * daysInCurrentYearToDate;
-      const calculatedOccupancyRate = totalAvailableNightsInPeriod > 0 ? (nightsCount / totalAvailableNightsInPeriod) * 100 : 0;
+      const calculatedOccupancyRate = totalAvailableNightsInPeriod > 0 ? (currentTotalNights / totalAvailableNightsInPeriod) * 100 : 0;
       setOccupancyRateCurrentYear(calculatedOccupancyRate);
 
     } catch (err: any) {
@@ -292,22 +244,28 @@ const DashboardPage = () => {
     } finally {
       setLoadingKrossbookingStats(false);
     }
-  };
+  }, []); // No dependencies for fetchKrossbookingStats, it takes currentTotalNights as param
 
   useEffect(() => {
-    fetchData(); // Fetches GSheet data and profile
-    fetchKrossbookingStats(); // Fetches Krossbooking related stats
-  }, []);
+    fetchData();
+  }, [fetchData]); // Call fetchData once on mount
+
+  useEffect(() => {
+    // Call fetchKrossbookingStats when totalNightsCurrentYear is updated by fetchData
+    if (!loadingFinancialData) { // Ensure fetchData has completed and set totalNightsCurrentYear
+        fetchKrossbookingStats(totalNightsCurrentYear);
+    }
+  }, [totalNightsCurrentYear, loadingFinancialData, fetchKrossbookingStats]); // Depend on totalNightsCurrentYear and loading state
 
   // Effect to calculate Net Price Per Night once financialData and totalNightsCurrentYear are available
   useEffect(() => {
-    if (!loadingFinancialData && !loadingKrossbookingStats && financialData.resultatAnnee !== undefined && totalNightsCurrentYear > 0) {
+    if (!loadingFinancialData && financialData.resultatAnnee !== undefined && totalNightsCurrentYear > 0) {
       const calculatedNetPricePerNight = financialData.resultatAnnee / totalNightsCurrentYear;
       setNetPricePerNight(calculatedNetPricePerNight);
-    } else if (!loadingFinancialData && !loadingKrossbookingStats && totalNightsCurrentYear === 0) {
+    } else if (!loadingFinancialData && totalNightsCurrentYear === 0) {
       setNetPricePerNight(0); // Avoid division by zero if no nights
     }
-  }, [financialData.resultatAnnee, totalNightsCurrentYear, loadingFinancialData, loadingKrossbookingStats]);
+  }, [financialData.resultatAnnee, totalNightsCurrentYear, loadingFinancialData]);
 
   const reservationPerMonthData = [
     { name: 'Jan', reservations: 10 },
@@ -424,7 +382,7 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loadingKrossbookingStats ? (
+              {loadingKrossbookingStats || loadingFinancialData ? ( // Combined loading for all stats in this card
                 <div className="space-y-4">
                   <Skeleton className="h-8 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
@@ -438,11 +396,11 @@ const DashboardPage = () => {
                   </div>
                   <Skeleton className="h-4 w-1/3" />
                 </div>
-              ) : krossbookingStatsError ? (
+              ) : krossbookingStatsError || financialDataError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{krossbookingStatsError}</AlertDescription>
+                  <AlertDescription>{krossbookingStatsError || financialDataError}</AlertDescription>
                 </Alert>
               ) : (
                 <>
@@ -497,7 +455,7 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col p-4">
-              {loadingKrossbookingStats ? (
+              {loadingFinancialData ? ( // Donut data also comes from GSheet, so use loadingFinancialData
                 <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
                   <Skeleton className="w-full md:w-3/5 h-[280px]" />
                   <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
@@ -506,11 +464,11 @@ const DashboardPage = () => {
                     ))}
                   </div>
                 </div>
-              ) : krossbookingStatsError ? (
+              ) : financialDataError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{krossbookingStatsError}</AlertDescription>
+                  <AlertDescription>{financialDataError}</AlertDescription>
                 </Alert>
               ) : (
                 <>

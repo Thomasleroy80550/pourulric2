@@ -57,7 +57,7 @@ const formSchema = z.object({
 });
 
 const REPORT_PROBLEM_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/report-problem-proxy";
-const MAKE_WEBHOOK_URL = "YOUR_MAKE_WEBHOOK_URL_HERE"; // <-- REMPLACEZ CECI PAR L'URL DE VOTRE WEBHOOK MAKE.COM
+const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/f04cgbxaplh9biuskxcj13vppe32ca5a"; // <-- URL du webhook Make.com
 
 const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
   isOpen,
@@ -123,35 +123,31 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
       }
 
       // Step 2: Send data to Make.com webhook for email
-      if (MAKE_WEBHOOK_URL === "YOUR_MAKE_WEBHOOK_URL_HERE") {
-        toast.warning("Veuillez configurer l'URL du webhook Make.com pour l'envoi d'e-mails.");
+      const makePayload = {
+        reservation_id: booking.id,
+        problem_type: values.problemType,
+        description: values.description,
+        contact_email: values.contactEmail,
+        contact_phone: booking.phone || '', // Pass phone from booking if available
+        guest_name: booking.guest_name,
+        property_name: booking.property_name,
+        user_email: session.user.email, // User's email from session
+      };
+
+      const makeResponse = await fetch(MAKE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(makePayload),
+      });
+
+      if (!makeResponse.ok) {
+        const errorText = await makeResponse.text();
+        console.error("Error sending data to Make.com webhook:", makeResponse.status, errorText);
+        toast.warning("Signalement enregistré, mais l'e-mail de notification n'a pas pu être envoyé via Make.com.");
       } else {
-        const makePayload = {
-          reservation_id: booking.id,
-          problem_type: values.problemType,
-          description: values.description,
-          contact_email: values.contactEmail,
-          contact_phone: booking.phone || '', // Pass phone from booking if available
-          guest_name: booking.guest_name,
-          property_name: booking.property_name,
-          user_email: session.user.email, // User's email from session
-        };
-
-        const makeResponse = await fetch(MAKE_WEBHOOK_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(makePayload),
-        });
-
-        if (!makeResponse.ok) {
-          const errorText = await makeResponse.text();
-          console.error("Error sending data to Make.com webhook:", makeResponse.status, errorText);
-          toast.warning("Signalement enregistré, mais l'e-mail de notification n'a pas pu être envoyé via Make.com.");
-        } else {
-          toast.success("Signalement envoyé avec succès !");
-        }
+        toast.success("Signalement envoyé avec succès !");
       }
       
       onReportSubmitted(); // Trigger callback to refresh/close

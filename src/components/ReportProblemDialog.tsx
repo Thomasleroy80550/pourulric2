@@ -57,7 +57,7 @@ const formSchema = z.object({
 });
 
 const REPORT_PROBLEM_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/report-problem-proxy";
-const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/f04cgbxaplh9biuskxcj13vppe32ca5a"; // <-- URL du webhook Make.com
+const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/reaxso26x1j3s1zh793do1h0vqffspgc"; // <-- URL du webhook Make.com
 
 const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
   isOpen,

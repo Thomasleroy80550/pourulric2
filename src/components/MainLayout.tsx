@@ -1,8 +1,8 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet } from 'lucide-react';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -12,12 +12,13 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-const navigationItems = [
+const gestionNavigationItems = [
   { name: 'Aperçu', href: '/', icon: Home },
   { name: 'Calendrier', href: '/calendar', icon: CalendarDays },
   { name: 'Réservations', href: '/bookings', icon: Bookmark },
@@ -30,65 +31,88 @@ const navigationItems = [
   { name: 'Aides', href: '/help', icon: LifeBuoy },
 ];
 
-const bottomNavigationItems = [
+const decouvrirNavigationItems = [
+  { name: 'Blog', href: '/blog', icon: Newspaper },
   { name: 'Modules', href: '/modules', icon: Puzzle },
   { name: 'Road Map', href: '/roadmap', icon: Map },
+];
+
+const bottomNavigationItems = [
   { name: 'Paramètres', href: '/settings', icon: Settings },
   { name: 'Mon Profil', href: '/profile', icon: User },
 ];
 
 // Reusable Sidebar content
-const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => (
-  <>
-    <div className="flex items-center mb-8">
-      <img src="/logo.svg" alt="Hello Keys Logo" className="h-8 w-auto mr-2" />
-      <span className="text-lg font-bold text-sidebar-primary">HELLO KEYS</span>
-      <span className="text-xs ml-1 text-sidebar-foreground">GESTION LOCATIVE 2.0</span>
-    </div>
+const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
+  const [activeSection, setActiveSection] = useState<'gestion' | 'decouvrir'>('gestion');
 
-    <div className="mb-6">
-      <Button variant="secondary" className="w-full justify-start mb-2 bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80">Gestion</Button>
-      <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">Découvrir</Button>
-    </div>
+  const currentNavigationItems = activeSection === 'gestion' ? gestionNavigationItems : decouvrirNavigationItems;
 
-    <nav className="flex-grow">
-      <ul className="space-y-2">
-        {navigationItems.map((item) => (
-          <li key={item.name}>
-            <Link
-              to={item.href}
-              className={cn(
-                "flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all",
-                item.href === '/' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
-              )}
-              onClick={onLinkClick}
-            >
-              <item.icon className="h-5 w-5 mr-3" />
-              {item.name}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
+  return (
+    <>
+      <div className="flex items-center mb-8">
+        <img src="/logo.svg" alt="Hello Keys Logo" className="h-8 w-auto mr-2" />
+        <span className="text-lg font-bold text-sidebar-primary">HELLO KEYS</span>
+        <span className="text-xs ml-1 text-sidebar-foreground">GESTION LOCATIVE 2.0</span>
+      </div>
 
-    <nav className="mt-auto pt-4 border-t border-sidebar-border">
-      <ul className="space-y-2">
-        {bottomNavigationItems.map((item) => (
-          <li key={item.name}>
-            <Link
-              to={item.href}
-              className="flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all"
-              onClick={onLinkClick}
-            >
-              <item.icon className="h-5 w-5 mr-3" />
-              {item.name}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  </>
-);
+      <div className="mb-6 flex justify-center">
+        <ToggleGroup
+          type="single"
+          value={activeSection}
+          onValueChange={(value: 'gestion' | 'decouvrir') => {
+            if (value) setActiveSection(value);
+          }}
+          className="w-full grid grid-cols-2 gap-2"
+        >
+          <ToggleGroupItem value="gestion" aria-label="Toggle gestion" className="flex-1">
+            Gestion
+          </ToggleGroupItem>
+          <ToggleGroupItem value="decouvrir" aria-label="Toggle découvrir" className="flex-1">
+            Découvrir
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      <nav className="flex-grow">
+        <ul className="space-y-2">
+          {currentNavigationItems.map((item) => (
+            <li key={item.name}>
+              <Link
+                to={item.href}
+                className={cn(
+                  "flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all",
+                  location.pathname === item.href ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                )}
+                onClick={onLinkClick}
+              >
+                <item.icon className="h-5 w-5 mr-3" />
+                {item.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <nav className="mt-auto pt-4 border-t border-sidebar-border">
+        <ul className="space-y-2">
+          {bottomNavigationItems.map((item) => (
+            <li key={item.name}>
+              <Link
+                to={item.href}
+                className="flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all"
+                onClick={onLinkClick}
+              >
+                <item.icon className="h-5 w-5 mr-3" />
+                {item.name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </>
+  );
+};
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();

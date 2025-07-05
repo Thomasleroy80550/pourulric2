@@ -32,14 +32,14 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
 
-    /* Custom Sidebar Colors based on screenshot */
-    --sidebar-background: 210 20% 98%; /* Very light cool grey/blue, almost white */
-    --sidebar-foreground: 205 55% 33%; /* Hello Keys Blue #255F85 */
+    /* Custom Sidebar Colors */
+    --sidebar-background: 205 100% 94%; /* #e1f2ff */
+    --sidebar-foreground: 205 55% 33%; /* #255F85 */
     --sidebar-primary: 205 55% 33%; /* Logo text color, same as foreground */
     --sidebar-primary-foreground: 0 0% 100%; /* Keep as white for potential future use with dark primary bg */
-    --sidebar-accent: 205 55% 95%; /* Very, very light blue for hover/active background */
+    --sidebar-accent: 205 100% 90%; /* Lighter shade of background for hover/active */
     --sidebar-accent-foreground: 205 55% 33%; /* Text color on hover/active background, same as foreground */
-    --sidebar-border: 210 20% 90%; /* Light grey/blue border */
+    --sidebar-border: 205 100% 85%; /* Slightly darker than background for border */
     --sidebar-ring: 222.2 84% 4.9%; /* Consistent with main ring */
   }
 
@@ -74,11 +74,11 @@
 
     /* Custom Sidebar Colors for dark mode */
     --sidebar-background: 220 10% 15%; /* Dark blue */
-    --sidebar-foreground: 200 60% 90%; /* Light blue text */
-    --sidebar-primary: 200 60% 90%; /* Logo text color */
+    --sidebar-foreground: 205 55% 70%; /* Lighter version of #255F85 for contrast */
+    --sidebar-primary: 205 55% 70%; /* Logo text color */
     --sidebar-primary-foreground: 220 10% 15%; /* Dark text */
-    --sidebar-accent: 200 70% 25%; /* Slightly darker blue for hover */
-    --sidebar-accent-foreground: 200 60% 90%; /* Light blue text */
+    --sidebar-accent: 205 55% 25%; /* Slightly darker blue for hover */
+    --sidebar-accent-foreground: 205 55% 70%; /* Light blue text */
     --sidebar-border: 220 10% 25%; /* Dark grey/blue border */
     --sidebar-ring: 217.2 91.2% 59.8%; /* Consistent with main ring */
   }

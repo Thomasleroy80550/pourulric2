@@ -32,6 +32,9 @@ const ForecastDialog: React.FC<ForecastDialogProps> = ({ isOpen, onOpenChange, f
           <DialogTitle className="text-2xl font-bold text-center text-green-600">Prévision Financière</DialogTitle>
           <DialogDescription className="text-center text-gray-700 dark:text-gray-300 mt-2 mb-6">
             Voici la prévision du résultat financier pour l'année {year} basée sur vos données actuelles.
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              Ce montant est une projection linéaire de votre bénéfice net actuel sur l'ensemble de l'année.
+            </p>
           </DialogDescription>
         </DialogHeader>
         <div className="w-full h-48">

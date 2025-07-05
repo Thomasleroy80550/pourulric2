@@ -4,9 +4,8 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Sparkles } from "lucide-react"; // Import Sparkles
+import { Terminal } from "lucide-react"; 
 import {
   ResponsiveContainer,
   PieChart,
@@ -33,6 +32,7 @@ import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore 
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import ForecastDialog from '@/components/ForecastDialog';
+import { FieryProgressBar } from '@/components/FieryProgressBar'; // Import the new component
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -189,7 +189,7 @@ const DashboardPage = () => {
       if (monthlyFinancialSheetData && monthlyFinancialSheetData.length >= 4) {
         const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
         const caValues = monthlyFinancialSheetData[0] || [];
-        const montantVerseValues = monthlyFinancialData[1] || [];
+        const montantVerseValues = monthlyFinancialSheetData[1] || [];
         const fraisValues = monthlyFinancialData[2] || [];
         const benefValues = monthlyFinancialSheetData[3] || [];
 
@@ -382,13 +382,11 @@ const DashboardPage = () => {
                   </div>
                   <div className="space-y-2 mt-2 relative">
                     <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
-                    <Progress value={financialData.currentAchievementPercentage} className="h-2" />
-                    {financialData.currentAchievementPercentage >= 80 && (
-                      <Sparkles
-                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-orange-500 animate-fire-glow z-10"
-                        style={{ left: `${financialData.currentAchievementPercentage}%` }}
-                      />
-                    )}
+                    <FieryProgressBar 
+                      value={financialData.currentAchievementPercentage} 
+                      className="h-2" 
+                      indicatorClassName={financialData.currentAchievementPercentage >= 80 ? 'progress-flame' : ''}
+                    />
                     <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" onClick={() => setIsObjectiveDialogOpen(true)}>
                       Modifier mon objectif -&gt;

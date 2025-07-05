@@ -137,30 +137,31 @@
   background-color: rgba(0, 0, 0, 0.6) !important; /* Slightly darker for dark mode, but still lighter than default */
 }
 
-/* New keyframes for a fire-like glow effect */
-@keyframes fire-glow {
-  0%, 100% {
-    transform: translateY(-50%) translateX(-50%) scale(1);
-    opacity: 0.9;
-    filter: drop-shadow(0 0 4px rgba(255, 165, 0, 0.7)); /* Orange glow */
-    color: #FFD700; /* Gold */
+/* New keyframes for a fire-like glow effect on the progress bar */
+@keyframes progress-fire-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 165, 0, 0.7), /* Orange */
+                0 0 10px rgba(255, 69, 0, 0.5); /* Red-orange */
   }
   25% {
-    transform: translateY(-50%) translateX(-50%) scale(1.1);
-    opacity: 1;
-    filter: drop-shadow(0 0 8px rgba(255, 69, 0, 0.9)); /* Red-orange glow */
-    color: #FFA500; /* Orange */
+    box-shadow: 0 0 8px rgba(255, 140, 0, 0.9), /* Dark orange */
+                0 0 15px rgba(255, 99, 71, 0.7); /* Tomato */
   }
   50% {
-    transform: translateY(-50%) translateX(-50%) scale(1);
-    opacity: 0.9;
-    filter: drop-shadow(0 0 6px rgba(255, 140, 0, 0.8)); /* Dark orange glow */
-    color: #FF4500; /* Red-orange */
+    box-shadow: 0 0 10px rgba(255, 69, 0, 1), /* Red-orange */
+                0 0 20px rgba(255, 0, 0, 0.8); /* Red */
   }
   75% {
-    transform: translateY(-50%) translateX(-50%) scale(1.05);
-    opacity: 1;
-    filter: drop-shadow(0 0 7px rgba(255, 99, 71, 0.9)); /* Tomato glow */
-    color: #FF8C00; /* Dark Orange */
+    box-shadow: 0 0 8px rgba(255, 140, 0, 0.9), /* Dark orange */
+                0 0 15px rgba(255, 99, 71, 0.7); /* Tomato */
   }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 165, 0, 0.7), /* Orange */
+                0 0 10px rgba(255, 69, 0, 0.5); /* Red-orange */
+  }
+}
+
+.progress-flame {
+  animation: progress-fire-glow 2s infinite alternate ease-in-out;
+  background-color: #FF4500 !important; /* Ensure it's a fiery red-orange */
 }

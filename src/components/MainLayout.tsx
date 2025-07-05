@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper } from 'lucide-react';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -11,8 +11,9 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast }ner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import AICopilotDialog from './AICopilotDialog'; // Import the new AI Copilot Dialog
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -135,6 +136,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false); // State for AI Copilot dialog
   const navigate = useNavigate();
 
   const handleLinkClick = () => {
@@ -192,6 +194,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <Plus className="h-4 w-4" />
               <span className="ml-2 hidden xl:inline-block">Actions rapides</span>
             </Button>
+            {/* New AI Copilot Button */}
+            <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
+              <Sparkles className="h-5 w-5 text-blue-500" />
+            </Button>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />
@@ -240,6 +246,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           {children}
         </main>
       </div>
+      <AICopilotDialog
+        isOpen={isAICopilotDialogOpen}
+        onOpenChange={setIsAICopilotDialogOpen}
+      />
     </div>
   );
 };

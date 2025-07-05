@@ -32,12 +32,12 @@ import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore 
 import { fr } from 'date-fns/locale';
 
 const DONUT_CATEGORIES = [
-  { name: 'Airbnb', color: '#1e40af' },
-  { name: 'Booking', color: '#ef4444' },
-  { name: 'Abritel', color: '#3b82f6' },
-  { name: 'Hello Keys', color: '#0e7490' },
-  { name: 'Proprio', color: '#4f46e5' }, // This will aggregate PROP0, PROPRI, DIRECT
-  { name: 'Autre', color: '#6b7280' }, // For UNKNOWN or other unmapped channels
+  { name: 'Airbnb', color: '#FF5A5F' }, // Airbnb brand color
+  { name: 'Booking', color: '#003580' }, // Booking.com brand color
+  { name: 'Abritel', color: '#2D60E0' }, // Abritel/Vrbo brand color
+  { name: 'Hello Keys', color: '#00A699' }, // Distinct color for Hello Keys
+  { name: 'Proprio', color: '#4f46e5' }, // Existing purple for owner reservations
+  { name: 'Autre', color: '#6b7280' }, // Existing gray for unknown/other channels
 ];
 
 const DashboardPage = () => {
@@ -203,8 +203,7 @@ const DashboardPage = () => {
     setLoadingKrossbookingStats(true);
     setKrossbookingStatsError(null);
     try {
-      const fetchedUserRooms = await getUserRooms(); // Fetch user rooms here
-      // Pass fetchedUserRooms to fetchKrossbookingReservations
+      const fetchedUserRooms = await getUserRooms();
       const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
       console.log("DEBUG: Total Krossbooking Reservations fetched:", allReservations.length);
 

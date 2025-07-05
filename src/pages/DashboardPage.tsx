@@ -13,8 +13,8 @@ import {
   Pie,
   Cell,
   Tooltip,
-  BarChart, // Changed from LineChart
-  Bar,      // Changed from Line
+  LineChart, // Changed back to LineChart
+  Line,      // Changed back to Line
   XAxis,
   YAxis,
   CartesianGrid,
@@ -30,6 +30,7 @@ import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/kr
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import ChartFullScreenDialog from '@/components/ChartFullScreenDialog'; // Import the new component
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' }, // Airbnb brand color
@@ -73,6 +74,23 @@ const DashboardPage = () => {
   const [netPricePerNight, setNetPricePerNight] = useState(0);
   const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
   const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
+
+  // State for full-screen chart dialog
+  const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
+  const [dialogChartData, setDialogChartData] = useState<any[]>([]);
+  const [dialogChartType, setDialogChartType] = useState<'line' | 'bar'>('line');
+  const [dialogChartTitle, setDialogChartTitle] = useState('');
+  const [dialogChartDataKeys, setDialogChartDataKeys] = useState<{ key: string; name: string; color: string; }[]>([]);
+  const [dialogChartYAxisUnit, setDialogChartYAxisUnit] = useState<string | undefined>(undefined);
+
+  const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
+    setDialogChartData(data);
+    setDialogChartType(type);
+    setDialogChartTitle(title);
+    setDialogChartDataKeys(dataKeys);
+    setDialogChartYAxisUnit(yAxisUnit);
+    setIsChartDialogOpen(true);
+  };
 
   const fetchData = useCallback(async () => {
     setLoadingFinancialData(true);
@@ -494,10 +512,24 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          {/* Statistiques Card (Bar Chart for Financial Data) */}
+          {/* Statistiques Card (Line Chart for Financial Data) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                monthlyFinancialData,
+                'line',
+                'Statistiques Financières Mensuelles',
+                [
+                  { key: 'ca', name: 'CA', color: 'hsl(var(--primary))' },
+                  { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
+                  { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
+                  { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
+                ],
+                '€'
+              )}>
+                Agrandir
+              </Button>
             </CardHeader>
             <CardContent className="h-72"> {/* Increased height */}
               {loadingMonthlyFinancialData ? (
@@ -510,8 +542,8 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                    <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                     <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                     <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                     <Tooltip 
@@ -521,25 +553,33 @@ const DashboardPage = () => {
                       formatter={(value: number) => `${value}€`}
                     />
                     <Legend />
-                    <Bar dataKey="ca" fill="hsl(var(--primary))" name="CA" animationDuration={1500} animationEasing="ease-in-out" />
-                    <Bar dataKey="montantVerse" fill="#FACC15" name="Montant Versé" animationDuration={1500} animationEasing="ease-in-out" />
-                    <Bar dataKey="frais" fill="hsl(var(--destructive))" name="Frais" animationDuration={1500} animationEasing="ease-in-out" />
-                    <Bar dataKey="benef" fill="#22c55e" name="Bénéfice" animationDuration={1500} animationEasing="ease-in-out" />
-                  </BarChart>
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                  </LineChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
 
-          {/* Réservation / mois Card (Bar Chart) */}
+          {/* Réservation / mois Card (Line Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Réservation / mois</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                reservationPerMonthData,
+                'line',
+                'Réservation / mois',
+                [{ key: 'reservations', name: 'Réservations', color: 'hsl(var(--accent))' }]
+              )}>
+                Agrandir
+              </Button>
             </CardHeader>
             <CardContent className="h-72"> {/* Increased height */}
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                  <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" />
+                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -548,21 +588,30 @@ const DashboardPage = () => {
                     itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
                   <Legend />
-                  <Bar dataKey="reservations" fill="hsl(var(--accent))" name="Réservations" animationDuration={1500} animationEasing="ease-in-out" />
-                </BarChart>
+                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Occupation Card (Bar Chart) */}
+          {/* Occupation Card (Line Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Occupation</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                occupationRateData,
+                'line',
+                'Occupation',
+                [{ key: 'occupation', name: 'Occupation', color: 'hsl(var(--secondary))' }],
+                '%'
+              )}>
+                Agrandir
+              </Button>
             </CardHeader>
             <CardContent className="h-72"> {/* Increased height */}
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                  <CartesianGrid strokeDashArray="" className="stroke-gray-200 dark:stroke-gray-700" />
+                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                  <CartesianGrid strokeDashArray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -572,8 +621,8 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}%`}
                   />
                   <Legend />
-                  <Bar dataKey="occupation" fill="hsl(var(--secondary))" name="Occupation" animationDuration={1500} animationEasing="ease-in-out" />
-                </BarChart>
+                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -585,6 +634,15 @@ const DashboardPage = () => {
         onOpenChange={setIsObjectiveDialogOpen}
         currentObjectiveAmount={userObjectiveAmount} // Pass the amount
         onObjectiveUpdated={fetchData} // Re-fetch all data after objective is updated
+      />
+      <ChartFullScreenDialog
+        isOpen={isChartDialogOpen}
+        onOpenChange={setIsChartDialogOpen}
+        chartData={dialogChartData}
+        chartType={dialogChartType}
+        title={dialogChartTitle}
+        dataKeys={dialogChartDataKeys}
+        yAxisUnit={dialogChartYAxisUnit}
       />
     </MainLayout>
   );

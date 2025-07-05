@@ -5,12 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle } from 'lucide-react';
+import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag } from 'lucide-react'; // Added Flag icon
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils'; // Correction ici
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Skeleton } from '@/components/ui/skeleton';
+import ReportProblemDialog from '@/components/ReportProblemDialog'; // Import the new component
 
 interface Booking {
   id: string;
@@ -33,6 +34,8 @@ interface Booking {
   status: string;
   amount: string;
   cod_channel?: string;
+  email?: string; // Added email for reporting
+  phone?: string; // Added phone for reporting
 }
 
 const BookingsPage: React.FC = () => {
@@ -46,6 +49,9 @@ const BookingsPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false); // New state for report dialog
+  const [bookingToReport, setBookingToReport] = useState<Booking | null>(null); // New state for booking to report
+
   // Filter states - Initialized to 'all' instead of ''
   const [filterRoomId, setFilterRoomId] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -53,7 +59,7 @@ const BookingsPage: React.FC = () => {
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
 
-  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED'];
+  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'PROPRI', 'PROP0']; // Added owner statuses
   const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
 
   const applyFilters = (bookingsToFilter: Booking[]) => {
@@ -90,43 +96,43 @@ const BookingsPage: React.FC = () => {
     setFilteredBookings(tempBookings);
   };
 
+  const loadBookings = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fetchedUserRooms = await getUserRooms();
+      setUserRooms(fetchedUserRooms);
+
+      // Pass fetchedUserRooms to fetchKrossbookingReservations
+      const fetchedBookings = await fetchKrossbookingReservations(fetchedUserRooms);
+      console.log(`Fetched bookings for BookingsPage (Rooms: ${fetchedUserRooms.map(r => r.room_id).join(', ')}):`, fetchedBookings);
+
+      const currentYear = new Date().getFullYear();
+      const yearStart = startOfYear(new Date(currentYear, 0, 1));
+      const yearEnd = endOfYear(new Date(currentYear, 0, 1));
+
+      const bookingsForCurrentYear = fetchedBookings.filter(booking => {
+        const checkInDate = parseISO(booking.check_in_date);
+        return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
+      });
+
+      const sortedBookings = bookingsForCurrentYear.sort((a, b) => {
+        const dateA = parseISO(a.check_in_date).getTime();
+        const dateB = parseISO(b.check_in_date).getTime();
+        return dateA - dateB;
+      });
+
+      setAllBookings(sortedBookings);
+      applyFilters(sortedBookings);
+    } catch (err: any) {
+      setError(`Erreur lors du chargement des réservations : ${err.message}`);
+      console.error("Error in loadBookings for BookingsPage:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadBookings = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const fetchedUserRooms = await getUserRooms();
-        setUserRooms(fetchedUserRooms);
-
-        // Pass fetchedUserRooms to fetchKrossbookingReservations
-        const fetchedBookings = await fetchKrossbookingReservations(fetchedUserRooms);
-        console.log(`Fetched bookings for BookingsPage (Rooms: ${fetchedUserRooms.map(r => r.room_id).join(', ')}):`, fetchedBookings);
-
-        const currentYear = new Date().getFullYear();
-        const yearStart = startOfYear(new Date(currentYear, 0, 1));
-        const yearEnd = endOfYear(new Date(currentYear, 0, 1));
-
-        const bookingsForCurrentYear = fetchedBookings.filter(booking => {
-          const checkInDate = parseISO(booking.check_in_date);
-          return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
-        });
-
-        const sortedBookings = bookingsForCurrentYear.sort((a, b) => {
-          const dateA = parseISO(a.check_in_date).getTime();
-          const dateB = parseISO(b.check_in_date).getTime();
-          return dateA - dateB;
-        });
-
-        setAllBookings(sortedBookings);
-        applyFilters(sortedBookings);
-      } catch (err: any) {
-        setError(`Erreur lors du chargement des réservations : ${err.message}`);
-        console.error("Error in loadBookings for BookingsPage:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadBookings();
   }, []);
 
@@ -138,13 +144,17 @@ const BookingsPage: React.FC = () => {
     switch (status.toLowerCase()) {
       case 'confirmed':
       case 'confirmée':
+      case 'propri': // For owner reservations that are active
         return 'default';
       case 'pending':
       case 'en attente':
         return 'secondary';
       case 'cancelled':
       case 'annulée':
+      case 'canc': // For cancelled owner reservations
         return 'destructive';
+      case 'prop0': // Owner reservation without cleaning
+        return 'outline';
       default:
         return 'outline';
     }
@@ -155,6 +165,11 @@ const BookingsPage: React.FC = () => {
     setSelectedBooking(booking);
     setIsDetailDialogOpen(true);
     console.log("isDetailDialogOpen after setting:", true);
+  };
+
+  const handleReportProblem = (booking: Booking) => {
+    setBookingToReport(booking);
+    setIsReportDialogOpen(true);
   };
 
   const handleResetFilters = () => {
@@ -198,7 +213,7 @@ const BookingsPage: React.FC = () => {
                       <SelectValue placeholder="Toutes les chambres" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Toutes les chambres</SelectItem> {/* Changed value to 'all' */}
+                      <SelectItem value="all">Toutes les chambres</SelectItem>
                       {userRooms.map(room => (
                         <SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>
                       ))}
@@ -213,7 +228,7 @@ const BookingsPage: React.FC = () => {
                       <SelectValue placeholder="Tous les statuts" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tous les statuts</SelectItem> {/* Changed value to 'all' */}
+                      <SelectItem value="all">Tous les statuts</SelectItem>
                       {commonStatuses.map(status => (
                         <SelectItem key={status} value={status}>{status}</SelectItem>
                       ))}
@@ -228,7 +243,7 @@ const BookingsPage: React.FC = () => {
                       <SelectValue placeholder="Tous les canaux" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tous les canaux</SelectItem> {/* Changed value to 'all' */}
+                      <SelectItem value="all">Tous les canaux</SelectItem>
                       {commonChannels.map(channel => (
                         <SelectItem key={channel} value={channel}>{channel}</SelectItem>
                       ))}
@@ -307,6 +322,7 @@ const BookingsPage: React.FC = () => {
                           <TableHead>Départ</TableHead>
                           <TableHead>Statut</TableHead>
                           <TableHead className="text-right">Montant</TableHead>
+                          <TableHead className="text-right">Actions</TableHead> {/* New TableHead for actions */}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -325,6 +341,12 @@ const BookingsPage: React.FC = () => {
                             </TableCell>
                             <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200">
                               {booking.amount}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
+                                <Flag className="h-4 w-4" />
+                                <span className="ml-2 hidden md:inline-block">Signaler</span>
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -368,6 +390,12 @@ const BookingsPage: React.FC = () => {
                               {booking.status}
                             </Badge>
                             <span className="text-xs text-gray-500">Canal: {booking.cod_channel || 'N/A'}</span>
+                          </div>
+                          <div className="pt-2">
+                            <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
+                              <Flag className="h-4 w-4 mr-2" />
+                              Signaler un problème
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -436,6 +464,18 @@ const BookingsPage: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <ReportProblemDialog
+        isOpen={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
+        booking={bookingToReport}
+        onReportSubmitted={() => {
+          // No need to re-fetch bookings for now, as the report is just submitted.
+          // If you want to show a visual change on the booking list after reporting,
+          // you would trigger a re-fetch here.
+          setIsReportDialogOpen(false);
+        }}
+      />
     </MainLayout>
   );
 };

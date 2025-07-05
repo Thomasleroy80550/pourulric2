@@ -10,7 +10,7 @@ import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, is
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } => '@/lib/utils';
+import { cn } from '@/lib/utils'; // Correction ici
 import {
   Dialog,
   DialogContent,

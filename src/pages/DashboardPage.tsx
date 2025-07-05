@@ -436,7 +436,7 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col p-4">
+            <CardContent className="flex flex-col p-4 h-[320px]"> {/* Increased height for better donut visibility */}
               {loadingFinancialData ? ( // Donut data also comes from GSheet, so use loadingFinancialData
                 <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
                   <Skeleton className="w-full md:w-3/5 h-[280px]" />
@@ -455,16 +455,16 @@ const DashboardPage = () => {
               ) : (
                 <>
                   {/* Wrapper div with fixed height for ResponsiveContainer */}
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
-                    <div className="w-full md:w-3/5" style={{ height: '280px' }}> {/* Reduced height slightly */}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full h-full"> {/* Ensure it takes full height of parent */}
+                    <div className="w-full md:w-3/5 h-full"> {/* Ensure it takes full height of parent */}
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart isAnimationActive={true}>
                           <Pie
                             data={activityData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={40} // Reduced inner radius
-                            outerRadius={90} // Reduced outer radius
+                            innerRadius={50} // Increased inner radius
+                            outerRadius={100} // Increased outer radius
                             fill="#8884d8"
                             paddingAngle={5}
                             dataKey="value"
@@ -499,7 +499,7 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
             </CardHeader>
-            <CardContent className="h-64">
+            <CardContent className="h-72"> {/* Increased height */}
               {loadingMonthlyFinancialData ? (
                 <Skeleton className="h-full w-full" />
               ) : monthlyFinancialDataError ? (
@@ -511,7 +511,7 @@ const DashboardPage = () => {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                    <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" /> {/* Removed strokeDasharray */}
+                    <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" />
                     <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                     <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                     <Tooltip 
@@ -536,10 +536,10 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Réservation / mois</CardTitle>
             </CardHeader>
-            <CardContent className="h-64">
+            <CardContent className="h-72"> {/* Increased height */}
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                  <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" /> {/* Removed strokeDasharray */}
+                  <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 
@@ -559,10 +559,10 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Occupation</CardTitle>
             </CardHeader>
-            <CardContent className="h-64">
+            <CardContent className="h-72"> {/* Increased height */}
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                  <CartesianGrid strokeDashArray="" className="stroke-gray-200 dark:stroke-gray-700" /> {/* Removed strokeDasharray */}
+                  <CartesianGrid strokeDashArray="" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
                   <Tooltip 

@@ -28,7 +28,7 @@ import { getProfile } from "@/lib/profile-api"; // Import getProfile
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isBefore, isValid, max, min } from 'date-fns'; // Added max, min
+import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isValid, max, min, getDaysInYear } from 'date-fns'; // Added getDaysInYear
 import { fr } from 'date-fns/locale';
 
 const DONUT_CATEGORIES = [
@@ -231,11 +231,10 @@ const DashboardPage = () => {
       setNextArrival(nextArrivalCandidate);
 
       // Calculate occupancy rate using totalNightsCurrentYear from GSheet
-      const currentYearStart = startOfYear(today);
-      const periodEnd = today;
-      const daysInCurrentYearToDate = differenceInDays(periodEnd, currentYearStart) + 1;
-      const totalAvailableNightsInPeriod = fetchedUserRooms.length * daysInCurrentYearToDate;
-      const calculatedOccupancyRate = totalAvailableNightsInPeriod > 0 ? (currentTotalNights / totalAvailableNightsInPeriod) * 100 : 0;
+      // Now calculating total available nights for the ENTIRE year
+      const totalDaysInCurrentYear = getDaysInYear(today); // Get 365 or 366 days
+      const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInCurrentYear;
+      const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (currentTotalNights / totalAvailableNightsInYear) * 100 : 0;
       setOccupancyRateCurrentYear(calculatedOccupancyRate);
 
     } catch (err: any) {

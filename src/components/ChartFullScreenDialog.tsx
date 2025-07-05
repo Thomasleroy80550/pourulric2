@@ -44,7 +44,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[95vw] h-[90vh] flex flex-col p-6">
+      <DialogContent className="sm:max-w-[90vw] md:max-w-[1000px] h-[80vh] flex flex-col p-6">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

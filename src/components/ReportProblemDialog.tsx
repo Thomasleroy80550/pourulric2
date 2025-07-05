@@ -58,6 +58,7 @@ const formSchema = z.object({
 });
 
 const REPORT_PROBLEM_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/report-problem-proxy";
+const PHP_EMAIL_ENDPOINT = "/api/send_report_email.php"; // <-- Chemin vers votre script PHP
 
 const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
   isOpen,
@@ -94,37 +95,64 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
     }
 
     try {
+      // Step 1: Submit report to Supabase Edge Function (for database storage)
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
         throw new Error("Vous devez être connecté pour signaler un problème.");
       }
 
-      const payload = {
+      const supabasePayload = {
         reservation_id: booking.id,
         problem_type: values.problemType,
         description: values.description,
         contact_email: values.contactEmail || null,
         contact_phone: values.contactPhone || null,
-        guest_name: booking.guest_name, // Pass guest_name
-        property_name: booking.property_name, // Pass property_name
       };
 
-      const response = await fetch(REPORT_PROBLEM_PROXY_URL, {
+      const supabaseResponse = await fetch(REPORT_PROBLEM_PROXY_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(supabasePayload),
       });
 
-      const responseData = await response.json();
+      const supabaseData = await supabaseResponse.json();
 
-      if (!response.ok) {
-        throw new Error(responseData.error || "Erreur inconnue lors de l'envoi du signalement.");
+      if (!supabaseResponse.ok) {
+        throw new Error(supabaseData.error || "Erreur inconnue lors de l'enregistrement du signalement.");
       }
 
-      toast.success("Signalement envoyé avec succès !");
+      // Step 2: Send email via PHP endpoint
+      const emailPayload = {
+        reservation_id: booking.id,
+        problem_type: values.problemType,
+        description: values.description,
+        contact_email: values.contactEmail || '',
+        contact_phone: values.contactPhone || '',
+        guest_name: booking.guest_name,
+        property_name: booking.property_name,
+      };
+
+      const emailResponse = await fetch(PHP_EMAIL_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailPayload),
+      });
+
+      if (!emailResponse.ok) {
+        const errorText = await emailResponse.text();
+        console.error("Error sending email via PHP:", emailResponse.status, errorText);
+        // Do not throw a hard error here, as the report is already saved to DB.
+        // Just inform the user that the email failed.
+        toast.warning("Signalement enregistré, mais l'e-mail de notification n'a pas pu être envoyé.");
+      } else {
+        toast.success("Signalement envoyé avec succès !");
+      }
+      
       onReportSubmitted(); // Trigger callback to refresh/close
       onOpenChange(false); // Close dialog
     } catch (error: any) {

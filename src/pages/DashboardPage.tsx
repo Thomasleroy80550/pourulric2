@@ -32,7 +32,7 @@ import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
-import ForecastDialog from '@/components/ForecastDialog'; // Import new ForecastDialog
+import ForecastDialog from '@/components/ForecastDialog';
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -294,7 +294,6 @@ const DashboardPage = () => {
     const totalDaysInYear = getDaysInYear(today);
 
     if (dayOfYear === 0) {
-      // Show error toast if too early in year
       toast.error("Impossible de calculer la prévision au début de l'année.");
       return;
     }
@@ -390,8 +389,255 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          {/* Other cards unchanged... */}
+          {/* Activité de Location Card */}
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingKrossbookingStats || loadingFinancialData ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-8 w-1/2" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+              ) : krossbookingStatsError || financialDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{krossbookingStatsError || financialDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div>
+                    {nextArrival ? (
+                      <p className="text-xl font-bold">
+                        {format(parseISO(nextArrival.check_in_date), 'dd MMMM', { locale: fr })}
+                      </p>
+                    ) : (
+                      <p className="text-xl font-bold">Aucune</p>
+                    )}
+                    <p className="text-sm text-gray-500">
+                      Prochaine arrivée
+                      {nextArrival && ` (${nextArrival.property_name})`}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xl font-bold">{totalReservationsCurrentYear}</p>
+                      <p className="text-sm text-gray-500">Réservations sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{totalNightsCurrentYear}</p>
+                      <p className="text-sm text-gray-500">Nuits sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{totalGuestsCurrentYear}</p>
+                      <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{occupancyRateCurrentYear.toFixed(2)}%</p>
+                      <p className="text-sm text-gray-500">Occupation sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{netPricePerNight.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Prix net / nuit</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">4.4/5</p>
+                      <p className="text-sm text-gray-500">Votre note</p>
+                    </div>
+                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes avis -&gt;</Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
+          {/* Activité de Location Card (Donut Chart) */}
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col p-4 h-[320px]">
+              {loadingFinancialData ? (
+                <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
+                  <Skeleton className="w-full md:w-3/5 h-[280px]" />
+                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-4 w-full" />
+                    ))}
+                  </div>
+                </div>
+              ) : financialDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{financialDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full h-full">
+                    <div className="w-full md:w-3/5 h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart isAnimationActive={true}>
+                          <Pie
+                            data={activityData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            paddingAngle={5}
+                            dataKey="value"
+                            animationDuration={1000}
+                            animationEasing="ease-in-out"
+                          >
+                            {activityData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
+                      {activityData.map((item) => (
+                        <div key={item.name} className="flex items-center">
+                          <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
+                          {item.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Statistiques Financières Mensuelles Card */}
+          <Card className="shadow-md col-span-full lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                monthlyFinancialData,
+                'line',
+                'Statistiques Financières Mensuelles',
+                [
+                  { key: 'ca', name: 'CA', color: 'hsl(var(--primary))' },
+                  { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
+                  { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
+                  { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
+                ],
+                '€'
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              {loadingMonthlyFinancialData ? (
+                <Skeleton className="h-full w-full" />
+              ) : monthlyFinancialDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{monthlyFinancialDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                    <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                    <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
+                      formatter={(value: number) => `${value}€`}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Réservation / mois Card */}
+          <Card className="shadow-md col-span-full lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Réservation / mois</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                reservationPerMonthData,
+                'line',
+                'Réservation / mois',
+                [{ key: 'reservations', name: 'Réservations', color: 'hsl(var(--accent))' }]
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                  <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Occupation Card */}
+          <Card className="shadow-md col-span-full lg:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Occupation</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                occupationRateData,
+                'line',
+                'Occupation',
+                [{ key: 'occupation', name: 'Occupation', color: 'hsl(var(--secondary))' }],
+                '%'
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                  <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                    formatter={(value: number) => `${value}%`}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
       </div>
       <MadeWithDyad />

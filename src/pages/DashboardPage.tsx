@@ -385,7 +385,7 @@ const DashboardPage = () => {
                     <FieryProgressBar 
                       value={financialData.currentAchievementPercentage} 
                       className="h-2" 
-                      indicatorClassName={'progress-flame'} {/* FORCED FOR DEBUGGING */}
+                      indicatorClassName={financialData.currentAchievementPercentage >= 80 ? 'progress-flame' : ''}
                     />
                     <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" onClick={() => setIsObjectiveDialogOpen(true)}>

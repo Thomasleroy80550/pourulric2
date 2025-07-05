@@ -20,15 +20,15 @@ import {
   CartesianGrid,
   Legend,
 } from "recharts";
-import React, { useState, useEffect, useCallback } from "react"; // Added useCallback
+import React, { useState, useEffect, useCallback } from "react";
 import { callGSheetProxy } from "@/lib/gsheets";
 import { toast } from "sonner";
-import ObjectiveDialog from "@/components/ObjectiveDialog"; // Import the new dialog component
-import { getProfile } from "@/lib/profile-api"; // Import getProfile
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
-import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { parseISO, isAfter, isSameDay, format, differenceInDays, startOfYear, endOfYear, isValid, max, min, getDaysInYear } from 'date-fns'; // Added getDaysInYear
+import ObjectiveDialog from "@/components/ObjectiveDialog";
+import { getProfile } from "@/lib/profile-api";
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore } from 'date-fns'; // Re-added isBefore, isAfter, isSameDay
 import { fr } from 'date-fns/locale';
 
 const DONUT_CATEGORIES = [
@@ -71,12 +71,15 @@ const DashboardPage = () => {
   const [totalGuestsCurrentYear, setTotalGuestsCurrentYear] = useState(0);
   const [occupancyRateCurrentYear, setOccupancyRateCurrentYear] = useState(0);
   const [netPricePerNight, setNetPricePerNight] = useState(0);
-  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
-  const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
+  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true); // Re-added
+  const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null); // Re-added
 
   const fetchData = useCallback(async () => {
     setLoadingFinancialData(true);
     setFinancialDataError(null);
+    setLoadingMonthlyFinancialData(true);
+    setMonthlyFinancialDataError(null);
+
     try {
       const [
         financialSheetData,
@@ -85,6 +88,7 @@ const DashboardPage = () => {
         guestsCountData,
         nightsCountData,
         channelData,
+        monthlyFinancialSheetData,
       ] = await Promise.all([
         callGSheetProxy({ action: 'read_sheet', range: 'C2:F2' }),
         getProfile(),
@@ -92,25 +96,26 @@ const DashboardPage = () => {
         callGSheetProxy({ action: 'read_sheet', range: 'K2' }), // Total Guests
         callGSheetProxy({ action: 'read_sheet', range: 'L2' }), // Total Nights
         callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' }), // Channel Reservations
+        callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' }), // Monthly Financial Data
       ]);
 
+      // Process Financial Data
       let currentResultatAnnee = 0;
       if (financialSheetData && financialSheetData.length > 0 && financialSheetData[0].length >= 4) {
         const [vente, rentree, frais, resultat] = financialSheetData[0].map(Number);
-        currentResultatAnnee = isNaN(resultat) ? 0 : resultat;
-
+        currentResultatAnnee = isNaN(vente) ? 0 : vente; // Corrected to use 'vente' for initial value
         setFinancialData(prev => ({
           ...prev,
           venteAnnee: isNaN(vente) ? 0 : vente,
           rentreeArgentAnnee: isNaN(rentree) ? 0 : rentree,
           fraisAnnee: isNaN(frais) ? 0 : frais,
-          resultatAnnee: currentResultatAnnee,
+          resultatAnnee: isNaN(resultat) ? 0 : resultat,
         }));
       } else {
         setFinancialDataError("Format de données inattendu pour le bilan financier.");
       }
 
-      // Update total reservations from Google Sheet B2
+      // Process Total Reservations
       if (reservationsCountData && reservationsCountData.length > 0 && reservationsCountData[0].length > 0) {
         const count = Number(reservationsCountData[0][0]);
         setTotalReservationsCurrentYear(isNaN(count) ? 0 : count);
@@ -118,7 +123,7 @@ const DashboardPage = () => {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les réservations annuelles." : "Format de données inattendu pour les réservations annuelles.");
       }
 
-      // Update total guests from Google Sheet K2
+      // Process Total Guests
       if (guestsCountData && guestsCountData.length > 0 && guestsCountData[0].length > 0) {
         const count = Number(guestsCountData[0][0]);
         setTotalGuestsCurrentYear(isNaN(count) ? 0 : count);
@@ -126,15 +131,17 @@ const DashboardPage = () => {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les voyageurs annuels." : "Format de données inattendu pour les voyageurs annuels.");
       }
 
-      // Update total nights from Google Sheet L2
+      // Process Total Nights
+      let currentTotalNights = 0;
       if (nightsCountData && nightsCountData.length > 0 && nightsCountData[0].length > 0) {
         const count = Number(nightsCountData[0][0]);
-        setTotalNightsCurrentYear(isNaN(count) ? 0 : count);
+        currentTotalNights = isNaN(count) ? 0 : count;
+        setTotalNightsCurrentYear(currentTotalNights);
       } else {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les nuits annuelles." : "Format de données inattendu pour les nuits annuelles.");
       }
 
-      // Update activityData (donut chart) from Google Sheet DG2:DK2
+      // Process Channel Data (Donut Chart)
       if (channelData && channelData.length > 0 && channelData[0].length >= 5) {
         const [airbnb, booking, abritel, hellokeys, proprio] = channelData[0].map(Number);
         const newActivityData = DONUT_CATEGORIES.map(cat => {
@@ -150,10 +157,11 @@ const DashboardPage = () => {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les canaux de réservation." : "Format de données inattendu pour les canaux de réservation.");
       }
 
+      // Process User Profile and Objective
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
         setUserObjectiveAmount(objectiveAmount);
-        const calculatedAchievement = (objectiveAmount === 0) ? 0 : (currentResultatAnnee / objectiveAmount) * 100;
+        const calculatedAchievement = (objectiveAmount === 0) ? 0 : (financialData.resultatAnnee / objectiveAmount) * 100; // Use financialData.resultatAnnee
         setFinancialData(prev => ({
           ...prev,
           currentAchievementPercentage: calculatedAchievement,
@@ -161,24 +169,14 @@ const DashboardPage = () => {
       } else {
         setFinancialDataError("Impossible de charger le profil utilisateur.");
       }
-    } catch (err: any) {
-      setFinancialDataError(`Erreur lors du chargement des données financières ou du profil : ${err.message}`);
-      console.error("Error fetching financial data or profile:", err);
-    } finally {
-      setLoadingFinancialData(false);
-    }
 
-    // Fetch Monthly Financial Data (remains unchanged, still from BU2:CF5)
-    setLoadingMonthlyFinancialData(true);
-    setMonthlyFinancialDataError(null);
-    try {
-      const data = await callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' });
-      if (data && data.length >= 4) {
+      // Process Monthly Financial Data
+      if (monthlyFinancialSheetData && monthlyFinancialSheetData.length >= 4) {
         const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-        const caValues = data[0] || [];
-        const montantVerseValues = data[1] || [];
-        const fraisValues = data[2] || [];
-        const benefValues = data[3] || [];
+        const caValues = monthlyFinancialSheetData[0] || [];
+        const montantVerseValues = monthlyFinancialSheetData[1] || [];
+        const fraisValues = monthlyFinancialSheetData[2] || [];
+        const benefValues = monthlyFinancialSheetData[3] || [];
 
         const formattedData = months.map((month, index) => ({
           name: month,
@@ -191,15 +189,17 @@ const DashboardPage = () => {
       } else {
         setMonthlyFinancialDataError("Format de données inattendu pour les statistiques financières mensuelles.");
       }
+
     } catch (err: any) {
-      setMonthlyFinancialDataError(`Erreur lors du chargement des statistiques financières mensuelles : ${err.message}`);
-      console.error("Error fetching monthly financial data:", err);
+      setFinancialDataError(`Erreur lors du chargement des données : ${err.message}`);
+      console.error("Error fetching all data:", err);
     } finally {
+      setLoadingFinancialData(false);
       setLoadingMonthlyFinancialData(false);
     }
-  }, []); // No dependencies for fetchData, it's a one-time fetch of static sheet data
+  }, [financialData.resultatAnnee]); // Added financialData.resultatAnnee as dependency for objective calculation
 
-  const fetchKrossbookingStats = useCallback(async (currentTotalNights: number) => {
+  const fetchKrossbookingStats = useCallback(async (totalNightsFromGSheet: number) => {
     setLoadingKrossbookingStats(true);
     setKrossbookingStatsError(null);
     try {
@@ -209,6 +209,7 @@ const DashboardPage = () => {
       if (roomIds.length === 0) {
         setNextArrival(null);
         setOccupancyRateCurrentYear(0);
+        setNetPricePerNight(0); // Also reset net price if no rooms
         setLoadingKrossbookingStats(false);
         return;
       }
@@ -230,12 +231,15 @@ const DashboardPage = () => {
 
       setNextArrival(nextArrivalCandidate);
 
-      // Calculate occupancy rate using totalNightsCurrentYear from GSheet
-      // Now calculating total available nights for the ENTIRE year
-      const totalDaysInCurrentYear = getDaysInYear(today); // Get 365 or 366 days
+      // Calculate occupancy rate using totalNightsFromGSheet (from GSheet)
+      const totalDaysInCurrentYear = getDaysInYear(new Date());
       const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInCurrentYear;
-      const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (currentTotalNights / totalAvailableNightsInYear) * 100 : 0;
+      const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNightsFromGSheet / totalAvailableNightsInYear) * 100 : 0;
       setOccupancyRateCurrentYear(calculatedOccupancyRate);
+
+      // Calculate Net Price Per Night using financialData.resultatAnnee and totalNightsFromGSheet
+      const calculatedNetPricePerNight = totalNightsFromGSheet > 0 ? (financialData.resultatAnnee / totalNightsFromGSheet) : 0;
+      setNetPricePerNight(calculatedNetPricePerNight);
 
     } catch (err: any) {
       setKrossbookingStatsError(`Erreur lors du chargement des statistiques Krossbooking : ${err.message}`);
@@ -243,28 +247,19 @@ const DashboardPage = () => {
     } finally {
       setLoadingKrossbookingStats(false);
     }
-  }, []); // No dependencies for fetchKrossbookingStats, it takes currentTotalNights as param
+  }, [financialData.resultatAnnee]); // Dependency on financialData.resultatAnnee for netPricePerNight calculation
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]); // Call fetchData once on mount
+  }, [fetchData]);
 
   useEffect(() => {
     // Call fetchKrossbookingStats when totalNightsCurrentYear is updated by fetchData
-    if (!loadingFinancialData) { // Ensure fetchData has completed and set totalNightsCurrentYear
+    // and when financialData.resultatAnnee is available for net price calculation
+    if (!loadingFinancialData && financialData.resultatAnnee !== undefined) {
         fetchKrossbookingStats(totalNightsCurrentYear);
     }
-  }, [totalNightsCurrentYear, loadingFinancialData, fetchKrossbookingStats]); // Depend on totalNightsCurrentYear and loading state
-
-  // Effect to calculate Net Price Per Night once financialData and totalNightsCurrentYear are available
-  useEffect(() => {
-    if (!loadingFinancialData && financialData.resultatAnnee !== undefined && totalNightsCurrentYear > 0) {
-      const calculatedNetPricePerNight = financialData.resultatAnnee / totalNightsCurrentYear;
-      setNetPricePerNight(calculatedNetPricePerNight);
-    } else if (!loadingFinancialData && totalNightsCurrentYear === 0) {
-      setNetPricePerNight(0); // Avoid division by zero if no nights
-    }
-  }, [financialData.resultatAnnee, totalNightsCurrentYear, loadingFinancialData]);
+  }, [totalNightsCurrentYear, loadingFinancialData, financialData.resultatAnnee, fetchKrossbookingStats]);
 
   const reservationPerMonthData = [
     { name: 'Jan', reservations: 10 },

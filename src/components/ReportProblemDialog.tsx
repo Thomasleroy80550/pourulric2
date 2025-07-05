@@ -105,6 +105,8 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
         description: values.description,
         contact_email: values.contactEmail || null,
         contact_phone: values.contactPhone || null,
+        guest_name: booking.guest_name, // Pass guest_name
+        property_name: booking.property_name, // Pass property_name
       };
 
       const response = await fetch(REPORT_PROBLEM_PROXY_URL, {

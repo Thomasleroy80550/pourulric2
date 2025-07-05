@@ -30,13 +30,19 @@ const ForecastDialog: React.FC<ForecastDialogProps> = ({ isOpen, onOpenChange, f
       <DialogContent className="sm:max-w-md w-full p-6 rounded-lg shadow-lg bg-white dark:bg-gray-900">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center text-green-600">Prévision Financière</DialogTitle>
-          <DialogDescription className="text-center text-gray-700 dark:text-gray-300 mt-2 mb-6">
+          <DialogDescription className="text-center text-gray-700 dark:text-gray-300 mt-2 mb-4">
             Voici la prévision du résultat financier pour l'année {year} basée sur vos données actuelles.
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               Ce montant est une projection linéaire de votre bénéfice net actuel sur l'ensemble de l'année.
             </p>
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400 mt-4">
+              ⚠️ Cette prévision est indicative et non garantie. Elle est basée sur les données passées et ne prend pas en compte les fluctuations futures.
+            </p>
           </DialogDescription>
         </DialogHeader>
+        <div className="text-center text-4xl font-extrabold text-green-700 dark:text-green-400 mt-6 mb-6">
+          {forecastAmount.toFixed(2)}€
+        </div>
         <div className="w-full h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -47,9 +53,6 @@ const ForecastDialog: React.FC<ForecastDialogProps> = ({ isOpen, onOpenChange, f
               <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-        <div className="text-center text-4xl font-extrabold text-green-700 dark:text-green-400 mt-6">
-          {forecastAmount.toFixed(2)}€
         </div>
         <DialogFooter className="mt-6 flex justify-center">
           <Button onClick={() => onOpenChange(false)} className="px-8">

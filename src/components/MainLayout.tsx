@@ -33,8 +33,6 @@ const gestionNavigationItems = [
 
 const decouvrirNavigationItems = [
   { name: 'Blog', href: '/blog', icon: Newspaper },
-  { name: 'Modules', href: '/modules', icon: Puzzle },
-  { name: 'Road Map', href: '/roadmap', icon: Map },
 ];
 
 const bottomNavigationItems = [
@@ -65,10 +63,28 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
           }}
           className="w-full grid grid-cols-2 gap-2"
         >
-          <ToggleGroupItem value="gestion" aria-label="Toggle gestion" className="flex-1">
+          <ToggleGroupItem
+            value="gestion"
+            aria-label="Toggle gestion"
+            variant="ghost"
+            className={cn(
+              "flex-1 font-bold text-sidebar-foreground",
+              "hover:bg-transparent hover:opacity-80",
+              "data-[state=on]:bg-transparent data-[state=on]:text-sidebar-foreground data-[state=on]:opacity-100"
+            )}
+          >
             Gestion
           </ToggleGroupItem>
-          <ToggleGroupItem value="decouvrir" aria-label="Toggle découvrir" className="flex-1">
+          <ToggleGroupItem
+            value="decouvrir"
+            aria-label="Toggle découvrir"
+            variant="ghost"
+            className={cn(
+              "flex-1 font-bold text-sidebar-foreground",
+              "hover:bg-transparent hover:opacity-80",
+              "data-[state=on]:bg-transparent data-[state=on]:text-sidebar-foreground data-[state=on]:opacity-100"
+            )}
+          >
             Découvrir
           </ToggleGroupItem>
         </ToggleGroup>
@@ -81,8 +97,8 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
               <Link
                 to={item.href}
                 className={cn(
-                  "flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all",
-                  location.pathname === item.href ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                  "flex items-center p-2 rounded-md text-sidebar-foreground font-bold hover:bg-transparent hover:opacity-80 transition-all",
+                  location.pathname === item.href ? 'bg-transparent' : ''
                 )}
                 onClick={onLinkClick}
               >
@@ -100,7 +116,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
             <li key={item.name}>
               <Link
                 to={item.href}
-                className="flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all"
+                className="flex items-center p-2 rounded-md text-sidebar-foreground font-bold hover:bg-transparent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all"
                 onClick={onLinkClick}
               >
                 <item.icon className="h-5 w-5 mr-3" />

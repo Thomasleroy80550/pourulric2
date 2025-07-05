@@ -58,7 +58,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
             <Link
               to={item.href}
               className={cn(
-                "flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
+                "flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all",
                 item.href === '/' ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
               )}
               onClick={onLinkClick}
@@ -77,7 +77,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
           <li key={item.name}>
             <Link
               to={item.href}
-              className="flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              className="flex items-center p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:opacity-80 transition-all"
               onClick={onLinkClick}
             >
               <item.icon className="h-5 w-5 mr-3" />

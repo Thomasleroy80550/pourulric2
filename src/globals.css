@@ -136,3 +136,32 @@
 .dark .fixed.inset-0.z-50.bg-black\/80 {
   background-color: rgba(0, 0, 0, 0.6) !important; /* Slightly darker for dark mode, but still lighter than default */
 }
+
+/* Keyframes for the flame flicker animation */
+@keyframes flame-flicker {
+  0% {
+    opacity: 0.8;
+    transform: translateY(-50%) translateX(-50%) scale(1);
+    box-shadow: 0 0 8px 4px rgba(255, 215, 0, 0.7); /* Yellow glow */
+  }
+  25% {
+    opacity: 0.9;
+    transform: translateY(-50%) translateX(-50%) scale(1.05);
+    box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-50%) scale(1.1);
+    box-shadow: 0 0 12px 6px rgba(255, 215, 0, 0.9);
+  }
+  75% {
+    opacity: 0.9;
+    transform: translateY(-50%) translateX(-50%) scale(1.05);
+    box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0.8);
+  }
+  100% {
+    opacity: 0.8;
+    transform: translateY(-50%) translateX(-50%) scale(1);
+    box-shadow: 0 0 8px 4px rgba(255, 215, 0, 0.7);
+  }
+}

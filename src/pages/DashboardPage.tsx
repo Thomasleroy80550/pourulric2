@@ -376,9 +376,15 @@ const DashboardPage = () => {
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
                     <Button variant="outline" onClick={handleShowForecast}>Prévision</Button>
                   </div>
-                  <div className="space-y-2 mt-2">
+                  <div className="space-y-2 mt-2 relative"> {/* Added relative here */}
                     <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
                     <Progress value={financialData.currentAchievementPercentage} className="h-2" />
+                    {financialData.currentAchievementPercentage >= 80 && (
+                      <div
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-yellow-400 animate-flame-flicker z-10"
+                        style={{ left: `${financialData.currentAchievementPercentage}%` }}
+                      ></div>
+                    )}
                     <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" onClick={() => setIsObjectiveDialogOpen(true)}>
                       Modifier mon objectif -&gt;

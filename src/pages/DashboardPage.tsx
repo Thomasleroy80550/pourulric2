@@ -297,6 +297,26 @@ const DashboardPage = () => {
     { name: 'Déc', occupation: 70 },
   ];
 
+  // New function to calculate forecast based on current data
+  const handleShowForecast = () => {
+    const today = new Date();
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+    const totalDaysInYear = getDaysInYear(today);
+
+    if (dayOfYear === 0) {
+      toast.error("Impossible de calculer la prévision au début de l'année.");
+      return;
+    }
+
+    // Calculate average daily revenue so far
+    const avgDailyRevenue = financialData.resultatAnnee / dayOfYear;
+
+    // Forecast for the full year
+    const forecast = avgDailyRevenue * totalDaysInYear;
+
+    toast.success(`Prévision du résultat financier pour l'année ${currentYear} : ${forecast.toFixed(2)}€`);
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
@@ -361,9 +381,11 @@ const DashboardPage = () => {
                       <p className="text-sm text-gray-500">Résultats sur l'année</p>
                     </div>
                   </div>
-                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
-                  
-                  <div className="space-y-2">
+                  <div className="flex space-x-4 items-center">
+                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
+                    <Button variant="outline" onClick={handleShowForecast}>Prévision</Button>
+                  </div>
+                  <div className="space-y-2 mt-2">
                     <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
                     <Progress value={financialData.currentAchievementPercentage} className="h-2" />
                     <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>

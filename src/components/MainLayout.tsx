@@ -69,7 +69,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
             aria-label="Toggle gestion"
             variant="ghost"
             className={cn(
-              "flex-1 font-thin text-[15px] tracking-wide rounded-full",
+              "flex-1 font-medium text-[15px] tracking-wide rounded-full",
               "hover:bg-transparent hover:opacity-80",
               "data-[state=on]:bg-transparent data-[state=on]:text-sidebar-foreground data-[state=on]:opacity-100"
             )}
@@ -81,7 +81,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
             aria-label="Toggle découvrir"
             variant="ghost"
             className={cn(
-              "flex-1 font-thin text-[15px] tracking-wide rounded-full",
+              "flex-1 font-medium text-[15px] tracking-wide rounded-full",
               "hover:bg-transparent hover:opacity-80",
               "data-[state=on]:bg-transparent data-[state=on]:text-sidebar-foreground data-[state=on]:opacity-100"
             )}
@@ -98,7 +98,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
               <Link
                 to={item.href}
                 className={cn(
-                  "flex items-center px-4 py-2.5 rounded-full text-[15px] text-sidebar-foreground font-thin tracking-wide transition-all",
+                  "flex items-center px-4 py-2.5 rounded-full text-[15px] text-sidebar-foreground font-medium tracking-wide transition-all",
                   "hover:bg-transparent hover:opacity-80",
                   location.pathname === item.href ? 'bg-transparent opacity-100' : ''
                 )}
@@ -118,7 +118,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
             <li key={item.name} className="mt-3.5 first:mt-0">
               <Link
                 to={item.href}
-                className="flex items-center px-4 py-2.5 rounded-full text-[15px] text-sidebar-foreground font-thin tracking-wide hover:bg-transparent hover:opacity-80 transition-all"
+                className="flex items-center px-4 py-2.5 rounded-full text-[15px] text-sidebar-foreground font-medium tracking-wide hover:bg-transparent hover:opacity-80 transition-all"
                 onClick={onLinkClick}
               >
                 <item.icon className="h-5 w-5 mr-3" />

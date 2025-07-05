@@ -13,8 +13,8 @@ import {
   Pie,
   Cell,
   Tooltip,
-  LineChart,
-  Line,
+  BarChart, // Changed from LineChart
+  Bar,      // Changed from Line
   XAxis,
   YAxis,
   CartesianGrid,
@@ -494,7 +494,7 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          {/* Statistiques Card (Line Chart for Financial Data) */}
+          {/* Statistiques Card (Bar Chart for Financial Data) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
@@ -510,7 +510,7 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                  <BarChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
                     <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" />
                     <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                     <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
@@ -521,24 +521,24 @@ const DashboardPage = () => {
                       formatter={(value: number) => `${value}€`}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                  </LineChart>
+                    <Bar dataKey="ca" fill="hsl(var(--primary))" name="CA" animationDuration={1500} animationEasing="ease-in-out" />
+                    <Bar dataKey="montantVerse" fill="#FACC15" name="Montant Versé" animationDuration={1500} animationEasing="ease-in-out" />
+                    <Bar dataKey="frais" fill="hsl(var(--destructive))" name="Frais" animationDuration={1500} animationEasing="ease-in-out" />
+                    <Bar dataKey="benef" fill="#22c55e" name="Bénéfice" animationDuration={1500} animationEasing="ease-in-out" />
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
 
-          {/* Réservation / mois Card (Line Chart) */}
+          {/* Réservation / mois Card (Bar Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Réservation / mois</CardTitle>
             </CardHeader>
             <CardContent className="h-72"> {/* Increased height */}
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                <BarChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
                   <CartesianGrid strokeDasharray="" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
@@ -548,20 +548,20 @@ const DashboardPage = () => {
                     itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                </LineChart>
+                  <Bar dataKey="reservations" fill="hsl(var(--accent))" name="Réservations" animationDuration={1500} animationEasing="ease-in-out" />
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Occupation Card (Line Chart) */}
+          {/* Occupation Card (Bar Chart) */}
           <Card className="shadow-md col-span-full lg:col-span-1">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Occupation</CardTitle>
             </CardHeader>
             <CardContent className="h-72"> {/* Increased height */}
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                <BarChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
                   <CartesianGrid strokeDashArray="" className="stroke-gray-200 dark:stroke-gray-700" />
                   <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
                   <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
@@ -572,8 +572,8 @@ const DashboardPage = () => {
                     formatter={(value: number) => `${value}%`}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                </LineChart>
+                  <Bar dataKey="occupation" fill="hsl(var(--secondary))" name="Occupation" animationDuration={1500} animationEasing="ease-in-out" />
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,11 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Sparkles, Loader2, CalendarDays, MessageSquare } from 'lucide-react'; // Added CalendarDays, MessageSquare
+import { Send, Sparkles, Loader2, CalendarDays, MessageSquare, Home } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, isWithinInterval, parseISO, isSameDay, addDays, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { cn } from '@/lib/utils'; // Ensure cn is imported
+import { cn } from '@/lib/utils';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
 
 interface AICopilotDialogProps {
   isOpen: boolean;
@@ -25,21 +27,28 @@ interface ChatMessage {
   id: string;
   sender: 'user' | 'ai';
   text: string;
-  parsedData?: any; // To store structured data if AI parses it
+  parsedData?: any;
 }
 
 const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [conversationMode, setConversationMode] = useState<'initial' | 'chat' | 'block_room_prompt'>('initial'); // New state for conversation mode
+  const [conversationMode, setConversationMode] = useState<'initial' | 'chat' | 'block_room_awaiting_room_selection' | 'block_room_awaiting_dates'>('initial');
+  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [allReservations, setAllReservations] = useState<KrossbookingReservation[]>([]);
+  const [selectedRoomForBlocking, setSelectedRoomForBlocking] = useState<UserRoom | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setMessages([{ id: 'ai-welcome', sender: 'ai', text: "Bonjour ! Je suis votre assistant IA. Comment puis-je vous aider aujourd'hui ?" }]);
       setInput('');
-      setConversationMode('initial'); // Reset mode when dialog opens
+      setConversationMode('initial');
+      setUserRooms([]);
+      setAllReservations([]);
+      setSelectedRoomForBlocking(null);
     }
   }, [isOpen]);
 
@@ -47,49 +56,129 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const parseUserCommand = (command: string) => {
+  const fetchInitialData = useCallback(async () => {
+    setIsThinking(true);
+    try {
+      const fetchedUserRooms = await getUserRooms();
+      setUserRooms(fetchedUserRooms);
+      const fetchedReservations = await fetchKrossbookingReservations(fetchedUserRooms);
+      setAllReservations(fetchedReservations);
+      return { fetchedUserRooms, fetchedReservations };
+    } catch (error: any) {
+      toast.error(`Erreur lors du chargement des données : ${error.message}`);
+      console.error("Error fetching initial data for AI Copilot:", error);
+      return { fetchedUserRooms: [], fetchedReservations: [] };
+    } finally {
+      setIsThinking(false);
+    }
+  }, []);
+
+  const checkAvailability = (room: UserRoom, startDate: Date, endDate: Date, currentBookingId?: string) => {
+    const conflicts: KrossbookingReservation[] = [];
+    const requestedInterval = { start: subDays(startDate, 0), end: addDays(endDate, 0) }; // Include check-in and check-out days
+
+    for (const res of allReservations) {
+      // Skip the current booking if we are editing it
+      if (currentBookingId && res.id === currentBookingId) {
+        continue;
+      }
+
+      const resCheckIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+      const resCheckOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+
+      if (!resCheckIn || !resCheckOut) continue;
+
+      // Check if the reservation is for the selected room and is not cancelled
+      if (res.krossbooking_room_id === room.room_id && res.status !== 'CANC') {
+        // A conflict exists if the requested interval overlaps with an existing reservation's interval
+        // The existing reservation's interval is from check-in to the day *before* check-out for multi-night stays.
+        // For single-night stays (check-in == check-out), the interval is just that single day.
+        const existingIntervalEnd = isSameDay(resCheckIn, resCheckOut) ? resCheckIn : subDays(resCheckOut, 1);
+        const existingInterval = { start: resCheckIn, end: existingIntervalEnd };
+
+        // Check for overlap:
+        // 1. Requested start is within existing interval
+        // 2. Requested end is within existing interval
+        // 3. Existing start is within requested interval
+        if (
+          (isWithinInterval(requestedInterval.start, existingInterval) ||
+          isWithinInterval(requestedInterval.end, existingInterval) ||
+          isWithinInterval(existingInterval.start, requestedInterval))
+        ) {
+          conflicts.push(res);
+        }
+      }
+    }
+    return conflicts;
+  };
+
+  const parseUserCommand = async (command: string) => {
     const lowerCommand = command.toLowerCase();
     let responseText = "Désolé, je n'ai pas compris votre demande. Pouvez-vous reformuler ?";
     let parsedData = null;
 
-    // Regex for "bloquer mon logement du DD/MM/YYYY au DD/MM/YYYY avec/sans ménage"
-    const blockRoomRegex = /bloquer mon logement du (\d{2}\/\d{2}\/\d{4}) au (\d{2}\/\d{2}\/\d{4})( avec ménage| sans ménage)?/;
-    const match = lowerCommand.match(blockRoomRegex);
-
-    if (match) {
-      const startDateStr = match[1];
-      const endDateStr = match[2];
-      const cleaningPreference = match[3] ? match[3].trim() : '';
-
-      const startDate = parse(startDateStr, 'dd/MM/yyyy', new Date());
-      const endDate = parse(endDateStr, 'dd/MM/yyyy', new Date());
-
-      if (isValid(startDate) && isValid(endDate)) {
-        const formattedStartDate = format(startDate, 'dd MMMM yyyy', { locale: fr });
-        const formattedEndDate = format(endDate, 'dd MMMM yyyy', { locale: fr });
-        const cleaningText = cleaningPreference === 'avec ménage' ? 'avec ménage' : 'sans ménage';
-
-        responseText = `J'ai compris que vous souhaitez bloquer votre logement du ${formattedStartDate} au ${formattedEndDate} ${cleaningText}.`;
-        responseText += `\n\nPour effectuer cette action, veuillez vous rendre sur la page "Calendrier" et utiliser le bouton "Réservation Propriétaire".`;
-        
-        parsedData = {
-          action: 'block_room',
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          cleaning: cleaningPreference === 'avec ménage',
-        };
+    if (conversationMode === 'block_room_awaiting_room_selection') {
+      const matchedRoom = userRooms.find(room => lowerCommand.includes(room.room_name.toLowerCase()));
+      if (matchedRoom) {
+        setSelectedRoomForBlocking(matchedRoom);
+        setConversationMode('block_room_awaiting_dates');
+        responseText = `D'accord, pour la chambre "${matchedRoom.room_name}". Maintenant, veuillez me donner les dates d'arrivée et de départ, et si vous souhaitez prévoir le ménage. Par exemple : 'du 01/01/2025 au 05/01/2025 avec ménage'.`;
       } else {
-        responseText = "Les dates fournies ne sont pas valides. Veuillez utiliser le format JJ/MM/AAAA.";
+        responseText = `Je n'ai pas trouvé de chambre correspondant à "${command}". Veuillez choisir parmi vos chambres configurées : ${userRooms.map(r => r.room_name).join(', ')}.`;
+      }
+    } else if (conversationMode === 'block_room_awaiting_dates') {
+      const blockRoomRegex = /du (\d{2}\/\d{2}\/\d{4}) au (\d{2}\/\d{2}\/\d{4})( avec ménage| sans ménage)?/;
+      const match = lowerCommand.match(blockRoomRegex);
+
+      if (match && selectedRoomForBlocking) {
+        const startDateStr = match[1];
+        const endDateStr = match[2];
+        const cleaningPreference = match[3] ? match[3].trim() : '';
+
+        const startDate = parse(startDateStr, 'dd/MM/yyyy', new Date());
+        const endDate = parse(endDateStr, 'dd/MM/yyyy', new Date());
+
+        if (isValid(startDate) && isValid(endDate)) {
+          const conflicts = checkAvailability(selectedRoomForBlocking, startDate, endDate);
+
+          const formattedStartDate = format(startDate, 'dd MMMM yyyy', { locale: fr });
+          const formattedEndDate = format(endDate, 'dd MMMM yyyy', { locale: fr });
+          const cleaningText = cleaningPreference === 'avec ménage' ? 'avec ménage' : 'sans ménage';
+
+          if (conflicts.length === 0) {
+            responseText = `Les dates du ${formattedStartDate} au ${formattedEndDate} pour la chambre "${selectedRoomForBlocking.room_name}" sont disponibles !`;
+            responseText += `\n\nPour finaliser le blocage, veuillez vous rendre sur la page "Calendrier" et utiliser le bouton "Réservation Propriétaire".`;
+            parsedData = {
+              action: 'block_room',
+              roomId: selectedRoomForBlocking.room_id,
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              cleaning: cleaningPreference === 'avec ménage',
+            };
+          } else {
+            responseText = `Attention : Les dates du ${formattedStartDate} au ${formattedEndDate} pour la chambre "${selectedRoomForBlocking.room_name}" ne sont PAS entièrement disponibles.`;
+            responseText += `\n\nConflits trouvés :`;
+            conflicts.forEach(c => {
+              responseText += `\n- Réservation #${c.id} (${c.guest_name}) du ${format(parseISO(c.check_in_date), 'dd/MM/yyyy')} au ${format(parseISO(c.check_out_date), 'dd/MM/yyyy')}`;
+            });
+            responseText += `\n\nVeuillez vérifier le calendrier sur la page "Calendrier" pour plus de détails et pour ajuster votre demande.`;
+          }
+          setConversationMode('initial'); // Reset mode after processing dates
+        } else {
+          responseText = "Les dates fournies ne sont pas valides. Veuillez utiliser le format JJ/MM/AAAA.";
+        }
+      } else {
+        responseText = "Veuillez me donner les dates au format 'du JJ/MM/AAAA au JJ/MM/AAAA avec ménage' ou 'sans ménage'.";
       }
     } else if (lowerCommand.includes("bonjour") || lowerCommand.includes("salut")) {
       responseText = "Bonjour ! Comment puis-je vous assister ?";
+      setConversationMode('initial');
     } else if (lowerCommand.includes("aide") || lowerCommand.includes("help")) {
       responseText = "Je peux vous aider à bloquer des dates pour votre logement. Essayez une phrase comme : 'Bloquer mon logement du 01/01/2025 au 05/01/2025 avec ménage'.";
+      setConversationMode('initial');
     } else {
-      // If in block_room_prompt mode and input doesn't match, provide specific guidance
-      if (conversationMode === 'block_room_prompt') {
-        responseText = "Veuillez me donner les dates au format 'du JJ/MM/AAAA au JJ/MM/AAAA avec ménage' ou 'sans ménage'.";
-      }
+      responseText = "Désolé, je n'ai pas compris votre demande. Pouvez-vous reformuler ?";
+      setConversationMode('initial');
     }
 
     return { text: responseText, data: parsedData };
@@ -103,10 +192,7 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
     setInput('');
     setIsThinking(true);
 
-    // Simulate AI processing time
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const aiResponse = parseUserCommand(newUserMessage.text);
+    const aiResponse = await parseUserCommand(newUserMessage.text);
     const newAiMessage: ChatMessage = { id: Date.now().toString() + '-ai', sender: 'ai', text: aiResponse.text, parsedData: aiResponse.data };
     setMessages((prev) => [...prev, newAiMessage]);
     setIsThinking(false);
@@ -118,29 +204,45 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
     }
   };
 
-  const handleInitialAction = (actionType: 'block_room' | 'general_question') => {
+  const handleInitialAction = async (actionType: 'block_room' | 'general_question') => {
     setIsThinking(true);
-    setTimeout(() => {
-      if (actionType === 'block_room') {
-        setConversationMode('block_room_prompt');
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Small delay for button click
+
+    if (actionType === 'block_room') {
+      const { fetchedUserRooms } = await fetchInitialData();
+      if (fetchedUserRooms.length === 0) {
         setMessages((prev) => [
           ...prev,
-          { id: Date.now().toString() + '-ai-prompt', sender: 'ai', text: "D'accord. Pour bloquer votre logement, veuillez me donner les dates d'arrivée et de départ, et si vous souhaitez prévoir le ménage. Par exemple : 'du 01/01/2025 au 05/01/2025 avec ménage'." }
+          { id: Date.now().toString() + '-ai-no-rooms', sender: 'ai', text: "Vous n'avez pas encore configuré de chambres. Veuillez en ajouter via la page 'Mon Profil' pour pouvoir bloquer des dates." }
         ]);
-      } else if (actionType === 'general_question') {
-        setConversationMode('chat');
+        setConversationMode('initial');
+      } else if (fetchedUserRooms.length === 1) {
+        setSelectedRoomForBlocking(fetchedUserRooms[0]);
+        setConversationMode('block_room_awaiting_dates');
         setMessages((prev) => [
           ...prev,
-          { id: Date.now().toString() + '-ai-prompt', sender: 'ai', text: "Je suis prêt à répondre à vos questions. Que souhaitez-vous savoir ?" }
+          { id: Date.now().toString() + '-ai-single-room', sender: 'ai', text: `D'accord, pour votre chambre "${fetchedUserRooms[0].room_name}". Veuillez me donner les dates d'arrivée et de départ, et si vous souhaitez prévoir le ménage. Par exemple : 'du 01/01/2025 au 05/01/2025 avec ménage'.` }
+        ]);
+      } else {
+        setConversationMode('block_room_awaiting_room_selection');
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString() + '-ai-multi-room', sender: 'ai', text: `Pour quelle chambre souhaitez-vous bloquer des dates ? Veuillez me donner le nom de la chambre. Vos chambres configurées sont : ${fetchedUserRooms.map(r => r.room_name).join(', ')}.` }
         ]);
       }
-      setIsThinking(false);
-    }, 500); // Small delay for button click
+    } else if (actionType === 'general_question') {
+      setConversationMode('chat');
+      setMessages((prev) => [
+        ...prev,
+        { id: Date.now().toString() + '-ai-prompt', sender: 'ai', text: "Je suis prêt à répondre à vos questions. Que souhaitez-vous savoir ?" }
+      ]);
+    }
+    setIsThinking(false);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] flex flex-col max-h-[60vh]"> {/* Reduced height */}
+      <DialogContent className="sm:max-w-[500px] flex flex-col max-h-[60vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Sparkles className="h-5 w-5 mr-2 text-blue-500" />
@@ -150,7 +252,7 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
             Posez-moi des questions sur la gestion de votre logement ou initiez une action.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[calc(100%-120px)]"> {/* Adjusted height */}
+        <ScrollArea className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[calc(100%-120px)]">
           <div className="space-y-4">
             {messages.map((msg) => (
               <div

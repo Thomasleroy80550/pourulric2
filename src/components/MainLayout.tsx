@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AICopilotDialog from './AICopilotDialog';
+import NewFeaturesBanner from './NewFeaturesBanner'; // Import the new banner
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -240,6 +241,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </DropdownMenu>
           </div>
         </header>
+
+        {/* New Features Banner */}
+        <NewFeaturesBanner />
 
         {/* Main content area for pages */}
         <main className="flex-1 p-6 overflow-auto">

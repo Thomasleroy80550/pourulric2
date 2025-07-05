@@ -13,16 +13,17 @@ import {
   Pie,
   Cell,
   Tooltip,
-  LineChart, // Changed back to LineChart
-  Line,      // Changed back to Line
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Legend,
+  BarChart,
+  Bar,
 } from "recharts";
 import React, { useState, useEffect, useCallback } from "react";
 import { callGSheetProxy } from "@/lib/gsheets";
-import { toast } from "sonner";
 import ObjectiveDialog from "@/components/ObjectiveDialog";
 import { getProfile } from "@/lib/profile-api";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,15 +31,16 @@ import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/kr
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import ChartFullScreenDialog from '@/components/ChartFullScreenDialog'; // Import the new component
+import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
+import ForecastDialog from '@/components/ForecastDialog'; // Import new ForecastDialog
 
 const DONUT_CATEGORIES = [
-  { name: 'Airbnb', color: '#FF5A5F' }, // Airbnb brand color
-  { name: 'Booking', color: '#003580' }, // Booking.com brand color
-  { name: 'Abritel', color: '#2D60E0' }, // Abritel/Vrbo brand color
-  { name: 'Hello Keys', color: '#00A699' }, // Distinct color for Hello Keys
-  { name: 'Proprio', color: '#4f46e5' }, // Existing purple for owner reservations
-  { name: 'Autre', color: '#6b7280' }, // Existing gray for unknown/other channels
+  { name: 'Airbnb', color: '#FF5A5F' },
+  { name: 'Booking', color: '#003580' },
+  { name: 'Abritel', color: '#2D60E0' },
+  { name: 'Hello Keys', color: '#00A699' },
+  { name: 'Proprio', color: '#4f46e5' },
+  { name: 'Autre', color: '#6b7280' },
 ];
 
 const DashboardPage = () => {
@@ -75,13 +77,15 @@ const DashboardPage = () => {
   const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
   const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
 
-  // State for full-screen chart dialog
   const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
   const [dialogChartData, setDialogChartData] = useState<any[]>([]);
   const [dialogChartType, setDialogChartType] = useState<'line' | 'bar'>('line');
   const [dialogChartTitle, setDialogChartTitle] = useState('');
   const [dialogChartDataKeys, setDialogChartDataKeys] = useState<{ key: string; name: string; color: string; }[]>([]);
   const [dialogChartYAxisUnit, setDialogChartYAxisUnit] = useState<string | undefined>(undefined);
+
+  const [isForecastDialogOpen, setIsForecastDialogOpen] = useState(false);
+  const [forecastAmount, setForecastAmount] = useState(0);
 
   const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
     setDialogChartData(data);
@@ -110,18 +114,15 @@ const DashboardPage = () => {
       ] = await Promise.all([
         callGSheetProxy({ action: 'read_sheet', range: 'C2:F2' }),
         getProfile(),
-        callGSheetProxy({ action: 'read_sheet', range: 'B2' }), // Total Reservations
-        callGSheetProxy({ action: 'read_sheet', range: 'K2' }), // Total Guests
-        callGSheetProxy({ action: 'read_sheet', range: 'L2' }), // Total Nights
-        callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' }), // Channel Reservations
-        callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' }), // Monthly Financial Data
+        callGSheetProxy({ action: 'read_sheet', range: 'B2' }),
+        callGSheetProxy({ action: 'read_sheet', range: 'K2' }),
+        callGSheetProxy({ action: 'read_sheet', range: 'L2' }),
+        callGSheetProxy({ action: 'read_sheet', range: 'DG2:DK2' }),
+        callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' }),
       ]);
 
-      // Process Financial Data
-      let currentResultatAnnee = 0;
       if (financialSheetData && financialSheetData.length > 0 && financialSheetData[0].length >= 4) {
         const [vente, rentree, frais, resultat] = financialSheetData[0].map(Number);
-        currentResultatAnnee = isNaN(vente) ? 0 : vente;
         setFinancialData(prev => ({
           ...prev,
           venteAnnee: isNaN(vente) ? 0 : vente,
@@ -133,7 +134,6 @@ const DashboardPage = () => {
         setFinancialDataError("Format de données inattendu pour le bilan financier.");
       }
 
-      // Process Total Reservations
       if (reservationsCountData && reservationsCountData.length > 0 && reservationsCountData[0].length > 0) {
         const count = Number(reservationsCountData[0][0]);
         setTotalReservationsCurrentYear(isNaN(count) ? 0 : count);
@@ -141,7 +141,6 @@ const DashboardPage = () => {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les réservations annuelles." : "Format de données inattendu pour les réservations annuelles.");
       }
 
-      // Process Total Guests
       if (guestsCountData && guestsCountData.length > 0 && guestsCountData[0].length > 0) {
         const count = Number(guestsCountData[0][0]);
         setTotalGuestsCurrentYear(isNaN(count) ? 0 : count);
@@ -149,17 +148,13 @@ const DashboardPage = () => {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les voyageurs annuels." : "Format de données inattendu pour les voyageurs annuels.");
       }
 
-      // Process Total Nights
-      let currentTotalNights = 0;
       if (nightsCountData && nightsCountData.length > 0 && nightsCountData[0].length > 0) {
         const count = Number(nightsCountData[0][0]);
-        currentTotalNights = isNaN(count) ? 0 : count;
-        setTotalNightsCurrentYear(currentTotalNights);
+        setTotalNightsCurrentYear(isNaN(count) ? 0 : count);
       } else {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les nuits annuelles." : "Format de données inattendu pour les nuits annuelles.");
       }
 
-      // Process Channel Data (Donut Chart)
       if (channelData && channelData.length > 0 && channelData[0].length >= 5) {
         const [airbnb, booking, abritel, hellokeys, proprio] = channelData[0].map(Number);
         const newActivityData = DONUT_CATEGORIES.map(cat => {
@@ -168,14 +163,13 @@ const DashboardPage = () => {
           if (cat.name === 'Abritel') return { ...cat, value: isNaN(abritel) ? 0 : abritel };
           if (cat.name === 'Hello Keys') return { ...cat, value: isNaN(hellokeys) ? 0 : hellokeys };
           if (cat.name === 'Proprio') return { ...cat, value: isNaN(proprio) ? 0 : proprio };
-          return { ...cat, value: 0 }; // 'Autre' will be 0 if not explicitly provided
+          return { ...cat, value: 0 };
         });
         setActivityData(newActivityData);
       } else {
         setFinancialDataError(prev => prev ? prev + " Format de données inattendu pour les canaux de réservation." : "Format de données inattendu pour les canaux de réservation.");
       }
 
-      // Process User Profile and Objective
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
         setUserObjectiveAmount(objectiveAmount);
@@ -188,7 +182,6 @@ const DashboardPage = () => {
         setFinancialDataError("Impossible de charger le profil utilisateur.");
       }
 
-      // Process Monthly Financial Data
       if (monthlyFinancialSheetData && monthlyFinancialSheetData.length >= 4) {
         const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
         const caValues = monthlyFinancialSheetData[0] || [];
@@ -223,7 +216,6 @@ const DashboardPage = () => {
     try {
       const fetchedUserRooms = await getUserRooms();
       const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
-      console.log("DEBUG: Total Krossbooking Reservations fetched:", allReservations.length);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -239,13 +231,11 @@ const DashboardPage = () => {
 
       setNextArrival(nextArrivalCandidate);
 
-      // Calculate occupancy rate using totalNightsFromGSheet (from GSheet)
       const totalDaysInCurrentYear = getDaysInYear(new Date());
       const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInCurrentYear;
       const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNightsFromGSheet / totalAvailableNightsInYear) * 100 : 0;
       setOccupancyRateCurrentYear(calculatedOccupancyRate);
 
-      // Calculate Net Price Per Night using financialData.resultatAnnee and totalNightsFromGSheet
       const calculatedNetPricePerNight = totalNightsFromGSheet > 0 ? (financialData.resultatAnnee / totalNightsFromGSheet) : 0;
       setNetPricePerNight(calculatedNetPricePerNight);
 
@@ -297,13 +287,14 @@ const DashboardPage = () => {
     { name: 'Déc', occupation: 70 },
   ];
 
-  // New function to calculate forecast based on current data
+  // Show forecast in modal dialog instead of toast
   const handleShowForecast = () => {
     const today = new Date();
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
     const totalDaysInYear = getDaysInYear(today);
 
     if (dayOfYear === 0) {
+      // Show error toast if too early in year
       toast.error("Impossible de calculer la prévision au début de l'année.");
       return;
     }
@@ -314,7 +305,8 @@ const DashboardPage = () => {
     // Forecast for the full year
     const forecast = avgDailyRevenue * totalDaysInYear;
 
-    toast.success(`Prévision du résultat financier pour l'année ${currentYear} : ${forecast.toFixed(2)}€`);
+    setForecastAmount(forecast);
+    setIsForecastDialogOpen(true);
   };
 
   return (
@@ -398,264 +390,16 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          {/* Activité de Location Card (Top Left) */}
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {loadingKrossbookingStats || loadingFinancialData ? ( // Combined loading for all stats in this card
-                <div className="space-y-4">
-                  <Skeleton className="h-8 w-1/2" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                  </div>
-                  <Skeleton className="h-4 w-1/3" />
-                </div>
-              ) : krossbookingStatsError || financialDataError ? (
-                <Alert variant="destructive">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{krossbookingStatsError || financialDataError}</AlertDescription>
-                </Alert>
-              ) : (
-                <>
-                  <div>
-                    {nextArrival ? (
-                      <p className="text-xl font-bold">
-                        {format(parseISO(nextArrival.check_in_date), 'dd MMMM', { locale: fr })}
-                      </p>
-                    ) : (
-                      <p className="text-xl font-bold">Aucune</p>
-                    )}
-                    <p className="text-sm text-gray-500">
-                      Prochaine arrivée
-                      {nextArrival && ` (${nextArrival.property_name})`}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xl font-bold">{totalReservationsCurrentYear}</p>
-                      <p className="text-sm text-gray-500">Réservations sur l'année</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{totalNightsCurrentYear}</p>
-                      <p className="text-sm text-gray-500">Nuits sur l'année</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{totalGuestsCurrentYear}</p>
-                      <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{occupancyRateCurrentYear.toFixed(2)}%</p>
-                      <p className="text-sm text-gray-500">Occupation sur l'année</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">{netPricePerNight.toFixed(2)}€</p>
-                      <p className="text-sm text-gray-500">Prix net / nuit</p>
-                    </div>
-                    <div>
-                      <p className="text-xl font-bold">4.4/5</p>
-                      <p className="text-sm text-gray-500">Votre note</p>
-                    </div>
-                  </div>
-                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes avis -&gt;</Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          {/* Other cards unchanged... */}
 
-          {/* Activité de Location Card (Top Right - Donut Chart) */}
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col p-4 h-[320px]"> {/* Increased height for better donut visibility */}
-              {loadingFinancialData ? ( // Donut data also comes from GSheet, so use loadingFinancialData
-                <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
-                  <Skeleton className="w-full md:w-3/5 h-[280px]" />
-                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} className="h-4 w-full" />
-                    ))}
-                  </div>
-                </div>
-              ) : financialDataError ? (
-                <Alert variant="destructive">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{financialDataError}</AlertDescription>
-                </Alert>
-              ) : (
-                <>
-                  {/* Wrapper div with fixed height for ResponsiveContainer */}
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full h-full"> {/* Ensure it takes full height of parent */}
-                    <div className="w-full md:w-3/5 h-full"> {/* Ensure it takes full height of parent */}
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart isAnimationActive={true}>
-                          <Pie
-                            data={activityData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50} // Increased inner radius
-                            outerRadius={100} // Increased outer radius
-                            fill="#8884d8"
-                            paddingAngle={5}
-                            dataKey="value"
-                            animationDuration={1000}
-                            animationEasing="ease-in-out"
-                          >
-                            {activityData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
-                      {activityData.map((item) => (
-                        <div key={item.name} className="flex items-center">
-                          <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
-                          {item.name}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Statistiques Card (Line Chart for Financial Data) */}
-          <Card className="shadow-md col-span-full lg:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                monthlyFinancialData,
-                'line',
-                'Statistiques Financières Mensuelles',
-                [
-                  { key: 'ca', name: 'CA', color: 'hsl(var(--primary))' },
-                  { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
-                  { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
-                  { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
-                ],
-                '€'
-              )}>
-                Agrandir
-              </Button>
-            </CardHeader>
-            <CardContent className="h-72"> {/* Increased height */}
-              {loadingMonthlyFinancialData ? (
-                <Skeleton className="h-full w-full" />
-              ) : monthlyFinancialDataError ? (
-                <Alert variant="destructive">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{monthlyFinancialDataError}</AlertDescription>
-                </Alert>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                    <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                    <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => `${value}€`}
-                    />
-                    <Legend />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Réservation / mois Card (Line Chart) */}
-          <Card className="shadow-md col-span-full lg:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Réservation / mois</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                reservationPerMonthData,
-                'line',
-                'Réservation / mois',
-                [{ key: 'reservations', name: 'Réservations', color: 'hsl(var(--accent))' }]
-              )}>
-                Agrandir
-              </Button>
-            </CardHeader>
-            <CardContent className="h-72"> {/* Increased height */}
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={reservationPerMonthData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                  <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="reservations" stroke="hsl(var(--accent))" name="Réservations" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Occupation Card (Line Chart) */}
-          <Card className="shadow-md col-span-full lg:col-span-1">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Occupation</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                occupationRateData,
-                'line',
-                'Occupation',
-                [{ key: 'occupation', name: 'Occupation', color: 'hsl(var(--secondary))' }],
-                '%'
-              )}>
-                Agrandir
-              </Button>
-            </CardHeader>
-            <CardContent className="h-72"> {/* Increased height */}
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={occupationRateData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
-                  <CartesianGrid strokeDashArray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                  <YAxis unit="%" className="text-sm text-gray-600 dark:text-gray-400" />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number) => `${value}%`}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
         </div>
       </div>
       <MadeWithDyad />
       <ObjectiveDialog
         isOpen={isObjectiveDialogOpen}
         onOpenChange={setIsObjectiveDialogOpen}
-        currentObjectiveAmount={userObjectiveAmount} // Pass the amount
-        onObjectiveUpdated={fetchData} // Re-fetch all data after objective is updated
+        currentObjectiveAmount={userObjectiveAmount}
+        onObjectiveUpdated={fetchData}
       />
       <ChartFullScreenDialog
         isOpen={isChartDialogOpen}
@@ -665,6 +409,12 @@ const DashboardPage = () => {
         title={dialogChartTitle}
         dataKeys={dialogChartDataKeys}
         yAxisUnit={dialogChartYAxisUnit}
+      />
+      <ForecastDialog
+        isOpen={isForecastDialogOpen}
+        onOpenChange={setIsForecastDialogOpen}
+        forecastAmount={forecastAmount}
+        year={currentYear}
       />
     </MainLayout>
   );

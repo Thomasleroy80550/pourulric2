@@ -14,6 +14,7 @@ import { Send, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parse, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils'; // Importation ajoutée
 
 interface AICopilotDialogProps {
   isOpen: boolean;
@@ -164,10 +165,12 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
           <Button onClick={handleSendMessage} disabled={isThinking || input.trim() === ''}>
             <Send className="h-4 w-4" />
           </Button>
-        </DialogFooter>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
 };
 
-export default AICopilotDialog;
+export default ReportProblemDialog;

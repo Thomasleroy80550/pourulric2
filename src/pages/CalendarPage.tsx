@@ -10,6 +10,7 @@ import OwnerReservationDialog from '@/components/OwnerReservationDialog'; // Imp
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { useLocation } from 'react-router-dom'; // Import useLocation
 
 const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
@@ -18,6 +19,7 @@ const CalendarPage: React.FC = () => {
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loadingData, setLoadingData] = useState(true); // New loading state for all data
   const [refreshTrigger, setRefreshTrigger] = useState(0); // State to trigger data refresh
+  const location = useLocation(); // Get location object
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,6 +40,15 @@ const CalendarPage: React.FC = () => {
     };
     fetchData();
   }, [refreshTrigger]); // Re-fetch all data if refreshTrigger changes
+
+  useEffect(() => {
+    // Check if the dialog should be opened from navigation state
+    if (location.state?.openOwnerReservationDialog) {
+      setIsOwnerReservationDialogOpen(true);
+      // Clear the state to prevent re-opening on subsequent renders/visits
+      window.history.replaceState({}, document.title); 
+    }
+  }, [location.state]);
 
   const handleReservationChange = () => {
     setRefreshTrigger(prev => prev + 1); // Increment to trigger data refresh

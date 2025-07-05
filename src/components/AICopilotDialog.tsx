@@ -17,10 +17,12 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { NavigateFunction } from 'react-router-dom'; // Import NavigateFunction
 
 interface AICopilotDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  navigate: NavigateFunction; // Add navigate prop
 }
 
 interface ChatMessage {
@@ -30,7 +32,7 @@ interface ChatMessage {
   parsedData?: any;
 }
 
-const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange }) => {
+const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange, navigate }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -216,18 +218,30 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
           { id: Date.now().toString() + '-ai-no-rooms', sender: 'ai', text: "Vous n'avez pas encore configuré de chambres. Veuillez en ajouter via la page 'Mon Profil' pour pouvoir bloquer des dates." }
         ]);
         setConversationMode('initial');
-      } else if (fetchedUserRooms.length === 1) {
-        setSelectedRoomForBlocking(fetchedUserRooms[0]);
-        setConversationMode('block_room_awaiting_dates');
-        setMessages((prev) => [
-          ...prev,
-          { id: Date.now().toString() + '-ai-single-room', sender: 'ai', text: `D'accord, pour votre chambre "${fetchedUserRooms[0].room_name}". Veuillez me donner les dates d'arrivée et de départ, et si vous souhaitez prévoir le ménage. Par exemple : 'du 01/01/2025 au 05/01/2025 avec ménage'.` }
-        ]);
       } else {
-        setConversationMode('block_room_awaiting_room_selection');
+        let roomListText = '';
+        if (fetchedUserRooms.length === 1) {
+          roomListText = `votre chambre "${fetchedUserRooms[0].room_name}"`;
+          setSelectedRoomForBlocking(fetchedUserRooms[0]);
+          setConversationMode('block_room_awaiting_dates');
+        } else {
+          roomListText = `vos chambres : ${fetchedUserRooms.map(r => r.room_name).join(', ')}`;
+          setConversationMode('block_room_awaiting_room_selection');
+        }
+        
         setMessages((prev) => [
           ...prev,
-          { id: Date.now().toString() + '-ai-multi-room', sender: 'ai', text: `Pour quelle chambre souhaitez-vous bloquer des dates ? Veuillez me donner le nom de la chambre. Vos chambres configurées sont : ${fetchedUserRooms.map(r => r.room_name).join(', ')}.` }
+          { 
+            id: Date.now().toString() + '-ai-block-prompt', 
+            sender: 'ai', 
+            text: `D'accord. Pour bloquer un logement, je peux vous aider à vérifier les disponibilités pour ${roomListText}. Vous pouvez me donner les dates directement (ex: 'du 01/01/2025 au 05/01/2025 avec ménage'), ou bien cliquer sur le bouton ci-dessous pour ouvrir le calendrier et gérer vos réservations.` 
+          },
+          {
+            id: Date.now().toString() + '-ai-button',
+            sender: 'ai',
+            text: '', // Empty text, as it's a button message
+            parsedData: { action: 'open_calendar_dialog' }
+          }
         ]);
       }
     } else if (actionType === 'general_question') {
@@ -238,6 +252,24 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
       ]);
     }
     setIsThinking(false);
+  };
+
+  const renderMessageContent = (message: ChatMessage) => {
+    if (message.sender === 'ai' && message.parsedData?.action === 'open_calendar_dialog') {
+      return (
+        <Button 
+          onClick={() => {
+            onOpenChange(false); // Close AI dialog
+            navigate('/calendar', { state: { openOwnerReservationDialog: true } });
+          }}
+          className="w-full mt-2"
+        >
+          <CalendarDays className="h-4 w-4 mr-2" />
+          Ouvrir le calendrier
+        </Button>
+      );
+    }
+    return message.text;
   };
 
   return (
@@ -267,7 +299,7 @@ const AICopilotDialog: React.FC<AICopilotDialogProps> = ({ isOpen, onOpenChange 
                       : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-tl-none'
                   )}
                 >
-                  {msg.text}
+                  {renderMessageContent(msg)}
                 </div>
               </div>
             ))}

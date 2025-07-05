@@ -249,6 +249,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <AICopilotDialog
         isOpen={isAICopilotDialogOpen}
         onOpenChange={setIsAICopilotDialogOpen}
+        navigate={navigate} {/* Pass navigate prop */}
       />
     </div>
   );

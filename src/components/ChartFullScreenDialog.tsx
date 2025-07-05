@@ -57,10 +57,14 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
 
   useEffect(() => {
     if (showConfetti) {
-      const timer = setTimeout(() => setShowConfetti(false), 3000);
+      // Auto close dialog after confetti animation (3 seconds)
+      const timer = setTimeout(() => {
+        setShowConfetti(false);
+        onOpenChange(false);
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [showConfetti]);
+  }, [showConfetti, onOpenChange]);
 
   const handleExportPdf = async () => {
     if (!chartContainerRef.current) {
@@ -113,21 +117,22 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
           width={width}
           height={height}
           recycle={false}
-          numberOfPieces={400} // Plus de confettis
-          gravity={0.2} // Moins de gravité pour une chute plus lente après l'explosion
-          initialVelocityX={{ min: -20, max: 20 }} // Propagation horizontale plus large
-          initialVelocityY={{ min: -50, max: -100 }} // Forte impulsion initiale vers le haut
-          tweenDuration={3000} // Durée de l'animation plus longue pour l'effet d'explosion
-          confettiSource={{ // Point de départ au centre de l'écran
+          numberOfPieces={200} // Reduced confetti pieces for a single explosion
+          gravity={0.15} // Slightly slower fall
+          initialVelocityX={{ min: -15, max: 15 }} // Moderate horizontal spread
+          initialVelocityY={{ min: -40, max: -80 }} // Moderate upward velocity
+          tweenDuration={3000} // Duration matches auto close timer
+          confettiSource={{ // Center of screen
             x: width / 2,
             y: height / 2,
             w: 0,
             h: 0,
           }}
+          style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 9999 }} // Ensure confetti is on top
         />
       )}
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[90vw] md:max-w-[1000px] h-[80vh] flex flex-col p-6 rounded-md shadow-xl">
+        <DialogContent className="sm:max-w-[90vw] md:max-w-[900px] h-[70vh] flex flex-col p-6 rounded-md shadow-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
             {description && <DialogDescription>{description}</DialogDescription>}

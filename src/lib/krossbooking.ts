@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { UserRoom } from "./user-room-api"; // Import UserRoom
 
 interface KrossbookingReservation {
   id: string; // id_reservation from Krossbooking
@@ -102,23 +103,27 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
 
 /**
  * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy for multiple rooms.
- * @param roomIds An array of Krossbooking room IDs to fetch reservations for.
+ * @param userRooms An array of UserRoom objects to fetch reservations for.
  * @returns A promise that resolves to an array of KrossbookingReservation objects.
  */
-export async function fetchKrossbookingReservations(roomIds: string[]): Promise<KrossbookingReservation[]> {
+export async function fetchKrossbookingReservations(userRooms: UserRoom[]): Promise<KrossbookingReservation[]> {
   let allReservations: KrossbookingReservation[] = [];
+  const roomIds = userRooms.map(room => room.room_id); // Extract room_ids from userRooms
+
   for (const roomId of roomIds) {
     try {
       const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
       if (Array.isArray(data)) {
         const roomReservations = data.map((res: any) => {
-          console.log(`DEBUG: Raw Krossbooking reservation data for room ${roomId}:`, res); // Log raw data
-          const roomLabel = res.rooms?.[0]?.label || res.rooms?.[0]?.id_room?.toString() || 'N/A';
-          const krossbookingRoomId = res.rooms?.[0]?.id_room?.toString() || ''; // Capture the room ID
+          // Find the user-friendly room name based on the Krossbooking room ID
+          const userFriendlyRoom = userRooms.find(ur => ur.room_id === roomId);
+          const propertyName = userFriendlyRoom ? userFriendlyRoom.room_name : 'N/A';
+
+          const krossbookingRoomId = res.rooms?.[0]?.id_room?.toString() || ''; // Capture the actual Krossbooking room ID
           return {
             id: res.id_reservation.toString(), 
             guest_name: res.label || 'N/A', 
-            property_name: roomLabel,
+            property_name: propertyName, // Use the user-friendly name
             krossbooking_room_id: krossbookingRoomId, // Populate it
             check_in_date: res.arrival || '', 
             check_out_date: res.departure || '', 

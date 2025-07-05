@@ -10,14 +10,11 @@ import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, Kross
 import { UserRoom } from '@/lib/user-room-api';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import ReservationActionsDialog from './ReservationActionsDialog'; // Import the new dialog
-import OwnerReservationDialog from './OwnerReservationDialog'; // Import OwnerReservationDialog
+import ReservationActionsDialog from './ReservationActionsDialog';
+import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Corrected import syntax
-
-// KrossbookingReservation interface is now imported from krossbooking.ts
-// interface KrossbookingReservation { ... }
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -38,18 +35,18 @@ const getTaskIcon = (status: string) => {
 };
 
 interface CalendarGridMobileProps {
-  refreshTrigger: number; // New prop
-  userRooms: UserRoom[]; // Now received as prop
-  reservations: KrossbookingReservation[]; // Now received as prop
-  onReservationChange: () => void; // New prop for triggering refresh
+  refreshTrigger: number;
+  userRooms: UserRoom[];
+  reservations: KrossbookingReservation[];
+  onReservationChange: () => void;
 }
 
 const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
-  const [loadingTasks, setLoadingTasks] = useState<boolean>(true); // Separate loading for tasks
+  const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<Date>(new Date()); // Default to today
+  const [selectedDay, setSelectedDay] = useState<Date>(new Date());
 
   const [isActionsDialogOpen, setIsActionsDialogOpen] = useState(false);
   const [selectedBookingForActions, setSelectedBookingForActions] = useState<KrossbookingReservation | null>(null);
@@ -84,16 +81,15 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
 
   useEffect(() => {
     loadHousekeepingTasks();
-  }, [currentMonth, userRooms, refreshTrigger]); // Re-fetch when month changes or refreshTrigger changes
+  }, [currentMonth, userRooms, refreshTrigger]);
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     const days = eachDayOfInterval({ start, end });
 
-    // Add leading empty days for the first week (Monday start)
-    const firstDayOfWeek = getDay(start); // 0 for Sunday, 1 for Monday
-    const leadingEmptyDaysCount = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // If Sunday (0), need 6 empty days to start on Monday. If Monday (1), need 0.
+    const firstDayOfWeek = getDay(start);
+    const leadingEmptyDaysCount = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
     const leadingEmptyDays = Array.from({ length: leadingEmptyDaysCount }, (_, i) => null);
 
     return [...leadingEmptyDays, ...days];
@@ -101,12 +97,12 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
 
   const goToPreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
-    setSelectedDay(startOfMonth(subMonths(currentMonth, 1))); // Select first day of new month
+    setSelectedDay(startOfMonth(subMonths(currentMonth, 1)));
   };
 
   const goToNextMonth = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
-    setSelectedDay(startOfMonth(addMonths(currentMonth, 1))); // Select first day of new month
+    setSelectedDay(startOfMonth(addMonths(currentMonth, 1)));
   };
 
   const getEventsForDay = (day: Date) => {
@@ -118,8 +114,6 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
 
         if (!checkIn || !checkOut) return;
 
-        // Check if the day is within the reservation period (inclusive of check-in, exclusive of check-out)
-        // For display purposes, we want to show check-out on the day of departure.
         const isCheckInDay = isSameDay(checkIn, day);
         const isCheckOutDay = isSameDay(checkOut, day);
         const isStayDay = day > checkIn && day < checkOut;
@@ -127,8 +121,8 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
         if (isCheckInDay || isCheckOutDay || isStayDay) {
           let type: 'check_in' | 'check_out' | 'stay' | 'check_in_out' = 'stay';
           if (isCheckInDay) type = 'check_in';
-          if (isCheckOutDay && !isCheckInDay) type = 'check_out'; // Only mark as check-out if not also check-in
-          if (isCheckInDay && isCheckOutDay) type = 'check_in_out'; // New type for same-day arrival/departure
+          if (isCheckOutDay && !isCheckInDay) type = 'check_out';
+          if (isCheckInDay && isCheckOutDay) type = 'check_in_out';
 
           events.push({ type, data: res, roomName: room.room_name, roomId: room.room_id });
         }
@@ -142,13 +136,11 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
       });
     });
 
-    // Filter unique events for display in the cell
     const uniqueEvents = [...new Map(events.map(item => {
       if (item.type === 'task') return [`task-${(item.data as KrossbookingHousekeepingTask).id_task}-${item.roomName}`, item];
       return [`${item.type}-${(item.data as KrossbookingReservation).id}-${item.roomName}`, item];
     })).values()];
     
-    // Sort events for better display: check-in, check-in_out, check-out, task, then stay
     uniqueEvents.sort((a, b) => {
       const order = { 'check_in': 1, 'check_in_out': 2, 'check_out': 3, 'task': 4, 'stay': 5 };
       return order[a.type] - order[b.type];
@@ -169,7 +161,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
   const handleEditReservation = (booking: KrossbookingReservation) => {
     setBookingToEdit(booking);
     setIsOwnerReservationDialogOpen(true);
-    setIsActionsDialogOpen(false); // Close actions dialog
+    setIsActionsDialogOpen(false);
   };
 
   const handleDeleteReservation = async (bookingId: string) => {
@@ -185,20 +177,19 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
 
       console.log("DEBUG: Booking object before cancellation payload creation (CalendarGridMobile):", bookingToCancel);
 
-      // Call saveKrossbookingReservation with CANC status, using original booking details
       await saveKrossbookingReservation({
         id_reservation: bookingToCancel.id,
-        label: bookingToCancel.guest_name || "Annulation", // Use original guest name or generic label
+        label: bookingToCancel.guest_name || "Annulation",
         arrival: bookingToCancel.check_in_date,
         departure: bookingToCancel.check_out_date,
-        email: bookingToCancel.email || '', // Use original email or empty string
-        phone: bookingToCancel.phone || '', // Use original phone or empty string
+        email: bookingToCancel.email || '',
+        phone: bookingToCancel.phone || '',
         cod_reservation_status: "CANC",
         id_room: bookingToCancel.krossbooking_room_id,
       });
       toast.success("Réservation annulée avec succès !");
-      setIsActionsDialogOpen(false); // Close actions dialog
-      onReservationChange(); // Trigger refresh in parent (CalendarPage)
+      setIsActionsDialogOpen(false);
+      onReservationChange();
     } catch (err: any) {
       toast.error(`Erreur lors de l'annulation de la réservation : ${err.message}`);
       console.error("Error deleting reservation:", err);
@@ -227,7 +218,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
             {weekDays.map((day) => (
               <Skeleton key={day} className="h-8 w-full" />
             ))}
-            {Array.from({ length: 35 }).map((_, index) => ( // 5 rows * 7 days
+            {Array.from({ length: 35 }).map((_, index) => (
               <Skeleton key={index} className="h-20 w-full" />
             ))}
           </div>
@@ -250,15 +241,14 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
             ))}
             {daysInMonth.map((day, index) => {
               if (!day) {
-                return <div key={`empty-${index}`} className="h-20"></div>; // Empty cell for padding
+                return <div key={`empty-${index}`} className="h-20"></div>;
               }
 
               const isToday = isSameDay(day, new Date());
               const isSelected = isSameDay(day, selectedDay);
               const eventsForCell = getEventsForDay(day);
 
-              // Prioritize display: check-in, check-in_out, check-out, task, then stay
-              const displayEvents = eventsForCell.slice(0, 3); // Show up to 3 indicators
+              const displayEvents = eventsForCell.slice(0, 3);
               const remainingEventsCount = eventsForCell.length - displayEvents.length;
 
               return (
@@ -267,7 +257,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
                   className={cn(
                     "h-20 flex flex-col items-center justify-start p-1 rounded-md cursor-pointer border",
                     isToday ? "bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700" : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700",
-                    isSelected && "ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400", // Highlight selected day
+                    isSelected && "ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400",
                     "hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   )}
                   onClick={() => setSelectedDay(day)}
@@ -299,7 +289,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
                         let icon = null;
                         if (event.type === 'check_in' || event.type === 'check_in_out') icon = <LogIn className="h-3 w-3" />;
                         else if (event.type === 'check_out') icon = <LogOut className="h-3 w-3" />;
-                        else if (event.type === 'stay') icon = <CalendarDays className="h-3 w-3" />; // Generic icon for stay
+                        else if (event.type === 'stay') icon = <CalendarDays className="h-3 w-3" />;
 
                         return (
                           <Tooltip key={`cell-res-${reservation.id}-${event.type}-${event.roomName}-${idx}`}>
@@ -310,7 +300,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
                             </TooltipTrigger>
                             <TooltipContent className="p-2 text-sm">
                               <p className="font-bold">{reservation.guest_name}</p>
-                              <p>{event.roomName}</p>
+                              <p>{reservation.property_name}</p> {/* Use property_name here */}
                               <p>Statut: {reservation.status}</p>
                               <p>Canal: {channelInfo.name}</p>
                             </TooltipContent>
@@ -331,7 +321,6 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
         )}
       </CardContent>
 
-      {/* Section for selected day's events */}
       <CardContent className="p-4 border-t mt-4">
         <h3 className="text-lg font-bold mb-3">Événements du {format(selectedDay, 'EEEE dd MMMM yyyy', { locale: fr })}</h3>
         {loadingTasks ? (
@@ -389,11 +378,11 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
                         className={cn(
                           `flex items-center p-2 rounded-md text-sm font-medium ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`
                         )}
-                        onClick={() => handleReservationClick(reservation)} // Add click handler here
+                        onClick={() => handleReservationClick(reservation)}
                       >
                         {icon && <span className="mr-3">{icon}</span>}
                         <div className="flex-grow">
-                          <p className="font-semibold">{event.roomName}: {eventLabel}</p>
+                          <p className="font-semibold">{reservation.property_name}: {eventLabel}</p> {/* Use property_name here */}
                           <p className="text-xs opacity-90">
                             Du {checkIn ? format(checkIn, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} au {checkOut ? format(checkOut, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} ({numberOfNights} nuit(s))
                           </p>
@@ -421,12 +410,12 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
         isOpen={isOwnerReservationDialogOpen}
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
-        allReservations={reservations} // Pass all reservations
+        allReservations={reservations}
         onReservationCreated={() => {
-          setIsOwnerReservationDialogOpen(false); // Close dialog
-          onReservationChange(); // Trigger refresh in parent
+          setIsOwnerReservationDialogOpen(false);
+          onReservationChange();
         }}
-        initialBooking={bookingToEdit} // Pass the booking to edit
+        initialBooking={bookingToEdit}
       />
     </Card>
   );

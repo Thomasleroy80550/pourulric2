@@ -10,7 +10,7 @@ import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, is
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
+import { cn } => '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -98,17 +98,9 @@ const BookingsPage: React.FC = () => {
         const fetchedUserRooms = await getUserRooms();
         setUserRooms(fetchedUserRooms);
 
-        const roomIds = fetchedUserRooms.map(room => room.room_id);
-
-        if (roomIds.length === 0) {
-          setAllBookings([]);
-          setFilteredBookings([]);
-          setLoading(false);
-          return;
-        }
-
-        const fetchedBookings = await fetchKrossbookingReservations(roomIds);
-        console.log(`Fetched bookings for BookingsPage (Rooms: ${roomIds.join(', ')}):`, fetchedBookings);
+        // Pass fetchedUserRooms to fetchKrossbookingReservations
+        const fetchedBookings = await fetchKrossbookingReservations(fetchedUserRooms);
+        console.log(`Fetched bookings for BookingsPage (Rooms: ${fetchedUserRooms.map(r => r.room_id).join(', ')}):`, fetchedBookings);
 
         const currentYear = new Date().getFullYear();
         const yearStart = startOfYear(new Date(currentYear, 0, 1));

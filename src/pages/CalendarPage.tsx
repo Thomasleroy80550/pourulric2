@@ -26,8 +26,8 @@ const CalendarPage: React.FC = () => {
         const fetchedUserRooms = await getUserRooms();
         setUserRooms(fetchedUserRooms);
 
-        const roomIds = fetchedUserRooms.map(room => room.room_id);
-        const fetchedReservations = await fetchKrossbookingReservations(roomIds);
+        // Pass fetchedUserRooms to fetchKrossbookingReservations
+        const fetchedReservations = await fetchKrossbookingReservations(fetchedUserRooms);
         setReservations(fetchedReservations);
       } catch (error) {
         console.error("Error fetching data for CalendarPage:", error);

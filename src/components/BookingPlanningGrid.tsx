@@ -7,14 +7,14 @@ import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle,
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'; // Corrected import syntax
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
-import ReservationActionsDialog from './ReservationActionsDialog'; // Import the new dialog
-import OwnerReservationDialog from './OwnerReservationDialog'; // Import OwnerReservationDialog
+import { UserRoom } from '@/lib/user-room-api';
+import { useIsMobile } from '@/hooks/use-mobile';
+import ReservationActionsDialog from './ReservationActionsDialog';
+import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Skeleton } from '@/components/ui/skeleton';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -27,17 +27,17 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 
 interface BookingPlanningGridProps {
   refreshTrigger: number;
-  userRooms: UserRoom[]; // Now received as prop
-  reservations: KrossbookingReservation[]; // Now received as prop
-  onReservationChange: () => void; // New prop for triggering refresh
+  userRooms: UserRoom[];
+  reservations: KrossbookingReservation[];
+  onReservationChange: () => void;
 }
 
 const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
-  const [loadingTasks, setLoadingTasks] = useState<boolean>(true); // Separate loading for tasks
+  const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const isMobile = useIsMobile(); // Use the hook to detect mobile
+  const isMobile = useIsMobile();
 
   const [isActionsDialogOpen, setIsActionsDialogOpen] = useState(false);
   const [selectedBookingForActions, setSelectedBookingForActions] = useState<KrossbookingReservation | null>(null);
@@ -73,7 +73,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
   useEffect(() => {
     loadHousekeepingTasks();
-  }, [currentMonth, userRooms, refreshTrigger]); // Re-fetch tasks when month, rooms, or refreshTrigger changes
+  }, [currentMonth, userRooms, refreshTrigger]);
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -90,8 +90,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   };
 
   // Adjust widths based on mobile status
-  const dayCellWidth = isMobile ? 40 : 80; // Smaller cells on mobile
-  const propertyColumnWidth = isMobile ? 100 : 150; // Smaller property column on mobile
+  const dayCellWidth = isMobile ? 40 : 80;
+  const propertyColumnWidth = isMobile ? 100 : 150;
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -110,7 +110,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   const handleEditReservation = (booking: KrossbookingReservation) => {
     setBookingToEdit(booking);
     setIsOwnerReservationDialogOpen(true);
-    setIsActionsDialogOpen(false); // Close actions dialog
+    setIsActionsDialogOpen(false);
   };
 
   const handleDeleteReservation = async (bookingId: string) => {
@@ -129,17 +129,17 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
       // Call saveKrossbookingReservation with CANC status, using original booking details
       await saveKrossbookingReservation({
         id_reservation: bookingToCancel.id,
-        label: bookingToCancel.guest_name || "Annulation", // Use original guest name
+        label: bookingToCancel.guest_name || "Annulation",
         arrival: bookingToCancel.check_in_date,
         departure: bookingToCancel.check_out_date,
-        email: bookingToCancel.email || '', // Use original email or empty string
-        phone: bookingToCancel.phone || '', // Use original phone or empty string
+        email: bookingToCancel.email || '',
+        phone: bookingToCancel.phone || '',
         cod_reservation_status: "CANC",
         id_room: bookingToCancel.krossbooking_room_id,
       });
       toast.success("Réservation annulée avec succès !");
-      setIsActionsDialogOpen(false); // Close actions dialog
-      onReservationChange(); // Trigger refresh in parent
+      setIsActionsDialogOpen(false);
+      onReservationChange();
     } catch (err: any) {
       toast.error(`Erreur lors de l'annulation de la réservation : ${err.message}`);
       console.error("Error deleting reservation:", err);
@@ -217,7 +217,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               <React.Fragment key={room.id}>
                 {/* Property Name Cell */}
                 <div className="grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2"
-                  style={{ gridRow: `${3 + roomIndex}` }}> {/* Adjust row based on index */}
+                  style={{ gridRow: `${3 + roomIndex}` }}>
                   <Home className="h-4 w-4 mr-2 text-gray-500" />
                   <span className="font-medium text-sm">{room.room_name}</span>
                 </div>
@@ -240,7 +240,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                           <TooltipTrigger asChild>
                             <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20">
                               {tasksForThisDay.length > 1 ? (
-                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisSkelton.length}</span>
+                                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
                               ) : (
                                 getTaskIcon(tasksForThisDay[0].status)
                               )}
@@ -263,7 +263,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
                 {/* Reservation Bars (Overlay) for this room */}
                 {reservations
-                  .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id) // Filter reservations for the current room using krossbooking_room_id
+                  .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id)
                   .map((reservation) => {
                     const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
                     const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
@@ -276,18 +276,14 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     const monthStart = startOfMonth(currentMonth);
                     const monthEnd = endOfMonth(currentMonth);
 
-                    // Calculate the number of nights. If 0, it's a same-day arrival/departure.
                     const numberOfNights = differenceInDays(checkOut, checkIn);
 
-                    // The bar visually spans from check-in day to check-out day (inclusive)
                     const barStartDate = checkIn;
                     const barEndDate = checkOut; 
 
-                    // Determine the effective visible start and end of the reservation bar within the current month
                     const visibleBarStart = max([barStartDate, monthStart]);
                     const visibleBarEnd = min([barEndDate, monthEnd]);
 
-                    // If reservation doesn't overlap with current month's visual span, don't render the bar
                     if (visibleBarStart > visibleBarEnd) {
                       return null;
                     }
@@ -302,16 +298,13 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
                     let calculatedLeft: number;
                     let calculatedWidth: number;
-                    const isSingleDayStay = numberOfNights === 0; // 0 nights means arrival and departure on the same day
+                    const isSingleDayStay = numberOfNights === 0;
 
                     if (isSingleDayStay) {
-                      // For single-day stays, center the bar within the cell and give it half the cell's width
-                      calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4); // Start at 1/4 of the cell
-                      calculatedWidth = dayCellWidth / 2; // Span half the cell
+                      calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4);
+                      calculatedWidth = dayCellWidth / 2;
                     } else {
-                      // For multi-day stays, start at the center of the first day and end at the center of the last day
                       calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
-                      // Width spans from center of startIndex to center of endIndex
                       calculatedWidth = (endIndex - startIndex) * dayCellWidth;
                     }
 
@@ -322,12 +315,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     
                     const barClasses = cn(
                       `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`,
-                      isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1', // Smaller text and padding on mobile
+                      isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                       {
-                        'rounded-full': isSingleDayStay, // Full round for single day
-                        'rounded-l-full': isArrivalDayVisible && !isSingleDayStay, // Left round for multi-day arrival
-                        'rounded-r-full': isDepartureDayVisible && !isSingleDayStay, // Right round for multi-day departure
-                        // No rounding if it's a middle segment of a long reservation spanning across months
+                        'rounded-full': isSingleDayStay,
+                        'rounded-l-full': isArrivalDayVisible && !isSingleDayStay,
+                        'rounded-r-full': isDepartureDayVisible && !isSingleDayStay,
                       }
                     );
 
@@ -337,23 +329,21 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                           <div
                             className={barClasses}
                             style={{
-                              gridRow: `${3 + roomIndex}`, // Position in the correct row for the room
+                              gridRow: `${3 + roomIndex}`,
                               left: `${calculatedLeft}px`,
                               width: `${calculatedWidth}px`,
-                              height: '36px', // Adjusted for better vertical centering
-                              marginTop: '2px', // Small margin from the top of the grid row
-                              marginBottom: '2px', // Small margin from the bottom of the grid row
-                              zIndex: 5, // Ensure bars are above background cells but below icons
-                              display: 'flex', // Ensure flexbox for icon positioning
-                              justifyContent: 'space-between', // Distribute items
+                              height: '36px',
+                              marginTop: '2px',
+                              marginBottom: '2px',
+                              zIndex: 5,
+                              display: 'flex',
+                              justifyContent: 'space-between',
                               alignItems: 'center',
                             }}
-                            onClick={() => handleReservationClick(reservation)} // Add click handler here
+                            onClick={() => handleReservationClick(reservation)}
                           >
-                            {/* Render LogIn icon at the start of the bar if it's the check-in day */}
                             {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                             
-                            {/* Render Sparkles icon for single-day reservations (arrival and departure on same day) */}
                             {isSingleDayStay && <Sparkles className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
 
                             <span className="flex-grow text-center px-1 truncate">
@@ -363,7 +353,6 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                               <span className="truncate">{reservation.guest_name}</span>
                             </span>
 
-                            {/* Render LogOut icon at the end of the bar if it's the check-out day (or same day for 0 nights) */}
                             {isDepartureDayVisible && !isSingleDayStay && <LogOut className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                           </div>
                         </TooltipTrigger>
@@ -381,9 +370,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               </React.Fragment>
             ))}
           </div>
-        ) : null} {/* Render null if not loading and no rooms */}
+        ) : null}
 
-        {/* Legend for OTA Platforms */}
         <div className="mt-8 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
           <h3 className="text-md font-semibold mb-3">Légende des plateformes</h3>
           <div className="flex flex-wrap gap-4">
@@ -444,9 +432,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         isOpen={isOwnerReservationDialogOpen}
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
-        allReservations={reservations} // Pass all reservations
-        onReservationCreated={onReservationChange} // Use the new handler
-        initialBooking={bookingToEdit} // Pass the booking to edit
+        allReservations={reservations}
+        onReservationCreated={onReservationChange}
+        initialBooking={bookingToEdit}
       />
     </Card>
   );

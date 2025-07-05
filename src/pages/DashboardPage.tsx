@@ -28,7 +28,7 @@ import { getProfile } from "@/lib/profile-api";
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore } from 'date-fns'; // Re-added isBefore, isAfter, isSameDay
+import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const DONUT_CATEGORIES = [
@@ -71,8 +71,8 @@ const DashboardPage = () => {
   const [totalGuestsCurrentYear, setTotalGuestsCurrentYear] = useState(0);
   const [occupancyRateCurrentYear, setOccupancyRateCurrentYear] = useState(0);
   const [netPricePerNight, setNetPricePerNight] = useState(0);
-  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true); // Re-added
-  const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null); // Re-added
+  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
+  const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoadingFinancialData(true);
@@ -103,7 +103,7 @@ const DashboardPage = () => {
       let currentResultatAnnee = 0;
       if (financialSheetData && financialSheetData.length > 0 && financialSheetData[0].length >= 4) {
         const [vente, rentree, frais, resultat] = financialSheetData[0].map(Number);
-        currentResultatAnnee = isNaN(vente) ? 0 : vente; // Corrected to use 'vente' for initial value
+        currentResultatAnnee = isNaN(vente) ? 0 : vente;
         setFinancialData(prev => ({
           ...prev,
           venteAnnee: isNaN(vente) ? 0 : vente,
@@ -161,7 +161,7 @@ const DashboardPage = () => {
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
         setUserObjectiveAmount(objectiveAmount);
-        const calculatedAchievement = (objectiveAmount === 0) ? 0 : (financialData.resultatAnnee / objectiveAmount) * 100; // Use financialData.resultatAnnee
+        const calculatedAchievement = (objectiveAmount === 0) ? 0 : (financialData.resultatAnnee / objectiveAmount) * 100;
         setFinancialData(prev => ({
           ...prev,
           currentAchievementPercentage: calculatedAchievement,
@@ -191,30 +191,21 @@ const DashboardPage = () => {
       }
 
     } catch (err: any) {
-      setFinancialDataError(`Erreur lors du chargement des données : ${err.message}`);
-      console.error("Error fetching all data:", err);
+      setFinancialDataError(`Erreur lors du chargement des données financières ou du profil : ${err.message}`);
+      console.error("Error fetching financial data or profile:", err);
     } finally {
       setLoadingFinancialData(false);
       setLoadingMonthlyFinancialData(false);
     }
-  }, [financialData.resultatAnnee]); // Added financialData.resultatAnnee as dependency for objective calculation
+  }, [financialData.resultatAnnee]);
 
   const fetchKrossbookingStats = useCallback(async (totalNightsFromGSheet: number) => {
     setLoadingKrossbookingStats(true);
     setKrossbookingStatsError(null);
     try {
-      const fetchedUserRooms = await getUserRooms();
-      const roomIds = fetchedUserRooms.map(room => room.room_id);
-
-      if (roomIds.length === 0) {
-        setNextArrival(null);
-        setOccupancyRateCurrentYear(0);
-        setNetPricePerNight(0); // Also reset net price if no rooms
-        setLoadingKrossbookingStats(false);
-        return;
-      }
-
-      const allReservations = await fetchKrossbookingReservations(roomIds);
+      const fetchedUserRooms = await getUserRooms(); // Fetch user rooms here
+      // Pass fetchedUserRooms to fetchKrossbookingReservations
+      const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
       console.log("DEBUG: Total Krossbooking Reservations fetched:", allReservations.length);
 
       const today = new Date();
@@ -247,15 +238,13 @@ const DashboardPage = () => {
     } finally {
       setLoadingKrossbookingStats(false);
     }
-  }, [financialData.resultatAnnee]); // Dependency on financialData.resultatAnnee for netPricePerNight calculation
+  }, [financialData.resultatAnnee]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   useEffect(() => {
-    // Call fetchKrossbookingStats when totalNightsCurrentYear is updated by fetchData
-    // and when financialData.resultatAnnee is available for net price calculation
     if (!loadingFinancialData && financialData.resultatAnnee !== undefined) {
         fetchKrossbookingStats(totalNightsCurrentYear);
     }

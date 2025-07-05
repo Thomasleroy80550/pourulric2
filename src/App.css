@@ -1,5 +1,4 @@
 #root {
-  max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -39,4 +38,38 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Custom styles for the new Booking Planning Grid */
+.grid-container {
+  display: grid;
+  /* grid-template-columns will be set dynamically by JS */
+  grid-auto-rows: 40px; /* Height of each row (property row, day header row) */
+  position: relative; /* For absolute positioning of reservation bars */
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  overflow: hidden; /* Ensures rounded corners and hides overflow */
+}
+
+.grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  box-sizing: border-box; /* Include padding in cell's total width/height */
+}
+
+.header-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for header cells */
+}
+
+.property-name-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for property name cells */
+  justify-content: flex-start; /* Align text to start */
 }

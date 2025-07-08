@@ -24,46 +24,50 @@ import ProfilePage from "./pages/ProfilePage";
 import GoogleSheetDataPage from "./pages/GoogleSheetDataPage";
 import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
-import PromotionPage from "./pages/PromotionPage"; // Import the new page
+import PromotionPage from "./pages/PromotionPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
+import { ThemeProvider } from "next-themes"; // Import ThemeProvider
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <SessionContextProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/admin/pages" element={<PageCreator />} />
-            <Route path="/pages/:slug" element={<ContentPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
-            <Route path="/blog" element={<BlogPage />} />
-            <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
-            <Route path="/promotion" element={<PromotionPage />} /> {/* New route for promotion page */}
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/bookings" element={<BookingsPage />} />
-            <Route path="/performance" element={<PerformancePage />} />
-            <Route path="/reviews" element={<ReviewsPage />} />
-            <Route path="/accounting" element={<AccountingPage />} />
-            <Route path="/balances" element={<BalancesPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/help" element={<HelpPage />} />
-            <Route path="/modules" element={<ModulesPage />} />
-            <Route path="/roadmap" element={<RoadmapPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </SessionContextProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    {/* ThemeProvider added here to wrap the entire application */}
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <SessionContextProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/admin/pages" element={<PageCreator />} />
+              <Route path="/pages/:slug" element={<ContentPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
+              <Route path="/promotion" element={<PromotionPage />} />
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/bookings" element={<BookingsPage />} />
+              <Route path="/performance" element={<PerformancePage />} />
+              <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/accounting" element={<AccountingPage />} />
+              <Route path="/balances" element={<BalancesPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/help" element={<HelpPage />} />
+              <Route path="/modules" element={<ModulesPage />} />
+              <Route path="/roadmap" element={<RoadmapPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </SessionContextProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider> {/* Closing ThemeProvider */}
   </QueryClientProvider>
 );
 

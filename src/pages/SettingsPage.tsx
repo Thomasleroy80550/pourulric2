@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Skeleton } from '@/components/ui/skeleton';
+import { useTheme } from 'next-themes'; // Import useTheme
 
 const SettingsPage: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = React.useState(false);
   const [loading, setLoading] = useState(true);
+
+  const { theme, setTheme } = useTheme(); // Use the useTheme hook
 
   useEffect(() => {
     // Simulate data fetching
@@ -25,10 +27,10 @@ const SettingsPage: React.FC = () => {
   const handleSaveSettings = () => {
     console.log("Paramètres sauvegardés:", {
       notificationsEnabled,
-      darkModeEnabled,
-      // ... autres champs
+      theme, // Log the current theme
+      // ... other fields
     });
-    // Ici, vous intégreriez la logique de sauvegarde réelle (API, etc.)
+    // Here, you would integrate the actual saving logic (API, etc.)
   };
 
   return (
@@ -88,8 +90,8 @@ const SettingsPage: React.FC = () => {
                   <Label htmlFor="darkMode">Mode Sombre</Label>
                   <Switch
                     id="darkMode"
-                    checked={darkModeEnabled}
-                    onCheckedChange={setDarkModeEnabled}
+                    checked={theme === 'dark'} // Check if current theme is 'dark'
+                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} // Set theme based on switch
                   />
                 </div>
 

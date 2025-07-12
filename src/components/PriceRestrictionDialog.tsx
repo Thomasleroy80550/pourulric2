@@ -39,14 +39,6 @@ interface PriceRestrictionDialogProps {
   onSettingsSaved: () => void;
 }
 
-const channels = [
-  { value: 'AIRBNB', label: 'Airbnb' },
-  { value: 'BOOKING', label: 'Booking.com' },
-  { value: 'ABRITEL', label: 'Abritel' },
-  { value: 'DIRECT', label: 'Direct' },
-  { value: 'HELLOKEYS', label: 'Hello Keys' },
-];
-
 const formSchema = z.object({
   roomId: z.string().min(1, { message: 'Veuillez sélectionner une chambre.' }),
   dateRange: z.object({
@@ -105,52 +97,48 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const formattedDateFrom = format(values.dateRange.from, 'yyyy-MM-dd');
     const formattedDateTo = format(values.dateRange.to!, 'yyyy-MM-dd');
 
-    const cmBlocks: { [key: string]: any } = {};
+    const cmBlock: any = {
+      id_room_type: parseInt(values.roomId),
+      id_rate: 1, // Hardcoded to 1
+      cod_channel: 'BOOKING', // Hardcoded to BOOKING as the base channel
+      date_from: formattedDateFrom,
+      date_to: formattedDateTo,
+    };
 
-    channels.forEach((channel, index) => {
-      const cmBlock: any = {
-        id_room_type: parseInt(values.roomId),
-        id_rate: 1, // Hardcoded to 1
-        cod_channel: channel.value,
-        date_from: formattedDateFrom,
-        date_to: formattedDateTo,
-      };
+    if (values.price !== '' && values.price !== undefined) {
+      cmBlock.price = values.price;
+    }
+    if (values.closed) {
+      cmBlock.closed = values.closed;
+    }
 
-      if (values.price !== '' && values.price !== undefined) {
-        cmBlock.price = values.price;
-      }
-      if (values.closed) {
-        cmBlock.closed = values.closed;
-      }
+    const restrictions: any = {};
+    if (values.minStay !== '' && values.minStay !== undefined) {
+      restrictions.MINST = values.minStay;
+    }
+    if (values.maxStay !== '' && values.maxStay !== undefined) {
+      restrictions.MAXST = values.maxStay;
+    }
+    if (values.closedOnArrival) {
+      restrictions.CLARR = values.closedOnArrival;
+    }
+    if (values.closedOnDeparture) {
+      restrictions.CLDEP = values.closedOnDeparture;
+    }
 
-      const restrictions: any = {};
-      if (values.minStay !== '' && values.minStay !== undefined) {
-        restrictions.MINST = values.minStay;
-      }
-      if (values.maxStay !== '' && values.maxStay !== undefined) {
-        restrictions.MAXST = values.maxStay;
-      }
-      if (values.closedOnArrival) {
-        restrictions.CLARR = values.closedOnArrival;
-      }
-      if (values.closedOnDeparture) {
-        restrictions.CLDEP = values.closedOnDeparture;
-      }
-
-      if (Object.keys(restrictions).length > 0) {
-        cmBlock.restrictions = restrictions;
-      }
-
-      cmBlocks[`block_${Date.now()}_${index}`] = cmBlock;
-    });
+    if (Object.keys(restrictions).length > 0) {
+      cmBlock.restrictions = restrictions;
+    }
 
     const payload = {
-      cm: cmBlocks,
+      cm: {
+        [`block_${Date.now()}`]: cmBlock,
+      },
     };
 
     try {
       await saveChannelManagerSettings(payload);
-      toast.success("Prix et restrictions mis à jour avec succès pour tous les canaux !");
+      toast.success("Prix et restrictions mis à jour avec succès pour Booking.com !");
       onSettingsSaved();
       onOpenChange(false);
     } catch (error: any) {
@@ -165,7 +153,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Configurer Prix & Restrictions</DialogTitle>
           <DialogDescription>
-            Définissez les prix et les restrictions de séjour pour vos chambres. Les modifications s'appliqueront au tarif de base sur tous les canaux.
+            Définissez les prix et les restrictions de séjour pour vos chambres. Les modifications s'appliqueront au tarif de base sur le canal Booking.com.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

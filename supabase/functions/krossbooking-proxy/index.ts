@@ -212,21 +212,28 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify(saveReservationPayload);
         break;
 
-      case 'get_messages':
+      case 'get_messages': // This action gets a list of threads for a reservation
         const { id_reservation: msgReservationId } = requestBody;
         if (!msgReservationId) {
           throw new Error("Missing required parameter: id_reservation for get_messages.");
         }
         const messagesPayload = {
           id_reservation: Number(msgReservationId), // Ensure it's a number
-          // Add other optional parameters if needed, e.g., to_read, search, last_update, cod_channel
-          // to_read: requestBody.to_read,
-          // search: requestBody.search,
-          // last_update: requestBody.last_update,
-          // cod_channel: requestBody.cod_channel,
         };
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/messaging/get-threads`;
         krossbookingBody = JSON.stringify(messagesPayload);
+        break;
+
+      case 'get_single_message_thread': // This new action gets a single thread with its messages
+        const { id_thread } = requestBody;
+        if (!id_thread) {
+          throw new Error("Missing required parameter: id_thread for get_single_message_thread.");
+        }
+        const singleThreadPayload = {
+          id_thread: Number(id_thread), // Ensure it's a number
+        };
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/messaging/get-thread`; // This is the singular endpoint
+        krossbookingBody = JSON.stringify(singleThreadPayload);
         break;
 
       default:

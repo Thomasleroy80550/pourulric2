@@ -65,7 +65,7 @@ const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functio
 
 /**
  * Calls the Supabase Edge Function proxy for Krossbooking API.
- * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation', 'get_messages').
+ * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation', 'get_messages', 'get_single_message_thread').
  * @param payload The data payload for the action.
  * @returns A promise that resolves to the response data from the Edge Function.
  */
@@ -226,32 +226,54 @@ export async function saveKrossbookingReservation(payload: SaveReservationPayloa
 
 /**
  * Fetches message threads for a specific reservation from Krossbooking API via the Supabase Edge Function proxy.
+ * This function now first gets the list of threads, then fetches messages for each thread.
  * @param reservationId The ID of the reservation to fetch messages for.
  * @returns A promise that resolves to an array of KrossbookingMessageThread objects.
  */
 export async function fetchKrossbookingMessageThreads(reservationId: string): Promise<KrossbookingMessageThread[]> {
   try {
-    const data = await callKrossbookingProxy('get_messages', { id_reservation: reservationId });
-    if (Array.isArray(data)) {
-      return data.map((thread: any) => ({
-        id_thread: thread.id_thread,
-        id_reservation: thread.id_reservation,
-        cod_channel: thread.cod_channel,
-        last_message_date: thread.last_message_date,
-        last_message_text: thread.last_message_text,
-        messages: Array.isArray(thread.messages) ? thread.messages.map((msg: any) => ({
-          id_message: msg.id_message,
-          id_thread: msg.id_thread,
-          date: msg.date,
-          sender: msg.sender,
-          text: msg.text,
-          is_read: msg.is_read,
-        })) : [],
-      }));
-    } else {
-      console.warn(`Unexpected Krossbooking API response structure for message threads:`, data);
+    // Step 1: Get the list of thread IDs for the reservation
+    const threadsMetadata = await callKrossbookingProxy('get_messages', { id_reservation: reservationId });
+
+    if (!Array.isArray(threadsMetadata)) {
+      console.warn(`Unexpected Krossbooking API response structure for message threads metadata:`, threadsMetadata);
       return [];
     }
+
+    // Step 2: For each thread, fetch its detailed messages
+    const fullThreadsPromises = threadsMetadata.map(async (threadMetadata: any) => {
+      if (threadMetadata.id_thread) {
+        const singleThreadData = await callKrossbookingProxy('get_single_message_thread', { id_thread: threadMetadata.id_thread });
+        
+        // Krossbooking's get-thread returns a single object, not an array.
+        // The messages array is directly inside this object.
+        if (singleThreadData && Array.isArray(singleThreadData.messages)) {
+          return {
+            id_thread: singleThreadData.id_thread,
+            id_reservation: singleThreadData.id_reservation,
+            cod_channel: singleThreadData.cod_channel,
+            last_message_date: singleThreadData.last_message_date,
+            last_message_text: singleThreadData.last_message_text,
+            messages: singleThreadData.messages.map((msg: any) => ({
+              id_message: msg.id_message,
+              id_thread: msg.id_thread,
+              date: msg.date,
+              sender: msg.sender,
+              text: msg.text,
+              is_read: msg.is_read,
+            })),
+          };
+        } else {
+          console.warn(`Unexpected Krossbooking API response structure for single message thread ${threadMetadata.id_thread}:`, singleThreadData);
+          return { ...threadMetadata, messages: [] }; // Return metadata with empty messages if structure is unexpected
+        }
+      }
+      return { ...threadMetadata, messages: [] }; // Return metadata with empty messages if no id_thread
+    });
+
+    const fullThreads = await Promise.all(fullThreadsPromises);
+    return fullThreads;
+
   } catch (error) {
     console.error(`Error fetching message threads for reservation ${reservationId}:`, error);
     throw error;

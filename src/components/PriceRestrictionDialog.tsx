@@ -156,6 +156,19 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   const handleDeleteOverride = async (override: PriceOverride) => {
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette modification et restaurer les valeurs par défaut ?")) return;
 
+    const priceInput = window.prompt("Veuillez entrer le prix à restaurer pour cette période (laisser vide pour ne pas modifier le prix).");
+
+    if (priceInput === null) {
+      return; // User cancelled the prompt
+    }
+
+    const price = parseFloat(priceInput);
+
+    if (priceInput !== '' && isNaN(price)) {
+      toast.error("Le prix entré n'est pas valide. La suppression a été annulée.");
+      return;
+    }
+
     const resetCmBlock: any = {
       id_room_type: parseInt(override.room_id),
       id_rate: 1,
@@ -165,6 +178,10 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       closed: false,
       restrictions: { MINST: 2, CLARR: false, CLDEP: false },
     };
+
+    if (priceInput !== '' && !isNaN(price)) {
+      resetCmBlock.price = price;
+    }
 
     const payload = { cm: { [`reset_${override.id}`]: resetCmBlock } };
 

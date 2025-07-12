@@ -100,7 +100,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const cmBlock: any = {
       id_room_type: parseInt(values.roomId),
       id_rate: 1, // Hardcoded to 1
-      cod_channel: 'BOOKING', // Hardcoded to BOOKING as the base channel
+      cod_channel: 'BE', // Hardcoded to BE for Booking Engine
       date_from: formattedDateFrom,
       date_to: formattedDateTo,
     };
@@ -138,7 +138,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 
     try {
       await saveChannelManagerSettings(payload);
-      toast.success("Prix et restrictions mis à jour avec succès pour Booking.com !");
+      toast.success("Prix et restrictions mis à jour avec succès pour le Moteur de Réservation !");
       onSettingsSaved();
       onOpenChange(false);
     } catch (error: any) {
@@ -153,7 +153,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Configurer Prix & Restrictions</DialogTitle>
           <DialogDescription>
-            Définissez les prix et les restrictions de séjour pour vos chambres. Les modifications s'appliqueront au tarif de base sur le canal Booking.com.
+            Définissez les prix et les restrictions de séjour pour vos chambres. Les modifications s'appliqueront au tarif de base sur le canal Moteur de Réservation (Booking Engine).
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

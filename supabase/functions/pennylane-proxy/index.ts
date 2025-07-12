@@ -52,9 +52,14 @@ serve(async (req) => {
       throw new Error("Missing PENNYLANE_API_KEY in environment variables.");
     }
 
-    // 4. Call the Pennylane API
+    // 4. Call the Pennylane API with the corrected filter format
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
-    url.searchParams.set('filter[customer_id][eq]', pennylaneCustomerId);
+    const filterObject = {
+      customer_id: {
+        eq: pennylaneCustomerId
+      }
+    };
+    url.searchParams.set('filter', JSON.stringify(filterObject));
     url.searchParams.set('sort', '-date'); // Sort by most recent date
     url.searchParams.set('limit', '100'); // Fetch up to 100 invoices
 

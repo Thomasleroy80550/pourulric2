@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import {
@@ -47,17 +47,8 @@ const channels = [
   { value: 'HELLOKEYS', label: 'Hello Keys' },
 ];
 
-// Example rate types. You might need to adjust these based on your Krossbooking setup.
-const rateTypes = [
-  { value: '5', label: 'Tarif Standard' }, // Common default rate ID
-  { value: '1', label: 'Tarif Propriétaire' }, // Example of another rate ID
-  // Add more as needed, e.g., { value: 'YOUR_RATE_ID', label: 'Your Custom Rate Name' }
-];
-
 const formSchema = z.object({
   roomId: z.string().min(1, { message: 'Veuillez sélectionner une chambre.' }),
-  channel: z.string().min(1, { message: 'Veuillez sélectionner un canal.' }),
-  idRate: z.string().min(1, { message: 'Veuillez sélectionner un type de tarif.' }), // New field for idRate
   dateRange: z.object({
     from: z.date({ required_error: 'La date de début est requise.' }),
     to: z.date({ required_error: 'La date de fin est requise.' }),
@@ -91,8 +82,6 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       roomId: '',
-      channel: '',
-      idRate: '1', // Default to '1' as requested
       dateRange: {
         from: undefined,
         to: undefined,
@@ -116,48 +105,52 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const formattedDateFrom = format(values.dateRange.from, 'yyyy-MM-dd');
     const formattedDateTo = format(values.dateRange.to!, 'yyyy-MM-dd');
 
-    const cmBlock: any = {
-      id_room_type: parseInt(values.roomId),
-      id_rate: parseInt(values.idRate), // Use selected idRate
-      cod_channel: values.channel,
-      date_from: formattedDateFrom,
-      date_to: formattedDateTo,
-    };
+    const cmBlocks: { [key: string]: any } = {};
 
-    if (values.price !== '' && values.price !== undefined) {
-      cmBlock.price = values.price;
-    }
-    if (values.closed) {
-      cmBlock.closed = values.closed;
-    }
+    channels.forEach((channel, index) => {
+      const cmBlock: any = {
+        id_room_type: parseInt(values.roomId),
+        id_rate: 1, // Hardcoded to 1
+        cod_channel: channel.value,
+        date_from: formattedDateFrom,
+        date_to: formattedDateTo,
+      };
 
-    const restrictions: any = {};
-    if (values.minStay !== '' && values.minStay !== undefined) {
-      restrictions.MINST = values.minStay;
-    }
-    if (values.maxStay !== '' && values.maxStay !== undefined) {
-      restrictions.MAXST = values.maxStay;
-    }
-    if (values.closedOnArrival) {
-      restrictions.CLARR = values.closedOnArrival;
-    }
-    if (values.closedOnDeparture) {
-      restrictions.CLDEP = values.closedOnDeparture;
-    }
+      if (values.price !== '' && values.price !== undefined) {
+        cmBlock.price = values.price;
+      }
+      if (values.closed) {
+        cmBlock.closed = values.closed;
+      }
 
-    if (Object.keys(restrictions).length > 0) {
-      cmBlock.restrictions = restrictions;
-    }
+      const restrictions: any = {};
+      if (values.minStay !== '' && values.minStay !== undefined) {
+        restrictions.MINST = values.minStay;
+      }
+      if (values.maxStay !== '' && values.maxStay !== undefined) {
+        restrictions.MAXST = values.maxStay;
+      }
+      if (values.closedOnArrival) {
+        restrictions.CLARR = values.closedOnArrival;
+      }
+      if (values.closedOnDeparture) {
+        restrictions.CLDEP = values.closedOnDeparture;
+      }
+
+      if (Object.keys(restrictions).length > 0) {
+        cmBlock.restrictions = restrictions;
+      }
+
+      cmBlocks[`block_${Date.now()}_${index}`] = cmBlock;
+    });
 
     const payload = {
-      cm: {
-        [`block_${Date.now()}`]: cmBlock, // Generate a unique key for the block
-      },
+      cm: cmBlocks,
     };
 
     try {
       await saveChannelManagerSettings(payload);
-      toast.success("Prix et restrictions mis à jour avec succès !");
+      toast.success("Prix et restrictions mis à jour avec succès pour tous les canaux !");
       onSettingsSaved();
       onOpenChange(false);
     } catch (error: any) {
@@ -172,7 +165,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Configurer Prix & Restrictions</DialogTitle>
           <DialogDescription>
-            Définissez les prix et les restrictions de séjour pour vos chambres sur différents canaux.
+            Définissez les prix et les restrictions de séjour pour vos chambres. Les modifications s'appliqueront au tarif de base sur tous les canaux.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -193,56 +186,6 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                       {userRooms.map((room) => (
                         <SelectItem key={room.id} value={room.room_id}>
                           {room.room_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="channel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Canal de Distribution</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un canal" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {channels.map((channel) => (
-                        <SelectItem key={channel.value} value={channel.value}>
-                          {channel.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="idRate" // New field
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type de Tarif</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un type de tarif" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {rateTypes.map((rate) => (
-                        <SelectItem key={rate.value} value={rate.value}>
-                          {rate.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

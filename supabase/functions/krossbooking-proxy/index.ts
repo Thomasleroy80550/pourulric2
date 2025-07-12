@@ -148,6 +148,7 @@ serve(async (req) => {
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST'; 
     let krossbookingBody: string | undefined;
+    let returnFullData = false; // Flag to determine if full data should be returned
 
     switch (action) {
       case 'get_reservations':
@@ -234,6 +235,7 @@ serve(async (req) => {
         };
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/messaging/get-thread`; // This is the singular endpoint
         krossbookingBody = JSON.stringify(singleThreadPayload);
+        returnFullData = true; // Set flag to return full data for this specific action
         break;
 
       default:
@@ -260,16 +262,27 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("Krossbooking API response (full data, now filtered by Edge Function):", data); 
+    console.log("Krossbooking API response (full data):", data); 
 
-    // Return all data received from Krossbooking API
-    return new Response(JSON.stringify({ data: data.data || [], total_count: data.total_count, count: data.count, limit: data.limit, offset: data.offset }), {
-      status: response.status,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders,
-      },
-    });
+    // Conditionally return data based on the action
+    if (returnFullData) {
+      return new Response(JSON.stringify({ data: data }), { // Return the entire 'data' object from Krossbooking
+        status: response.status,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      });
+    } else {
+      // For other actions, continue to return data.data or empty array if not present
+      return new Response(JSON.stringify({ data: data.data || [], total_count: data.total_count, count: data.count, limit: data.limit, offset: data.offset }), {
+        status: response.status,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders,
+        },
+      });
+    }
   } catch (error: any) {
     console.error("Error in krossbooking-proxy function:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {

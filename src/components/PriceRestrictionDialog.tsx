@@ -92,7 +92,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     defaultValues: {
       roomId: '',
       channel: '',
-      idRate: '5', // Default to '5' or a common base rate ID
+      idRate: '1', // Default to '1' as requested
       dateRange: {
         from: undefined,
         to: undefined,

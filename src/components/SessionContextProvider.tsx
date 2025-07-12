@@ -9,6 +9,7 @@ import OnboardingConfettiDialog from './OnboardingConfettiDialog';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
+import { callGSheetProxy } from '@/lib/gsheets'; // Import the gsheet proxy function
 
 interface SessionContextType {
   session: Session | null;
@@ -32,9 +33,32 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const fetchUserProfile = useCallback(async (userSession: Session) => {
     console.log("Fetching user profile...");
     try {
-      const userProfile = await getProfile();
-      setProfile(userProfile);
+      let userProfile = await getProfile();
       console.log("User profile fetched:", userProfile);
+
+      // New logic: Check for Pennylane Customer ID and fetch if missing
+      if (userProfile && !userProfile.pennylane_customer_id) {
+        console.log("Pennylane Customer ID is missing. Fetching from Google Sheet...");
+        try {
+          const sheetData = await callGSheetProxy({ action: 'read_sheet', range: 'BT2' });
+          if (sheetData && sheetData[0] && sheetData[0][0]) {
+            const pennylaneId = sheetData[0][0];
+            console.log(`Found Pennylane Customer ID in GSheet: ${pennylaneId}`);
+            
+            const updatedProfile = await updateProfile({ pennylane_customer_id: pennylaneId });
+            console.log("Profile updated with Pennylane ID:", updatedProfile);
+            
+            userProfile = updatedProfile; // Use the updated profile for the rest of the session
+          } else {
+            console.warn("Could not find Pennylane Customer ID in Google Sheet at cell BT2.");
+          }
+        } catch (gsheetError: any) {
+          console.error("Error fetching Pennylane ID from Google Sheet:", gsheetError.message);
+          toast.warning("Impossible de récupérer l'ID client Pennylane depuis Google Sheets. Vous pouvez le configurer manuellement dans votre profil.");
+        }
+      }
+
+      setProfile(userProfile);
       return userProfile;
     } catch (error) {
       console.error("Error fetching user profile in SessionContextProvider:", error);
@@ -42,26 +66,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       return null;
     }
   }, []);
-
-  const handleAcceptCguv = async () => {
-    if (!session?.user) {
-      toast.error("Vous devez être connecté pour accepter les CGUV.");
-      return;
-    }
-    try {
-      await updateProfile({
-        cguv_accepted_at: new Date().toISOString(),
-        cguv_version: CURRENT_CGUV_VERSION,
-      });
-      setProfile(prev => prev ? { ...prev, cguv_accepted_at: new Date().toISOString(), cguv_version: CURRENT_CGUV_VERSION } : null);
-      setShowCguvModal(false);
-      toast.success("Conditions Générales d'Utilisation acceptées !");
-      setShowOnboardingConfetti(true);
-    } catch (error: any) {
-      console.error("Error accepting CGUV:", error);
-      toast.error(`Erreur lors de l'acceptation des CGUV : ${error.message}`);
-    }
-  };
 
   // This function will handle the core logic of checking session and profile
   const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {

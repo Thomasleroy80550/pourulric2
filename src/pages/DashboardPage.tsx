@@ -32,7 +32,8 @@ import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore 
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import ForecastDialog from '@/components/ForecastDialog';
-import { FieryProgressBar } from '@/components/FieryProgressBar'; // Import the new component
+import { FieryProgressBar } from '@/components/FieryProgressBar';
+import WelcomeTour from '@/components/WelcomeTour'; // Import the tour component
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -314,6 +315,7 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
+      <WelcomeTour />
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
@@ -332,7 +334,7 @@ const DashboardPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Bilan Financier Card */}
-          <Card className="shadow-md">
+          <Card id="tour-financial-summary" className="shadow-md">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Bilan Financier</CardTitle>
             </CardHeader>
@@ -380,7 +382,7 @@ const DashboardPage = () => {
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
                     <Button variant="outline" onClick={handleShowForecast}>Prévision</Button>
                   </div>
-                  <div className="space-y-2 mt-2 relative">
+                  <div id="tour-objective" className="space-y-2 mt-2 relative">
                     <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
                     <FieryProgressBar 
                       value={financialData.currentAchievementPercentage} 
@@ -398,7 +400,7 @@ const DashboardPage = () => {
           </Card>
 
           {/* Activité de Location Card */}
-          <Card className="shadow-md">
+          <Card id="tour-activity-stats" className="shadow-md">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
@@ -471,7 +473,7 @@ const DashboardPage = () => {
           </Card>
 
           {/* Activité de Location Card (Donut Chart) */}
-          <Card className="shadow-md">
+          <Card id="tour-activity-chart" className="shadow-md">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
@@ -533,7 +535,7 @@ const DashboardPage = () => {
           </Card>
 
           {/* Statistiques Financières Mensuelles Card */}
-          <Card className="shadow-md col-span-full lg:col-span-1">
+          <Card id="tour-monthly-financials" className="shadow-md col-span-full lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(

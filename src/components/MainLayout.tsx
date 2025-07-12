@@ -92,7 +92,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
         </ToggleGroup>
       </div>
 
-      <nav className="flex-grow">
+      <nav id="tour-sidebar-nav" className="flex-grow">
         <ul className="">
           {currentNavigationItems.map((item) => (
             <li key={item.name} className="mt-3.5 first:mt-0">

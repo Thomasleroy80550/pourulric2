@@ -318,109 +318,6 @@
 .tunnel-stars:nth-child(100) { --random-x: 0.10; --random-y: 0.20; animation-delay: 0.93s; }
 
 
-/* Animation delays for a staggered effect */
-.tunnel-stars.delay-1 { animation-delay: 0.05s; }
-.tunnel-stars.delay-2 { animation-delay: 0.1s; }
-.tunnel-stars.delay-3 { animation-delay: 0.15s; }
-.tunnel-stars.delay-4 { animation-delay: 0.2s; }
-.tunnel-stars.delay-5 { animation-delay: 0.25s; }
-.tunnel-stars.delay-6 { animation-delay: 0.3s; }
-.tunnel-stars.delay-7 { animation-delay: 0.35s; }
-.tunnel-stars.delay-8 { animation-delay: 0.4s; }
-.tunnel-stars.delay-9 { animation-delay: 0.45s; }
-.tunnel-stars.delay-10 { animation-delay: 0.5s; }
-.tunnel-stars.delay-11 { animation-delay: 0.55s; }
-.tunnel-stars.delay-12 { animation-delay: 0.6s; }
-.tunnel-stars.delay-13 { animation-delay: 0.65s; }
-.tunnel-stars.delay-14 { animation-delay: 0.7s; }
-.tunnel-stars.delay-15 { animation-delay: 0.75s; }
-.tunnel-stars.delay-16 { animation-delay: 0.8s; }
-.tunnel-stars.delay-17 { animation-delay: 0.85s; }
-.tunnel-stars.delay-18 { animation-delay: 0.9s; }
-.tunnel-stars.delay-19 { animation-delay: 0.95s; }
-.tunnel-stars.delay-20 { animation-delay: 1.0s; }
-.tunnel-stars.delay-21 { animation-delay: 1.05s; }
-.tunnel-stars.delay-22 { animation-delay: 1.1s; }
-.tunnel-stars.delay-23 { animation-delay: 1.15s; }
-.tunnel-stars.delay-24 { animation-delay: 1.2s; }
-.tunnel-stars.delay-25 { animation-delay: 1.25s; }
-.tunnel-stars.delay-26 { animation-delay: 1.3s; }
-.tunnel-stars.delay-27 { animation-delay: 1.35s; }
-.tunnel-stars.delay-28 { animation-delay: 1.4s; }
-.tunnel-stars.delay-29 { animation-delay: 1.45s; }
-.tunnel-stars.delay-30 { animation-delay: 1.5s; }
-.tunnel-stars.delay-31 { animation-delay: 1.55s; }
-.tunnel-stars.delay-32 { animation-delay: 1.6s; }
-.tunnel-stars.delay-33 { animation-delay: 1.65s; }
-.tunnel-stars.delay-34 { animation-delay: 1.7s; }
-.tunnel-stars.delay-35 { animation-delay: 1.75s; }
-.tunnel-stars.delay-36 { animation-delay: 1.8s; }
-.tunnel-stars.delay-37 { animation-delay: 1.85s; }
-.tunnel-stars.delay-38 { animation-delay: 1.9s; }
-.tunnel-stars.delay-39 { animation-delay: 1.95s; }
-.tunnel-stars.delay-40 { animation-delay: 2.0s; }
-.tunnel-stars.delay-41 { animation-delay: 2.05s; }
-.tunnel-stars.delay-42 { animation-delay: 2.1s; }
-.tunnel-stars.delay-43 { animation-delay: 2.15s; }
-.tunnel-stars.delay-44 { animation-delay: 2.2s; }
-.tunnel-stars.delay-45 { animation-delay: 2.25s; }
-.tunnel-stars.delay-46 { animation-delay: 2.3s; }
-.tunnel-stars.delay-47 { animation-delay: 2.35s; }
-.tunnel-stars.delay-48 { animation-delay: 2.4s; }
-.tunnel-stars.delay-49 { animation-delay: 2.45s; }
-.tunnel-stars.delay-50 { animation-delay: 2.5s; }
-.tunnel-stars.delay-51 { animation-delay: 2.55s; }
-.tunnel-stars.delay-52 { animation-delay: 2.6s; }
-.tunnel-stars.delay-53 { animation-delay: 2.65s; }
-.tunnel-stars.delay-54 { animation-delay: 2.7s; }
-.tunnel-stars.delay-55 { animation-delay: 2.75s; }
-.tunnel-stars.delay-56 { animation-delay: 2.8s; }
-.tunnel-stars.delay-57 { animation-delay: 2.85s; }
-.tunnel-stars.delay-58 { animation-delay: 2.9s; }
-.tunnel-stars.delay-59 { animation-delay: 2.95s; }
-.tunnel-stars.delay-60 { animation-delay: 3.0s; }
-.tunnel-stars.delay-61 { animation-delay: 3.05s; }
-.tunnel-stars.delay-62 { animation-delay: 3.1s; }
-.tunnel-stars.delay-63 { animation-delay: 3.15s; }
-.tunnel-stars.delay-64 { animation-delay: 3.2s; }
-.tunnel-stars.delay-65 { animation-delay: 3.25s; }
-.tunnel-stars.delay-66 { animation-delay: 3.3s; }
-.tunnel-stars.delay-67 { animation-delay: 3.35s; }
-.tunnel-stars.delay-68 { animation-delay: 3.4s; }
-.tunnel-stars.delay-69 { animation-delay: 3.45s; }
-.tunnel-stars.delay-70 { animation-delay: 3.5s; }
-.tunnel-stars.delay-71 { animation-delay: 3.55s; }
-.tunnel-stars.delay-72 { animation-delay: 3.6s; }
-.tunnel-stars.delay-73 { animation-delay: 3.65s; }
-.tunnel-stars.delay-74 { animation-delay: 3.7s; }
-.tunnel-stars.delay-75 { animation-delay: 3.75s; }
-.tunnel-stars.delay-76 { animation-delay: 3.8s; }
-.tunnel-stars.delay-77 { animation-delay: 3.85s; }
-.tunnel-stars.delay-78 { animation-delay: 3.9s; }
-.tunnel-stars.delay-79 { animation-delay: 3.95s; }
-.tunnel-stars.delay-80 { animation-delay: 4.0s; }
-.tunnel-stars.delay-81 { animation-delay: 4.05s; }
-.tunnel-stars.delay-82 { animation-delay: 4.1s; }
-.tunnel-stars.delay-83 { animation-delay: 4.15s; }
-.tunnel-stars.delay-84 { animation-delay: 4.2s; }
-.tunnel-stars.delay-85 { animation-delay: 4.25s; }
-.tunnel-stars.delay-86 { animation-delay: 4.3s; }
-.tunnel-stars.delay-87 { animation-delay: 4.35s; }
-.tunnel-stars.delay-88 { animation-delay: 4.4s; }
-.tunnel-stars.delay-89 { animation-delay: 4.45s; }
-.tunnel-stars.delay-90 { animation-delay: 4.5s; }
-.tunnel-stars.delay-91 { animation-delay: 4.55s; }
-.tunnel-stars.delay-92 { animation-delay: 4.6s; }
-.tunnel-stars.delay-93 { animation-delay: 4.65s; }
-.tunnel-stars.delay-94 { animation-delay: 4.7s; }
-.tunnel-stars.delay-95 { animation-delay: 4.75s; }
-.tunnel-stars.delay-96 { animation-delay: 4.8s; }
-.tunnel-stars.delay-97 { animation-delay: 4.85s; }
-.tunnel-stars.delay-98 { animation-delay: 4.9s; }
-.tunnel-stars.delay-99 { animation-delay: 4.95s; }
-.tunnel-stars.delay-100 { animation-delay: 5.0s; }
-
-
 /* Keyframes for fade-in-up animation (for landing page content) */
 @keyframes fade-in-up {
   from {
@@ -443,4 +340,68 @@
 
 .animate-fade-in-up.delay-400 {
   animation-delay: 0.4s;
+}
+
+/* driver.js custom styling */
+.driver-popover {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.driver-popover-title {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 600; /* font-semibold */
+  color: hsl(var(--foreground));
+}
+
+.driver-popover-description {
+  color: hsl(var(--muted-foreground));
+}
+
+.driver-popover-arrow-side-left .driver-popover-arrow {
+  border-left-color: hsl(var(--popover));
+}
+
+.driver-popover-arrow-side-right .driver-popover-arrow {
+  border-right-color: hsl(var(--popover));
+}
+
+.driver-popover-arrow-side-top .driver-popover-arrow {
+  border-top-color: hsl(var(--popover));
+}
+
+.driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-bottom-color: hsl(var(--popover));
+}
+
+.driver-popover-close-btn {
+  color: hsl(var(--muted-foreground));
+}
+.driver-popover-close-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.driver-popover-footer button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.driver-popover-footer button:hover {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+.driver-popover-footer .driver-popover-prev-btn {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.driver-popover-footer .driver-popover-prev-btn:hover {
+  background-color: hsl(var(--secondary) / 0.9);
 }

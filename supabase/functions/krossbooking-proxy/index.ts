@@ -238,6 +238,17 @@ serve(async (req) => {
         returnFullData = true; // Set flag to return full data for this specific action
         break;
 
+      case 'save_channel_manager':
+        const cmPayload = requestBody.cm; // This will be the object with dynamic keys
+        if (!cmPayload || typeof cmPayload !== 'object') {
+            throw new Error("Invalid 'cm' payload for save_channel_manager.");
+        }
+        // Krossbooking expects the 'cm' object directly as the body
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/channel/save-cm`;
+        krossbookingMethod = 'POST';
+        krossbookingBody = JSON.stringify({ cm: cmPayload }); // Wrap in 'cm' object as per Krossbooking example
+        break;
+
       default:
         throw new Error(`Unsupported action: ${action}`);
     }

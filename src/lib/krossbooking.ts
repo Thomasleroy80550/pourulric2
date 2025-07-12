@@ -60,12 +60,41 @@ export interface KrossbookingMessageThread {
   messages: KrossbookingMessage[];
 }
 
+// New interfaces for Channel Manager
+export interface Restrictions {
+  MINST?: number; // Minimum stay
+  MINSA?: number; // Minimum stay on arrival
+  MAXST?: number; // Maximum stay
+  MAXSA?: number; // Maximum stay on arrival
+  EXST?: number; // Exact stay
+  EXSTAR?: number; // Exact stay on arrival
+  CLARR?: boolean; // Closed on arrival
+  CLDEP?: boolean; // Closed on departure
+}
+
+export interface ChannelManagerBlock {
+  id_room_type: number;
+  id_rate: number;
+  cod_channel: string;
+  date_from: string; // yyyy-mm-dd
+  date_to: string; // yyyy-mm-dd
+  price?: number;
+  closed?: boolean;
+  restrictions?: Restrictions;
+}
+
+export interface ChannelManagerPayload {
+  cm: {
+    [key: string]: ChannelManagerBlock; // Dynamic keys like 'my_id_1'
+  };
+}
+
 // Define the base URL for your Supabase Edge Function
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
 /**
  * Calls the Supabase Edge Function proxy for Krossbooking API.
- * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation', 'get_messages', 'get_single_message_thread').
+ * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation', 'get_messages', 'get_single_message_thread', 'save_channel_manager').
  * @param payload The data payload for the action.
  * @returns A promise that resolves to the response data from the Edge Function.
  */
@@ -278,4 +307,13 @@ export async function fetchKrossbookingMessageThreads(reservationId: string): Pr
     console.error(`Error fetching message threads for reservation ${reservationId}:`, error);
     throw error;
   }
+}
+
+/**
+ * Saves channel manager settings (prices and restrictions) to Krossbooking API via the Supabase Edge Function proxy.
+ * @param payload The channel manager data to save.
+ * @returns A promise that resolves to the response data from the Edge Function.
+ */
+export async function saveChannelManagerSettings(payload: ChannelManagerPayload): Promise<any> {
+  return callKrossbookingProxy('save_channel_manager', payload);
 }

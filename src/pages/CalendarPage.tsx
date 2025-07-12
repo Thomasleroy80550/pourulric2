@@ -5,8 +5,9 @@ import BookingPlanningGrid from '@/components/BookingPlanningGrid';
 import CalendarGridMobile from '@/components/CalendarGridMobile'; // Import the new mobile grid component
 import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
 import { Button } from '@/components/ui/button'; // Import Button
-import { PlusCircle } from 'lucide-react'; // Import PlusCircle icon
+import { PlusCircle, DollarSign } from 'lucide-react'; // Import PlusCircle and DollarSign icons
 import OwnerReservationDialog from '@/components/OwnerReservationDialog'; // Import the new dialog
+import PriceRestrictionDialog from '@/components/PriceRestrictionDialog'; // Import the new PriceRestrictionDialog
 import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
@@ -15,6 +16,7 @@ import { useLocation } from 'react-router-dom'; // Import useLocation
 const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
+  const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false); // New state for price/restriction dialog
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loadingData, setLoadingData] = useState(true); // New loading state for all data
@@ -54,6 +56,12 @@ const CalendarPage: React.FC = () => {
     setRefreshTrigger(prev => prev + 1); // Increment to trigger data refresh
   };
 
+  const handlePriceRestrictionSaved = () => {
+    // No need to refresh calendar data for price/restriction changes, as they are not displayed on the calendar grid.
+    // If you had a component that *did* display prices/restrictions, you'd trigger a refresh here.
+    setIsPriceRestrictionDialogOpen(false);
+  };
+
   if (loadingData) {
     return (
       <MainLayout>
@@ -86,12 +94,18 @@ const CalendarPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold">Calendrier</h1>
-          <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center">
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Réservation Propriétaire
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center w-full sm:w-auto">
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Réservation Propriétaire
+            </Button>
+            <Button onClick={() => setIsPriceRestrictionDialogOpen(true)} variant="outline" className="flex items-center w-full sm:w-auto">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Configurer Prix & Restrictions
+            </Button>
+          </div>
         </div>
         
         {isMobile ? (
@@ -134,6 +148,12 @@ const CalendarPage: React.FC = () => {
         userRooms={userRooms}
         allReservations={reservations} // Pass all reservations
         onReservationCreated={handleReservationChange} // Use the new handler
+      />
+      <PriceRestrictionDialog
+        isOpen={isPriceRestrictionDialogOpen}
+        onOpenChange={setIsPriceRestrictionDialogOpen}
+        userRooms={userRooms}
+        onSettingsSaved={handlePriceRestrictionSaved}
       />
     </MainLayout>
   );

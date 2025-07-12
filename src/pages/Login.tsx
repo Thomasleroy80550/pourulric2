@@ -18,7 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import MagicLoginButton from '@/components/MagicLoginButton';
-import logoUrl from '@/assets/logo.png'; // Import the logo
+// The logo is now in the public folder, so we don't need to import it.
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -130,7 +130,7 @@ const Login = () => {
       <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
         <div className="w-full max-w-sm space-y-8">
           <div className="flex flex-col items-start mb-6">
-            <img src={logoUrl} alt="Hello Keys Logo" className="w-48 h-auto mb-6" />
+            <img src="/logo.png" alt="Hello Keys Logo" className="w-48 h-auto mb-6" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-2">
               Connectez-vous à votre compte
             </h1>

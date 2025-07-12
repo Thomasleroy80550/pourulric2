@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AICopilotDialog from './AICopilotDialog';
 import NewFeaturesBanner from './NewFeaturesBanner';
-import logoUrl from '@/assets/logo.png'; // Import the logo
+// The logo is now in the public folder, so we don't need to import it.
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -53,7 +53,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
   return (
     <>
       <div className="flex items-center mb-8">
-        <img src={logoUrl} alt="Hello Keys Logo" className="w-full h-auto" />
+        <img src="/logo.png" alt="Hello Keys Logo" className="w-full h-auto" />
       </div>
 
       <div className="mb-6 flex justify-center">

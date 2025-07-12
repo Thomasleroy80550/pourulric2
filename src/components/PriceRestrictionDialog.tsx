@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,10 @@ import { cn } from '@/lib/utils';
 import { UserRoom } from '@/lib/user-room-api';
 import { saveChannelManagerSettings } from '@/lib/krossbooking';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { getOverrides, addOverride, deleteOverride, PriceOverride, NewPriceOverride } from '@/lib/price-override-api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PriceRestrictionDialogProps {
   isOpen: boolean;
@@ -61,14 +65,14 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   userRooms,
   onSettingsSaved,
 }) => {
+  const [overrides, setOverrides] = useState<PriceOverride[]>([]);
+  const [isLoadingOverrides, setIsLoadingOverrides] = useState(true);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       roomId: '',
-      dateRange: {
-        from: undefined,
-        to: undefined,
-      },
+      dateRange: { from: undefined, to: undefined },
       price: '',
       closed: false,
       minStay: '',
@@ -77,9 +81,22 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     },
   });
 
-  React.useEffect(() => {
-    if (!isOpen) {
-      form.reset(); // Reset form when dialog closes
+  const fetchOverrides = async () => {
+    setIsLoadingOverrides(true);
+    try {
+      const data = await getOverrides();
+      setOverrides(data);
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsLoadingOverrides(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchOverrides();
+      form.reset();
     }
   }, [isOpen, form]);
 
@@ -89,266 +106,187 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 
     const cmBlock: any = {
       id_room_type: parseInt(values.roomId),
-      id_rate: 1, // Hardcoded to 1
-      cod_channel: 'BE', // Hardcoded to BE for Booking Engine
+      id_rate: 1,
+      cod_channel: 'BE',
       date_from: formattedDateFrom,
       date_to: formattedDateTo,
     };
 
-    if (values.price !== '' && values.price !== undefined) {
-      cmBlock.price = values.price;
-    }
-    if (values.closed) {
-      cmBlock.closed = values.closed;
-    }
+    if (values.price !== '' && values.price !== undefined) cmBlock.price = values.price;
+    if (values.closed) cmBlock.closed = values.closed;
 
     const restrictions: any = {};
-    // Set minStay to 2 if not provided, otherwise use the user's value
     if (values.minStay !== '' && values.minStay !== undefined) {
       restrictions.MINST = values.minStay;
     } else {
       restrictions.MINST = 2;
     }
+    if (values.closedOnArrival) restrictions.CLARR = values.closedOnArrival;
+    if (values.closedOnDeparture) restrictions.CLDEP = values.closedOnDeparture;
 
-    if (values.closedOnArrival) {
-      restrictions.CLARR = values.closedOnArrival;
-    }
-    if (values.closedOnDeparture) {
-      restrictions.CLDEP = values.closedOnDeparture;
-    }
+    if (Object.keys(restrictions).length > 0) cmBlock.restrictions = restrictions;
 
-    if (Object.keys(restrictions).length > 0) {
-      cmBlock.restrictions = restrictions;
-    }
-
-    const payload = {
-      cm: {
-        [`block_${Date.now()}`]: cmBlock,
-      },
-    };
+    const payload = { cm: { [`block_${Date.now()}`]: cmBlock } };
 
     try {
       await saveChannelManagerSettings(payload);
-      toast.success("Prix et restrictions mis à jour avec succès pour le Moteur de Réservation !");
+
+      const selectedRoom = userRooms.find(r => r.room_id === values.roomId);
+      const overrideToSave: NewPriceOverride = {
+        room_id: values.roomId,
+        room_name: selectedRoom?.room_name || 'N/A',
+        start_date: formattedDateFrom,
+        end_date: formattedDateTo,
+        price: values.price !== '' ? values.price : undefined,
+        closed: values.closed,
+        min_stay: values.minStay !== '' ? values.minStay : undefined,
+        closed_on_arrival: values.closedOnArrival,
+        closed_on_departure: values.closedOnDeparture,
+      };
+      await addOverride(overrideToSave);
+
+      toast.success("Prix et restrictions mis à jour avec succès !");
       onSettingsSaved();
       onOpenChange(false);
     } catch (error: any) {
       toast.error(`Erreur lors de la mise à jour : ${error.message}`);
-      console.error("Error saving channel manager settings:", error);
+    }
+  };
+
+  const handleDeleteOverride = async (override: PriceOverride) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette modification et restaurer les valeurs par défaut ?")) return;
+
+    const resetCmBlock: any = {
+      id_room_type: parseInt(override.room_id),
+      id_rate: 1,
+      cod_channel: 'BE',
+      date_from: override.start_date,
+      date_to: override.end_date,
+      closed: false,
+      restrictions: { MINST: 2, CLARR: false, CLDEP: false },
+    };
+
+    const payload = { cm: { [`reset_${override.id}`]: resetCmBlock } };
+
+    try {
+      await saveChannelManagerSettings(payload);
+      await deleteOverride(override.id);
+      toast.success("Modification supprimée et valeurs par défaut restaurées.");
+      fetchOverrides();
+    } catch (error: any) {
+      toast.error(`Erreur lors de la suppression : ${error.message}`);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Configurer Prix & Restrictions</DialogTitle>
           <DialogDescription>
-            Définissez les prix et les restrictions de séjour pour vos chambres. Les modifications s'appliqueront au tarif de base sur le canal Moteur de Réservation (Booking Engine).
+            Créez une nouvelle modification ou consultez l'historique.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="roomId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Chambre</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une chambre" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {userRooms.map((room) => (
-                        <SelectItem key={room.id} value={room.room_id}>
-                          {room.room_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+        <Tabs defaultValue="create" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="create">Créer</TabsTrigger>
+            <TabsTrigger value="history">Historique</TabsTrigger>
+          </TabsList>
+          <TabsContent value="create">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField control={form.control} name="roomId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Chambre</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Sélectionner une chambre" /></SelectTrigger></FormControl>
+                      <SelectContent>{userRooms.map((room) => (<SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>))}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="dateRange" render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Dates</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button id="date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value.from && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value.from ? (field.value.to ? (<>{format(field.value.from, "PPP", { locale: fr })} - {format(field.value.to, "PPP", { locale: fr })}</>) : (format(field.value.from, "PPP", { locale: fr }))) : (<span>Choisir une plage de dates</span>)}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={field.value.from} selected={field.value} onSelect={field.onChange} numberOfMonths={1} locale={fr} /></PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="price" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prix (€)</FormLabel>
+                    <FormControl><Input type="number" step="0.01" placeholder="Laisser vide pour ne pas modifier" {...field} onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="minStay" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Séjour Minimum (nuits)</FormLabel>
+                    <FormControl><Input type="number" placeholder="Par défaut : 2 nuits" {...field} onChange={(e) => field.onChange(e.target.value === '' ? '' : Number(e.target.value))} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="closed" render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Fermer la disponibilité</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name="closedOnArrival" render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Fermé à l'arrivée</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                )} />
+                <FormField control={form.control} name="closedOnDeparture" render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Fermé au départ</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                )} />
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sauvegarde...</>) : ('Sauvegarder')}</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </TabsContent>
+          <TabsContent value="history">
+            <ScrollArea className="h-96 w-full rounded-md border p-4 mt-4">
+              {isLoadingOverrides ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : overrides.length === 0 ? (
+                <p className="text-center text-gray-500">Aucune modification enregistrée.</p>
+              ) : (
+                <div className="space-y-3">
+                  {overrides.map((override) => (
+                    <div key={override.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                      <div>
+                        <p className="font-semibold">{override.room_name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {format(new Date(override.start_date), 'dd/MM/yy')} - {format(new Date(override.end_date), 'dd/MM/yy')}
+                        </p>
+                        <div className="text-xs text-gray-500 dark:text-gray-300">
+                          {override.price && `Prix: ${override.price}€ `}
+                          {override.min_stay && `Min: ${override.min_stay}n `}
+                          {override.closed && `Fermé `}
+                        </div>
+                      </div>
+                      <Button variant="destructive" size="icon" onClick={() => handleDeleteOverride(override)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               )}
-            />
-
-            <FormField
-              control={form.control}
-              name="dateRange"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Dates de début et de fin</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          id="date"
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !field.value.from && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value.from ? (
-                            field.value.to ? (
-                              <>
-                                {format(field.value.from, "PPP", { locale: fr })} -{" "}
-                                {format(field.value.to, "PPP", { locale: fr })}
-                              </>
-                            ) : (
-                              format(field.value.from, "PPP", { locale: fr })
-                            )
-                          ) : (
-                            <span>Choisir une plage de dates</span>
-                          )}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={field.value.from}
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        numberOfMonths={1}
-                        locale={fr}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Prix (€)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Laisser vide pour ne pas modifier le prix"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? '' : Number(e.target.value);
-                        field.onChange(value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="closed"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>Fermer la disponibilité</FormLabel>
-                    <DialogDescription>
-                      Bloque la chambre pour la période sélectionnée sur ce canal.
-                    </DialogDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="minStay"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Séjour Minimum (nuits)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Par défaut : 2 nuits"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? '' : Number(e.target.value);
-                        field.onChange(value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="closedOnArrival"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>Fermé à l'arrivée</FormLabel>
-                    <DialogDescription>
-                      Empêche les arrivées ce jour-là.
-                    </DialogDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="closedOnDeparture"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>Fermé au départ</FormLabel>
-                    <DialogDescription>
-                      Empêche les départs ce jour-là.
-                    </DialogDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Annuler
-              </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sauvegarde...
-                  </>
-                ) : (
-                  'Sauvegarder les paramètres'
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

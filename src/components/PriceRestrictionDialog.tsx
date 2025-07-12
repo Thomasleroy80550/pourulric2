@@ -51,17 +51,8 @@ const formSchema = z.object({
   price: z.coerce.number().min(0, { message: 'Le prix ne peut pas être négatif.' }).optional().or(z.literal('')),
   closed: z.boolean().default(false),
   minStay: z.coerce.number().min(0, { message: 'Le séjour minimum ne peut pas être négatif.' }).optional().or(z.literal('')),
-  maxStay: z.coerce.number().min(0, { message: 'Le séjour maximum ne peut pas être négatif.' }).optional().or(z.literal('')),
   closedOnArrival: z.boolean().default(false),
   closedOnDeparture: z.boolean().default(false),
-}).superRefine((data, ctx) => {
-  if (data.minStay !== '' && data.maxStay !== '' && data.minStay !== undefined && data.maxStay !== undefined && data.minStay > data.maxStay) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Le séjour minimum ne peut pas être supérieur au séjour maximum.',
-      path: ['minStay'],
-    });
-  }
 });
 
 const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
@@ -81,7 +72,6 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       price: '',
       closed: false,
       minStay: '',
-      maxStay: '',
       closedOnArrival: false,
       closedOnDeparture: false,
     },
@@ -113,12 +103,13 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     }
 
     const restrictions: any = {};
+    // Set minStay to 2 if not provided, otherwise use the user's value
     if (values.minStay !== '' && values.minStay !== undefined) {
       restrictions.MINST = values.minStay;
+    } else {
+      restrictions.MINST = 2;
     }
-    if (values.maxStay !== '' && values.maxStay !== undefined) {
-      restrictions.MAXST = values.maxStay;
-    }
+
     if (values.closedOnArrival) {
       restrictions.CLARR = values.closedOnArrival;
     }
@@ -277,50 +268,27 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="minStay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Séjour Minimum (nuits)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Laisser vide pour ne pas modifier"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value === '' ? '' : Number(e.target.value);
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="maxStay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Séjour Maximum (nuits)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Laisser vide pour ne pas modifier"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value === '' ? '' : Number(e.target.value);
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="minStay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Séjour Minimum (nuits)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Par défaut : 2 nuits"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? '' : Number(e.target.value);
+                        field.onChange(value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

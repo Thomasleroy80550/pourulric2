@@ -47,9 +47,17 @@ const channels = [
   { value: 'HELLOKEYS', label: 'Hello Keys' },
 ];
 
+// Example rate types. You might need to adjust these based on your Krossbooking setup.
+const rateTypes = [
+  { value: '5', label: 'Tarif Standard' }, // Common default rate ID
+  { value: '1', label: 'Tarif Propriétaire' }, // Example of another rate ID
+  // Add more as needed, e.g., { value: 'YOUR_RATE_ID', label: 'Your Custom Rate Name' }
+];
+
 const formSchema = z.object({
   roomId: z.string().min(1, { message: 'Veuillez sélectionner une chambre.' }),
   channel: z.string().min(1, { message: 'Veuillez sélectionner un canal.' }),
+  idRate: z.string().min(1, { message: 'Veuillez sélectionner un type de tarif.' }), // New field for idRate
   dateRange: z.object({
     from: z.date({ required_error: 'La date de début est requise.' }),
     to: z.date({ required_error: 'La date de fin est requise.' }),
@@ -84,6 +92,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     defaultValues: {
       roomId: '',
       channel: '',
+      idRate: '5', // Default to '5' or a common base rate ID
       dateRange: {
         from: undefined,
         to: undefined,
@@ -109,7 +118,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 
     const cmBlock: any = {
       id_room_type: parseInt(values.roomId),
-      id_rate: 5, // Hardcoded rate ID as per Krossbooking example
+      id_rate: parseInt(values.idRate), // Use selected idRate
       cod_channel: values.channel,
       date_from: formattedDateFrom,
       date_to: formattedDateTo,
@@ -209,6 +218,31 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                       {channels.map((channel) => (
                         <SelectItem key={channel.value} value={channel.value}>
                           {channel.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="idRate" // New field
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type de Tarif</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un type de tarif" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {rateTypes.map((rate) => (
+                        <SelectItem key={rate.value} value={rate.value}>
+                          {rate.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

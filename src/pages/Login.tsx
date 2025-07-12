@@ -129,8 +129,7 @@ const Login = () => {
       <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
         <div className="w-full max-w-sm space-y-8">
           <div className="flex flex-col items-start mb-6">
-            <img src="/logo.svg" alt="Hello Keys Logo" className="h-12 w-auto mb-2" />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">GESTION LOCATIVE 2.0</p>
+            <img src="/LOGO-FINAL-BLEU-SANS-MAISON-2048x656.png" alt="Hello Keys Logo" className="w-48 h-auto mb-6" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-2">
               Connectez-vous à votre compte
             </h1>

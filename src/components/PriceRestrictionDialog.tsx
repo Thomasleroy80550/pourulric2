@@ -101,11 +101,17 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   }, [isOpen, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const roomIdNumber = parseInt(values.roomId);
+    if (isNaN(roomIdNumber)) {
+      toast.error(`ID de chambre invalide sélectionné (${values.roomId}).`);
+      return;
+    }
+
     const formattedDateFrom = format(values.dateRange.from, 'yyyy-MM-dd');
     const formattedDateTo = format(values.dateRange.to!, 'yyyy-MM-dd');
 
     const cmBlock: any = {
-      id_room_type: parseInt(values.roomId),
+      id_room_type: roomIdNumber,
       id_rate: 1,
       cod_channel: 'BE',
       date_from: formattedDateFrom,
@@ -154,23 +160,24 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   };
 
   const handleDeleteOverride = async (override: PriceOverride) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette modification et restaurer les valeurs par défaut ?")) return;
-
-    const priceInput = window.prompt("Veuillez entrer le prix à restaurer pour cette période (laisser vide pour ne pas modifier le prix).");
-
-    if (priceInput === null) {
-      return; // User cancelled the prompt
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette modification et restaurer les valeurs par défaut ?")) {
+      return;
     }
 
-    const price = parseFloat(priceInput);
+    const priceInput = window.prompt("Pour restaurer le prix, entrez une nouvelle valeur. Laissez vide pour ne pas modifier le prix actuel.", "");
 
-    if (priceInput !== '' && isNaN(price)) {
-      toast.error("Le prix entré n'est pas valide. La suppression a été annulée.");
+    if (priceInput === null) {
+      return; // User clicked Cancel
+    }
+
+    const roomIdNumber = parseInt(override.room_id);
+    if (isNaN(roomIdNumber)) {
+      toast.error(`ID de chambre invalide dans l'historique (${override.room_id}). Impossible de continuer.`);
       return;
     }
 
     const resetCmBlock: any = {
-      id_room_type: parseInt(override.room_id),
+      id_room_type: roomIdNumber,
       id_rate: 1,
       cod_channel: 'BE',
       date_from: override.start_date,
@@ -179,19 +186,27 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       restrictions: { MINST: 2, CLARR: false, CLDEP: false },
     };
 
-    if (priceInput !== '' && !isNaN(price)) {
+    if (priceInput.trim() !== '') {
+      const price = parseFloat(priceInput);
+      if (isNaN(price)) {
+        toast.error("Le prix entré n'est pas un nombre valide. La suppression a été annulée.");
+        return;
+      }
       resetCmBlock.price = price;
     }
 
     const payload = { cm: { [`reset_${override.id}`]: resetCmBlock } };
+    const toastId = toast.loading("Suppression en cours...");
 
     try {
       await saveChannelManagerSettings(payload);
       await deleteOverride(override.id);
-      toast.success("Modification supprimée et valeurs par défaut restaurées.");
+
+      toast.success("Modification supprimée et valeurs par défaut restaurées.", { id: toastId });
       fetchOverrides();
     } catch (error: any) {
-      toast.error(`Erreur lors de la suppression : ${error.message}`);
+      toast.error(`Erreur lors de la suppression : ${error.message}`, { id: toastId });
+      console.error("Error during override deletion:", error);
     }
   };
 

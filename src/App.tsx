@@ -25,6 +25,7 @@ import GoogleSheetDataPage from "./pages/GoogleSheetDataPage";
 import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
+import InvoicesPage from "./pages/InvoicesPage"; // Import the new page
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes"; // Import ThemeProvider
 
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
               <Route path="/promotion" element={<PromotionPage />} />
+              <Route path="/invoices" element={<InvoicesPage />} /> {/* Add the new route */}
               <Route path="/" element={<DashboardPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/bookings" element={<BookingsPage />} />

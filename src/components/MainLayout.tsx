@@ -28,6 +28,7 @@ const gestionNavigationItems = [
   { name: 'Performances', href: '/performance', icon: TrendingUp },
   { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
   { name: 'Comptabilité', href: '/accounting', icon: Banknote },
+  { name: 'Factures', href: '/invoices', icon: FileText }, // Added Invoices link
   { name: 'Bilans', href: '/balances', icon: FileText },
   { name: 'Rapports', href: '/reports', icon: FileText },
   { name: 'Mes Données GSheet', href: '/my-google-sheet-data', icon: FileSpreadsheet },

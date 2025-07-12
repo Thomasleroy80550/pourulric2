@@ -14,7 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AICopilotDialog from './AICopilotDialog';
-import NewFeaturesBanner from './NewFeaturesBanner'; // Import the new banner
+import NewFeaturesBanner from './NewFeaturesBanner';
+import logoUrl from '@/assets/logo.png'; // Import the logo
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -52,7 +53,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
   return (
     <>
       <div className="flex items-center mb-8">
-        <img src="/LOGO-FINAL-BLEU-SANS-MAISON-2048x656.png" alt="Hello Keys Logo" className="w-full h-auto" />
+        <img src={logoUrl} alt="Hello Keys Logo" className="w-full h-auto" />
       </div>
 
       <div className="mb-6 flex justify-center">

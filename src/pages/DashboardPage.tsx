@@ -33,7 +33,7 @@ import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import ForecastDialog from '@/components/ForecastDialog';
 import { FieryProgressBar } from '@/components/FieryProgressBar';
-import WelcomeTour from '@/components/WelcomeTour'; // Import the tour component
+import { startDashboardTour } from '@/lib/tour'; // Import the tour function
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -262,6 +262,17 @@ const DashboardPage = () => {
     }
   }, [totalNightsCurrentYear, loadingFinancialData, financialData.resultatAnnee, fetchKrossbookingStats]);
 
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('dashboardTourCompleted_v1');
+    if (!tourCompleted) {
+      // A small delay to ensure all elements are rendered before starting the tour
+      const timer = setTimeout(() => {
+        startDashboardTour();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   const reservationPerMonthData = [
     { name: 'Jan', reservations: 10 },
     { name: 'Fév', reservations: 12 },
@@ -315,7 +326,6 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
-      <WelcomeTour />
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>

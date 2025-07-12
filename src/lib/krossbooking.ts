@@ -41,12 +41,31 @@ export interface SaveReservationPayload {
   id_room: string; // Krossbooking room ID
 }
 
+// New interfaces for Krossbooking Messaging
+export interface KrossbookingMessage {
+  id_message: number;
+  id_thread: number;
+  date: string; // yyyy-mm-dd hh:mm:ss
+  sender: 'guest' | 'host' | 'system';
+  text: string;
+  is_read: boolean;
+}
+
+export interface KrossbookingMessageThread {
+  id_thread: number;
+  id_reservation: number;
+  cod_channel: string;
+  last_message_date: string;
+  last_message_text: string;
+  messages: KrossbookingMessage[];
+}
+
 // Define the base URL for your Supabase Edge Function
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
 /**
  * Calls the Supabase Edge Function proxy for Krossbooking API.
- * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation').
+ * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation', 'get_messages').
  * @param payload The data payload for the action.
  * @returns A promise that resolves to the response data from the Edge Function.
  */
@@ -203,4 +222,38 @@ export async function fetchKrossbookingHousekeepingTasks(
  */
 export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {
   return callKrossbookingProxy('save_reservation', payload);
+}
+
+/**
+ * Fetches message threads for a specific reservation from Krossbooking API via the Supabase Edge Function proxy.
+ * @param reservationId The ID of the reservation to fetch messages for.
+ * @returns A promise that resolves to an array of KrossbookingMessageThread objects.
+ */
+export async function fetchKrossbookingMessageThreads(reservationId: string): Promise<KrossbookingMessageThread[]> {
+  try {
+    const data = await callKrossbookingProxy('get_messages', { id_reservation: reservationId });
+    if (Array.isArray(data)) {
+      return data.map((thread: any) => ({
+        id_thread: thread.id_thread,
+        id_reservation: thread.id_reservation,
+        cod_channel: thread.cod_channel,
+        last_message_date: thread.last_message_date,
+        last_message_text: thread.last_message_text,
+        messages: Array.isArray(thread.messages) ? thread.messages.map((msg: any) => ({
+          id_message: msg.id_message,
+          id_thread: msg.id_thread,
+          date: msg.date,
+          sender: msg.sender,
+          text: msg.text,
+          is_read: msg.is_read,
+        })) : [],
+      }));
+    } else {
+      console.warn(`Unexpected Krossbooking API response structure for message threads:`, data);
+      return [];
+    }
+  } catch (error) {
+    console.error(`Error fetching message threads for reservation ${reservationId}:`, error);
+    throw error;
+  }
 }

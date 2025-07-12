@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag } from 'lucide-react'; // Added Flag icon
+import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag, MessageSquare } from 'lucide-react'; // Added MessageSquare icon
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReportProblemDialog from '@/components/ReportProblemDialog'; // Import the new component
+import MessagesDialog from '@/components/MessagesDialog'; // Import the new component
 
 interface Booking {
   id: string;
@@ -51,6 +52,9 @@ const BookingsPage: React.FC = () => {
 
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false); // New state for report dialog
   const [bookingToReport, setBookingToReport] = useState<Booking | null>(null); // New state for booking to report
+
+  const [isMessagesDialogOpen, setIsMessagesDialogOpen] = useState(false); // New state for messages dialog
+  const [bookingForMessages, setBookingForMessages] = useState<Booking | null>(null); // New state for booking to show messages
 
   // Filter states - Initialized to 'all' instead of ''
   const [filterRoomId, setFilterRoomId] = useState<string>('all');
@@ -170,6 +174,11 @@ const BookingsPage: React.FC = () => {
   const handleReportProblem = (booking: Booking) => {
     setBookingToReport(booking);
     setIsReportDialogOpen(true);
+  };
+
+  const handleOpenMessages = (booking: Booking) => {
+    setBookingForMessages(booking);
+    setIsMessagesDialogOpen(true);
   };
 
   const handleResetFilters = () => {
@@ -342,10 +351,15 @@ const BookingsPage: React.FC = () => {
                             <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200">
                               {booking.amount}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right flex justify-end space-x-2"> {/* Added flex and space-x-2 */}
                               <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
                                 <Flag className="h-4 w-4" />
                                 <span className="ml-2 hidden md:inline-block">Signaler</span>
+                              </Button>
+                              {/* New Messages Button */}
+                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
+                                <MessageSquare className="h-4 w-4" />
+                                <span className="ml-2 hidden md:inline-block">Messages</span>
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -391,10 +405,15 @@ const BookingsPage: React.FC = () => {
                             </Badge>
                             <span className="text-xs text-gray-500">Canal: {booking.cod_channel || 'N/A'}</span>
                           </div>
-                          <div className="pt-2">
+                          <div className="pt-2 flex flex-col gap-2"> {/* Changed to flex-col and gap-2 */}
                             <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
                               <Flag className="h-4 w-4 mr-2" />
                               Signaler un problème
+                            </Button>
+                            {/* New Messages Button for mobile */}
+                            <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Messages
                             </Button>
                           </div>
                         </CardContent>
@@ -475,6 +494,13 @@ const BookingsPage: React.FC = () => {
           // you would trigger a re-fetch here.
           setIsReportDialogOpen(false);
         }}
+      />
+
+      {/* New Messages Dialog */}
+      <MessagesDialog
+        isOpen={isMessagesDialogOpen}
+        onOpenChange={setIsMessagesDialogOpen}
+        booking={bookingForMessages}
       />
     </MainLayout>
   );

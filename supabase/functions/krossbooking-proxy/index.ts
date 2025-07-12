@@ -212,6 +212,23 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify(saveReservationPayload);
         break;
 
+      case 'get_messages':
+        const { id_reservation: msgReservationId } = requestBody;
+        if (!msgReservationId) {
+          throw new Error("Missing required parameter: id_reservation for get_messages.");
+        }
+        const messagesPayload = {
+          id_reservation: Number(msgReservationId), // Ensure it's a number
+          // Add other optional parameters if needed, e.g., to_read, search, last_update, cod_channel
+          // to_read: requestBody.to_read,
+          // search: requestBody.search,
+          // last_update: requestBody.last_update,
+          // cod_channel: requestBody.cod_channel,
+        };
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/messaging/get-threads`;
+        krossbookingBody = JSON.stringify(messagesPayload);
+        break;
+
       default:
         throw new Error(`Unsupported action: ${action}`);
     }

@@ -11,6 +11,7 @@ import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { format, parseISO, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays, getDaysInMonth, getDaysInYear, isWithinInterval, max, min } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
+import { Button } from '@/components/ui/button'; // Added import for Button
 
 const PerformancePage: React.FC = () => {
   const currentYear = new Date().getFullYear();

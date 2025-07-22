@@ -129,6 +129,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       json.splice(0, 1); // Remove header
 
       const processedReservations: ProcessedReservation[] = [];
+      let taxAdjusted = false;
 
       json.forEach((row, index) => {
         try {
@@ -138,10 +139,17 @@ const AdminInvoiceGenerationPage: React.FC = () => {
           const portail = row[16] || 'N/A';
           const totalPaye = parseFloat(row[22]) || 0;
           const prixSejour = parseFloat(row[23]) || 0;
-          const taxeDeSejour = parseFloat(row[24]) || 0;
+          let taxeDeSejour = parseFloat(row[24]) || 0;
           const fraisMenage = parseFloat(row[25]) || 0;
           let commissionPlateforme = parseFloat(row[37]) || 0;
           const fraisPaiement = parseFloat(row[38]) || 0;
+
+          if (portail.toLowerCase().includes('booking') || portail.toLowerCase().includes('airbnb')) {
+            if (taxeDeSejour > 0) {
+              taxeDeSejour = 0;
+              taxAdjusted = true;
+            }
+          }
 
           if (portail === 'Hello Keys') {
             commissionPlateforme = (totalPaye * 1.4 / 100) + 0.25;
@@ -170,6 +178,10 @@ const AdminInvoiceGenerationPage: React.FC = () => {
           toast.warning(`La ligne ${index + 2} a été ignorée en raison d'une erreur.`);
         }
       });
+
+      if (taxAdjusted) {
+        toast.info("La taxe de séjour a été automatiquement mise à 0 pour les réservations Airbnb et Booking.");
+      }
 
       setProcessedData(processedReservations);
       recalculateTotals(processedReservations);
@@ -377,13 +389,15 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         {helloKeysCollectsRent && <TableHead><Checkbox onCheckedChange={(checked) => handleSelectAll(!!checked)} /></TableHead>}
+                        <TableHead>Portail</TableHead>
                         <TableHead>Voyageur</TableHead><TableHead>Arrivée</TableHead><TableHead>Prix Séjour</TableHead><TableHead>Frais Ménage</TableHead><TableHead>Taxe Séjour</TableHead><TableHead>Montant Versé</TableHead><TableHead>Revenu Net</TableHead><TableHead>Commission</TableHead><TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 10 : 9}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
+                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 11 : 10}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
                         <TableRow key={index}>
                           {helloKeysCollectsRent && <TableCell><Checkbox checked={selectedReservations.has(index)} onCheckedChange={(checked) => { const newSet = new Set(selectedReservations); if (checked) newSet.add(index); else newSet.delete(index); setSelectedReservations(newSet); }} /></TableCell>}
+                          <TableCell>{row.portail}</TableCell>
                           <TableCell>{row.voyageur}</TableCell><TableCell>{row.arrivee}</TableCell><TableCell>{row.prixSejour.toFixed(2)}€</TableCell><TableCell>{row.fraisMenage.toFixed(2)}€</TableCell><TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell><TableCell>{row.montantVerse.toFixed(2)}€</TableCell><TableCell>{row.revenuNet.toFixed(2)}€</TableCell><TableCell>{row.commissionHelloKeys.toFixed(2)}€</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(row, index)}>
@@ -391,11 +405,11 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 10 : 9} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
+                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 11 : 10} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold">
-                        <TableCell colSpan={helloKeysCollectsRent ? 3 : 2}>Totaux</TableCell><TableCell>{totalPrixSejour.toFixed(2)}€</TableCell><TableCell>{totalFraisMenage.toFixed(2)}€</TableCell><TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell><TableCell>{totalMontantVerse.toFixed(2)}€</TableCell><TableCell>{totalRevenuNet.toFixed(2)}€</TableCell><TableCell>{totalCommission.toFixed(2)}€</TableCell><TableCell></TableCell>
+                        <TableCell colSpan={helloKeysCollectsRent ? 4 : 3}>Totaux</TableCell><TableCell>{totalPrixSejour.toFixed(2)}€</TableCell><TableCell>{totalFraisMenage.toFixed(2)}€</TableCell><TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell><TableCell>{totalMontantVerse.toFixed(2)}€</TableCell><TableCell>{totalRevenuNet.toFixed(2)}€</TableCell><TableCell>{totalCommission.toFixed(2)}€</TableCell><TableCell></TableCell>
                       </TableRow>
                     </TableFooter>
                   </Table>

@@ -40,6 +40,7 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Portail</TableHead>
                 <TableHead>Voyageur</TableHead>
                 <TableHead>Arrivée</TableHead>
                 <TableHead>Prix Séjour</TableHead>
@@ -53,6 +54,7 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
             <TableBody>
               {invoiceData.map((row, index) => (
                 <TableRow key={index}>
+                  <TableCell>{row.portail}</TableCell>
                   <TableCell>{row.voyageur}</TableCell>
                   <TableCell>{row.arrivee}</TableCell>
                   <TableCell>{row.prixSejour.toFixed(2)}€</TableCell>
@@ -66,7 +68,7 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
             </TableBody>
             <TableFooter>
               <TableRow className="font-bold bg-secondary">
-                <TableCell colSpan={2}>Totaux</TableCell>
+                <TableCell colSpan={3}>Totaux</TableCell>
                 <TableCell>{totals.totalPrixSejour.toFixed(2)}€</TableCell>
                 <TableCell>{totals.totalFraisMenage.toFixed(2)}€</TableCell>
                 <TableCell>{totals.totalTaxeDeSejour.toFixed(2)}€</TableCell>

@@ -88,8 +88,8 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                 <TableHead className="text-right">Prix Séjour</TableHead>
                 <TableHead className="text-right">Frais Ménage</TableHead>
                 <TableHead className="text-right">Taxe Séjour</TableHead>
-                <TableHead className="text-right">Revenu Net</TableHead>
-                <TableHead className="text-right">Commission HK</TableHead>
+                <TableHead className="text-right">Montant Versé</TableHead>
+                <TableHead className="text-right">Commission</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -101,7 +101,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                   <TableCell className="text-right">{row.prixSejour.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.fraisMenage.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.taxeDeSejour.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right font-semibold">{row.revenuNet.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold">{row.montantVerse.toFixed(2)}€</TableCell>
                   <TableCell className="text-right text-red-600">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
                 </TableRow>
               ))}

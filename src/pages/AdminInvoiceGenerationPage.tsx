@@ -155,8 +155,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
             commissionPlateforme = (totalPaye * 1.4 / 100) + 0.25;
           }
 
+          const commissionHelloKeys = prixSejour * 0.26; // Commission based on stay price
           const revenuNet = prixSejour - commissionPlateforme - fraisPaiement;
-          const commissionHelloKeys = revenuNet * 0.26;
           const montantVerse = revenuNet + fraisMenage + taxeDeSejour;
 
           processedReservations.push({
@@ -214,8 +214,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     const originalReservation = newData[index];
 
     if (originalReservation) {
+      const commissionHelloKeys = updatedData.prixSejour * 0.26; // Recalculate commission based on new stay price
       const revenuNet = updatedData.prixSejour - originalReservation.originalCommissionPlateforme - originalReservation.originalFraisPaiement;
-      const commissionHelloKeys = revenuNet * 0.26;
       const montantVerse = revenuNet + updatedData.fraisMenage + updatedData.taxeDeSejour;
 
       newData[index] = {
@@ -390,26 +390,45 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                       <TableRow>
                         {helloKeysCollectsRent && <TableHead><Checkbox onCheckedChange={(checked) => handleSelectAll(!!checked)} /></TableHead>}
                         <TableHead>Portail</TableHead>
-                        <TableHead>Voyageur</TableHead><TableHead>Arrivée</TableHead><TableHead>Prix Séjour</TableHead><TableHead>Frais Ménage</TableHead><TableHead>Taxe Séjour</TableHead><TableHead>Montant Versé</TableHead><TableHead>Revenu Net</TableHead><TableHead>Commission</TableHead><TableHead className="text-right">Actions</TableHead>
+                        <TableHead>Voyageur</TableHead>
+                        <TableHead>Arrivée</TableHead>
+                        <TableHead>Prix Séjour</TableHead>
+                        <TableHead>Frais Ménage</TableHead>
+                        <TableHead>Taxe Séjour</TableHead>
+                        <TableHead>Montant Versé</TableHead>
+                        <TableHead>Commission</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 11 : 10}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
+                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 10 : 9}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
                         <TableRow key={index}>
                           {helloKeysCollectsRent && <TableCell><Checkbox checked={selectedReservations.has(index)} onCheckedChange={(checked) => { const newSet = new Set(selectedReservations); if (checked) newSet.add(index); else newSet.delete(index); setSelectedReservations(newSet); }} /></TableCell>}
                           <TableCell>{row.portail}</TableCell>
-                          <TableCell>{row.voyageur}</TableCell><TableCell>{row.arrivee}</TableCell><TableCell>{row.prixSejour.toFixed(2)}€</TableCell><TableCell>{row.fraisMenage.toFixed(2)}€</TableCell><TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell><TableCell>{row.montantVerse.toFixed(2)}€</TableCell><TableCell>{row.revenuNet.toFixed(2)}€</TableCell><TableCell>{row.commissionHelloKeys.toFixed(2)}€</TableCell>
+                          <TableCell>{row.voyageur}</TableCell>
+                          <TableCell>{row.arrivee}</TableCell>
+                          <TableCell>{row.prixSejour.toFixed(2)}€</TableCell>
+                          <TableCell>{row.fraisMenage.toFixed(2)}€</TableCell>
+                          <TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell>
+                          <TableCell>{row.montantVerse.toFixed(2)}€</TableCell>
+                          <TableCell>{row.commissionHelloKeys.toFixed(2)}€</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(row, index)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                           </TableCell>
                         </TableRow>
-                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 11 : 10} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
+                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 10 : 9} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold">
-                        <TableCell colSpan={helloKeysCollectsRent ? 4 : 3}>Totaux</TableCell><TableCell>{totalPrixSejour.toFixed(2)}€</TableCell><TableCell>{totalFraisMenage.toFixed(2)}€</TableCell><TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell><TableCell>{totalMontantVerse.toFixed(2)}€</TableCell><TableCell>{totalRevenuNet.toFixed(2)}€</TableCell><TableCell>{totalCommission.toFixed(2)}€</TableCell><TableCell></TableCell>
+                        <TableCell colSpan={helloKeysCollectsRent ? 4 : 3}>Totaux</TableCell>
+                        <TableCell>{totalPrixSejour.toFixed(2)}€</TableCell>
+                        <TableCell>{totalFraisMenage.toFixed(2)}€</TableCell>
+                        <TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell>
+                        <TableCell>{totalMontantVerse.toFixed(2)}€</TableCell>
+                        <TableCell>{totalCommission.toFixed(2)}€</TableCell>
+                        <TableCell></TableCell>
                       </TableRow>
                     </TableFooter>
                   </Table>
@@ -423,7 +442,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                 <CardContent className="space-y-4">
                   {Object.entries(transfersBySource).map(([source, data]) => data.reservations.length > 0 && (
                     <div key={source}>
-                      <h3 className="font-semibold mb-2">Depuis {source.charAt(0).toUpperCase() + source.slice(1)}</h3>
+                      <h3 className="font-semibold mb-2">Depuis {source.charAt(0).toUpperCase() + s.slice(1)}</h3>
                       <Table>
                         <TableHeader><TableRow><TableHead>Voyageur</TableHead><TableHead className="text-right">Montant à virer</TableHead></TableRow></TableHeader>
                         <TableBody>{data.reservations.map((r, i) => <TableRow key={i}><TableCell>{r.voyageur}</TableCell><TableCell className="text-right">{r.montantVerse.toFixed(2)}€</TableCell></TableRow>)}</TableBody>

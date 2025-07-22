@@ -29,7 +29,8 @@ const gestionNavigationItems = [
   { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
   { name: 'Comptabilité', href: '/accounting', icon: Banknote },
   { name: 'Factures', href: '/invoices', icon: FileText },
-  { name: 'Générer Facture', href: '/admin/invoice-generation', icon: FilePlus2 }, // Added new link
+  { name: 'Relevés', href: '/statements', icon: FileText }, // Added new link
+  { name: 'Générer Facture', href: '/admin/invoice-generation', icon: FilePlus2 },
   { name: 'Bilans', href: '/balances', icon: FileText },
   { name: 'Rapports', href: '/reports', icon: FileText },
   { name: 'Mes Données GSheet', href: '/my-google-sheet-data', icon: FileSpreadsheet },

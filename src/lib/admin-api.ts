@@ -1,6 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserProfile } from "./profile-api"; // Assuming UserProfile is exported from profile-api
 
+export interface SavedInvoice {
+  id: string;
+  user_id: string;
+  period: string;
+  invoice_data: any[];
+  totals: any;
+  created_at: string;
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+}
+
 /**
  * Fetches all user profiles. Intended for admin use.
  * @returns A promise that resolves to an array of UserProfile objects.
@@ -40,4 +53,27 @@ export async function saveInvoice(invoicePayload: {
     throw new Error(`Erreur lors de la sauvegarde de la facture : ${error.message}`);
   }
   return data;
+}
+
+/**
+ * Fetches all saved invoices/statements from the database.
+ * @returns A promise that resolves to an array of SavedInvoice objects.
+ */
+export async function getSavedInvoices(): Promise<SavedInvoice[]> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(`
+      *,
+      profiles (
+        first_name,
+        last_name
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching saved invoices:", error);
+    throw new Error(`Erreur lors de la récupération des relevés sauvegardés : ${error.message}`);
+  }
+  return data || [];
 }

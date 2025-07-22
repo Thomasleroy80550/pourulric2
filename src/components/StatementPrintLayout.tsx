@@ -10,7 +10,16 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   const clientName = statement.profiles ? `${statement.profiles.first_name}` : 'Client';
   const totals = statement.totals;
   const invoiceData = statement.invoice_data;
-  const netToPay = totals.totalRevenuNet - totals.totalCommission - totals.totalFraisMenage;
+
+  // Defensive checks for totals properties to avoid errors with older data
+  const totalRevenuNet = totals.totalRevenuNet || 0;
+  const totalCommission = totals.totalCommission || 0;
+  const totalFraisMenage = totals.totalFraisMenage || 0;
+  
+  // Calculate totalFacture with a fallback for older records that might not have this field
+  const totalFacture = totals.totalFacture !== undefined ? totals.totalFacture : (totalCommission + totalFraisMenage);
+  
+  const netToPay = totalRevenuNet - totalCommission - totalFraisMenage;
 
   return (
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans a4-container">
@@ -36,11 +45,11 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Total des séjours (net de commission plateforme)</p>
-              <p className="font-semibold text-lg">{totals.totalRevenuNet.toFixed(2)}€</p>
+              <p className="font-semibold text-lg">{totalRevenuNet.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Total des frais (Ménage + Commission HK)</p>
-              <p className="font-semibold text-lg text-red-600">- {totals.totalFacture.toFixed(2)}€</p>
+              <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€</p>
             </div>
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center text-xl">
@@ -56,15 +65,15 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Revenu net total des séjours</p>
-              <p className="font-semibold">{totals.totalRevenuNet.toFixed(2)}€</p>
+              <p className="font-semibold">{totalRevenuNet.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Commission Hello Keys (26%)</p>
-              <p className="font-semibold text-red-600">- {totals.totalCommission.toFixed(2)}€</p>
+              <p className="font-semibold text-red-600">- {totalCommission.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Total frais de ménage</p>
-              <p className="font-semibold text-red-600">- {totals.totalFraisMenage.toFixed(2)}€</p>
+              <p className="font-semibold text-red-600">- {totalFraisMenage.toFixed(2)}€</p>
             </div>
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center">

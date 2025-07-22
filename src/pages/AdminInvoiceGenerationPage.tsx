@@ -48,8 +48,15 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       const data = await fileToProcess.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheetName = workbook.SheetNames[0];
+      if (!worksheetName) {
+        throw new Error("Le fichier Excel ne contient aucune feuille de calcul.");
+      }
       const worksheet = workbook.Sheets[worksheetName];
       const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+      if (!json || json.length < 2) {
+        throw new Error("Le fichier Excel est vide ou ne contient pas de données après la ligne d'en-tête.");
+      }
 
       // Remove header row from Krossbooking export
       json.splice(0, 1);
@@ -58,41 +65,52 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       const processedReservations: ProcessedReservation[] = [];
 
       json.forEach((row, index) => {
-        // Rule 1: Exclude owner stays
-        const voyageurOrStatus = row[18] || '';
-        if (voyageurOrStatus.toUpperCase() === 'PROPRIETAIRE') {
-          return; // Skip this row
+        try {
+          // Add a check to ensure the row is an array and has enough columns
+          if (!Array.isArray(row) || row.length < 39) {
+            console.warn(`Ligne ${index + 2} ignorée : format de données incorrect ou nombre de colonnes insuffisant.`);
+            return; // Skip this malformed row
+          }
+
+          // Rule 1: Exclude owner stays
+          const voyageurOrStatus = row[18] || '';
+          if (voyageurOrStatus.toUpperCase() === 'PROPRIETAIRE') {
+            return; // Skip this row
+          }
+
+          // Extract data based on column index from your script
+          const portail = row[16] || 'N/A';
+          const totalPaye = parseFloat(row[22]) || 0;
+          const prixSejour = parseFloat(row[23]) || 0;
+          let commissionPlateforme = parseFloat(row[37]) || 0;
+          const fraisPaiement = parseFloat(row[38]) || 0;
+
+          // Rule 4: Special case for "Hello Keys"
+          if (portail === 'Hello Keys') {
+            commissionPlateforme = (totalPaye * 1.4 / 100) + 0.25;
+          }
+
+          // Rule 2: Calculate Net Revenue
+          const revenuNet = prixSejour - commissionPlateforme - fraisPaiement;
+
+          // Rule 3: Calculate our commission
+          const commissionHelloKeys = revenuNet * 0.26;
+
+          commissionSum += commissionHelloKeys;
+
+          processedReservations.push({
+            portail,
+            voyageur: voyageurOrStatus,
+            arrivee: row[2] || '',
+            depart: row[3] || '',
+            prixSejour,
+            revenuNet,
+            commissionHelloKeys,
+          });
+        } catch (rowError: any) {
+          console.error(`Erreur lors du traitement de la ligne ${index + 2} du fichier:`, row, rowError);
+          toast.warning(`La ligne ${index + 2} a été ignorée en raison d'une erreur.`);
         }
-
-        // Extract data based on column index from your script
-        const portail = row[16] || 'N/A';
-        const totalPaye = parseFloat(row[22]) || 0;
-        const prixSejour = parseFloat(row[23]) || 0;
-        let commissionPlateforme = parseFloat(row[37]) || 0;
-        const fraisPaiement = parseFloat(row[38]) || 0;
-
-        // Rule 4: Special case for "Hello Keys"
-        if (portail === 'Hello Keys') {
-          commissionPlateforme = (totalPaye * 1.4 / 100) + 0.25;
-        }
-
-        // Rule 2: Calculate Net Revenue
-        const revenuNet = prixSejour - commissionPlateforme - fraisPaiement;
-
-        // Rule 3: Calculate our commission
-        const commissionHelloKeys = revenuNet * 0.26;
-
-        commissionSum += commissionHelloKeys;
-
-        processedReservations.push({
-          portail,
-          voyageur: voyageurOrStatus,
-          arrivee: row[2] || '',
-          depart: row[3] || '',
-          prixSejour,
-          revenuNet,
-          commissionHelloKeys,
-        });
       });
 
       setProcessedData(processedReservations);

@@ -425,7 +425,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                 <CardContent className="space-y-4">
                   {Object.entries(transfersBySource).map(([source, data]) => data.reservations.length > 0 && (
                     <div key={source}>
-                      <h3 className="font-semibold mb-2">Depuis {source.charAt(0).toUpperCase() + s.slice(1)}</h3>
+                      <h3 className="font-semibold mb-2">Depuis {source.charAt(0).toUpperCase() + source.slice(1)}</h3>
                       <Table>
                         <TableHeader><TableRow><TableHead>Voyageur</TableHead><TableHead className="text-right">Montant à virer</TableHead></TableRow></TableHeader>
                         <TableBody>{data.reservations.map((r, i) => <TableRow key={i}><TableCell>{r.voyageur}</TableCell><TableCell className="text-right">{r.montantVerse.toFixed(2)}€</TableCell></TableRow>)}</TableBody>

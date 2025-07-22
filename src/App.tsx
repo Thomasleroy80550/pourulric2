@@ -31,6 +31,7 @@ import StatementsPage from "./pages/StatementsPage";
 import AdminStatementsPage from "./pages/AdminStatementsPage"; // Import the new admin page
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
+import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
 
 const queryClient = new QueryClient();
 
@@ -42,35 +43,37 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <SessionContextProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/admin" element={<AdminDashboardPage />} />
-              <Route path="/admin/pages" element={<PageCreator />} />
-              <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
-              <Route path="/admin/statements" element={<AdminStatementsPage />} /> {/* Add the new admin route */}
-              <Route path="/pages/:slug" element={<ContentPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
-              <Route path="/promotion" element={<PromotionPage />} />
-              <Route path="/invoices" element={<InvoicesPage />} />
-              <Route path="/statements" element={<StatementsPage />} />
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/bookings" element={<BookingsPage />} />
-              <Route path="/performance" element={<PerformancePage />} />
-              <Route path="/reviews" element={<ReviewsPage />} />
-              <Route path="/accounting" element={<AccountingPage />} />
-              <Route path="/balances" element={<BalancesPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/help" element={<HelpPage />} />
-              <Route path="/modules" element={<ModulesPage />} />
-              <Route path="/roadmap" element={<RoadmapPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <InvoiceGenerationProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/admin" element={<AdminDashboardPage />} />
+                <Route path="/admin/pages" element={<PageCreator />} />
+                <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
+                <Route path="/admin/statements" element={<AdminStatementsPage />} /> {/* Add the new admin route */}
+                <Route path="/pages/:slug" element={<ContentPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
+                <Route path="/blog" element={<BlogPage />} />
+                <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
+                <Route path="/promotion" element={<PromotionPage />} />
+                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route path="/statements" element={<StatementsPage />} />
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/bookings" element={<BookingsPage />} />
+                <Route path="/performance" element={<PerformancePage />} />
+                <Route path="/reviews" element={<ReviewsPage />} />
+                <Route path="/accounting" element={<AccountingPage />} />
+                <Route path="/balances" element={<BalancesPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/help" element={<HelpPage />} />
+                <Route path="/modules" element={<ModulesPage />} />
+                <Route path="/roadmap" element={<RoadmapPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </InvoiceGenerationProvider>
           </SessionContextProvider>
         </BrowserRouter>
       </TooltipProvider>

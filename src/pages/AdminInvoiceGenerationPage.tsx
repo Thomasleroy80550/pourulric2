@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, FileText, DollarSign, Loader2, Terminal } from 'lucide-react';
+import { Upload, FileText, DollarSign, Loader2, Terminal, Pencil } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import EditReservationDialog from '@/components/EditReservationDialog'; // Import the new dialog
 
 // Interface for a processed reservation row
 interface ProcessedReservation {
@@ -26,6 +27,10 @@ interface ProcessedReservation {
   revenuNet: number;
   commissionHelloKeys: number;
   montantVerse: number;
+  // Original data for recalculation
+  originalTotalPaye: number;
+  originalCommissionPlateforme: number;
+  originalFraisPaiement: number;
 }
 
 const AdminInvoiceGenerationPage: React.FC = () => {
@@ -41,33 +46,40 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
 
-  // New states for advanced features
+  // States for advanced features
   const [helloKeysCollectsRent, setHelloKeysCollectsRent] = useState(false);
   const [selectedReservations, setSelectedReservations] = useState<Set<number>>(new Set());
   const [paymentSources, setPaymentSources] = useState<string[]>([]);
   const [deductInvoice, setDeductInvoice] = useState(false);
   const [deductionSource, setDeductionSource] = useState('');
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setFileName(selectedFile.name);
-      processFile(selectedFile);
-    }
-  };
+  // States for editing
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState<{ data: ProcessedReservation; index: number } | null>(null);
+
+  const recalculateTotals = useCallback((data: ProcessedReservation[]) => {
+    let commissionSum = 0, prixSejourSum = 0, fraisMenageSum = 0, taxeDeSejourSum = 0, revenuNetSum = 0, montantVerseSum = 0;
+    data.forEach(row => {
+      commissionSum += row.commissionHelloKeys;
+      prixSejourSum += row.prixSejour;
+      fraisMenageSum += row.fraisMenage;
+      taxeDeSejourSum += row.taxeDeSejour;
+      revenuNetSum += row.revenuNet;
+      montantVerseSum += row.montantVerse;
+    });
+    setTotalCommission(commissionSum);
+    setTotalPrixSejour(prixSejourSum);
+    setTotalFraisMenage(fraisMenageSum);
+    setTotalTaxeDeSejour(taxeDeSejourSum);
+    setTotalRevenuNet(revenuNetSum);
+    setTotalMontantVerse(montantVerseSum);
+  }, []);
 
   const processFile = async (fileToProcess: File) => {
     setIsLoading(true);
     setError(null);
     setProcessedData([]);
-    setTotalCommission(0);
-    setTotalPrixSejour(0);
-    setTotalFraisMenage(0);
-    setTotalTaxeDeSejour(0);
-    setTotalRevenuNet(0);
-    setTotalMontantVerse(0);
-    setSelectedReservations(new Set()); // Reset selections
+    setSelectedReservations(new Set());
 
     try {
       const data = await fileToProcess.arrayBuffer();
@@ -81,7 +93,6 @@ const AdminInvoiceGenerationPage: React.FC = () => {
 
       json.splice(0, 1); // Remove header
 
-      let commissionSum = 0, prixSejourSum = 0, fraisMenageSum = 0, taxeDeSejourSum = 0, revenuNetSum = 0, montantVerseSum = 0;
       const processedReservations: ProcessedReservation[] = [];
 
       json.forEach((row, index) => {
@@ -92,8 +103,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
           const portail = row[16] || 'N/A';
           const totalPaye = parseFloat(row[22]) || 0;
           const prixSejour = parseFloat(row[23]) || 0;
-          const taxeDeSejour = parseFloat(row[24]) || 0; // Column Y
-          const fraisMenage = parseFloat(row[25]) || 0; // Column Z
+          const taxeDeSejour = parseFloat(row[24]) || 0;
+          const fraisMenage = parseFloat(row[25]) || 0;
           let commissionPlateforme = parseFloat(row[37]) || 0;
           const fraisPaiement = parseFloat(row[38]) || 0;
 
@@ -104,13 +115,6 @@ const AdminInvoiceGenerationPage: React.FC = () => {
           const revenuNet = prixSejour - commissionPlateforme - fraisPaiement;
           const commissionHelloKeys = revenuNet * 0.26;
           const montantVerse = revenuNet + fraisMenage + taxeDeSejour;
-
-          commissionSum += commissionHelloKeys;
-          prixSejourSum += prixSejour;
-          fraisMenageSum += fraisMenage;
-          taxeDeSejourSum += taxeDeSejour;
-          revenuNetSum += revenuNet;
-          montantVerseSum += montantVerse;
 
           processedReservations.push({
             portail,
@@ -123,6 +127,9 @@ const AdminInvoiceGenerationPage: React.FC = () => {
             revenuNet,
             commissionHelloKeys,
             montantVerse,
+            originalTotalPaye: totalPaye,
+            originalCommissionPlateforme: commissionPlateforme,
+            originalFraisPaiement: fraisPaiement,
           });
         } catch (rowError: any) {
           toast.warning(`La ligne ${index + 2} a été ignorée en raison d'une erreur.`);
@@ -130,12 +137,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       });
 
       setProcessedData(processedReservations);
-      setTotalCommission(commissionSum);
-      setTotalPrixSejour(prixSejourSum);
-      setTotalFraisMenage(fraisMenageSum);
-      setTotalTaxeDeSejour(taxeDeSejourSum);
-      setTotalRevenuNet(revenuNetSum);
-      setTotalMontantVerse(montantVerseSum);
+      recalculateTotals(processedReservations);
       toast.success(`Fichier "${fileToProcess.name}" analysé avec succès !`);
 
     } catch (err: any) {
@@ -143,6 +145,45 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       toast.error("Une erreur est survenue lors de l'analyse du fichier.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
+      processFile(selectedFile);
+    }
+  };
+
+  const handleEditClick = (reservation: ProcessedReservation, index: number) => {
+    setEditingReservation({ data: reservation, index });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateReservation = (updatedData: Omit<ProcessedReservation, 'revenuNet' | 'commissionHelloKeys' | 'montantVerse'>, index: number) => {
+    const newData = [...processedData];
+    const originalReservation = newData[index];
+
+    if (originalReservation) {
+      // Recalculate derived values based on edited inputs
+      const revenuNet = updatedData.prixSejour - originalReservation.originalCommissionPlateforme - originalReservation.originalFraisPaiement;
+      const commissionHelloKeys = revenuNet * 0.26;
+      const montantVerse = revenuNet + updatedData.fraisMenage + updatedData.taxeDeSejour;
+
+      newData[index] = {
+        ...originalReservation,
+        ...updatedData,
+        revenuNet,
+        commissionHelloKeys,
+        montantVerse,
+      };
+
+      setProcessedData(newData);
+      recalculateTotals(newData);
+      setIsEditDialogOpen(false);
+      toast.success("Réservation mise à jour avec succès !");
     }
   };
 
@@ -253,20 +294,25 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         {helloKeysCollectsRent && <TableHead><Checkbox onCheckedChange={(checked) => handleSelectAll(!!checked)} /></TableHead>}
-                        <TableHead>Voyageur</TableHead><TableHead>Arrivée</TableHead><TableHead>Prix Séjour</TableHead><TableHead>Frais Ménage</TableHead><TableHead>Taxe Séjour</TableHead><TableHead>Montant Versé</TableHead><TableHead>Revenu Net</TableHead><TableHead className="text-right">Commission</TableHead>
+                        <TableHead>Voyageur</TableHead><TableHead>Arrivée</TableHead><TableHead>Prix Séjour</TableHead><TableHead>Frais Ménage</TableHead><TableHead>Taxe Séjour</TableHead><TableHead>Montant Versé</TableHead><TableHead>Revenu Net</TableHead><TableHead>Commission</TableHead><TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 9 : 8}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
+                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 10 : 9}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
                         <TableRow key={index}>
                           {helloKeysCollectsRent && <TableCell><Checkbox checked={selectedReservations.has(index)} onCheckedChange={(checked) => { const newSet = new Set(selectedReservations); if (checked) newSet.add(index); else newSet.delete(index); setSelectedReservations(newSet); }} /></TableCell>}
-                          <TableCell>{row.voyageur}</TableCell><TableCell>{row.arrivee}</TableCell><TableCell>{row.prixSejour.toFixed(2)}€</TableCell><TableCell>{row.fraisMenage.toFixed(2)}€</TableCell><TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell><TableCell>{row.montantVerse.toFixed(2)}€</TableCell><TableCell>{row.revenuNet.toFixed(2)}€</TableCell><TableCell className="text-right font-medium">{row.commissionHelloKeys.toFixed(2)}€</TableCell>
+                          <TableCell>{row.voyageur}</TableCell><TableCell>{row.arrivee}</TableCell><TableCell>{row.prixSejour.toFixed(2)}€</TableCell><TableCell>{row.fraisMenage.toFixed(2)}€</TableCell><TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell><TableCell>{row.montantVerse.toFixed(2)}€</TableCell><TableCell>{row.revenuNet.toFixed(2)}€</TableCell><TableCell>{row.commissionHelloKeys.toFixed(2)}€</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(row, index)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
-                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 9 : 8} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
+                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 10 : 9} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold">
-                        <TableCell colSpan={helloKeysCollectsRent ? 3 : 2}>Totaux</TableCell><TableCell>{totalPrixSejour.toFixed(2)}€</TableCell><TableCell>{totalFraisMenage.toFixed(2)}€</TableCell><TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell><TableCell>{totalMontantVerse.toFixed(2)}€</TableCell><TableCell>{totalRevenuNet.toFixed(2)}€</TableCell><TableCell className="text-right">{totalCommission.toFixed(2)}€</TableCell>
+                        <TableCell colSpan={helloKeysCollectsRent ? 3 : 2}>Totaux</TableCell><TableCell>{totalPrixSejour.toFixed(2)}€</TableCell><TableCell>{totalFraisMenage.toFixed(2)}€</TableCell><TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell><TableCell>{totalMontantVerse.toFixed(2)}€</TableCell><TableCell>{totalRevenuNet.toFixed(2)}€</TableCell><TableCell>{totalCommission.toFixed(2)}€</TableCell><TableCell></TableCell>
                       </TableRow>
                     </TableFooter>
                   </Table>
@@ -294,6 +340,16 @@ const AdminInvoiceGenerationPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <EditReservationDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        reservationData={editingReservation?.data || null}
+        onSave={(updatedData) => {
+          if (editingReservation) {
+            handleUpdateReservation(updatedData, editingReservation.index);
+          }
+        }}
+      />
     </MainLayout>
   );
 };

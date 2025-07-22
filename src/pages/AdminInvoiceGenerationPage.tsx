@@ -129,6 +129,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       json.splice(0, 1); // Remove header
 
       const processedReservations: ProcessedReservation[] = [];
+      let taxWasModified = false; // Flag to show notification once
 
       json.forEach((row, index) => {
         try {
@@ -137,10 +138,19 @@ const AdminInvoiceGenerationPage: React.FC = () => {
 
           const portail = row[16] || 'N/A';
           const prixSejour = parseFloat(row[23]) || 0; // Colonne X
-          const taxeDeSejour = parseFloat(row[24]) || 0; // Colonne Y
+          let taxeDeSejour = parseFloat(row[24]) || 0; // Colonne Y
           const fraisMenage = parseFloat(row[25]) || 0; // Colonne Z
           const commissionPlateforme = parseFloat(row[38]) || 0; // Colonne AM (Frais OTA)
           const fraisPaiement = parseFloat(row[39]) || 0; // Colonne AN
+
+          // New logic: Set tax to 0 for Airbnb and Booking
+          const portailLower = portail.toLowerCase();
+          if (portailLower.includes('airbnb') || portailLower.includes('booking')) {
+            if (taxeDeSejour !== 0) {
+              taxWasModified = true;
+            }
+            taxeDeSejour = 0;
+          }
 
           const commissionHelloKeys = prixSejour * 0.26;
           const revenuNet = prixSejour - commissionPlateforme - fraisPaiement; // Still useful for statement
@@ -168,6 +178,11 @@ const AdminInvoiceGenerationPage: React.FC = () => {
 
       setProcessedData(processedReservations);
       recalculateTotals(processedReservations);
+      
+      if (taxWasModified) {
+        toast.info("La taxe de séjour a été mise à 0 pour les réservations Airbnb et Booking.com.");
+      }
+
       toast.success(`Fichier "${fileToProcess.name}" analysé avec succès !`);
 
     } catch (err: any) {
@@ -351,7 +366,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                           <div className="space-y-2"><Label>Sources de paiement</Label><ToggleGroup type="multiple" value={paymentSources} onValueChange={setPaymentSources}><ToggleGroupItem value="stripe">Stripe</ToggleGroupItem><ToggleGroupItem value="airbnb">Airbnb</ToggleGroupItem></ToggleGroup></div>
                           <div className="flex items-center space-x-2"><Checkbox id="deductInvoice" checked={deductInvoice} onCheckedChange={(checked) => setDeductInvoice(!!checked)} /><Label htmlFor="deductInvoice">Déduire la facture des loyers ?</Label></div>
                           {deductInvoice && (
-                            <div className="space-y-2"><Label>Déduire sur</Label><Select value={deductionSource} onValueChange={setDeductionSource}><SelectTrigger><SelectValue placeholder="Choisir une source" /></SelectTrigger><SelectContent>{paymentSources.map(s => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}</SelectContent></Select></div>
+                            <div className="space-y-2"><Label>Déduire sur</Label><Select value={deductionSource} onValueChange={setDeductionSource}><SelectTrigger><SelectValue placeholder="Choisir une source" /></SelectTrigger><SelectContent>{paymentSources.map(source => <SelectItem key={source} value={source}>{source.charAt(0).toUpperCase() + source.slice(1)}</SelectItem>)}</SelectContent></Select></div>
                           )}
                         </>
                       )}

@@ -25,15 +25,15 @@ import GoogleSheetDataPage from "./pages/GoogleSheetDataPage";
 import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
-import InvoicesPage from "./pages/InvoicesPage"; // Import the new page
+import InvoicesPage from "./pages/InvoicesPage";
+import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage"; // Import the new page
 import { SessionContextProvider } from "./components/SessionContextProvider";
-import { ThemeProvider } from "next-themes"; // Import ThemeProvider
+import { ThemeProvider } from "next-themes";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    {/* ThemeProvider added here to wrap the entire application */}
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
         <Toaster />
@@ -44,13 +44,14 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/pages" element={<PageCreator />} />
+              <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} /> {/* Add the new route */}
               <Route path="/pages/:slug" element={<ContentPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
               <Route path="/promotion" element={<PromotionPage />} />
-              <Route path="/invoices" element={<InvoicesPage />} /> {/* Add the new route */}
+              <Route path="/invoices" element={<InvoicesPage />} />
               <Route path="/" element={<DashboardPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/bookings" element={<BookingsPage />} />
@@ -69,7 +70,7 @@ const App = () => (
           </SessionContextProvider>
         </BrowserRouter>
       </TooltipProvider>
-    </ThemeProvider> {/* Closing ThemeProvider */}
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

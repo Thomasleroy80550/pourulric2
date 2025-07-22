@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles } from 'lucide-react';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles, FilePlus2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -28,7 +28,8 @@ const gestionNavigationItems = [
   { name: 'Performances', href: '/performance', icon: TrendingUp },
   { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
   { name: 'Comptabilité', href: '/accounting', icon: Banknote },
-  { name: 'Factures', href: '/invoices', icon: FileText }, // Added Invoices link
+  { name: 'Factures', href: '/invoices', icon: FileText },
+  { name: 'Générer Facture', href: '/admin/invoice-generation', icon: FilePlus2 }, // Added new link
   { name: 'Bilans', href: '/balances', icon: FileText },
   { name: 'Rapports', href: '/reports', icon: FileText },
   { name: 'Mes Données GSheet', href: '/my-google-sheet-data', icon: FileSpreadsheet },

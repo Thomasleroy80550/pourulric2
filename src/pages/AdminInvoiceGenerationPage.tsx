@@ -350,8 +350,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                 {isLoading ? <div className="flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div> : (
                   <>
                     <div className="text-sm space-y-1">
-                      <p>Total Commission: <span className="font-bold">{totalCommission.toFixed(2)}€</span></p>
-                      <p>Total Frais de Ménage: <span className="font-bold">{totalFraisMenage.toFixed(2)}€</span></p>
+                      <p>Total Commission (TTC): <span className="font-bold">{totalCommission.toFixed(2)}€</span></p>
+                      <p>Total Frais de Ménage (TTC): <span className="font-bold">{totalFraisMenage.toFixed(2)}€</span></p>
                       <p>Facture HT: <span className="font-bold">{factureHT.toFixed(2)}€</span></p>
                       <p>TVA (20%): <span className="font-bold">{tva.toFixed(2)}€</span></p>
                     </div>

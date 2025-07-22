@@ -129,35 +129,22 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       json.splice(0, 1); // Remove header
 
       const processedReservations: ProcessedReservation[] = [];
-      let taxAdjusted = false;
 
       json.forEach((row, index) => {
         try {
-          if (!Array.isArray(row) || row.length < 39) return;
+          if (!Array.isArray(row) || row.length < 40) return; // Check up to column AN
           if ((row[18] || '').toUpperCase() === 'PROPRIETAIRE') return;
 
           const portail = row[16] || 'N/A';
-          const totalPaye = parseFloat(row[22]) || 0;
-          const prixSejour = parseFloat(row[23]) || 0;
-          let taxeDeSejour = parseFloat(row[24]) || 0;
-          const fraisMenage = parseFloat(row[25]) || 0;
-          let commissionPlateforme = parseFloat(row[37]) || 0;
-          const fraisPaiement = parseFloat(row[38]) || 0;
+          const prixSejour = parseFloat(row[23]) || 0; // Colonne X
+          const fraisMenage = parseFloat(row[24]) || 0; // Colonne Y
+          const taxeDeSejour = parseFloat(row[25]) || 0; // Colonne Z (Assumed from previous logic)
+          const commissionPlateforme = parseFloat(row[38]) || 0; // Colonne AM (Frais OTA)
+          const fraisPaiement = parseFloat(row[39]) || 0; // Colonne AN
 
-          if (portail.toLowerCase().includes('booking') || portail.toLowerCase().includes('airbnb')) {
-            if (taxeDeSejour > 0) {
-              taxeDeSejour = 0;
-              taxAdjusted = true;
-            }
-          }
-
-          if (portail === 'Hello Keys') {
-            commissionPlateforme = (totalPaye * 1.4 / 100) + 0.25;
-          }
-
-          const commissionHelloKeys = prixSejour * 0.26; // Commission based on stay price
-          const revenuNet = prixSejour - commissionPlateforme - fraisPaiement;
-          const montantVerse = revenuNet + fraisMenage + taxeDeSejour;
+          const commissionHelloKeys = prixSejour * 0.26;
+          const revenuNet = prixSejour - commissionPlateforme - fraisPaiement; // Still useful for statement
+          const montantVerse = prixSejour + fraisMenage + taxeDeSejour - commissionPlateforme - fraisPaiement;
 
           processedReservations.push({
             portail,
@@ -170,7 +157,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
             revenuNet,
             commissionHelloKeys,
             montantVerse,
-            originalTotalPaye: totalPaye,
+            originalTotalPaye: parseFloat(row[22]) || 0, // Keep for reference if needed
             originalCommissionPlateforme: commissionPlateforme,
             originalFraisPaiement: fraisPaiement,
           });
@@ -178,10 +165,6 @@ const AdminInvoiceGenerationPage: React.FC = () => {
           toast.warning(`La ligne ${index + 2} a été ignorée en raison d'une erreur.`);
         }
       });
-
-      if (taxAdjusted) {
-        toast.info("La taxe de séjour a été automatiquement mise à 0 pour les réservations Airbnb et Booking.");
-      }
 
       setProcessedData(processedReservations);
       recalculateTotals(processedReservations);
@@ -214,9 +197,9 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     const originalReservation = newData[index];
 
     if (originalReservation) {
-      const commissionHelloKeys = updatedData.prixSejour * 0.26; // Recalculate commission based on new stay price
+      const commissionHelloKeys = updatedData.prixSejour * 0.26;
       const revenuNet = updatedData.prixSejour - originalReservation.originalCommissionPlateforme - originalReservation.originalFraisPaiement;
-      const montantVerse = revenuNet + updatedData.fraisMenage + updatedData.taxeDeSejour;
+      const montantVerse = updatedData.prixSejour + updatedData.fraisMenage + updatedData.taxeDeSejour - originalReservation.originalCommissionPlateforme - originalReservation.originalFraisPaiement;
 
       newData[index] = {
         ...originalReservation,

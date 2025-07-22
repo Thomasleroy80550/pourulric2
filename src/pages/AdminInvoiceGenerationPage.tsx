@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Upload, FileText, DollarSign, Loader2, Terminal } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Interface for a processed reservation row
 interface ProcessedReservation {

@@ -27,7 +27,8 @@ import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
-import StatementsPage from "./pages/StatementsPage"; // Import the new page
+import StatementsPage from "./pages/StatementsPage";
+import AdminStatementsPage from "./pages/AdminStatementsPage"; // Import the new admin page
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/pages" element={<PageCreator />} />
               <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
+              <Route path="/admin/statements" element={<AdminStatementsPage />} /> {/* Add the new admin route */}
               <Route path="/pages/:slug" element={<ContentPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
@@ -53,7 +55,7 @@ const App = () => (
               <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
               <Route path="/promotion" element={<PromotionPage />} />
               <Route path="/invoices" element={<InvoicesPage />} />
-              <Route path="/statements" element={<StatementsPage />} /> {/* Add the new route */}
+              <Route path="/statements" element={<StatementsPage />} />
               <Route path="/" element={<DashboardPage />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/bookings" element={<BookingsPage />} />

@@ -109,6 +109,16 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           </Table>
         </div>
       </div>
+
+      {/* Admin Comment Section */}
+      {statement.admin_comment && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Commentaire de votre gestionnaire</h2>
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+            <p className="text-gray-700 whitespace-pre-wrap">{statement.admin_comment}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

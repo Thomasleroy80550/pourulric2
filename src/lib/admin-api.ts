@@ -8,6 +8,7 @@ export interface SavedInvoice {
   invoice_data: any[];
   totals: any;
   created_at: string;
+  admin_comment: string | null; // New field for admin comments
   profiles: {
     first_name: string | null;
     last_name: string | null;
@@ -76,4 +77,41 @@ export async function getSavedInvoices(): Promise<SavedInvoice[]> {
     throw new Error(`Erreur lors de la récupération des relevés sauvegardés : ${error.message}`);
   }
   return data || [];
+}
+
+/**
+ * Updates the admin comment on a specific invoice.
+ * @param id The ID of the invoice to update.
+ * @param admin_comment The new comment text.
+ * @returns The updated invoice record.
+ */
+export async function updateInvoiceComment(id: string, admin_comment: string | null): Promise<SavedInvoice> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .update({ admin_comment })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating invoice comment:", error);
+    throw new Error(`Erreur lors de la mise à jour du commentaire : ${error.message}`);
+  }
+  return data;
+}
+
+/**
+ * Deletes a specific invoice.
+ * @param id The ID of the invoice to delete.
+ */
+export async function deleteInvoice(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting invoice:", error);
+    throw new Error(`Erreur lors de la suppression du relevé : ${error.message}`);
+  }
 }

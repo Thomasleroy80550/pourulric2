@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSession } from '@/components/SessionContextProvider';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, FileText } from 'lucide-react'; // Import FileText icon
 import { Button } from '@/components/ui/button'; // Import Button
 
 const AdminDashboardPage: React.FC = () => {
@@ -53,6 +53,20 @@ const AdminDashboardPage: React.FC = () => {
               </p>
               <Link to="/admin/pages">
                 <Button>Accéder au Créateur de Pages</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Gestion des Relevés</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
+                Consultez, commentez et supprimez les relevés de tous les clients.
+              </p>
+              <Link to="/admin/statements">
+                <Button>Gérer les Relevés</Button>
               </Link>
             </CardContent>
           </Card>

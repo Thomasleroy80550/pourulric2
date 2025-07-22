@@ -137,8 +137,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
 
           const portail = row[16] || 'N/A';
           const prixSejour = parseFloat(row[23]) || 0; // Colonne X
-          const fraisMenage = parseFloat(row[24]) || 0; // Colonne Y
-          const taxeDeSejour = parseFloat(row[25]) || 0; // Colonne Z (Assumed from previous logic)
+          const taxeDeSejour = parseFloat(row[24]) || 0; // Colonne Y
+          const fraisMenage = parseFloat(row[25]) || 0; // Colonne Z
           const commissionPlateforme = parseFloat(row[38]) || 0; // Colonne AM (Frais OTA)
           const fraisPaiement = parseFloat(row[39]) || 0; // Colonne AN
 

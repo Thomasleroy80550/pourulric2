@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import EditReservationDialog from '@/components/EditReservationDialog'; // Import the new dialog
+import EditReservationDialog from '@/components/EditReservationDialog';
+import { getAllProfiles, saveInvoice } from '@/lib/admin-api';
+import { UserProfile } from '@/lib/profile-api';
 
 // Interface for a processed reservation row
 interface ProcessedReservation {
@@ -46,6 +48,12 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
 
+  // New states for client selection and invoice period
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [invoicePeriod, setInvoicePeriod] = useState<string>('');
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
+
   // States for advanced features
   const [helloKeysCollectsRent, setHelloKeysCollectsRent] = useState(false);
   const [selectedReservations, setSelectedReservations] = useState<Set<number>>(new Set());
@@ -56,6 +64,33 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   // States for editing
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingReservation, setEditingReservation] = useState<{ data: ProcessedReservation; index: number } | null>(null);
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        const fetchedProfiles = await getAllProfiles();
+        setProfiles(fetchedProfiles);
+      } catch (err: any) {
+        toast.error(err.message);
+      } finally {
+        setLoadingProfiles(false);
+      }
+    };
+    fetchProfiles();
+  }, []);
+
+  const resetState = () => {
+    setFile(null);
+    setFileName('');
+    setProcessedData([]);
+    setTotalCommission(0);
+    setTotalPrixSejour(0);
+    setTotalFraisMenage(0);
+    setTotalTaxeDeSejour(0);
+    setTotalRevenuNet(0);
+    setTotalMontantVerse(0);
+    setSelectedReservations(new Set());
+  };
 
   const recalculateTotals = useCallback((data: ProcessedReservation[]) => {
     let commissionSum = 0, prixSejourSum = 0, fraisMenageSum = 0, taxeDeSejourSum = 0, revenuNetSum = 0, montantVerseSum = 0;
@@ -167,7 +202,6 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     const originalReservation = newData[index];
 
     if (originalReservation) {
-      // Recalculate derived values based on edited inputs
       const revenuNet = updatedData.prixSejour - originalReservation.originalCommissionPlateforme - originalReservation.originalFraisPaiement;
       const commissionHelloKeys = revenuNet * 0.26;
       const montantVerse = revenuNet + updatedData.fraisMenage + updatedData.taxeDeSejour;
@@ -187,10 +221,38 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     }
   };
 
-  const handleGenerateInvoice = () => {
-    const totalFacture = totalCommission + totalFraisMenage;
-    toast.info("Simulation de la génération de facture...", {
-      description: `Une facture de ${totalFacture.toFixed(2)}€ serait envoyée à Pennylane.`,
+  const handleGenerateInvoice = async () => {
+    if (!selectedClientId || !invoicePeriod || processedData.length === 0) {
+      toast.error("Veuillez sélectionner un client, définir une période et importer un fichier.");
+      return;
+    }
+
+    const totalsObject = {
+      totalCommission,
+      totalFraisMenage,
+      totalPrixSejour,
+      totalTaxeDeSejour,
+      totalRevenuNet,
+      totalMontantVerse,
+      totalFacture: totalCommission + totalFraisMenage,
+    };
+
+    const payload = {
+      user_id: selectedClientId,
+      period: invoicePeriod,
+      invoice_data: processedData,
+      totals: totalsObject,
+    };
+
+    const promise = saveInvoice(payload);
+
+    toast.promise(promise, {
+      loading: 'Sauvegarde du relevé en cours...',
+      success: () => {
+        resetState();
+        return 'Relevé sauvegardé avec succès !';
+      },
+      error: (err) => `Erreur: ${err.message}`,
     });
   };
 
@@ -241,18 +303,39 @@ const AdminInvoiceGenerationPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-6">
             <Card className="shadow-md">
-              <CardHeader><CardTitle>1. Importer le relevé</CardTitle><CardDescription>Importez le fichier Excel (.xlsx) de Krossbooking.</CardDescription></CardHeader>
+              <CardHeader><CardTitle>1. Client & Période</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {loadingProfiles ? <Skeleton className="h-24 w-full" /> : (
+                  <>
+                    <div>
+                      <Label htmlFor="client-select">Sélectionner un client</Label>
+                      <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                        <SelectTrigger id="client-select"><SelectValue placeholder="Choisir un client..." /></SelectTrigger>
+                        <SelectContent>{profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="invoice-period">Période de facturation</Label>
+                      <Input id="invoice-period" placeholder="Ex: Juillet 2024" value={invoicePeriod} onChange={(e) => setInvoicePeriod(e.target.value)} />
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-md">
+              <CardHeader><CardTitle>2. Importer le relevé</CardTitle><CardDescription>Importez le fichier Excel (.xlsx) de Krossbooking.</CardDescription></CardHeader>
               <CardContent>
-                <Label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <Upload className="h-8 w-8 text-gray-500 mb-2" /><span className="text-sm text-gray-500">Cliquez pour choisir un fichier</span>
+                <Label htmlFor="file-upload" className={`cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg ${!selectedClientId || !invoicePeriod ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                  <Upload className="h-8 w-8 text-gray-500 mb-2" /><span className="text-sm text-gray-500">{!selectedClientId || !invoicePeriod ? 'Sélectionnez d\'abord un client et une période' : 'Cliquez pour choisir un fichier'}</span>
                 </Label>
-                <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".xlsx, .xls" />
+                <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".xlsx, .xls" disabled={!selectedClientId || !invoicePeriod} />
                 {fileName && <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-2">Fichier: {fileName}</p>}
               </CardContent>
             </Card>
 
             <Card className="shadow-md">
-              <CardHeader><CardTitle>2. Résumé & Facturation</CardTitle></CardHeader>
+              <CardHeader><CardTitle>3. Résumé & Facturation</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {isLoading ? <div className="flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div> : (
                   <>
@@ -278,7 +361,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         </>
                       )}
                     </div>
-                    <Button className="w-full" onClick={handleGenerateInvoice} disabled={processedData.length === 0}><DollarSign className="h-4 w-4 mr-2" />Générer la Facture (Simulation)</Button>
+                    <Button className="w-full" onClick={handleGenerateInvoice} disabled={processedData.length === 0}><FileText className="h-4 w-4 mr-2" />Sauvegarder le Relevé</Button>
                   </>
                 )}
               </CardContent>
@@ -287,7 +370,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
 
           <div className="lg:col-span-2 space-y-6">
             <Card className="shadow-md">
-              <CardHeader><CardTitle>3. Relevé Détaillé</CardTitle><CardDescription>Vérifiez les réservations et les commissions calculées.</CardDescription></CardHeader>
+              <CardHeader><CardTitle>4. Relevé Détaillé</CardTitle><CardDescription>Vérifiez les réservations et les commissions calculées.</CardDescription></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto h-[600px]">
                   <Table>
@@ -322,7 +405,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
 
             {helloKeysCollectsRent && selectedReservations.size > 0 && (
               <Card className="shadow-md">
-                <CardHeader><CardTitle>4. Virements à effectuer</CardTitle></CardHeader>
+                <CardHeader><CardTitle>5. Virements à effectuer</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   {Object.entries(transfersBySource).map(([source, data]) => data.reservations.length > 0 && (
                     <div key={source}>

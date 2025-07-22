@@ -405,3 +405,32 @@
 .driver-popover-footer .driver-popover-prev-btn:hover {
   background-color: hsl(var(--secondary) / 0.9);
 }
+
+/* Print-specific styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #statement-to-print, #statement-to-print * {
+    visibility: visible;
+  }
+  #statement-to-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 1cm; /* Add some padding for printing */
+    border: none;
+    box-shadow: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .a4-container {
+    width: 210mm;
+    min-height: 297mm;
+    page-break-after: always;
+  }
+}

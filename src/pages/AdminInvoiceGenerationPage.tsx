@@ -25,6 +25,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     totalPrixSejour,
     totalFraisMenage,
     totalTaxeDeSejour,
+    totalRevenuGenere,
     totalMontantVerse,
     isLoading,
     error,
@@ -64,9 +65,14 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
+      const selectedProfile = profiles.find(p => p.id === selectedClientId);
+      const commissionRate = selectedProfile?.commission_rate || 0.26;
+      if (!selectedProfile?.commission_rate) {
+        toast.warning(`Taux de commission non trouvé pour le client, utilisation de la valeur par défaut de 26%.`);
+      }
       setFile(selectedFile);
       setFileName(selectedFile.name);
-      processFile(selectedFile);
+      processFile(selectedFile, commissionRate);
     }
   };
 
@@ -75,19 +81,22 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateReservation = (updatedData: Omit<ProcessedReservation, 'revenuNet' | 'commissionHelloKeys' | 'montantVerse'>, index: number) => {
+  const handleUpdateReservation = (updatedData: Omit<ProcessedReservation, 'revenuGenere' | 'commissionHelloKeys' | 'montantVerse'>, index: number) => {
     const newData = [...processedData];
     const originalReservation = newData[index];
 
     if (originalReservation) {
-      const commissionHelloKeys = updatedData.prixSejour * 0.26;
-      const revenuNet = updatedData.prixSejour - originalReservation.originalCommissionPlateforme - originalReservation.originalFraisPaiement;
+      const selectedProfile = profiles.find(p => p.id === selectedClientId);
+      const commissionRate = selectedProfile?.commission_rate || 0.26;
+
       const montantVerse = updatedData.prixSejour + updatedData.fraisMenage + updatedData.taxeDeSejour - originalReservation.originalCommissionPlateforme - originalReservation.originalFraisPaiement;
+      const revenuGenere = montantVerse - updatedData.fraisMenage - updatedData.taxeDeSejour;
+      const commissionHelloKeys = revenuGenere * commissionRate;
 
       newData[index] = {
         ...originalReservation,
         ...updatedData,
-        revenuNet,
+        revenuGenere,
         commissionHelloKeys,
         montantVerse,
       };
@@ -226,13 +235,14 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         <TableHead>Prix Séjour</TableHead>
                         <TableHead>Frais Ménage</TableHead>
                         <TableHead>Taxe Séjour</TableHead>
+                        <TableHead>Revenu Généré</TableHead>
                         <TableHead>Montant Versé</TableHead>
                         <TableHead>Commission</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 10 : 9}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
+                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 11 : 10}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
                         <TableRow key={index}>
                           {helloKeysCollectsRent && <TableCell><Checkbox checked={selectedReservations.has(index)} onCheckedChange={(checked) => { const newSet = new Set(selectedReservations); if (checked) newSet.add(index); else newSet.delete(index); setSelectedReservations(newSet); }} /></TableCell>}
                           <TableCell>{row.portail}</TableCell>
@@ -241,6 +251,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                           <TableCell>{row.prixSejour.toFixed(2)}€</TableCell>
                           <TableCell>{row.fraisMenage.toFixed(2)}€</TableCell>
                           <TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell>
+                          <TableCell>{row.revenuGenere.toFixed(2)}€</TableCell>
                           <TableCell>{row.montantVerse.toFixed(2)}€</TableCell>
                           <TableCell>{row.commissionHelloKeys.toFixed(2)}€</TableCell>
                           <TableCell className="text-right">
@@ -249,7 +260,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 10 : 9} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
+                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 11 : 10} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold">
@@ -257,6 +268,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         <TableCell>{totalPrixSejour.toFixed(2)}€</TableCell>
                         <TableCell>{totalFraisMenage.toFixed(2)}€</TableCell>
                         <TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell>
+                        <TableCell>{totalRevenuGenere.toFixed(2)}€</TableCell>
                         <TableCell>{totalMontantVerse.toFixed(2)}€</TableCell>
                         <TableCell>{totalCommission.toFixed(2)}€</TableCell>
                         <TableCell></TableCell>

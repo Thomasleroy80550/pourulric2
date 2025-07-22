@@ -10,6 +10,7 @@ export interface UserProfile {
   objective_amount?: number; // Nouvelle propriété pour l'objectif en Euros
   cguv_accepted_at?: string; // Nouveau champ pour la date d'acceptation des CGUV
   cguv_version?: string;      // Nouveau champ pour la version des CGUV acceptée
+  commission_rate?: number; // Nouveau champ pour le taux de commission
 }
 
 /**
@@ -25,7 +26,7 @@ export async function getProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, role, google_sheet_id, google_sheet_tab, objective_amount, cguv_accepted_at, cguv_version') // Sélectionner les nouvelles colonnes
+    .select('id, first_name, last_name, role, google_sheet_id, google_sheet_tab, objective_amount, cguv_accepted_at, cguv_version, commission_rate') // Sélectionner les nouvelles colonnes
     .eq('id', user.id)
     .single();
 

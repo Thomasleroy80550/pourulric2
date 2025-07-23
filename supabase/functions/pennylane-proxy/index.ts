@@ -45,6 +45,7 @@ serve(async (req) => {
       });
     }
     const pennylaneCustomerId = profile.pennylane_customer_id;
+    console.log(`Fetching Pennylane invoices for customer ID: ${pennylaneCustomerId}`); // Added log
 
     // 3. Get the Pennylane API key from secrets
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
@@ -81,6 +82,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
+    console.log(`Pennylane API returned ${data.items?.length || 0} invoices for customer ID: ${pennylaneCustomerId}`); // Added log
 
     // 5. Return the data to the client
     return new Response(JSON.stringify(data), {

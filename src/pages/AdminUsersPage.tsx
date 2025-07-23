@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import MainLayout from '@/components/MainLayout'; // We'll replace this with AdminLayout
+import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -70,7 +70,7 @@ const AdminUsersPage: React.FC = () => {
   };
 
   return (
-    <MainLayout>
+    <AdminLayout>
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Gestion des Utilisateurs</h1>
@@ -157,7 +157,7 @@ const AdminUsersPage: React.FC = () => {
           </Form>
         </DialogContent>
       </Dialog>
-    </MainLayout>
+    </AdminLayout>
   );
 };
 

@@ -11,15 +11,17 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   const totals = statement.totals;
   const invoiceData = statement.invoice_data;
 
-  // Defensive checks for totals properties to avoid errors with older data
-  const totalRevenuGenere = totals.totalRevenuGenere || totals.totalRevenuNet || 0; // Fallback for older invoices
+  // Defensive checks for all needed values
+  const totalMontantVerse = totals.totalMontantVerse || 0;
   const totalCommission = totals.totalCommission || 0;
   const totalFraisMenage = totals.totalFraisMenage || 0;
+  const totalTaxeDeSejour = totals.totalTaxeDeSejour || 0;
   
   // Calculate totalFacture with a fallback for older records that might not have this field
   const totalFacture = totals.totalFacture !== undefined ? totals.totalFacture : (totalCommission + totalFraisMenage);
   
-  const netToPay = totalRevenuGenere - totalCommission - totalFraisMenage;
+  // The final, correct calculation for the owner's payout, starting from the total amount transferred
+  const netToPay = totalMontantVerse - totalTaxeDeSejour - totalFraisMenage - totalCommission;
 
   return (
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans a4-container">
@@ -42,14 +44,19 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Summary Card */}
         <div className="bg-gray-50 p-6 rounded-lg border">
+          <h2 className="text-lg font-semibold mb-4 text-gray-800">Résumé de votre relevé</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total des séjours (net de commission plateforme)</p>
-              <p className="font-semibold text-lg">{totalRevenuGenere.toFixed(2)}€</p>
+              <p className="text-gray-600">Total perçu des plateformes</p>
+              <p className="font-semibold text-lg">{totalMontantVerse.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total des frais (Ménage + Commission HK)</p>
+              <p className="text-gray-600">Total de notre facture (Ménage + Commission)</p>
               <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€</p>
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-gray-600">Taxes de séjour collectées</p>
+              <p className="font-semibold text-lg text-red-600">- {totalTaxeDeSejour.toFixed(2)}€</p>
             </div>
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center text-xl">
@@ -61,24 +68,20 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
 
         {/* Calculation Card */}
         <div className="bg-gray-50 p-6 rounded-lg border">
-          <h2 className="text-lg font-semibold mb-4 text-gray-800">Calcul du montant net</h2>
+          <h2 className="text-lg font-semibold mb-4 text-gray-800">Détail de notre facture</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Revenu généré total des séjours</p>
-              <p className="font-semibold">{totalRevenuGenere.toFixed(2)}€</p>
-            </div>
-            <div className="flex justify-between items-center">
               <p className="text-gray-600">Commission Hello Keys</p>
-              <p className="font-semibold text-red-600">- {totalCommission.toFixed(2)}€</p>
+              <p className="font-semibold">{totalCommission.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Total frais de ménage</p>
-              <p className="font-semibold text-red-600">- {totalFraisMenage.toFixed(2)}€</p>
+              <p className="font-semibold">{totalFraisMenage.toFixed(2)}€</p>
             </div>
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center">
-              <p className="font-bold">Net à payer</p>
-              <p className="font-bold text-lg">{netToPay.toFixed(2)}€</p>
+              <p className="font-bold">Total Facture Hello Keys</p>
+              <p className="font-bold text-lg">{totalFacture.toFixed(2)}€</p>
             </div>
           </div>
         </div>
@@ -98,6 +101,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                 <TableHead className="text-right">Frais Ménage</TableHead>
                 <TableHead className="text-right">Taxe Séjour</TableHead>
                 <TableHead className="text-right">Montant Versé</TableHead>
+                <TableHead className="text-right">Revenu Généré</TableHead>
                 <TableHead className="text-right">Commission</TableHead>
               </TableRow>
             </TableHeader>
@@ -111,6 +115,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                   <TableCell className="text-right">{row.fraisMenage.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.taxeDeSejour.toFixed(2)}€</TableCell>
                   <TableCell className="text-right font-semibold">{row.montantVerse.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold">{row.revenuGenere.toFixed(2)}€</TableCell>
                   <TableCell className="text-right text-red-600">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
                 </TableRow>
               ))}

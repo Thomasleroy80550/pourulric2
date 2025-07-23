@@ -562,7 +562,7 @@ const DashboardPage = () => {
                 monthlyReservationsData,
                 'bar',
                 'Réservations par mois',
-                [{ key: 'reservations', name: 'Réservations', color: 'hsl(var(--accent))' }]
+                [{ key: 'reservations', name: 'Réservations', color: '#8b5cf6' }]
               )}>
                 Agrandir
               </Button>
@@ -575,8 +575,8 @@ const DashboardPage = () => {
                   <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0.2}/>
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -599,7 +599,7 @@ const DashboardPage = () => {
                 monthlyOccupancyData,
                 'line',
                 'Taux d\'Occupation Mensuel',
-                [{ key: 'occupation', name: 'Occupation', color: '#82ca9d' }],
+                [{ key: 'occupation', name: 'Occupation', color: '#14b8a6' }],
                 '%'
               )}>
                 Agrandir
@@ -613,8 +613,8 @@ const DashboardPage = () => {
                   <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#14b8a6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -622,7 +622,7 @@ const DashboardPage = () => {
                     <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Area type="monotone" dataKey="occupation" stroke="#82ca9d" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
                   </AreaChart>
                 </ResponsiveContainer>
               )}

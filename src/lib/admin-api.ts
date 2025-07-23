@@ -108,3 +108,20 @@ export async function updateInvoiceComment(invoiceId: string, comment: string): 
     throw new Error(`Erreur lors de la sauvegarde du commentaire : ${error.message}`);
   }
 }
+
+/**
+ * Deletes a specific invoice.
+ * @param invoiceId The ID of the invoice to delete.
+ * @returns A promise that resolves when the invoice is deleted.
+ */
+export async function deleteInvoice(invoiceId: string): Promise<void> {
+  const { error } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', invoiceId);
+
+  if (error) {
+    console.error("Error deleting invoice:", error);
+    throw new Error(`Erreur lors de la suppression du relevé : ${error.message}`);
+  }
+}

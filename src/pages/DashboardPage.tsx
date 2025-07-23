@@ -101,7 +101,7 @@ const DashboardPage = () => {
   const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[]) => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
-    let totalVente = 0, totalRentree = 0, totalFrais = 0, totalResultat = 0, totalNights = 0, totalGuests = 0;
+    let totalVente = 0, totalRentree = 0, totalFrais = 0, totalResultat = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
     const channelCounts: { [key: string]: number } = {};
     DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name.toLowerCase()] = 0);
 
@@ -112,10 +112,12 @@ const DashboardPage = () => {
 
     const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
     const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
-    const newMonthlyOccupancyData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), occupation: 0 }));
     const monthlyNights = Array(12).fill(0);
+    
+    const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
 
     statementsForYear.forEach(s => {
+      // Aggregate yearly totals directly from statement totals
       totalVente += s.totals.totalRevenuGenere || 0;
       totalRentree += s.totals.totalMontantVerse || 0;
       totalFrais += s.totals.totalCommission || 0;
@@ -123,22 +125,27 @@ const DashboardPage = () => {
       totalResultat += netToPay;
       totalNights += s.totals.totalNuits || 0;
       totalGuests += s.totals.totalVoyageurs || 0;
+      totalReservations += s.invoice_data.length;
 
-      s.invoice_data.forEach(resa => {
-        const arrivee = parseISO(resa.arrivee);
-        if (isValid(arrivee) && arrivee.getFullYear() === year) {
-          const monthIndex = arrivee.getMonth();
-          newMonthlyReservationsData[monthIndex].reservations++;
-          
-          const netToPayResa = resa.montantVerse - resa.taxeDeSejour - resa.fraisMenage - resa.commissionHelloKeys;
-          newMonthlyFinancialData[monthIndex].ca += resa.revenuGenere;
-          newMonthlyFinancialData[monthIndex].montantVerse += resa.montantVerse;
-          newMonthlyFinancialData[monthIndex].frais += resa.commissionHelloKeys;
-          newMonthlyFinancialData[monthIndex].benef += netToPayResa;
-          
-          monthlyNights[monthIndex] += resa.nuits;
-        }
+      // Aggregate monthly data based on the statement's period
+      const periodParts = s.period.toLowerCase().split(' ');
+      const monthName = periodParts[0];
+      const monthIndex = monthFrToNum[monthName];
+
+      if (monthIndex !== undefined) {
+        const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
         
+        newMonthlyFinancialData[monthIndex].ca += s.totals.totalRevenuGenere || 0;
+        newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
+        newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
+        newMonthlyFinancialData[monthIndex].benef += statementNetToPay;
+        
+        newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
+        monthlyNights[monthIndex] += s.totals.totalNuits || 0;
+      }
+
+      // Donut chart logic still needs to iterate invoice_data
+      s.invoice_data.forEach(resa => {
         const portail = resa.portail.toLowerCase();
         if (portail.includes('airbnb')) channelCounts['airbnb']++;
         else if (portail.includes('booking')) channelCounts['booking']++;
@@ -149,10 +156,11 @@ const DashboardPage = () => {
       });
     });
 
-    monthsOfYear.forEach((monthDate, index) => {
-      const daysInMonth = getDaysInMonth(monthDate);
+    const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
+      const daysInMonth = getDaysInMonth(m);
       const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
-      newMonthlyOccupancyData[index].occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
+      const occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
+      return { name: format(m, 'MMM', { locale: fr }), occupation };
     });
 
     setFinancialData(prev => ({
@@ -163,7 +171,7 @@ const DashboardPage = () => {
       resultatAnnee: totalResultat,
     }));
     setTotalNightsCurrentYear(totalNights);
-    setTotalReservationsCurrentYear(statementsForYear.reduce((acc, s) => acc + s.invoice_data.length, 0));
+    setTotalReservationsCurrentYear(totalReservations);
     setTotalGuestsCurrentYear(totalGuests);
     setMonthlyFinancialData(newMonthlyFinancialData);
     setMonthlyReservationsData(newMonthlyReservationsData);

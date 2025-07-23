@@ -67,32 +67,34 @@ const PerformancePage: React.FC = () => {
       
       const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
       const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
-      const newMonthlyOccupancyData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), occupation: 0 }));
       const monthlyNights = Array(12).fill(0);
       let totalNightsForYear = 0;
 
       statementsForYear.forEach(s => {
         totalNightsForYear += s.totals.totalNuits || 0;
 
-        s.invoice_data.forEach(resa => {
-          const arrivee = parseISO(resa.arrivee);
-          if (arrivee.getFullYear() === currentYear) {
-            const monthIndex = arrivee.getMonth();
-            const netToPay = (resa.montantVerse || 0) - (resa.taxeDeSejour || 0) - (resa.fraisMenage || 0) - (resa.commissionHelloKeys || 0);
-            newMonthlyFinancialData[monthIndex].ca += resa.revenuGenere || 0;
-            newMonthlyFinancialData[monthIndex].montantVerse += resa.montantVerse || 0;
-            newMonthlyFinancialData[monthIndex].frais += resa.commissionHelloKeys || 0;
-            newMonthlyFinancialData[monthIndex].benef += netToPay;
-            newMonthlyReservationsData[monthIndex].reservations++;
-            monthlyNights[monthIndex] += resa.nuits || 0;
-          }
-        });
+        const periodParts = s.period.toLowerCase().split(' ');
+        const monthName = periodParts[0];
+        const monthIndex = monthFrToNum[monthName];
+
+        if (monthIndex !== undefined) {
+          const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
+          
+          newMonthlyFinancialData[monthIndex].ca += s.totals.totalRevenuGenere || 0;
+          newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
+          newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
+          newMonthlyFinancialData[monthIndex].benef += statementNetToPay;
+          
+          newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
+          monthlyNights[monthIndex] += s.totals.totalNuits || 0;
+        }
       });
 
-      monthsOfYear.forEach((monthDate, index) => {
-        const daysInMonth = getDaysInMonth(monthDate);
+      const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
+        const daysInMonth = getDaysInMonth(m);
         const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
-        newMonthlyOccupancyData[index].occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
+        const occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
+        return { name: format(m, 'MMM', { locale: fr }), occupation };
       });
 
       setMonthlyFinancialData(newMonthlyFinancialData);

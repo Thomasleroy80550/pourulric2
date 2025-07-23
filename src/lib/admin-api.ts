@@ -37,7 +37,7 @@ export async function getAllProfiles(): Promise<UserProfile[]> {
  * Fetches all saved invoices/statements from the database.
  * @returns A promise that resolves to an array of SavedInvoice objects.
  */
-export async function getAllStatements(): Promise<SavedInvoice[]> {
+export async function getSavedInvoices(): Promise<SavedInvoice[]> {
   const { data, error } = await supabase
     .from('invoices')
     .select(`

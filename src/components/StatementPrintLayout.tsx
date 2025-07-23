@@ -54,10 +54,12 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
               <p className="text-gray-600">Total de notre facture (Ménage + Commission)</p>
               <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€</p>
             </div>
-            <div className="flex justify-between items-center">
-              <p className="text-gray-600">Taxes de séjour collectées</p>
-              <p className="font-semibold text-lg text-red-600">- {totalTaxeDeSejour.toFixed(2)}€</p>
-            </div>
+            {totalTaxeDeSejour > 0 && (
+              <div className="flex justify-between items-center">
+                <p className="text-gray-600">Taxes de séjour collectées</p>
+                <p className="font-semibold text-lg text-red-600">- {totalTaxeDeSejour.toFixed(2)}€</p>
+              </div>
+            )}
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center text-xl">
               <p className="font-bold">Montant net à vous verser</p>

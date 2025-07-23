@@ -54,9 +54,12 @@ const PerformancePage: React.FC = () => {
 
       const statementsForYear = statements.filter(s => s.period.includes(currentYear.toString()));
 
-      // Calculate Total Revenues
-      const totalRevenuGenere = statementsForYear.reduce((acc, s) => acc + (s.totals.totalRevenuGenere || 0), 0);
-      setTotalRevenues(totalRevenuGenere);
+      // Calculate Total Revenues (CA)
+      const totalCA = statementsForYear.reduce((acc, s) => {
+        const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((itemAcc, item) => itemAcc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
+        return acc + statementCA;
+      }, 0);
+      setTotalRevenues(totalCA);
 
       // Calculate Monthly Financial, Reservations, and Occupancy Data
       const monthsOfYear = eachMonthOfInterval({
@@ -79,9 +82,10 @@ const PerformancePage: React.FC = () => {
         const monthIndex = monthFrToNum[monthName];
 
         if (monthIndex !== undefined) {
+          const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
           const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
           
-          newMonthlyFinancialData[monthIndex].ca += s.totals.totalRevenuGenere || 0;
+          newMonthlyFinancialData[monthIndex].ca += statementCA;
           newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
           newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
           newMonthlyFinancialData[monthIndex].benef += statementNetToPay;
@@ -144,11 +148,11 @@ const PerformancePage: React.FC = () => {
             <>
               <Card className="shadow-md">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold">Revenus Totaux ({currentYear})</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Chiffre d'Affaires ({currentYear})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-3xl font-bold text-green-600">{totalRevenues.toFixed(2)}€</p>
-                  <p className="text-sm text-gray-500">Total des ventes sur l'année</p>
+                  <p className="text-sm text-gray-500">Total brut payé par les voyageurs</p>
                 </CardContent>
               </Card>
               <Card className="shadow-md">

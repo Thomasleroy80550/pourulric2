@@ -57,7 +57,7 @@ const DashboardPage = () => {
   );
 
   const [financialData, setFinancialData] = useState({
-    venteAnnee: 0,
+    caAnnee: 0,
     rentreeArgentAnnee: 0,
     fraisAnnee: 0,
     resultatAnnee: 0,
@@ -104,7 +104,7 @@ const DashboardPage = () => {
   const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[]) => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
-    let totalVente = 0, totalRentree = 0, totalFrais = 0, totalResultat = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
+    let totalCA = 0, totalRentree = 0, totalFrais = 0, totalResultat = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
     const channelCounts: { [key: string]: number } = {};
     DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name.toLowerCase()] = 0);
 
@@ -120,8 +120,8 @@ const DashboardPage = () => {
     const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
 
     statementsForYear.forEach(s => {
-      // Aggregate yearly totals directly from statement totals
-      totalVente += s.totals.totalRevenuGenere || 0;
+      const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
+      totalCA += statementCA;
       totalRentree += s.totals.totalMontantVerse || 0;
       totalFrais += s.totals.totalCommission || 0;
       const netToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
@@ -130,7 +130,6 @@ const DashboardPage = () => {
       totalGuests += s.totals.totalVoyageurs || 0;
       totalReservations += s.invoice_data.length;
 
-      // Aggregate monthly data based on the statement's period
       const periodParts = s.period.toLowerCase().split(' ');
       const monthName = periodParts[0];
       const monthIndex = monthFrToNum[monthName];
@@ -138,7 +137,7 @@ const DashboardPage = () => {
       if (monthIndex !== undefined) {
         const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
         
-        newMonthlyFinancialData[monthIndex].ca += s.totals.totalRevenuGenere || 0;
+        newMonthlyFinancialData[monthIndex].ca += statementCA;
         newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
         newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
         newMonthlyFinancialData[monthIndex].benef += statementNetToPay;
@@ -147,7 +146,6 @@ const DashboardPage = () => {
         monthlyNights[monthIndex] += s.totals.totalNuits || 0;
       }
 
-      // Donut chart logic still needs to iterate invoice_data
       s.invoice_data.forEach(resa => {
         const portail = resa.portail.toLowerCase();
         if (portail.includes('airbnb')) channelCounts['airbnb']++;
@@ -168,7 +166,7 @@ const DashboardPage = () => {
 
     setFinancialData(prev => ({
       ...prev,
-      venteAnnee: totalVente,
+      caAnnee: totalCA,
       rentreeArgentAnnee: totalRentree,
       fraisAnnee: totalFrais,
       resultatAnnee: totalResultat,
@@ -326,8 +324,8 @@ const DashboardPage = () => {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col items-start">
-                      <p className="text-xl md:text-2xl font-bold text-green-600">{financialData.venteAnnee.toFixed(2)}€</p>
-                      <p className="text-sm text-gray-500">Vente sur l'année</p>
+                      <p className="text-xl md:text-2xl font-bold text-green-600">{financialData.caAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">CA sur l'année</p>
                     </div>
                     <div className="flex flex-col items-start">
                       <p className="text-xl md:text-2xl font-bold text-orange-600">{financialData.rentreeArgentAnnee.toFixed(2)}€</p>

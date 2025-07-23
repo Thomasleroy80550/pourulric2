@@ -15,6 +15,7 @@ export interface ProcessedReservation {
   prixSejour: number;
   fraisMenage: number;
   taxeDeSejour: number;
+  ca: number; // Chiffre d'Affaires (Total payé par le voyageur)
   revenuGenere: number;
   commissionHelloKeys: number;
   montantVerse: number;
@@ -29,6 +30,7 @@ interface InvoiceGenerationContextType {
   setFile: React.Dispatch<React.SetStateAction<File | null>>;
   processedData: ProcessedReservation[];
   setProcessedData: React.Dispatch<React.SetStateAction<ProcessedReservation[]>>;
+  totalCA: number;
   totalCommission: number;
   totalPrixSejour: number;
   totalFraisMenage: number;
@@ -68,6 +70,7 @@ const InvoiceGenerationContext = createContext<InvoiceGenerationContextType | un
 export const InvoiceGenerationProvider = ({ children }: { children: ReactNode }) => {
   const [file, setFile] = useState<File | null>(null);
   const [processedData, setProcessedData] = useState<ProcessedReservation[]>([]);
+  const [totalCA, setTotalCA] = useState(0);
   const [totalCommission, setTotalCommission] = useState(0);
   const [totalPrixSejour, setTotalPrixSejour] = useState(0);
   const [totalFraisMenage, setTotalFraisMenage] = useState(0);
@@ -93,6 +96,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     setFile(null);
     setFileName('');
     setProcessedData([]);
+    setTotalCA(0);
     setTotalCommission(0);
     setTotalPrixSejour(0);
     setTotalFraisMenage(0);
@@ -106,8 +110,9 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
   }, []);
 
   const recalculateTotals = useCallback((data: ProcessedReservation[]) => {
-    let commissionSum = 0, prixSejourSum = 0, fraisMenageSum = 0, taxeDeSejourSum = 0, revenuGenereSum = 0, montantVerseSum = 0, nuitsSum = 0, voyageursSum = 0;
+    let caSum = 0, commissionSum = 0, prixSejourSum = 0, fraisMenageSum = 0, taxeDeSejourSum = 0, revenuGenereSum = 0, montantVerseSum = 0, nuitsSum = 0, voyageursSum = 0;
     data.forEach(row => {
+      caSum += row.ca;
       commissionSum += row.commissionHelloKeys;
       prixSejourSum += row.prixSejour;
       fraisMenageSum += row.fraisMenage;
@@ -117,6 +122,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       nuitsSum += row.nuits;
       voyageursSum += row.voyageurs;
     });
+    setTotalCA(caSum);
     setTotalCommission(commissionSum);
     setTotalPrixSejour(prixSejourSum);
     setTotalFraisMenage(fraisMenageSum);
@@ -168,8 +174,9 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
             taxeDeSejour = 0;
           }
 
-          const montantVerse = prixSejour + fraisMenage + taxeDeSejour - commissionPlateforme - fraisPaiement;
-          const revenuGenere = montantVerse - fraisMenage - taxeDeSejour; // As per user formula
+          const ca = prixSejour + fraisMenage + taxeDeSejour; // Correct CA calculation
+          const montantVerse = ca - commissionPlateforme - fraisPaiement;
+          const revenuGenere = montantVerse - fraisMenage - taxeDeSejour;
           const commissionHelloKeys = revenuGenere * commissionRate;
 
           processedReservations.push({
@@ -182,6 +189,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
             prixSejour,
             fraisMenage,
             taxeDeSejour,
+            ca,
             revenuGenere,
             commissionHelloKeys,
             montantVerse,
@@ -242,6 +250,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     }
 
     const totalsObject = {
+      totalCA,
       totalCommission,
       totalFraisMenage,
       totalPrixSejour,
@@ -277,11 +286,12 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       },
       error: (err) => `Erreur: ${err.message}`,
     });
-  }, [selectedClientId, invoicePeriod, processedData, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalNuits, totalVoyageurs, totalFacture, helloKeysCollectsRent, transfersBySource, deductInvoice, deductionSource, resetState]);
+  }, [selectedClientId, invoicePeriod, processedData, totalCA, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalNuits, totalVoyageurs, totalFacture, helloKeysCollectsRent, transfersBySource, deductInvoice, deductionSource, resetState]);
 
   const value = {
     file, setFile,
     processedData, setProcessedData,
+    totalCA,
     totalCommission,
     totalPrixSejour,
     totalFraisMenage,

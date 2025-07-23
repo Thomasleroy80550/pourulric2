@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from '@/lib/admin-api';
-import { getUserRooms } from '@/lib/user-room-api';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { format, parseISO, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays, getDaysInMonth, getDaysInYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
@@ -68,30 +68,31 @@ const PerformancePage: React.FC = () => {
       const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
       const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
       const newMonthlyOccupancyData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), occupation: 0 }));
+      const monthlyNights = Array(12).fill(0);
       let totalNightsForYear = 0;
 
       statementsForYear.forEach(s => {
-        const periodMonthStr = s.period.split(' ')[0].toLowerCase();
-        const monthIndex = monthFrToNum[periodMonthStr];
-        if (monthIndex !== undefined) {
-          const netToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
-          newMonthlyFinancialData[monthIndex].ca += s.totals.totalRevenuGenere || 0;
-          newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
-          newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
-          newMonthlyFinancialData[monthIndex].benef += netToPay;
-          newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
+        totalNightsForYear += s.totals.totalNuits || 0;
 
-          let occupiedNightsInMonth = 0;
-          s.invoice_data.forEach(resa => {
-            const nights = differenceInDays(parseISO(resa.depart), parseISO(resa.arrivee));
-            occupiedNightsInMonth += nights > 0 ? nights : 0;
-            totalNightsForYear += nights > 0 ? nights : 0;
-          });
+        s.invoice_data.forEach(resa => {
+          const arrivee = parseISO(resa.arrivee);
+          if (arrivee.getFullYear() === currentYear) {
+            const monthIndex = arrivee.getMonth();
+            const netToPay = (resa.montantVerse || 0) - (resa.taxeDeSejour || 0) - (resa.fraisMenage || 0) - (resa.commissionHelloKeys || 0);
+            newMonthlyFinancialData[monthIndex].ca += resa.revenuGenere || 0;
+            newMonthlyFinancialData[monthIndex].montantVerse += resa.montantVerse || 0;
+            newMonthlyFinancialData[monthIndex].frais += resa.commissionHelloKeys || 0;
+            newMonthlyFinancialData[monthIndex].benef += netToPay;
+            newMonthlyReservationsData[monthIndex].reservations++;
+            monthlyNights[monthIndex] += resa.nuits || 0;
+          }
+        });
+      });
 
-          const daysInCurrentMonth = getDaysInMonth(new Date(currentYear, monthIndex, 1));
-          const totalAvailableNightsInMonth = userRooms.length * daysInCurrentMonth;
-          newMonthlyOccupancyData[monthIndex].occupation = totalAvailableNightsInMonth > 0 ? (occupiedNightsInMonth / totalAvailableNightsInMonth) * 100 : 0;
-        }
+      monthsOfYear.forEach((monthDate, index) => {
+        const daysInMonth = getDaysInMonth(monthDate);
+        const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
+        newMonthlyOccupancyData[index].occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
       });
 
       setMonthlyFinancialData(newMonthlyFinancialData);
@@ -258,7 +259,7 @@ const PerformancePage: React.FC = () => {
                 monthlyOccupancyData,
                 'line',
                 'Taux d\'Occupation Mensuel',
-                [{ key: 'occupation', name: 'Occupation', color: 'hsl(var(--secondary))' }],
+                [{ key: 'occupation', name: 'Occupation', color: '#82ca9d' }],
                 '%'
               )}>
                 Agrandir
@@ -280,7 +281,7 @@ const PerformancePage: React.FC = () => {
                       formatter={(value: number) => `${value.toFixed(2)}%`}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="occupation" stroke="hsl(var(--secondary))" name="Occupation" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="occupation" stroke="#82ca9d" name="Occupation" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
                   </LineChart>
                 </ResponsiveContainer>
               )}

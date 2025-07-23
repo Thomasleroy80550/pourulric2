@@ -14,6 +14,8 @@ import {
   Tooltip,
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -24,14 +26,14 @@ import ObjectiveDialog from "@/components/ObjectiveDialog";
 import { getProfile } from "@/lib/profile-api";
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
-import { getUserRooms } from '@/lib/user-room-api';
-import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore, differenceInDays } from 'date-fns';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore, differenceInDays, getDaysInMonth, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import ForecastDialog from '@/components/ForecastDialog';
 import { FieryProgressBar } from '@/components/FieryProgressBar';
 import { startDashboardTour } from '@/lib/tour';
-import { getMyStatements } from '@/lib/statements-api'; // New data source
+import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
 
 const DONUT_CATEGORIES = [
@@ -62,6 +64,8 @@ const DashboardPage = () => {
   const [financialDataError, setFinancialDataError] = useState<string | null>(null);
 
   const [monthlyFinancialData, setMonthlyFinancialData] = useState<any[]>([]);
+  const [monthlyReservationsData, setMonthlyReservationsData] = useState<any[]>([]);
+  const [monthlyOccupancyData, setMonthlyOccupancyData] = useState<any[]>([]);
 
   const [isObjectiveDialogOpen, setIsObjectiveDialogOpen] = useState(false);
   const [userObjectiveAmount, setUserObjectiveAmount] = useState(0);
@@ -94,16 +98,22 @@ const DashboardPage = () => {
     setIsChartDialogOpen(true);
   };
 
-  const processStatements = (statements: SavedInvoice[], year: number) => {
+  const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[]) => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
     let totalVente = 0, totalRentree = 0, totalFrais = 0, totalResultat = 0, totalNights = 0, totalGuests = 0;
     const channelCounts: { [key: string]: number } = {};
     DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name.toLowerCase()] = 0);
 
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-    const monthlyData = months.map(m => ({ name: m, ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
-    const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
+    const monthsOfYear = eachMonthOfInterval({
+      start: startOfMonth(new Date(year, 0, 1)),
+      end: endOfMonth(new Date(year, 11, 1)),
+    });
+
+    const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
+    const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
+    const newMonthlyOccupancyData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), occupation: 0 }));
+    const monthlyNights = Array(12).fill(0);
 
     statementsForYear.forEach(s => {
       totalVente += s.totals.totalRevenuGenere || 0;
@@ -111,20 +121,23 @@ const DashboardPage = () => {
       totalFrais += s.totals.totalCommission || 0;
       const netToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
       totalResultat += netToPay;
-
-      const periodMonthStr = s.period.split(' ')[0].toLowerCase();
-      const monthIndex = monthFrToNum[periodMonthStr];
-      if (monthIndex !== undefined) {
-        monthlyData[monthIndex].ca += s.totals.totalRevenuGenere || 0;
-        monthlyData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
-        monthlyData[monthIndex].frais += s.totals.totalCommission || 0;
-        monthlyData[monthIndex].benef += netToPay;
-      }
+      totalNights += s.totals.totalNuits || 0;
+      totalGuests += s.totals.totalVoyageurs || 0;
 
       s.invoice_data.forEach(resa => {
-        const nights = differenceInDays(parseISO(resa.depart), parseISO(resa.arrivee));
-        totalNights += nights > 0 ? nights : 0;
-        // Note: Guest count is not in the statement data, so we'll leave it at 0 for now.
+        const arrivee = parseISO(resa.arrivee);
+        if (isValid(arrivee) && arrivee.getFullYear() === year) {
+          const monthIndex = arrivee.getMonth();
+          newMonthlyReservationsData[monthIndex].reservations++;
+          
+          const netToPayResa = resa.montantVerse - resa.taxeDeSejour - resa.fraisMenage - resa.commissionHelloKeys;
+          newMonthlyFinancialData[monthIndex].ca += resa.revenuGenere;
+          newMonthlyFinancialData[monthIndex].montantVerse += resa.montantVerse;
+          newMonthlyFinancialData[monthIndex].frais += resa.commissionHelloKeys;
+          newMonthlyFinancialData[monthIndex].benef += netToPayResa;
+          
+          monthlyNights[monthIndex] += resa.nuits;
+        }
         
         const portail = resa.portail.toLowerCase();
         if (portail.includes('airbnb')) channelCounts['airbnb']++;
@@ -136,6 +149,12 @@ const DashboardPage = () => {
       });
     });
 
+    monthsOfYear.forEach((monthDate, index) => {
+      const daysInMonth = getDaysInMonth(monthDate);
+      const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
+      newMonthlyOccupancyData[index].occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
+    });
+
     setFinancialData(prev => ({
       ...prev,
       venteAnnee: totalVente,
@@ -145,8 +164,10 @@ const DashboardPage = () => {
     }));
     setTotalNightsCurrentYear(totalNights);
     setTotalReservationsCurrentYear(statementsForYear.reduce((acc, s) => acc + s.invoice_data.length, 0));
-    setTotalGuestsCurrentYear(totalGuests); // Will be 0 for now
-    setMonthlyFinancialData(monthlyData);
+    setTotalGuestsCurrentYear(totalGuests);
+    setMonthlyFinancialData(newMonthlyFinancialData);
+    setMonthlyReservationsData(newMonthlyReservationsData);
+    setMonthlyOccupancyData(newMonthlyOccupancyData);
 
     const newActivityData = DONUT_CATEGORIES.map(cat => ({
       ...cat,
@@ -164,12 +185,13 @@ const DashboardPage = () => {
     setKrossbookingStatsError(null);
 
     try {
-      const [userProfile, statements] = await Promise.all([
+      const [userProfile, statements, fetchedUserRooms] = await Promise.all([
         getProfile(),
         getMyStatements(),
+        getUserRooms(),
       ]);
 
-      const { totalNights } = processStatements(statements, currentYear);
+      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms);
 
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
@@ -182,8 +204,6 @@ const DashboardPage = () => {
         setFinancialDataError("Impossible de charger le profil utilisateur.");
       }
 
-      // Fetch Krossbooking stats (for future bookings)
-      const fetchedUserRooms = await getUserRooms();
       const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
 
       const today = new Date();
@@ -517,6 +537,72 @@ const DashboardPage = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* New Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 col-span-full">
+            {/* Réservation / mois Card */}
+            <Card className="shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-semibold">Réservations par mois</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                  monthlyReservationsData,
+                  'bar',
+                  'Réservations par mois',
+                  [{ key: 'reservations', name: 'Réservations', color: 'hsl(var(--accent))' }]
+                )}>
+                  Agrandir
+                </Button>
+              </CardHeader>
+              <CardContent className="h-72">
+                {loadingFinancialData ? (
+                  <Skeleton className="h-full w-full" />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyReservationsData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="reservations" fill="hsl(var(--accent))" name="Réservations" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Occupation Mensuelle Card */}
+            <Card className="shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-semibold">Taux d'Occupation Mensuel</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                  monthlyOccupancyData,
+                  'line',
+                  'Taux d\'Occupation Mensuel',
+                  [{ key: 'occupation', name: 'Occupation', color: '#82ca9d' }],
+                  '%'
+                )}>
+                  Agrandir
+                </Button>
+              </CardHeader>
+              <CardContent className="h-72">
+                {loadingFinancialData ? (
+                  <Skeleton className="h-full w-full" />
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={monthlyOccupancyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis unit="%" />
+                      <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
+                      <Legend />
+                      <Line type="monotone" dataKey="occupation" stroke="#82ca9d" name="Occupation" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
       <MadeWithDyad />

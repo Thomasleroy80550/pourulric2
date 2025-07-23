@@ -27,6 +27,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     totalTaxeDeSejour,
     totalRevenuGenere,
     totalMontantVerse,
+    totalNuits,
+    totalVoyageurs,
     isLoading,
     error,
     fileName, setFileName,
@@ -82,7 +84,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateReservation = (updatedData: Omit<ProcessedReservation, 'revenuGenere' | 'commissionHelloKeys' | 'montantVerse'>, index: number) => {
+  const handleUpdateReservation = (updatedData: Omit<ProcessedReservation, 'revenuGenere' | 'commissionHelloKeys' | 'montantVerse' | 'nuits' | 'voyageurs'>, index: number) => {
     const newData = [...processedData];
     const originalReservation = newData[index];
 
@@ -209,6 +211,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         <TableHead>Portail</TableHead>
                         <TableHead>Voyageur</TableHead>
                         <TableHead>Arrivée</TableHead>
+                        <TableHead>Nuits</TableHead>
+                        <TableHead>Voyageurs</TableHead>
                         <TableHead>Prix Séjour</TableHead>
                         <TableHead>Frais Ménage</TableHead>
                         <TableHead>Taxe Séjour</TableHead>
@@ -219,12 +223,14 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 11 : 10}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
+                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 13 : 12}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
                         <TableRow key={index}>
                           {helloKeysCollectsRent && <TableCell><Checkbox checked={selectedReservations.has(index)} onCheckedChange={(checked) => { const newSet = new Set(selectedReservations); if (checked) newSet.add(index); else newSet.delete(index); setSelectedReservations(newSet); }} /></TableCell>}
                           <TableCell>{row.portail}</TableCell>
                           <TableCell>{row.voyageur}</TableCell>
                           <TableCell>{row.arrivee}</TableCell>
+                          <TableCell>{row.nuits}</TableCell>
+                          <TableCell>{row.voyageurs}</TableCell>
                           <TableCell>{row.prixSejour.toFixed(2)}€</TableCell>
                           <TableCell>{row.fraisMenage.toFixed(2)}€</TableCell>
                           <TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell>
@@ -237,11 +243,13 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 11 : 10} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
+                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 13 : 12} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold">
                         <TableCell colSpan={helloKeysCollectsRent ? 4 : 3}>Totaux</TableCell>
+                        <TableCell>{totalNuits}</TableCell>
+                        <TableCell>{totalVoyageurs}</TableCell>
                         <TableCell>{totalPrixSejour.toFixed(2)}€</TableCell>
                         <TableCell>{totalFraisMenage.toFixed(2)}€</TableCell>
                         <TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell>

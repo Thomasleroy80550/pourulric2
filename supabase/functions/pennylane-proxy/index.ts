@@ -14,6 +14,7 @@ serve(async (req) => {
   }
 
   try {
+    console.log("--- Pennylane Proxy Function Start ---");
     // 1. Authenticate the user with Supabase
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -29,6 +30,7 @@ serve(async (req) => {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+    console.log(`Authenticated user ID: ${user.id}`);
 
     // 2. Fetch the user's Pennylane Customer ID from their profile
     const { data: profile, error: profileError } = await supabaseClient
@@ -45,19 +47,21 @@ serve(async (req) => {
       });
     }
     const pennylaneCustomerId = profile.pennylane_customer_id;
-    console.log(`Fetching Pennylane invoices for customer ID: ${pennylaneCustomerId}`);
+    console.log(`Retrieved Pennylane Customer ID from profile: ${pennylaneCustomerId}`);
 
     // 3. Get the Pennylane API key from secrets
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
     if (!PENNYLANE_API_KEY) {
+      console.error("PENNYLANE_API_KEY environment variable is not set.");
       throw new Error("Missing PENNYLANE_API_KEY in environment variables.");
     }
+    console.log(`PENNYLANE_API_KEY is set: ${!!PENNYLANE_API_KEY}`);
 
     // 4. Call the Pennylane API using the general endpoint with a filter
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
     const filterObject = [
       {
-        "field": "customer_id", // Corrected field name as per Pennylane API documentation
+        "field": "customer_id",
         "operator": "eq",
         "value": pennylaneCustomerId
       }
@@ -65,6 +69,8 @@ serve(async (req) => {
     url.searchParams.set('filter', JSON.stringify(filterObject));
     url.searchParams.set('sort', '-date'); // Sort by most recent date
     url.searchParams.set('limit', '100'); // Fetch up to 100 invoices
+
+    console.log(`Calling Pennylane API URL: ${url.toString()}`);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -74,15 +80,26 @@ serve(async (req) => {
       },
     });
 
+    console.log(`Pennylane API Response Status: ${response.status}`);
+    const rawResponseText = await response.clone().text(); // Clone response to read text without consuming body
+    console.log("Pennylane API Raw Response Body:", rawResponseText);
+
     if (!response.ok) {
-      const errorBody = await response.text();
+      let errorBodyParsed;
+      try {
+        errorBodyParsed = JSON.parse(rawResponseText);
+      } catch (e) {
+        errorBodyParsed = rawResponseText;
+      }
       console.error(`Pennylane API returned non-OK status: ${response.status} ${response.statusText}`);
-      console.error("Pennylane API Error Body:", errorBody);
-      throw new Error(`Pennylane API error: ${response.status} ${response.statusText} - ${errorBody}`);
+      console.error("Pennylane API Error Body (parsed if JSON):", errorBodyParsed);
+      throw new Error(`Pennylane API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorBodyParsed)}`);
     }
 
-    const data = await response.json();
+    const data = JSON.parse(rawResponseText); // Parse the raw text
     console.log(`Pennylane API returned ${data.items?.length || 0} invoices for customer ID: ${pennylaneCustomerId}`);
+    console.log("Pennylane API Parsed Data (first 5 items):", data.items ? data.items.slice(0, 5) : "No items");
+
 
     // 5. Return the data to the client
     return new Response(JSON.stringify(data), {
@@ -96,5 +113,7 @@ serve(async (req) => {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
+  } finally {
+    console.log("--- Pennylane Proxy Function End ---");
   }
 });

@@ -153,6 +153,30 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     };
   }, [revalidateSessionAndProfile]);
 
+  const handleAcceptCguv = async () => {
+    console.log("Handling CGUV acceptance...");
+    try {
+      const wasFirstTimeAccepting = !profile?.cguv_accepted_at;
+
+      const updatedProfile = await updateProfile({
+        cguv_accepted_at: new Date().toISOString(),
+        cguv_version: CURRENT_CGUV_VERSION,
+      });
+
+      setProfile(updatedProfile); // Update local profile state
+      setShowCguvModal(false); // Close the modal
+      toast.success("Merci d'avoir accepté les conditions générales.");
+
+      if (wasFirstTimeAccepting) {
+        console.log("First time accepting CGUV, showing confetti.");
+        setShowOnboardingConfetti(true);
+      }
+    } catch (error: any) {
+      console.error("Error accepting CGUV:", error);
+      toast.error(`Erreur lors de l'acceptation des CGUV : ${error.message}`);
+    }
+  };
+
   console.log("SessionContextProvider - Before return. Loading:", loading, "showCguvModal:", showCguvModal, "showOnboardingConfetti:", showOnboardingConfetti);
 
   if (loading) {

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRoom } from "./user-room-api"; // Import UserRoom
+import { createNotification } from "./notifications-api"; // Import the new function
 
 interface KrossbookingReservation {
   id: string; // id_reservation from Krossbooking
@@ -250,7 +251,19 @@ export async function fetchKrossbookingHousekeepingTasks(
  * @returns A promise that resolves to the response data from the Edge Function.
  */
 export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {
-  return callKrossbookingProxy('save_reservation', payload);
+  const response = await callKrossbookingProxy('save_reservation', payload);
+
+  // After successfully saving, create a notification for the user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user && !payload.id_reservation) { // Only notify on creation, not update
+    await createNotification(
+      user.id,
+      `Nouvelle réservation propriétaire créée : ${payload.label}`,
+      '/calendar' // Link to the calendar page
+    );
+  }
+
+  return response;
 }
 
 /**

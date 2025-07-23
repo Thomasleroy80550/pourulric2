@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles, Shield } from 'lucide-react';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles, Shield, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -15,7 +15,10 @@ import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AICopilotDialog from './AICopilotDialog';
 import NewFeaturesBanner from './NewFeaturesBanner';
-import { useSession } from './SessionContextProvider'; // Import useSession
+import { useSession } from './SessionContextProvider';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -40,11 +43,10 @@ const bottomNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
 ];
 
-// Reusable Sidebar content
 const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
   const [activeSection, setActiveSection] = useState<'gestion' | 'decouvrir'>('gestion');
   const location = useLocation();
-  const { profile } = useSession(); // Get profile to check for admin role
+  const { profile } = useSession();
 
   const currentNavigationItems = activeSection === 'gestion' ? gestionNavigationItems : decouvrirNavigationItems;
 
@@ -146,6 +148,34 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+    try {
+      const notifs = await getNotifications();
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter(n => !n.is_read).length);
+    } catch (error) {
+      console.error("Failed to fetch notifications", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    // Set up a listener for real-time updates on the notifications table
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
+        console.log('Change received!', payload);
+        fetchNotifications(); // Refetch notifications on any change
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -156,30 +186,38 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       toast.success("Déconnexion réussie !");
       navigate('/login');
     } catch (error: any) {
       toast.error(`Erreur lors de la déconnexion : ${error.message}`);
-      console.error("Logout error:", error);
     }
   };
 
-  console.log("MainLayout is rendering!");
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.is_read) {
+      await markNotificationAsRead(notification.id);
+      fetchNotifications(); // Refresh list
+    }
+    if (notification.link) {
+      navigate(notification.link);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    await markAllNotificationsAsRead();
+    fetchNotifications(); // Refresh list
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
-      {/* Sidebar for Desktop */}
       {!isMobile && (
         <aside className="w-64 bg-sidebar text-sidebar-foreground p-4 flex flex-col border-r border-sidebar-border shadow-lg">
           <SidebarContent />
         </aside>
       )}
 
-      {/* Main content area */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <header className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm">
           <div className="flex items-center space-x-4">
             {isMobile && (
@@ -202,14 +240,48 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <Plus className="h-4 w-4" />
               <span className="ml-2 hidden xl:inline-block">Actions rapides</span>
             </Button>
-            {/* New AI Copilot Button */}
             <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
               <Sparkles className="h-5 w-5 text-blue-500" />
             </Button>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />
-            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500 flex items-center justify-center text-white text-[10px]">
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-80" align="end">
+                <DropdownMenuLabel className="flex justify-between items-center">
+                  <span>Notifications</span>
+                  {unreadCount > 0 && (
+                    <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} className="h-auto p-1">
+                      <CheckCheck className="h-4 w-4 mr-1" /> Tout marquer comme lu
+                    </Button>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.length > 0 ? (
+                  notifications.map(notif => (
+                    <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className={cn("cursor-pointer", !notif.is_read && "bg-blue-50 dark:bg-blue-900/20")}>
+                      <div className="flex items-start space-x-3">
+                        {!notif.is_read && <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5"></div>}
+                        <div className={cn("flex-1", notif.is_read && "pl-5")}>
+                          <p className="text-sm">{notif.message}</p>
+                          <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: fr })}</p>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <p className="text-center text-sm text-gray-500 p-4">Vous n'avez aucune notification.</p>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2">
@@ -234,25 +306,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  Settings
-                </DropdownMenuItem>
+                <DropdownMenuItem>Profile</DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  Log out
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
 
-        {/* New Features Banner */}
         <NewFeaturesBanner />
 
-        {/* Main content area for pages */}
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>

@@ -54,11 +54,13 @@ serve(async (req) => {
 
     // 4. Call the Pennylane API with the corrected filter format
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
-    const filterObject = {
-      customer_id: {
-        eq: pennylaneCustomerId
+    const filterObject = [
+      {
+        "field": "customer_id",
+        "operator": "eq",
+        "value": pennylaneCustomerId
       }
-    };
+    ];
     url.searchParams.set('filter', JSON.stringify(filterObject));
     url.searchParams.set('sort', '-date'); // Sort by most recent date
     url.searchParams.set('limit', '100'); // Fetch up to 100 invoices

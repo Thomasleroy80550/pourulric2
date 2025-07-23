@@ -125,3 +125,22 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
     throw new Error(`Erreur lors de la suppression du relevé : ${error.message}`);
   }
 }
+
+/**
+ * Creates a new user. This is an admin-only function.
+ * It invites a user by email.
+ * @param userData The user data.
+ * @returns A promise that resolves with the created user data.
+ */
+export async function createUser(userData: { email: string; first_name: string; last_name: string; role: string; }) {
+  const { data, error } = await supabase.functions.invoke('create-user-proxy', {
+    body: userData,
+  });
+
+  if (error) {
+    console.error('Error creating user:', error);
+    throw new Error(`Erreur lors de la création de l'utilisateur : ${error.message}`);
+  }
+
+  return data;
+}

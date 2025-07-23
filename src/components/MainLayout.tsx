@@ -27,11 +27,7 @@ const gestionNavigationItems = [
   { name: 'Réservations', href: '/bookings', icon: Bookmark },
   { name: 'Performances', href: '/performance', icon: TrendingUp },
   { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
-  { name: 'Comptabilité', href: '/accounting', icon: Banknote },
-  { name: 'Factures', href: '/invoices', icon: FileText },
-  { name: 'Relevés', href: '/statements', icon: FileText },
-  { name: 'Bilans', href: '/balances', icon: FileText },
-  { name: 'Rapports', href: '/reports', icon: FileText },
+  { name: 'Finances', href: '/finances', icon: Banknote },
   { name: 'Aides', href: '/help', icon: LifeBuoy },
 ];
 
@@ -103,7 +99,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
                 className={cn(
                   "flex items-center px-4 py-2.5 rounded-full text-[15px] text-sidebar-foreground font-medium tracking-wide transition-all",
                   "hover:bg-transparent hover:opacity-80",
-                  location.pathname === item.href ? 'bg-transparent opacity-100' : ''
+                  location.pathname.startsWith(item.href) && item.href !== '/' || location.pathname === item.href ? 'bg-transparent opacity-100' : ''
                 )}
                 onClick={onLinkClick}
               >

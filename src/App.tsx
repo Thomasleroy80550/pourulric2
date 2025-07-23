@@ -8,9 +8,6 @@ import CalendarPage from "./pages/CalendarPage";
 import BookingsPage from "./pages/BookingsPage";
 import PerformancePage from "./pages/PerformancePage";
 import ReviewsPage from "./pages/ReviewsPage";
-import AccountingPage from "./pages/AccountingPage";
-import BalancesPage from "./pages/BalancesPage";
-import ReportsPage from "./pages/ReportsPage";
 import HelpPage from "./pages/HelpPage";
 import ModulesPage from "./pages/ModulesPage";
 import RoadmapPage from "./pages/RoadmapPage";
@@ -24,11 +21,10 @@ import ProfilePage from "./pages/ProfilePage";
 import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
-import InvoicesPage from "./pages/InvoicesPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
-import StatementsPage from "./pages/StatementsPage";
 import AdminStatementsPage from "./pages/AdminStatementsPage";
-import AdminUsersPage from "./pages/AdminUsersPage"; // Import the new admin page
+import AdminUsersPage from "./pages/AdminUsersPage";
+import FinancePage from "./pages/FinancePage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
@@ -50,22 +46,18 @@ const App = () => (
                 <Route path="/admin/pages" element={<PageCreator />} />
                 <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
                 <Route path="/admin/statements" element={<AdminStatementsPage />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} /> {/* Add the new admin route */}
+                <Route path="/admin/users" element={<AdminUsersPage />} />
                 <Route path="/pages/:slug" element={<ContentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/blog" element={<BlogPage />} />
                 <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                 <Route path="/promotion" element={<PromotionPage />} />
-                <Route path="/invoices" element={<InvoicesPage />} />
-                <Route path="/statements" element={<StatementsPage />} />
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/bookings" element={<BookingsPage />} />
                 <Route path="/performance" element={<PerformancePage />} />
                 <Route path="/reviews" element={<ReviewsPage />} />
-                <Route path="/accounting" element={<AccountingPage />} />
-                <Route path="/balances" element={<BalancesPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/finances" element={<FinancePage />} />
                 <Route path="/help" element={<HelpPage />} />
                 <Route path="/modules" element={<ModulesPage />} />
                 <Route path="/roadmap" element={<RoadmapPage />} />

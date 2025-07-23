@@ -12,14 +12,14 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   const invoiceData = statement.invoice_data;
 
   // Defensive checks for totals properties to avoid errors with older data
-  const totalRevenuNet = totals.totalRevenuNet || 0;
+  const totalRevenuGenere = totals.totalRevenuGenere || totals.totalRevenuNet || 0; // Fallback for older invoices
   const totalCommission = totals.totalCommission || 0;
   const totalFraisMenage = totals.totalFraisMenage || 0;
   
   // Calculate totalFacture with a fallback for older records that might not have this field
   const totalFacture = totals.totalFacture !== undefined ? totals.totalFacture : (totalCommission + totalFraisMenage);
   
-  const netToPay = totalRevenuNet - totalCommission - totalFraisMenage;
+  const netToPay = totalRevenuGenere - totalCommission - totalFraisMenage;
 
   return (
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans a4-container">
@@ -45,7 +45,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Total des séjours (net de commission plateforme)</p>
-              <p className="font-semibold text-lg">{totalRevenuNet.toFixed(2)}€</p>
+              <p className="font-semibold text-lg">{totalRevenuGenere.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Total des frais (Ménage + Commission HK)</p>
@@ -64,11 +64,11 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <h2 className="text-lg font-semibold mb-4 text-gray-800">Calcul du montant net</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Revenu net total des séjours</p>
-              <p className="font-semibold">{totalRevenuNet.toFixed(2)}€</p>
+              <p className="text-gray-600">Revenu généré total des séjours</p>
+              <p className="font-semibold">{totalRevenuGenere.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Commission Hello Keys (26%)</p>
+              <p className="text-gray-600">Commission Hello Keys</p>
               <p className="font-semibold text-red-600">- {totalCommission.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">

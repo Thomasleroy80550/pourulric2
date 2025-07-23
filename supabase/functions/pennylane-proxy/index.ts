@@ -45,7 +45,7 @@ serve(async (req) => {
       });
     }
     const pennylaneCustomerId = profile.pennylane_customer_id;
-    console.log(`Fetching Pennylane invoices for customer ID: ${pennylaneCustomerId}`); // Added log
+    console.log(`Fetching Pennylane invoices for customer ID: ${pennylaneCustomerId}`);
 
     // 3. Get the Pennylane API key from secrets
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
@@ -53,16 +53,8 @@ serve(async (req) => {
       throw new Error("Missing PENNYLANE_API_KEY in environment variables.");
     }
 
-    // 4. Call the Pennylane API with the corrected filter format
-    const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
-    const filterObject = [
-      {
-        "field": "customer_id",
-        "operator": "eq",
-        "value": pennylaneCustomerId
-      }
-    ];
-    url.searchParams.set('filter', JSON.stringify(filterObject));
+    // 4. Call the Pennylane API using the customer-specific endpoint
+    const url = new URL(`${PENNYLANE_API_BASE_URL}/customers/${pennylaneCustomerId}/customer_invoices`);
     url.searchParams.set('sort', '-date'); // Sort by most recent date
     url.searchParams.set('limit', '100'); // Fetch up to 100 invoices
 
@@ -82,7 +74,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log(`Pennylane API returned ${data.items?.length || 0} invoices for customer ID: ${pennylaneCustomerId}`); // Added log
+    console.log(`Pennylane API returned ${data.items?.length || 0} invoices for customer ID: ${pennylaneCustomerId}`);
 
     // 5. Return the data to the client
     return new Response(JSON.stringify(data), {

@@ -15,6 +15,16 @@ export interface SavedInvoice {
   } | null;
 }
 
+export interface NewUserPayload {
+  email: string;
+  password?: string;
+  first_name: string;
+  last_name: string;
+  role: 'user' | 'admin';
+}
+
+const CREATE_USER_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/create-user-proxy";
+
 /**
  * Fetches all user profiles. Intended for admin use.
  * @returns A promise that resolves to an array of UserProfile objects.
@@ -30,6 +40,31 @@ export async function getAllProfiles(): Promise<UserProfile[]> {
     throw new Error(`Erreur lors de la récupération des profils : ${error.message}`);
   }
   return data || [];
+}
+
+/**
+ * Creates a new user via a secure Edge Function. Intended for admin use.
+ * @param userData The data for the new user.
+ * @returns The newly created user data.
+ */
+export async function createUser(userData: NewUserPayload): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Admin not authenticated.");
+
+  const response = await fetch(CREATE_USER_PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(userData),
+  });
+
+  const responseData = await response.json();
+  if (!response.ok) {
+    throw new Error(responseData.error || "Failed to create user.");
+  }
+  return responseData.data;
 }
 
 /**

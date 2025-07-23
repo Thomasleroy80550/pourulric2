@@ -28,7 +28,8 @@ import PromotionPage from "./pages/PromotionPage";
 import InvoicesPage from "./pages/InvoicesPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
 import StatementsPage from "./pages/StatementsPage";
-import AdminStatementsPage from "./pages/AdminStatementsPage"; // Import the new admin page
+import AdminStatementsPage from "./pages/AdminStatementsPage";
+import AdminUsersPage from "./pages/AdminUsersPage"; // Import the new admin page
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
@@ -49,7 +50,8 @@ const App = () => (
                 <Route path="/admin" element={<AdminDashboardPage />} />
                 <Route path="/admin/pages" element={<PageCreator />} />
                 <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
-                <Route path="/admin/statements" element={<AdminStatementsPage />} /> {/* Add the new admin route */}
+                <Route path="/admin/statements" element={<AdminStatementsPage />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} /> {/* Add the new admin route */}
                 <Route path="/pages/:slug" element={<ContentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />

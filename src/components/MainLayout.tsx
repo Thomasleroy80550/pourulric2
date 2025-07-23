@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles, FilePlus2 } from 'lucide-react';
+import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AICopilotDialog from './AICopilotDialog';
 import NewFeaturesBanner from './NewFeaturesBanner';
-// The logo is now in the public folder, so we don't need to import it.
+import { useSession } from './SessionContextProvider'; // Import useSession
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -29,8 +29,7 @@ const gestionNavigationItems = [
   { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
   { name: 'Comptabilité', href: '/accounting', icon: Banknote },
   { name: 'Factures', href: '/invoices', icon: FileText },
-  { name: 'Relevés', href: '/statements', icon: FileText }, // Added new link
-  { name: 'Générer Facture', href: '/admin/invoice-generation', icon: FilePlus2 },
+  { name: 'Relevés', href: '/statements', icon: FileText },
   { name: 'Bilans', href: '/balances', icon: FileText },
   { name: 'Rapports', href: '/reports', icon: FileText },
   { name: 'Mes Données GSheet', href: '/my-google-sheet-data', icon: FileSpreadsheet },
@@ -50,6 +49,7 @@ const bottomNavigationItems = [
 const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
   const [activeSection, setActiveSection] = useState<'gestion' | 'decouvrir'>('gestion');
   const location = useLocation();
+  const { profile } = useSession(); // Get profile to check for admin role
 
   const currentNavigationItems = activeSection === 'gestion' ? gestionNavigationItems : decouvrirNavigationItems;
 
@@ -117,6 +117,16 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
       </nav>
 
       <nav className="mt-auto pt-4 border-t border-sidebar-border">
+        {profile?.role === 'admin' && (
+          <div className="mb-2">
+            <Link to="/admin" onClick={onLinkClick}>
+              <Button variant="outline" className="w-full justify-start bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90">
+                <Shield className="h-5 w-5 mr-3" />
+                Administration
+              </Button>
+            </Link>
+          </div>
+        )}
         <ul className="">
           {bottomNavigationItems.map((item) => (
             <li key={item.name} className="mt-3.5 first:mt-0">

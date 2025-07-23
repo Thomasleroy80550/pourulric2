@@ -64,15 +64,27 @@ export async function getSavedInvoices(): Promise<SavedInvoice[]> {
  * @param totals The calculated totals for the invoice.
  * @returns A promise that resolves when the invoice is saved.
  */
-export async function saveInvoice(userId: string, period: string, invoiceData: any, totals: any): Promise<void> {
+export async function saveInvoice(userId: any, period: string, invoiceData: any, totals: any): Promise<void> {
+  const payload = {
+    user_id: userId,
+    period: period,
+    invoice_data: invoiceData,
+    totals: totals,
+  };
+
+  // The error indicates that an object might be passed as the first argument.
+  // Let's check for that and adjust the payload accordingly.
+  if (typeof userId === 'object' && userId !== null) {
+    const passedObject = userId;
+    payload.user_id = passedObject.user_id;
+    payload.period = passedObject.period;
+    payload.invoice_data = passedObject.invoice_data;
+    payload.totals = passedObject.totals;
+  }
+
   const { data, error } = await supabase
     .from('invoices')
-    .insert({
-      user_id: userId,
-      period: period,
-      invoice_data: invoiceData,
-      totals: totals,
-    })
+    .insert(payload)
     .select()
     .single();
 
@@ -84,8 +96,8 @@ export async function saveInvoice(userId: string, period: string, invoiceData: a
   // Create a notification for the user
   if (data) {
     await createNotification(
-      userId,
-      `Votre nouveau relevé pour la période "${period}" est disponible.`,
+      payload.user_id,
+      `Votre nouveau relevé pour la période "${payload.period}" est disponible.`,
       '/finances' // Link to the finances page
     );
   }

@@ -20,6 +20,8 @@ import {
   YAxis,
   CartesianGrid,
   Legend,
+  AreaChart,
+  Area,
 } from "recharts";
 import React, { useState, useEffect, useCallback } from "react";
 import ObjectiveDialog from "@/components/ObjectiveDialog";
@@ -35,6 +37,7 @@ import { FieryProgressBar } from '@/components/FieryProgressBar';
 import { startDashboardTour } from '@/lib/tour';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
+import CustomChartTooltip from '@/components/CustomChartTooltip';
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -525,22 +528,23 @@ const DashboardPage = () => {
                 </Alert>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} isAnimationActive={true}>
+                  <AreaChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                    <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                    <YAxis className="text-sm text-gray-600 dark:text-gray-400" />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-                      labelStyle={{ color: 'hsl(var(--foreground))' }}
-                      itemStyle={{ color: 'hsl(var(--foreground))' }}
-                      formatter={(value: number) => `${value}€`}
-                    />
-                    <Legend />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="benef" stroke="#22c55e" name="Bénéfice" strokeWidth={3} dot={{ r: 4 }} animationDuration={1500} animationEasing="ease-in-out" />
-                  </LineChart>
+                    <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
+                    <YAxis className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
+                    <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
+                    <Legend wrapperStyle={{ fontSize: '14px' }} />
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} />
+                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} />
+                  </AreaChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
@@ -567,12 +571,18 @@ const DashboardPage = () => {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyReservationsData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="reservations" fill="hsl(var(--accent))" name="Réservations" />
+                      <defs>
+                        <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0.2}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} className="text-xs" tickLine={false} axisLine={false} />
+                      <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                      <Legend wrapperStyle={{ fontSize: '14px' }} />
+                      <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -598,14 +608,20 @@ const DashboardPage = () => {
                   <Skeleton className="h-full w-full" />
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyOccupancyData}>
+                    <AreaChart data={monthlyOccupancyData}>
+                      <defs>
+                        <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis unit="%" />
-                      <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
-                      <Legend />
-                      <Line type="monotone" dataKey="occupation" stroke="#82ca9d" name="Occupation" />
-                    </LineChart>
+                      <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
+                      <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
+                      <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
+                      <Legend wrapperStyle={{ fontSize: '14px' }} />
+                      <Area type="monotone" dataKey="occupation" stroke="#82ca9d" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} />
+                    </AreaChart>
                   </ResponsiveContainer>
                 )}
               </CardContent>

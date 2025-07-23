@@ -57,7 +57,7 @@ serve(async (req) => {
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
     const filterObject = [
       {
-        "field": "customer_id",
+        "field": "customer.id",
         "operator": "eq",
         "value": pennylaneCustomerId
       }

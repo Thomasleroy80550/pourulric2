@@ -28,14 +28,14 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg md:max-w-2xl lg:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader className="no-print">
           <DialogTitle>Aperçu du Relevé</DialogTitle>
           <DialogDescription>
             Voici un aperçu du relevé pour {statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client inconnu'}. Vous pouvez l'imprimer.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow rounded-md bg-gray-200 p-4">
+        <ScrollArea className="flex-grow rounded-md bg-gray-200">
           <StatementPrintLayout statement={statement} />
         </ScrollArea>
         <DialogFooter className="no-print">

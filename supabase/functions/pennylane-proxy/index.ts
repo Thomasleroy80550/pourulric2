@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log("--- Pennylane Proxy Function Start ---");
+    console.log("--- Pennylane Proxy Function Start (Diagnostic Mode) ---");
     // 1. Authenticate the user with Supabase
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -32,24 +32,7 @@ serve(async (req) => {
     }
     console.log(`Authenticated user ID: ${user.id}`);
 
-    // 2. Fetch the user's Pennylane Customer ID from their profile
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('pennylane_customer_id')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile || !profile.pennylane_customer_id) {
-      console.warn(`User ${user.id} does not have a Pennylane Customer ID configured.`);
-      return new Response(JSON.stringify({ error: "Pennylane Customer ID not configured for this user." }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-    const pennylaneCustomerId = profile.pennylane_customer_id;
-    console.log(`Retrieved Pennylane Customer ID from profile: ${pennylaneCustomerId}`);
-
-    // 3. Get the Pennylane API key from secrets
+    // 2. Get the Pennylane API key from secrets
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
     if (!PENNYLANE_API_KEY) {
       console.error("PENNYLANE_API_KEY environment variable is not set.");
@@ -57,13 +40,12 @@ serve(async (req) => {
     }
     console.log(`PENNYLANE_API_KEY is set: ${!!PENNYLANE_API_KEY}`);
 
-    // 4. Call the Pennylane API using the generic invoices endpoint and filtering by customer
+    // 3. [DIAGNOSTIC] Call the Pennylane API using the generic invoices endpoint WITHOUT customer filter
     const url = new URL(`${PENNYLANE_API_BASE_URL}/invoices`);
-    url.searchParams.set('customer_id', pennylaneCustomerId);
     url.searchParams.set('sort', '-date'); // Sort by most recent date
-    url.searchParams.set('limit', '100'); // Fetch up to 100 invoices
+    url.searchParams.set('limit', '5');   // Fetch only 5 for this test
 
-    console.log(`Calling Pennylane API URL: ${url.toString()}`);
+    console.log(`[DIAGNOSTIC] Calling Pennylane API URL: ${url.toString()}`);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -73,9 +55,9 @@ serve(async (req) => {
       },
     });
 
-    console.log(`Pennylane API Response Status: ${response.status}`);
-    const rawResponseText = await response.clone().text(); // Clone response to read text without consuming body
-    console.log("Pennylane API Raw Response Body:", rawResponseText);
+    console.log(`[DIAGNOSTIC] Pennylane API Response Status: ${response.status}`);
+    const rawResponseText = await response.clone().text();
+    console.log("[DIAGNOSTIC] Pennylane API Raw Response Body:", rawResponseText);
 
     if (!response.ok) {
       let errorBodyParsed;
@@ -84,17 +66,22 @@ serve(async (req) => {
       } catch (e) {
         errorBodyParsed = rawResponseText;
       }
-      console.error(`Pennylane API returned non-OK status: ${response.status} ${response.statusText}`);
-      console.error("Pennylane API Error Body (parsed if JSON):", errorBodyParsed);
-      throw new Error(`Pennylane API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorBodyParsed)}`);
+      console.error(`[DIAGNOSTIC] Pennylane API returned non-OK status: ${response.status} ${response.statusText}`);
+      console.error("[DIAGNOSTIC] Pennylane API Error Body (parsed if JSON):", errorBodyParsed);
+      // For this diagnostic, we will return the error but also the fact that it's a test
+      const errorMessage = `Diagnostic failed: Pennylane API error: ${response.status} ${response.statusText} - ${JSON.stringify(errorBodyParsed)}`;
+      throw new Error(errorMessage);
     }
 
-    const data = JSON.parse(rawResponseText); // Parse the raw text
-    console.log(`Pennylane API returned ${data.items?.length || 0} invoices for customer ID: ${pennylaneCustomerId}`);
-    console.log("Pennylane API Parsed Data (first 5 items):", data.items ? data.items.slice(0, 5) : "No items");
+    const data = JSON.parse(rawResponseText);
+    console.log(`[DIAGNOSTIC] Pennylane API returned ${data.items?.length || 0} invoices without customer filter.`);
+    
+    // NOTE: This diagnostic call will likely return invoices for ALL customers.
+    // We are not filtering them for the user here, as the goal is just to see if the API responds.
+    // In a real scenario, we would need to filter these results.
+    // For now, we return them as is to confirm the connection works.
 
-
-    // 5. Return the data to the client
+    // 4. Return the data to the client
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

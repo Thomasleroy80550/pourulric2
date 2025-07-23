@@ -97,7 +97,7 @@ export async function saveInvoice(userId: string, period: string, invoiceData: a
  * @param comment The comment text.
  * @returns A promise that resolves when the comment is saved.
  */
-export async function saveAdminComment(invoiceId: string, comment: string): Promise<void> {
+export async function updateInvoiceComment(invoiceId: string, comment: string): Promise<void> {
   const { error } = await supabase
     .from('invoices')
     .update({ admin_comment: comment })

@@ -92,7 +92,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       {/* Detailed Reservations Table */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Détail des réservations</h2>
-        <div className="border rounded-lg overflow-x-auto">
+        <div className="border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-100">

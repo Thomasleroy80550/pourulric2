@@ -8,7 +8,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { SavedInvoice } from '@/lib/admin-api';
 import StatementPrintLayout from './StatementPrintLayout';
 import { Printer } from 'lucide-react';
@@ -35,10 +34,10 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
             Voici un aperçu du relevé pour {statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client inconnu'}. Vous pouvez l'imprimer.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow rounded-md bg-gray-200">
+        <div className="flex-grow rounded-md bg-gray-200 overflow-auto">
           <StatementPrintLayout statement={statement} />
-        </ScrollArea>
-        <DialogFooter className="no-print">
+        </div>
+        <DialogFooter className="no-print mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
           <Button onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />

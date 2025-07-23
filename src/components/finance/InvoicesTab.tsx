@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Download, FileText } from 'lucide-react';
+import { Terminal, Download, FileText, WifiOff } from 'lucide-react';
 import { fetchPennylaneInvoices, PennylaneInvoice } from '@/lib/pennylane-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -47,6 +47,34 @@ const InvoicesTab: React.FC = () => {
     }
   };
 
+  const renderError = () => {
+    if (!error) return null;
+
+    if (error.includes('error sending request')) {
+      return (
+        <Alert variant="destructive">
+          <WifiOff className="h-4 w-4" />
+          <AlertTitle>Erreur de Connexion au Service de Facturation</AlertTitle>
+          <AlertDescription>
+            <p>Nous ne parvenons pas à contacter le service Pennylane pour le moment. Cela est probablement dû à un problème de réseau temporaire entre nos serveurs et les leurs.</p>
+            <p className="mt-2 text-sm">Veuillez réessayer dans quelques instants. Si le problème persiste, il se peut qu'une intervention technique soit nécessaire au niveau de l'infrastructure.</p>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <Alert variant="destructive">
+        <Terminal className="h-4 w-4" />
+        <AlertTitle>Erreur de chargement</AlertTitle>
+        <AlertDescription>
+          {error}
+          <p className="mt-2 text-sm">Veuillez vérifier que votre ID client Pennylane est correctement configuré dans votre profil et que la clé API est valide.</p>
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   return (
     <div className="mt-6">
       <Card className="shadow-md">
@@ -65,14 +93,7 @@ const InvoicesTab: React.FC = () => {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : error ? (
-            <Alert variant="destructive">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Erreur de chargement</AlertTitle>
-              <AlertDescription>
-                {error}
-                <p className="mt-2 text-sm">Veuillez vérifier que votre ID client Pennylane est correctement configuré dans votre profil et que la clé API est valide.</p>
-              </AlertDescription>
-            </Alert>
+            renderError()
           ) : invoices.length === 0 ? (
             <p className="text-center text-gray-500 py-8">Aucune facture trouvée.</p>
           ) : (

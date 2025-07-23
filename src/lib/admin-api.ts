@@ -23,7 +23,15 @@ export interface NewUserPayload {
   role: 'user' | 'admin';
 }
 
+export interface UpdateUserPayload {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  role: 'user' | 'admin';
+}
+
 const CREATE_USER_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/create-user-proxy";
+const UPDATE_USER_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/update-user-proxy";
 
 /**
  * Fetches all user profiles. Intended for admin use.
@@ -66,6 +74,32 @@ export async function createUser(userData: NewUserPayload): Promise<any> {
   }
   return responseData.data;
 }
+
+/**
+ * Updates a user's profile via a secure Edge Function. Intended for admin use.
+ * @param userData The data to update for the user.
+ * @returns The updated user profile data.
+ */
+export async function updateUser(userData: UpdateUserPayload): Promise<any> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Admin not authenticated.");
+
+  const response = await fetch(UPDATE_USER_PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(userData),
+  });
+
+  const responseData = await response.json();
+  if (!response.ok) {
+    throw new Error(responseData.error || "Failed to update user.");
+  }
+  return responseData.data;
+}
+
 
 /**
  * Saves a generated invoice to the database.

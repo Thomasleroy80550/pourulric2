@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { createNotification } from "./notifications-api"; // Import the new function
+import { createNotification } from "./notifications-api";
+import { UserProfile } from "./profile-api";
 
 export interface SavedInvoice {
   id: string;
@@ -13,6 +14,23 @@ export interface SavedInvoice {
     first_name: string;
     last_name: string;
   }
+}
+
+/**
+ * Fetches all user profiles. This is an admin-only function.
+ * @returns A promise that resolves to an array of UserProfile objects.
+ */
+export async function getAllProfiles(): Promise<UserProfile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('first_name', { ascending: true });
+
+  if (error) {
+    console.error("Error fetching all profiles:", error);
+    throw new Error(`Erreur lors de la récupération des profils : ${error.message}`);
+  }
+  return data || [];
 }
 
 /**

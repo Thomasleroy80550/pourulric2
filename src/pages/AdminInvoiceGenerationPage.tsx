@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     paymentSources, setPaymentSources,
     deductInvoice, setDeductInvoice,
     deductionSource, setDeductionSource,
+    transfersBySource,
     recalculateTotals,
     processFile,
     handleGenerateInvoice,
@@ -120,30 +121,6 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const totalFacture = totalCommission + totalFraisMenage;
   const factureHT = totalFacture / 1.2;
   const tva = totalFacture - factureHT;
-
-  const transfersBySource = useMemo(() => {
-    const result: { [key: string]: { reservations: ProcessedReservation[], total: number } } = {};
-    paymentSources.forEach(source => {
-      result[source.toLowerCase()] = { reservations: [], total: 0 };
-    });
-
-    selectedReservations.forEach(index => {
-      const resa = processedData[index];
-      if (!resa) return;
-
-      const sourceKey = resa.portail.toLowerCase().includes('airbnb') ? 'airbnb' : 'stripe';
-      if (result[sourceKey]) {
-        result[sourceKey].reservations.push(resa);
-        result[sourceKey].total += resa.montantVerse;
-      }
-    });
-
-    if (deductInvoice && deductionSource && result[deductionSource]) {
-      result[deductionSource].total -= totalFacture;
-    }
-
-    return result;
-  }, [selectedReservations, processedData, paymentSources, deductInvoice, deductionSource, totalFacture]);
 
   return (
     <MainLayout>

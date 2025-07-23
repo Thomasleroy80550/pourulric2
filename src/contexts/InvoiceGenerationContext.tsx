@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback, ReactNode } from 'react';
+import React, { createContext, useState, useContext, useCallback, ReactNode, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
@@ -51,6 +51,7 @@ interface InvoiceGenerationContextType {
   setDeductInvoice: React.Dispatch<React.SetStateAction<boolean>>;
   deductionSource: string;
   setDeductionSource: React.Dispatch<React.SetStateAction<string>>;
+  transfersBySource: { [key: string]: { reservations: ProcessedReservation[], total: number } };
   
   recalculateTotals: (data: ProcessedReservation[]) => void;
   processFile: (fileToProcess: File, commissionRate: number) => Promise<void>;
@@ -79,6 +80,8 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
   const [paymentSources, setPaymentSources] = useState<string[]>([]);
   const [deductInvoice, setDeductInvoice] = useState(false);
   const [deductionSource, setDeductionSource] = useState('');
+
+  const totalFacture = totalCommission + totalFraisMenage;
 
   const resetState = useCallback(() => {
     setFile(null);
@@ -192,6 +195,30 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     }
   }, [recalculateTotals]);
 
+  const transfersBySource = useMemo(() => {
+    const result: { [key: string]: { reservations: ProcessedReservation[], total: number } } = {};
+    paymentSources.forEach(source => {
+      result[source.toLowerCase()] = { reservations: [], total: 0 };
+    });
+
+    selectedReservations.forEach(index => {
+      const resa = processedData[index];
+      if (!resa) return;
+
+      const sourceKey = resa.portail.toLowerCase().includes('airbnb') ? 'airbnb' : 'stripe';
+      if (result[sourceKey]) {
+        result[sourceKey].reservations.push(resa);
+        result[sourceKey].total += resa.montantVerse;
+      }
+    });
+
+    if (deductInvoice && deductionSource && result[deductionSource]) {
+      result[deductionSource].total -= totalFacture;
+    }
+
+    return result;
+  }, [selectedReservations, processedData, paymentSources, deductInvoice, deductionSource, totalFacture]);
+
   const handleGenerateInvoice = useCallback(async () => {
     if (!selectedClientId || !invoicePeriod || processedData.length === 0) {
       toast.error("Veuillez sélectionner un client, définir une période et importer un fichier.");
@@ -205,7 +232,14 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       totalTaxeDeSejour,
       totalRevenuGenere,
       totalMontantVerse,
-      totalFacture: totalCommission + totalFraisMenage,
+      totalFacture,
+      transferDetails: helloKeysCollectsRent ? {
+        sources: transfersBySource,
+        deductionInfo: {
+          deducted: deductInvoice,
+          source: deductionSource,
+        },
+      } : null,
     };
 
     const payload = {
@@ -225,7 +259,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       },
       error: (err) => `Erreur: ${err.message}`,
     });
-  }, [selectedClientId, invoicePeriod, processedData, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, resetState]);
+  }, [selectedClientId, invoicePeriod, processedData, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalFacture, helloKeysCollectsRent, transfersBySource, deductInvoice, deductionSource, resetState]);
 
   const value = {
     file, setFile,
@@ -246,6 +280,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     paymentSources, setPaymentSources,
     deductInvoice, setDeductInvoice,
     deductionSource, setDeductionSource,
+    transfersBySource,
     recalculateTotals,
     processFile,
     resetState,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { SavedInvoice } from '@/lib/admin-api';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 
 interface StatementPrintLayoutProps {
   statement: SavedInvoice;
@@ -22,6 +22,8 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   
   // The final, correct calculation for the owner's payout, starting from the total amount transferred
   const netToPay = totalMontantVerse - totalTaxeDeSejour - totalFraisMenage - totalCommission;
+
+  const transferDetails = totals.transferDetails;
 
   return (
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans">
@@ -90,7 +92,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       </div>
 
       {/* Detailed Reservations Table */}
-      <div>
+      <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Détail des réservations</h2>
         <div className="border rounded-lg overflow-x-auto">
           <Table>
@@ -125,6 +127,44 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           </Table>
         </div>
       </div>
+
+      {/* Transfers Section */}
+      {transferDetails && transferDetails.sources && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Virements à effectuer</h2>
+          <div className="space-y-6">
+            {Object.entries(transferDetails.sources).map(([source, data]: [string, any]) => data.reservations.length > 0 && (
+              <div key={source}>
+                <h3 className="font-semibold mb-2 text-gray-800">Depuis {source.charAt(0).toUpperCase() + source.slice(1)}</h3>
+                <div className="border rounded-lg overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-100">
+                        <TableHead>Voyageur</TableHead>
+                        <TableHead className="text-right">Montant à virer</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.reservations.map((r: any, i: number) => (
+                        <TableRow key={i} className="even:bg-gray-50">
+                          <TableCell>{r.voyageur}</TableCell>
+                          <TableCell className="text-right">{r.montantVerse.toFixed(2)}€</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow className="font-bold bg-gray-100">
+                        <TableCell>Total à virer ({transferDetails.deductionInfo?.deducted && transferDetails.deductionInfo?.source === source ? "facture déduite" : ""})</TableCell>
+                        <TableCell className="text-right">{data.total.toFixed(2)}€</TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Admin Comment Section */}
       {statement.admin_comment && (

@@ -32,7 +32,6 @@ const gestionNavigationItems = [
   { name: 'Relevés', href: '/statements', icon: FileText },
   { name: 'Bilans', href: '/balances', icon: FileText },
   { name: 'Rapports', href: '/reports', icon: FileText },
-  { name: 'Mes Données GSheet', href: '/my-google-sheet-data', icon: FileSpreadsheet },
   { name: 'Aides', href: '/help', icon: LifeBuoy },
 ];
 

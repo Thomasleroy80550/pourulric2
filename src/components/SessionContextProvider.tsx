@@ -9,7 +9,6 @@ import OnboardingConfettiDialog from './OnboardingConfettiDialog';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
-import { callGSheetProxy } from '@/lib/gsheets'; // Import the gsheet proxy function
 
 interface SessionContextType {
   session: Session | null;
@@ -33,31 +32,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const fetchUserProfile = useCallback(async (userSession: Session) => {
     console.log("Fetching user profile...");
     try {
-      let userProfile = await getProfile();
+      const userProfile = await getProfile();
       console.log("User profile fetched:", userProfile);
-
-      // New logic: Check for Pennylane Customer ID and fetch if missing
-      if (userProfile && !userProfile.pennylane_customer_id) {
-        console.log("Pennylane Customer ID is missing. Fetching from Google Sheet...");
-        try {
-          const sheetData = await callGSheetProxy({ action: 'read_sheet', range: 'BT2' });
-          if (sheetData && sheetData[0] && sheetData[0][0]) {
-            const pennylaneId = sheetData[0][0];
-            console.log(`Found Pennylane Customer ID in GSheet: ${pennylaneId}`);
-            
-            const updatedProfile = await updateProfile({ pennylane_customer_id: pennylaneId });
-            console.log("Profile updated with Pennylane ID:", updatedProfile);
-            
-            userProfile = updatedProfile; // Use the updated profile for the rest of the session
-          } else {
-            console.warn("Could not find Pennylane Customer ID in Google Sheet at cell BT2.");
-          }
-        } catch (gsheetError: any) {
-          console.error("Error fetching Pennylane ID from Google Sheet:", gsheetError.message);
-          toast.warning("Impossible de récupérer l'ID client Pennylane depuis Google Sheets. Vous pouvez le configurer manuellement dans votre profil.");
-        }
-      }
-
       setProfile(userProfile);
       return userProfile;
     } catch (error) {
@@ -67,7 +43,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
   }, []);
 
-  // This function will handle the core logic of checking session and profile
   const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
     setLoading(true); // Start loading
     if (currentSession) {
@@ -90,15 +65,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           setShowCguvModal(false);
         }
       } else if (!userProfile && location.pathname !== '/login') {
-        // If session exists but profile couldn't be fetched, or is null,
-        // it might indicate a problem or a new user without a profile entry yet.
-        // For now, we'll assume it's a new user or an error and keep them on login or redirect.
-        // If a profile is mandatory for all pages, they should be redirected.
-        // Given the current flow, if profile is null, it might be a new user who needs to accept CGUV.
-        // The CGUV modal logic already handles this.
         console.log("Session exists but profile not found or error fetching. Checking CGUV status.");
-        // The CGUV modal will be shown if profile is null or CGUV not accepted.
-        // No explicit redirect here, let the CGUV modal handle it.
       }
     } else {
       // No session
@@ -119,22 +86,18 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     console.log("SessionContextProvider useEffect running.");
     let isMounted = true;
 
-    // Supabase auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
       console.log('Auth state changed:', event, currentSession);
-      // When auth state changes, revalidate everything
       revalidateSessionAndProfile(currentSession);
     });
 
-    // Initial session check on mount
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       if (!isMounted) return;
       console.log("Initial getSession result:", initialSession);
       revalidateSessionAndProfile(initialSession);
     });
 
-    // Handle tab visibility change (alt-tab scenario)
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
         console.log('Tab became visible. Re-checking session...');
@@ -163,8 +126,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         cguv_version: CURRENT_CGUV_VERSION,
       });
 
-      setProfile(updatedProfile); // Update local profile state
-      setShowCguvModal(false); // Close the modal
+      setProfile(updatedProfile);
+      setShowCguvModal(false);
       toast.success("Merci d'avoir accepté les conditions générales.");
 
       if (wasFirstTimeAccepting) {
@@ -176,8 +139,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       toast.error(`Erreur lors de l'acceptation des CGUV : ${error.message}`);
     }
   };
-
-  console.log("SessionContextProvider - Before return. Loading:", loading, "showCguvModal:", showCguvModal, "showOnboardingConfetti:", showOnboardingConfetti);
 
   if (loading) {
     return (

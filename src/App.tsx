@@ -21,7 +21,6 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import PageCreator from "./components/PageCreator";
 import ContentPage from "./pages/ContentPage";
 import ProfilePage from "./pages/ProfilePage";
-import GoogleSheetDataPage from "./pages/GoogleSheetDataPage";
 import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
@@ -54,7 +53,6 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsersPage />} /> {/* Add the new admin route */}
                 <Route path="/pages/:slug" element={<ContentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/my-google-sheet-data" element={<GoogleSheetDataPage />} />
                 <Route path="/blog" element={<BlogPage />} />
                 <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                 <Route path="/promotion" element={<PromotionPage />} />

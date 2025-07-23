@@ -24,8 +24,7 @@ const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
-  const [googleSheetId, setGoogleSheetId] = useState<string>('');
-  const [googleSheetTab, setGoogleSheetTab] = useState<string>('COUNTER'); // Default tab name
+  const [pennylaneCustomerId, setPennylaneCustomerId] = useState<string>('');
 
   const fetchProfileAndRooms = async () => {
     setLoading(true);
@@ -36,8 +35,7 @@ const ProfilePage: React.FC = () => {
       if (fetchedProfile) {
         setFirstName(fetchedProfile.first_name || '');
         setLastName(fetchedProfile.last_name || '');
-        setGoogleSheetId(fetchedProfile.google_sheet_id || '');
-        setGoogleSheetTab(fetchedProfile.google_sheet_tab || 'COUNTER');
+        setPennylaneCustomerId(fetchedProfile.pennylane_customer_id || '');
       }
 
       const fetchedRooms = await getUserRooms();
@@ -60,8 +58,7 @@ const ProfilePage: React.FC = () => {
       await updateProfile({
         first_name: firstName,
         last_name: lastName,
-        google_sheet_id: googleSheetId,
-        google_sheet_tab: googleSheetTab,
+        pennylane_customer_id: pennylaneCustomerId,
       });
       toast.success("Profil mis à jour avec succès !");
       await fetchProfileAndRooms(); // Re-fetch to ensure state is consistent
@@ -137,7 +134,6 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-10 w-48" />
               </>
             ) : (
@@ -177,28 +173,16 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="googleSheetId">ID du Google Sheet</Label>
+                  <Label htmlFor="pennylaneCustomerId">ID Client Pennylane</Label>
                   <Input
-                    id="googleSheetId"
+                    id="pennylaneCustomerId"
                     type="text"
-                    placeholder="Ex: 1ABC...xyz"
-                    value={googleSheetId}
-                    onChange={(e) => setGoogleSheetId(e.target.value)}
+                    placeholder="Ex: cus_..."
+                    value={pennylaneCustomerId}
+                    onChange={(e) => setPennylaneCustomerId(e.target.value)}
                     disabled={loading}
                   />
-                  <p className="text-sm text-gray-500">L'ID se trouve dans l'URL de votre feuille Google (après '/d/' et avant '/edit').</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="googleSheetTab">Nom de l'onglet Google Sheet</Label>
-                  <Input
-                    id="googleSheetTab"
-                    type="text"
-                    placeholder="Ex: COUNTER"
-                    value={googleSheetTab}
-                    onChange={(e) => setGoogleSheetTab(e.target.value)}
-                    disabled={loading}
-                  />
-                  <p className="text-sm text-gray-500">Le nom de l'onglet à lire (par défaut 'COUNTER').</p>
+                  <p className="text-sm text-gray-500">Cet ID est utilisé pour récupérer vos factures depuis Pennylane.</p>
                 </div>
                 <Button onClick={handleUpdateProfile} disabled={loading}>
                   {loading ? 'Sauvegarde en cours...' : 'Mettre à jour le Profil'}

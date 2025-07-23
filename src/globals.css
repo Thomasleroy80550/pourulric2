@@ -428,9 +428,4 @@
   .no-print {
     display: none !important;
   }
-  .a4-container {
-    width: 210mm;
-    min-height: 297mm;
-    page-break-after: always;
-  }
 }

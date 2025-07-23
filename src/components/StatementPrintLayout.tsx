@@ -24,7 +24,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   const netToPay = totalMontantVerse - totalTaxeDeSejour - totalFraisMenage - totalCommission;
 
   return (
-    <div id="statement-to-print" className="bg-white text-black p-8 font-sans a4-container">
+    <div id="statement-to-print" className="bg-white text-black p-8 font-sans">
       <div className="flex justify-between items-start mb-8">
         <div>
           <img src="/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mb-4" />
@@ -92,7 +92,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       {/* Detailed Reservations Table */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Détail des réservations</h2>
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-100">

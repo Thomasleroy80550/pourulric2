@@ -53,7 +53,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
               <p className="font-semibold text-lg">{totalMontantVerse.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total de notre facture (Ménage + Commission)</p>
+              <p className="text-gray-600">Total de notre facture</p>
               <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€</p>
             </div>
             {totalTaxeDeSejour > 0 && (
@@ -64,7 +64,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
             )}
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center text-xl">
-              <p className="font-bold">Montant net à vous verser</p>
+              <p className="font-bold">Résultat</p>
               <p className="font-extrabold text-2xl text-green-600">{netToPay.toFixed(2)}€</p>
             </div>
           </div>
@@ -135,7 +135,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <div className="space-y-6">
             {Object.entries(transferDetails.sources).map(([source, data]: [string, any]) => data.reservations.length > 0 && (
               <div key={source}>
-                <h3 className="font-semibold mb-2 text-gray-800">Depuis {source.charAt(0).toUpperCase() + source.slice(1)}</h3>
+                <h3 className="font-semibold mb-2 text-gray-800">Loyers encaissés via {source.charAt(0).toUpperCase() + source.slice(1)}</h3>
                 <div className="border rounded-lg overflow-x-auto">
                   <Table>
                     <TableHeader>

@@ -57,8 +57,9 @@ serve(async (req) => {
     }
     console.log(`PENNYLANE_API_KEY is set: ${!!PENNYLANE_API_KEY}`);
 
-    // 4. Call the Pennylane API using the specific customer endpoint
-    const url = new URL(`${PENNYLANE_API_BASE_URL}/customers/${pennylaneCustomerId}/invoices`);
+    // 4. Call the Pennylane API using the generic invoices endpoint and filtering by customer
+    const url = new URL(`${PENNYLANE_API_BASE_URL}/invoices`);
+    url.searchParams.set('customer_id', pennylaneCustomerId);
     url.searchParams.set('sort', '-date'); // Sort by most recent date
     url.searchParams.set('limit', '100'); // Fetch up to 100 invoices
 

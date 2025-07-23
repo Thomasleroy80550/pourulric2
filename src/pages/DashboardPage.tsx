@@ -12,8 +12,6 @@ import {
   Pie,
   Cell,
   Tooltip,
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -22,6 +20,8 @@ import {
   Legend,
   AreaChart,
   Area,
+  ComposedChart,
+  Line,
 } from "recharts";
 import React, { useState, useEffect, useCallback } from "react";
 import ObjectiveDialog from "@/components/ObjectiveDialog";
@@ -462,7 +462,7 @@ const DashboardPage = () => {
                   <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full h-full">
                     <div className="w-full md:w-3/5 h-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart isAnimationActive={true}>
+                        <PieChart>
                           <Pie
                             data={activityData}
                             cx="50%"
@@ -472,7 +472,8 @@ const DashboardPage = () => {
                             fill="#8884d8"
                             paddingAngle={5}
                             dataKey="value"
-                            animationDuration={1000}
+                            isAnimationActive={true}
+                            animationDuration={1500}
                             animationEasing="ease-in-out"
                           >
                             {activityData.map((entry, index) => (
@@ -497,11 +498,14 @@ const DashboardPage = () => {
               )}
             </CardContent>
           </Card>
+        </div>
 
+        {/* New 3-column grid for charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
           {/* Statistiques Financières Mensuelles Card */}
-          <Card id="tour-monthly-financials" className="shadow-md col-span-full">
+          <Card id="tour-monthly-financials" className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
+              <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyFinancialData,
                 'line',
@@ -523,12 +527,12 @@ const DashboardPage = () => {
               ) : financialDataError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertTitle>Erreur</AlertTitle>
                   <AlertDescription>{financialDataError}</AlertDescription>
                 </Alert>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
@@ -539,94 +543,91 @@ const DashboardPage = () => {
                     <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <YAxis className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
-                    <Legend wrapperStyle={{ fontSize: '14px' }} />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} />
-                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} />
-                  </AreaChart>
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
+                  </ComposedChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
 
-          {/* New Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 col-span-full">
-            {/* Réservation / mois Card */}
-            <Card className="shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Réservations par mois</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                  monthlyReservationsData,
-                  'bar',
-                  'Réservations par mois',
-                  [{ key: 'reservations', name: 'Réservations', color: 'hsl(var(--accent))' }]
-                )}>
-                  Agrandir
-                </Button>
-              </CardHeader>
-              <CardContent className="h-72">
-                {loadingFinancialData ? (
-                  <Skeleton className="h-full w-full" />
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyReservationsData}>
-                      <defs>
-                        <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0.2}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                      <YAxis allowDecimals={false} className="text-xs" tickLine={false} axisLine={false} />
-                      <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                      <Legend wrapperStyle={{ fontSize: '14px' }} />
-                      <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
+          {/* Réservation / mois Card */}
+          <Card className="shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Réservations / mois</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                monthlyReservationsData,
+                'bar',
+                'Réservations par mois',
+                [{ key: 'reservations', name: 'Réservations', color: 'hsl(var(--accent))' }]
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              {loadingFinancialData ? (
+                <Skeleton className="h-full w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0.2}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} className="text-xs" tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Occupation Mensuelle Card */}
-            <Card className="shadow-md">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold">Taux d'Occupation Mensuel</CardTitle>
-                <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                  monthlyOccupancyData,
-                  'line',
-                  'Taux d\'Occupation Mensuel',
-                  [{ key: 'occupation', name: 'Occupation', color: '#82ca9d' }],
-                  '%'
-                )}>
-                  Agrandir
-                </Button>
-              </CardHeader>
-              <CardContent className="h-72">
-                {loadingFinancialData ? (
-                  <Skeleton className="h-full w-full" />
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyOccupancyData}>
-                      <defs>
-                        <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                      <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
-                      <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
-                      <Legend wrapperStyle={{ fontSize: '14px' }} />
-                      <Area type="monotone" dataKey="occupation" stroke="#82ca9d" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          {/* Occupation Mensuelle Card */}
+          <Card className="shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Taux d'Occupation</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                monthlyOccupancyData,
+                'line',
+                'Taux d\'Occupation Mensuel',
+                [{ key: 'occupation', name: 'Occupation', color: '#82ca9d' }],
+                '%'
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              {loadingFinancialData ? (
+                <Skeleton className="h-full w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
+                    <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Area type="monotone" dataKey="occupation" stroke="#82ca9d" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
       <MadeWithDyad />

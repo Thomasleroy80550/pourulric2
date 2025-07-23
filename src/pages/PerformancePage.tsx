@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Line, AreaChart, Area, ComposedChart } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
@@ -173,11 +173,11 @@ const PerformancePage: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Statistiques Financières Mensuelles Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Statistiques Financières Mensuelles</CardTitle>
+              <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyFinancialData,
                 'line',
@@ -198,9 +198,9 @@ const PerformancePage: React.FC = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyFinancialData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>
-                      <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="colorBenefPerf" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
                         <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                       </linearGradient>
@@ -209,12 +209,12 @@ const PerformancePage: React.FC = () => {
                     <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <YAxis unit="€" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
-                    <Legend wrapperStyle={{ fontSize: '14px' }} />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} />
-                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} />
-                  </AreaChart>
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenefPerf)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
+                  </ComposedChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
@@ -223,7 +223,7 @@ const PerformancePage: React.FC = () => {
           {/* Réservation / mois Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Réservations par mois</CardTitle>
+              <CardTitle className="text-lg font-semibold">Réservations / mois</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyReservationsData,
                 'bar',
@@ -238,9 +238,9 @@ const PerformancePage: React.FC = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>
-                      <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="colorReservationsPerf" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.8}/>
                         <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0.2}/>
                       </linearGradient>
@@ -249,8 +249,8 @@ const PerformancePage: React.FC = () => {
                     <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                    <Legend wrapperStyle={{ fontSize: '14px' }} />
-                    <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="reservations" fill="url(#colorReservationsPerf)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -258,9 +258,9 @@ const PerformancePage: React.FC = () => {
           </Card>
 
           {/* Occupation Mensuelle Card */}
-          <Card className="shadow-md col-span-full">
+          <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Taux d'Occupation Mensuel</CardTitle>
+              <CardTitle className="text-lg font-semibold">Taux d'Occupation</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyOccupancyData,
                 'line',
@@ -276,9 +276,9 @@ const PerformancePage: React.FC = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <defs>
-                      <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="colorOccupationPerf" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
                         <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
                       </linearGradient>
@@ -287,8 +287,8 @@ const PerformancePage: React.FC = () => {
                     <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <YAxis unit="%" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
-                    <Legend wrapperStyle={{ fontSize: '14px' }} />
-                    <Area type="monotone" dataKey="occupation" stroke="#82ca9d" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Area type="monotone" dataKey="occupation" stroke="#82ca9d" fill="url(#colorOccupationPerf)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
                   </AreaChart>
                 </ResponsiveContainer>
               )}

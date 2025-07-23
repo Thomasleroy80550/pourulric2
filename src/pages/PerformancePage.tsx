@@ -5,13 +5,13 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { callGSheetProxy } from '@/lib/gsheets';
-import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
-import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { format, parseISO, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays, getDaysInMonth, getDaysInYear, isWithinInterval, max, min } from 'date-fns';
+import { getMyStatements } from '@/lib/statements-api';
+import { SavedInvoice } from '@/lib/admin-api';
+import { getUserRooms } from '@/lib/user-room-api';
+import { format, parseISO, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays, getDaysInMonth, getDaysInYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
-import { Button } from '@/components/ui/button'; // Added import for Button
+import { Button } from '@/components/ui/button';
 
 const PerformancePage: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -46,104 +46,63 @@ const PerformancePage: React.FC = () => {
     setLoadingData(true);
     setError(null);
     try {
-      const [
-        financialSheetData,
-        monthlyFinancialSheetData,
-        userRooms,
-        allReservations,
-        totalNightsCurrentYearData,
-      ] = await Promise.all([
-        callGSheetProxy({ action: 'read_sheet', range: 'C2' }), // Vente Année
-        callGSheetProxy({ action: 'read_sheet', range: 'BU2:CF5' }), // Monthly CA, Montant Versé, Frais, Bénéfice
+      const [statements, userRooms] = await Promise.all([
+        getMyStatements(),
         getUserRooms(),
-        fetchKrossbookingReservations([]), // Fetch all reservations for calculations
-        callGSheetProxy({ action: 'read_sheet', range: 'L2' }), // Total Nights for current year
       ]);
 
-      // Set Total Revenues
-      if (financialSheetData && financialSheetData.length > 0 && financialSheetData[0].length > 0) {
-        setTotalRevenues(Number(financialSheetData[0][0]) || 0);
-      } else {
-        setError(prev => prev ? prev + " Format de données inattendu pour les revenus totaux." : "Format de données inattendu pour les revenus totaux.");
-      }
+      const statementsForYear = statements.filter(s => s.period.includes(currentYear.toString()));
 
-      // Set Monthly Financial Data
-      if (monthlyFinancialSheetData && monthlyFinancialSheetData.length >= 4) {
-        const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-        const caValues = monthlyFinancialSheetData[0] || [];
-        const montantVerseValues = monthlyFinancialSheetData[1] || [];
-        const fraisValues = monthlyFinancialData[2] || [];
-        const benefValues = monthlyFinancialSheetData[3] || [];
+      // Calculate Total Revenues
+      const totalRevenuGenere = statementsForYear.reduce((acc, s) => acc + (s.totals.totalRevenuGenere || 0), 0);
+      setTotalRevenues(totalRevenuGenere);
 
-        const formattedData = months.map((month, index) => ({
-          name: month,
-          ca: parseFloat(caValues[index]) || 0,
-          montantVerse: parseFloat(montantVerseValues[index]) || 0,
-          frais: parseFloat(fraisValues[index]) || 0,
-          benef: parseFloat(benefValues[index]) || 0,
-        }));
-        setMonthlyFinancialData(formattedData);
-      } else {
-        setError(prev => prev ? prev + " Format de données inattendu pour les statistiques financières mensuelles." : "Format de données inattendu pour les statistiques financières mensuelles.");
-      }
-
-      // Calculate Monthly Reservations and Monthly Occupancy
+      // Calculate Monthly Financial, Reservations, and Occupancy Data
       const monthsOfYear = eachMonthOfInterval({
         start: startOfMonth(new Date(currentYear, 0, 1)),
         end: endOfMonth(new Date(currentYear, 11, 1)),
       });
 
-      const newMonthlyReservationsData: any[] = [];
-      const newMonthlyOccupancyData: any[] = [];
+      const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
+      
+      const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
+      const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
+      const newMonthlyOccupancyData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), occupation: 0 }));
+      let totalNightsForYear = 0;
 
-      monthsOfYear.forEach(month => {
-        const monthName = format(month, 'MMM', { locale: fr });
-        let reservationsCount = 0;
-        let totalOccupiedNightsInMonth = 0;
-        const daysInCurrentMonth = getDaysInMonth(month);
-        const totalAvailableNightsInMonth = userRooms.length * daysInCurrentMonth;
+      statementsForYear.forEach(s => {
+        const periodMonthStr = s.period.split(' ')[0].toLowerCase();
+        const monthIndex = monthFrToNum[periodMonthStr];
+        if (monthIndex !== undefined) {
+          const netToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
+          newMonthlyFinancialData[monthIndex].ca += s.totals.totalRevenuGenere || 0;
+          newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
+          newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
+          newMonthlyFinancialData[monthIndex].benef += netToPay;
+          newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
 
-        allReservations.forEach(res => {
-          const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-          const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+          let occupiedNightsInMonth = 0;
+          s.invoice_data.forEach(resa => {
+            const nights = differenceInDays(parseISO(resa.depart), parseISO(resa.arrivee));
+            occupiedNightsInMonth += nights > 0 ? nights : 0;
+            totalNightsForYear += nights > 0 ? nights : 0;
+          });
 
-          if (!checkIn || !checkOut || res.status === 'CANC') return; // Skip invalid dates or cancelled reservations
-
-          // For monthly reservations count
-          if (isSameMonth(checkIn, month)) {
-            reservationsCount++;
-          }
-
-          // For monthly occupancy calculation
-          const monthStart = startOfMonth(month);
-          const monthEnd = endOfMonth(month);
-
-          const overlapStart = max([checkIn, monthStart]);
-          const overlapEnd = min([checkOut, monthEnd]);
-
-          if (overlapStart < overlapEnd) {
-            totalOccupiedNightsInMonth += differenceInDays(overlapEnd, overlapStart);
-          }
-        });
-
-        newMonthlyReservationsData.push({ name: monthName, reservations: reservationsCount });
-        const calculatedOccupancy = totalAvailableNightsInMonth > 0 ? (totalOccupiedNightsInMonth / totalAvailableNightsInMonth) * 100 : 0;
-        newMonthlyOccupancyData.push({ name: monthName, occupation: calculatedOccupancy });
+          const daysInCurrentMonth = getDaysInMonth(new Date(currentYear, monthIndex, 1));
+          const totalAvailableNightsInMonth = userRooms.length * daysInCurrentMonth;
+          newMonthlyOccupancyData[monthIndex].occupation = totalAvailableNightsInMonth > 0 ? (occupiedNightsInMonth / totalAvailableNightsInMonth) * 100 : 0;
+        }
       });
 
+      setMonthlyFinancialData(newMonthlyFinancialData);
       setMonthlyReservationsData(newMonthlyReservationsData);
       setMonthlyOccupancyData(newMonthlyOccupancyData);
 
       // Set overall Occupancy Rate for the year
-      if (totalNightsCurrentYearData && totalNightsCurrentYearData.length > 0 && totalNightsCurrentYearData[0].length > 0) {
-        const totalNights = Number(totalNightsCurrentYearData[0][0]) || 0;
-        const totalDaysInYear = getDaysInYear(new Date(currentYear, 0, 1));
-        const totalAvailableNightsInYear = userRooms.length * totalDaysInYear;
-        const calculatedOccupancyRateYear = totalAvailableNightsInYear > 0 ? (totalNights / totalAvailableNightsInYear) * 100 : 0;
-        setOccupancyRateYear(calculatedOccupancyRateYear);
-      } else {
-        setError(prev => prev ? prev + " Format de données inattendu pour les nuits totales de l'année." : "Format de données inattendu pour les nuits totales de l'année.");
-      }
+      const totalDaysInYear = getDaysInYear(new Date(currentYear, 0, 1));
+      const totalAvailableNightsInYear = userRooms.length * totalDaysInYear;
+      const calculatedOccupancyRateYear = totalAvailableNightsInYear > 0 ? (totalNightsForYear / totalAvailableNightsInYear) * 100 : 0;
+      setOccupancyRateYear(calculatedOccupancyRateYear);
 
     } catch (err: any) {
       setError(`Erreur lors du chargement des données de performance : ${err.message}`);

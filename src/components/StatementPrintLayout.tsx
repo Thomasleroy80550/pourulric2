@@ -132,6 +132,9 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       {transferDetails && transferDetails.sources && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Virements à effectuer</h2>
+          <p className="text-sm italic text-gray-600 mb-4">
+            Le relevé permet de réaliser vos virements, il est donc normal de recevoir votre relevé facture avant de percevoir vos fonds.
+          </p>
           <div className="space-y-6">
             {Object.entries(transferDetails.sources).map(([source, data]: [string, any]) => data.reservations.length > 0 && (
               <div key={source}>

@@ -32,7 +32,10 @@ const emailSchema = z.object({
 });
 
 const phoneSchema = z.object({
-  phone: z.string().regex(/^\d{10,15}$/, { message: "Numéro de téléphone invalide. Utilisez le format international sans le '+' (ex: 33612345678)." }),
+  phone: z.string()
+    .min(1, "Le numéro de téléphone est requis.")
+    .transform(val => val.replace(/\s+|-|\+/g, '')) // Nettoie les espaces, tirets, et '+'
+    .pipe(z.string().regex(/^\d{10,15}$/, { message: "Numéro invalide. Entrez 10-15 chiffres (ex: 33612345678)." })),
   otp: z.string().optional(),
 });
 

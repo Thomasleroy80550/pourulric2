@@ -11,6 +11,7 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,11 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import MagicLoginButton from '@/components/MagicLoginButton';
-// The logo is now in the public folder, so we don't need to import it.
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -27,16 +32,8 @@ const emailSchema = z.object({
 });
 
 const phoneSchema = z.object({
-  phone: z.string().min(10, { message: "Numéro de téléphone invalide." }).max(15, { message: "Numéro de téléphone trop long." }),
-  otp: z.string().optional(), // OTP is optional initially, required after sending code
-}).superRefine((data, ctx) => {
-  if (data.otp && data.otp.length < 6) { // Assuming 6-digit OTP
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Le code OTP doit contenir 6 chiffres.",
-      path: ['otp'],
-    });
-  }
+  phone: z.string().regex(/^\d{10,15}$/, { message: "Numéro de téléphone invalide. Utilisez le format international sans le '+' (ex: 33612345678)." }),
+  otp: z.string().min(6, { message: "Le code doit contenir 6 chiffres." }),
 });
 
 type EmailFormValues = z.infer<typeof emailSchema>;
@@ -48,7 +45,6 @@ const Login = () => {
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Initialize react-hook-form with conditional schema
   const form = useForm<EmailFormValues | PhoneFormValues>({
     resolver: zodResolver(authMethod === 'email' ? emailSchema : phoneSchema),
     defaultValues: {
@@ -59,7 +55,6 @@ const Login = () => {
     },
   });
 
-  // Reset form state when auth method changes
   useEffect(() => {
     form.reset();
     setShowOtpInput(false);
@@ -71,7 +66,6 @@ const Login = () => {
         navigate('/');
       }
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
 
@@ -79,54 +73,66 @@ const Login = () => {
     setAuthMethod(checked ? 'phone' : 'email');
   };
 
-  const onSubmit = async (values: EmailFormValues | PhoneFormValues) => {
+  const handlePhoneSubmit = async (values: PhoneFormValues) => {
     setLoading(true);
     try {
-      if (authMethod === 'email') {
-        const emailValues = values as EmailFormValues;
-        const { error } = await supabase.auth.signInWithPassword({
-          email: emailValues.email,
-          password: emailValues.password,
+      if (!showOtpInput) {
+        // Step 1: Send OTP
+        const { error } = await supabase.functions.invoke('custom-sms-auth', {
+          body: { action: 'send', phone: values.phone },
         });
-        if (error) throw error;
-        toast.success("Connexion réussie !");
-      } else { // Phone authentication
-        const phoneValues = values as PhoneFormValues;
-        if (!showOtpInput) {
-          // Step 1: Send OTP
-          const { error } = await supabase.auth.signInWithOtp({
-            phone: phoneValues.phone,
-          });
-          if (error) throw error;
-          setShowOtpInput(true);
-          toast.success("Code OTP envoyé à votre numéro de téléphone !");
+        if (error) throw new Error(error.message);
+        setShowOtpInput(true);
+        toast.success("Code de vérification envoyé !");
+      } else {
+        // Step 2: Verify OTP and get magic link
+        const { data, error } = await supabase.functions.invoke('custom-sms-auth', {
+          body: { action: 'verify', phone: values.phone, otp: values.otp },
+        });
+        if (error) throw new Error(error.message);
+        if (data.action_link) {
+          toast.success("Vérification réussie ! Connexion en cours...");
+          // Redirect to the magic link to complete authentication
+          window.location.href = data.action_link;
         } else {
-          // Step 2: Verify OTP
-          if (!phoneValues.otp) {
-            form.setError('otp', { message: "Veuillez entrer le code OTP." });
-            setLoading(false);
-            return;
-          }
-          const { error } = await supabase.auth.verifyOtp({
-            phone: phoneValues.phone,
-            token: phoneValues.otp,
-            type: 'sms',
-          });
-          if (error) throw error;
-          toast.success("Connexion réussie !");
+          throw new Error("Le lien de connexion n'a pas pu être généré.");
         }
       }
     } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
-      console.error("Authentication error:", error);
+      const errorMessage = error.message || "Une erreur est survenue.";
+      toast.error(`Erreur: ${errorMessage}`);
+      console.error("Phone auth error:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleEmailSubmit = async (values: EmailFormValues) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+      if (error) throw error;
+      toast.success("Connexion réussie !");
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onSubmit = (values: EmailFormValues | PhoneFormValues) => {
+    if (authMethod === 'phone') {
+      handlePhoneSubmit(values as PhoneFormValues);
+    } else {
+      handleEmailSubmit(values as EmailFormValues);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Left Column: Login Form */}
       <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
         <div className="w-full max-w-sm space-y-8">
           <div className="flex flex-col items-start mb-6">
@@ -188,7 +194,7 @@ const Login = () => {
                     {loading ? 'Connexion en cours...' : 'Se connecter'}
                   </Button>
                 </>
-              ) : ( // Phone authentication
+              ) : (
                 <>
                   <FormField
                     control={form.control}
@@ -197,7 +203,7 @@ const Login = () => {
                       <FormItem>
                         <FormLabel>Numéro de téléphone</FormLabel>
                         <FormControl>
-                          <Input placeholder="+33612345678" {...field} disabled={loading || showOtpInput} />
+                          <Input placeholder="33612345678" {...field} disabled={loading || showOtpInput} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -208,29 +214,39 @@ const Login = () => {
                       control={form.control}
                       name="otp"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Code OTP</FormLabel>
+                        <FormItem className="flex flex-col items-center">
+                          <FormLabel>Code de vérification</FormLabel>
                           <FormControl>
-                            <Input placeholder="Entrez le code à 6 chiffres" {...field} disabled={loading} />
+                            <InputOTP maxLength={6} {...field}>
+                              <InputOTPGroup>
+                                <InputOTPSlot index={0} />
+                                <InputOTPSlot index={1} />
+                                <InputOTPSlot index={2} />
+                                <InputOTPSlot index={3} />
+                                <InputOTPSlot index={4} />
+                                <InputOTPSlot index={5} />
+                              </InputOTPGroup>
+                            </InputOTP>
                           </FormControl>
+                          <FormDescription>
+                            Entrez le code à 6 chiffres reçu par SMS.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   )}
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (showOtpInput ? 'Vérification...' : 'Envoi du code...') : (showOtpInput ? 'Vérifier le code' : 'Envoyer le code')}
+                    {loading ? (showOtpInput ? 'Vérification...' : 'Envoi du code...') : (showOtpInput ? 'Vérifier et se connecter' : 'Envoyer le code')}
                   </Button>
                 </>
               )}
             </form>
           </Form>
-          {/* Magic Login Button for development */}
           <MagicLoginButton />
         </div>
       </div>
 
-      {/* Right Column: Marketing/Illustration */}
       <div className="hidden md:flex w-full md:w-1/2 bg-blue-800 dark:bg-blue-950 items-center justify-center p-8">
         <div className="text-center text-white space-y-6">
           <div className="w-full max-w-md mx-auto h-64 bg-blue-700 dark:bg-blue-800 rounded-lg flex items-center justify-center text-xl font-bold">

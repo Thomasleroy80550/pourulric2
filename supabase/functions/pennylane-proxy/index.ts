@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-const PENNYLANE_API_BASE_URL = "https://api.pennylane.com/api/external/v2";
+const PENNYLANE_API_BASE_URL = "https://app.pennylane.com/api/external/v2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,31 +61,19 @@ serve(async (req) => {
     }
     console.log(`PENNYLANE_API_KEY is set.`);
 
-    // Utilisation de POST /invoices avec un corps de requête
-    const url = `${PENNYLANE_API_BASE_URL}/invoices`;
-    console.log(`Calling Pennylane API URL (POST): ${url}`);
+    const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
+    url.searchParams.append('customer_id', pennylaneCustomerId);
+    url.searchParams.append('sort', '-date');
+    url.searchParams.append('limit', '100');
 
-    const requestBody = {
-      filter: [
-        {
-          field: 'customer_id',
-          operator: 'eq',
-          value: pennylaneCustomerId,
-        },
-      ],
-      sort: '-date',
-      limit: 100,
-    };
+    console.log(`Calling Pennylane API URL (GET): ${url.toString()}`);
 
-    console.log("Pennylane API Request Body:", JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch(url, {
-      method: 'POST',
+    const response = await fetch(url.toString(), {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${PENNYLANE_API_KEY}`,
       },
-      body: JSON.stringify(requestBody),
     });
 
     const responseBodyText = await response.text();

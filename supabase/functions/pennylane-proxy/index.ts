@@ -62,6 +62,7 @@ serve(async (req) => {
     console.log(`PENNYLANE_API_KEY is set.`);
 
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
+    // On continue d'envoyer le customer_id, au cas où Pennylane le supporterait un jour.
     url.searchParams.append('customer_id', pennylaneCustomerId);
     url.searchParams.append('sort', '-date');
     url.searchParams.append('limit', '100');
@@ -78,8 +79,7 @@ serve(async (req) => {
 
     const responseBodyText = await response.text();
     console.log(`Pennylane API Response Status: ${response.status}`);
-    console.log("Pennylane API Raw Response Body:", responseBodyText);
-
+    
     if (!response.ok) {
       const errorMessage = `Pennylane API error: ${response.status} ${response.statusText}. Response: ${responseBodyText}`;
       console.error(errorMessage);
@@ -87,9 +87,28 @@ serve(async (req) => {
     }
 
     const data = JSON.parse(responseBodyText);
-    console.log(`Pennylane API returned ${data.items?.length || 0} invoices for customer ${pennylaneCustomerId}.`);
+    console.log(`Received ${data.items?.length || 0} invoices from Pennylane before filtering.`);
 
-    return new Response(JSON.stringify(data), {
+    // **FILTRAGE MANUEL AJOUTÉ ICI**
+    // L'ID du profil est un string, celui de Pennylane est un nombre. On convertit.
+    const customerIdToMatch = parseInt(pennylaneCustomerId, 10);
+    if (isNaN(customerIdToMatch)) {
+        throw new Error("L'ID client Pennylane dans votre profil n'est pas un nombre valide.");
+    }
+
+    const filteredItems = (data.items || []).filter(invoice => 
+        invoice.customer && invoice.customer.id === customerIdToMatch
+    );
+
+    console.log(`Found ${filteredItems.length} invoices after filtering for customer ID ${customerIdToMatch}.`);
+
+    // On reconstruit la réponse avec seulement les factures filtrées.
+    const filteredResponse = {
+        ...data,
+        items: filteredItems,
+    };
+
+    return new Response(JSON.stringify(filteredResponse), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

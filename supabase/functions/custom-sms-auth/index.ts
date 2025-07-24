@@ -58,15 +58,28 @@ async function sendSms(phone: string, otpCode: string) {
     });
 
     console.log(`[sendSms] Réponse de SMSFactor reçue avec le statut : ${response.status}`);
-    const responseBody = await response.json();
+    const responseText = await response.text();
 
     if (!response.ok) {
-      console.error("[sendSms] Erreur de l'API SMSFactor :", responseBody);
-      const errorMessage = responseBody?.message || `Erreur lors de l'envoi du SMS (status: ${response.status}).`;
+      console.error("[sendSms] Erreur de l'API SMSFactor. Réponse brute :", responseText);
+      let errorMessage = `Erreur lors de l'envoi du SMS (status: ${response.status}).`;
+      if (responseText) {
+        try {
+          const errorBody = JSON.parse(responseText);
+          errorMessage = errorBody?.message || errorMessage;
+        } catch (e) {
+          errorMessage += ` Réponse: ${responseText}`;
+        }
+      }
       throw new Error(errorMessage);
     }
 
-    console.log('[sendSms] SMS envoyé avec succès via SMSFactor. Réponse :', responseBody);
+    if (responseText) {
+      const responseBody = JSON.parse(responseText);
+      console.log('[sendSms] SMS envoyé avec succès via SMSFactor. Réponse :', responseBody);
+    } else {
+      console.log('[sendSms] SMS envoyé avec succès via SMSFactor (réponse vide).');
+    }
 
   } catch (error) {
     console.error("[sendSms] Exception lors de l'appel à l'API SMSFactor :", error);

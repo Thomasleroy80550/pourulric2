@@ -48,7 +48,7 @@ serve(async (req) => {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-    console.log(`Request from user ID: ${caller.id}. Admin status is irrelevant.`);
+    console.log(`Request from user ID: ${caller.id}.`);
 
     // Client admin pour récupérer le profil de manière sécurisée
     const supabaseAdmin = createClient(
@@ -63,7 +63,9 @@ serve(async (req) => {
       console.log(`User ${caller.id} does not have a Pennylane customer ID configured.`);
       throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré dans son profil.");
     }
-    console.log(`Fetching invoices for Pennylane Customer ID: ${pennylaneCustomerId}`);
+    
+    // Log de vérification crucial
+    console.log(`Found and using Pennylane Customer ID: '${pennylaneCustomerId}' for user ${caller.id}.`);
 
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
     if (!PENNYLANE_API_KEY) {
@@ -74,7 +76,7 @@ serve(async (req) => {
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
     url.searchParams.append('customer_id', pennylaneCustomerId);
     url.searchParams.append('sort', '-date');
-    url.searchParams.append('limit', '100');
+    url.search_params.append('limit', '100');
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -87,7 +89,7 @@ serve(async (req) => {
     }
 
     const data = JSON.parse(responseBodyText);
-    console.log(`Received ${data.items?.length || 0} invoices from Pennylane.`);
+    console.log(`Received ${data.items?.length || 0} invoices from Pennylane for customer ID ${pennylaneCustomerId}.`);
 
     return new Response(JSON.stringify(data), {
       status: 200,

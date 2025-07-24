@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
-// Utilisation de la nouvelle URL de base de l'API, qui semble plus correcte.
 const PENNYLANE_API_BASE_URL = "https://api.pennylane.com/api/external/v2";
 
 const corsHeaders = {
@@ -9,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Fonction pour récupérer l'ID client Pennylane de l'utilisateur depuis son profil
 async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: string): Promise<string | null> {
   const { data, error } = await supabaseClient
     .from('profiles')
@@ -19,7 +17,6 @@ async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: st
 
   if (error) {
     console.error(`Error fetching profile for user ${userId}:`, error.message);
-    // Ne pas exposer les erreurs de base de données au client
     throw new Error("Impossible de récupérer le profil utilisateur.");
   }
 
@@ -33,7 +30,6 @@ serve(async (req) => {
 
   try {
     console.log("--- Pennylane Proxy Function Start (Production Logic) ---");
-    // 1. Authentifier l'utilisateur avec Supabase
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -50,7 +46,6 @@ serve(async (req) => {
     }
     console.log(`Authenticated user ID: ${user.id}`);
 
-    // 2. Récupérer l'ID client Pennylane de l'utilisateur
     const pennylaneCustomerId = await getPennylaneCustomerId(supabaseClient, user.id);
 
     if (!pennylaneCustomerId) {
@@ -59,7 +54,6 @@ serve(async (req) => {
     }
     console.log(`Found Pennylane Customer ID: ${pennylaneCustomerId}`);
 
-    // 3. Récupérer la clé API Pennylane depuis les secrets
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
     if (!PENNYLANE_API_KEY) {
       console.error("PENNYLANE_API_KEY environment variable is not set.");
@@ -67,20 +61,31 @@ serve(async (req) => {
     }
     console.log(`PENNYLANE_API_KEY is set.`);
 
-    // 4. Appeler l'API Pennylane pour récupérer les factures du client
-    const url = new URL(`${PENNYLANE_API_BASE_URL}/invoices`);
-    url.searchParams.set('customer_id', pennylaneCustomerId);
-    url.searchParams.set('sort', '-date');
-    url.searchParams.set('limit', '100');
+    // Utilisation de POST /invoices/search avec un corps de requête
+    const url = `${PENNYLANE_API_BASE_URL}/invoices/search`;
+    console.log(`Calling Pennylane API URL: ${url}`);
 
-    console.log(`Calling Pennylane API URL: ${url.toString()}`);
+    const requestBody = {
+      filter: [
+        {
+          field: 'customer_id',
+          operator: 'eq',
+          value: pennylaneCustomerId,
+        },
+      ],
+      sort: '-date',
+      limit: 100,
+    };
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
+    console.log("Pennylane API Request Body:", JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch(url, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${PENNYLANE_API_KEY}`,
       },
+      body: JSON.stringify(requestBody),
     });
 
     const responseBodyText = await response.text();
@@ -96,7 +101,6 @@ serve(async (req) => {
     const data = JSON.parse(responseBodyText);
     console.log(`Pennylane API returned ${data.items?.length || 0} invoices for customer ${pennylaneCustomerId}.`);
 
-    // 5. Renvoyer les données au client
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

@@ -31,15 +31,8 @@ serve(async (req) => {
 
   try {
     console.log("--- Pennylane Proxy Function Start ---");
-    const { target_user_id } = (await req.json().catch(() => ({}))) || {};
 
-    // Use the service role key to perform admin checks securely
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // Create a client with the user's auth context to get their ID
+    // Client pour vérifier l'authentification de l'appelant
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -55,35 +48,19 @@ serve(async (req) => {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-    console.log(`Request from caller ID: ${caller.id}`);
+    console.log(`Request from user ID: ${caller.id}. Admin status is irrelevant.`);
 
-    let userIdToFetchInvoicesFor: string;
+    // Client admin pour récupérer le profil de manière sécurisée
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    if (target_user_id) {
-      console.log(`Admin request detected. Target User ID: ${target_user_id}`);
-      // An admin is trying to fetch invoices for a specific user.
-      // First, verify the caller is an admin.
-      const { data: isAdmin, error: isAdminError } = await supabaseAdmin.rpc('is_admin', { user_id: caller.id });
-
-      if (isAdminError || !isAdmin) {
-        console.error(`Authorization error: Caller ${caller.id} is not an admin.`, isAdminError);
-        return new Response(JSON.stringify({ error: "Action non autorisée." }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
-      console.log(`Caller ${caller.id} confirmed as admin.`);
-      userIdToFetchInvoicesFor = target_user_id;
-    } else {
-      // Regular user fetching their own invoices.
-      console.log(`Regular user request for own invoices.`);
-      userIdToFetchInvoicesFor = caller.id;
-    }
-
-    const pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, userIdToFetchInvoicesFor);
+    // On récupère TOUJOURS l'ID Pennylane de l'utilisateur qui fait l'appel.
+    const pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
 
     if (!pennylaneCustomerId) {
-      console.log(`User ${userIdToFetchInvoicesFor} does not have a Pennylane customer ID configured.`);
+      console.log(`User ${caller.id} does not have a Pennylane customer ID configured.`);
       throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré dans son profil.");
     }
     console.log(`Fetching invoices for Pennylane Customer ID: ${pennylaneCustomerId}`);

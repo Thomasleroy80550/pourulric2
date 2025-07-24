@@ -89,15 +89,12 @@ serve(async (req) => {
     const data = JSON.parse(responseBodyText);
     console.log(`Received ${data.items?.length || 0} invoices from Pennylane before filtering.`);
 
-    // **FILTRAGE MANUEL AJOUTÉ ICI**
-    // L'ID du profil est un string, celui de Pennylane est un nombre. On convertit.
-    const customerIdToMatch = parseInt(pennylaneCustomerId, 10);
-    if (isNaN(customerIdToMatch)) {
-        throw new Error("L'ID client Pennylane dans votre profil n'est pas un nombre valide.");
-    }
+    // **FILTRAGE MANUEL CORRIGÉ ICI**
+    // On compare les IDs en tant que chaînes de caractères pour éviter les problèmes de type (nombre vs texte).
+    const customerIdToMatch = pennylaneCustomerId;
 
     const filteredItems = (data.items || []).filter(invoice => 
-        invoice.customer && invoice.customer.id === customerIdToMatch
+        invoice.customer && String(invoice.customer.id) === customerIdToMatch
     );
 
     console.log(`Found ${filteredItems.length} invoices after filtering for customer ID ${customerIdToMatch}.`);

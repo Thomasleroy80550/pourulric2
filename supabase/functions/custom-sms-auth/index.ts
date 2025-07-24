@@ -35,12 +35,15 @@ serve(async (req) => {
       const otpCode = phone === DEV_TEST_PHONE_NUMBER ? DEV_TEST_OTP : generateOtp();
       const expiresAt = new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000);
 
-      // Store OTP in the database
-      const { error: storeError } = await supabaseAdmin.from('sms_otps').insert({
+      // Use upsert to avoid duplicate key errors if an OTP already exists for this number
+      const { error: storeError } = await supabaseAdmin.from('sms_otps').upsert({
         phone_number: phone,
         otp_code: otpCode, // In a real-world high-security scenario, you'd hash this.
         expires_at: expiresAt.toISOString(),
+      }, {
+        onConflict: 'phone_number'
       });
+
       if (storeError) throw storeError;
 
       // Send SMS via SMSFactor, except for the test number

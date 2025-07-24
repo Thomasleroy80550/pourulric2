@@ -29,7 +29,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log("--- Pennylane Proxy Function Start (Production Logic) ---");
+    console.log("--- Pennylane Proxy Function Start ---");
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -61,8 +61,12 @@ serve(async (req) => {
     }
 
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
+    // Utilisation directe du filtre `customer_id` de l'API
+    url.searchParams.append('customer_id', pennylaneCustomerId);
     url.searchParams.append('sort', '-date');
     url.searchParams.append('limit', '100');
+
+    console.log(`Calling Pennylane API with URL: ${url.toString()}`);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -75,25 +79,10 @@ serve(async (req) => {
     }
 
     const data = JSON.parse(responseBodyText);
-    console.log(`Received ${data.items?.length || 0} total invoices from Pennylane.`);
+    console.log(`Received ${data.items?.length || 0} invoices from Pennylane using the customer_id filter.`);
 
-    // **NOUVEAU LOG DE DÉBOGAGE**
-    if (data.items && data.items.length > 0) {
-      console.log("DEBUG: Full first invoice object from Pennylane:", JSON.stringify(data.items[0], null, 2));
-    }
-
-    const customerIdToMatch = pennylaneCustomerId;
-    console.log(`Attempting to filter for profile customer ID: '${customerIdToMatch}'`);
-
-    const filteredItems = (data.items || []).filter(invoice => 
-        invoice.customer && String(invoice.customer.id) === customerIdToMatch
-    );
-
-    console.log(`Found ${filteredItems.length} invoices after filtering.`);
-
-    const filteredResponse = { ...data, items: filteredItems };
-
-    return new Response(JSON.stringify(filteredResponse), {
+    // Plus de filtrage manuel. La réponse de l'API est directement renvoyée.
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

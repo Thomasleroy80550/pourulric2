@@ -47,7 +47,7 @@ async function sendSms(phone: string, otpCode: string) {
   console.log('[sendSms] Préparation de l\'envoi vers SMSFactor avec le payload :', JSON.stringify(payload));
 
   try {
-    const response = await fetch('https://api.smsfactor.com/api/v2/campaign', {
+    const response = await fetch('https://api.smsfactor.com/api/v2/campaigns', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

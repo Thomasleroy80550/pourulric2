@@ -12,11 +12,18 @@ const DEV_TEST_OTP = '123456';
 
 function normalizePhoneNumber(phone: string): string {
   console.log(`[normalizePhoneNumber] Original phone: ${phone}`);
-  let normalized = phone.replace(/[\s\-\(\)]/g, ''); // remove spaces, dashes, parens
-  if (normalized.startsWith('330')) {
+  // remove spaces, dashes, parens, and plus sign
+  let normalized = phone.replace(/[\s\-\(\)\+]/g, ''); 
+
+  if (normalized.startsWith('0')) {
+    // French number starting with 0, e.g., 0612345678 -> 33612345678
+    normalized = '33' + normalized.substring(1);
+  } else if (normalized.startsWith('330')) {
+    // French number with country code but also leading 0, e.g., 330612345678 -> 33612345678
     normalized = '33' + normalized.substring(3);
-    console.log(`[normalizePhoneNumber] Normalized to: ${normalized}`);
   }
+  
+  console.log(`[normalizePhoneNumber] Normalized to: ${normalized}`);
   return normalized;
 }
 
@@ -39,9 +46,12 @@ async function sendSms(phone: string, otpCode: string) {
     throw new Error("La clé API SMSFactor n'est pas configurée.");
   }
   
+  const smsFactorSender = Deno.env.get('SMSFACTOR_SENDER') || 'HelloKeys';
+
   const payload = {
     text: `Votre code de connexion HelloKeys est : ${otpCode}`,
     to: normalizedPhone,
+    sender: smsFactorSender,
   };
 
   console.log('[sendSms] Préparation de l\'envoi vers SMSFactor avec le payload :', JSON.stringify(payload));

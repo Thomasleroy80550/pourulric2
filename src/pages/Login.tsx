@@ -33,7 +33,7 @@ const emailSchema = z.object({
 
 const phoneSchema = z.object({
   phone: z.string().regex(/^\d{10,15}$/, { message: "Numéro de téléphone invalide. Utilisez le format international sans le '+' (ex: 33612345678)." }),
-  otp: z.string().min(6, { message: "Le code doit contenir 6 chiffres." }),
+  otp: z.string().optional(),
 });
 
 type EmailFormValues = z.infer<typeof emailSchema>;
@@ -86,6 +86,9 @@ const Login = () => {
         toast.success("Code de vérification envoyé !");
       } else {
         // Step 2: Verify OTP and get magic link
+        if (!values.otp || values.otp.length !== 6) {
+          throw new Error("Le code de vérification doit contenir 6 chiffres.");
+        }
         const { data, error } = await supabase.functions.invoke('custom-sms-auth', {
           body: { action: 'verify', phone: values.phone, otp: values.otp },
         });

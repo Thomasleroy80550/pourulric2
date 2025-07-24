@@ -10,15 +10,26 @@ const OTP_EXPIRATION_MINUTES = 5;
 const DEV_TEST_PHONE_NUMBER = Deno.env.get('DEV_TEST_PHONE_NUMBER') || '33600000000';
 const DEV_TEST_OTP = '123456';
 
+function normalizePhoneNumber(phone: string): string {
+  console.log(`[normalizePhoneNumber] Original phone: ${phone}`);
+  let normalized = phone.replace(/[\s\-\(\)]/g, ''); // remove spaces, dashes, parens
+  if (normalized.startsWith('330')) {
+    normalized = '33' + normalized.substring(3);
+    console.log(`[normalizePhoneNumber] Normalized to: ${normalized}`);
+  }
+  return normalized;
+}
+
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 async function sendSms(phone: string, otpCode: string) {
-  console.log(`[sendSms] Début de l'envoi de SMS pour le numéro : ${phone}`);
+  const normalizedPhone = normalizePhoneNumber(phone);
+  console.log(`[sendSms] Début de l'envoi de SMS pour le numéro normalisé : ${normalizedPhone}`);
 
-  if (phone === DEV_TEST_PHONE_NUMBER) {
-    console.log(`[sendSms] Numéro de test détecté (${phone}). Aucun SMS ne sera envoyé.`);
+  if (normalizedPhone === DEV_TEST_PHONE_NUMBER) {
+    console.log(`[sendSms] Numéro de test détecté (${normalizedPhone}). Aucun SMS ne sera envoyé.`);
     return;
   }
 
@@ -28,12 +39,9 @@ async function sendSms(phone: string, otpCode: string) {
     throw new Error("La clé API SMSFactor n'est pas configurée.");
   }
   
-  const smsFactorSender = Deno.env.get('SMSFACTOR_SENDER') || 'HelloKeys';
-  
   const payload = {
     text: `Votre code de connexion HelloKeys est : ${otpCode}`,
-    to: phone,
-    sender: smsFactorSender,
+    to: normalizedPhone,
   };
 
   console.log('[sendSms] Préparation de l\'envoi vers SMSFactor avec le payload :', JSON.stringify(payload));

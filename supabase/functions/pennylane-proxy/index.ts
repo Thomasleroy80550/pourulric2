@@ -8,7 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Helper function to get Pennylane Customer ID from a user's profile
 async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: string): Promise<string | null> {
   const { data, error } = await supabaseClient
     .from('profiles')
@@ -29,10 +28,17 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // La fonction attend désormais une requête POST
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method Not Allowed, please use POST' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
   try {
     console.log("--- Pennylane Proxy Function Start ---");
 
-    // Client pour vérifier l'authentification de l'appelant
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -50,22 +56,37 @@ serve(async (req) => {
     }
     console.log(`Request from user ID: ${caller.id}.`);
 
-    // Client admin pour récupérer le profil de manière sécurisée
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // On récupère TOUJOURS l'ID Pennylane de l'utilisateur qui fait l'appel.
-    const pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
+    // Vérifier si l'utilisateur est un admin
+    const { data: isAdmin, error: isAdminError } = await supabaseAdmin.rpc('is_admin', { user_id: caller.id });
+    if (isAdminError) {
+      console.error(`Error checking admin status for user ${caller.id}:`, isAdminError.message);
+      throw new Error("Erreur lors de la vérification des permissions de l'utilisateur.");
+    }
+
+    let pennylaneCustomerId: string | null = null;
+    const body = await req.json().catch(() => ({})); // Gère les body vides ou invalides
+    const requestedCustomerId = body.customer_id;
+
+    if (isAdmin && requestedCustomerId) {
+      console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${requestedCustomerId}`);
+      pennylaneCustomerId = requestedCustomerId;
+    } else {
+      console.log(`Standard user or admin without specific request. Fetching own profile for user ${caller.id}.`);
+      pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
+    }
 
     if (!pennylaneCustomerId) {
-      console.log(`User ${caller.id} does not have a Pennylane customer ID configured.`);
-      throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré dans son profil.");
+      const errorMessage = `User ${caller.id} does not have a Pennylane customer ID configured, and no specific ID was requested.`;
+      console.log(errorMessage);
+      throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré.");
     }
     
-    // Log de vérification crucial
-    console.log(`Found and using Pennylane Customer ID: '${pennylaneCustomerId}' for user ${caller.id}.`);
+    console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);
 
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
     if (!PENNYLANE_API_KEY) {

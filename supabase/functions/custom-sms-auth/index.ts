@@ -96,32 +96,61 @@ serve(async (req) => {
       // Clean up used OTP
       await supabaseAdmin.from('sms_otps').delete().eq('id', otpEntry.id);
 
-      // Find or create user
-      const dummyEmail = `${phone}@hellokeys.com`;
-      let userId = '';
+      // --- NEW LOGIC: Find user by phone number in profiles first ---
+      let targetEmail: string | null = null;
 
-      const { data: existingUser, error: userError } = await supabaseAdmin.auth.admin.listUsers({ phone });
-      if (userError) throw userError;
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', phone)
+        .single();
 
-      const user = existingUser.users.find(u => u.phone === phone);
-
-      if (user) {
-        userId = user.id;
+      if (profile) {
+        // Profile found, get the user's real email
+        const { data: { user }, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+        if (getUserError || !user) {
+          console.error(`Profile found for phone ${phone} but no matching auth user with id ${profile.id}`);
+          throw new Error("Utilisateur associé non trouvé. Veuillez contacter le support.");
+        }
+        if (!user.email) {
+            throw new Error("L'utilisateur associé n'a pas d'email. Connexion impossible.");
+        }
+        targetEmail = user.email;
       } else {
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          phone: phone,
-          email: dummyEmail,
-          phone_confirmed_at: new Date().toISOString(),
-          email_confirm: true, // Auto-confirm dummy email
-        });
-        if (createError) throw createError;
-        userId = newUser.user.id;
+        // No profile found, proceed with phone-based user lookup/creation
+        const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({ phone });
+        if (listUsersError) throw listUsersError;
+
+        const existingUser = users.find(u => u.phone === phone);
+
+        if (existingUser) {
+          targetEmail = existingUser.email!;
+        } else {
+          // Create a new user
+          const newDummyEmail = `${phone}@hellokeys.com`;
+          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            phone: phone,
+            email: newDummyEmail,
+            phone_confirmed_at: new Date().toISOString(),
+            email_confirm: true, // Auto-confirm dummy email
+          });
+          if (createError) throw createError;
+          
+          // Also add the phone number to the new user's profile
+          await supabaseAdmin.from('profiles').update({ phone_number: phone }).eq('id', newUser.user.id);
+
+          targetEmail = newDummyEmail;
+        }
+      }
+
+      if (!targetEmail) {
+        throw new Error("Impossible de déterminer l'email pour la connexion.");
       }
 
       // Generate magic link to create a session
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
-        email: dummyEmail,
+        email: targetEmail,
       });
       if (linkError) throw linkError;
 

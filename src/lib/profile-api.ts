@@ -5,6 +5,7 @@ export interface UserProfile {
   first_name?: string;
   last_name?: string;
   role?: string;
+  phone_number?: string;
   objective_amount?: number;
   cguv_accepted_at?: string;
   cguv_version?: string;
@@ -25,7 +26,7 @@ export async function getProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, role, objective_amount, cguv_accepted_at, cguv_version, commission_rate, pennylane_customer_id')
+    .select('id, first_name, last_name, role, phone_number, objective_amount, cguv_accepted_at, cguv_version, commission_rate, pennylane_customer_id')
     .eq('id', user.id)
     .single();
 

@@ -25,6 +25,7 @@ const ProfilePage: React.FC = () => {
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [pennylaneCustomerId, setPennylaneCustomerId] = useState<string>('');
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
 
   const fetchProfileAndRooms = async () => {
     setLoading(true);
@@ -36,6 +37,7 @@ const ProfilePage: React.FC = () => {
         setFirstName(fetchedProfile.first_name || '');
         setLastName(fetchedProfile.last_name || '');
         setPennylaneCustomerId(fetchedProfile.pennylane_customer_id || '');
+        setPhoneNumber(fetchedProfile.phone_number || '');
       }
 
       const fetchedRooms = await getUserRooms();
@@ -59,6 +61,7 @@ const ProfilePage: React.FC = () => {
         first_name: firstName,
         last_name: lastName,
         pennylane_customer_id: pennylaneCustomerId,
+        phone_number: phoneNumber,
       });
       toast.success("Profil mis à jour avec succès !");
       await fetchProfileAndRooms(); // Re-fetch to ensure state is consistent
@@ -134,6 +137,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-10 w-48" />
               </>
             ) : (
@@ -171,6 +175,18 @@ const ProfilePage: React.FC = () => {
                     disabled // Email is read-only from Supabase Auth
                     className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Numéro de téléphone</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="Votre numéro de téléphone"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    disabled={loading}
+                  />
+                  <p className="text-sm text-gray-500">Utilisé pour la connexion par SMS. Doit être unique.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pennylaneCustomerId">ID Client Pennylane</Label>

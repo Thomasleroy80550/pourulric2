@@ -31,23 +31,15 @@ async function sendSms(phone: string, otpCode: string) {
   const smsFactorSender = Deno.env.get('SMSFACTOR_SENDER') || 'HelloKeys';
   
   const payload = {
-    sms: {
-      message: {
-        text: `Votre code de connexion HelloKeys est : ${otpCode}`,
-        sender: smsFactorSender,
-      },
-      recipients: {
-        gsm: [
-          { value: phone }
-        ]
-      }
-    }
+    text: `Votre code de connexion HelloKeys est : ${otpCode}`,
+    to: phone,
+    sender: smsFactorSender,
   };
 
   console.log('[sendSms] Préparation de l\'envoi vers SMSFactor avec le payload :', JSON.stringify(payload));
 
   try {
-    const response = await fetch('https://api.smsfactor.com/api/v2/campaigns', {
+    const response = await fetch('https://api.smsfactor.com/api/v2/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -61,9 +61,9 @@ serve(async (req) => {
     }
     console.log(`PENNYLANE_API_KEY is set.`);
 
-    // Utilisation de POST /invoices/search avec un corps de requête
-    const url = `${PENNYLANE_API_BASE_URL}/invoices/search`;
-    console.log(`Calling Pennylane API URL: ${url}`);
+    // Utilisation de POST /invoices avec un corps de requête
+    const url = `${PENNYLANE_API_BASE_URL}/invoices`;
+    console.log(`Calling Pennylane API URL (POST): ${url}`);
 
     const requestBody = {
       filter: [

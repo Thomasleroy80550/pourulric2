@@ -31,15 +31,23 @@ async function sendSms(phone: string, otpCode: string) {
   const smsFactorSender = Deno.env.get('SMSFACTOR_SENDER') || 'HelloKeys';
   
   const payload = {
-    to: phone,
-    text: `Votre code de connexion HelloKeys est : ${otpCode}`,
-    sender: smsFactorSender,
+    sms: {
+      message: {
+        text: `Votre code de connexion HelloKeys est : ${otpCode}`,
+        sender: smsFactorSender,
+      },
+      recipients: {
+        gsm: [
+          { value: phone }
+        ]
+      }
+    }
   };
 
   console.log('[sendSms] Préparation de l\'envoi vers SMSFactor avec le payload :', JSON.stringify(payload));
 
   try {
-    const response = await fetch('https://api.smsfactor.com/send', {
+    const response = await fetch('https://api.smsfactor.com/api/v2/campaign', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -50,14 +58,14 @@ async function sendSms(phone: string, otpCode: string) {
     });
 
     console.log(`[sendSms] Réponse de SMSFactor reçue avec le statut : ${response.status}`);
+    const responseBody = await response.json();
 
     if (!response.ok) {
-      const errorBody = await response.json();
-      console.error("[sendSms] Erreur de l'API SMSFactor :", errorBody);
-      throw new Error(`Erreur lors de l'envoi du SMS (status: ${response.status}).`);
+      console.error("[sendSms] Erreur de l'API SMSFactor :", responseBody);
+      const errorMessage = responseBody?.message || `Erreur lors de l'envoi du SMS (status: ${response.status}).`;
+      throw new Error(errorMessage);
     }
 
-    const responseBody = await response.json();
     console.log('[sendSms] SMS envoyé avec succès via SMSFactor. Réponse :', responseBody);
 
   } catch (error) {

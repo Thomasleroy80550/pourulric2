@@ -6,15 +6,25 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, PlusCircle, Trash2, Home, User as UserIcon, Mail } from 'lucide-react'; // Renamed User to UserIcon to avoid conflict
+import { Terminal, PlusCircle, Trash2, Home } from 'lucide-react';
 import { addUserRoom, getUserRooms, deleteUserRoom, UserRoom } from '@/lib/user-room-api';
-import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api'; // Import profile API
+import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
-import { useSession } from '@/components/SessionContextProvider'; // Import useSession
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { useSession } from '@/components/SessionContextProvider';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PhoneVerificationDialog from '@/components/PhoneVerificationDialog';
+
+const countryCodes = [
+  { code: '33', name: 'FR (+33)' },
+  { code: '32', name: 'BE (+32)' },
+  { code: '41', name: 'CH (+41)' },
+  { code: '352', name: 'LU (+352)' },
+  { code: '1', name: 'US (+1)' },
+];
 
 const ProfilePage: React.FC = () => {
-  const { session } = useSession(); // Get session to access user email
+  const { session } = useSession();
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +35,10 @@ const ProfilePage: React.FC = () => {
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [pennylaneCustomerId, setPennylaneCustomerId] = useState<string>('');
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  
+  const [phoneCountryCode, setPhoneCountryCode] = useState('33');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isVerificationDialogOpen, setIsVerificationDialogOpen] = useState(false);
 
   const fetchProfileAndRooms = async () => {
     setLoading(true);
@@ -37,7 +50,17 @@ const ProfilePage: React.FC = () => {
         setFirstName(fetchedProfile.first_name || '');
         setLastName(fetchedProfile.last_name || '');
         setPennylaneCustomerId(fetchedProfile.pennylane_customer_id || '');
-        setPhoneNumber(fetchedProfile.phone_number || '');
+        
+        if (fetchedProfile.phone_number) {
+          const matchedCountry = countryCodes.find(c => fetchedProfile.phone_number!.startsWith(c.code));
+          if (matchedCountry) {
+            setPhoneCountryCode(matchedCountry.code);
+            setPhoneNumber(fetchedProfile.phone_number!.substring(matchedCountry.code.length));
+          } else {
+            setPhoneCountryCode('33'); // Fallback
+            setPhoneNumber(fetchedProfile.phone_number || '');
+          }
+        }
       }
 
       const fetchedRooms = await getUserRooms();
@@ -61,10 +84,9 @@ const ProfilePage: React.FC = () => {
         first_name: firstName,
         last_name: lastName,
         pennylane_customer_id: pennylaneCustomerId,
-        phone_number: phoneNumber,
       });
       toast.success("Profil mis à jour avec succès !");
-      await fetchProfileAndRooms(); // Re-fetch to ensure state is consistent
+      await fetchProfileAndRooms();
     } catch (err: any) {
       setError(`Erreur lors de la mise à jour du profil : ${err.message}`);
       toast.error(`Erreur: ${err.message}`);
@@ -84,7 +106,7 @@ const ProfilePage: React.FC = () => {
       toast.success("Chambre ajoutée avec succès !");
       setNewRoomId('');
       setNewRoomName('');
-      await fetchProfileAndRooms(); // Refresh the list
+      await fetchProfileAndRooms();
     } catch (err: any) {
       setError(`Erreur lors de l'ajout de la chambre : ${err.message}`);
       toast.error(`Erreur: ${err.message}`);
@@ -94,14 +116,12 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleDeleteRoom = async (id: string) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette chambre de votre liste ?")) {
-      return;
-    }
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette chambre de votre liste ?")) return;
     setLoading(true);
     try {
       await deleteUserRoom(id);
       toast.success("Chambre supprimée avec succès !");
-      await fetchProfileAndRooms(); // Refresh the list
+      await fetchProfileAndRooms();
     } catch (err: any) {
       setError(`Erreur lors de la suppression de la chambre : ${err.message}`);
       toast.error(`Erreur: ${err.message}`);
@@ -109,6 +129,10 @@ const ProfilePage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const fullPhoneNumber = `${phoneCountryCode}${phoneNumber.replace(/\s+|-/g, '')}`;
+  const originalFullPhoneNumber = profile?.phone_number || '';
+  const isPhoneChanged = fullPhoneNumber !== originalFullPhoneNumber;
 
   return (
     <MainLayout>
@@ -123,186 +147,122 @@ const ProfilePage: React.FC = () => {
           </Alert>
         )}
 
-        {/* User Profile Section */}
         <Card className="shadow-md mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Informations du Profil</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Informations du Profil</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {loading ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-10 w-48" />
-              </>
+              <Skeleton className="h-48 w-full" />
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">Prénom</Label>
-                    <Input
-                      id="firstName"
-                      type="text"
-                      placeholder="Votre prénom"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      disabled={loading}
-                    />
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={loading} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Nom</Label>
-                    <Input
-                      id="lastName"
-                      type="text"
-                      placeholder="Votre nom"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      disabled={loading}
-                    />
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={loading} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={session?.user?.email || ''}
-                    disabled // Email is read-only from Supabase Auth
-                    className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
-                  />
+                  <Input id="email" value={session?.user?.email || ''} disabled className="bg-gray-100 dark:bg-gray-700" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">Numéro de téléphone</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    placeholder="Votre numéro de téléphone"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    disabled={loading}
-                  />
-                  <p className="text-sm text-gray-500">Utilisé pour la connexion par SMS. Doit être unique.</p>
+                  <div className="flex items-center gap-2">
+                    <Select value={phoneCountryCode} onValueChange={setPhoneCountryCode} disabled={loading}>
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countryCodes.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Input id="phoneNumber" type="tel" placeholder="6 12 34 56 78" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} disabled={loading} />
+                    <Button onClick={() => setIsVerificationDialogOpen(true)} disabled={loading || !isPhoneChanged || !phoneNumber}>
+                      Vérifier
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-500">Utilisé pour la connexion par SMS. Doit être unique et vérifié.</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pennylaneCustomerId">ID Client Pennylane</Label>
-                  <Input
-                    id="pennylaneCustomerId"
-                    type="text"
-                    placeholder="Ex: cus_..."
-                    value={pennylaneCustomerId}
-                    onChange={(e) => setPennylaneCustomerId(e.target.value)}
-                    disabled={loading}
-                  />
-                  <p className="text-sm text-gray-500">Cet ID est utilisé pour récupérer vos factures depuis Pennylane.</p>
+                  <Input id="pennylaneCustomerId" value={pennylaneCustomerId} onChange={(e) => setPennylaneCustomerId(e.target.value)} disabled={loading} />
+                  <p className="text-sm text-gray-500">Utilisé pour récupérer vos factures depuis Pennylane.</p>
                 </div>
                 <Button onClick={handleUpdateProfile} disabled={loading}>
-                  {loading ? 'Sauvegarde en cours...' : 'Mettre à jour le Profil'}
+                  {loading ? 'Sauvegarde...' : 'Mettre à jour le Profil'}
                 </Button>
               </>
             )}
           </CardContent>
         </Card>
 
-        {/* Add New Room Section */}
         <Card className="shadow-md mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Ajouter une Nouvelle Chambre</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Ajouter une Nouvelle Chambre</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {loading ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-                <Skeleton className="h-10 w-48" />
-              </>
-            ) : (
+            {loading ? <Skeleton className="h-24 w-full" /> : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newRoomId">ID de la Chambre (Krossbooking)</Label>
-                    <Input
-                      id="newRoomId"
-                      type="text"
-                      placeholder="Ex: 36"
-                      value={newRoomId}
-                      onChange={(e) => setNewRoomId(e.target.value)}
-                      disabled={loading}
-                    />
+                    <Label htmlFor="newRoomId">ID Chambre (Krossbooking)</Label>
+                    <Input id="newRoomId" value={newRoomId} onChange={(e) => setNewRoomId(e.target.value)} disabled={loading} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="newRoomName">Nom de la Chambre (pour affichage)</Label>
-                    <Input
-                      id="newRoomName"
-                      type="text"
-                      placeholder="Ex: Appartement Paris 1"
-                      value={newRoomName}
-                      onChange={(e) => setNewRoomName(e.target.value)}
-                      disabled={loading}
-                    />
+                    <Label htmlFor="newRoomName">Nom de la Chambre</Label>
+                    <Input id="newRoomName" value={newRoomName} onChange={(e) => setNewRoomName(e.target.value)} disabled={loading} />
                   </div>
                 </div>
                 <Button onClick={handleAddRoom} disabled={loading}>
                   <PlusCircle className="h-4 w-4 mr-2" />
-                  {loading ? 'Ajout en cours...' : 'Ajouter la Chambre'}
+                  {loading ? 'Ajout...' : 'Ajouter la Chambre'}
                 </Button>
               </>
             )}
           </CardContent>
         </Card>
 
-        {/* Configured Rooms Section */}
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Mes Chambres Configurées</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Mes Chambres Configurées</CardTitle></CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : rooms.length === 0 ? (
-              <p className="text-gray-500">Vous n'avez pas encore configuré de chambres. Ajoutez-en une ci-dessus !</p>
+            {loading ? <Skeleton className="h-24 w-full" /> : rooms.length === 0 ? (
+              <p className="text-gray-500">Vous n'avez pas encore configuré de chambres.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nom de la Chambre</TableHead>
-                      <TableHead>ID Krossbooking</TableHead>
-                      <TableHead>Actions</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>ID Krossbooking</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rooms.map((room) => (
+                    <TableRow key={room.id}>
+                      <TableCell className="font-medium flex items-center"><Home className="h-4 w-4 mr-2 text-gray-500" />{room.room_name}</TableCell>
+                      <TableCell>{room.room_id}</TableCell>
+                      <TableCell>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteRoom(room.id)} disabled={loading}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rooms.map((room) => (
-                      <TableRow key={room.id}>
-                        <TableCell className="font-medium flex items-center">
-                          <Home className="h-4 w-4 mr-2 text-gray-500" />
-                          {room.room_name}
-                        </TableCell>
-                        <TableCell>{room.room_id}</TableCell>
-                        <TableCell>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteRoom(room.id)} disabled={loading}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
       </div>
+      <PhoneVerificationDialog
+        open={isVerificationDialogOpen}
+        onOpenChange={setIsVerificationDialogOpen}
+        phoneNumber={fullPhoneNumber}
+        onVerified={() => {
+          fetchProfileAndRooms();
+        }}
+      />
     </MainLayout>
   );
 };

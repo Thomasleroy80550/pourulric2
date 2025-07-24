@@ -76,7 +76,7 @@ serve(async (req) => {
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
     url.searchParams.append('customer_id', pennylaneCustomerId);
     url.searchParams.append('sort', '-date');
-    url.search_params.append('limit', '100');
+    url.searchParams.append('limit', '100');
 
     const response = await fetch(url.toString(), {
       method: 'GET',

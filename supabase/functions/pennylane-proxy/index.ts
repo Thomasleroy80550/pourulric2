@@ -59,53 +59,39 @@ serve(async (req) => {
       console.error("PENNYLANE_API_KEY environment variable is not set.");
       throw new Error("Erreur de configuration : Clé API Pennylane manquante sur le serveur.");
     }
-    console.log(`PENNYLANE_API_KEY is set.`);
 
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
-    url.searchParams.append('customer_id', pennylaneCustomerId);
     url.searchParams.append('sort', '-date');
     url.searchParams.append('limit', '100');
 
-    console.log(`Calling Pennylane API URL (GET): ${url.toString()}`);
-
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${PENNYLANE_API_KEY}`,
-      },
+      headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${PENNYLANE_API_KEY}` },
     });
 
     const responseBodyText = await response.text();
-    console.log(`Pennylane API Response Status: ${response.status}`);
-    
     if (!response.ok) {
-      const errorMessage = `Pennylane API error: ${response.status} ${response.statusText}. Response: ${responseBodyText}`;
-      console.error(errorMessage);
-      throw new Error("Une erreur est survenue lors de la récupération des factures depuis Pennylane.");
+      throw new Error(`Pennylane API error: ${response.status} ${response.statusText}. Response: ${responseBodyText}`);
     }
 
     const data = JSON.parse(responseBodyText);
-    console.log(`Received ${data.items?.length || 0} invoices from Pennylane before filtering.`);
+    console.log(`Received ${data.items?.length || 0} total invoices from Pennylane.`);
+
+    // **NOUVEAU LOG DE DÉBOGAGE**
+    if (data.items && data.items.length > 0) {
+      console.log("DEBUG: Full first invoice object from Pennylane:", JSON.stringify(data.items[0], null, 2));
+    }
 
     const customerIdToMatch = pennylaneCustomerId;
     console.log(`Attempting to filter for profile customer ID: '${customerIdToMatch}'`);
-
-    if (data.items && data.items.length > 0) {
-      const receivedCustomerIds = data.items.slice(0, 5).map(inv => inv.customer ? inv.customer.id : 'N/A');
-      console.log(`DEBUG: First 5 customer IDs from Pennylane response: [${receivedCustomerIds.join(', ')}]`);
-    }
 
     const filteredItems = (data.items || []).filter(invoice => 
         invoice.customer && String(invoice.customer.id) === customerIdToMatch
     );
 
-    console.log(`Found ${filteredItems.length} invoices after filtering for customer ID ${customerIdToMatch}.`);
+    console.log(`Found ${filteredItems.length} invoices after filtering.`);
 
-    const filteredResponse = {
-        ...data,
-        items: filteredItems,
-    };
+    const filteredResponse = { ...data, items: filteredItems };
 
     return new Response(JSON.stringify(filteredResponse), {
       status: 200,

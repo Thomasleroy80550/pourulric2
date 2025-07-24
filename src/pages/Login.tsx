@@ -24,6 +24,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -32,15 +33,23 @@ const emailSchema = z.object({
 });
 
 const phoneSchema = z.object({
+  countryCode: z.string().min(1, "Indicatif requis."),
   phone: z.string()
     .min(1, "Le numéro de téléphone est requis.")
-    .transform(val => val.replace(/\s+|-|\+/g, '')) // Nettoie les espaces, tirets, et '+'
-    .pipe(z.string().regex(/^\d{10,15}$/, { message: "Numéro invalide. Entrez 10-15 chiffres (ex: 33612345678)." })),
+    .transform(val => val.replace(/\s+|-/g, '')), // Nettoie les espaces et tirets
   otp: z.string().optional(),
 });
 
 type EmailFormValues = z.infer<typeof emailSchema>;
 type PhoneFormValues = z.infer<typeof phoneSchema>;
+
+const countryCodes = [
+  { code: '33', name: 'FR (+33)' },
+  { code: '32', name: 'BE (+32)' },
+  { code: '41', name: 'CH (+41)' },
+  { code: '352', name: 'LU (+352)' },
+  { code: '1', name: 'US (+1)' },
+];
 
 const Login = () => {
   const navigate = useNavigate();
@@ -53,13 +62,20 @@ const Login = () => {
     defaultValues: {
       email: '',
       password: '',
+      countryCode: '33',
       phone: '',
       otp: '',
     },
   });
 
   useEffect(() => {
-    form.reset();
+    form.reset({
+      email: '',
+      password: '',
+      countryCode: '33',
+      phone: '',
+      otp: '',
+    });
     setShowOtpInput(false);
   }, [authMethod, form]);
 
@@ -78,11 +94,12 @@ const Login = () => {
 
   const handlePhoneSubmit = async (values: PhoneFormValues) => {
     setLoading(true);
+    const fullPhoneNumber = `${values.countryCode}${values.phone}`;
     try {
       if (!showOtpInput) {
         // Step 1: Send OTP
         const { error } = await supabase.functions.invoke('custom-sms-auth', {
-          body: { action: 'send', phone: values.phone },
+          body: { action: 'send', phone: fullPhoneNumber },
         });
         if (error) throw new Error(error.message);
         setShowOtpInput(true);
@@ -93,12 +110,11 @@ const Login = () => {
           throw new Error("Le code de vérification doit contenir 6 chiffres.");
         }
         const { data, error } = await supabase.functions.invoke('custom-sms-auth', {
-          body: { action: 'verify', phone: values.phone, otp: values.otp },
+          body: { action: 'verify', phone: fullPhoneNumber, otp: values.otp },
         });
         if (error) throw new Error(error.message);
         if (data.action_link) {
           toast.success("Vérification réussie ! Connexion en cours...");
-          // Redirect to the magic link to complete authentication
           window.location.href = data.action_link;
         } else {
           throw new Error("Le lien de connexion n'a pas pu être généré.");
@@ -202,19 +218,45 @@ const Login = () => {
                 </>
               ) : (
                 <>
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Numéro de téléphone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="33612345678" {...field} disabled={loading || showOtpInput} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormItem>
+                    <FormLabel>Numéro de téléphone</FormLabel>
+                    <div className="flex gap-2">
+                       <FormField
+                        control={form.control}
+                        name="countryCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loading || showOtpInput}>
+                              <FormControl>
+                                <SelectTrigger className="w-[120px]">
+                                  <SelectValue placeholder="Indicatif" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {countryCodes.map(c => (
+                                  <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem className="flex-grow">
+                            <FormControl>
+                              <Input placeholder="6 12 34 56 78" {...field} disabled={loading || showOtpInput} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </FormItem>
+
                   {showOtpInput && (
                     <FormField
                       control={form.control}

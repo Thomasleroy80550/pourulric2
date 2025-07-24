@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,30 +15,54 @@ function generateOtp() {
 }
 
 async function sendSms(phone: string, otpCode: string) {
-  if (phone === DEV_TEST_PHONE_NUMBER) return; // Don't send SMS for test number
+  console.log(`[sendSms] Début de l'envoi de SMS pour le numéro : ${phone}`);
+
+  if (phone === DEV_TEST_PHONE_NUMBER) {
+    console.log(`[sendSms] Numéro de test détecté (${phone}). Aucun SMS ne sera envoyé.`);
+    return;
+  }
 
   const smsFactorToken = Deno.env.get('SMSFACTOR_API_TOKEN');
+  if (!smsFactorToken) {
+    console.error("[sendSms] Erreur critique : La variable d'environnement SMSFACTOR_API_TOKEN est manquante.");
+    throw new Error("La clé API SMSFactor n'est pas configurée.");
+  }
+  
   const smsFactorSender = Deno.env.get('SMSFACTOR_SENDER') || 'HelloKeys';
-  if (!smsFactorToken) throw new Error("La clé API SMSFactor n'est pas configurée.");
+  
+  const payload = {
+    to: phone,
+    text: `Votre code de connexion HelloKeys est : ${otpCode}`,
+    sender: smsFactorSender,
+  };
 
-  const response = await fetch('https://api.smsfactor.com/send', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${smsFactorToken}`,
-    },
-    body: JSON.stringify({
-      to: phone,
-      text: `Votre code de connexion HelloKeys est : ${otpCode}`,
-      sender: smsFactorSender,
-    }),
-  });
+  console.log('[sendSms] Préparation de l\'envoi vers SMSFactor avec le payload :', JSON.stringify(payload));
 
-  if (!response.ok) {
-    const errorBody = await response.json();
-    console.error("SMSFactor API Error:", errorBody);
-    throw new Error("Erreur lors de l'envoi du SMS.");
+  try {
+    const response = await fetch('https://api.smsfactor.com/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${smsFactorToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log(`[sendSms] Réponse de SMSFactor reçue avec le statut : ${response.status}`);
+
+    if (!response.ok) {
+      const errorBody = await response.json();
+      console.error("[sendSms] Erreur de l'API SMSFactor :", errorBody);
+      throw new Error(`Erreur lors de l'envoi du SMS (status: ${response.status}).`);
+    }
+
+    const responseBody = await response.json();
+    console.log('[sendSms] SMS envoyé avec succès via SMSFactor. Réponse :', responseBody);
+
+  } catch (error) {
+    console.error("[sendSms] Exception lors de l'appel à l'API SMSFactor :", error);
+    throw error;
   }
 }
 
@@ -49,6 +73,8 @@ serve(async (req) => {
 
   try {
     const { action, phone, otp } = await req.json();
+    console.log(`[Handler] Action reçue: ${action}, Téléphone: ${phone ? phone : 'non fourni'}`);
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -69,6 +95,7 @@ serve(async (req) => {
       if (userError || !user) throw new Error("Utilisateur non authentifié.");
 
       if (action === 'send-verification') {
+        console.log(`[send-verification] Début pour l'utilisateur ${user.id} et le téléphone ${phone}`);
         if (!phone) throw new Error("Le numéro de téléphone est requis.");
 
         const { data: existingProfile, error: profileError } = await supabaseAdmin
@@ -78,12 +105,15 @@ serve(async (req) => {
 
         const otpCode = phone === DEV_TEST_PHONE_NUMBER ? DEV_TEST_OTP : generateOtp();
         await supabaseAdmin.from('sms_otps').upsert({ phone_number: phone, otp_code: otpCode, expires_at: new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000).toISOString() }, { onConflict: 'phone_number' });
+        
         await sendSms(phone, otpCode);
+        console.log(`[send-verification] Processus terminé pour le téléphone ${phone}`);
 
         return new Response(JSON.stringify({ success: true, message: "Code envoyé." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
       if (action === 'verify-and-update') {
+        console.log(`[verify-and-update] Début pour l'utilisateur ${user.id} et le téléphone ${phone}`);
         if (!phone || !otp) throw new Error("Téléphone et OTP requis.");
 
         const { data: otpEntry, error: findError } = await supabaseAdmin.from('sms_otps').select('*').eq('phone_number', phone).eq('otp_code', otp).single();
@@ -93,21 +123,27 @@ serve(async (req) => {
         await supabaseAdmin.from('sms_otps').delete().eq('id', otpEntry.id);
         const { error: updateError } = await supabaseAdmin.from('profiles').update({ phone_number: phone }).eq('id', user.id);
         if (updateError) throw updateError;
-
+        
+        console.log(`[verify-and-update] Numéro mis à jour avec succès pour l'utilisateur ${user.id}`);
         return new Response(JSON.stringify({ success: true, message: "Numéro mis à jour." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
     // --- Unauthenticated Actions (Login) ---
     if (action === 'send') {
+      console.log(`[send] Début de l'envoi de l'OTP pour le téléphone ${phone}`);
       if (!phone) throw new Error("Le numéro de téléphone est requis.");
       const otpCode = phone === DEV_TEST_PHONE_NUMBER ? DEV_TEST_OTP : generateOtp();
       await supabaseAdmin.from('sms_otps').upsert({ phone_number: phone, otp_code: otpCode, expires_at: new Date(Date.now() + OTP_EXPIRATION_MINUTES * 60 * 1000).toISOString() }, { onConflict: 'phone_number' });
+      
       await sendSms(phone, otpCode);
+      console.log(`[send] Processus d'envoi de l'OTP terminé pour le téléphone ${phone}`);
+      
       return new Response(JSON.stringify({ success: true, message: "Code OTP envoyé." }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     if (action === 'verify') {
+      console.log(`[verify] Début de la vérification de l'OTP pour le téléphone ${phone}`);
       if (!phone || !otp) throw new Error("Téléphone et OTP requis.");
       const { data: otpEntry, error: findError } = await supabaseAdmin.from('sms_otps').select('*').eq('phone_number', phone).eq('otp_code', otp).single();
       if (findError || !otpEntry) throw new Error("Code OTP invalide.");
@@ -138,6 +174,7 @@ serve(async (req) => {
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({ type: 'magiclink', email: targetEmail });
       if (linkError) throw linkError;
 
+      console.log(`[verify] Lien magique généré avec succès pour ${targetEmail}`);
       return new Response(JSON.stringify({ success: true, action_link: linkData.properties.action_link }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 

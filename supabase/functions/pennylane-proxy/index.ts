@@ -52,7 +52,7 @@ serve(async (req) => {
       console.log(`User ${user.id} does not have a Pennylane customer ID configured.`);
       throw new Error("Votre ID client Pennylane n'est pas configuré dans votre profil.");
     }
-    console.log(`Found Pennylane Customer ID: ${pennylaneCustomerId}`);
+    console.log(`Found Pennylane Customer ID from profile: ${pennylaneCustomerId}`);
 
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
     if (!PENNYLANE_API_KEY) {
@@ -62,7 +62,6 @@ serve(async (req) => {
     console.log(`PENNYLANE_API_KEY is set.`);
 
     const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
-    // On continue d'envoyer le customer_id, au cas où Pennylane le supporterait un jour.
     url.searchParams.append('customer_id', pennylaneCustomerId);
     url.searchParams.append('sort', '-date');
     url.searchParams.append('limit', '100');
@@ -89,9 +88,13 @@ serve(async (req) => {
     const data = JSON.parse(responseBodyText);
     console.log(`Received ${data.items?.length || 0} invoices from Pennylane before filtering.`);
 
-    // **FILTRAGE MANUEL CORRIGÉ ICI**
-    // On compare les IDs en tant que chaînes de caractères pour éviter les problèmes de type (nombre vs texte).
     const customerIdToMatch = pennylaneCustomerId;
+    console.log(`Attempting to filter for profile customer ID: '${customerIdToMatch}'`);
+
+    if (data.items && data.items.length > 0) {
+      const receivedCustomerIds = data.items.slice(0, 5).map(inv => inv.customer ? inv.customer.id : 'N/A');
+      console.log(`DEBUG: First 5 customer IDs from Pennylane response: [${receivedCustomerIds.join(', ')}]`);
+    }
 
     const filteredItems = (data.items || []).filter(invoice => 
         invoice.customer && String(invoice.customer.id) === customerIdToMatch
@@ -99,7 +102,6 @@ serve(async (req) => {
 
     console.log(`Found ${filteredItems.length} invoices after filtering for customer ID ${customerIdToMatch}.`);
 
-    // On reconstruit la réponse avec seulement les factures filtrées.
     const filteredResponse = {
         ...data,
         items: filteredItems,

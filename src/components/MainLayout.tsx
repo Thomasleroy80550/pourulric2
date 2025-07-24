@@ -53,7 +53,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
   return (
     <>
       <div className="flex items-center mb-8">
-        <img src="/logo.png" alt="Hello Keys Logo" className="w-48 h-auto mx-auto" />
+        <img src="/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mx-auto" />
       </div>
 
       <div className="mb-6 flex justify-center">

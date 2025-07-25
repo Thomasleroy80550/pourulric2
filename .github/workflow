@@ -1,0 +1,43 @@
+name: Build and commit dist to main
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Commit dist
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add dist
+          git commit -m "chore: update dist" || echo "No changes to commit"
+      - name: Push to main
+        env:
+          GH_TOKEN: ${{ secrets.hellokeys }}
+        run: |
+          git pull
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Thomasleroy80550/pourulric2.git
+          git push origin main

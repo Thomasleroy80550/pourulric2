@@ -296,14 +296,13 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="hidden md:flex w-full md:w-1/2 bg-blue-800 dark:bg-blue-950 items-center justify-center p-8">
-        <div className="text-center text-white space-y-6">
-          <div className="w-full max-w-md mx-auto h-64 bg-blue-700 dark:bg-blue-800 rounded-lg flex items-center justify-center text-xl font-bold">
-            Illustration Placeholder
-          </div>
-          <h2 className="text-3xl font-bold">Suivez vos réservations en temps réel.</h2>
-          <p className="text-lg text-blue-100">
-            Consultez et gérez facilement toutes vos réservations depuis un seul et même espace.
+      <div className="hidden md:flex w-full md:w-1/2 bg-slate-900 items-center justify-center p-8 relative overflow-hidden">
+        <div className="absolute -top-1/2 -right-1/2 w-[800px] h-[800px] bg-blue-600/20 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-1/2 -left-1/2 w-[600px] h-[600px] bg-purple-600/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
+        <div className="text-center text-white space-y-6 relative z-10">
+          <h2 className="text-4xl font-bold">La gestion locative, réinventée.</h2>
+          <p className="text-lg text-slate-300 max-w-md mx-auto">
+            Centralisez vos réservations, suivez vos finances et optimisez vos revenus avec une simplicité inégalée.
           </p>
         </div>
       </div>

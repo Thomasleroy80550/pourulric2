@@ -342,6 +342,25 @@
   animation-delay: 0.4s;
 }
 
+/* New keyframes for a dynamic aurora background */
+@keyframes aurora {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.aurora-background {
+  background: linear-gradient(-45deg, #0f172a, #1e293b, #3b82f6, #8b5cf6);
+  background-size: 400% 400%;
+  animation: aurora 15s ease infinite;
+}
+
 /* driver.js custom styling */
 .driver-popover {
   background-color: hsl(var(--popover));

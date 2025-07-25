@@ -56,6 +56,7 @@ const Login = () => {
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fullPhoneNumber, setFullPhoneNumber] = useState('');
 
   const form = useForm<EmailFormValues | PhoneFormValues>({
     resolver: zodResolver(authMethod === 'email' ? emailSchema : phoneSchema),
@@ -94,31 +95,31 @@ const Login = () => {
 
   const handlePhoneSubmit = async (values: PhoneFormValues) => {
     setLoading(true);
-    const fullPhoneNumber = `${values.countryCode}${values.phone}`;
+    const phone = `+${values.countryCode}${values.phone}`;
+    setFullPhoneNumber(phone);
+
     try {
       if (!showOtpInput) {
-        // Step 1: Send OTP
-        const { error } = await supabase.functions.invoke('custom-sms-auth', {
-          body: { action: 'send', phone: fullPhoneNumber },
+        // Step 1: Send OTP using Supabase native auth
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: phone,
         });
-        if (error) throw new Error(error.message);
+        if (error) throw error;
         setShowOtpInput(true);
         toast.success("Code de vérification envoyé !");
       } else {
-        // Step 2: Verify OTP and get magic link
+        // Step 2: Verify OTP using Supabase native auth
         if (!values.otp || values.otp.length !== 6) {
           throw new Error("Le code de vérification doit contenir 6 chiffres.");
         }
-        const { data, error } = await supabase.functions.invoke('custom-sms-auth', {
-          body: { action: 'verify', phone: fullPhoneNumber, otp: values.otp },
+        const { error } = await supabase.auth.verifyOtp({
+          phone: phone,
+          token: values.otp,
+          type: 'sms',
         });
-        if (error) throw new Error(error.message);
-        if (data.action_link) {
-          toast.success("Vérification réussie ! Connexion en cours...");
-          window.location.href = data.action_link;
-        } else {
-          throw new Error("Le lien de connexion n'a pas pu être généré.");
-        }
+        if (error) throw error;
+        toast.success("Vérification réussie ! Connexion en cours...");
+        // The onAuthStateChange listener will handle navigation
       }
     } catch (error: any) {
       const errorMessage = error.message || "Une erreur est survenue.";

@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { updateProfile } from '@/lib/profile-api';
 
 interface PhoneVerificationDialogProps {
   open: boolean;
@@ -31,11 +32,10 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
   const sendOtp = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('custom-sms-auth', {
-        body: { action: 'send-verification', phone: phoneNumber },
-      });
-      if (error) throw new Error(error.message);
-      toast.success(`Code de vérification envoyé à ${phoneNumber}`);
+      // Use Supabase native method to initiate phone change
+      const { error } = await supabase.auth.updateUser({ phone: `+${phoneNumber}` });
+      if (error) throw error;
+      toast.success(`Code de vérification envoyé à +${phoneNumber}`);
       setResendCooldown(60); // 60 seconds cooldown
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -48,7 +48,7 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
     if (open) {
       sendOtp();
     }
-  }, [open]);
+  }, [open, phoneNumber]);
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -60,10 +60,17 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
   const handleVerify = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('custom-sms-auth', {
-        body: { action: 'verify-and-update', phone: phoneNumber, otp },
+      // Use Supabase native method to verify the OTP for phone change
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        phone: `+${phoneNumber}`,
+        token: otp,
+        type: 'phone_change',
       });
-      if (error) throw new Error(error.message);
+      if (verifyError) throw verifyError;
+
+      // After successful verification in auth.users, update our public.profiles table
+      await updateProfile({ phone_number: `+${phoneNumber}` });
+
       toast.success("Numéro de téléphone vérifié et mis à jour !");
       onVerified();
       onOpenChange(false);
@@ -80,7 +87,7 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
         <DialogHeader>
           <DialogTitle>Vérifier votre numéro de téléphone</DialogTitle>
           <DialogDescription>
-            Nous avons envoyé un code à 6 chiffres à {phoneNumber}. Entrez-le ci-dessous pour confirmer.
+            Nous avons envoyé un code à 6 chiffres à +{phoneNumber}. Entrez-le ci-dessous pour confirmer.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center space-y-4 py-4">

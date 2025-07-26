@@ -19,7 +19,7 @@ import { getAdminReports, createReport, markReportAsResolved, TechnicalReport } 
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const reportSchema = z.object({

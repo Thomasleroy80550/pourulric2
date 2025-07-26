@@ -90,6 +90,20 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     }
   };
 
+  const handleOwnerResolve = async () => {
+    if (!id) return;
+    try {
+      // First, add an automatic update message
+      await addReportUpdate(id, "Le propriétaire a marqué ce rapport comme résolu.");
+      // Then, mark the report as resolved
+      await markReportAsResolved(id);
+      toast.success("Rapport marqué comme résolu.");
+      fetchReport(); // Refresh data
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending_owner_action': return <Badge variant="secondary">Action requise</Badge>;
@@ -201,6 +215,14 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
               <CardContent className="flex flex-col gap-2">
                 <Button onClick={() => handleResponse('admin_will_manage')}><Wrench className="h-4 w-4 mr-2" />Hello Keys s'en occupe</Button>
                 <Button variant="outline" onClick={() => handleResponse('owner_will_manage')}><User className="h-4 w-4 mr-2" />Je m'en occupe</Button>
+              </CardContent>
+            </Card>
+          )}
+          {report.status === 'owner_will_manage' && !isAdmin && (
+            <Card>
+              <CardHeader><CardTitle>Gérer le Rapport</CardTitle></CardHeader>
+              <CardContent>
+                <Button className="w-full" onClick={handleOwnerResolve}><CheckCircle className="h-4 w-4 mr-2" />Marquer comme résolu</Button>
               </CardContent>
             </Card>
           )}

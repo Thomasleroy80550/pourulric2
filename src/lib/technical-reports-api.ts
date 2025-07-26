@@ -141,7 +141,7 @@ export async function respondToReport(reportId: string, response: 'owner_will_ma
   return data;
 }
 
-// For Admins: Mark a report as resolved
+// For Admins or Owners: Mark a report as resolved
 export async function markReportAsResolved(reportId: string): Promise<TechnicalReport> {
   const { data, error } = await supabase
     .from('technical_reports')

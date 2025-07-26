@@ -14,13 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
-import { getAdminReports, createReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { getAdminReports, createReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Loader2, Archive, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const reportSchema = z.object({
   user_id: z.string().min(1, "Veuillez sélectionner un propriétaire."),
@@ -33,7 +34,8 @@ const reportSchema = z.object({
 });
 
 const AdminTechnicalReportsPage: React.FC = () => {
-  const [reports, setReports] = useState<TechnicalReport[]>([]);
+  const [activeReports, setActiveReports] = useState<TechnicalReport[]>([]);
+  const [archivedReports, setArchivedReports] = useState<TechnicalReport[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -47,11 +49,13 @@ const AdminTechnicalReportsPage: React.FC = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [fetchedReports, fetchedProfiles] = await Promise.all([
-        getAdminReports(),
+      const [fetchedActive, fetchedArchived, fetchedProfiles] = await Promise.all([
+        getAdminReports(false),
+        getAdminReports(true),
         getAllProfiles(),
       ]);
-      setReports(fetchedReports);
+      setActiveReports(fetchedActive);
+      setArchivedReports(fetchedArchived);
       setProfiles(fetchedProfiles);
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
@@ -76,6 +80,16 @@ const AdminTechnicalReportsPage: React.FC = () => {
     }
   };
 
+  const handleArchiveToggle = async (reportId: string, archiveStatus: boolean) => {
+    try {
+      await archiveReport(reportId, archiveStatus);
+      toast.success(`Rapport ${archiveStatus ? 'archivé' : 'désarchivé'} avec succès !`);
+      fetchAllData();
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending_owner_action': return <Badge variant="secondary">En attente proprio</Badge>;
@@ -86,41 +100,65 @@ const AdminTechnicalReportsPage: React.FC = () => {
     }
   };
 
+  const ReportsTable: React.FC<{ reports: TechnicalReport[], isArchivedView?: boolean }> = ({ reports, isArchivedView = false }) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Propriétaire</TableHead>
+          <TableHead>Propriété</TableHead>
+          <TableHead>Titre</TableHead>
+          <TableHead>Statut</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {reports.map(report => (
+          <TableRow key={report.id} onClick={() => navigate(`/admin/technical-reports/${report.id}`)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
+            <TableCell>{report.profiles?.first_name} {report.profiles?.last_name}</TableCell>
+            <TableCell>{report.property_name}</TableCell>
+            <TableCell>{report.title}</TableCell>
+            <TableCell>{getStatusBadge(report.status)}</TableCell>
+            <TableCell>{format(parseISO(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+            <TableCell className="text-right">
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleArchiveToggle(report.id, !isArchivedView); }}>
+                {isArchivedView ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Rapports Techniques</h1>
         <Button onClick={() => setIsCreateDialogOpen(true)}><PlusCircle className="h-4 w-4 mr-2" />Créer un rapport</Button>
       </div>
-      <Card>
-        <CardHeader><CardTitle>Tous les rapports</CardTitle></CardHeader>
-        <CardContent>
-          {loading ? <Skeleton className="h-48 w-full" /> : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Propriétaire</TableHead>
-                  <TableHead>Propriété</TableHead>
-                  <TableHead>Titre</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reports.map(report => (
-                  <TableRow key={report.id} onClick={() => navigate(`/admin/technical-reports/${report.id}`)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
-                    <TableCell>{report.profiles?.first_name} {report.profiles?.last_name}</TableCell>
-                    <TableCell>{report.property_name}</TableCell>
-                    <TableCell>{report.title}</TableCell>
-                    <TableCell>{getStatusBadge(report.status)}</TableCell>
-                    <TableCell>{format(parseISO(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="active">
+        <TabsList>
+          <TabsTrigger value="active">Actifs</TabsTrigger>
+          <TabsTrigger value="archived">Archivés</TabsTrigger>
+        </TabsList>
+        <TabsContent value="active">
+          <Card>
+            <CardHeader><CardTitle>Rapports Actifs</CardTitle></CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-48 w-full" /> : <ReportsTable reports={activeReports} />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="archived">
+          <Card>
+            <CardHeader><CardTitle>Rapports Archivés</CardTitle></CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-48 w-full" /> : <ReportsTable reports={archivedReports} isArchivedView />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>

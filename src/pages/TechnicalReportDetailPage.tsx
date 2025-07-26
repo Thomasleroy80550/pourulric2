@@ -8,8 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip } from 'lucide-react';
-import { getReportById, respondToReport, addReportUpdate, markReportAsResolved, TechnicalReport } from '@/lib/technical-reports-api';
+import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore } from 'lucide-react';
+import { getReportById, respondToReport, addReportUpdate, markReportAsResolved, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -93,12 +93,21 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const handleOwnerResolve = async () => {
     if (!id) return;
     try {
-      // First, add an automatic update message
       await addReportUpdate(id, "Le propriétaire a marqué ce rapport comme résolu.");
-      // Then, mark the report as resolved
       await markReportAsResolved(id);
       toast.success("Rapport marqué comme résolu.");
-      fetchReport(); // Refresh data
+      fetchReport();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
+  const handleArchiveToggle = async () => {
+    if (!id || report === null) return;
+    try {
+      await archiveReport(id, !report.is_archived);
+      toast.success(`Rapport ${!report.is_archived ? 'archivé' : 'désarchivé'} avec succès !`);
+      fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
     }
@@ -141,7 +150,10 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
                   <CardTitle className="text-2xl">{report.title}</CardTitle>
                   <CardDescription>{report.property_name}</CardDescription>
                 </div>
-                {getStatusBadge(report.status)}
+                <div className="flex items-center gap-2">
+                  {report.is_archived && <Badge variant="destructive">Archivé</Badge>}
+                  {getStatusBadge(report.status)}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -226,11 +238,16 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
               </CardContent>
             </Card>
           )}
-          {isAdmin && report.status !== 'resolved' && (
+          {isAdmin && (
             <Card>
               <CardHeader><CardTitle>Actions Admin</CardTitle></CardHeader>
-              <CardContent>
-                <Button className="w-full" onClick={handleResolve}><CheckCircle className="h-4 w-4 mr-2" />Marquer comme résolu</Button>
+              <CardContent className="space-y-2">
+                {report.status !== 'resolved' && (
+                  <Button className="w-full" onClick={handleResolve}><CheckCircle className="h-4 w-4 mr-2" />Marquer comme résolu</Button>
+                )}
+                <Button variant="outline" className="w-full" onClick={handleArchiveToggle}>
+                  {report.is_archived ? <><ArchiveRestore className="h-4 w-4 mr-2" />Désarchiver</> : <><Archive className="h-4 w-4 mr-2" />Archiver</>}
+                </Button>
               </CardContent>
             </Card>
           )}

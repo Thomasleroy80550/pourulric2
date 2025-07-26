@@ -28,6 +28,7 @@ export interface TechnicalReport {
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   category?: string;
   media_urls?: string[];
+  is_archived: boolean; // New field
   profiles?: { // For joining user data
     first_name: string;
     last_name: string;
@@ -35,12 +36,12 @@ export interface TechnicalReport {
   technical_report_updates?: TechnicalReportUpdate[]; // To hold updates
 }
 
-export type NewTechnicalReport = Omit<TechnicalReport, 'id' | 'created_at' | 'status' | 'owner_response' | 'resolved_at' | 'profiles' | 'technical_report_updates' | 'media_urls'> & {
+export type NewTechnicalReport = Omit<TechnicalReport, 'id' | 'created_at' | 'status' | 'owner_response' | 'resolved_at' | 'profiles' | 'technical_report_updates' | 'media_urls' | 'is_archived'> & {
   media_files?: FileList;
 };
 
-// For Admins: Get all reports
-export async function getAdminReports(): Promise<TechnicalReport[]> {
+// For Admins: Get reports (active or archived)
+export async function getAdminReports(archived = false): Promise<TechnicalReport[]> {
   const { data, error } = await supabase
     .from('technical_reports')
     .select(`
@@ -50,17 +51,19 @@ export async function getAdminReports(): Promise<TechnicalReport[]> {
         last_name
       )
     `)
+    .eq('is_archived', archived)
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Erreur (admin): ${error.message}`);
   return data || [];
 }
 
-// For Owners: Get their own reports
+// For Owners: Get their own reports (only active ones)
 export async function getUserReports(): Promise<TechnicalReport[]> {
   const { data, error } = await supabase
     .from('technical_reports')
     .select('*')
+    .eq('is_archived', false)
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Erreur (user): ${error.message}`);
@@ -186,5 +189,18 @@ export async function addReportUpdate(reportId: string, content: string, mediaFi
     .single();
 
   if (error) throw new Error(`Erreur lors de l'ajout de la mise à jour: ${error.message}`);
+  return data;
+}
+
+// For Admins: Archive or unarchive a report
+export async function archiveReport(reportId: string, archiveStatus: boolean): Promise<TechnicalReport> {
+  const { data, error } = await supabase
+    .from('technical_reports')
+    .update({ is_archived: archiveStatus })
+    .eq('id', reportId)
+    .select()
+    .single();
+
+  if (error) throw new Error(`Erreur lors de l'archivage du rapport: ${error.message}`);
   return data;
 }

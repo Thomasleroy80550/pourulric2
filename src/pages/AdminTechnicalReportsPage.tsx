@@ -14,34 +14,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
-import { getUserRooms } from '@/lib/user-room-api';
-import { getAdminReports, createReport, markReportAsResolved, TechnicalReport } from '@/lib/technical-reports-api';
+import { getAdminReports, createReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, CheckCircle } from 'lucide-react';
+import { PlusCircle, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 const reportSchema = z.object({
   user_id: z.string().min(1, "Veuillez sélectionner un propriétaire."),
   property_name: z.string().min(1, "Veuillez sélectionner une propriété."),
   title: z.string().min(5, "Le titre doit contenir au moins 5 caractères."),
   description: z.string().optional(),
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
+  category: z.string().optional(),
 });
 
 const AdminTechnicalReportsPage: React.FC = () => {
   const [reports, setReports] = useState<TechnicalReport[]>([]);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
-  const [allUserRooms, setAllUserRooms] = useState<any[]>([]); // We'll fetch rooms for the selected user
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof reportSchema>>({
     resolver: zodResolver(reportSchema),
-    defaultValues: { user_id: '', property_name: '', title: '', description: '' },
+    defaultValues: { user_id: '', property_name: '', title: '', description: '', priority: 'medium', category: '' },
   });
-
-  const selectedUserId = form.watch('user_id');
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -69,16 +69,6 @@ const AdminTechnicalReportsPage: React.FC = () => {
       toast.success("Rapport créé et envoyé au propriétaire !");
       setIsCreateDialogOpen(false);
       form.reset();
-      fetchAllData();
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
-    }
-  };
-
-  const handleResolveReport = async (reportId: string) => {
-    try {
-      await markReportAsResolved(reportId);
-      toast.success("Rapport marqué comme résolu.");
       fetchAllData();
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
@@ -113,22 +103,16 @@ const AdminTechnicalReportsPage: React.FC = () => {
                   <TableHead>Titre</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.map(report => (
-                  <TableRow key={report.id}>
+                  <TableRow key={report.id} onClick={() => navigate(`/admin/technical-reports/${report.id}`)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
                     <TableCell>{report.profiles?.first_name} {report.profiles?.last_name}</TableCell>
                     <TableCell>{report.property_name}</TableCell>
                     <TableCell>{report.title}</TableCell>
                     <TableCell>{getStatusBadge(report.status)}</TableCell>
                     <TableCell>{format(parseISO(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                    <TableCell className="text-right">
-                      {report.status !== 'resolved' && (
-                        <Button size="sm" onClick={() => handleResolveReport(report.id)}><CheckCircle className="h-4 w-4 mr-2" />Résolu</Button>
-                      )}
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -170,6 +154,28 @@ const AdminTechnicalReportsPage: React.FC = () => {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl><Textarea {...field} placeholder="Décrire le problème en détail..." /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="priority" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priorité</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="low">Basse</SelectItem>
+                      <SelectItem value="medium">Moyenne</SelectItem>
+                      <SelectItem value="high">Haute</SelectItem>
+                      <SelectItem value="urgent">Urgente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="category" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catégorie</FormLabel>
+                  <FormControl><Input {...field} placeholder="Ex: Plomberie, Électricité..." /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

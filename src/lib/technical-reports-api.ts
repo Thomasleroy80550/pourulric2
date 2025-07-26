@@ -1,6 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "./notifications-api";
 
+export interface TechnicalReportUpdate {
+  id: string;
+  report_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profiles: { // For joining author data
+    first_name: string;
+    last_name: string;
+    role: string;
+  };
+}
+
 export interface TechnicalReport {
   id: string;
   user_id: string;
@@ -11,13 +24,16 @@ export interface TechnicalReport {
   owner_response?: string;
   resolved_at?: string;
   created_at: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  category?: string;
   profiles?: { // For joining user data
     first_name: string;
     last_name: string;
   };
+  technical_report_updates?: TechnicalReportUpdate[]; // To hold updates
 }
 
-export type NewTechnicalReport = Omit<TechnicalReport, 'id' | 'created_at' | 'status' | 'owner_response' | 'resolved_at' | 'profiles'>;
+export type NewTechnicalReport = Omit<TechnicalReport, 'id' | 'created_at' | 'status' | 'owner_response' | 'resolved_at' | 'profiles' | 'technical_report_updates'>;
 
 // For Admins: Get all reports
 export async function getAdminReports(): Promise<TechnicalReport[]> {
@@ -47,6 +63,26 @@ export async function getUserReports(): Promise<TechnicalReport[]> {
   return data || [];
 }
 
+// Get a single report by ID, including its updates
+export async function getReportById(id: string): Promise<TechnicalReport | null> {
+  const { data, error } = await supabase
+    .from('technical_reports')
+    .select(`
+      *,
+      profiles (first_name, last_name),
+      technical_report_updates (
+        *,
+        profiles (first_name, last_name, role)
+      )
+    `)
+    .eq('id', id)
+    .order('created_at', { referencedTable: 'technical_report_updates', ascending: true })
+    .single();
+
+  if (error) throw new Error(`Erreur lors de la récupération du rapport: ${error.message}`);
+  return data;
+}
+
 // For Admins: Create a new report
 export async function createReport(reportData: NewTechnicalReport): Promise<TechnicalReport> {
   const { data, error } = await supabase
@@ -61,13 +97,13 @@ export async function createReport(reportData: NewTechnicalReport): Promise<Tech
   await createNotification(
     reportData.user_id,
     `Nouveau rapport technique pour ${reportData.property_name}: "${reportData.title}"`,
-    '/reports'
+    `/reports/${data.id}`
   );
 
   return data;
 }
 
-// For Owners: Respond to a report
+// For Owners: Respond to a report (updates status)
 export async function respondToReport(reportId: string, response: 'owner_will_manage' | 'admin_will_manage', comment?: string): Promise<TechnicalReport> {
   const { data, error } = await supabase
     .from('technical_reports')
@@ -90,5 +126,20 @@ export async function markReportAsResolved(reportId: string): Promise<TechnicalR
     .single();
 
   if (error) throw new Error(`Erreur lors de la résolution du rapport: ${error.message}`);
+  return data;
+}
+
+// Add an update/comment to a report
+export async function addReportUpdate(reportId: string, content: string): Promise<TechnicalReportUpdate> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Utilisateur non authentifié.");
+
+  const { data, error } = await supabase
+    .from('technical_report_updates')
+    .insert({ report_id: reportId, user_id: user.id, content })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Erreur lors de l'ajout de la mise à jour: ${error.message}`);
   return data;
 }

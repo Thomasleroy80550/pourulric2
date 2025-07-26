@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Wrench, User, CheckCircle } from 'lucide-react';
-import { getUserReports, respondToReport, TechnicalReport } from '@/lib/technical-reports-api';
-import { toast } from 'sonner';
+import { Terminal } from 'lucide-react';
+import { getUserReports, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
 const TechnicalReportsPage: React.FC = () => {
   const [reports, setReports] = useState<TechnicalReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const fetchReports = async () => {
     setLoading(true);
@@ -32,16 +32,6 @@ const TechnicalReportsPage: React.FC = () => {
   useEffect(() => {
     fetchReports();
   }, []);
-
-  const handleResponse = async (reportId: string, response: 'owner_will_manage' | 'admin_will_manage') => {
-    try {
-      await respondToReport(reportId, response);
-      toast.success("Votre réponse a été enregistrée.");
-      fetchReports();
-    } catch (err: any) {
-      toast.error(`Erreur: ${err.message}`);
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -69,7 +59,7 @@ const TechnicalReportsPage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {reports.map(report => (
-              <Card key={report.id}>
+              <Card key={report.id} onClick={() => navigate(`/reports/${report.id}`)} className="cursor-pointer hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
@@ -80,14 +70,8 @@ const TechnicalReportsPage: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{report.description}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{report.description}</p>
                 </CardContent>
-                {report.status === 'pending_owner_action' && (
-                  <CardFooter className="flex flex-col sm:flex-row gap-2">
-                    <Button className="w-full" onClick={() => handleResponse(report.id, 'admin_will_manage')}><Wrench className="h-4 w-4 mr-2" />Hello Keys s'en occupe</Button>
-                    <Button className="w-full" variant="outline" onClick={() => handleResponse(report.id, 'owner_will_manage')}><User className="h-4 w-4 mr-2" />Je m'en occupe</Button>
-                  </CardFooter>
-                )}
               </Card>
             ))}
           </div>

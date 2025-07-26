@@ -1,0 +1,197 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import MainLayout from '@/components/MainLayout';
+import AdminLayout from '@/components/AdminLayout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield } from 'lucide-react';
+import { getReportById, respondToReport, addReportUpdate, markReportAsResolved, TechnicalReport } from '@/lib/technical-reports-api';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { useSession } from '@/components/SessionContextProvider';
+
+interface TechnicalReportDetailPageProps {
+  isAdmin?: boolean;
+}
+
+const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ isAdmin = false }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { profile } = useSession();
+  const [report, setReport] = useState<TechnicalReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [newUpdate, setNewUpdate] = useState('');
+
+  const fetchReport = async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getReportById(id);
+      setReport(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReport();
+  }, [id]);
+
+  const handleResponse = async (response: 'owner_will_manage' | 'admin_will_manage') => {
+    if (!id) return;
+    try {
+      await respondToReport(id, response);
+      toast.success("Votre réponse a été enregistrée.");
+      fetchReport();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
+  const handleAddUpdate = async () => {
+    if (!id || !newUpdate.trim()) return;
+    try {
+      await addReportUpdate(id, newUpdate.trim());
+      toast.success("Mise à jour ajoutée.");
+      setNewUpdate('');
+      fetchReport();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
+  const handleResolve = async () => {
+    if (!id) return;
+    try {
+      await markReportAsResolved(id);
+      toast.success("Rapport marqué comme résolu.");
+      fetchReport();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending_owner_action': return <Badge variant="secondary">Action requise</Badge>;
+      case 'owner_will_manage': return <Badge variant="outline">Géré par proprio</Badge>;
+      case 'admin_will_manage': return <Badge>Géré par Hello Keys</Badge>;
+      case 'resolved': return <Badge className="bg-green-600 text-white">Résolu</Badge>;
+      default: return <Badge>{status}</Badge>;
+    }
+  };
+
+  const getPriorityBadge = (priority?: string) => {
+    switch (priority) {
+      case 'low': return <Badge variant="outline">Basse</Badge>;
+      case 'medium': return <Badge variant="secondary">Moyenne</Badge>;
+      case 'high': return <Badge>Haute</Badge>;
+      case 'urgent': return <Badge variant="destructive">Urgente</Badge>;
+      default: return null;
+    }
+  };
+
+  const Layout = isAdmin ? AdminLayout : MainLayout;
+
+  const renderContent = () => {
+    if (loading) return <Skeleton className="h-96 w-full" />;
+    if (error) return <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
+    if (!report) return <p>Rapport non trouvé.</p>;
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-2xl">{report.title}</CardTitle>
+                  <CardDescription>{report.property_name}</CardDescription>
+                </div>
+                {getStatusBadge(report.status)}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="whitespace-pre-wrap">{report.description}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Fil de discussion</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {report.technical_report_updates?.map(update => (
+                <div key={update.id} className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">{update.profiles.role === 'admin' ? <Shield className="h-5 w-5 text-blue-500" /> : <User className="h-5 w-5 text-gray-500" />}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold">{update.profiles.first_name} {update.profiles.last_name}</p>
+                      <p className="text-xs text-gray-500">{format(new Date(update.created_at), 'dd/MM/yy HH:mm', { locale: fr })}</p>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{update.content}</p>
+                  </div>
+                </div>
+              ))}
+              {report.status !== 'resolved' && (
+                <div className="pt-4 border-t">
+                  <Textarea value={newUpdate} onChange={(e) => setNewUpdate(e.target.value)} placeholder="Ajouter une mise à jour..." />
+                  <Button onClick={handleAddUpdate} className="mt-2">
+                    <Send className="h-4 w-4 mr-2" />
+                    Envoyer
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader><CardTitle>Détails</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p><strong>Propriétaire:</strong> {report.profiles?.first_name} {report.profiles?.last_name}</p>
+              <p><strong>Créé le:</strong> {format(new Date(report.created_at), 'dd MMMM yyyy', { locale: fr })}</p>
+              <p><strong>Priorité:</strong> {getPriorityBadge(report.priority)}</p>
+              <p><strong>Catégorie:</strong> <Badge variant="outline">{report.category || 'Non définie'}</Badge></p>
+            </CardContent>
+          </Card>
+          {report.status === 'pending_owner_action' && !isAdmin && (
+            <Card>
+              <CardHeader><CardTitle>Votre Action</CardTitle></CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                <Button onClick={() => handleResponse('admin_will_manage')}><Wrench className="h-4 w-4 mr-2" />Hello Keys s'en occupe</Button>
+                <Button variant="outline" onClick={() => handleResponse('owner_will_manage')}><User className="h-4 w-4 mr-2" />Je m'en occupe</Button>
+              </CardContent>
+            </Card>
+          )}
+          {isAdmin && report.status !== 'resolved' && (
+            <Card>
+              <CardHeader><CardTitle>Actions Admin</CardTitle></CardHeader>
+              <CardContent>
+                <Button className="w-full" onClick={handleResolve}><CheckCircle className="h-4 w-4 mr-2" />Marquer comme résolu</Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Layout>
+      <Button variant="ghost" onClick={() => navigate(isAdmin ? '/admin/technical-reports' : '/reports')} className="mb-4">
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Retour à la liste
+      </Button>
+      {renderContent()}
+    </Layout>
+  );
+};
+
+export default TechnicalReportDetailPage;

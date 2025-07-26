@@ -90,3 +90,6 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
     </div>
   );
+};
+
+export default AdminLayout;

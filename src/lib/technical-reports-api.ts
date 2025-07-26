@@ -26,6 +26,7 @@ export interface TechnicalReport {
   created_at: string;
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   category?: string;
+  media_urls?: string[];
   profiles?: { // For joining user data
     first_name: string;
     last_name: string;
@@ -33,7 +34,9 @@ export interface TechnicalReport {
   technical_report_updates?: TechnicalReportUpdate[]; // To hold updates
 }
 
-export type NewTechnicalReport = Omit<TechnicalReport, 'id' | 'created_at' | 'status' | 'owner_response' | 'resolved_at' | 'profiles' | 'technical_report_updates'>;
+export type NewTechnicalReport = Omit<TechnicalReport, 'id' | 'created_at' | 'status' | 'owner_response' | 'resolved_at' | 'profiles' | 'technical_report_updates' | 'media_urls'> & {
+  media_files?: FileList;
+};
 
 // For Admins: Get all reports
 export async function getAdminReports(): Promise<TechnicalReport[]> {
@@ -85,15 +88,36 @@ export async function getReportById(id: string): Promise<TechnicalReport | null>
 
 // For Admins: Create a new report
 export async function createReport(reportData: NewTechnicalReport): Promise<TechnicalReport> {
+  const { media_files, ...reportDbData } = reportData;
+  let mediaUrls: string[] = [];
+
+  if (media_files && media_files.length > 0) {
+    for (const file of Array.from(media_files)) {
+      const filePath = `${reportData.user_id}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('technical_reports_media')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw new Error(`Erreur lors du téléversement du fichier: ${uploadError.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('technical_reports_media')
+        .getPublicUrl(filePath);
+      
+      mediaUrls.push(urlData.publicUrl);
+    }
+  }
+
   const { data, error } = await supabase
     .from('technical_reports')
-    .insert(reportData)
+    .insert({ ...reportDbData, media_urls: mediaUrls })
     .select()
     .single();
 
   if (error) throw new Error(`Erreur lors de la création du rapport: ${error.message}`);
   
-  // Notify the user
   await createNotification(
     reportData.user_id,
     `Nouveau rapport technique pour ${reportData.property_name}: "${reportData.title}"`,

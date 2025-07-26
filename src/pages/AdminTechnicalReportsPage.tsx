@@ -29,6 +29,7 @@ const reportSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
   category: z.string().optional(),
+  media_files: z.instanceof(FileList).optional(),
 });
 
 const AdminTechnicalReportsPage: React.FC = () => {
@@ -179,6 +180,13 @@ const AdminTechnicalReportsPage: React.FC = () => {
                   <FormMessage />
                 </FormItem>
               )} />
+              <FormItem>
+                <FormLabel>Photos / Vidéos</FormLabel>
+                <FormControl>
+                  <Input type="file" multiple {...form.register('media_files')} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Annuler</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Envoyer le rapport"}</Button>

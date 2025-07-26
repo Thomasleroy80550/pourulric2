@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield } from 'lucide-react';
+import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip } from 'lucide-react';
 import { getReportById, respondToReport, addReportUpdate, markReportAsResolved, TechnicalReport } from '@/lib/technical-reports-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -124,6 +124,20 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
               <p className="whitespace-pre-wrap">{report.description}</p>
             </CardContent>
           </Card>
+
+          {report.media_urls && report.media_urls.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center"><Paperclip className="h-5 w-5 mr-2" />Pièces Jointes</CardTitle></CardHeader>
+              <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {report.media_urls.map((url, index) => (
+                  <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border hover:opacity-80 transition-opacity">
+                    <img src={url} alt={`Pièce jointe ${index + 1}`} className="w-full h-32 object-cover" />
+                  </a>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader><CardTitle>Fil de discussion</CardTitle></CardHeader>
             <CardContent className="space-y-4">

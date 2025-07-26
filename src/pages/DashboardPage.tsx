@@ -93,6 +93,7 @@ const DashboardPage = () => {
 
   const [isForecastDialogOpen, setIsForecastDialogOpen] = useState(false);
   const [forecastAmount, setForecastAmount] = useState(0);
+  const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
 
   const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
     setDialogChartData(data);
@@ -201,6 +202,10 @@ const DashboardPage = () => {
 
     try {
       const userProfile = await getProfile();
+      if (userProfile) {
+        setExpensesModuleEnabled(userProfile.expenses_module_enabled || false);
+      }
+
       let allExpenses: Expense[] = [];
       if (userProfile?.expenses_module_enabled) {
         const [singleExpenses, recurringTemplates] = await Promise.all([
@@ -351,10 +356,12 @@ const DashboardPage = () => {
                       <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.fraisAnnee.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">Frais de gestion</p>
                     </div>
-                    <div className="flex flex-col items-start">
-                      <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.depensesAnnee.toFixed(2)}€</p>
-                      <p className="text-sm text-gray-500">Autres dépenses</p>
-                    </div>
+                    {expensesModuleEnabled && (
+                      <div className="flex flex-col items-start">
+                        <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.depensesAnnee.toFixed(2)}€</p>
+                        <p className="text-sm text-gray-500">Autres dépenses</p>
+                      </div>
+                    )}
                   </div>
                   <div className="border-t pt-4">
                     <p className="text-sm text-gray-500">Résultat net sur l'année</p>

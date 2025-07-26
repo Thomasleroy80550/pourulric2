@@ -7,42 +7,58 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, PlusCircle, Trash2 } from 'lucide-react';
-import { getExpenses, addExpense, deleteExpense, Expense } from '@/lib/expenses-api';
+import { getExpenses, addExpense, deleteExpense, Expense, getRecurringExpenses, addRecurringExpense, deleteRecurringExpense, RecurringExpense } from '@/lib/expenses-api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const expenseSchema = z.object({
+const singleExpenseSchema = z.object({
   amount: z.coerce.number().min(0.01, "Le montant doit être supérieur à 0."),
   description: z.string().min(3, "La description est trop courte."),
   category: z.string().optional(),
   expense_date: z.string().min(1, "La date est requise."),
 });
 
+const recurringExpenseSchema = z.object({
+  amount: z.coerce.number().min(0.01, "Le montant doit être supérieur à 0."),
+  description: z.string().min(3, "La description est trop courte."),
+  category: z.string().optional(),
+  frequency: z.enum(['monthly', 'quarterly', 'yearly']),
+  start_date: z.string().min(1, "La date de début est requise."),
+  end_date: z.string().optional(),
+});
+
 const ExpensesTab: React.FC = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [singleExpenses, setSingleExpenses] = useState<Expense[]>([]);
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const currentYear = new Date().getFullYear();
 
-  const form = useForm<z.infer<typeof expenseSchema>>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      amount: undefined,
-      description: '',
-      category: '',
-      expense_date: new Date().toISOString().split('T')[0],
-    },
+  const singleForm = useForm<z.infer<typeof singleExpenseSchema>>({
+    resolver: zodResolver(singleExpenseSchema),
+    defaultValues: { amount: undefined, description: '', category: '', expense_date: new Date().toISOString().split('T')[0] },
   });
 
-  const fetchExpenses = async () => {
+  const recurringForm = useForm<z.infer<typeof recurringExpenseSchema>>({
+    resolver: zodResolver(recurringExpenseSchema),
+    defaultValues: { amount: undefined, description: '', category: '', frequency: 'monthly', start_date: new Date().toISOString().split('T')[0], end_date: '' },
+  });
+
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getExpenses(currentYear);
-      setExpenses(data);
+      const [singleData, recurringData] = await Promise.all([
+        getExpenses(currentYear),
+        getRecurringExpenses(),
+      ]);
+      setSingleExpenses(singleData);
+      setRecurringExpenses(recurringData);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -51,109 +67,110 @@ const ExpensesTab: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchExpenses();
+    fetchData();
   }, [currentYear]);
 
-  const onSubmit = async (values: z.infer<typeof expenseSchema>) => {
+  const onSingleSubmit = async (values: z.infer<typeof singleExpenseSchema>) => {
     try {
       await addExpense(values);
-      toast.success("Dépense ajoutée avec succès !");
-      form.reset({
-        amount: undefined,
-        description: '',
-        category: '',
-        expense_date: new Date().toISOString().split('T')[0],
-      });
-      fetchExpenses();
-    } catch (err: any) {
-      toast.error(`Erreur: ${err.message}`);
-    }
+      toast.success("Dépense ajoutée !");
+      singleForm.reset();
+      fetchData();
+    } catch (err: any) { toast.error(`Erreur: ${err.message}`); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette dépense ?")) return;
+  const onRecurringSubmit = async (values: z.infer<typeof recurringExpenseSchema>) => {
     try {
-      await deleteExpense(id);
-      toast.success("Dépense supprimée.");
-      fetchExpenses();
-    } catch (err: any) {
-      toast.error(`Erreur: ${err.message}`);
-    }
+      await addRecurringExpense({ ...values, end_date: values.end_date || undefined });
+      toast.success("Dépense récurrente ajoutée !");
+      recurringForm.reset();
+      fetchData();
+    } catch (err: any) { toast.error(`Erreur: ${err.message}`); }
+  };
+
+  const handleDeleteSingle = async (id: string) => {
+    if (!window.confirm("Supprimer cette dépense ?")) return;
+    try { await deleteExpense(id); toast.success("Dépense supprimée."); fetchData(); }
+    catch (err: any) { toast.error(`Erreur: ${err.message}`); }
+  };
+
+  const handleDeleteRecurring = async (id: string) => {
+    if (!window.confirm("Supprimer cette dépense récurrente ?")) return;
+    try { await deleteRecurringExpense(id); toast.success("Dépense récurrente supprimée."); fetchData(); }
+    catch (err: any) { toast.error(`Erreur: ${err.message}`); }
   };
 
   return (
-    <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Ajouter une Dépense</CardTitle>
-            <CardDescription>Enregistrez une nouvelle dépense pour l'année {currentYear}.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="amount" render={({ field }) => (
-                  <FormItem><FormLabel>Montant (€)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="category" render={({ field }) => (
-                  <FormItem><FormLabel>Catégorie (Optionnel)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="expense_date" render={({ field }) => (
-                  <FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Ajouter
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="lg:col-span-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Historique des Dépenses ({currentYear})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-48 w-full" /> : error ? (
-              <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
-            ) : expenses.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Aucune dépense enregistrée pour cette année.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Catégorie</TableHead>
-                    <TableHead className="text-right">Montant</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenses.map(expense => (
-                    <TableRow key={expense.id}>
-                      <TableCell>{format(new Date(expense.expense_date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{expense.description}</TableCell>
-                      <TableCell>{expense.category || '-'}</TableCell>
-                      <TableCell className="text-right font-medium text-red-600">{expense.amount.toFixed(2)}€</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(expense.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+    <div className="mt-6">
+      <Tabs defaultValue="single">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="single">Dépenses Ponctuelles</TabsTrigger>
+          <TabsTrigger value="recurring">Dépenses Récurrentes</TabsTrigger>
+        </TabsList>
+        <TabsContent value="single">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+            <div className="lg:col-span-1">
+              <Card><CardHeader><CardTitle>Ajouter une Dépense</CardTitle></CardHeader>
+                <CardContent>
+                  <Form {...singleForm}>
+                    <form onSubmit={singleForm.handleSubmit(onSingleSubmit)} className="space-y-4">
+                      <FormField control={singleForm.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Montant (€)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={singleForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={singleForm.control} name="category" render={({ field }) => (<FormItem><FormLabel>Catégorie</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={singleForm.control} name="expense_date" render={({ field }) => (<FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <Button type="submit" disabled={singleForm.formState.isSubmitting}><PlusCircle className="h-4 w-4 mr-2" />Ajouter</Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-2">
+              <Card><CardHeader><CardTitle>Historique ({currentYear})</CardTitle></CardHeader>
+                <CardContent>
+                  {loading ? <Skeleton className="h-48 w-full" /> : error ? <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : singleExpenses.length === 0 ? <p className="text-center text-gray-500 py-8">Aucune dépense.</p> : (
+                    <Table>
+                      <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Montant</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                      <TableBody>{singleExpenses.map(e => (<TableRow key={e.id}><TableCell>{format(new Date(e.expense_date), 'dd/MM/yyyy')}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteSingle(e.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="recurring">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+            <div className="lg:col-span-1">
+              <Card><CardHeader><CardTitle>Ajouter une Dépense Récurrente</CardTitle></CardHeader>
+                <CardContent>
+                  <Form {...recurringForm}>
+                    <form onSubmit={recurringForm.handleSubmit(onRecurringSubmit)} className="space-y-4">
+                      <FormField control={recurringForm.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Montant (€)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={recurringForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={recurringForm.control} name="frequency" render={({ field }) => (<FormItem><FormLabel>Fréquence</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="monthly">Mensuelle</SelectItem><SelectItem value="quarterly">Trimestrielle</SelectItem><SelectItem value="yearly">Annuelle</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      <FormField control={recurringForm.control} name="start_date" render={({ field }) => (<FormItem><FormLabel>Date de début</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={recurringForm.control} name="end_date" render={({ field }) => (<FormItem><FormLabel>Date de fin (Optionnel)</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <Button type="submit" disabled={recurringForm.formState.isSubmitting}><PlusCircle className="h-4 w-4 mr-2" />Ajouter</Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-2">
+              <Card><CardHeader><CardTitle>Vos Dépenses Récurrentes</CardTitle></CardHeader>
+                <CardContent>
+                  {loading ? <Skeleton className="h-48 w-full" /> : error ? <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : recurringExpenses.length === 0 ? <p className="text-center text-gray-500 py-8">Aucune dépense récurrente.</p> : (
+                    <Table>
+                      <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Montant</TableHead><TableHead>Fréquence</TableHead><TableHead>Prochaine</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                      <TableBody>{recurringExpenses.map(e => (<TableRow key={e.id}><TableCell>{e.description}</TableCell><TableCell className="font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell><TableCell>{e.frequency}</TableCell><TableCell>{e.last_created_date ? format(new Date(e.last_created_date), 'dd/MM/yy') : 'À venir'}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteRecurring(e.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -11,6 +11,7 @@ export interface UserProfile {
   cguv_version?: string;
   commission_rate?: number;
   pennylane_customer_id?: string;
+  expenses_module_enabled?: boolean; // Ajout du champ
 }
 
 /**
@@ -26,7 +27,7 @@ export async function getProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, role, phone_number, objective_amount, cguv_accepted_at, cguv_version, commission_rate, pennylane_customer_id')
+    .select('id, first_name, last_name, role, phone_number, objective_amount, cguv_accepted_at, cguv_version, commission_rate, pennylane_customer_id, expenses_module_enabled')
     .eq('id', user.id)
     .single();
 

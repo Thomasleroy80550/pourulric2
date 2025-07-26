@@ -7,30 +7,46 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from 'next-themes'; // Import useTheme
+import { useTheme } from 'next-themes';
+import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
+import { toast } from 'sonner';
 
 const SettingsPage: React.FC = () => {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+  const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { theme, setTheme } = useTheme(); // Use the useTheme hook
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    // Simulate data fetching
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500); // Simulate 1.5 seconds loading
-
-    return () => clearTimeout(timer);
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const userProfile = await getProfile();
+        setProfile(userProfile);
+        if (userProfile) {
+          setExpensesModuleEnabled(userProfile.expenses_module_enabled || false);
+        }
+      } catch (error: any) {
+        toast.error(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
   }, []);
 
-  const handleSaveSettings = () => {
-    console.log("Paramètres sauvegardés:", {
-      notificationsEnabled,
-      theme, // Log the current theme
-      // ... other fields
-    });
-    // Here, you would integrate the actual saving logic (API, etc.)
+  const handleSaveSettings = async () => {
+    if (!profile) return;
+    try {
+      await updateProfile({
+        expenses_module_enabled: expensesModuleEnabled,
+      });
+      toast.success("Paramètres sauvegardés avec succès !");
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    }
   };
 
   return (
@@ -64,11 +80,11 @@ const SettingsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Nom Complet</Label>
-                    <Input id="fullName" type="text" placeholder="Votre nom complet" defaultValue="Thomas" />
+                    <Input id="fullName" type="text" placeholder="Votre nom complet" defaultValue={profile?.first_name} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" placeholder="Votre adresse email" defaultValue="m@example.com" />
+                    <Input id="email" type="email" placeholder="Votre adresse email" defaultValue={profile?.last_name} />
                   </div>
                 </div>
 
@@ -90,8 +106,20 @@ const SettingsPage: React.FC = () => {
                   <Label htmlFor="darkMode">Mode Sombre</Label>
                   <Switch
                     id="darkMode"
-                    checked={theme === 'dark'} // Check if current theme is 'dark'
-                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} // Set theme based on switch
+                    checked={theme === 'dark'}
+                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between space-x-2 p-3 border rounded-md">
+                  <div>
+                    <Label htmlFor="expensesModule">Activer le module de dépenses</Label>
+                    <p className="text-sm text-gray-500">Permet de suivre vos dépenses et de les déduire de votre bilan.</p>
+                  </div>
+                  <Switch
+                    id="expensesModule"
+                    checked={expensesModuleEnabled}
+                    onCheckedChange={setExpensesModuleEnabled}
                   />
                 </div>
 

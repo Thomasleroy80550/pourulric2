@@ -25,7 +25,7 @@ import {
 } from "recharts";
 import React, { useState, useEffect, useCallback } from "react";
 import ObjectiveDialog from "@/components/ObjectiveDialog";
-import { getProfile } from "@/lib/profile-api";
+import { getProfile, UserProfile } from "@/lib/profile-api";
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -38,6 +38,7 @@ import { startDashboardTour } from '@/lib/tour';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
 import CustomChartTooltip from '@/components/CustomChartTooltip';
+import { getExpenses, Expense } from '@/lib/expenses-api'; // Import expenses API
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -60,6 +61,7 @@ const DashboardPage = () => {
     caAnnee: 0,
     rentreeArgentAnnee: 0,
     fraisAnnee: 0,
+    depensesAnnee: 0, // New state for expenses
     resultatAnnee: 0,
     currentAchievementPercentage: 0,
   });
@@ -101,10 +103,13 @@ const DashboardPage = () => {
     setIsChartDialogOpen(true);
   };
 
-  const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[]) => {
+  const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[], expenses: Expense[]) => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
-    let totalCA = 0, totalRentree = 0, totalFrais = 0, totalResultat = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
+    let totalCA = 0, totalRentree = 0, totalFrais = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
+    const totalDepenses = expenses.reduce((acc, exp) => acc + exp.amount, 0);
+    let totalResultat = 0;
+
     const channelCounts: { [key: string]: number } = {};
     DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name.toLowerCase()] = 0);
 
@@ -169,7 +174,8 @@ const DashboardPage = () => {
       caAnnee: totalCA,
       rentreeArgentAnnee: totalRentree,
       fraisAnnee: totalFrais,
-      resultatAnnee: totalResultat,
+      depensesAnnee: totalDepenses,
+      resultatAnnee: totalResultat - totalDepenses, // Subtract expenses here
     }));
     setTotalNightsCurrentYear(totalNights);
     setTotalReservationsCurrentYear(totalReservations);
@@ -194,13 +200,18 @@ const DashboardPage = () => {
     setKrossbookingStatsError(null);
 
     try {
-      const [userProfile, statements, fetchedUserRooms] = await Promise.all([
-        getProfile(),
+      const userProfile = await getProfile();
+      let expenses: Expense[] = [];
+      if (userProfile?.expenses_module_enabled) {
+        expenses = await getExpenses(currentYear);
+      }
+
+      const [statements, fetchedUserRooms] = await Promise.all([
         getMyStatements(),
         getUserRooms(),
       ]);
 
-      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms);
+      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, expenses);
 
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
@@ -324,7 +335,7 @@ const DashboardPage = () => {
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col items-start">
-                      <p className="text-xl md:text-2xl font-bold text-green-600">{financialData.caAnnee.toFixed(2)}€</p>
+                      <p className="text-xl md:text-2xl font-bold text-blue-600">{financialData.caAnnee.toFixed(2)}€</p>
                       <p className="text-sm text-gray-500">CA sur l'année</p>
                     </div>
                     <div className="flex flex-col items-start">
@@ -333,12 +344,16 @@ const DashboardPage = () => {
                     </div>
                     <div className="flex flex-col items-start">
                       <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.fraisAnnee.toFixed(2)}€</p>
-                      <p className="text-sm text-gray-500">Frais de gestion sur l'année</p>
+                      <p className="text-sm text-gray-500">Frais de gestion</p>
                     </div>
                     <div className="flex flex-col items-start">
-                      <p className="text-xl md:text-2xl font-bold text-green-600">{financialData.resultatAnnee.toFixed(2)}€</p>
-                      <p className="text-sm text-gray-500">Résultats sur l'année</p>
+                      <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.depensesAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Autres dépenses</p>
                     </div>
+                  </div>
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-gray-500">Résultat net sur l'année</p>
+                    <p className="text-2xl font-bold text-green-600">{financialData.resultatAnnee.toFixed(2)}€</p>
                   </div>
                   <div className="flex space-x-4 items-center">
                     <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>

@@ -2,17 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Search, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, FileText, LifeBuoy, Puzzle, Map, User, Menu, Plus, FileSpreadsheet, Newspaper, Sparkles, Shield, CheckCheck, Wrench } from 'lucide-react';
+import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AICopilotDialog from './AICopilotDialog';
 import NewFeaturesBanner from './NewFeaturesBanner';
 import { useSession } from './SessionContextProvider';
@@ -24,32 +22,41 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-const gestionNavigationItems = [
-  { name: 'Aperçu', href: '/', icon: Home },
-  { name: 'Calendrier', href: '/calendar', icon: CalendarDays },
-  { name: 'Réservations', href: '/bookings', icon: Bookmark },
-  { name: 'Performances', href: '/performance', icon: TrendingUp },
-  { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
-  { name: 'Finances', href: '/finances', icon: Banknote },
-  { name: 'Rapports Tech.', href: '/reports', icon: Wrench },
-  { name: 'Aides', href: '/help', icon: LifeBuoy },
+const sidebarSections = [
+  {
+    title: 'Pilotage',
+    items: [
+      { name: 'Aperçu', href: '/', icon: Home },
+      { name: 'Calendrier', href: '/calendar', icon: CalendarDays },
+      { name: 'Réservations', href: '/bookings', icon: Bookmark },
+      { name: 'Rapports Tech.', href: '/reports', icon: Wrench },
+    ],
+  },
+  {
+    title: 'Analyse & Suivi',
+    items: [
+      { name: 'Performances', href: '/performance', icon: TrendingUp },
+      { name: 'Finances', href: '/finances', icon: Banknote },
+      { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
+    ],
+  },
+  {
+    title: 'Ressources',
+    items: [
+      { name: 'Blog', href: '/blog', icon: Newspaper },
+      { name: 'Aides', href: '/help', icon: LifeBuoy },
+    ],
+  },
 ];
 
-const decouvrirNavigationItems = [
-  { name: 'Blog', href: '/blog', icon: Newspaper },
-];
-
-const bottomNavigationItems = [
-  { name: 'Paramètres', href: '/settings', icon: Settings },
+const accountNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
+  { name: 'Paramètres', href: '/settings', icon: Settings },
 ];
 
 const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
-  const [activeSection, setActiveSection] = useState<'gestion' | 'decouvrir'>('gestion');
   const location = useLocation();
   const { profile } = useSession();
-
-  const currentNavigationItems = activeSection === 'gestion' ? gestionNavigationItems : decouvrirNavigationItems;
 
   return (
     <>
@@ -57,61 +64,32 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
         <img src="/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mx-auto" />
       </div>
 
-      <div className="mb-6 flex justify-center">
-        <ToggleGroup
-          type="single"
-          value={activeSection}
-          onValueChange={(value: 'gestion' | 'decouvrir') => {
-            if (value) setActiveSection(value);
-          }}
-          className="w-full grid grid-cols-2 gap-2"
-        >
-          <ToggleGroupItem
-            value="gestion"
-            aria-label="Toggle gestion"
-            variant="ghost"
-            className={cn(
-              "flex-1 font-medium text-[15px] tracking-wide rounded-full",
-              "hover:bg-transparent hover:opacity-80",
-              "data-[state=on]:bg-transparent data-[state=on]:text-sidebar-foreground data-[state=on]:opacity-100"
-            )}
-          >
-            Gestion
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="decouvrir"
-            aria-label="Toggle découvrir"
-            variant="ghost"
-            className={cn(
-              "flex-1 font-medium text-[15px] tracking-wide rounded-full",
-              "hover:bg-transparent hover:opacity-80",
-              "data-[state=on]:bg-transparent data-[state=on]:text-sidebar-foreground data-[state=on]:opacity-100"
-            )}
-          >
-            Découvrir
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-
-      <nav id="tour-sidebar-nav" className="flex-grow">
-        <ul className="">
-          {currentNavigationItems.map((item) => (
-            <li key={item.name} className="mt-3.5 first:mt-0">
-              <Link
-                to={item.href}
-                className={cn(
-                  "flex items-center px-4 py-2.5 rounded-full text-[15px] text-sidebar-foreground font-medium tracking-wide transition-all",
-                  "hover:bg-transparent hover:opacity-80",
-                  location.pathname.startsWith(item.href) && item.href !== '/' || location.pathname === item.href ? 'bg-transparent opacity-100' : ''
-                )}
-                onClick={onLinkClick}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <nav id="tour-sidebar-nav" className="flex-grow space-y-6">
+        {sidebarSections.map((section) => (
+          <div key={section.title}>
+            <h3 className="px-4 mb-2 text-xs font-semibold uppercase text-sidebar-foreground/70 tracking-wider">
+              {section.title}
+            </h3>
+            <ul>
+              {section.items.map((item) => (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
+                    className={cn(
+                      "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
+                      "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                    )}
+                    onClick={onLinkClick}
+                  >
+                    <item.icon className="h-5 w-5 mr-3" />
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <nav className="mt-auto pt-4 border-t border-sidebar-border">
@@ -125,12 +103,16 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
             </Link>
           </div>
         )}
-        <ul className="">
-          {bottomNavigationItems.map((item) => (
-            <li key={item.name} className="mt-3.5 first:mt-0">
+        <ul>
+          {accountNavigationItems.map((item) => (
+            <li key={item.name}>
               <Link
                 to={item.href}
-                className="flex items-center px-4 py-2.5 rounded-full text-[15px] text-sidebar-foreground font-medium tracking-wide hover:bg-transparent hover:opacity-80 transition-all"
+                className={cn(
+                  "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
+                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  location.pathname.startsWith(item.href) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                )}
                 onClick={onLinkClick}
               >
                 <item.icon className="h-5 w-5 mr-3" />

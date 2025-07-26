@@ -38,7 +38,7 @@ import { startDashboardTour } from '@/lib/tour';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
 import CustomChartTooltip from '@/components/CustomChartTooltip';
-import { getExpenses, Expense } from '@/lib/expenses-api'; // Import expenses API
+import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense } from '@/lib/expenses-api';
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -61,7 +61,7 @@ const DashboardPage = () => {
     caAnnee: 0,
     rentreeArgentAnnee: 0,
     fraisAnnee: 0,
-    depensesAnnee: 0, // New state for expenses
+    depensesAnnee: 0,
     resultatAnnee: 0,
     currentAchievementPercentage: 0,
   });
@@ -175,7 +175,7 @@ const DashboardPage = () => {
       rentreeArgentAnnee: totalRentree,
       fraisAnnee: totalFrais,
       depensesAnnee: totalDepenses,
-      resultatAnnee: totalResultat - totalDepenses, // Subtract expenses here
+      resultatAnnee: totalResultat - totalDepenses,
     }));
     setTotalNightsCurrentYear(totalNights);
     setTotalReservationsCurrentYear(totalReservations);
@@ -201,9 +201,14 @@ const DashboardPage = () => {
 
     try {
       const userProfile = await getProfile();
-      let expenses: Expense[] = [];
+      let allExpenses: Expense[] = [];
       if (userProfile?.expenses_module_enabled) {
-        expenses = await getExpenses(currentYear);
+        const [singleExpenses, recurringTemplates] = await Promise.all([
+          getExpenses(currentYear),
+          getRecurringExpenses()
+        ]);
+        const recurringInstances = generateRecurringInstances(recurringTemplates, currentYear);
+        allExpenses = [...singleExpenses, ...recurringInstances];
       }
 
       const [statements, fetchedUserRooms] = await Promise.all([
@@ -211,7 +216,7 @@ const DashboardPage = () => {
         getUserRooms(),
       ]);
 
-      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, expenses);
+      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
 
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;

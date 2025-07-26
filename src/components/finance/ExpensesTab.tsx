@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, PlusCircle, Trash2 } from 'lucide-react';
-import { getExpenses, addExpense, deleteExpense, Expense, getRecurringExpenses, addRecurringExpense, deleteRecurringExpense, RecurringExpense } from '@/lib/expenses-api';
+import { getExpenses, addExpense, deleteExpense, Expense, getRecurringExpenses, addRecurringExpense, deleteRecurringExpense, RecurringExpense, generateRecurringInstances } from '@/lib/expenses-api';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const singleExpenseSchema = z.object({
@@ -33,8 +33,8 @@ const recurringExpenseSchema = z.object({
 });
 
 const ExpensesTab: React.FC = () => {
-  const [singleExpenses, setSingleExpenses] = useState<Expense[]>([]);
-  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+  const [allExpenses, setAllExpenses] = useState<Expense[]>([]);
+  const [recurringTemplates, setRecurringTemplates] = useState<RecurringExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const currentYear = new Date().getFullYear();
@@ -57,8 +57,11 @@ const ExpensesTab: React.FC = () => {
         getExpenses(currentYear),
         getRecurringExpenses(),
       ]);
-      setSingleExpenses(singleData);
-      setRecurringExpenses(recurringData);
+      const recurringInstances = generateRecurringInstances(recurringData, currentYear);
+      const combinedExpenses = [...singleData, ...recurringInstances].sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime());
+      
+      setAllExpenses(combinedExpenses);
+      setRecurringTemplates(recurringData);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -89,6 +92,10 @@ const ExpensesTab: React.FC = () => {
   };
 
   const handleDeleteSingle = async (id: string) => {
+    if (id.startsWith('recurring-')) {
+      toast.error("Vous ne pouvez pas supprimer une dépense récurrente individuelle ici. Veuillez gérer le modèle dans l'onglet 'Dépenses Récurrentes'.");
+      return;
+    }
     if (!window.confirm("Supprimer cette dépense ?")) return;
     try { await deleteExpense(id); toast.success("Dépense supprimée."); fetchData(); }
     catch (err: any) { toast.error(`Erreur: ${err.message}`); }
@@ -110,7 +117,7 @@ const ExpensesTab: React.FC = () => {
         <TabsContent value="single">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
             <div className="lg:col-span-1">
-              <Card><CardHeader><CardTitle>Ajouter une Dépense</CardTitle></CardHeader>
+              <Card><CardHeader><CardTitle>Ajouter une Dépense Ponctuelle</CardTitle></CardHeader>
                 <CardContent>
                   <Form {...singleForm}>
                     <form onSubmit={singleForm.handleSubmit(onSingleSubmit)} className="space-y-4">
@@ -127,10 +134,10 @@ const ExpensesTab: React.FC = () => {
             <div className="lg:col-span-2">
               <Card><CardHeader><CardTitle>Historique ({currentYear})</CardTitle></CardHeader>
                 <CardContent>
-                  {loading ? <Skeleton className="h-48 w-full" /> : error ? <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : singleExpenses.length === 0 ? <p className="text-center text-gray-500 py-8">Aucune dépense.</p> : (
+                  {loading ? <Skeleton className="h-48 w-full" /> : error ? <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : allExpenses.length === 0 ? <p className="text-center text-gray-500 py-8">Aucune dépense.</p> : (
                     <Table>
                       <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Montant</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
-                      <TableBody>{singleExpenses.map(e => (<TableRow key={e.id}><TableCell>{format(new Date(e.expense_date), 'dd/MM/yyyy')}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteSingle(e.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody>
+                      <TableBody>{allExpenses.map(e => (<TableRow key={e.id}><TableCell>{format(parseISO(e.expense_date), 'dd/MM/yyyy')}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteSingle(e.id)} disabled={e.id.startsWith('recurring-')}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody>
                     </Table>
                   )}
                 </CardContent>
@@ -159,10 +166,10 @@ const ExpensesTab: React.FC = () => {
             <div className="lg:col-span-2">
               <Card><CardHeader><CardTitle>Vos Dépenses Récurrentes</CardTitle></CardHeader>
                 <CardContent>
-                  {loading ? <Skeleton className="h-48 w-full" /> : error ? <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : recurringExpenses.length === 0 ? <p className="text-center text-gray-500 py-8">Aucune dépense récurrente.</p> : (
+                  {loading ? <Skeleton className="h-48 w-full" /> : error ? <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : recurringTemplates.length === 0 ? <p className="text-center text-gray-500 py-8">Aucune dépense récurrente.</p> : (
                     <Table>
-                      <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Montant</TableHead><TableHead>Fréquence</TableHead><TableHead>Prochaine</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
-                      <TableBody>{recurringExpenses.map(e => (<TableRow key={e.id}><TableCell>{e.description}</TableCell><TableCell className="font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell><TableCell>{e.frequency}</TableCell><TableCell>{e.last_created_date ? format(new Date(e.last_created_date), 'dd/MM/yy') : 'À venir'}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteRecurring(e.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody>
+                      <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Montant</TableHead><TableHead>Fréquence</TableHead><TableHead>Début</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                      <TableBody>{recurringTemplates.map(e => (<TableRow key={e.id}><TableCell>{e.description}</TableCell><TableCell className="font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell><TableCell>{e.frequency}</TableCell><TableCell>{format(parseISO(e.start_date), 'dd/MM/yy')}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteRecurring(e.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody>
                     </Table>
                   )}
                 </CardContent>

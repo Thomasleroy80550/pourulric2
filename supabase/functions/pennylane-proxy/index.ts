@@ -28,7 +28,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // La fonction attend désormais une requête POST
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed, please use POST' }), {
       status: 405,
@@ -61,7 +60,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Vérifier si l'utilisateur est un admin
     const { data: isAdmin, error: isAdminError } = await supabaseAdmin.rpc('is_admin', { user_id: caller.id });
     if (isAdminError) {
       console.error(`Error checking admin status for user ${caller.id}:`, isAdminError.message);
@@ -69,20 +67,21 @@ serve(async (req) => {
     }
 
     let pennylaneCustomerId: string | null = null;
-    const body = await req.json().catch(() => ({})); // Gère les body vides ou invalides
-    const requestedCustomerId = body.customer_id;
 
-    if (isAdmin && requestedCustomerId) {
-      console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${requestedCustomerId}`);
+    if (isAdmin) {
+      const body = await req.json().catch(() => ({}));
+      const requestedCustomerId = body.customer_id;
+      if (!requestedCustomerId) {
+        throw new Error("Les administrateurs doivent spécifier un 'customer_id' pour récupérer les factures.");
+      }
       pennylaneCustomerId = requestedCustomerId;
+      console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${pennylaneCustomerId}`);
     } else {
-      console.log(`Standard user or admin without specific request. Fetching own profile for user ${caller.id}.`);
+      console.log(`Standard user ${caller.id}. Fetching own profile.`);
       pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
     }
 
     if (!pennylaneCustomerId) {
-      const errorMessage = `User ${caller.id} does not have a Pennylane customer ID configured, and no specific ID was requested.`;
-      console.log(errorMessage);
       throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré.");
     }
     

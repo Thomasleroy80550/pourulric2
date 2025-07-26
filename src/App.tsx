@@ -25,6 +25,8 @@ import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
 import AdminStatementsPage from "./pages/AdminStatementsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import FinancePage from "./pages/FinancePage";
+import AdminTechnicalReportsPage from "./pages/AdminTechnicalReportsPage";
+import TechnicalReportsPage from "./pages/TechnicalReportsPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
@@ -47,6 +49,7 @@ const App = () => (
                 <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
                 <Route path="/admin/statements" element={<AdminStatementsPage />} />
                 <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
                 <Route path="/pages/:slug" element={<ContentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/blog" element={<BlogPage />} />
@@ -58,6 +61,7 @@ const App = () => (
                 <Route path="/performance" element={<PerformancePage />} />
                 <Route path="/reviews" element={<ReviewsPage />} />
                 <Route path="/finances" element={<FinancePage />} />
+                <Route path="/reports" element={<TechnicalReportsPage />} />
                 <Route path="/help" element={<HelpPage />} />
                 <Route path="/modules" element={<ModulesPage />} />
                 <Route path="/roadmap" element={<RoadmapPage />} />

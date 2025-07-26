@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, FileText, FilePlus, Settings, LogOut, Shield, ArrowLeft } from 'lucide-react';
+import { Home, Users, FileText, FilePlus, Settings, LogOut, Shield, ArrowLeft, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSession } from './SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +11,7 @@ const adminNavigationItems = [
   { name: 'Tableau de Bord', href: '/admin', icon: Shield },
   { name: 'Utilisateurs', href: '/admin/users', icon: Users },
   { name: 'Pages', href: '/admin/pages', icon: FileText },
+  { name: 'Rapports Tech.', href: '/admin/technical-reports', icon: Wrench },
   { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus },
   { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },
 ];
@@ -89,6 +90,3 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
     </div>
   );
-};
-
-export default AdminLayout;

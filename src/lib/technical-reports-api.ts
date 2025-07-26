@@ -7,6 +7,7 @@ export interface TechnicalReportUpdate {
   user_id: string;
   content: string;
   created_at: string;
+  media_urls?: string[];
   profiles: { // For joining author data
     first_name: string;
     last_name: string;
@@ -153,14 +154,34 @@ export async function markReportAsResolved(reportId: string): Promise<TechnicalR
   return data;
 }
 
-// Add an update/comment to a report
-export async function addReportUpdate(reportId: string, content: string): Promise<TechnicalReportUpdate> {
+// Add an update/comment to a report, now with media
+export async function addReportUpdate(reportId: string, content: string, mediaFiles?: FileList | null): Promise<TechnicalReportUpdate> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Utilisateur non authentifié.");
 
+  let mediaUrls: string[] = [];
+  if (mediaFiles && mediaFiles.length > 0) {
+    for (const file of Array.from(mediaFiles)) {
+      const filePath = `${user.id}/${reportId}/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('technical_reports_media')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw new Error(`Erreur lors du téléversement du fichier: ${uploadError.message}`);
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('technical_reports_media')
+        .getPublicUrl(filePath);
+      
+      mediaUrls.push(urlData.publicUrl);
+    }
+  }
+
   const { data, error } = await supabase
     .from('technical_report_updates')
-    .insert({ report_id: reportId, user_id: user.id, content })
+    .insert({ report_id: reportId, user_id: user.id, content, media_urls: mediaUrls.length > 0 ? mediaUrls : undefined })
     .select()
     .single();
 

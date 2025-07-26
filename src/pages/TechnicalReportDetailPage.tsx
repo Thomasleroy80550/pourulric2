@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip } from 'lucide-react';
@@ -27,6 +28,8 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newUpdate, setNewUpdate] = useState('');
+  const [newMediaFiles, setNewMediaFiles] = useState<FileList | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchReport = async () => {
     if (!id) return;
@@ -58,11 +61,18 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   };
 
   const handleAddUpdate = async () => {
-    if (!id || !newUpdate.trim()) return;
+    if (!id || (!newUpdate.trim() && !newMediaFiles)) {
+      toast.warning("Veuillez ajouter un message ou un fichier.");
+      return;
+    }
     try {
-      await addReportUpdate(id, newUpdate.trim());
+      await addReportUpdate(id, newUpdate.trim(), newMediaFiles);
       toast.success("Mise à jour ajoutée.");
       setNewUpdate('');
+      setNewMediaFiles(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -127,7 +137,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
 
           {report.media_urls && report.media_urls.length > 0 && (
             <Card>
-              <CardHeader><CardTitle className="flex items-center"><Paperclip className="h-5 w-5 mr-2" />Pièces Jointes</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="flex items-center"><Paperclip className="h-5 w-5 mr-2" />Pièces Jointes Initiales</CardTitle></CardHeader>
               <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {report.media_urls.map((url, index) => (
                   <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border hover:opacity-80 transition-opacity">
@@ -149,13 +159,23 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
                       <p className="font-semibold">{update.profiles.first_name} {update.profiles.last_name}</p>
                       <p className="text-xs text-gray-500">{format(new Date(update.created_at), 'dd/MM/yy HH:mm', { locale: fr })}</p>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{update.content}</p>
+                    {update.content && <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{update.content}</p>}
+                    {update.media_urls && update.media_urls.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                        {update.media_urls.map((url, index) => (
+                          <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-md overflow-hidden border hover:opacity-80 transition-opacity">
+                            <img src={url} alt={`Média ${index + 1}`} className="w-full h-24 object-cover" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
               {report.status !== 'resolved' && (
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t space-y-2">
                   <Textarea value={newUpdate} onChange={(e) => setNewUpdate(e.target.value)} placeholder="Ajouter une mise à jour..." />
+                  <Input type="file" multiple onChange={(e) => setNewMediaFiles(e.target.files)} ref={fileInputRef} />
                   <Button onClick={handleAddUpdate} className="mt-2">
                     <Send className="h-4 w-4 mr-2" />
                     Envoyer

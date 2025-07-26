@@ -60,31 +60,34 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    let pennylaneCustomerId: string | null = null;
-    const body = await req.json().catch(() => ({})); // Get body regardless of role
-
-    // Always try to get the user's own customer ID from their profile first.
-    const ownPennylaneId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
-
-    // Check if the user is an admin
     const { data: isAdmin, error: isAdminError } = await supabaseAdmin.rpc('is_admin', { user_id: caller.id });
     if (isAdminError) {
+      console.error(`Error checking admin status for user ${caller.id}:`, isAdminError.message);
       throw new Error("Erreur lors de la vérification des permissions de l'utilisateur.");
     }
 
-    if (isAdmin && body.customer_id) {
-      // If the user is an admin AND they provided a specific customer_id, use that one.
-      pennylaneCustomerId = body.customer_id;
-      console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${pennylaneCustomerId}`);
+    let pennylaneCustomerId: string | null = null;
+    const body = await req.json().catch(() => ({}));
+
+    if (isAdmin) {
+      const requestedCustomerId = body.customer_id;
+      if (requestedCustomerId) {
+        // Admin is requesting a specific customer's invoices
+        pennylaneCustomerId = requestedCustomerId;
+        console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${pennylaneCustomerId}`);
+      } else {
+        // Admin is viewing their own finance page, so fetch their own ID
+        pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
+        console.log(`Admin user ${caller.id} is requesting their own invoices.`);
+      }
     } else {
-      // For regular users, OR for admins who didn't specify a customer_id (e.g., viewing their own finance page),
-      // use their own ID from their profile.
-      pennylaneCustomerId = ownPennylaneId;
-      console.log(`User ${caller.id} (Role: ${isAdmin ? 'Admin' : 'User'}) is requesting their own invoices.`);
+      // Standard user can only ever get their own invoices
+      pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
+      console.log(`Standard user ${caller.id} is requesting their own invoices.`);
     }
 
     if (!pennylaneCustomerId) {
-      throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré.");
+      throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré ou est vide.");
     }
     
     console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);

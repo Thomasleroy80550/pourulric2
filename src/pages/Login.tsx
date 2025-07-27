@@ -158,7 +158,7 @@ const Login = () => {
       <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
         <div className="w-full max-w-sm space-y-8">
           <div className="flex flex-col items-start mb-6">
-            <img src="/logo.png" alt="Hello Keys Logo" className="w-48 h-auto mb-6" />
+            <img src="/assets/logo.png" alt="Hello Keys Logo" className="w-48 h-auto mb-6" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-2">
               Connectez-vous à votre compte
             </h1>

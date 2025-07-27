@@ -1,6 +1,7 @@
 import React from 'react';
 import { SavedInvoice } from '@/lib/admin-api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import logo from './assets/logo.png';
 
 interface StatementPrintLayoutProps {
   statement: SavedInvoice;
@@ -29,7 +30,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans">
       <div className="flex justify-between items-start mb-8">
         <div>
-          <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="Hello Keys Logo" className="w-40 h-auto mb-4" />
+          <img src={logo} alt="Hello Keys Logo" className="w-40 h-auto mb-4" />
         </div>
         <div className="text-right">
           <p className="font-semibold">Hello Keys</p>

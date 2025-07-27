@@ -19,6 +19,7 @@ import { useSession } from './SessionContextProvider';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import logo from './assets/logo.png';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -53,7 +54,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
   return (
     <>
       <div className="flex items-center mb-8">
-        <img src={`${process.env.PUBLIC_URL}/logo.png`} alt="Hello Keys Logo" className="w-40 h-auto mx-auto" />
+        <img src={logo} alt="Hello Keys Logo" className="w-40 h-auto mx-auto" />
       </div>
 
       <div className="mb-6 flex justify-center">

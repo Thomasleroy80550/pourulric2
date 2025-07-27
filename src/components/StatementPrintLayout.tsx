@@ -29,7 +29,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans">
       <div className="flex justify-between items-start mb-8">
         <div>
-          <img src="/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mb-4" />
+          <img src="/assets/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mb-4" />
         </div>
         <div className="text-right">
           <p className="font-semibold">Hello Keys</p>

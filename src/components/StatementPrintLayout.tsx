@@ -1,8 +1,7 @@
 import React from 'react';
 import { SavedInvoice } from '@/lib/admin-api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import logo from './assets/logo.png';
-
+import logo from '../assets/logo.png';
 interface StatementPrintLayoutProps {
   statement: SavedInvoice;
 }

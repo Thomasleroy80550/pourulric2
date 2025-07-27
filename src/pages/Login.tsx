@@ -25,8 +25,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import logo from './assets/logo.png';
-
+import logo from '../assets/logo.png';
 // Zod schemas for validation
 const emailSchema = z.object({
   email: z.string().email({ message: "Email invalide." }),

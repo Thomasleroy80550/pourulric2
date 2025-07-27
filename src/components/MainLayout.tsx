@@ -19,8 +19,7 @@ import { useSession } from './SessionContextProvider';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import logo from './assets/logo.png';
-
+import logo from '../assets/logo.png';
 interface MainLayoutProps {
   children: React.ReactNode;
 }

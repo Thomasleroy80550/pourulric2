@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { Button } => '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +22,7 @@ import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { uploadFiles } from '@/lib/storage-api'; // Import the uploadFiles function
 
 const reportSchema = z.object({
   user_id: z.string().min(1, "Veuillez sélectionner un propriétaire."),
@@ -70,7 +71,23 @@ const AdminTechnicalReportsPage: React.FC = () => {
 
   const handleCreateReport = async (values: z.infer<typeof reportSchema>) => {
     try {
-      await createTechnicalReport(values);
+      let uploadedMediaUrls: string[] | null = null;
+      if (values.media_files && values.media_files.length > 0) {
+        const folderPath = `technical_reports_media/${crypto.randomUUID()}`; // Unique folder for this upload batch
+        uploadedMediaUrls = await uploadFiles(values.media_files, 'technical_report_media_bucket', folderPath);
+      }
+
+      const reportData = {
+        user_id: values.user_id,
+        property_name: values.property_name,
+        title: values.title,
+        description: values.description,
+        priority: values.priority,
+        category: values.category,
+        media_urls: uploadedMediaUrls, // Pass the uploaded URLs
+      };
+
+      await createTechnicalReport(reportData);
       toast.success("Incident créé et envoyé au propriétaire !");
       setIsCreateDialogOpen(false);
       form.reset();

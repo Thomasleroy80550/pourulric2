@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
-import { getAdminReports, createReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { getAdminReports, createTechnicalReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Archive, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -70,7 +70,7 @@ const AdminTechnicalReportsPage: React.FC = () => {
 
   const handleCreateReport = async (values: z.infer<typeof reportSchema>) => {
     try {
-      await createReport(values);
+      await createTechnicalReport(values); // Changed from createReport to createTechnicalReport
       toast.success("Rapport créé et envoyé au propriétaire !");
       setIsCreateDialogOpen(false);
       form.reset();

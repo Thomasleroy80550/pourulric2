@@ -28,6 +28,8 @@ export interface UserProfile {
   notify_new_booking_sms?: boolean;
   notify_cancellation_sms?: boolean;
   is_banned?: boolean;
+  kyc_status?: 'not_verified' | 'pending_review' | 'verified' | 'rejected';
+  kyc_documents?: { identity?: string; address?: string; };
 }
 
 /**
@@ -50,7 +52,8 @@ export async function getProfile(): Promise<UserProfile | null> {
       iban_airbnb_booking, bic_airbnb_booking, sync_with_hellokeys, 
       iban_abritel_hellokeys, bic_abritel_hellokeys, linen_type, agency, 
       contract_start_date, notify_new_booking_email, notify_cancellation_email, 
-      notify_new_booking_sms, notify_cancellation_sms, is_banned
+      notify_new_booking_sms, notify_cancellation_sms, is_banned,
+      kyc_status, kyc_documents
     `)
     .eq('id', user.id)
     .single();

@@ -16,6 +16,7 @@ import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs components
+import KycForm from '@/components/KycForm';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -181,11 +182,12 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-4"> {/* Adjusted grid-cols */}
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5"> {/* Adjusted grid-cols */}
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger> {/* Combined tab */}
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
           </TabsList>
 
           <TabsContent value="personal-data">
@@ -340,6 +342,10 @@ const ProfilePage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="kyc">
+            {profile && <KycForm profile={profile} onUpdate={fetchProfileData} />}
           </TabsContent>
 
           <div className="flex justify-end">

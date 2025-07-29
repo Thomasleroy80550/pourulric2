@@ -91,7 +91,6 @@ const DashboardPage = () => {
   const [dialogChartYAxisUnit, setDialogChartYAxisUnit] = useState<string | undefined>(undefined);
 
   const [isForecastDialogOpen, setIsForecastDialogOpen] = useState(false);
-  const [forecastAmount, setForecastAmount] = useState(0);
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
 
   const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
@@ -118,7 +117,7 @@ const DashboardPage = () => {
       end: endOfMonth(new Date(year, 11, 1)),
     });
 
-    const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
+    const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0, depenses: 0 }));
     const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
     const monthlyNights = Array(12).fill(0);
     
@@ -129,8 +128,8 @@ const DashboardPage = () => {
       totalCA += statementCA;
       totalRentree += s.totals.totalMontantVerse || 0;
       totalFrais += s.totals.totalCommission || 0;
-      const netToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
-      totalResultat += netToPay;
+      const netToPayFromStatement = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
+      totalResultat += netToPayFromStatement;
       totalNights += s.totals.totalNuits || 0;
       totalGuests += s.totals.totalVoyageurs || 0;
       totalReservations += s.invoice_data.length;
@@ -140,12 +139,10 @@ const DashboardPage = () => {
       const monthIndex = monthFrToNum[monthName];
 
       if (monthIndex !== undefined) {
-        const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
-        
         newMonthlyFinancialData[monthIndex].ca += statementCA;
         newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
         newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
-        newMonthlyFinancialData[monthIndex].benef += statementNetToPay;
+        newMonthlyFinancialData[monthIndex].benef += netToPayFromStatement;
         
         newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
         monthlyNights[monthIndex] += s.totals.totalNuits || 0;
@@ -160,6 +157,22 @@ const DashboardPage = () => {
         else if (portail.includes('proprio')) channelCounts['proprio']++;
         else channelCounts['autre']++;
       });
+    });
+
+    // Distribute expenses across months
+    expenses.forEach(exp => {
+      const expenseDate = parseISO(exp.expense_date);
+      if (isValid(expenseDate) && expenseDate.getFullYear() === year) {
+        const monthIndex = expenseDate.getMonth(); // 0-indexed month
+        if (monthIndex >= 0 && monthIndex < 12) {
+          newMonthlyFinancialData[monthIndex].depenses += exp.amount;
+        }
+      }
+    });
+
+    // Calculate final net benefit for each month by subtracting monthly expenses
+    newMonthlyFinancialData.forEach(monthData => {
+      monthData.benef -= monthData.depenses;
     });
 
     const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
@@ -287,7 +300,7 @@ const DashboardPage = () => {
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
     const totalDaysInYear = getDaysInYear(today);
     if (dayOfYear === 0) {
-      toast.error("Impossible de calculer la prévision au début de l'année.");
+      // toast.error("Impossible de calculer la prévision au début de l'année."); // Assuming toast is available
       return;
     }
     const avgDailyRevenue = financialData.resultatAnnee / dayOfYear;
@@ -539,6 +552,7 @@ const DashboardPage = () => {
                   { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
                   { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
                   { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
+                  ...(expensesModuleEnabled ? [{ key: 'depenses', name: 'Autres Dépenses', color: '#9333EA' }] : []),
                 ],
                 '€'
               )}>
@@ -571,6 +585,9 @@ const DashboardPage = () => {
                     <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    {expensesModuleEnabled && (
+                      <Line type="monotone" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    )}
                     <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
                   </ComposedChart>
                 </ResponsiveContainer>

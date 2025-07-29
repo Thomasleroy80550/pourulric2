@@ -17,6 +17,7 @@ import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, N
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import BottomNavBar from './BottomNavBar';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -69,17 +70,31 @@ const accountNavigationItems = [
 
 const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
   const location = useLocation();
-  const { profile } = useSession();
+  const { profile, session } = useSession();
+  const isMobile = useIsMobile();
 
   const sidebarSections = profile?.role === 'accountant' ? accountantSidebarSections : defaultSidebarSections;
 
   return (
-    <>
-      <div className="flex items-center mb-8">
+    <div className="flex flex-col h-full">
+      {isMobile && profile && (
+        <div className="flex items-center p-4 border-b border-sidebar-border">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
+            <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
+          </Avatar>
+          <div className="ml-3">
+            <p className="text-sm font-semibold text-sidebar-foreground">{profile.first_name} {profile.last_name}</p>
+            <p className="text-xs text-sidebar-foreground/80">{session?.user?.email}</p>
+          </div>
+        </div>
+      )}
+
+      <div className={cn("flex items-center mb-8 p-4", isMobile && "hidden")}>
         <img src="/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mx-auto" />
       </div>
 
-      <nav id="tour-sidebar-nav" className="flex-grow space-y-6">
+      <nav id="tour-sidebar-nav" className="flex-grow space-y-6 px-4 overflow-y-auto">
         {sidebarSections.map((section) => (
           <div key={section.title}>
             <h3 className="px-4 mb-2 text-xs font-semibold uppercase text-sidebar-foreground/70 tracking-wider">
@@ -107,7 +122,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
         ))}
       </nav>
 
-      <nav className="mt-auto pt-4 border-t border-sidebar-border">
+      <nav className="mt-auto p-4 border-t border-sidebar-border">
         {profile?.role === 'admin' && (
           <div className="mb-2">
             <Link to="/admin" onClick={onLinkClick}>
@@ -139,7 +154,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
           </ul>
         )}
       </nav>
-    </>
+    </div>
   );
 };
 
@@ -150,7 +165,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { profile, session } = useSession(); // Destructure session here
+  const { profile, session } = useSession();
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
@@ -172,8 +187,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     fetchNotifications();
     const channel = supabase
       .channel('public:notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
-        console.log('Change received!', payload);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
         fetchNotifications();
       })
       .subscribe();
@@ -193,7 +207,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      localStorage.removeItem('admin_impersonation_session'); // Clear on logout
+      localStorage.removeItem('admin_impersonation_session');
       toast.success("Déconnexion réussie !");
       navigate('/login');
     } catch (error: any) {
@@ -239,31 +253,36 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {!isMobile && (
-        <aside className="w-64 bg-sidebar text-sidebar-foreground p-4 flex flex-col border-r border-sidebar-border shadow-lg">
+        <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
           <SidebarContent />
         </aside>
       )}
 
       <div className="flex-1 flex flex-col">
-        <header className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm">
-          <div className="flex items-center space-x-4">
+        <header className="bg-background p-4 border-b flex items-center justify-between shadow-sm md:px-6 z-40">
+          <div className="w-1/3 md:w-auto">
             {isMobile && (
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="lg:hidden">
+                  <Button variant="ghost" size="icon">
                     <Menu className="h-6 w-6" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-4 bg-sidebar text-sidebar-foreground flex flex-col">
+                <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
                   <SidebarContent onLinkClick={handleLinkClick} />
                 </SheetContent>
               </Sheet>
             )}
-            {/* Removed 0°C display */}
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <Button variant="outline" className="flex items-center px-2 md:px-4">
+          <div className="w-1/3 flex justify-center md:hidden">
+            <Link to="/">
+              <img src="/logo.png" alt="Hello Keys Logo" className="h-8 w-auto" />
+            </Link>
+          </div>
+
+          <div className="w-1/3 md:w-auto flex items-center justify-end space-x-2 sm:space-x-4">
+            <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4">
               <Plus className="h-4 w-4" />
               <span className="ml-2 hidden xl:inline-block">Actions rapides</span>
             </Button>
@@ -275,10 +294,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500 flex items-center justify-center text-white text-[10px]">
-                    </span>
-                  )}
+                  {unreadCount > 0 && <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500"></span>}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-80" align="end">
@@ -309,45 +325,45 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
-                    <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="hidden xl:flex flex-col items-start ml-2">
-                    <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
-                    <span className="text-xs leading-none text-gray-500 dark:text-gray-400">
-                      {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : (profile?.role === 'accountant' ? 'Compte comptable' : 'Compte utilisateur'))}
-                    </span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 ml-2 hidden md:inline-block" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {session?.user?.email} {/* Display user email from session */}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {profile?.role !== 'accountant' && accountNavigationItems.map((item) => (
-                  <DropdownMenuItem key={item.name} onClick={() => navigate(item.href)}>
-                    <item.icon className="h-4 w-4 mr-2" />
-                    {item.name}
+            <div className="hidden md:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
+                      <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="hidden xl:flex flex-col items-start ml-2">
+                      <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
+                      <span className="text-xs leading-none text-gray-500 dark:text-gray-400">
+                        {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : (profile?.role === 'accountant' ? 'Compte comptable' : 'Compte utilisateur'))}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 ml-2 hidden md:inline-block" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {profile?.role !== 'accountant' && accountNavigationItems.map((item) => (
+                    <DropdownMenuItem key={item.name} onClick={() => navigate(item.href)}>
+                      <item.icon className="h-4 w-4 mr-2" />
+                      {item.name}
+                    </DropdownMenuItem>
+                  ))}
+                  {profile?.role !== 'accountant' && <DropdownMenuSeparator />}
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Déconnexion
                   </DropdownMenuItem>
-                ))}
-                {profile?.role !== 'accountant' && <DropdownMenuSeparator />}
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="h-4 w-4 mr-2" /> {/* Add LogOut icon */}
-                  Déconnexion
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </header>
 
@@ -365,10 +381,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </Alert>
         )}
 
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6">
           {children}
         </main>
       </div>
+
+      {isMobile && <BottomNavBar />}
+      
       <AICopilotDialog
         isOpen={isAICopilotDialogOpen}
         onOpenChange={setIsAICopilotDialogOpen}

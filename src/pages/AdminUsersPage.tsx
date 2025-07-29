@@ -14,9 +14,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { getAllProfiles, createUser, updateUser, UpdateUserPayload, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, createAccountantClientRelation, getUserRoomsForAdmin, addUserRoomForAdmin, deleteUserRoomForAdmin } from '@/lib/admin-api';
+import { getAllProfiles, createUser, updateUser, UpdateUserPayload, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, createAccountantClientRelation } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
-import { UserRoom } from '@/lib/user-room-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -108,11 +107,6 @@ const AdminUsersPage: React.FC = () => {
   const [pendingApproval, setPendingApproval] = useState<AccountantRequest | null>(null);
   const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
   const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string }>({});
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
-  const [roomsLoading, setRoomsLoading] = useState(true);
-  const [newRoomId, setNewRoomId] = useState('');
-  const [newRoomName, setNewRoomName] = useState('');
-  const [isAddingRoom, setIsAddingRoom] = useState(false);
   const navigate = useNavigate();
 
   const addUserForm = useForm<z.infer<typeof newUserSchema>>({
@@ -208,18 +202,6 @@ const AdminUsersPage: React.FC = () => {
       kyc_status: user.kyc_status || 'not_verified',
     });
     setIsEditDialogOpen(true);
-
-    // Fetch user rooms
-    setRoomsLoading(true);
-    setUserRooms([]);
-    try {
-        const rooms = await getUserRoomsForAdmin(user.id);
-        setUserRooms(rooms);
-    } catch (error: any) {
-        toast.error(`Erreur de chargement des chambres: ${error.message}`);
-    } finally {
-        setRoomsLoading(false);
-    }
 
     // Fetch signed URLs for KYC documents
     setDocumentUrls({}); // Reset first
@@ -328,39 +310,6 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const handleAddNewRoom = async () => {
-    if (!editingUser || !newRoomId || !newRoomName) {
-      toast.warning("Veuillez remplir l'ID et le nom de la chambre.");
-      return;
-    }
-    setIsAddingRoom(true);
-    try {
-      await addUserRoomForAdmin(editingUser.id, newRoomId, newRoomName);
-      toast.success("Chambre ajoutée avec succès !");
-      setNewRoomId('');
-      setNewRoomName('');
-      // Refresh the list
-      const rooms = await getUserRoomsForAdmin(editingUser.id);
-      setUserRooms(rooms);
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
-    } finally {
-      setIsAddingRoom(false);
-    }
-  };
-
-  const handleDeleteRoom = async (userRoomId: string) => {
-    if (!editingUser) return;
-    try {
-      await deleteUserRoomForAdmin(userRoomId);
-      toast.success("Chambre supprimée.");
-      // Refresh the list
-      setUserRooms(prev => prev.filter(r => r.id !== userRoomId));
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
-    }
-  };
-
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -399,6 +348,7 @@ const AdminUsersPage: React.FC = () => {
                         <TableHead>Email</TableHead>
                         <TableHead>Rôle</TableHead>
                         <TableHead>Statut</TableHead>
+                        <TableHead>Statut KYC</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -527,13 +477,12 @@ const AdminUsersPage: React.FC = () => {
           <Form {...editUserForm}>
             <form onSubmit={editUserForm.handleSubmit(handleUpdateUser)} className="flex-grow overflow-y-auto pr-6 pl-2 space-y-4">
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="personal">Personnel</TabsTrigger>
                   <TabsTrigger value="payment">Paiement</TabsTrigger>
                   <TabsTrigger value="offer">Offre</TabsTrigger>
                   <TabsTrigger value="notifications">Notifications</TabsTrigger>
                   <TabsTrigger value="kyc">KYC</TabsTrigger>
-                  <TabsTrigger value="rooms">Chambres</TabsTrigger>
                 </TabsList>
                 <TabsContent value="personal" className="mt-4 space-y-4">
                   <Card>
@@ -657,52 +606,6 @@ const AdminUsersPage: React.FC = () => {
                               )}
                             </ul>
                           )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="rooms" className="mt-4">
-                  <Card>
-                    <CardHeader><CardTitle>Chambres attribuées</CardTitle></CardHeader>
-                    <CardContent>
-                      {roomsLoading ? (
-                        <div className="flex items-center justify-center p-4">
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {userRooms.map(room => (
-                            <div key={room.id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50 dark:bg-gray-800/50">
-                              <div>
-                                <p className="font-medium">{room.room_name}</p>
-                                <p className="text-sm text-muted-foreground">ID Krossbooking: {room.room_id}</p>
-                              </div>
-                              <Button variant="destructive" size="sm" onClick={() => handleDeleteRoom(room.id)}>Supprimer</Button>
-                            </div>
-                          ))}
-                          {userRooms.length === 0 && <p className="text-sm text-center text-muted-foreground py-4">Aucune chambre attribuée à cet utilisateur.</p>}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                  <Card className="mt-6">
-                    <CardHeader><CardTitle>Ajouter une nouvelle chambre</CardTitle></CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 space-y-1">
-                          <Label htmlFor="new-room-id">ID Krossbooking</Label>
-                          <Input id="new-room-id" placeholder="Ex: 12345" value={newRoomId} onChange={e => setNewRoomId(e.target.value)} />
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <Label htmlFor="new-room-name">Nom de la chambre</Label>
-                          <Input id="new-room-name" placeholder="Ex: Appartement T2 Vue Mer" value={newRoomName} onChange={e => setNewRoomName(e.target.value)} />
-                        </div>
-                        <div className="flex items-end">
-                          <Button onClick={handleAddNewRoom} disabled={isAddingRoom || !newRoomId || !newRoomName} className="w-full sm:w-auto">
-                            {isAddingRoom ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" }
-                            Ajouter
-                          </Button>
                         </div>
                       </div>
                     </CardContent>

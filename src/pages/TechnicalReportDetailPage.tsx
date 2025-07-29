@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore } from 'lucide-react';
-import { getTechnicalReportById, respondToReport, addTechnicalReportUpdate, markReportAsResolved, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
-import { uploadFiles } from '@/lib/storage-api'; // Nouvelle importation
+import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -37,7 +37,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     setLoading(true);
     setError(null);
     try {
-      const data = await getTechnicalReportById(id); // Corrected function name
+      const data = await getTechnicalReportById(id);
       setReport(data);
     } catch (err: any) {
       setError(err.message);
@@ -53,7 +53,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const handleResponse = async (response: 'owner_will_manage' | 'admin_will_manage') => {
     if (!id) return;
     try {
-      await respondToReport(id, response);
+      await updateTechnicalReport(id, { status: response });
       toast.success("Votre réponse a été enregistrée.");
       fetchReport();
     } catch (err: any) {
@@ -74,8 +74,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     try {
       let mediaUrls: string[] | null = null;
       if (newMediaFiles && newMediaFiles.length > 0) {
-        // Télécharger les fichiers et obtenir leurs URLs publiques
-        const folderPath = `report_updates/${id}`; // Organiser les fichiers par ID de rapport
+        const folderPath = `report_updates/${id}`;
         mediaUrls = await uploadFiles(newMediaFiles, 'technical_report_media', folderPath);
       }
 
@@ -100,7 +99,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const handleResolve = async () => {
     if (!id) return;
     try {
-      await markReportAsResolved(id);
+      await updateTechnicalReport(id, { status: 'resolved', resolved_at: new Date().toISOString() });
       toast.success("Rapport marqué comme résolu.");
       fetchReport();
     } catch (err: any) {
@@ -111,14 +110,13 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const handleOwnerResolve = async () => {
     if (!id || !profile?.id) return;
     try {
-      // Ajouter une mise à jour indiquant que le propriétaire a résolu le rapport
       await addTechnicalReportUpdate({
         report_id: id,
         user_id: profile.id,
         content: "Le propriétaire a marqué ce rapport comme résolu.",
         media_urls: null,
       });
-      await markReportAsResolved(id);
+      await updateTechnicalReport(id, { status: 'resolved', resolved_at: new Date().toISOString() });
       toast.success("Rapport marqué comme résolu.");
       fetchReport();
     } catch (err: any) {
@@ -129,11 +127,15 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const handleArchiveToggle = async () => {
     if (!id || report === null) return;
     try {
-      // Note: The archiveReport function in technical-reports-api.ts needs to be updated
-      // to accept a boolean for is_archived to properly toggle.
-      // For now, assuming it handles the toggle logic internally or will be updated.
-      await archiveReport(id, !report.is_archived); // Passing the desired archive status
-      toast.success(`Rapport ${!report.is_archived ? 'archivé' : 'désarchivé'} avec succès !`);
+      // The archiveReport function in technical-reports-api.ts already handles setting status to 'archived'
+      // and is_archived to true. If we want to unarchive, we need to use updateTechnicalReport.
+      if (report.is_archived) {
+        await updateTechnicalReport(id, { is_archived: false, status: 'pending_owner_action' }); // Or previous status
+        toast.success(`Rapport désarchivé avec succès !`);
+      } else {
+        await archiveReport(id); // This function sets is_archived to true and status to 'archived'
+        toast.success(`Rapport archivé avec succès !`);
+      }
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -146,6 +148,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
       case 'owner_will_manage': return <Badge variant="outline">Géré par proprio</Badge>;
       case 'admin_will_manage': return <Badge>Géré par Hello Keys</Badge>;
       case 'resolved': return <Badge className="bg-green-600 text-white">Résolu</Badge>;
+      case 'archived': return <Badge variant="destructive">Archivé</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
@@ -178,7 +181,6 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
                   <CardDescription>{report.property_name}</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  {report.is_archived && <Badge variant="destructive">Archivé</Badge>}
                   {getStatusBadge(report.status)}
                 </div>
               </div>
@@ -204,12 +206,13 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
           <Card>
             <CardHeader><CardTitle>Fil de discussion</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              {report.technical_report_updates?.map(update => (
+              {/* Ensure technical_report_updates is an array before mapping */}
+              {Array.isArray(report.technical_report_updates) && report.technical_report_updates.map(update => (
                 <div key={update.id} className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">{update.profiles.role === 'admin' ? <Shield className="h-5 w-5 text-blue-500" /> : <User className="h-5 w-5 text-gray-500" />}</div>
+                  <div className="flex-shrink-0">{update.profiles?.role === 'admin' ? <Shield className="h-5 w-5 text-blue-500" /> : <User className="h-5 w-5 text-gray-500" />}</div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold">{update.profiles.first_name} {update.profiles.last_name}</p>
+                      <p className="font-semibold">{update.profiles?.first_name} {update.profiles?.last_name}</p>
                       <p className="text-xs text-gray-500">{format(new Date(update.created_at), 'dd/MM/yy HH:mm', { locale: fr })}</p>
                     </div>
                     {update.content && <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{update.content}</p>}
@@ -225,7 +228,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
                   </div>
                 </div>
               ))}
-              {report.status !== 'resolved' && (
+              {report.status !== 'resolved' && report.status !== 'archived' && (
                 <div className="pt-4 border-t space-y-2">
                   <Textarea value={newUpdate} onChange={(e) => setNewUpdate(e.target.value)} placeholder="Ajouter une mise à jour..." />
                   <Input type="file" multiple onChange={(e) => setNewMediaFiles(e.target.files)} ref={fileInputRef} />

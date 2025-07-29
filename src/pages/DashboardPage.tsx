@@ -1,6 +1,5 @@
 "use client";
 
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -655,7 +654,6 @@ const DashboardPage = () => {
           </Card>
         </div>
       </div>
-      <MadeWithDyad />
       <ObjectiveDialog
         isOpen={isObjectiveDialogOpen}
         onOpenChange={setIsObjectiveDialogOpen}

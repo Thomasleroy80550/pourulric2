@@ -382,41 +382,6 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               </div>
             ))}
           </div>
-          <h3 className="text-md font-semibold mt-4 mb-3">Légende des tâches de ménage et mouvements</h3>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center">
-              <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche générique / Autre</span>
-            </div>
-            <div className="flex items-center">
-              <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche terminée</span>
-            </div>
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-yellow-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche en attente / en cours</span>
-            </div>
-            <div className="flex items-center">
-              <XCircle className="h-4 w-4 mr-2 text-red-500" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Tâche annulée</span>
-            </div>
-            <div className="flex items-center">
-              <span className="w-4 h-4 mr-2 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-full">2+</span>
-              <span className="text-sm text-gray-700 dark:text-gray-300">Plusieurs tâches</span>
-            </div>
-            <div className="flex items-center">
-              <LogIn className="h-4 w-4 mr-2 text-white bg-green-600 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Icône d'arrivée (dans la barre de réservation)</span>
-            </div>
-            <div className="flex items-center">
-              <LogOut className="h-4 w-4 mr-2 text-white bg-red-600 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Icône de départ (dans la barre de réservation)</span>
-            </div>
-            <div className="flex items-center">
-              <Sparkles className="h-4 w-4 mr-2 text-white bg-purple-500 rounded-full p-0.5" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Arrivée & Départ le même jour (dans la barre de réservation)</span>
-            </div>
-          </div>
         </div>
       </CardContent>
 

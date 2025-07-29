@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { getUserReports, TechnicalReport } from '@/lib/technical-reports-api';
+import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const TechnicalReportsPage: React.FC = () => {
   const [reports, setReports] = useState<TechnicalReport[]>([]);
@@ -20,7 +21,13 @@ const TechnicalReportsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getUserReports();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setError("Vous devez être connecté pour voir vos rapports techniques.");
+        setLoading(false);
+        return;
+      }
+      const data = await getTechnicalReportsByUserId(user.id);
       setReports(data);
     } catch (err: any) {
       setError(err.message);

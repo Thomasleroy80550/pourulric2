@@ -38,9 +38,11 @@ serve(async (req) => {
     }
 
     // 2. Get user data from request body
-    const { user_id, first_name, last_name, role } = await req.json();
-    if (!user_id || !first_name || !last_name || !role) {
-      throw new Error("Missing required fields: user_id, first_name, last_name, role.");
+    const body = await req.json();
+    const { user_id, ...updateData } = body;
+
+    if (!user_id) {
+      throw new Error("Missing required field: user_id.");
     }
 
     // 3. Create admin client
@@ -49,17 +51,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Update auth.users metadata to keep it in sync
-    const { data: updatedUser, error: updateUserError } = await adminSupabaseClient.auth.admin.updateUserById(
-      user_id,
-      { user_metadata: { first_name, last_name, role } }
-    );
-    if (updateUserError) throw updateUserError;
+    // 4. Separate auth metadata from profile data
+    const { first_name, last_name, role, ...profileData } = updateData;
+    
+    const authUpdatePayload: { [key: string]: any } = {};
+    if (first_name !== undefined) authUpdatePayload.first_name = first_name;
+    if (last_name !== undefined) authUpdatePayload.last_name = last_name;
+    if (role !== undefined) authUpdatePayload.role = role;
+
+    // Update auth.users metadata if there's anything to update
+    if (Object.keys(authUpdatePayload).length > 0) {
+      const { error: updateUserError } = await adminSupabaseClient.auth.admin.updateUserById(
+        user_id,
+        { user_metadata: authUpdatePayload }
+      );
+      if (updateUserError) throw updateUserError;
+    }
 
     // 5. Update public.profiles table
     const { data: updatedProfile, error: updateProfileError } = await adminSupabaseClient
       .from('profiles')
-      .update({ first_name, last_name, role })
+      .update({ first_name, last_name, role, ...profileData })
       .eq('id', user_id)
       .select()
       .single();

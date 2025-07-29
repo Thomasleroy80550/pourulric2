@@ -157,12 +157,14 @@ export async function createUser(userData: { email: string; first_name: string; 
   return data;
 }
 
+export type UpdateUserPayload = { user_id: string } & Partial<Omit<UserProfile, 'id'>>;
+
 /**
  * Updates a user's profile. This is an admin-only function.
  * @param userData The user data to update, including user_id.
  * @returns A promise that resolves with the updated user data.
  */
-export async function updateUser(userData: { user_id: string; first_name: string; last_name: string; role: string; }) {
+export async function updateUser(userData: UpdateUserPayload) {
   const { data, error } = await supabase.functions.invoke('update-user-proxy', {
     body: userData,
   });

@@ -39,6 +39,7 @@ serve(async (req) => {
 
     // 2. Get user data from request body
     const body = await req.json();
+    console.log("Incoming request body:", JSON.stringify(body)); // Log incoming body
     const { user_id, ...updateData } = body;
 
     if (!user_id) {
@@ -59,23 +60,38 @@ serve(async (req) => {
     if (last_name !== undefined) authUpdatePayload.last_name = last_name;
     if (role !== undefined) authUpdatePayload.role = role;
 
+    console.log("Auth update payload:", JSON.stringify(authUpdatePayload));
+    console.log("Profile data for public.profiles update:", JSON.stringify(profileData));
+
     // Update auth.users metadata if there's anything to update
     if (Object.keys(authUpdatePayload).length > 0) {
+      console.log(`Attempting to update auth.users metadata for user_id: ${user_id}`);
       const { error: updateUserError } = await adminSupabaseClient.auth.admin.updateUserById(
         user_id,
         { user_metadata: authUpdatePayload }
       );
-      if (updateUserError) throw updateUserError;
+      if (updateUserError) {
+        console.error("Error updating auth.users metadata:", updateUserError);
+        throw new Error(`Failed to update auth.users metadata: ${updateUserError.message}`);
+      }
+      console.log("Successfully updated auth.users metadata.");
+    } else {
+      console.log("No auth.users metadata to update.");
     }
 
     // 5. Update public.profiles table
+    console.log(`Attempting to update public.profiles for user_id: ${user_id} with data: ${JSON.stringify({ first_name, last_name, role, ...profileData })}`);
     const { data: updatedProfile, error: updateProfileError } = await adminSupabaseClient
       .from('profiles')
       .update({ first_name, last_name, role, ...profileData })
       .eq('id', user_id)
       .select()
       .single();
-    if (updateProfileError) throw updateProfileError;
+    if (updateProfileError) {
+      console.error("Error updating public.profiles table:", updateProfileError);
+      throw new Error(`Failed to update public.profiles: ${updateProfileError.message}`);
+    }
+    console.log("Successfully updated public.profiles table.");
 
     // 6. Return success response
     return new Response(JSON.stringify({ data: updatedProfile, message: "User updated successfully." }), {

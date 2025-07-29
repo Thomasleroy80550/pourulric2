@@ -85,7 +85,7 @@ const ReportsTab: React.FC = () => {
             date: format(parseISO(s.created_at), 'yyyy-MM-dd'),
             description: `Relevé Période ${s.period}`,
             type: 'Revenu',
-            amount: s.totals?.total_brut_ht || 0,
+            amount: s.totals?.total_brut_ht || 0, // Changed to total_brut_ht for gross revenue
           }));
 
         const expenseTransactions: Transaction[] = allExpenses
@@ -97,7 +97,31 @@ const ReportsTab: React.FC = () => {
             amount: e.amount,
           }));
 
-        const combinedTransactions = [...revenueTransactions, ...expenseTransactions]
+        // Add HelloKeys commission and payment fees as expenses
+        const statementFeeTransactions: Transaction[] = statements
+          .filter(s => isWithinInterval(parseISO(s.created_at), interval))
+          .flatMap(s => {
+            const fees: Transaction[] = [];
+            if (s.totals?.total_commission_hk) {
+              fees.push({
+                date: format(parseISO(s.created_at), 'yyyy-MM-dd'),
+                description: `Commission HelloKeys (${s.period})`,
+                type: 'Dépense',
+                amount: s.totals.total_commission_hk,
+              });
+            }
+            if (s.totals?.total_frais_paiement) {
+              fees.push({
+                date: format(parseISO(s.created_at), 'yyyy-MM-dd'),
+                description: `Frais de paiement (${s.period})`,
+                type: 'Dépense',
+                amount: s.totals.total_frais_paiement,
+              });
+            }
+            return fees;
+          });
+
+        const combinedTransactions = [...revenueTransactions, ...expenseTransactions, ...statementFeeTransactions] // Include new fee transactions
           .sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
         
         setReportData(combinedTransactions);

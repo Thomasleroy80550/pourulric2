@@ -48,16 +48,24 @@ const BalancesTab: React.FC = () => {
         // Calculate revenues
         const calculateRevenues = (interval: { start: Date, end: Date }) => statements
           .filter(s => isWithinInterval(parseISO(s.created_at), interval))
-          .reduce((acc, s) => acc + (s.totals?.totalRevenuGenere || 0), 0);
+          .reduce((acc, s) => acc + (s.totals?.total_brut_ht || 0), 0);
 
         const annualRevenues = calculateRevenues(annualInterval);
         const quarterlyRevenues = calculateRevenues(quarterlyInterval);
         const monthlyRevenues = calculateRevenues(monthlyInterval);
 
         // Calculate expenses
-        const calculateExpenses = (interval: { start: Date, end: Date }) => allExpenses
-          .filter(e => isWithinInterval(parseISO(e.expense_date), interval))
-          .reduce((acc, e) => acc + e.amount, 0);
+        const calculateExpenses = (interval: { start: Date, end: Date }) => {
+          const regularExpenses = allExpenses
+            .filter(e => isWithinInterval(parseISO(e.expense_date), interval))
+            .reduce((acc, e) => acc + e.amount, 0);
+
+          const statementFees = statements
+            .filter(s => isWithinInterval(parseISO(s.created_at), interval))
+            .reduce((acc, s) => acc + (s.totals?.total_commission_hk || 0) + (s.totals?.total_frais_paiement || 0), 0);
+
+          return regularExpenses + statementFees;
+        };
 
         const annualExpenses = calculateExpenses(annualInterval);
         const quarterlyExpenses = calculateExpenses(quarterlyInterval);

@@ -38,6 +38,7 @@ import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
 import CustomChartTooltip from '@/components/CustomChartTooltip';
 import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense } from '@/lib/expenses-api';
+import { toast } from 'sonner'; // Added toast import
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -91,6 +92,7 @@ const DashboardPage = () => {
   const [dialogChartYAxisUnit, setDialogChartYAxisUnit] = useState<string | undefined>(undefined);
 
   const [isForecastDialogOpen, setIsForecastDialogOpen] = useState(false);
+  const [forecastAmount, setForecastAmount] = useState(0); // Ensured this line is present and correct
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
 
   const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
@@ -300,7 +302,7 @@ const DashboardPage = () => {
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
     const totalDaysInYear = getDaysInYear(today);
     if (dayOfYear === 0) {
-      // toast.error("Impossible de calculer la prévision au début de l'année."); // Assuming toast is available
+      toast.error("Impossible de calculer la prévision au début de l'année.");
       return;
     }
     const avgDailyRevenue = financialData.resultatAnnee / dayOfYear;

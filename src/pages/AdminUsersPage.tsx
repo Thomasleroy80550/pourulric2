@@ -16,8 +16,9 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { toast } from 'sonner';
 import { getAllProfiles, createUser, updateUser, UpdateUserPayload, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, createAccountantClientRelation } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
+import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,11 @@ const editUserSchema = z.object({
   notify_cancellation_sms: z.boolean().optional(),
   is_banned: z.boolean().optional(),
   kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional(),
+});
+
+const roomSchema = z.object({
+  room_id: z.string().min(1, "L'ID de la chambre est requis."),
+  room_name: z.string().min(1, "Le nom de la chambre est requis."),
 });
 
 const getKycStatusText = (status?: string) => {
@@ -104,6 +110,8 @@ const AdminUsersPage: React.FC = () => {
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
   const [pendingApproval, setPendingApproval] = useState<AccountantRequest | null>(null);
   const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
   const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string }>({});
@@ -116,6 +124,11 @@ const AdminUsersPage: React.FC = () => {
 
   const editUserForm = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
+  });
+
+  const addRoomForm = useForm<z.infer<typeof roomSchema>>({
+    resolver: zodResolver(roomSchema),
+    defaultValues: { room_id: '', room_name: '' },
   });
 
   const fetchUsers = async () => {
@@ -203,6 +216,18 @@ const AdminUsersPage: React.FC = () => {
     });
     setIsEditDialogOpen(true);
 
+    // Fetch user rooms
+    setLoadingRooms(true);
+    try {
+        const rooms = await getUserRoomsByUserId(user.id);
+        setUserRooms(rooms);
+    } catch (error: any) {
+        toast.error(`Erreur de chargement des chambres: ${error.message}`);
+        setUserRooms([]);
+    } finally {
+        setLoadingRooms(false);
+    }
+
     // Fetch signed URLs for KYC documents
     setDocumentUrls({}); // Reset first
     if (user.kyc_documents) {
@@ -246,6 +271,29 @@ const AdminUsersPage: React.FC = () => {
     } catch (error: any) {
       toast.error(`Erreur lors de la mise à jour : ${error.message}`);
     }
+  };
+
+  const handleAddRoom = async (values: z.infer<typeof roomSchema>) => {
+    if (!editingUser) return;
+    try {
+        const newRoom = await adminAddUserRoom(editingUser.id, values.room_id, values.room_name);
+        setUserRooms(prev => [...prev, newRoom]);
+        addRoomForm.reset();
+        toast.success("Chambre ajoutée avec succès !");
+    } catch (error: any) {
+        toast.error(`Erreur: ${error.message}`);
+    }
+  };
+
+  const handleDeleteRoom = async (roomId: string) => {
+      if (!editingUser) return;
+      try {
+          await deleteUserRoom(roomId);
+          setUserRooms(prev => prev.filter(room => room.id !== roomId));
+          toast.success("Chambre supprimée avec succès !");
+      } catch (error: any) {
+          toast.error(`Erreur: ${error.message}`);
+      }
   };
 
   const handleApproveClick = (request: AccountantRequest) => {
@@ -477,12 +525,13 @@ const AdminUsersPage: React.FC = () => {
           <Form {...editUserForm}>
             <form onSubmit={editUserForm.handleSubmit(handleUpdateUser)} className="flex-grow overflow-y-auto pr-6 pl-2 space-y-4">
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="personal">Personnel</TabsTrigger>
                   <TabsTrigger value="payment">Paiement</TabsTrigger>
                   <TabsTrigger value="offer">Offre</TabsTrigger>
                   <TabsTrigger value="notifications">Notifications</TabsTrigger>
                   <TabsTrigger value="kyc">KYC</TabsTrigger>
+                  <TabsTrigger value="rooms">Chambres</TabsTrigger>
                 </TabsList>
                 <TabsContent value="personal" className="mt-4 space-y-4">
                   <Card>
@@ -607,6 +656,58 @@ const AdminUsersPage: React.FC = () => {
                             </ul>
                           )}
                         </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="rooms" className="mt-4">
+                  <Card>
+                    <CardHeader><CardTitle>Chambres Assignées</CardTitle></CardHeader>
+                    <CardContent className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-2">Ajouter une chambre</h3>
+                        <Form {...addRoomForm}>
+                          <form onSubmit={addRoomForm.handleSubmit(handleAddRoom)} className="flex items-start gap-4">
+                            <FormField control={addRoomForm.control} name="room_id" render={({ field }) => (<FormItem className="flex-1"><FormLabel>ID Chambre (Krossbooking)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={addRoomForm.control} name="room_name" render={({ field }) => (<FormItem className="flex-1"><FormLabel>Nom de la chambre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <div className="pt-8">
+                              <Button type="submit" disabled={addRoomForm.formState.isSubmitting}>
+                                {addRoomForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ajouter"}
+                              </Button>
+                            </div>
+                          </form>
+                        </Form>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-medium mb-2">Chambres actuelles</h3>
+                        {loadingRooms ? (
+                          <Skeleton className="h-20 w-full" />
+                        ) : userRooms.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nom</TableHead>
+                                <TableHead>ID Krossbooking</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {userRooms.map(room => (
+                                <TableRow key={room.id}>
+                                  <TableCell>{room.room_name}</TableCell>
+                                  <TableCell>{room.room_id}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteRoom(room.id)}>
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Aucune chambre assignée à cet utilisateur.</p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

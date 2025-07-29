@@ -70,3 +70,43 @@ export async function deleteUserRoom(id: string): Promise<void> {
     throw new Error(`Erreur lors de la suppression de la chambre : ${error.message}`);
   }
 }
+
+/**
+ * Fetches all room configurations for a specific user. Admin use.
+ * @param userId The ID of the user.
+ * @returns An array of UserRoom objects.
+ */
+export async function getUserRoomsByUserId(userId: string): Promise<UserRoom[]> {
+  const { data, error } = await supabase
+    .from('user_rooms')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error) {
+    throw new Error(`Erreur lors de la récupération des chambres pour l'utilisateur : ${error.message}`);
+  }
+  return data || [];
+}
+
+/**
+ * Adds a new room configuration for a specific user. Admin use.
+ * @param user_id The ID of the user.
+ * @param room_id The Krossbooking room ID.
+ * @param room_name A user-friendly name for the room.
+ * @returns The created UserRoom object.
+ */
+export async function adminAddUserRoom(user_id: string, room_id: string, room_name: string): Promise<UserRoom> {
+  const { data, error } = await supabase
+    .from('user_rooms')
+    .insert({ user_id, room_id, room_name })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === '23505') { // Unique violation code
+      throw new Error(`La chambre avec l'ID "${room_id}" est déjà ajoutée.`);
+    }
+    throw new Error(`Erreur lors de l'ajout de la chambre : ${error.message}`);
+  }
+  return data;
+}

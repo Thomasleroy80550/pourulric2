@@ -3,6 +3,9 @@ import 'driver.js/dist/driver.css';
 import { toast } from 'sonner';
 
 export const startDashboardTour = () => {
+  // Enregistrer le marqueur dès que la visite est initiée
+  localStorage.setItem('dashboardTourCompleted_v1', 'true');
+
   const driverObj = driver({
     showProgress: true,
     allowClose: true,
@@ -10,7 +13,7 @@ export const startDashboardTour = () => {
     prevBtnText: 'Précédent',
     doneBtnText: 'Terminé',
     onCloseClick: () => {
-      localStorage.setItem('dashboardTourCompleted_v1', 'true');
+      // Le marqueur est déjà défini, on peut juste détruire l'objet et afficher le message
       driverObj.destroy();
       toast.info("Vous pouvez relancer la visite depuis le menu d'aide à tout moment.");
     },

@@ -8,7 +8,7 @@ import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
-import { parseISO, differenceInDays, getMonth, format } from 'date-fns';
+import { parseISO, differenceInDays, getMonth, format, getYear } from 'date-fns'; // Import getYear
 import { fr } from 'date-fns/locale';
 import { Info, Terminal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Import Dialog components
@@ -48,6 +48,7 @@ const TouristTaxPage: React.FC = () => {
         }
 
         const bookings = await fetchKrossbookingReservations(userRooms);
+        const currentYear = new Date().getFullYear(); // Get the current year
 
         const dataByMonth: { [key: number]: { taxableNights: number; totalActualTax: number; reservations: KrossbookingReservation[] } } = {};
 
@@ -58,13 +59,18 @@ const TouristTaxPage: React.FC = () => {
         bookings.forEach(booking => {
           const channel = (booking.cod_channel || 'UNKNOWN').toUpperCase();
           const status = (booking.status || '').toUpperCase();
+          const checkInDate = parseISO(booking.check_in_date);
+
+          // Filter by current year
+          if (getYear(checkInDate) !== currentYear) {
+            return;
+          }
 
           // Exclure les réservations Airbnb, Booking.com et les réservations annulées
           if (channel === 'AIRBNB' || channel === 'BOOKING' || status === 'CANCELLED' || status === 'CANC') {
             return;
           }
 
-          const checkInDate = parseISO(booking.check_in_date);
           const checkOutDate = parseISO(booking.check_out_date);
           const nights = differenceInDays(checkOutDate, checkInDate);
           const monthIndex = getMonth(checkInDate);
@@ -77,7 +83,7 @@ const TouristTaxPage: React.FC = () => {
         });
 
         const formattedData = Object.entries(dataByMonth).map(([monthIndex, data]) => {
-          const monthName = format(new Date(2024, parseInt(monthIndex)), 'MMMM', { locale: fr });
+          const monthName = format(new Date(currentYear, parseInt(monthIndex)), 'MMMM', { locale: fr }); // Use currentYear for date
           return {
             month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
             monthIndex: parseInt(monthIndex),
@@ -123,7 +129,7 @@ const TouristTaxPage: React.FC = () => {
           <Info className="h-4 w-4" />
           <AlertTitle>Information sur le calcul</AlertTitle>
           <AlertDescription>
-            Ce tableau présente une estimation de la taxe de séjour à déclarer. Le calcul est basé sur le montant de taxe de séjour fourni par Krossbooking pour chaque réservation confirmée, en excluant celles provenant d'Airbnb et Booking.com (qui collectent déjà la taxe). Cliquez sur un mois pour voir le détail des réservations.
+            Ce tableau présente une estimation de la taxe de séjour à déclarer pour l'année en cours. Le calcul est basé sur le montant de taxe de séjour fourni par Krossbooking pour chaque réservation confirmée, en excluant celles provenant d'Airbnb et Booking.com (qui collectent déjà la taxe). Cliquez sur un mois pour voir le détail des réservations.
           </AlertDescription>
         </Alert>
 

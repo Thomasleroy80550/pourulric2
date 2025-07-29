@@ -1,11 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Users, FileText, FilePlus } from 'lucide-react';
+import { Users, FileText, FilePlus, ClipboardList } from 'lucide-react';
+import { getAdminReportsByStatus, TechnicalReport } from '@/lib/technical-reports-api';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const AdminDashboardPage: React.FC = () => {
+  const [pendingReports, setPendingReports] = useState<TechnicalReport[]>([]);
+  const [loadingReports, setLoadingReports] = useState(true);
+  const [errorReports, setErrorReports] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setLoadingReports(true);
+        // Reports pending owner action or admin action are considered 'pending tasks' for admin
+        const statuses: TechnicalReport['status'][] = ['pending_owner_action', 'admin_will_manage'];
+        const reports = await getAdminReportsByStatus(statuses, false); // Get non-archived reports
+        setPendingReports(reports);
+      } catch (err: any) {
+        setErrorReports(err.message);
+      } finally {
+        setLoadingReports(false);
+      }
+    };
+    fetchReports();
+  }, []);
+
   return (
     <AdminLayout>
       <h1 className="text-3xl font-bold mb-6">Tableau de Bord Administrateur</h1>
@@ -71,6 +95,36 @@ const AdminDashboardPage: React.FC = () => {
             <Link to="/admin/statements">
               <Button>Gérer les Relevés</Button>
             </Link>
+          </CardContent>
+        </Card>
+
+        {/* New Card for Pending Tasks */}
+        <Card className="shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Tâches en Attente</CardTitle>
+            <ClipboardList className="h-6 w-6 text-gray-500" />
+          </CardHeader>
+          <CardContent>
+            {loadingReports ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ) : errorReports ? (
+              <Alert variant="destructive">
+                <AlertTitle>Erreur de chargement</AlertTitle>
+                <AlertDescription>{errorReports}</AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <p className="text-gray-700 dark:text-gray-300 mb-4">
+                  Vous avez <span className="font-bold text-xl">{pendingReports.length}</span> rapport(s) technique(s) en attente d'action.
+                </p>
+                <Link to="/admin/technical-reports">
+                  <Button>Voir les Rapports</Button>
+                </Link>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

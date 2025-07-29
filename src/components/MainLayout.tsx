@@ -135,7 +135,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { profile } = useSession();
+  const { profile, session } = useSession(); // Destructure session here
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
@@ -244,7 +244,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </SheetContent>
               </Sheet>
             )}
-            <span className="text-lg font-semibold">0°C</span>
+            {/* Removed 0°C display */}
           </div>
 
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -315,15 +315,22 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {profile?.email}
+                      {session?.user?.email} {/* Display user email from session */}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
+                {accountNavigationItems.map((item) => (
+                  <DropdownMenuItem key={item.name} onClick={() => navigate(item.href)}>
+                    <item.icon className="h-4 w-4 mr-2" />
+                    {item.name}
+                  </DropdownMenuItem>
+                ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" /> {/* Add LogOut icon */}
+                  Déconnexion
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

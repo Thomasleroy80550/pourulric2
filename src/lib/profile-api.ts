@@ -11,7 +11,22 @@ export interface UserProfile {
   cguv_version?: string;
   commission_rate?: number;
   pennylane_customer_id?: string;
-  expenses_module_enabled?: boolean; // Ajout du champ
+  expenses_module_enabled?: boolean;
+  property_address?: string;
+  property_city?: string;
+  property_zip_code?: string;
+  iban_airbnb_booking?: string;
+  bic_airbnb_booking?: string;
+  sync_with_hellokeys?: boolean;
+  iban_abritel_hellokeys?: string;
+  bic_abritel_hellokeys?: string;
+  linen_type?: string;
+  agency?: string;
+  contract_start_date?: string;
+  notify_new_booking_email?: boolean;
+  notify_cancellation_email?: boolean;
+  notify_new_booking_sms?: boolean;
+  notify_cancellation_sms?: boolean;
 }
 
 /**
@@ -27,7 +42,15 @@ export async function getProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, first_name, last_name, role, phone_number, objective_amount, cguv_accepted_at, cguv_version, commission_rate, pennylane_customer_id, expenses_module_enabled')
+    .select(`
+      id, first_name, last_name, role, phone_number, objective_amount, 
+      cguv_accepted_at, cguv_version, commission_rate, pennylane_customer_id, 
+      expenses_module_enabled, property_address, property_city, property_zip_code,
+      iban_airbnb_booking, bic_airbnb_booking, sync_with_hellokeys, 
+      iban_abritel_hellokeys, bic_abritel_hellokeys, linen_type, agency, 
+      contract_start_date, notify_new_booking_email, notify_cancellation_email, 
+      notify_new_booking_sms, notify_cancellation_sms
+    `)
     .eq('id', user.id)
     .single();
 
@@ -54,7 +77,7 @@ export async function updateProfile(updates: Partial<Omit<UserProfile, 'id' | 'r
     .from('profiles')
     .update(updates)
     .eq('id', user.id)
-    .select()
+    .select('*')
     .single();
 
   if (error) {

@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
-import { getAdminReports, createTechnicalReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { getAdminReportsByStatus, createTechnicalReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Archive, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -50,8 +50,8 @@ const AdminTechnicalReportsPage: React.FC = () => {
     setLoading(true);
     try {
       const [fetchedActive, fetchedArchived, fetchedProfiles] = await Promise.all([
-        getAdminReports(false),
-        getAdminReports(true),
+        getAdminReportsByStatus(['pending_owner_action', 'owner_will_manage', 'admin_will_manage', 'resolved'], false),
+        getAdminReportsByStatus(['archived'], true),
         getAllProfiles(),
       ]);
       setActiveReports(fetchedActive);
@@ -70,7 +70,7 @@ const AdminTechnicalReportsPage: React.FC = () => {
 
   const handleCreateReport = async (values: z.infer<typeof reportSchema>) => {
     try {
-      await createTechnicalReport(values); // Changed from createReport to createTechnicalReport
+      await createTechnicalReport(values);
       toast.success("Rapport créé et envoyé au propriétaire !");
       setIsCreateDialogOpen(false);
       form.reset();
@@ -82,7 +82,7 @@ const AdminTechnicalReportsPage: React.FC = () => {
 
   const handleArchiveToggle = async (reportId: string, archiveStatus: boolean) => {
     try {
-      await archiveReport(reportId, archiveStatus);
+      await archiveReport(reportId); // archiveReport only takes reportId
       toast.success(`Rapport ${archiveStatus ? 'archivé' : 'désarchivé'} avec succès !`);
       fetchAllData();
     } catch (error: any) {
@@ -96,6 +96,7 @@ const AdminTechnicalReportsPage: React.FC = () => {
       case 'owner_will_manage': return <Badge variant="outline">Géré par proprio</Badge>;
       case 'admin_will_manage': return <Badge>Géré par Hello Keys</Badge>;
       case 'resolved': return <Badge className="bg-green-600 text-white">Résolu</Badge>;
+      case 'archived': return <Badge variant="destructive">Archivé</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };

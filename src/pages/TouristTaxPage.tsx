@@ -10,7 +10,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import { parseISO, differenceInDays, getMonth, format, getYear } from 'date-fns'; // Import getYear
 import { fr } from 'date-fns/locale';
-import { Info, Terminal } from 'lucide-react';
+import { Info, Terminal, CheckCircle, CalendarDays, Clock } from 'lucide-react'; // Add new icons
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Import Dialog components
 
 interface MonthlyTaxData {
@@ -30,6 +30,9 @@ const TouristTaxPage: React.FC = () => {
   const [selectedMonthReservations, setSelectedMonthReservations] = useState<KrossbookingReservation[]>([]);
   const [selectedMonthName, setSelectedMonthName] = useState<string>('');
 
+  const currentMonthIndex = getMonth(new Date());
+  const currentYear = getYear(new Date());
+
   useEffect(() => {
     if (profile?.is_banned) {
       setLoading(false);
@@ -48,8 +51,7 @@ const TouristTaxPage: React.FC = () => {
         }
 
         const bookings = await fetchKrossbookingReservations(userRooms);
-        const currentYear = new Date().getFullYear(); // Get the current year
-
+        
         const dataByMonth: { [key: number]: { taxableNights: number; totalActualTax: number; reservations: KrossbookingReservation[] } } = {};
 
         for (let i = 0; i < 12; i++) {
@@ -104,7 +106,7 @@ const TouristTaxPage: React.FC = () => {
     };
 
     loadTaxData();
-  }, [profile]);
+  }, [profile, currentYear]); // Add currentYear to dependencies
 
   const handleMonthClick = (data: MonthlyTaxData) => {
     setSelectedMonthReservations(data.reservations);
@@ -159,13 +161,34 @@ const TouristTaxPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {monthlyData.map((data) => (
-                      <TableRow key={data.monthIndex} onClick={() => handleMonthClick(data)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <TableCell className="font-medium">{data.month}</TableCell>
-                        <TableCell className="text-center">{data.taxableNights}</TableCell>
-                        <TableCell className="text-right font-bold">{data.totalActualTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</TableCell>
-                      </TableRow>
-                    ))}
+                    {monthlyData.map((data) => {
+                      const isPastMonth = data.monthIndex < currentMonthIndex;
+                      const isCurrentMonth = data.monthIndex === currentMonthIndex;
+                      
+                      let rowClasses = "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800";
+                      let icon = null;
+
+                      if (isPastMonth) {
+                        rowClasses += " bg-green-50/20 dark:bg-green-900/10"; // Light green tint for past months
+                        icon = <CheckCircle className="h-4 w-4 text-green-600 mr-2" />;
+                      } else if (isCurrentMonth) {
+                        rowClasses += " bg-blue-50/20 dark:bg-blue-900/10 font-semibold"; // Light blue tint for current month
+                        icon = <CalendarDays className="h-4 w-4 text-blue-600 mr-2" />;
+                      } else { // Future month
+                        icon = <Clock className="h-4 w-4 text-gray-500 mr-2" />;
+                      }
+
+                      return (
+                        <TableRow key={data.monthIndex} onClick={() => handleMonthClick(data)} className={rowClasses}>
+                          <TableCell className="font-medium flex items-center">
+                            {icon}
+                            {data.month}
+                          </TableCell>
+                          <TableCell className="text-center">{data.taxableNights}</TableCell>
+                          <TableCell className="text-right font-bold">{data.totalActualTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

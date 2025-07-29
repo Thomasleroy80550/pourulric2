@@ -15,11 +15,9 @@ import { Info, Terminal } from 'lucide-react';
 interface MonthlyTaxData {
   month: string;
   monthIndex: number;
-  taxableNights: number;
-  estimatedTax: number;
+  taxableNights: number; // Still useful for context
+  totalActualTax: number; // Now stores the sum of actual tax amounts
 }
-
-const TAX_RATE_PER_NIGHT = 0.80; // Taux de taxe de séjour par nuitée (en euros)
 
 const TouristTaxPage: React.FC = () => {
   const { profile } = useSession();
@@ -46,10 +44,10 @@ const TouristTaxPage: React.FC = () => {
 
         const bookings = await fetchKrossbookingReservations(userRooms);
 
-        const dataByMonth: { [key: number]: { taxableNights: number } } = {};
+        const dataByMonth: { [key: number]: { taxableNights: number; totalActualTax: number } } = {};
 
         for (let i = 0; i < 12; i++) {
-          dataByMonth[i] = { taxableNights: 0 };
+          dataByMonth[i] = { taxableNights: 0, totalActualTax: 0 };
         }
 
         bookings.forEach(booking => {
@@ -68,6 +66,7 @@ const TouristTaxPage: React.FC = () => {
 
           if (nights > 0 && dataByMonth[monthIndex]) {
             dataByMonth[monthIndex].taxableNights += nights;
+            dataByMonth[monthIndex].totalActualTax += (booking.tourist_tax_amount || 0); // Sum the actual tax amount
           }
         });
 
@@ -77,7 +76,7 @@ const TouristTaxPage: React.FC = () => {
             month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
             monthIndex: parseInt(monthIndex),
             taxableNights: data.taxableNights,
-            estimatedTax: data.taxableNights * TAX_RATE_PER_NIGHT,
+            estimatedTax: data.totalActualTax, // Renamed to estimatedTax for consistency with UI, but it's now actual sum
           };
         });
 
@@ -111,7 +110,7 @@ const TouristTaxPage: React.FC = () => {
           <Info className="h-4 w-4" />
           <AlertTitle>Information sur le calcul</AlertTitle>
           <AlertDescription>
-            Ce tableau présente une estimation de la taxe de séjour à déclarer. Le calcul est basé sur le nombre de nuitées des réservations confirmées, en excluant celles provenant d'Airbnb et Booking.com (qui collectent déjà la taxe). Un taux forfaitaire de <strong>{TAX_RATE_PER_NIGHT.toFixed(2)} € par nuitée</strong> est appliqué.
+            Ce tableau présente une estimation de la taxe de séjour à déclarer. Le calcul est basé sur le montant de taxe de séjour fourni par Krossbooking pour chaque réservation confirmée, en excluant celles provenant d'Airbnb et Booking.com (qui collectent déjà la taxe).
           </AlertDescription>
         </Alert>
 

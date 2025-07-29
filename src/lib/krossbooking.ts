@@ -16,6 +16,7 @@ interface KrossbookingReservation {
   channel_identifier?: string; // Utilisé pour la logique de couleur dans le calendrier
   email?: string; // Added for owner reservations
   phone?: string; // Added for owner reservations
+  tourist_tax_amount?: number; // Nouveau champ pour le montant de la taxe de séjour
 }
 
 // Define interface for Housekeeping Task
@@ -183,6 +184,7 @@ export async function fetchKrossbookingReservations(userRooms: UserRoom[]): Prom
             channel_identifier: res.cod_channel || 'UNKNOWN',
             email: res.email || '', // Include email
             phone: res.phone || '', // Include phone
+            tourist_tax_amount: res.tourist_tax_amount ? parseFloat(res.tourist_tax_amount) : 0, // Assuming this field exists in Krossbooking response
           };
         });
         allReservations = allReservations.concat(roomReservations);

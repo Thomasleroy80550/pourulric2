@@ -30,7 +30,7 @@ const defaultSidebarSections = [
       { name: 'Aperçu', href: '/', icon: Home },
       { name: 'Calendrier', href: '/calendar', icon: CalendarDays },
       { name: 'Réservations', href: '/bookings', icon: Bookmark },
-      { name: 'Rapports Tech.', href: '/reports', icon: Wrench },
+      { name: 'Incidents', href: '/reports', icon: Wrench },
     ],
   },
   {

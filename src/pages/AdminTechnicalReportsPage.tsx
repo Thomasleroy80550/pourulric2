@@ -71,7 +71,7 @@ const AdminTechnicalReportsPage: React.FC = () => {
   const handleCreateReport = async (values: z.infer<typeof reportSchema>) => {
     try {
       await createTechnicalReport(values);
-      toast.success("Rapport créé et envoyé au propriétaire !");
+      toast.success("Incident créé et envoyé au propriétaire !");
       setIsCreateDialogOpen(false);
       form.reset();
       fetchAllData();
@@ -135,8 +135,8 @@ const AdminTechnicalReportsPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Rapports Techniques</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}><PlusCircle className="h-4 w-4 mr-2" />Créer un rapport</Button>
+        <h1 className="text-3xl font-bold">Incidents</h1>
+        <Button onClick={() => setIsCreateDialogOpen(true)}><PlusCircle className="h-4 w-4 mr-2" />Créer un incident</Button>
       </div>
       <Tabs defaultValue="active">
         <TabsList>
@@ -163,7 +163,7 @@ const AdminTechnicalReportsPage: React.FC = () => {
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Créer un nouveau rapport technique</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Créer un nouvel incident</DialogTitle></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleCreateReport)} className="space-y-4 py-4">
               <FormField control={form.control} name="user_id" render={({ field }) => (
@@ -228,7 +228,7 @@ const AdminTechnicalReportsPage: React.FC = () => {
               </FormItem>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Annuler</Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Envoyer le rapport"}</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Envoyer l'incident"}</Button>
               </DialogFooter>
             </form>
           </Form>

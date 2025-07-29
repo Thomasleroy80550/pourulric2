@@ -1,4 +1,5 @@
 import { supabase } from '../integrations/supabase/client';
+import { Notification } from './notifications-api'; // Import Notification interface
 
 export interface TechnicalReport {
   id: string;
@@ -41,6 +42,23 @@ export async function createTechnicalReport(report: Omit<TechnicalReport, 'id' |
     .single();
 
   if (error) throw new Error(`Erreur lors de la création du rapport technique : ${error.message}`);
+
+  // Add a notification for the user
+  const notification: Omit<Notification, 'id' | 'created_at' | 'is_read'> = {
+    user_id: data.user_id,
+    message: `Un nouvel incident a été créé pour votre propriété : ${data.title}`,
+    link: `/reports/${data.id}`,
+  };
+
+  const { error: notificationError } = await supabase
+    .from('notifications')
+    .insert(notification);
+
+  if (notificationError) {
+    console.error("Erreur lors de la création de la notification pour le rapport technique :", notificationError.message);
+    // Do not throw error here, as report creation was successful
+  }
+
   return data;
 }
 

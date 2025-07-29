@@ -14,13 +14,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { getAllProfiles, createUser, updateUser, UpdateUserPayload } from '@/lib/admin-api';
+import { getAllProfiles, createUser, updateUser, UpdateUserPayload, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -76,12 +78,33 @@ const getKycStatusVariant = (status?: string): "default" | "destructive" | "seco
   }
 };
 
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'pending': return 'En attente';
+    case 'approved': return 'Approuvée';
+    case 'rejected': return 'Rejetée';
+    default: return status;
+  }
+};
+
+const getStatusVariant = (status: string): "default" | "destructive" | "secondary" | "outline" => {
+  switch (status) {
+    case 'approved': return 'default';
+    case 'pending': return 'secondary';
+    case 'rejected': return 'destructive';
+    default: return 'outline';
+  }
+};
+
 const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<AccountantRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(true);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [pendingApproval, setPendingApproval] = useState<AccountantRequest | null>(null);
   const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
   const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string }>({});
   const navigate = useNavigate();
@@ -107,14 +130,35 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const fetchRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      const fetchedRequests = await getAccountantRequests();
+      setRequests(fetchedRequests);
+    } catch (error: any) {
+      toast.error(`Erreur lors de la récupération des demandes: ${error.message}`);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRequests();
   }, []);
 
   const handleAddUser = async (values: z.infer<typeof newUserSchema>) => {
     try {
       await createUser(values);
       toast.success("Utilisateur créé avec succès !");
+
+      if (pendingApproval) {
+        await updateAccountantRequestStatus(pendingApproval.id, 'approved');
+        toast.success("Demande d'accès approuvée.");
+        setPendingApproval(null);
+        fetchRequests();
+      }
+
       setIsAddUserDialogOpen(false);
       addUserForm.reset();
       fetchUsers();
@@ -195,6 +239,32 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleApproveClick = (request: AccountantRequest) => {
+    setPendingApproval(request);
+    const nameParts = request.accountant_name.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || request.accountant_name;
+
+    addUserForm.reset({
+      first_name: firstName,
+      last_name: lastName,
+      email: request.accountant_email,
+      password: '',
+      role: 'accountant',
+    });
+    setIsAddUserDialogOpen(true);
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await updateAccountantRequestStatus(requestId, 'rejected');
+      toast.success("Demande rejetée.");
+      fetchRequests();
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    }
+  };
+
   const handleSwitchUser = async (targetUserId: string) => {
     setIsSwitchingUser(targetUserId);
     try {
@@ -242,64 +312,131 @@ const AdminUsersPage: React.FC = () => {
           </Button>
         </div>
 
-        <Card className="shadow-md">
-          <CardHeader><CardTitle>Liste des utilisateurs</CardTitle></CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Prénom</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Rôle</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Statut KYC</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
-                      <TableCell>{user.last_name}</TableCell>
-                      <TableCell>{user.first_name}</TableCell>
-                      <TableCell>{users.find(u => u.id === user.id)?.email || 'N/A'}</TableCell>
-                      <TableCell>{user.role}</TableCell>
-                      <TableCell>{user.is_banned ? <span className="text-red-500 font-bold">Banni</span> : 'Actif'}</TableCell>
-                      <TableCell>
-                        <Badge variant={getKycStatusVariant(user.kyc_status)}>
-                          {getKycStatusText(user.kyc_status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier l'utilisateur">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleSwitchUser(user.id)}
-                          disabled={isSwitchingUser === user.id}
-                          title="Se connecter en tant que cet utilisateur"
-                        >
-                          {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList>
+            <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+            <TabsTrigger value="requests">
+              Demandes Comptable
+              {requests.filter(r => r.status === 'pending').length > 0 && (
+                <Badge className="ml-2">{requests.filter(r => r.status === 'pending').length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="users" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader><CardTitle>Liste des utilisateurs</CardTitle></CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nom</TableHead>
+                        <TableHead>Prénom</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Rôle</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Statut KYC</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
+                          <TableCell>{user.last_name}</TableCell>
+                          <TableCell>{user.first_name}</TableCell>
+                          <TableCell>{users.find(u => u.id === user.id)?.email || 'N/A'}</TableCell>
+                          <TableCell>{user.role}</TableCell>
+                          <TableCell>{user.is_banned ? <span className="text-red-500 font-bold">Banni</span> : 'Actif'}</TableCell>
+                          <TableCell>
+                            <Badge variant={getKycStatusVariant(user.kyc_status)}>
+                              {getKycStatusText(user.kyc_status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier l'utilisateur">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleSwitchUser(user.id)}
+                              disabled={isSwitchingUser === user.id}
+                              title="Se connecter en tant que cet utilisateur"
+                            >
+                              {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="requests" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader><CardTitle>Demandes d'accès comptable</CardTitle></CardHeader>
+              <CardContent>
+                {requestsLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Demandé par</TableHead>
+                        <TableHead>Nom Comptable</TableHead>
+                        <TableHead>Email Comptable</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {requests.map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell>{request.profiles?.first_name} {request.profiles?.last_name}</TableCell>
+                          <TableCell>{request.accountant_name}</TableCell>
+                          <TableCell>{request.accountant_email}</TableCell>
+                          <TableCell>{format(new Date(request.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusVariant(request.status)}>
+                              {getStatusText(request.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            {request.status === 'pending' && (
+                              <>
+                                <Button size="sm" onClick={() => handleApproveClick(request)}>Approuver</Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleRejectRequest(request.id)}>Rejeter</Button>
+                              </>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add User Dialog */}
-      <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+      <Dialog open={isAddUserDialogOpen} onOpenChange={(isOpen) => {
+        setIsAddUserDialogOpen(isOpen);
+        if (!isOpen) {
+          setPendingApproval(null);
+          addUserForm.reset({ first_name: '', last_name: '', email: '', password: '', role: 'user' });
+        }
+      }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Ajouter un nouvel utilisateur</DialogTitle><DialogDescription>Le nouvel utilisateur sera créé et un profil associé sera généré.</DialogDescription></DialogHeader>
           <Form {...addUserForm}>

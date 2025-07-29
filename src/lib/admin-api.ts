@@ -16,6 +16,19 @@ export interface SavedInvoice {
   }
 }
 
+export interface AccountantRequest {
+  id: string;
+  user_id: string;
+  accountant_name: string;
+  accountant_email: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  profiles: {
+    first_name: string;
+    last_name: string;
+  }
+}
+
 /**
  * Fetches all user profiles. This is an admin-only function.
  * @returns A promise that resolves to an array of UserProfile objects.
@@ -54,6 +67,46 @@ export async function getSavedInvoices(): Promise<SavedInvoice[]> {
     throw new Error(`Erreur lors de la récupération des relevés : ${error.message}`);
   }
   return data || [];
+}
+
+/**
+ * Fetches all accountant access requests.
+ * @returns A promise that resolves to an array of AccountantRequest objects.
+ */
+export async function getAccountantRequests(): Promise<AccountantRequest[]> {
+  const { data, error } = await supabase
+    .from('accountant_requests')
+    .select(`
+      *,
+      profiles (
+        first_name,
+        last_name
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching accountant requests:", error);
+    throw new Error("Erreur lors de la récupération des demandes d'accès comptable.");
+  }
+  return data || [];
+}
+
+/**
+ * Updates the status of an accountant access request.
+ * @param requestId The ID of the request to update.
+ * @param status The new status.
+ */
+export async function updateAccountantRequestStatus(requestId: string, status: 'approved' | 'rejected'): Promise<void> {
+  const { error } = await supabase
+    .from('accountant_requests')
+    .update({ status })
+    .eq('id', requestId);
+
+  if (error) {
+    console.error("Error updating accountant request status:", error);
+    throw new Error(`Erreur lors de la mise à jour de la demande : ${error.message}`);
+  }
 }
 
 /**

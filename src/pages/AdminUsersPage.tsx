@@ -14,7 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { getAllProfiles, createUser, updateUser, UpdateUserPayload, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest } from '@/lib/admin-api';
+import { getAllProfiles, createUser, updateUser, UpdateUserPayload, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, createAccountantClientRelation } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn } from 'lucide-react';
@@ -149,10 +149,19 @@ const AdminUsersPage: React.FC = () => {
 
   const handleAddUser = async (values: z.infer<typeof newUserSchema>) => {
     try {
-      await createUser(values);
-      toast.success("Utilisateur créé avec succès !");
+      const result = await createUser(values);
+      const newAccountantUser = result?.data?.user;
+
+      if (!newAccountantUser || !newAccountantUser.id) {
+        throw new Error("La création de l'utilisateur n'a pas retourné d'ID valide.");
+      }
+      
+      toast.success("Utilisateur comptable créé avec succès !");
 
       if (pendingApproval) {
+        await createAccountantClientRelation(newAccountantUser.id, pendingApproval.user_id);
+        toast.success("Lien comptable-client établi.");
+
         await updateAccountantRequestStatus(pendingApproval.id, 'approved');
         toast.success("Demande d'accès approuvée.");
         setPendingApproval(null);

@@ -223,3 +223,19 @@ export async function updateUser(userData: UpdateUserPayload) {
 
   return data;
 }
+
+/**
+ * Creates a link between an accountant and a client user.
+ * @param accountantId The ID of the accountant profile.
+ * @param clientId The ID of the client profile.
+ */
+export async function createAccountantClientRelation(accountantId: string, clientId: string): Promise<void> {
+  const { error } = await supabase
+    .from('accountant_client_relations')
+    .insert({ accountant_id: accountantId, client_id: clientId });
+
+  if (error) {
+    console.error("Error creating accountant-client relation:", error);
+    throw new Error(`Erreur lors de la liaison du comptable au client : ${error.message}`);
+  }
+}

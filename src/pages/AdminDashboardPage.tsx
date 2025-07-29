@@ -3,130 +3,173 @@ import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Users, FileText, FilePlus, ClipboardList } from 'lucide-react';
+import { Wrench, AlertTriangle, Lightbulb, ArrowRight } from 'lucide-react';
 import { getAdminReportsByStatus, TechnicalReport } from '@/lib/technical-reports-api';
+import { getAdminReservationReports, ReservationReport } from '@/lib/reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useSession } from '@/components/SessionContextProvider';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const AdminDashboardPage: React.FC = () => {
-  const [pendingReports, setPendingReports] = useState<TechnicalReport[]>([]);
-  const [loadingReports, setLoadingReports] = useState(true);
-  const [errorReports, setErrorReports] = useState<string | null>(null);
+  const { profile } = useSession();
+  const [pendingTechReports, setPendingTechReports] = useState<TechnicalReport[]>([]);
+  const [reservationReports, setReservationReports] = useState<ReservationReport[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchTasks = async () => {
       try {
-        setLoadingReports(true);
-        // Reports pending owner action or admin action are considered 'pending tasks' for admin
-        const statuses: TechnicalReport['status'][] = ['pending_owner_action', 'admin_will_manage'];
-        const reports = await getAdminReportsByStatus(statuses, false); // Get non-archived reports
-        setPendingReports(reports);
+        setLoading(true);
+        const techStatuses: TechnicalReport['status'][] = ['pending_owner_action', 'admin_will_manage'];
+        const [techReportsData, reservationReportsData] = await Promise.all([
+          getAdminReportsByStatus(techStatuses, false),
+          getAdminReservationReports()
+        ]);
+        setPendingTechReports(techReportsData);
+        setReservationReports(reservationReportsData);
       } catch (err: any) {
-        setErrorReports(err.message);
+        setError(err.message);
       } finally {
-        setLoadingReports(false);
+        setLoading(false);
       }
     };
-    fetchReports();
+    fetchTasks();
   }, []);
+
+  const renderTechReports = () => {
+    if (loading) return <Skeleton className="h-48 w-full" />;
+    if (error) return <Alert variant="destructive"><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
+    if (pendingTechReports.length === 0) return <p className="text-sm text-gray-500">Aucun rapport technique en attente. Excellent travail !</p>;
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Titre</TableHead>
+            <TableHead>Propriétaire</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pendingTechReports.map(report => (
+            <TableRow key={report.id}>
+              <TableCell className="font-medium">{report.title}</TableCell>
+              <TableCell>{report.profiles?.first_name} {report.profiles?.last_name}</TableCell>
+              <TableCell>{format(new Date(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+              <TableCell className="text-right">
+                <Button asChild variant="outline" size="sm">
+                  <Link to={`/admin/technical-reports/${report.id}`}>Voir</Link>
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  };
+
+  const renderReservationReports = () => {
+    if (loading) return <Skeleton className="h-48 w-full" />;
+    if (error) return <Alert variant="destructive"><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
+    if (reservationReports.length === 0) return <p className="text-sm text-gray-500">Aucun signalement de réservation. Tout est en ordre.</p>;
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Problème</TableHead>
+            <TableHead>N° Réservation</TableHead>
+            <TableHead>Propriétaire</TableHead>
+            <TableHead>Date</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {reservationReports.map(report => (
+            <TableRow key={report.id}>
+              <TableCell className="font-medium">{report.problem_type}</TableCell>
+              <TableCell>{report.reservation_id}</TableCell>
+              <TableCell>{report.profiles?.first_name} {report.profiles?.last_name}</TableCell>
+              <TableCell>{format(new Date(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  };
 
   return (
     <AdminLayout>
-      <h1 className="text-3xl font-bold mb-6">Tableau de Bord Administrateur</h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-8">
-        Bienvenue sur le tableau de bord administrateur. Ici, vous pouvez gérer les paramètres avancés et les données.
-      </p>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">Bonjour, {profile?.first_name || 'Admin'} !</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Voici un résumé de vos tâches et suggestions pour aujourd'hui.
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Gestion des Utilisateurs</CardTitle>
-            <Users className="h-6 w-6 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Créez, consultez et modifiez les comptes utilisateurs et leurs rôles.
-            </p>
-            <Link to="/admin/users">
-              <Button>Gérer les Utilisateurs</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Wrench className="h-6 w-6 mr-3 text-blue-500" />
+                  Rapports Techniques en Attente ({loading ? '...' : pendingTechReports.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {renderTechReports()}
+              </CardContent>
+            </Card>
 
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Gestion des Pages</CardTitle>
-            <FileText className="h-6 w-6 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Créez et modifiez des pages de contenu dynamiques pour votre site.
-            </p>
-            <Link to="/admin/pages">
-              <Button>Accéder au Créateur de Pages</Button>
-            </Link>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <AlertTriangle className="h-6 w-6 mr-3 text-orange-500" />
+                  Signalements sur les Réservations ({loading ? '...' : reservationReports.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {renderReservationReports()}
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Génération de Relevés</CardTitle>
-            <FilePlus className="h-6 w-6 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Générez manuellement les relevés mensuels pour les clients.
-            </p>
-            <Link to="/admin/invoice-generation">
-              <Button>Générer un Relevé</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Gestion des Relevés</CardTitle>
-            <FileText className="h-6 w-6 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Consultez, commentez et supprimez les relevés de tous les clients.
-            </p>
-            <Link to="/admin/statements">
-              <Button>Gérer les Relevés</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* New Card for Pending Tasks */}
-        <Card className="shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Tâches en Attente</CardTitle>
-            <ClipboardList className="h-6 w-6 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            {loadingReports ? (
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </div>
-            ) : errorReports ? (
-              <Alert variant="destructive">
-                <AlertTitle>Erreur de chargement</AlertTitle>
-                <AlertDescription>{errorReports}</AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  Vous avez <span className="font-bold text-xl">{pendingReports.length}</span> rapport(s) technique(s) en attente d'action.
+          <div className="lg:col-span-1 space-y-8">
+            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Lightbulb className="h-6 w-6 mr-3 text-yellow-400" />
+                  Suggestions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Pensez à vérifier les performances du mois dernier pour ajuster les stratégies de prix.
                 </p>
-                <Link to="/admin/technical-reports">
-                  <Button>Voir les Rapports</Button>
-                </Link>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                <Button variant="ghost" className="text-blue-600 dark:text-blue-300 p-0 h-auto hover:bg-transparent" asChild>
+                  <Link to="/performance">
+                    Analyser les performances <ArrowRight className="h-4 w-4 ml-2" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+             <Card>
+              <CardHeader>
+                <CardTitle>Accès Rapides</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col space-y-2">
+                 <Button asChild variant="outline"><Link to="/admin/users">Gérer les Utilisateurs</Link></Button>
+                 <Button asChild variant="outline"><Link to="/admin/pages">Gérer les Pages</Link></Button>
+                 <Button asChild variant="outline"><Link to="/admin/invoice-generation">Générer un Relevé</Link></Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );

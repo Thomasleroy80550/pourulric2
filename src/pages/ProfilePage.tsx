@@ -181,10 +181,9 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-4"> {/* Adjusted grid-cols */}
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
-            <TabsTrigger value="payment-airbnb-booking">Paiement Airbnb/Booking</TabsTrigger>
-            <TabsTrigger value="payment-abritel-hellokeys">Paiement Abritel/Hello Keys</TabsTrigger>
+            <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger> {/* Combined tab */}
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
@@ -224,10 +223,10 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="payment-airbnb-booking">
-            <Card>
+          <TabsContent value="payment-preferences"> {/* Combined tab content */}
+            <Card className="mb-6"> {/* Added margin-bottom for separation */}
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Banknote /> Préférences de paiement pour Airbnb et Booking.com</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Airbnb/Booking.com</CardTitle>
                 <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Airbnb et Booking.com.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -241,12 +240,10 @@ const ProfilePage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="payment-abritel-hellokeys">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Banknote /> Préférences de paiement pour Abritel et Hello Keys</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Abritel/Hello Keys</CardTitle>
                 <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Abritel et notre site.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">

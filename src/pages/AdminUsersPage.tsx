@@ -399,27 +399,30 @@ const AdminUsersPage: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {requests.map((request) => (
-                        <TableRow key={request.id}>
-                          <TableCell>{request.profiles?.first_name} {request.profiles?.last_name}</TableCell>
-                          <TableCell>{request.accountant_name}</TableCell>
-                          <TableCell>{request.accountant_email}</TableCell>
-                          <TableCell>{format(new Date(request.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                          <TableCell>
-                            <Badge variant={getStatusVariant(request.status)}>
-                              {getStatusText(request.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right space-x-2">
-                            {request.status === 'pending' && (
-                              <>
-                                <Button size="sm" onClick={() => handleApproveClick(request)}>Approuver</Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleRejectRequest(request.id)}>Rejeter</Button>
-                              </>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {requests.map((request) => {
+                        const requestingUser = users.find(u => u.id === request.user_id);
+                        return (
+                          <TableRow key={request.id}>
+                            <TableCell>{requestingUser ? `${requestingUser.first_name} ${requestingUser.last_name}` : 'Utilisateur inconnu'}</TableCell>
+                            <TableCell>{request.accountant_name}</TableCell>
+                            <TableCell>{request.accountant_email}</TableCell>
+                            <TableCell>{format(new Date(request.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell>
+                              <Badge variant={getStatusVariant(request.status)}>
+                                {getStatusText(request.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right space-x-2">
+                              {request.status === 'pending' && (
+                                <>
+                                  <Button size="sm" onClick={() => handleApproveClick(request)}>Approuver</Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleRejectRequest(request.id)}>Rejeter</Button>
+                                </>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}

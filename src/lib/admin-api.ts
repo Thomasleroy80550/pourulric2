@@ -23,7 +23,7 @@ export interface AccountantRequest {
   accountant_email: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
-  profiles: {
+  profiles?: {
     first_name: string;
     last_name: string;
   }
@@ -76,13 +76,7 @@ export async function getSavedInvoices(): Promise<SavedInvoice[]> {
 export async function getAccountantRequests(): Promise<AccountantRequest[]> {
   const { data, error } = await supabase
     .from('accountant_requests')
-    .select(`
-      *,
-      profiles (
-        first_name,
-        last_name
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {

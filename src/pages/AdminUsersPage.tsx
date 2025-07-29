@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -50,7 +51,30 @@ const editUserSchema = z.object({
   notify_new_booking_sms: z.boolean().optional(),
   notify_cancellation_sms: z.boolean().optional(),
   is_banned: z.boolean().optional(),
+  kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional(),
 });
+
+const getKycStatusText = (status?: string) => {
+  switch (status) {
+    case 'verified': return 'Vérifié';
+    case 'pending_review': return 'En attente';
+    case 'rejected': return 'Rejeté';
+    case 'not_verified':
+    default:
+      return 'Non vérifié';
+  }
+};
+
+const getKycStatusVariant = (status?: string): "default" | "destructive" | "secondary" | "outline" => {
+  switch (status) {
+    case 'verified': return 'default';
+    case 'pending_review': return 'secondary';
+    case 'rejected': return 'destructive';
+    case 'not_verified':
+    default:
+      return 'outline';
+  }
+};
 
 const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -59,6 +83,7 @@ const AdminUsersPage: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
+  const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string }>({});
   const navigate = useNavigate();
 
   const addUserForm = useForm<z.infer<typeof newUserSchema>>({
@@ -98,7 +123,7 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const handleEditClick = (user: UserProfile) => {
+  const handleEditClick = async (user: UserProfile) => {
     setEditingUser(user);
     editUserForm.reset({
       first_name: user.first_name || '',
@@ -121,8 +146,36 @@ const AdminUsersPage: React.FC = () => {
       notify_new_booking_sms: user.notify_new_booking_sms ?? false,
       notify_cancellation_sms: user.notify_cancellation_sms ?? false,
       is_banned: user.is_banned || false,
+      kyc_status: user.kyc_status || 'not_verified',
     });
     setIsEditDialogOpen(true);
+
+    // Fetch signed URLs for KYC documents
+    setDocumentUrls({}); // Reset first
+    if (user.kyc_documents) {
+        const urls: { identity?: string; address?: string } = {};
+        const expiresIn = 60 * 5; // 5 minutes
+
+        try {
+            if (user.kyc_documents.identity) {
+                const { data, error } = await supabase.storage
+                    .from('kyc-documents')
+                    .createSignedUrl(user.kyc_documents.identity, expiresIn);
+                if (error) throw error;
+                urls.identity = data.signedUrl;
+            }
+            if (user.kyc_documents.address) {
+                const { data, error } = await supabase.storage
+                    .from('kyc-documents')
+                    .createSignedUrl(user.kyc_documents.address, expiresIn);
+                if (error) throw error;
+                urls.address = data.signedUrl;
+            }
+            setDocumentUrls(urls);
+        } catch (error: any) {
+            toast.error(`Erreur de chargement des documents: ${error.message}`);
+        }
+    }
   };
 
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
@@ -205,6 +258,7 @@ const AdminUsersPage: React.FC = () => {
                     <TableHead>Email</TableHead>
                     <TableHead>Rôle</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Statut KYC</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -216,6 +270,11 @@ const AdminUsersPage: React.FC = () => {
                       <TableCell>{users.find(u => u.id === user.id)?.email || 'N/A'}</TableCell>
                       <TableCell>{user.role}</TableCell>
                       <TableCell>{user.is_banned ? <span className="text-red-500 font-bold">Banni</span> : 'Actif'}</TableCell>
+                      <TableCell>
+                        <Badge variant={getKycStatusVariant(user.kyc_status)}>
+                          {getKycStatusText(user.kyc_status)}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier l'utilisateur">
                           <Edit className="h-4 w-4" />
@@ -269,11 +328,12 @@ const AdminUsersPage: React.FC = () => {
           <Form {...editUserForm}>
             <form onSubmit={editUserForm.handleSubmit(handleUpdateUser)} className="flex-grow overflow-y-auto pr-6 pl-2 space-y-4">
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="personal">Personnel</TabsTrigger>
                   <TabsTrigger value="payment">Paiement</TabsTrigger>
                   <TabsTrigger value="offer">Offre</TabsTrigger>
                   <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                  <TabsTrigger value="kyc">KYC</TabsTrigger>
                 </TabsList>
                 <TabsContent value="personal" className="mt-4 space-y-4">
                   <Card>
@@ -330,6 +390,75 @@ const AdminUsersPage: React.FC = () => {
                       <FormField control={editUserForm.control} name="notify_cancellation_email" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><FormLabel>Annulations par email</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                       <FormField control={editUserForm.control} name="notify_new_booking_sms" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><FormLabel>Nouvelles réservations par SMS</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                       <FormField control={editUserForm.control} name="notify_cancellation_sms" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><FormLabel>Annulations par SMS</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="kyc" className="mt-4">
+                  <Card>
+                    <CardHeader><CardTitle>Vérification d'identité (KYC)</CardTitle></CardHeader>
+                    <CardContent className="space-y-6">
+                      <FormField
+                        control={editUserForm.control}
+                        name="kyc_status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Statut KYC</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionner un statut" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="not_verified">Non vérifié</SelectItem>
+                                <SelectItem value="pending_review">En attente de révision</SelectItem>
+                                <SelectItem value="verified">Vérifié</SelectItem>
+                                <SelectItem value="rejected">Rejeté</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div>
+                        <Label>Documents fournis</Label>
+                        <div className="mt-2 p-3 border rounded-md bg-gray-50 dark:bg-gray-800/50 min-h-[60px]">
+                          {!editingUser?.kyc_documents || (!editingUser.kyc_documents.identity && !editingUser.kyc_documents.address) ? (
+                            <p className="text-sm text-muted-foreground">Aucun document n'a été fourni.</p>
+                          ) : (
+                            <ul className="space-y-2 text-sm">
+                              {editingUser.kyc_documents.identity && (
+                                <li className="flex items-center justify-between">
+                                  <span>Pièce d'identité</span>
+                                  {documentUrls.identity ? (
+                                    <Button asChild variant="link" className="p-0 h-auto">
+                                      <a href={documentUrls.identity} target="_blank" rel="noopener noreferrer">
+                                        Voir le document
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <span className="text-muted-foreground">Chargement...</span>
+                                  )}
+                                </li>
+                              )}
+                              {editingUser.kyc_documents.address && (
+                                <li className="flex items-center justify-between">
+                                  <span>Justificatif de domicile</span>
+                                  {documentUrls.address ? (
+                                    <Button asChild variant="link" className="p-0 h-auto">
+                                      <a href={documentUrls.address} target="_blank" rel="noopener noreferrer">
+                                        Voir le document
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <span className="text-muted-foreground">Chargement...</span>
+                                  )}
+                                </li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </TabsContent>

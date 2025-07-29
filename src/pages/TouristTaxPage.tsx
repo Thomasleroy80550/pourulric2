@@ -12,6 +12,7 @@ import { parseISO, differenceInDays, getMonth, format, getYear } from 'date-fns'
 import { fr } from 'date-fns/locale';
 import { Info, Terminal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Import Dialog components
+import clsx from 'clsx'; // Import clsx for conditional class names
 
 interface MonthlyTaxData {
   month: string;
@@ -29,6 +30,9 @@ const TouristTaxPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState<boolean>(false);
   const [selectedMonthReservations, setSelectedMonthReservations] = useState<KrossbookingReservation[]>([]);
   const [selectedMonthName, setSelectedMonthName] = useState<string>('');
+
+  const currentMonthIndex = new Date().getMonth(); // 0-indexed (Jan=0, Dec=11)
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     if (profile?.is_banned) {
@@ -48,7 +52,7 @@ const TouristTaxPage: React.FC = () => {
         }
 
         const bookings = await fetchKrossbookingReservations(userRooms);
-        const currentYear = new Date().getFullYear(); // Get the current year
+        
 
         const dataByMonth: { [key: number]: { taxableNights: number; totalActualTax: number; reservations: KrossbookingReservation[] } } = {};
 
@@ -160,7 +164,16 @@ const TouristTaxPage: React.FC = () => {
                   </TableHeader>
                   <TableBody>
                     {monthlyData.map((data) => (
-                      <TableRow key={data.monthIndex} onClick={() => handleMonthClick(data)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
+                      <TableRow 
+                        key={data.monthIndex} 
+                        onClick={() => handleMonthClick(data)} 
+                        className={clsx(
+                          "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800",
+                          {
+                            "past-month": data.monthIndex < currentMonthIndex,
+                          }
+                        )}
+                      >
                         <TableCell className="font-medium">{data.month}</TableCell>
                         <TableCell className="text-center">{data.taxableNights}</TableCell>
                         <TableCell className="text-right font-bold">{data.totalActualTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</TableCell>

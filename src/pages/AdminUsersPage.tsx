@@ -27,13 +27,13 @@ const newUserSchema = z.object({
   last_name: z.string().min(1, "Le nom est requis."),
   email: z.string().email("L'email est invalide."),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères."),
-  role: z.enum(['user', 'admin'], { required_error: "Le rôle est requis." }),
+  role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
 });
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
   last_name: z.string().min(1, "Le nom est requis."),
-  role: z.enum(['user', 'admin'], { required_error: "Le rôle est requis." }),
+  role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
   property_address: z.string().optional(),
   property_city: z.string().optional(),
   property_zip_code: z.string().optional(),
@@ -128,7 +128,7 @@ const AdminUsersPage: React.FC = () => {
     editUserForm.reset({
       first_name: user.first_name || '',
       last_name: user.last_name || '',
-      role: user.role === 'admin' ? 'admin' : 'user',
+      role: user.role === 'admin' ? 'admin' : (user.role === 'accountant' ? 'accountant' : 'user'),
       property_address: user.property_address || '',
       property_city: user.property_city || '',
       property_zip_code: user.property_zip_code || '',
@@ -308,7 +308,7 @@ const AdminUsersPage: React.FC = () => {
               <FormField control={addUserForm.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Nom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="password" render={({ field }) => (<FormItem><FormLabel>Mot de passe</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={addUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={addUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsAddUserDialogOpen(false)}>Annuler</Button>
                 <Button type="submit" disabled={addUserForm.formState.isSubmitting}>{addUserForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer l'utilisateur"}</Button>
@@ -344,7 +344,7 @@ const AdminUsersPage: React.FC = () => {
                       <FormField control={editUserForm.control} name="property_address" render={({ field }) => (<FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="property_city" render={({ field }) => (<FormItem><FormLabel>Ville</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="property_zip_code" render={({ field }) => (<FormItem><FormLabel>Code Postal</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={editUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      <FormField control={editUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                     </CardContent>
                   </Card>
                   <Card className="border-red-500 border-2">

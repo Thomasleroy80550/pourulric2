@@ -23,7 +23,7 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-const sidebarSections = [
+const defaultSidebarSections = [
   {
     title: 'Pilotage',
     items: [
@@ -52,6 +52,17 @@ const sidebarSections = [
   },
 ];
 
+const accountantSidebarSections = [
+  {
+    title: 'Analyse & Suivi',
+    items: [
+      { name: 'Performances', href: '/performance', icon: TrendingUp },
+      { name: 'Finances', href: '/finances', icon: Banknote },
+      { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
+    ],
+  },
+];
+
 const accountNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
   { name: 'Paramètres', href: '/settings', icon: Settings },
@@ -60,6 +71,8 @@ const accountNavigationItems = [
 const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
   const location = useLocation();
   const { profile } = useSession();
+
+  const sidebarSections = profile?.role === 'accountant' ? accountantSidebarSections : defaultSidebarSections;
 
   return (
     <>
@@ -106,24 +119,26 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
             </Link>
           </div>
         )}
-        <ul>
-          {accountNavigationItems.map((item) => (
-            <li key={item.name}>
-              <Link
-                to={item.href}
-                className={cn(
-                  "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
-                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  location.pathname.startsWith(item.href) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
-                )}
-                onClick={onLinkClick}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {profile?.role !== 'accountant' && (
+          <ul>
+            {accountNavigationItems.map((item) => (
+              <li key={item.name}>
+                <Link
+                  to={item.href}
+                  className={cn(
+                    "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    location.pathname.startsWith(item.href) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                  )}
+                  onClick={onLinkClick}
+                >
+                  <item.icon className="h-5 w-5 mr-3" />
+                  {item.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </nav>
     </>
   );
@@ -305,7 +320,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <div className="hidden xl:flex flex-col items-start ml-2">
                     <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
                     <span className="text-xs leading-none text-gray-500 dark:text-gray-400">
-                      {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : 'Compte utilisateur')}
+                      {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : (profile?.role === 'accountant' ? 'Compte comptable' : 'Compte utilisateur'))}
                     </span>
                   </div>
                   <ChevronDown className="h-4 w-4 ml-2 hidden md:inline-block" />
@@ -321,13 +336,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {accountNavigationItems.map((item) => (
+                {profile?.role !== 'accountant' && accountNavigationItems.map((item) => (
                   <DropdownMenuItem key={item.name} onClick={() => navigate(item.href)}>
                     <item.icon className="h-4 w-4 mr-2" />
                     {item.name}
                   </DropdownMenuItem>
                 ))}
-                <DropdownMenuSeparator />
+                {profile?.role !== 'accountant' && <DropdownMenuSeparator />}
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="h-4 w-4 mr-2" /> {/* Add LogOut icon */}
                   Déconnexion

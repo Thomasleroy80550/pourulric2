@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plug, Settings, TrendingUp, MessageSquare, Shield, Banknote, Wrench, Sparkles, CheckCheck, Info } from 'lucide-react'; // Added new icons and Info
+import { Plug, Settings, TrendingUp, MessageSquare, Shield, Banknote, Wrench, Sparkles, CheckCheck, Info, UserCheck } from 'lucide-react'; // Added new icons and Info
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
+import AccountantAccessDialog from '@/components/AccountantAccessDialog'; // Import the new dialog
 
 interface Module {
   name: string;
@@ -15,9 +16,21 @@ interface Module {
   actionText: string;
   buttonVariant: 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive' | null | undefined;
   buttonDisabled: boolean;
+  onClick?: () => void;
 }
 
 const modules: Module[] = [
+  {
+    name: 'Accès Comptable',
+    description: 'Donnez un accès sécurisé et en lecture seule à votre comptable pour simplifier votre gestion.',
+    icon: UserCheck,
+    status: 'Nouveau',
+    info: 'Inclus dans votre forfait',
+    actionText: "Demander l'accès",
+    buttonVariant: 'default',
+    buttonDisabled: false,
+    onClick: () => setIsAccountantDialogOpen(true),
+  },
   {
     name: 'Smart Pricing',
     description: 'Des tarifs ajustés en temps réel pour maximiser vos revenus tout en restant compétitif.',
@@ -82,6 +95,7 @@ const modules: Module[] = [
 
 const ModulesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [isAccountantDialogOpen, setIsAccountantDialogOpen] = useState(false);
 
   useEffect(() => {
     // Simulate data fetching
@@ -138,7 +152,7 @@ const ModulesPage: React.FC = () => {
                         {module.status}
                       </span>
                     </div>
-                    <Button variant={module.buttonVariant} size="sm" disabled={module.buttonDisabled}>
+                    <Button variant={module.buttonVariant} size="sm" disabled={module.buttonDisabled} onClick={module.onClick}>
                       {module.actionText}
                     </Button>
                   </div>
@@ -148,6 +162,7 @@ const ModulesPage: React.FC = () => {
           )}
         </div>
       </div>
+      <AccountantAccessDialog isOpen={isAccountantDialogOpen} onOpenChange={setIsAccountantDialogOpen} />
     </MainLayout>
   );
 };

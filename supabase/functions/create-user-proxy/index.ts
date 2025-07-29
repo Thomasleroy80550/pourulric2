@@ -44,6 +44,9 @@ serve(async (req) => {
     if (!email || !password || !first_name || !last_name || !role) {
       throw new Error("Missing required fields: email, password, first_name, last_name, role.");
     }
+    if (!['user', 'admin', 'accountant'].includes(role)) {
+      throw new Error("Invalid role specified.");
+    }
 
     // 5. Create a Supabase admin client with the service role key
     const adminSupabaseClient = createClient(

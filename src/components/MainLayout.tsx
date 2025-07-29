@@ -38,6 +38,7 @@ const sidebarSections = [
     items: [
       { name: 'Performances', href: '/performance', icon: TrendingUp },
       { name: 'Finances', href: '/finances', icon: Banknote },
+      { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
       { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
     ],
   },

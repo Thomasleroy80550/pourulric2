@@ -14,6 +14,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ProfilePage: React.FC = () => {
   const { session } = useSession();
@@ -63,7 +64,7 @@ const ProfilePage: React.FC = () => {
         setSyncWithHellokeys(fetchedProfile.sync_with_hellokeys || false);
         setIbanAbritelHellokeys(fetchedProfile.iban_abritel_hellokeys || '');
         setBicAbritelHellokeys(fetchedProfile.bic_abritel_hellokeys || '');
-        setLinenType(fetchedProfile.linen_type || '');
+        setLinenType(fetchedProfile.linen_type || 'Hello Wash');
         setAgency(fetchedProfile.agency || '');
         setNotifyNewBookingEmail(fetchedProfile.notify_new_booking_email ?? true);
         setNotifyCancellationEmail(fetchedProfile.notify_cancellation_email ?? true);
@@ -266,7 +267,15 @@ const ProfilePage: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="agency">Mon agence</Label>
-                <Input id="agency" value={agency} onChange={(e) => setAgency(e.target.value)} />
+                <Select value={agency} onValueChange={setAgency}>
+                  <SelectTrigger id="agency">
+                    <SelectValue placeholder="Sélectionner une agence" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Côte d'opal">Côte d'opal</SelectItem>
+                    <SelectItem value="Baie de somme">Baie de somme</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Date de début de votre contrat</Label>

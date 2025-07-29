@@ -27,6 +27,7 @@ export interface UserProfile {
   notify_cancellation_email?: boolean;
   notify_new_booking_sms?: boolean;
   notify_cancellation_sms?: boolean;
+  is_banned?: boolean;
 }
 
 /**
@@ -49,7 +50,7 @@ export async function getProfile(): Promise<UserProfile | null> {
       iban_airbnb_booking, bic_airbnb_booking, sync_with_hellokeys, 
       iban_abritel_hellokeys, bic_abritel_hellokeys, linen_type, agency, 
       contract_start_date, notify_new_booking_email, notify_cancellation_email, 
-      notify_new_booking_sms, notify_cancellation_sms
+      notify_new_booking_sms, notify_cancellation_sms, is_banned
     `)
     .eq('id', user.id)
     .single();

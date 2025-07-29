@@ -49,6 +49,14 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setSession(currentSession);
       const userProfile = await fetchUserProfile(currentSession);
 
+      if (userProfile?.is_banned) {
+        console.log("User is banned. Signing out.");
+        toast.error("Votre compte a été suspendu. Veuillez contacter le support.");
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
       if (location.pathname === '/login') {
         navigate('/');
       }

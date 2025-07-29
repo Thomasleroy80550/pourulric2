@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, createUser, updateUser, UpdateUserPayload } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, AlertTriangle } from 'lucide-react';
 
 const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -47,6 +47,7 @@ const editUserSchema = z.object({
   notify_cancellation_email: z.boolean().optional(),
   notify_new_booking_sms: z.boolean().optional(),
   notify_cancellation_sms: z.boolean().optional(),
+  is_banned: z.boolean().optional(),
 });
 
 const AdminUsersPage: React.FC = () => {
@@ -108,13 +109,14 @@ const AdminUsersPage: React.FC = () => {
       iban_abritel_hellokeys: user.iban_abritel_hellokeys || '',
       bic_abritel_hellokeys: user.bic_abritel_hellokeys || '',
       commission_rate: (user.commission_rate || 0) * 100,
-      linen_type: user.linen_type || '',
+      linen_type: user.linen_type || 'Hello Wash',
       agency: user.agency || '',
       contract_start_date: user.contract_start_date || '',
       notify_new_booking_email: user.notify_new_booking_email ?? true,
       notify_cancellation_email: user.notify_cancellation_email ?? true,
       notify_new_booking_sms: user.notify_new_booking_sms ?? false,
       notify_cancellation_sms: user.notify_cancellation_sms ?? false,
+      is_banned: user.is_banned || false,
     });
     setIsEditDialogOpen(true);
   };
@@ -162,16 +164,18 @@ const AdminUsersPage: React.FC = () => {
                     <TableHead>Prénom</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Rôle</TableHead>
+                    <TableHead>Statut</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
                       <TableCell>{user.last_name}</TableCell>
                       <TableCell>{user.first_name}</TableCell>
                       <TableCell>{users.find(u => u.id === user.id)?.email || 'N/A'}</TableCell>
                       <TableCell>{user.role}</TableCell>
+                      <TableCell>{user.is_banned ? <span className="text-red-500 font-bold">Banni</span> : 'Actif'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)}>
                           <Edit className="h-4 w-4" />
@@ -222,7 +226,7 @@ const AdminUsersPage: React.FC = () => {
                   <TabsTrigger value="offer">Offre</TabsTrigger>
                   <TabsTrigger value="notifications">Notifications</TabsTrigger>
                 </TabsList>
-                <TabsContent value="personal" className="mt-4">
+                <TabsContent value="personal" className="mt-4 space-y-4">
                   <Card>
                     <CardHeader><CardTitle>Données personnelles</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
@@ -232,6 +236,12 @@ const AdminUsersPage: React.FC = () => {
                       <FormField control={editUserForm.control} name="property_city" render={({ field }) => (<FormItem><FormLabel>Ville</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="property_zip_code" render={({ field }) => (<FormItem><FormLabel>Code Postal</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                    </CardContent>
+                  </Card>
+                  <Card className="border-red-500 border-2">
+                    <CardHeader><CardTitle className="text-red-500 flex items-center gap-2"><AlertTriangle /> Zone de danger</CardTitle></CardHeader>
+                    <CardContent>
+                      <FormField control={editUserForm.control} name="is_banned" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-red-50 dark:bg-red-900/20"><div className="space-y-0.5"><FormLabel className="text-red-600 dark:text-red-400">Bannir l'utilisateur</FormLabel><p className="text-xs text-red-500 dark:text-red-400/80">L'utilisateur sera déconnecté et ne pourra plus accéder à son compte.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -258,7 +268,7 @@ const AdminUsersPage: React.FC = () => {
                     <CardContent className="space-y-4">
                       <FormField control={editUserForm.control} name="commission_rate" render={({ field }) => (<FormItem><FormLabel>Forfait (%)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="linen_type" render={({ field }) => (<FormItem><FormLabel>Type de linge</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={editUserForm.control} name="agency" render={({ field }) => (<FormItem><FormLabel>Agence</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={editUserForm.control} name="agency" render={({ field }) => (<FormItem><FormLabel>Agence</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Sélectionner une agence" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Côte d'opal">Côte d'opal</SelectItem><SelectItem value="Baie de somme">Baie de somme</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="contract_start_date" render={({ field }) => (<FormItem><FormLabel>Date de début de contrat</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     </CardContent>
                   </Card>

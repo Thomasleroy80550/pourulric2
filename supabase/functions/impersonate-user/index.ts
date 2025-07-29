@@ -49,27 +49,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Générer un lien magique pour obtenir une session valide
-    const { data, error: linkError } = await adminSupabaseClient.auth.admin.generateLink({
-      type: 'magiclink',
-      email: '', // L'email n'est pas utilisé quand on fournit l'ID
-      options: {
-        redirectTo: '/', // L'URL n'a pas d'importance, nous voulons juste le hash
-        data: { target_user_id } // On passe l'ID pour le retrouver
-      }
-    });
-    
-    // Note: La méthode ci-dessus est un contournement car `generateLink` attend un email.
-    // Une méthode plus directe serait d'utiliser `signInWithId`, mais elle n'est pas disponible dans l'API admin.
-    // Nous allons donc utiliser une autre approche plus robuste.
+    // 4. Récupérer l'utilisateur cible par son ID pour obtenir son email
     const { data: userToImpersonate, error: getUserError } = await adminSupabaseClient.auth.admin.getUserById(target_user_id);
-    if(getUserError) throw getUserError;
+    if (getUserError || !userToImpersonate.user || !userToImpersonate.user.email) {
+      throw new Error("Impossible de trouver l'utilisateur cible ou son email.");
+    }
 
+    // 5. Générer un lien magique pour l'utilisateur cible en utilisant son email
     const { data: sessionData, error: sessionError } = await adminSupabaseClient.auth.admin.generateLink({
         type: 'magiclink',
-        email: userToImpersonate.user.email!,
+        email: userToImpersonate.user.email,
         options: {
-            redirectTo: '/'
+            redirectTo: '/' // L'URL n'a pas d'importance, nous voulons juste le hash
         }
     });
 
@@ -82,10 +73,10 @@ serve(async (req) => {
     const refresh_token = params.get('refresh_token');
 
     if (!access_token || !refresh_token) {
-      throw new Error("Impossible de générer la session d'impersonnalisation.");
+      throw new Error("Impossible de générer la session d'impersonnalisation : tokens manquants.");
     }
 
-    // 5. Retourner les tokens de la nouvelle session
+    // 6. Retourner les tokens de la nouvelle session
     return new Response(JSON.stringify({ access_token, refresh_token }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

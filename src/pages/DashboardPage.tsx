@@ -38,7 +38,9 @@ import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
 import CustomChartTooltip from '@/components/CustomChartTooltip';
 import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense } from '@/lib/expenses-api';
-import { toast } from 'sonner'; // Added toast import
+import { toast } from 'sonner';
+import { useSession } from "@/components/SessionContextProvider";
+import BannedUserMessage from "@/components/BannedUserMessage";
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -50,6 +52,7 @@ const DONUT_CATEGORIES = [
 ];
 
 const DashboardPage = () => {
+  const { profile } = useSession();
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
 
@@ -284,18 +287,22 @@ const DashboardPage = () => {
   }, [currentYear]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!profile?.is_banned) {
+      fetchData();
+    }
+  }, [fetchData, profile]);
 
   useEffect(() => {
-    const tourCompleted = localStorage.getItem('dashboardTourCompleted_v1');
-    if (!tourCompleted) {
-      const timer = setTimeout(() => {
-        startDashboardTour();
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (!profile?.is_banned) {
+      const tourCompleted = localStorage.getItem('dashboardTourCompleted_v1');
+      if (!tourCompleted) {
+        const timer = setTimeout(() => {
+          startDashboardTour();
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, []);
+  }, [profile]);
 
   const handleShowForecast = () => {
     const today = new Date();
@@ -310,6 +317,14 @@ const DashboardPage = () => {
     setForecastAmount(forecast);
     setIsForecastDialogOpen(true);
   };
+
+  if (profile?.is_banned) {
+    return (
+      <MainLayout>
+        <BannedUserMessage />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

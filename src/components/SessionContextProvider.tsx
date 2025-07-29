@@ -49,28 +49,25 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setSession(currentSession);
       const userProfile = await fetchUserProfile(currentSession);
 
-      if (userProfile?.is_banned) {
-        console.log("User is banned. Signing out.");
-        toast.error("Votre compte a été suspendu. Veuillez contacter le support.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
-
       if (location.pathname === '/login') {
         navigate('/');
       }
 
       if (userProfile && location.pathname !== '/login') {
-        const cguvAccepted = userProfile.cguv_accepted_at;
-        const cguvVersion = userProfile.cguv_version;
-
-        if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
-          console.log("CGUV not accepted or version mismatch. Showing modal.");
-          setShowCguvModal(true);
-        } else {
-          console.log("CGUV already accepted and up to date.");
+        // Banned status takes precedence over CGUV modal
+        if (userProfile.is_banned) {
           setShowCguvModal(false);
+        } else {
+          const cguvAccepted = userProfile.cguv_accepted_at;
+          const cguvVersion = userProfile.cguv_version;
+
+          if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
+            console.log("CGUV not accepted or version mismatch. Showing modal.");
+            setShowCguvModal(true);
+          } else {
+            console.log("CGUV already accepted and up to date.");
+            setShowCguvModal(false);
+          }
         }
       } else if (!userProfile && location.pathname !== '/login') {
         console.log("Session exists but profile not found or error fetching. Checking CGUV status.");

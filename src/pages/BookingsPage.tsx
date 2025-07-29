@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag, MessageSquare } from 'lucide-react'; // Added MessageSquare icon
+import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag, MessageSquare } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -23,8 +23,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import ReportProblemDialog from '@/components/ReportProblemDialog'; // Import the new component
-import MessagesDialog from '@/components/MessagesDialog'; // Import the new component
+import ReportProblemDialog from '@/components/ReportProblemDialog';
+import MessagesDialog from '@/components/MessagesDialog';
+import { useSession } from "@/components/SessionContextProvider";
+import BannedUserMessage from "@/components/BannedUserMessage";
 
 interface Booking {
   id: string;
@@ -35,11 +37,12 @@ interface Booking {
   status: string;
   amount: string;
   cod_channel?: string;
-  email?: string; // Added email for reporting
-  phone?: string; // Added phone for reporting
+  email?: string;
+  phone?: string;
 }
 
 const BookingsPage: React.FC = () => {
+  const { profile } = useSession();
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -50,34 +53,33 @@ const BookingsPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
-  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false); // New state for report dialog
-  const [bookingToReport, setBookingToReport] = useState<Booking | null>(null); // New state for booking to report
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [bookingToReport, setBookingToReport] = useState<Booking | null>(null);
 
-  const [isMessagesDialogOpen, setIsMessagesDialogOpen] = useState(false); // New state for messages dialog
-  const [bookingForMessages, setBookingForMessages] = useState<Booking | null>(null); // New state for booking to show messages
+  const [isMessagesDialogOpen, setIsMessagesDialogOpen] = useState(false);
+  const [bookingForMessages, setBookingForMessages] = useState<Booking | null>(null);
 
-  // Filter states - Initialized to 'all' instead of ''
   const [filterRoomId, setFilterRoomId] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
 
-  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'PROPRI', 'PROP0']; // Added owner statuses
+  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'PROPRI', 'PROP0'];
   const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
 
   const applyFilters = (bookingsToFilter: Booking[]) => {
     let tempBookings = bookingsToFilter;
 
-    if (filterRoomId !== 'all') { // Check for 'all'
+    if (filterRoomId !== 'all') {
       tempBookings = tempBookings.filter(booking => booking.property_name === userRooms.find(r => r.room_id === filterRoomId)?.room_name || booking.property_name === filterRoomId);
     }
 
-    if (filterStatus !== 'all') { // Check for 'all'
+    if (filterStatus !== 'all') {
       tempBookings = tempBookings.filter(booking => booking.status.toLowerCase() === filterStatus.toLowerCase());
     }
 
-    if (filterChannel !== 'all') { // Check for 'all'
+    if (filterChannel !== 'all') {
       tempBookings = tempBookings.filter(booking => (booking.cod_channel || 'UNKNOWN').toLowerCase() === filterChannel.toLowerCase());
     }
 
@@ -107,7 +109,6 @@ const BookingsPage: React.FC = () => {
       const fetchedUserRooms = await getUserRooms();
       setUserRooms(fetchedUserRooms);
 
-      // Pass fetchedUserRooms to fetchKrossbookingReservations
       const fetchedBookings = await fetchKrossbookingReservations(fetchedUserRooms);
       console.log(`Fetched bookings for BookingsPage (Rooms: ${fetchedUserRooms.map(r => r.room_id).join(', ')}):`, fetchedBookings);
 
@@ -137,8 +138,12 @@ const BookingsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadBookings();
-  }, []);
+    if (!profile?.is_banned) {
+      loadBookings();
+    } else {
+      setLoading(false);
+    }
+  }, [profile]);
 
   useEffect(() => {
     applyFilters(allBookings);
@@ -148,16 +153,16 @@ const BookingsPage: React.FC = () => {
     switch (status.toLowerCase()) {
       case 'confirmed':
       case 'confirmée':
-      case 'propri': // For owner reservations that are active
+      case 'propri':
         return 'default';
       case 'pending':
       case 'en attente':
         return 'secondary';
       case 'cancelled':
       case 'annulée':
-      case 'canc': // For cancelled owner reservations
+      case 'canc':
         return 'destructive';
-      case 'prop0': // Owner reservation without cleaning
+      case 'prop0':
         return 'outline';
       default:
         return 'outline';
@@ -182,14 +187,22 @@ const BookingsPage: React.FC = () => {
   };
 
   const handleResetFilters = () => {
-    setFilterRoomId('all'); // Reset to 'all'
-    setFilterStatus('all'); // Reset to 'all'
-    setFilterChannel('all'); // Reset to 'all'
+    setFilterRoomId('all');
+    setFilterStatus('all');
+    setFilterChannel('all');
     setFilterStartDate('');
     setFilterEndDate('');
   };
 
   const currentYear = new Date().getFullYear();
+
+  if (profile?.is_banned) {
+    return (
+      <MainLayout>
+        <BannedUserMessage />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -331,7 +344,7 @@ const BookingsPage: React.FC = () => {
                           <TableHead>Départ</TableHead>
                           <TableHead>Statut</TableHead>
                           <TableHead className="text-right">Montant</TableHead>
-                          <TableHead className="text-right">Actions</TableHead> {/* New TableHead for actions */}
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -351,12 +364,11 @@ const BookingsPage: React.FC = () => {
                             <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200">
                               {booking.amount}
                             </TableCell>
-                            <TableCell className="text-right flex justify-end space-x-2"> {/* Added flex and space-x-2 */}
+                            <TableCell className="text-right flex justify-end space-x-2">
                               <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
                                 <Flag className="h-4 w-4" />
                                 <span className="ml-2 hidden md:inline-block">Signaler</span>
                               </Button>
-                              {/* New Messages Button */}
                               <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
                                 <MessageSquare className="h-4 w-4" />
                                 <span className="ml-2 hidden md:inline-block">Messages</span>
@@ -405,12 +417,11 @@ const BookingsPage: React.FC = () => {
                             </Badge>
                             <span className="text-xs text-gray-500">Canal: {booking.cod_channel || 'N/A'}</span>
                           </div>
-                          <div className="pt-2 flex flex-col gap-2"> {/* Changed to flex-col and gap-2 */}
+                          <div className="pt-2 flex flex-col gap-2">
                             <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
                               <Flag className="h-4 w-4 mr-2" />
                               Signaler un problème
                             </Button>
-                            {/* New Messages Button for mobile */}
                             <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
                               <MessageSquare className="h-4 w-4 mr-2" />
                               Messages
@@ -489,14 +500,10 @@ const BookingsPage: React.FC = () => {
         onOpenChange={setIsReportDialogOpen}
         booking={bookingToReport}
         onReportSubmitted={() => {
-          // No need to re-fetch bookings for now, as the report is just submitted.
-          // If you want to show a visual change on the booking list after reporting,
-          // you would trigger a re-fetch here.
           setIsReportDialogOpen(false);
         }}
       />
 
-      {/* New Messages Dialog */}
       <MessagesDialog
         isOpen={isMessagesDialogOpen}
         onOpenChange={setIsMessagesDialogOpen}

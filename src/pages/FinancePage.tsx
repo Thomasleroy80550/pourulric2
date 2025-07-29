@@ -6,8 +6,9 @@ import InvoicesTab from '@/components/finance/InvoicesTab';
 import StatementsTab from '@/components/finance/StatementsTab';
 import BalancesTab from '@/components/finance/BalancesTab';
 import ReportsTab from '@/components/finance/ReportsTab';
-import ExpensesTab from '@/components/finance/ExpensesTab'; // Import the new tab
+import ExpensesTab from '@/components/finance/ExpensesTab';
 import { useSession } from '@/components/SessionContextProvider';
+import BannedUserMessage from "@/components/BannedUserMessage";
 
 const FinancePage: React.FC = () => {
   const { profile } = useSession();
@@ -18,6 +19,14 @@ const FinancePage: React.FC = () => {
       setShowExpensesTab(profile.expenses_module_enabled || false);
     }
   }, [profile]);
+
+  if (profile?.is_banned) {
+    return (
+      <MainLayout>
+        <BannedUserMessage />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

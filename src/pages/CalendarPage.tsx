@@ -2,26 +2,29 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import CalendarGridMobile from '@/components/CalendarGridMobile'; // Import the new mobile grid component
-import { useIsMobile } from '@/hooks/use-mobile'; // Import useIsMobile hook
-import { Button } from '@/components/ui/button'; // Import Button
-import { PlusCircle, DollarSign } from 'lucide-react'; // Import PlusCircle and DollarSign icons
-import OwnerReservationDialog from '@/components/OwnerReservationDialog'; // Import the new dialog
-import PriceRestrictionDialog from '@/components/PriceRestrictionDialog'; // Import the new PriceRestrictionDialog
-import { getUserRooms, UserRoom } from '@/lib/user-room-api'; // Import user room API
-import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation and fetch function
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { useLocation } from 'react-router-dom'; // Import useLocation
+import CalendarGridMobile from '@/components/CalendarGridMobile';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, DollarSign } from 'lucide-react';
+import OwnerReservationDialog from '@/components/OwnerReservationDialog';
+import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useLocation } from 'react-router-dom';
+import { useSession } from "@/components/SessionContextProvider";
+import BannedUserMessage from "@/components/BannedUserMessage";
 
 const CalendarPage: React.FC = () => {
+  const { profile } = useSession();
   const isMobile = useIsMobile();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
-  const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false); // New state for price/restriction dialog
+  const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
-  const [loadingData, setLoadingData] = useState(true); // New loading state for all data
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // State to trigger data refresh
-  const location = useLocation(); // Get location object
+  const [loadingData, setLoadingData] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const location = useLocation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,37 +33,43 @@ const CalendarPage: React.FC = () => {
         const fetchedUserRooms = await getUserRooms();
         setUserRooms(fetchedUserRooms);
 
-        // Pass fetchedUserRooms to fetchKrossbookingReservations
         const fetchedReservations = await fetchKrossbookingReservations(fetchedUserRooms);
         setReservations(fetchedReservations);
       } catch (error) {
         console.error("Error fetching data for CalendarPage:", error);
-        // Optionally, show a toast error here
       } finally {
         setLoadingData(false);
       }
     };
-    fetchData();
-  }, [refreshTrigger]); // Re-fetch all data if refreshTrigger changes
+    if (!profile?.is_banned) {
+      fetchData();
+    } else {
+      setLoadingData(false);
+    }
+  }, [refreshTrigger, profile]);
 
   useEffect(() => {
-    // Check if the dialog should be opened from navigation state
     if (location.state?.openOwnerReservationDialog) {
       setIsOwnerReservationDialogOpen(true);
-      // Clear the state to prevent re-opening on subsequent renders/visits
       window.history.replaceState({}, document.title); 
     }
   }, [location.state]);
 
   const handleReservationChange = () => {
-    setRefreshTrigger(prev => prev + 1); // Increment to trigger data refresh
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handlePriceRestrictionSaved = () => {
-    // No need to refresh calendar data for price/restriction changes, as they are not displayed on the calendar grid.
-    // If you had a component that *did* display prices/restrictions, you'd trigger a refresh here.
     setIsPriceRestrictionDialogOpen(false);
   };
+
+  if (profile?.is_banned) {
+    return (
+      <MainLayout>
+        <BannedUserMessage />
+      </MainLayout>
+    );
+  }
 
   if (loadingData) {
     return (
@@ -146,8 +155,8 @@ const CalendarPage: React.FC = () => {
         isOpen={isOwnerReservationDialogOpen}
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
-        allReservations={reservations} // Pass all reservations
-        onReservationCreated={handleReservationChange} // Use the new handler
+        allReservations={reservations}
+        onReservationCreated={handleReservationChange}
       />
       <PriceRestrictionDialog
         isOpen={isPriceRestrictionDialogOpen}

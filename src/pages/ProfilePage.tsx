@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Bell, Briefcase, Download } from 'lucide-react';
+import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle } from 'lucide-react';
 import { getUserRooms } from '@/lib/user-room-api';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ProfilePage: React.FC = () => {
-  const { session } = useSession();
+  const { session, profile: userProfile } = useSession();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -160,6 +160,16 @@ const ProfilePage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Mon Profil</h1>
+
+        {userProfile?.is_banned && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Compte Suspendu</AlertTitle>
+            <AlertDescription>
+              Votre accès est restreint. Vous pouvez consulter vos informations mais pas les modifier. Veuillez contacter le support.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -322,7 +332,7 @@ const ProfilePage: React.FC = () => {
           </Card>
 
           <div className="flex justify-end">
-            <Button onClick={handleUpdateProfile} disabled={loading}>
+            <Button onClick={handleUpdateProfile} disabled={loading || userProfile?.is_banned}>
               {loading ? 'Sauvegarde...' : 'Enregistrer les modifications'}
             </Button>
           </div>

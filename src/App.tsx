@@ -33,6 +33,7 @@ import TouristTaxPage from "./pages/TouristTaxPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
+import BlogManager from "./components/BlogManager";
 
 const queryClient = new QueryClient();
 

@@ -48,7 +48,7 @@ const BalancesTab: React.FC = () => {
         // Calculate revenues
         const calculateRevenues = (interval: { start: Date, end: Date }) => statements
           .filter(s => isWithinInterval(parseISO(s.created_at), interval))
-          .reduce((acc, s) => acc + (s.totals?.total_brut_ht || 0), 0);
+          .reduce((acc, s) => acc + (s.totals?.totalRevenuGenere || 0), 0);
 
         const annualRevenues = calculateRevenues(annualInterval);
         const quarterlyRevenues = calculateRevenues(quarterlyInterval);

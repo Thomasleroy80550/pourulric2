@@ -11,6 +11,7 @@ const adminNavigationItems = [
   { name: 'Tableau de Bord', href: '/admin', icon: Shield },
   { name: 'Utilisateurs', href: '/admin/users', icon: Users },
   { name: 'Pages', href: '/admin/pages', icon: FileText },
+  { name: 'Blog', href: '/admin/blog', icon: FileText },
   { name: 'Rapports Tech.', href: '/admin/technical-reports', icon: Wrench },
   { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus },
   { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },

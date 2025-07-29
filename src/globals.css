@@ -352,16 +352,3 @@
     display: none !important;
   }
 }
-
-/* New style for past months in TouristTaxPage */
-.past-month {
-  background-color: hsl(var(--muted)); /* A muted background */
-  color: hsl(var(--muted-foreground)); /* Faded text color */
-  opacity: 0.7; /* Slightly transparent */
-}
-
-.dark .past-month {
-  background-color: hsl(var(--muted)); /* Darker muted background */
-  color: hsl(var(--muted-foreground)); /* Faded text color */
-  opacity: 0.7;
-}

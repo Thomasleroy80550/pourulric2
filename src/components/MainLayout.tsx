@@ -12,7 +12,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AICopilotDialog from './AICopilotDialog';
-import NewFeaturesBanner from './NewFeaturesBanner';
 import { useSession } from './SessionContextProvider';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
 import { formatDistanceToNow } from 'date-fns';
@@ -365,8 +364,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </AlertDescription>
           </Alert>
         )}
-
-        <NewFeaturesBanner />
 
         <main className="flex-1 p-6 overflow-auto">
           {children}

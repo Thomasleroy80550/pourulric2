@@ -27,7 +27,8 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import FinancePage from "./pages/FinancePage";
 import AdminTechnicalReportsPage from "./pages/AdminTechnicalReportsPage";
 import TechnicalReportsPage from "./pages/TechnicalReportsPage";
-import TechnicalReportDetailPage from "./pages/TechnicalReportDetailPage"; // Import new page
+import TechnicalReportDetailPage from "./pages/TechnicalReportDetailPage";
+import ReservationReportDetailPage from "./pages/ReservationReportDetailPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
@@ -51,7 +52,8 @@ const App = () => (
                 <Route path="/admin/statements" element={<AdminStatementsPage />} />
                 <Route path="/admin/users" element={<AdminUsersPage />} />
                 <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
-                <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} /> {/* Admin detail route */}
+                <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
+                <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                 <Route path="/pages/:slug" element={<ContentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/blog" element={<BlogPage />} />
@@ -64,7 +66,7 @@ const App = () => (
                 <Route path="/reviews" element={<ReviewsPage />} />
                 <Route path="/finances" element={<FinancePage />} />
                 <Route path="/reports" element={<TechnicalReportsPage />} />
-                <Route path="/reports/:id" element={<TechnicalReportDetailPage />} /> {/* User detail route */}
+                <Route path="/reports/:id" element={<TechnicalReportDetailPage />} />
                 <Route path="/help" element={<HelpPage />} />
                 <Route path="/modules" element={<ModulesPage />} />
                 <Route path="/roadmap" element={<RoadmapPage />} />

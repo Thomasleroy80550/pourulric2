@@ -86,6 +86,7 @@ const AdminDashboardPage: React.FC = () => {
             <TableHead>N° Réservation</TableHead>
             <TableHead>Propriétaire</TableHead>
             <TableHead>Date</TableHead>
+            <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -95,6 +96,11 @@ const AdminDashboardPage: React.FC = () => {
               <TableCell>{report.reservation_id}</TableCell>
               <TableCell>{report.profiles?.first_name} {report.profiles?.last_name}</TableCell>
               <TableCell>{format(new Date(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+              <TableCell className="text-right">
+                <Button asChild variant="outline" size="sm">
+                  <Link to={`/admin/reservation-reports/${report.id}`}>Voir</Link>
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

@@ -17,7 +17,9 @@ import { toast } from 'sonner';
 import { getAllProfiles, createUser, updateUser, UpdateUserPayload } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -56,6 +58,8 @@ const AdminUsersPage: React.FC = () => {
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const addUserForm = useForm<z.infer<typeof newUserSchema>>({
     resolver: zodResolver(newUserSchema),
@@ -138,6 +142,42 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleSwitchUser = async (targetUserId: string) => {
+    setIsSwitchingUser(targetUserId);
+    try {
+      // 1. Sauvegarder la session admin actuelle
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+      if (!adminSession) throw new Error("Session admin non trouvée.");
+      localStorage.setItem('admin_impersonation_session', JSON.stringify(adminSession));
+
+      // 2. Appeler la fonction Edge pour obtenir la session de l'utilisateur cible
+      const { data, error } = await supabase.functions.invoke('impersonate-user', {
+        body: { target_user_id: targetUserId },
+      });
+
+      if (error) throw error;
+      if (!data.access_token || !data.refresh_token) throw new Error("Tokens de session invalides reçus.");
+
+      // 3. Définir la nouvelle session
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+      if (sessionError) throw sessionError;
+
+      // 4. Naviguer et recharger
+      toast.success(`Vous êtes maintenant connecté en tant que l'utilisateur.`);
+      navigate('/');
+      window.location.reload(); // Forcer un rechargement complet pour que le SessionContextProvider se réinitialise
+
+    } catch (error: any) {
+      toast.error(`Erreur lors du changement de compte : ${error.message}`);
+      localStorage.removeItem('admin_impersonation_session'); // Nettoyer en cas d'erreur
+    } finally {
+      setIsSwitchingUser(null);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -177,8 +217,17 @@ const AdminUsersPage: React.FC = () => {
                       <TableCell>{user.role}</TableCell>
                       <TableCell>{user.is_banned ? <span className="text-red-500 font-bold">Banni</span> : 'Actif'}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier l'utilisateur">
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSwitchUser(user.id)}
+                          disabled={isSwitchingUser === user.id}
+                          title="Se connecter en tant que cet utilisateur"
+                        >
+                          {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                         </Button>
                       </TableCell>
                     </TableRow>

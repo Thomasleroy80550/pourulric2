@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench } from 'lucide-react';
+import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -17,6 +17,7 @@ import { useSession } from './SessionContextProvider';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -133,6 +134,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { profile } = useSession();
+  const [isImpersonating, setIsImpersonating] = useState(false);
+
+  useEffect(() => {
+    const impersonationSession = localStorage.getItem('admin_impersonation_session');
+    setIsImpersonating(!!impersonationSession);
+  }, [profile]);
 
   const fetchNotifications = async () => {
     try {
@@ -146,12 +154,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     fetchNotifications();
-    // Set up a listener for real-time updates on the notifications table
     const channel = supabase
       .channel('public:notifications')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, (payload) => {
         console.log('Change received!', payload);
-        fetchNotifications(); // Refetch notifications on any change
+        fetchNotifications();
       })
       .subscribe();
 
@@ -170,6 +177,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      localStorage.removeItem('admin_impersonation_session'); // Clear on logout
       toast.success("Déconnexion réussie !");
       navigate('/login');
     } catch (error: any) {
@@ -180,7 +188,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {
       await markNotificationAsRead(notification.id);
-      fetchNotifications(); // Refresh list
+      fetchNotifications();
     }
     if (notification.link) {
       navigate(notification.link);
@@ -189,7 +197,27 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const handleMarkAllAsRead = async () => {
     await markAllNotificationsAsRead();
-    fetchNotifications(); // Refresh list
+    fetchNotifications();
+  };
+
+  const handleReturnToAdmin = async () => {
+    const adminSessionString = localStorage.getItem('admin_impersonation_session');
+    if (!adminSessionString) {
+      toast.error("Session admin non trouvée. Veuillez vous reconnecter.");
+      return;
+    }
+    try {
+      const adminSession = JSON.parse(adminSessionString);
+      const { error } = await supabase.auth.setSession(adminSession);
+      if (error) throw error;
+
+      localStorage.removeItem('admin_impersonation_session');
+      toast.success("Retour au compte administrateur réussi.");
+      navigate('/admin/users');
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(`Erreur lors du retour au compte admin : ${error.message}`);
+    }
   };
 
   return (
@@ -269,12 +297,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/avatars/01.png" alt="Thomas" />
-                    <AvatarFallback>TH</AvatarFallback>
+                    <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
+                    <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
                   </Avatar>
                   <div className="hidden xl:flex flex-col items-start ml-2">
-                    <span className="text-sm font-medium">Thomas</span>
-                    <span className="text-xs leading-none text-gray-500 dark:text-gray-400">Compte admin</span>
+                    <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
+                    <span className="text-xs leading-none text-gray-500 dark:text-gray-400">
+                      {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : 'Compte utilisateur')}
+                    </span>
                   </div>
                   <ChevronDown className="h-4 w-4 ml-2 hidden md:inline-block" />
                 </Button>
@@ -282,9 +312,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">Thomas</p>
+                    <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      m@example.com
+                      {profile?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -297,6 +327,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </DropdownMenu>
           </div>
         </header>
+
+        {isImpersonating && (
+          <Alert variant="default" className="m-4 bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300">
+            <AlertTriangle className="h-4 w-4 !text-yellow-800 dark:!text-yellow-300" />
+            <AlertTitle>Mode Impersonnalisation</AlertTitle>
+            <AlertDescription className="flex items-center justify-between">
+              Vous naviguez en tant que {profile?.first_name} {profile?.last_name}.
+              <Button variant="outline" size="sm" onClick={handleReturnToAdmin} className="bg-yellow-200 hover:bg-yellow-300 text-yellow-900">
+                <LogOut className="h-4 w-4 mr-2" />
+                Retourner à mon compte Admin
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <NewFeaturesBanner />
 

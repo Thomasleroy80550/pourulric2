@@ -184,7 +184,7 @@ export async function fetchKrossbookingReservations(userRooms: UserRoom[]): Prom
             channel_identifier: res.cod_channel || 'UNKNOWN',
             email: res.email || '', // Include email
             phone: res.phone || '', // Include phone
-            tourist_tax_amount: res.tourist_tax_amount ? parseFloat(res.tourist_tax_amount) : 0, // Assuming this field exists in Krossbooking response
+            tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0, // Corrected field name to city_tax_amount
           };
         });
         allReservations = allReservations.concat(roomReservations);

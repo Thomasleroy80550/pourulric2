@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore } from 'lucide-react';
-import { getReportById, respondToReport, addTechnicalReportUpdate, markReportAsResolved, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { getTechnicalReportById, respondToReport, addTechnicalReportUpdate, markReportAsResolved, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { uploadFiles } from '@/lib/storage-api'; // Nouvelle importation
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const navigate = useNavigate();
   const { profile } = useSession();
   const [report, setReport] = useState<TechnicalReport | null>(null);
-  const [loading, setLoading] = true;
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newUpdate, setNewUpdate] = useState('');
   const [newMediaFiles, setNewMediaFiles] = useState<FileList | null>(null);
@@ -37,7 +37,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     setLoading(true);
     setError(null);
     try {
-      const data = await getReportById(id);
+      const data = await getTechnicalReportById(id); // Corrected function name
       setReport(data);
     } catch (err: any) {
       setError(err.message);

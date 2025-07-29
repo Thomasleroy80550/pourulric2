@@ -399,7 +399,6 @@ const AdminUsersPage: React.FC = () => {
                         <TableHead>Email</TableHead>
                         <TableHead>Rôle</TableHead>
                         <TableHead>Statut</TableHead>
-                        <TableHead>Statut KYC</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -701,7 +700,7 @@ const AdminUsersPage: React.FC = () => {
                         </div>
                         <div className="flex items-end">
                           <Button onClick={handleAddNewRoom} disabled={isAddingRoom || !newRoomId || !newRoomName} className="w-full sm:w-auto">
-                            {isAddingRoom ? <Loader2 className="h-4 w-4 animate-spin mr-2" : <PlusCircle className="h-4 w-4 mr-2" }
+                            {isAddingRoom ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <PlusCircle className="h-4 w-4 mr-2" }
                             Ajouter
                           </Button>
                         </div>

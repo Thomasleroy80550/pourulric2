@@ -56,28 +56,20 @@ serve(async (req) => {
     }
 
     // 5. Générer un lien magique pour l'utilisateur cible en utilisant son email
+    // L'URL de redirection doit être une URL de votre application où vous pouvez gérer les tokens
     const { data: sessionData, error: sessionError } = await adminSupabaseClient.auth.admin.generateLink({
         type: 'magiclink',
         email: userToImpersonate.user.email,
         options: {
-            redirectTo: '/' // L'URL n'a pas d'importance, nous voulons juste le hash
+            redirectTo: 'http://localhost:5173/' // Remplacez par l'URL de votre application où les tokens seront gérés
         }
     });
 
     if (sessionError) throw sessionError;
 
-    // Extraire les tokens du hash de l'URL
-    const url = new URL(sessionData.properties.action_link);
-    const params = new URLSearchParams(url.hash.substring(1)); // remove #
-    const access_token = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
-
-    if (!access_token || !refresh_token) {
-      throw new Error("Impossible de générer la session d'impersonnalisation : tokens manquants.");
-    }
-
-    // 6. Retourner les tokens de la nouvelle session
-    return new Response(JSON.stringify({ access_token, refresh_token }), {
+    // 6. Retourner le lien d'action au lieu des tokens
+    // Le client devra naviguer vers ce lien pour obtenir les tokens de session
+    return new Response(JSON.stringify({ action_link: sessionData.properties.action_link }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

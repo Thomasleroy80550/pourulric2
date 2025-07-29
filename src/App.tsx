@@ -34,6 +34,7 @@ import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
 import BlogManager from "./components/BlogManager";
+import BlogPostPage from "./pages/BlogPostPage"; // Add this line
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
                 <Route path="/pages/:slug" element={<ContentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/blog" element={<BlogPage />} />
+                <Route path="/blog/:slug" element={<BlogPostPage />} /> {/* Add this line */}
                 <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                 <Route path="/promotion" element={<PromotionPage />} />
                 <Route path="/" element={<DashboardPage />} />

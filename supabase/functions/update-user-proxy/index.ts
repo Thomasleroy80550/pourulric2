@@ -52,16 +52,37 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Separate auth metadata from profile data
-    const { first_name, last_name, role, ...profileData } = updateData;
-    
+    // 4. Prepare data for public.profiles, handling empty strings for optional fields
+    const profileUpdatePayload: { [key: string]: any } = {};
     const authUpdatePayload: { [key: string]: any } = {};
-    if (first_name !== undefined) authUpdatePayload.first_name = first_name;
-    if (last_name !== undefined) authUpdatePayload.last_name = last_name;
-    if (role !== undefined) authUpdatePayload.role = role;
+
+    // Iterate over all keys in updateData
+    for (const key in updateData) {
+      if (Object.prototype.hasOwnProperty.call(updateData, key)) {
+        let value = updateData[key];
+
+        // Convert empty strings to null for all fields, especially relevant for dates and optional text
+        if (typeof value === 'string' && value.trim() === '') {
+          value = null;
+        }
+
+        // Separate fields for auth.users metadata vs public.profiles
+        if (key === 'first_name' || key === 'last_name' || key === 'role') {
+          // These fields are part of auth.users metadata AND public.profiles
+          authUpdatePayload[key] = value;
+          profileUpdatePayload[key] = value;
+        } else {
+          // All other fields go directly to public.profiles
+          profileUpdatePayload[key] = value;
+        }
+      }
+    }
+
+    // Ensure user_id is not in the payload for update
+    delete profileUpdatePayload.user_id;
 
     console.log("Auth update payload:", JSON.stringify(authUpdatePayload));
-    console.log("Profile data for public.profiles update:", JSON.stringify(profileData));
+    console.log("Profile data for public.profiles update:", JSON.stringify(profileUpdatePayload));
 
     // Update auth.users metadata if there's anything to update
     if (Object.keys(authUpdatePayload).length > 0) {
@@ -80,10 +101,10 @@ serve(async (req) => {
     }
 
     // 5. Update public.profiles table
-    console.log(`Attempting to update public.profiles for user_id: ${user_id} with data: ${JSON.stringify({ first_name, last_name, role, ...profileData })}`);
+    console.log(`Attempting to update public.profiles for user_id: ${user_id} with data: ${JSON.stringify(profileUpdatePayload)}`);
     const { data: updatedProfile, error: updateProfileError } = await adminSupabaseClient
       .from('profiles')
-      .update({ first_name, last_name, role, ...profileData })
+      .update(profileUpdatePayload)
       .eq('id', user_id)
       .select()
       .single();

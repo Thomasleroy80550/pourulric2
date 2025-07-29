@@ -41,6 +41,7 @@ import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense 
 import { toast } from 'sonner';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
+import { Calendar, DollarSign, Users } from 'lucide-react';
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -550,6 +551,43 @@ const DashboardPage = () => {
                   <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
                 </>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Événements à venir (Exemple) Card */}
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Événements à venir (Exemple)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Nettoyage approfondi</p>
+                  <p className="text-sm text-gray-500">Appartement 1 - 15 juillet</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Paiement de la facture d'électricité</p>
+                  <p className="text-sm text-gray-500">Date limite: 20 juillet</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                  <Users className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-medium">Réunion avec le propriétaire</p>
+                  <p className="text-sm text-gray-500">Appartement 2 - 22 juillet</p>
+                </div>
+              </div>
+              <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir tous les événements -&gt;</Button>
             </CardContent>
           </Card>
         </div>

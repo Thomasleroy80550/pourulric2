@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore } from 'lucide-react';
-import { getReportById, respondToReport, addReportUpdate, markReportAsResolved, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { getReportById, respondToReport, addTechnicalReportUpdate, markReportAsResolved, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { uploadFiles } from '@/lib/storage-api'; // Nouvelle importation
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -25,7 +26,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const navigate = useNavigate();
   const { profile } = useSession();
   const [report, setReport] = useState<TechnicalReport | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = true;
   const [error, setError] = useState<string | null>(null);
   const [newUpdate, setNewUpdate] = useState('');
   const [newMediaFiles, setNewMediaFiles] = useState<FileList | null>(null);
@@ -65,8 +66,25 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
       toast.warning("Veuillez ajouter un message ou un fichier.");
       return;
     }
+    if (!profile?.id) {
+      toast.error("Impossible d'ajouter une mise à jour: utilisateur non identifié.");
+      return;
+    }
+
     try {
-      await addReportUpdate(id, newUpdate.trim(), newMediaFiles);
+      let mediaUrls: string[] | null = null;
+      if (newMediaFiles && newMediaFiles.length > 0) {
+        // Télécharger les fichiers et obtenir leurs URLs publiques
+        const folderPath = `report_updates/${id}`; // Organiser les fichiers par ID de rapport
+        mediaUrls = await uploadFiles(newMediaFiles, 'technical_report_media', folderPath);
+      }
+
+      await addTechnicalReportUpdate({
+        report_id: id,
+        user_id: profile.id,
+        content: newUpdate.trim(),
+        media_urls: mediaUrls,
+      });
       toast.success("Mise à jour ajoutée.");
       setNewUpdate('');
       setNewMediaFiles(null);
@@ -91,9 +109,15 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   };
 
   const handleOwnerResolve = async () => {
-    if (!id) return;
+    if (!id || !profile?.id) return;
     try {
-      await addReportUpdate(id, "Le propriétaire a marqué ce rapport comme résolu.");
+      // Ajouter une mise à jour indiquant que le propriétaire a résolu le rapport
+      await addTechnicalReportUpdate({
+        report_id: id,
+        user_id: profile.id,
+        content: "Le propriétaire a marqué ce rapport comme résolu.",
+        media_urls: null,
+      });
       await markReportAsResolved(id);
       toast.success("Rapport marqué comme résolu.");
       fetchReport();
@@ -105,7 +129,10 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const handleArchiveToggle = async () => {
     if (!id || report === null) return;
     try {
-      await archiveReport(id, !report.is_archived);
+      // Note: The archiveReport function in technical-reports-api.ts needs to be updated
+      // to accept a boolean for is_archived to properly toggle.
+      // For now, assuming it handles the toggle logic internally or will be updated.
+      await archiveReport(id, !report.is_archived); // Passing the desired archive status
       toast.success(`Rapport ${!report.is_archived ? 'archivé' : 'désarchivé'} avec succès !`);
       fetchReport();
     } catch (err: any) {

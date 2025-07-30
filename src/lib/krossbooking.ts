@@ -353,22 +353,49 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
 
 /**
  * Fetches room types and their associated rooms from Krossbooking.
+ * This now calls the /rooms/get-rooms endpoint and reconstructs the hierarchy.
  * @returns A promise that resolves to an array of KrossbookingRoomType objects.
  */
 export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType[]> {
   try {
-    const data = await callKrossbookingProxy('get_room_types');
-    if (Array.isArray(data)) {
-      return data.map((rt: any) => ({
-        id_room_type: rt.id_room_type,
-        label: rt.label,
-        rooms: rt.rooms || [],
-      }));
+    // This calls the 'get_room_types' action, which now points to the /rooms/get-rooms endpoint in the proxy.
+    const flatRoomsData = await callKrossbookingProxy('get_room_types');
+
+    if (!Array.isArray(flatRoomsData)) {
+      console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
+      return [];
     }
-    console.warn('Unexpected Krossbooking API response for room types:', data);
-    return [];
+
+    // Group rooms by room type
+    const roomTypesMap = new Map<number, KrossbookingRoomType>();
+
+    for (const room of flatRoomsData) {
+      // Assuming the structure from the new endpoint. These field names are assumptions.
+      const typeId = room.id_room_type;
+      const typeLabel = room.room_type_label || `Type ${typeId}`; // Fallback label
+
+      if (!typeId) continue; // Skip rooms without a type
+
+      if (!roomTypesMap.has(typeId)) {
+        roomTypesMap.set(typeId, {
+          id_room_type: typeId,
+          label: typeLabel,
+          rooms: [],
+        });
+      }
+
+      const roomType = roomTypesMap.get(typeId);
+      if (roomType) {
+        roomType.rooms.push({
+          id_room: room.id_room,
+          label: room.label,
+        });
+      }
+    }
+
+    return Array.from(roomTypesMap.values());
   } catch (error) {
-    console.error('Error fetching Krossbooking room types:', error);
+    console.error('Error fetching and processing Krossbooking room types:', error);
     throw error;
   }
 }

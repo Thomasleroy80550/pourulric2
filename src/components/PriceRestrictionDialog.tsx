@@ -190,7 +190,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const cmPayload: { [key: string]: any } = {};
     dateRanges.forEach((range, index) => {
         const cmBlock: any = {
-            id_room: roomIdNumber, // Corrected from id_room_type
+            id_room_type: roomIdNumber, // Corrected to id_room_type
             id_rate: 1,
             cod_channel: 'BE',
             date_from: range.from,
@@ -259,7 +259,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     }
 
     const resetCmBlock: any = {
-      id_room: roomIdNumber, // Corrected from id_room_type
+      id_room_type: roomIdNumber, // Corrected to id_room_type
       id_rate: 1,
       cod_channel: 'BE',
       date_from: override.start_date,

@@ -1,18 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
-const KROSSBOOKING_<think>Deciding which files are relevant...
-
-{
-  "complexity": "high",
-  "relevantFiles": [
-    "supabase/functions/krossbooking-proxy/index.ts",
-    "src/lib/krossbooking.ts",
-    "src/pages/CalendarPage.tsx",
-    "src/components/BookingPlanningGrid.tsx",
-    "src/components/CalendarGridMobile.tsx"
-  ]
-}</think><dyad-codebase-context files="supabase/functions/krossbooking-proxy/index.ts,src/lib/krossbooking.ts,src/pages/CalendarPage.tsx,src/components/BookingPlanningGrid.tsx,src/components/CalendarGridMobile.tsx">Complexity: high</dyad-codebase-context>API_BASE_URL = "https://api.krossbooking.com/v5";
+const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

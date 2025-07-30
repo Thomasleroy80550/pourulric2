@@ -1,20 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, isValid, getDay, differenceInDays } from 'date-fns';
+import React, { useState, useMemo } from 'react';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, differenceInDays, max, min, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Home, LogIn, LogOut, Sparkles, CheckCircle, Clock, XCircle, CalendarDays } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
-import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight, Home, LogIn, LogOut, Sparkles } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { UserRoom } from '@/lib/user-room-api';
+import { KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Profile } from '@/lib/profile-api';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -25,136 +23,29 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
 
-const getTaskIcon = (status: string) => {
-  switch (status.toLowerCase()) {
-    case 'completed': return <CheckCircle className="h-3 w-3 text-green-500" />;
-    case 'pending': return <Clock className="h-3 w-3 text-yellow-500" />;
-    case 'cancelled': return <XCircle className="h-3 w-3 text-red-500" />;
-    default: return <Sparkles className="h-3 w-3 text-purple-500" />;
-  }
-};
-
 interface CalendarGridMobileProps {
   refreshTrigger: number;
   userRooms: UserRoom[];
   reservations: KrossbookingReservation[];
   onReservationChange: () => void;
+  profile: Profile | null;
 }
 
-const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange }) => {
+const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, reservations, onReservationChange, profile }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
-  const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<Date>(new Date());
-
   const [isActionsDialogOpen, setIsActionsDialogOpen] = useState(false);
   const [selectedBookingForActions, setSelectedBookingForActions] = useState<KrossbookingReservation | null>(null);
-
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
-
-  const loadHousekeepingTasks = async () => {
-    setLoadingTasks(true);
-    setError(null);
-    try {
-      const roomIdsAsNumbers = userRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
-
-      if (roomIdsAsNumbers.length === 0) {
-        setHousekeepingTasks([]);
-        setLoadingTasks(false);
-        return;
-      }
-
-      const monthStartFormatted = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-      const monthEndFormatted = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-      const fetchedTasks = await fetchKrossbookingHousekeepingTasks(monthStartFormatted, monthEndFormatted, roomIdsAsNumbers);
-      setHousekeepingTasks(fetchedTasks);
-
-    } catch (err: any) {
-      setError(`Erreur lors du chargement des tâches de ménage : ${err.message}`);
-      console.error("Error in CalendarGridMobile loadHousekeepingTasks:", err);
-    } finally {
-      setLoadingTasks(false);
-    }
-  };
-
-  useEffect(() => {
-    loadHousekeepingTasks();
-  }, [currentMonth, userRooms, refreshTrigger]);
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
-    const days = eachDayOfInterval({ start, end });
-
-    const firstDayOfWeek = getDay(start);
-    const leadingEmptyDaysCount = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
-    const leadingEmptyDays = Array.from({ length: leadingEmptyDaysCount }, (_, i) => null);
-
-    return [...leadingEmptyDays, ...days];
+    return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
-  const goToPreviousMonth = () => {
-    setCurrentMonth(subMonths(currentMonth, 1));
-    setSelectedDay(startOfMonth(subMonths(currentMonth, 1)));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentMonth(addMonths(currentMonth, 1));
-    setSelectedDay(startOfMonth(addMonths(currentMonth, 1)));
-  };
-
-  const getEventsForDay = (day: Date) => {
-    const events: any[] = [];
-    userRooms.forEach(room => {
-      // Filter reservations for the current room
-      reservations
-        .filter(res => res.krossbooking_room_id === room.room_id)
-        .forEach(res => {
-          const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-          const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
-
-          if (!checkIn || !checkOut) return;
-
-          const isCheckInDay = isSameDay(checkIn, day);
-          const isCheckOutDay = isSameDay(checkOut, day);
-          const isStayDay = day > checkIn && day < checkOut;
-
-          if (isCheckInDay || isCheckOutDay || isStayDay) {
-            let type: 'check_in' | 'check_out' | 'stay' | 'check_in_out' = 'stay';
-            if (isCheckInDay) type = 'check_in';
-            if (isCheckOutDay && !isCheckInDay) type = 'check_out';
-            if (isCheckInDay && isCheckOutDay) type = 'check_in_out';
-
-            events.push({ type, data: res, roomName: room.room_name, roomId: room.room_id });
-          }
-        });
-
-      housekeepingTasks.forEach(task => {
-        const taskDate = isValid(parseISO(task.date)) ? parseISO(task.date) : null;
-        if (taskDate && isSameDay(taskDate, day) && task.id_room.toString() === room.room_id) {
-          events.push({ type: 'task', data: task, roomName: room.room_name, roomId: room.room_id });
-        }
-      });
-    });
-
-    const uniqueEvents = [...new Map(events.map(item => {
-      if (item.type === 'task') return [`task-${(item.data as KrossbookingHousekeepingTask).id_task}-${item.roomName}`, item];
-      return [`${item.type}-${(item.data as KrossbookingReservation).id}-${item.roomName}`, item];
-    })).values()];
-    
-    uniqueEvents.sort((a, b) => {
-      const order = { 'check_in': 1, 'check_in_out': 2, 'check_out': 3, 'task': 4, 'stay': 5 };
-      return order[a.type] - order[b.type];
-    });
-
-    return uniqueEvents;
-  };
-
-  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
-  const eventsForSelectedDay = getEventsForDay(selectedDay);
+  const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
+  const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
   const handleReservationClick = (booking: KrossbookingReservation) => {
     setSelectedBookingForActions(booking);
@@ -177,9 +68,6 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
         toast.error("Réservation introuvable pour annulation.");
         return;
       }
-
-      console.log("DEBUG: Booking object before cancellation payload creation (CalendarGridMobile):", bookingToCancel);
-
       await saveKrossbookingReservation({
         id_reservation: bookingToCancel.id,
         label: bookingToCancel.guest_name || "Annulation",
@@ -199,15 +87,30 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
     }
   };
 
+  const getReservationsForRoomAndMonth = (roomId: string) => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+
+    return reservations
+      .filter(res => res.krossbooking_room_id === roomId)
+      .filter(res => {
+        const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+        const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+        if (!checkIn || !checkOut) return false;
+        return (checkIn <= monthEnd && checkOut >= monthStart);
+      })
+      .sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
+  };
+
   return (
-    <Card className="shadow-md">
+    <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold">Calendrier Mobile</CardTitle>
+        <CardTitle className="text-lg font-semibold">Planning</CardTitle>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-medium text-lg">
+          <span className="font-medium text-base capitalize">
             {format(currentMonth, 'MMMM yyyy', { locale: fr })}
           </span>
           <Button variant="outline" size="icon" onClick={goToNextMonth}>
@@ -215,189 +118,58 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-2">
-        {loadingTasks ? (
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {weekDays.map((day) => (
-              <Skeleton key={day} className="h-8 w-full" />
-            ))}
-            {Array.from({ length: 35 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-full" />
-            ))}
-          </div>
-        ) : error ? (
-          <Alert variant="destructive" className="mb-4">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Erreur</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : userRooms.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">
-            Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
-          </p>
+      <CardContent>
+        {userRooms.length === 0 ? (
+          <p className="text-center text-gray-500 py-4">Aucune chambre configurée.</p>
         ) : (
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {weekDays.map((day) => (
-              <div key={day} className="text-sm font-semibold text-gray-600 dark:text-gray-400 py-2">
-                {day}
-              </div>
-            ))}
-            {daysInMonth.map((day, index) => {
-              if (!day) {
-                return <div key={`empty-${index}`} className="h-20"></div>;
-              }
-
-              const isToday = isSameDay(day, new Date());
-              const isSelected = isSameDay(day, selectedDay);
-              const eventsForCell = getEventsForDay(day);
-
-              const displayEvents = eventsForCell.slice(0, 3);
-              const remainingEventsCount = eventsForCell.length - displayEvents.length;
-
+          <Accordion type="multiple" defaultValue={userRooms.map(r => r.id)} className="w-full">
+            {userRooms.map(room => {
+              const roomReservations = getReservationsForRoomAndMonth(room.room_id);
               return (
-                <div
-                  key={format(day, 'yyyy-MM-dd')}
-                  className={cn(
-                    "h-20 flex flex-col items-center justify-start p-1 rounded-md cursor-pointer border",
-                    isToday ? "bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700" : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700",
-                    isSelected && "ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400",
-                    "hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  )}
-                  onClick={() => setSelectedDay(day)}
-                >
-                  <span className={cn("text-sm font-semibold", isToday ? "text-blue-800 dark:text-blue-200" : "text-gray-800 dark:text-gray-200")}>
-                    {format(day, 'd')}
-                  </span>
-                  <div className="flex flex-wrap justify-center gap-0.5 mt-1">
-                    {displayEvents.map((event, idx) => {
-                      if (event.type === 'task') {
-                        const task = event.data as KrossbookingHousekeepingTask;
-                        return (
-                          <Tooltip key={`cell-task-${task.id_task}-${event.roomName}-${idx}`}>
-                            <TooltipTrigger asChild>
-                              <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600">
-                                {getTaskIcon(task.status)}
+                <AccordionItem value={room.id} key={room.id}>
+                  <AccordionTrigger>
+                    <div className="flex items-center">
+                      <Home className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="font-medium text-sm truncate">
+                        {profile?.property_address ? `${profile.property_address} - ${room.room_name}` : room.room_name}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    {roomReservations.length > 0 ? (
+                      <div className="space-y-2">
+                        {roomReservations.map(res => {
+                          const checkIn = parseISO(res.check_in_date);
+                          const checkOut = parseISO(res.check_out_date);
+                          const channelInfo = channelColors[res.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                          return (
+                            <div
+                              key={res.id}
+                              className={cn("p-2 rounded-md flex justify-between items-center cursor-pointer", channelInfo.bgColor, channelInfo.textColor)}
+                              onClick={() => handleReservationClick(res)}
+                            >
+                              <div>
+                                <p className="font-bold text-sm">{res.guest_name}</p>
+                                <p className="text-xs">
+                                  {format(checkIn, 'dd/MM', { locale: fr })} - {format(checkOut, 'dd/MM', { locale: fr })}
+                                </p>
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="p-2 text-sm">
-                              <p className="font-bold">{event.roomName}: Tâche {task.task_type.replace('_', ' ')}</p>
-                              <p>Statut: {task.status}</p>
-                              {task.notes && <p>Notes: {task.notes}</p>}
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      } else {
-                        const reservation = event.data as KrossbookingReservation;
-                        const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                        let icon = null;
-                        if (event.type === 'check_in' || event.type === 'check_in_out') icon = <LogIn className="h-3 w-3" />;
-                        else if (event.type === 'check_out') icon = <LogOut className="h-3 w-3" />;
-                        else if (event.type === 'stay') icon = <CalendarDays className="h-3 w-3" />;
-
-                        return (
-                          <Tooltip key={`cell-res-${reservation.id}-${event.type}-${event.roomName}-${idx}`}>
-                            <TooltipTrigger asChild>
-                              <div className={cn("w-4 h-4 flex items-center justify-center rounded-full", channelInfo.bgColor, channelInfo.textColor)}>
-                                {icon}
+                              <div className="text-right">
+                                <p className="text-sm font-semibold">{res.amount}</p>
+                                <p className="text-xs">{channelInfo.name}</p>
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="p-2 text-sm">
-                              <p className="font-bold">{reservation.guest_name}</p>
-                              <p>{reservation.property_name}</p> {/* Use property_name here */}
-                              <p>Statut: {reservation.status}</p>
-                              <p>Canal: {channelInfo.name}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      }
-                    })}
-                    {remainingEventsCount > 0 && (
-                      <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-400 dark:bg-gray-500 text-white text-[0.6rem] font-bold">
-                        +{remainingEventsCount}
+                            </div>
+                          );
+                        })}
                       </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 text-center py-2">Aucune réservation ce mois-ci.</p>
                     )}
-                  </div>
-                </div>
+                  </AccordionContent>
+                </AccordionItem>
               );
             })}
-          </div>
-        )}
-      </CardContent>
-
-      <CardContent className="p-4 border-t mt-4">
-        <h3 className="text-lg font-bold mb-3">Événements du {format(selectedDay, 'EEEE dd MMMM yyyy', { locale: fr })}</h3>
-        {loadingTasks ? (
-          <div className="space-y-3">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : (
-          <ScrollArea className="h-[200px] pr-4">
-            <div className="space-y-3">
-              {eventsForSelectedDay.length === 0 ? (
-                <p className="text-gray-500">Aucun événement pour ce jour.</p>
-              ) : (
-                eventsForSelectedDay.map((event, index) => {
-                  if (event.type === 'task') {
-                    const task = event.data as KrossbookingHousekeepingTask;
-                    return (
-                      <div key={`detail-task-${task.id_task}-${event.roomName}-${index}`} className="flex items-center p-2 border rounded-md bg-gray-100 dark:bg-gray-700">
-                        {getTaskIcon(task.status)}
-                        <div className="ml-3 text-sm">
-                          <p className="font-semibold">{event.roomName}: Tâche {task.task_type.replace('_', ' ')}</p>
-                          <p className="text-gray-600 dark:text-gray-400">Statut: {task.status}</p>
-                          {task.notes && <p className="text-gray-600 dark:text-gray-400">Notes: {task.notes}</p>}
-                        </div>
-                      </div>
-                    );
-                  } else {
-                    const reservation = event.data as KrossbookingReservation;
-                    const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
-                    const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
-                    const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
-                    const numberOfNights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
-
-                    let icon = null;
-                    let eventLabel = '';
-
-                    if (event.type === 'check_in') {
-                      icon = <LogIn className="h-5 w-5 flex-shrink-0" />;
-                      eventLabel = `Arrivée de ${reservation.guest_name}`;
-                    } else if (event.type === 'check_out') {
-                      icon = <LogOut className="h-5 w-5 flex-shrink-0" />;
-                      eventLabel = `Départ de ${reservation.guest_name}`;
-                    } else if (event.type === 'check_in_out') {
-                      icon = <Sparkles className="h-5 w-5 flex-shrink-0" />;
-                      eventLabel = `Arrivée & Départ de ${reservation.guest_name}`;
-                    } else if (event.type === 'stay') {
-                      icon = <CalendarDays className="h-5 w-5 flex-shrink-0" />;
-                      eventLabel = `Séjour de ${reservation.guest_name}`;
-                    }
-
-                    return (
-                      <div
-                        key={`detail-res-${reservation.id}-${event.type}-${event.roomName}-${index}`}
-                        className={cn(
-                          `flex items-center p-2 rounded-md text-sm font-medium ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`
-                        )}
-                        onClick={() => handleReservationClick(reservation)}
-                      >
-                        {icon && <span className="mr-3">{icon}</span>}
-                        <div className="flex-grow">
-                          <p className="font-semibold">{reservation.property_name}: {eventLabel}</p> {/* Use property_name here */}
-                          <p className="text-xs opacity-90">
-                            Du {checkIn ? format(checkIn, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} au {checkOut ? format(checkOut, 'dd/MM/yyyy', { locale: fr }) : 'N/A'} ({numberOfNights} nuit(s))
-                          </p>
-                          <p className="text-xs opacity-90">Statut: {reservation.status} | Montant: {reservation.amount} | Canal: {channelInfo.name}</p>
-                        </div>
-                      </div>
-                    );
-                  }
-                })
-              )}
-            </div>
-          </ScrollArea>
+          </Accordion>
         )}
       </CardContent>
 
@@ -414,10 +186,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
         onOpenChange={setIsOwnerReservationDialogOpen}
         userRooms={userRooms}
         allReservations={reservations}
-        onReservationCreated={() => {
-          setIsOwnerReservationDialogOpen(false);
-          onReservationChange();
-        }}
+        onReservationCreated={onReservationChange}
         initialBooking={bookingToEdit}
       />
     </Card>

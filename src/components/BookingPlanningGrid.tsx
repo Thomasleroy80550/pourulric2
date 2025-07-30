@@ -15,6 +15,7 @@ import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Profile } from '@/lib/profile-api';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -30,9 +31,10 @@ interface BookingPlanningGridProps {
   userRooms: UserRoom[];
   reservations: KrossbookingReservation[];
   onReservationChange: () => void;
+  profile: Profile | null;
 }
 
-const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange }) => {
+const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
   const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
@@ -91,7 +93,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
   // Adjust widths based on mobile status
   const dayCellWidth = isMobile ? 40 : 80;
-  const propertyColumnWidth = isMobile ? 100 : 150;
+  const propertyColumnWidth = isMobile ? 100 : 250; // Increased width for longer names
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -219,7 +221,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 <div className="grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2"
                   style={{ gridRow: `${3 + roomIndex}` }}>
                   <Home className="h-4 w-4 mr-2 text-gray-500" />
-                  <span className="font-medium text-sm">{room.room_name}</span>
+                  <span className="font-medium text-sm truncate">
+                    {profile?.property_address ? `${profile.property_address} - ${room.room_name}` : room.room_name}
+                  </span>
                 </div>
 
                 {/* Day Cells (Background Grid) for the property row */}
@@ -265,11 +269,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 {reservations
                   .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id)
                   .map((reservation) => {
-                    const check<think>Deciding which files are relevant...
-
-[
-  "src/components/BookingPlanningGrid.tsx"
-]</think><dyad-codebase-context files="src/components/BookingPlanningGrid.tsx"></dyad-codebase-context>In = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
+                    const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
                     const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
 
                     if (!checkIn || !checkOut) {
@@ -310,11 +310,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     } else {
                       calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
                       calculatedWidth = (endIndex - startIndex) * dayCellWidth;
-                    }<think>Deciding which files are relevant...
-
-[
-  "src/components/BookingPlanningGrid.tsx"
-]</think><dyad-codebase-context files="src/components/BookingPlanningGrid.tsx"></dyad-codebase-context>
+                    }
 
                     const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
 
@@ -356,7 +352,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
                             <span className="flex-grow text-center px-1 truncate">
                               <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
-                              <span className="mr-1">{numberOfNights}n</span>
+                              <span className="mr-1">€ {numberOfNights}</span>
                               <span className="mx-1">|</span>
                               <span className="truncate">{reservation.guest_name}</span>
                             </span>
@@ -366,7 +362,6 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                         </TooltipTrigger>
                         <TooltipContent className="p-2 text-sm">
                           <p className="font-bold">{reservation.guest_name}</p>
-                          <p>Chambre: {reservation.property_name}</p>
                           <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
                           <p>{numberOfNights} nuit(s)</p>
                           <p>Statut: {reservation.status}</p>

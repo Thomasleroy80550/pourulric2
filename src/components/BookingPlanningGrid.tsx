@@ -265,7 +265,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 {reservations
                   .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id)
                   .map((reservation) => {
-                    const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
+                    const check<think>Deciding which files are relevant...
+
+[
+  "src/components/BookingPlanningGrid.tsx"
+]</think><dyad-codebase-context files="src/components/BookingPlanningGrid.tsx"></dyad-codebase-context>In = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
                     const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
 
                     if (!checkIn || !checkOut) {
@@ -306,7 +310,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     } else {
                       calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
                       calculatedWidth = (endIndex - startIndex) * dayCellWidth;
-                    }
+                    }<think>Deciding which files are relevant...
+
+[
+  "src/components/BookingPlanningGrid.tsx"
+]</think><dyad-codebase-context files="src/components/BookingPlanningGrid.tsx"></dyad-codebase-context>
 
                     const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
 
@@ -348,7 +356,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
                             <span className="flex-grow text-center px-1 truncate">
                               <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
-                              <span className="mr-1">€ {numberOfNights}</span>
+                              <span className="mr-1">{numberOfNights}n</span>
                               <span className="mx-1">|</span>
                               <span className="truncate">{reservation.guest_name}</span>
                             </span>
@@ -358,6 +366,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                         </TooltipTrigger>
                         <TooltipContent className="p-2 text-sm">
                           <p className="font-bold">{reservation.guest_name}</p>
+                          <p>Chambre: {reservation.property_name}</p>
                           <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
                           <p>{numberOfNights} nuit(s)</p>
                           <p>Statut: {reservation.status}</p>

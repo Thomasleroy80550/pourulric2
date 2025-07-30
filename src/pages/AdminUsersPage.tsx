@@ -666,17 +666,20 @@ const AdminUsersPage: React.FC = () => {
                     <CardContent className="space-y-6">
                       <div>
                         <h3 className="text-lg font-medium mb-2">Ajouter une chambre</h3>
-                        <Form {...addRoomForm}>
-                          <form onSubmit={addRoomForm.handleSubmit(handleAddRoom)} className="flex items-start gap-4">
+                        {/* Removed <Form {...addRoomForm}> and <form onSubmit={...}> */}
+                        <div className="flex items-start gap-4">
                             <FormField control={addRoomForm.control} name="room_id" render={({ field }) => (<FormItem className="flex-1"><FormLabel>ID Chambre (Krossbooking)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <FormField control={addRoomForm.control} name="room_name" render={({ field }) => (<FormItem className="flex-1"><FormLabel>Nom de la chambre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                             <div className="pt-8">
-                              <Button type="submit" disabled={addRoomForm.formState.isSubmitting}>
+                              <Button
+                                type="button" // Changed type to "button"
+                                onClick={addRoomForm.handleSubmit(handleAddRoom)} // Attached handleSubmit to onClick
+                                disabled={addRoomForm.formState.isSubmitting}
+                              >
                                 {addRoomForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ajouter"}
                               </Button>
                             </div>
-                          </form>
-                        </Form>
+                        </div>
                       </div>
                       <div>
                         <h3 className="text-lg font-medium mb-2">Chambres actuelles</h3>

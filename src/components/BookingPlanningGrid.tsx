@@ -222,7 +222,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   style={{ gridRow: `${3 + roomIndex}` }}>
                   <Home className="h-4 w-4 mr-2 text-gray-500" />
                   <span className="font-medium text-sm truncate">
-                    {profile?.property_address ? `${profile.property_address} - ${room.room_name}` : room.room_name}
+                    {room.room_name}
                   </span>
                 </div>
 

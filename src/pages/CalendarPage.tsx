@@ -60,31 +60,36 @@ const CalendarPage: React.FC = () => {
           );
 
           if (matchingKrossbookingType) {
-            // It's a room type. Add all its actual rooms to the display list.
+            // It's a room type. Add all its actual rooms to the display list, prepending the user-defined group name.
             matchingKrossbookingType.rooms.forEach(actualRoom => {
               flattenedUserRooms.push({
                 id: `${configuredRoom.id}-${actualRoom.id_room}`,
                 user_id: configuredRoom.user_id,
                 room_id: actualRoom.id_room.toString(),
-                room_name: actualRoom.label,
+                room_name: `${configuredRoom.room_name} - ${actualRoom.label}`,
               });
             });
           } else {
             // Case B: Check if the configured ID matches an ACTUAL ROOM ID inside any type
+            let roomFound = false;
             for (const kType of krossbookingRoomTypes) {
               const matchingActualRoom = kType.rooms.find(
                 actualRoom => actualRoom.id_room.toString() === configuredRoom.room_id
               );
               if (matchingActualRoom) {
-                // It's an actual room. Add it to the display list.
+                // It's an actual room. Use the user-defined name for it.
                 flattenedUserRooms.push({
                   id: configuredRoom.id,
                   user_id: configuredRoom.user_id,
                   room_id: matchingActualRoom.id_room.toString(),
-                  room_name: matchingActualRoom.label,
+                  room_name: configuredRoom.room_name,
                 });
+                roomFound = true;
                 break; // Found it, move to the next configured room
               }
+            }
+            if (!roomFound) {
+              console.warn(`Configured room with ID ${configuredRoom.room_id} and name "${configuredRoom.room_name}" was not found in any Krossbooking room type.`);
             }
           }
         });

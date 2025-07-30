@@ -33,7 +33,6 @@ import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import ForecastDialog from '@/components/ForecastDialog';
 import { FieryProgressBar } from '@/components/FieryProgressBar';
-import { startDashboardTour } from '@/lib/tour';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
 import CustomChartTooltip from '@/components/CustomChartTooltip';
@@ -111,7 +110,7 @@ const DashboardPage = () => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
     let totalCA = 0, totalRentree = 0, totalFrais = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
-    const totalDepenses = expenses.reduce((acc, exp) => acc + exp.amount, 0);
+    const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0); // Ensure amount is treated as number
     let totalResultat = 0;
 
     const channelCounts: { [key: string]: number } = {};
@@ -292,17 +291,7 @@ const DashboardPage = () => {
     }
   }, [fetchData, profile]);
 
-  useEffect(() => {
-    if (!profile?.is_banned) {
-      const tourCompleted = localStorage.getItem('dashboardTourCompleted_v1');
-      if (!tourCompleted) {
-        const timer = setTimeout(() => {
-          startDashboardTour();
-        }, 1000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [profile]);
+  // Removed the useEffect that starts the dashboard tour automatically
 
   const handleShowForecast = () => {
     const today = new Date();

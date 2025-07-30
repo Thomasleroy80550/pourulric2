@@ -149,6 +149,8 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       ]);
       setOverrides(overridesData);
       setRoomTypes(roomTypesData);
+      console.log("DEBUG: userRooms prop:", userRooms);
+      console.log("DEBUG: roomTypes fetched from Krossbooking:", roomTypesData);
     } catch (error: any) {
       toast.error(`Erreur lors du chargement des données : ${error.message}`);
     } finally {
@@ -162,27 +164,33 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       fetchDialogData();
       form.reset();
     }
-  }, [isOpen, form]);
+  }, [isOpen, form, userRooms]);
 
   const findRoomTypeId = (roomId: string): number | undefined => {
     const selectedRoomIdNumber = parseInt(roomId, 10);
+    console.log(`DEBUG: findRoomTypeId called with roomId: '${roomId}', parsed as number: ${selectedRoomIdNumber}`);
     if (isNaN(selectedRoomIdNumber)) return undefined;
 
     for (const type of roomTypes) {
       if (type.rooms.some(room => room.id_room === selectedRoomIdNumber)) {
+        console.log(`DEBUG: Found id_room_type: ${type.id_room_type} for roomId: ${roomId}`);
         return type.id_room_type;
       }
     }
+    console.log(`DEBUG: No id_room_type found for roomId: ${roomId}`);
     return undefined;
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    console.log("DEBUG: onSubmit values:", values);
     const roomTypeId = findRoomTypeId(values.roomId);
 
     if (!roomTypeId) {
       toast.error("Impossible de trouver la typologie de chambre pour la chambre sélectionnée. Assurez-vous que la configuration dans Krossbooking est correcte.");
+      console.error("ERROR: roomTypeId is undefined. Check Krossbooking room types and user rooms mapping.");
       return;
     }
+    console.log(`DEBUG: Resolved roomTypeId for submission: ${roomTypeId}`);
 
     let dateRanges: { from: string; to: string }[] = [];
     let toastMessage = "Prix et restrictions mis à jour avec succès !";
@@ -212,8 +220,8 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     dateRanges.forEach((range, index) => {
         const cmBlock: any = {
             id_room_type: roomTypeId,
-            id_rate: 1,
-            cod_channel: 'BE',
+            id_rate: 1, // Hardcoded to 1
+            cod_channel: 'BE', // Hardcoded to 'BE'
             date_from: range.from,
             date_to: range.to,
         };
@@ -236,6 +244,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     });
 
     const payload = { cm: cmPayload };
+    console.log(`DEBUG: Final cmPayload before sending: ${JSON.stringify(payload)}`);
 
     const selectedRoom = userRooms.find(r => r.room_id === values.roomId);
     const overridesToSave: NewPriceOverride[] = dateRanges.map(range => ({
@@ -270,8 +279,10 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const roomTypeId = findRoomTypeId(override.room_id);
     if (!roomTypeId) {
       toast.error(`Impossible de trouver la typologie pour la chambre ${override.room_name}. La suppression a été annulée.`);
+      console.error(`ERROR: roomTypeId is undefined for override deletion. Override roomId: ${override.room_id}`);
       return;
     }
+    console.log(`DEBUG: Resolved roomTypeId for deletion: ${roomTypeId}`);
 
     const priceInput = window.prompt("Pour restaurer le prix, entrez une nouvelle valeur. Laissez vide pour ne pas modifier le prix actuel.", "");
 
@@ -281,8 +292,8 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 
     const resetCmBlock: any = {
       id_room_type: roomTypeId,
-      id_rate: 1,
-      cod_channel: 'BE',
+      id_rate: 1, // Hardcoded to 1
+      cod_channel: 'BE', // Hardcoded to 'BE'
       date_from: override.start_date,
       date_to: override.end_date,
       closed: false,
@@ -299,6 +310,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     }
 
     const payload = { cm: { [`reset_${override.id}`]: resetCmBlock } };
+    console.log(`DEBUG: Final resetCmBlock payload before sending: ${JSON.stringify(payload)}`);
     const toastId = toast.loading("Suppression en cours...");
 
     try {

@@ -3,7 +3,7 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
 import CalendarGridMobile from '@/components/CalendarGridMobile';
-import { useIsMobile } from '@/hooks/use-mobile'; // Correction ici
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
@@ -76,7 +76,9 @@ const CalendarPage: React.FC = () => {
               room_name: configuredRoom.room_name, // Use the user-defined name directly
             });
           } else {
-            console.warn(`Configured room with ID ${configuredRoom.room_id} and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
+            console.warn(`Configured room with ID "${configuredRoom.room_id}" and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
+            console.warn(`DEBUG: Failed to match configured room:`, configuredRoom);
+            console.warn(`DEBUG: Available Krossbooking room IDs:`, flattenedKrossbookingRooms.map(r => r.id_room));
           }
         });
         console.log("DEBUG: validUserRooms (after Krossbooking validation):", validUserRooms);

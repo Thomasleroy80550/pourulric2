@@ -122,6 +122,8 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 }) => {
   const [overrides, setOverrides] = useState<PriceOverride[]>([]);
   const [isLoadingOverrides, setIsLoadingOverrides] = useState(true);
+  // roomTypes and isLoadingRoomTypes are kept for potential future validation/display,
+  // but not directly used for id_room_type mapping anymore.
   const [roomTypes, setRoomTypes] = useState<KrossbookingRoomType[]>([]);
   const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(true);
 
@@ -141,16 +143,16 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 
   const fetchDialogData = async () => {
     setIsLoadingOverrides(true);
-    setIsLoadingRoomTypes(true);
+    setIsLoadingRoomTypes(true); // Still fetch room types for general info/validation
     try {
       const [overridesData, roomTypesData] = await Promise.all([
         getOverrides(),
-        fetchKrossbookingRoomTypes(),
+        fetchKrossbookingRoomTypes(), // Fetch Krossbooking room types
       ]);
       setOverrides(overridesData);
       setRoomTypes(roomTypesData);
-      console.log("DEBUG: userRooms prop:", userRooms);
-      console.log("DEBUG: roomTypes fetched from Krossbooking:", roomTypesData);
+      console.log("DEBUG: userRooms prop (your configured rooms):", userRooms);
+      console.log("DEBUG: roomTypes fetched from Krossbooking (for info/validation):", roomTypesData);
     } catch (error: any) {
       toast.error(`Erreur lors du chargement des données : ${error.message}`);
     } finally {
@@ -166,31 +168,16 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     }
   }, [isOpen, form, userRooms]);
 
-  const findRoomTypeId = (roomId: string): number | undefined => {
-    const selectedRoomIdNumber = parseInt(roomId, 10);
-    console.log(`DEBUG: findRoomTypeId called with roomId: '${roomId}', parsed as number: ${selectedRoomIdNumber}`);
-    if (isNaN(selectedRoomIdNumber)) return undefined;
-
-    for (const type of roomTypes) {
-      if (type.rooms.some(room => room.id_room === selectedRoomIdNumber)) {
-        console.log(`DEBUG: Found id_room_type: ${type.id_room_type} for roomId: ${roomId}`);
-        return type.id_room_type;
-      }
-    }
-    console.log(`DEBUG: No id_room_type found for roomId: ${roomId}`);
-    return undefined;
-  };
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log("DEBUG: onSubmit values:", values);
-    const roomTypeId = findRoomTypeId(values.roomId);
+    const roomTypeId = parseInt(values.roomId, 10); // Directly use roomId as roomTypeId
 
-    if (!roomTypeId) {
-      toast.error("Impossible de trouver la typologie de chambre pour la chambre sélectionnée. Assurez-vous que la configuration dans Krossbooking est correcte.");
-      console.error("ERROR: roomTypeId is undefined. Check Krossbooking room types and user rooms mapping.");
+    if (isNaN(roomTypeId)) {
+      toast.error("L'ID de la chambre sélectionnée n'est pas valide. Veuillez vérifier votre configuration.");
+      console.error("ERROR: Parsed roomTypeId is NaN. Check userRooms configuration.");
       return;
     }
-    console.log(`DEBUG: Resolved roomTypeId for submission: ${roomTypeId}`);
+    console.log(`DEBUG: Using roomTypeId for submission: ${roomTypeId}`);
 
     let dateRanges: { from: string; to: string }[] = [];
     let toastMessage = "Prix et restrictions mis à jour avec succès !";
@@ -219,7 +206,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const cmPayload: { [key: string]: any } = {};
     dateRanges.forEach((range, index) => {
         const cmBlock: any = {
-            id_room_type: roomTypeId,
+            id_room_type: roomTypeId, // Corrected to id_room_type
             id_rate: 1, // Hardcoded to 1
             cod_channel: 'BE', // Hardcoded to 'BE'
             date_from: range.from,
@@ -276,13 +263,13 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       return;
     }
 
-    const roomTypeId = findRoomTypeId(override.room_id);
-    if (!roomTypeId) {
-      toast.error(`Impossible de trouver la typologie pour la chambre ${override.room_name}. La suppression a été annulée.`);
-      console.error(`ERROR: roomTypeId is undefined for override deletion. Override roomId: ${override.room_id}`);
+    const roomTypeId = parseInt(override.room_id, 10); // Directly use override.room_id as roomTypeId
+    if (isNaN(roomTypeId)) {
+      toast.error(`L'ID de la chambre dans l'historique n'est pas valide (${override.room_id}). Impossible de continuer.`);
+      console.error(`ERROR: Parsed roomTypeId is NaN for override deletion. Override roomId: ${override.room_id}`);
       return;
     }
-    console.log(`DEBUG: Resolved roomTypeId for deletion: ${roomTypeId}`);
+    console.log(`DEBUG: Using roomTypeId for deletion: ${roomTypeId}`);
 
     const priceInput = window.prompt("Pour restaurer le prix, entrez une nouvelle valeur. Laissez vide pour ne pas modifier le prix actuel.", "");
 
@@ -291,7 +278,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     }
 
     const resetCmBlock: any = {
-      id_room_type: roomTypeId,
+      id_room_type: roomTypeId, // Corrected to id_room_type
       id_rate: 1, // Hardcoded to 1
       cod_channel: 'BE', // Hardcoded to 'BE'
       date_from: override.start_date,
@@ -455,14 +442,14 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                 )} />
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting || isLoadingRoomTypes}>{form.formState.isSubmitting || isLoadingRoomTypes ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sauvegarde...</>) : ('Sauvegarder')}</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sauvegarde...</>) : ('Sauvegarder')}</Button>
                 </DialogFooter>
               </form>
             </Form>
           </TabsContent>
           <TabsContent value="history">
             <ScrollArea className="h-96 w-full rounded-md border p-4 mt-4">
-              {isLoadingOverrides || isLoadingRoomTypes ? (
+              {isLoadingOverrides || isLoadingRoomTypes ? ( // Still show skeleton if room types are loading
                 <div className="space-y-4">
                   <Skeleton className="h-16 w-full" />
                   <Skeleton className="h-16 w-full" />

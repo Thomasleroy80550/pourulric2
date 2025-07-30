@@ -104,6 +104,13 @@ export interface KrossbookingRoomType {
 // Define the base URL for your Supabase Edge Function
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
+// Simple in-memory cache for room types
+let roomTypesCache: {
+  data: KrossbookingRoomType[];
+  timestamp: number;
+} | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 /**
  * Calls the Supabase Edge Function proxy for Krossbooking API.
  * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation', 'get_messages', 'get_single_message_thread', 'save_channel_manager').
@@ -138,7 +145,8 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
 
     console.log(`Response status from Edge Function: ${response.status}`);
     const responseText = await response.text();
-    console.log(`Raw response from Edge Function: ${responseText}`);
+    // Do not log raw response in production to avoid logging sensitive data
+    // console.log(`Raw response from Edge Function: ${responseText}`);
 
     if (!response.ok) {
       let errorData;
@@ -152,7 +160,7 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
     }
 
     const krossbookingResponse = JSON.parse(responseText);
-    console.log(`Parsed Krossbooking response from proxy (full data):`, krossbookingResponse); 
+    // console.log(`Parsed Krossbooking response from proxy (full data):`, krossbookingResponse); 
 
     return krossbookingResponse.data; // Return the 'data' array from the proxy response
   } catch (error: any) {
@@ -353,15 +361,24 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
 /**
  * Fetches room types and their associated rooms from Krossbooking.
  * This now calls the /rooms/get-rooms endpoint and reconstructs the hierarchy.
+ * It uses a simple in-memory cache to avoid excessive API calls.
  * @returns A promise that resolves to an array of KrossbookingRoomType objects.
  */
 export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType[]> {
+  const now = Date.now();
+  if (roomTypesCache && (now - roomTypesCache.timestamp < CACHE_DURATION)) {
+    console.log("Returning cached Krossbooking room types.");
+    return roomTypesCache.data;
+  }
+
   try {
+    console.log("Fetching fresh Krossbooking room types from API.");
     // This calls the 'get_room_types' action, which now points to the /rooms/get-rooms endpoint in the proxy.
     const flatRoomsData = await callKrossbookingProxy('get_room_types');
 
     if (!Array.isArray(flatRoomsData)) {
       console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
+      // Don't cache a bad response
       return [];
     }
 
@@ -392,9 +409,23 @@ export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType
       }
     }
 
-    return Array.from(roomTypesMap.values());
+    const processedRoomTypes = Array.from(roomTypesMap.values());
+    
+    // Update cache
+    roomTypesCache = {
+      data: processedRoomTypes,
+      timestamp: now,
+    };
+    console.log("Krossbooking room types cached successfully.");
+
+    return processedRoomTypes;
   } catch (error) {
     console.error('Error fetching and processing Krossbooking room types:', error);
+    // In case of error, don't wipe a potentially stale but valid cache
+    if (roomTypesCache) {
+      console.warn("Returning stale cache due to API error.");
+      return roomTypesCache.data;
+    }
     throw error;
   }
 }

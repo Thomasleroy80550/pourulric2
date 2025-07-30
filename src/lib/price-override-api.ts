@@ -31,6 +31,9 @@ export async function getOverrides(): Promise<PriceOverride[]> {
 }
 
 export async function addOverride(overrideData: NewPriceOverride): Promise<PriceOverride> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const ruid = user?.id || 'unknown_user';
+
   const { data, error } = await supabase
     .from('price_overrides')
     .insert([overrideData]) // Wrap in array for insert
@@ -38,14 +41,18 @@ export async function addOverride(overrideData: NewPriceOverride): Promise<Price
     .single();
 
   if (error) {
-    console.error("Error adding price override:", error);
+    console.error(`RUID: ${ruid} - Error adding price override:`, error);
     throw new Error(`Erreur lors de l'ajout de la modification de prix : ${error.message}`);
   }
+  console.log(`RUID: ${ruid} - Successfully added price override:`, data);
   return data;
 }
 
 export async function addOverrides(overridesData: NewPriceOverride[]): Promise<PriceOverride[]> {
   if (overridesData.length === 0) return [];
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const ruid = user?.id || 'unknown_user';
 
   const { data, error } = await supabase
     .from('price_overrides')
@@ -53,20 +60,25 @@ export async function addOverrides(overridesData: NewPriceOverride[]): Promise<P
     .select();
 
   if (error) {
-    console.error("Error adding multiple price overrides:", error);
+    console.error(`RUID: ${ruid} - Error adding multiple price overrides:`, error);
     throw new Error(`Erreur lors de l'ajout des modifications de prix : ${error.message}`);
   }
+  console.log(`RUID: ${ruid} - Successfully added multiple price overrides:`, data);
   return data || [];
 }
 
 export async function deleteOverride(id: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const ruid = user?.id || 'unknown_user';
+
   const { error } = await supabase
     .from('price_overrides')
     .delete()
     .eq('id', id);
 
   if (error) {
-    console.error("Error deleting price override:", error);
+    console.error(`RUID: ${ruid} - Error deleting price override with ID ${id}:`, error);
     throw new Error(`Erreur lors de la suppression de la modification de prix : ${error.message}`);
   }
+  console.log(`RUID: ${ruid} - Successfully deleted price override with ID ${id}.`);
 }

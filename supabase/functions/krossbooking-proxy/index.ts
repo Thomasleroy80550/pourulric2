@@ -160,9 +160,9 @@ serve(async (req) => {
         break;
 
       case 'get_room_types':
-        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/settings/get-room-types?with_rooms=true`;
-        krossbookingMethod = 'GET';
-        krossbookingBody = undefined;
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/settings/get-room-types`;
+        krossbookingMethod = 'POST';
+        krossbookingBody = JSON.stringify({ with_rooms: true });
         break;
 
       default:

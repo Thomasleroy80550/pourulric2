@@ -44,6 +44,21 @@ export async function addOverride(overrideData: NewPriceOverride): Promise<Price
   return data;
 }
 
+export async function addOverrides(overridesData: NewPriceOverride[]): Promise<PriceOverride[]> {
+  if (overridesData.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('price_overrides')
+    .insert(overridesData)
+    .select();
+
+  if (error) {
+    console.error("Error adding multiple price overrides:", error);
+    throw new Error(`Erreur lors de l'ajout des modifications de prix : ${error.message}`);
+  }
+  return data || [];
+}
+
 export async function deleteOverride(id: string): Promise<void> {
   const { error } = await supabase
     .from('price_overrides')

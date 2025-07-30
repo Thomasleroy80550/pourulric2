@@ -20,10 +20,11 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -33,7 +34,7 @@ import { saveChannelManagerSettings } from '@/lib/krossbooking';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getOverrides, addOverride, deleteOverride, PriceOverride, NewPriceOverride } from '@/lib/price-override-api';
+import { getOverrides, addOverrides, deleteOverride, PriceOverride, NewPriceOverride } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface PriceRestrictionDialogProps {
@@ -96,18 +97,21 @@ const parseDateString = (dateStr: string): Date => {
 
 const formSchema = z.object({
   roomId: z.string().min(1, { message: 'Veuillez sélectionner une chambre.' }),
+  seasonName: z.string().optional(),
   dateRange: z.object({
-    from: z.date({ required_error: 'La date de début est requise.' }),
-    to: z.date({ required_error: 'La date de fin est requise.' }),
-  }).refine(data => data.to! >= data.from, {
-    message: 'La date de fin ne peut pas être antérieure à la date de début.',
-    path: ['to'],
+    from: z.date().optional(),
+    to: z.date().optional(),
   }),
   price: z.coerce.number().min(0, { message: 'Le prix ne peut pas être négatif.' }).optional().or(z.literal('')),
   closed: z.boolean().default(false),
   minStay: z.coerce.number().min(0, { message: 'Le séjour minimum ne peut pas être négatif.' }).optional().or(z.literal('')),
   closedOnArrival: z.boolean().default(false),
   closedOnDeparture: z.boolean().default(false),
+}).refine(data => {
+    return data.seasonName || (data.dateRange.from && data.dateRange.to);
+}, {
+    message: "Veuillez sélectionner une saison ou une plage de dates personnalisée.",
+    path: ["seasonName"],
 });
 
 const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
@@ -123,6 +127,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: {
       roomId: '',
+      seasonName: '',
       dateRange: { from: undefined, to: undefined },
       price: '',
       closed: false,
@@ -158,55 +163,81 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       return;
     }
 
-    const formattedDateFrom = format(values.dateRange.from, 'yyyy-MM-dd');
-    const formattedDateTo = format(values.dateRange.to!, 'yyyy-MM-dd');
+    let dateRanges: { from: string; to: string }[] = [];
+    let toastMessage = "Prix et restrictions mis à jour avec succès !";
 
-    const cmBlock: any = {
-      id_room_type: roomIdNumber,
-      id_rate: 1,
-      cod_channel: 'BE',
-      date_from: formattedDateFrom,
-      date_to: formattedDateTo,
-    };
-
-    if (values.price !== '' && values.price !== undefined) cmBlock.price = values.price;
-    if (values.closed) cmBlock.closed = values.closed;
-
-    const restrictions: any = {};
-    if (values.minStay !== '' && values.minStay !== undefined) {
-      restrictions.MINST = values.minStay;
-    } else {
-      restrictions.MINST = 2;
+    if (values.seasonName) {
+        const selectedSeason = seasons.find(s => s.name === values.seasonName);
+        if (selectedSeason) {
+            dateRanges = selectedSeason.ranges.map(range => ({
+                from: format(parseDateString(range.from), 'yyyy-MM-dd'),
+                to: format(parseDateString(range.to), 'yyyy-MM-dd'),
+            }));
+            toastMessage = `Paramètres appliqués à la saison '${selectedSeason.name}'.`;
+        }
+    } else if (values.dateRange.from && values.dateRange.to) {
+        dateRanges = [{
+            from: format(values.dateRange.from, 'yyyy-MM-dd'),
+            to: format(values.dateRange.to, 'yyyy-MM-dd'),
+        }];
     }
-    if (values.closedOnArrival) restrictions.CLARR = values.closedOnArrival;
-    if (values.closedOnDeparture) restrictions.CLDEP = values.closedOnDeparture;
 
-    if (Object.keys(restrictions).length > 0) cmBlock.restrictions = restrictions;
+    if (dateRanges.length === 0) {
+        toast.error("Aucune plage de dates valide à traiter.");
+        return;
+    }
 
-    const payload = { cm: { [`block_${Date.now()}`]: cmBlock } };
+    const cmPayload: { [key: string]: any } = {};
+    dateRanges.forEach((range, index) => {
+        const cmBlock: any = {
+            id_room_type: roomIdNumber,
+            id_rate: 1,
+            cod_channel: 'BE',
+            date_from: range.from,
+            date_to: range.to,
+        };
 
-    try {
-      await saveChannelManagerSettings(payload);
+        if (values.price !== '' && values.price !== undefined) cmBlock.price = values.price;
+        if (values.closed) cmBlock.closed = values.closed;
 
-      const selectedRoom = userRooms.find(r => r.room_id === values.roomId);
-      const overrideToSave: NewPriceOverride = {
+        const restrictions: any = {};
+        if (values.minStay !== '' && values.minStay !== undefined) {
+            restrictions.MINST = values.minStay;
+        } else {
+            restrictions.MINST = 2;
+        }
+        if (values.closedOnArrival) restrictions.CLARR = values.closedOnArrival;
+        if (values.closedOnDeparture) restrictions.CLDEP = values.closedOnDeparture;
+
+        if (Object.keys(restrictions).length > 0) cmBlock.restrictions = restrictions;
+        
+        cmPayload[`block_${Date.now()}_${index}`] = cmBlock;
+    });
+
+    const payload = { cm: cmPayload };
+
+    const selectedRoom = userRooms.find(r => r.room_id === values.roomId);
+    const overridesToSave: NewPriceOverride[] = dateRanges.map(range => ({
         room_id: values.roomId,
         room_name: selectedRoom?.room_name || 'N/A',
-        start_date: formattedDateFrom,
-        end_date: formattedDateTo,
+        start_date: range.from,
+        end_date: range.to,
         price: values.price !== '' ? values.price : undefined,
         closed: values.closed,
         min_stay: values.minStay !== '' ? values.minStay : undefined,
         closed_on_arrival: values.closedOnArrival,
         closed_on_departure: values.closedOnDeparture,
-      };
-      await addOverride(overrideToSave);
+    }));
 
-      toast.success("Prix et restrictions mis à jour avec succès !");
-      onSettingsSaved();
-      onOpenChange(false);
+    try {
+        await saveChannelManagerSettings(payload);
+        await addOverrides(overridesToSave);
+
+        toast.success(toastMessage);
+        onSettingsSaved();
+        onOpenChange(false);
     } catch (error: any) {
-      toast.error(`Erreur lors de la mise à jour : ${error.message}`);
+        toast.error(`Erreur lors de la mise à jour : ${error.message}`);
     }
   };
 
@@ -288,53 +319,84 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormItem>
-                  <FormLabel>Saisons Prédéfinies</FormLabel>
-                  <Select onValueChange={(value) => {
-                      if (value) {
-                          const [fromStr, toStr] = value.split('_');
-                          form.setValue('dateRange', {
-                              from: parseDateString(fromStr),
-                              to: parseDateString(toStr),
-                          }, { shouldValidate: true });
-                      }
-                  }}>
-                      <FormControl>
-                          <SelectTrigger>
-                              <SelectValue placeholder="Optionnel: choisir une saison pour pré-remplir les dates" />
-                          </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                          {seasons.map(season => (
-                              <SelectGroup key={season.name}>
-                                  <SelectLabel>{season.name}</SelectLabel>
-                                  {season.ranges.map((range, index) => (
-                                      <SelectItem key={`${season.name}-${index}`} value={`${range.from}_${range.to}`}>
-                                          Du {range.from} au {range.to}
-                                      </SelectItem>
-                                  ))}
-                              </SelectGroup>
-                          ))}
-                      </SelectContent>
-                  </Select>
-                </FormItem>
-                <FormField control={form.control} name="dateRange" render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Dates</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+                
+                <FormField
+                  control={form.control}
+                  name="seasonName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Appliquer à une saison entière</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          form.setValue('dateRange', { from: undefined, to: undefined });
+                          form.clearErrors('dateRange');
+                        }}
+                        value={field.value}
+                      >
                         <FormControl>
-                          <Button id="date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value.from && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value.from ? (field.value.to ? (<>{format(field.value.from, "PPP", { locale: fr })} - {format(field.value.to, "PPP", { locale: fr })}</>) : (format(field.value.from, "PPP", { locale: fr }))) : (<span>Choisir une plage de dates</span>)}
-                          </Button>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Optionnel: choisir une saison" />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={field.value.from} selected={field.value} onSelect={field.onChange} numberOfMonths={1} locale={fr} /></PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                        <SelectContent>
+                          {seasons.map(season => (
+                            <SelectItem key={season.name} value={season.name}>
+                              {season.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Applique les paramètres à toutes les périodes de la saison. Ignore le sélecteur de dates ci-dessous.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dateRange"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Ou choisir une plage de dates personnalisée</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              id="date"
+                              variant={"outline"}
+                              className={cn("w-full justify-start text-left font-normal", !field.value?.from && "text-muted-foreground")}
+                              disabled={!!form.watch('seasonName')}
+                              onClick={() => {
+                                form.setValue('seasonName', '');
+                                form.clearErrors('seasonName');
+                              }}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value?.from ? (field.value.to ? (<>{format(field.value.from, "PPP", { locale: fr })} - {format(field.value.to, "PPP", { locale: fr })}</>) : (format(field.value.from, "PPP", { locale: fr }))) : (<span>Choisir une plage de dates</span>)}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={field.value?.from}
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            numberOfMonths={1}
+                            locale={fr}
+                            disabled={!!form.watch('seasonName')}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField control={form.control} name="price" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Prix (€)</FormLabel>

@@ -11,7 +11,7 @@ import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes } from '@/lib/krossbooking';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLocation } from 'react-router-dom'; // Corrected syntax
+import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 
@@ -30,7 +30,7 @@ const CalendarPage: React.FC = () => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        // 1. Fetch the user's configured rooms/types from Supabase
+        // 1. Fetch the user's configured rooms from Supabase
         const configuredUserRooms = await getUserRooms();
 
         if (configuredUserRooms.length === 0) {
@@ -40,8 +40,8 @@ const CalendarPage: React.FC = () => {
           return;
         }
 
-        // 2. Fetch all room type definitions from Krossbooking
-        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes();
+        // 2. Fetch all room definitions from Krossbooking to validate configured rooms
+        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(); // This returns room types, each containing individual rooms
         if (krossbookingRoomTypes.length === 0) {
           console.warn("Krossbooking returned no room types. Calendar will be empty.");
           setUserRooms([]);
@@ -50,60 +50,42 @@ const CalendarPage: React.FC = () => {
           return;
         }
 
+        const flattenedKrossbookingRooms: { id_room: number; label: string; }[] = [];
+        krossbookingRoomTypes.forEach(type => {
+          flattenedKrossbookingRooms.push(...type.rooms);
+        });
+
         // 3. Process configured rooms to build a flat list of actual rooms to display and fetch reservations for.
-        const flattenedUserRooms: UserRoom[] = [];
+        const validUserRooms: UserRoom[] = [];
 
         configuredUserRooms.forEach(configuredRoom => {
-          // Case A: Check if the configured ID matches a ROOM TYPE ID
-          const matchingKrossbookingType = krossbookingRoomTypes.find(
-            kType => kType.id_room_type.toString() === configuredRoom.room_id
+          const matchingActualRoom = flattenedKrossbookingRooms.find(
+            actualRoom => actualRoom.id_room.toString() === configuredRoom.room_id
           );
 
-          if (matchingKrossbookingType) {
-            // It's a room type. Add all its actual rooms to the display list, prepending the user-defined group name.
-            matchingKrossbookingType.rooms.forEach(actualRoom => {
-              flattenedUserRooms.push({
-                id: `${configuredRoom.id}-${actualRoom.id_room}`,
-                user_id: configuredRoom.user_id,
-                room_id: actualRoom.id_room.toString(),
-                room_name: `${configuredRoom.room_name} - ${actualRoom.label}`,
-              });
+          if (matchingActualRoom) {
+            // It's an actual room. Use the user-defined name for it.
+            validUserRooms.push({
+              id: configuredRoom.id,
+              user_id: configuredRoom.user_id,
+              room_id: matchingActualRoom.id_room.toString(),
+              room_name: configuredRoom.room_name, // Use the user-defined name directly
             });
           } else {
-            // Case B: Check if the configured ID matches an ACTUAL ROOM ID inside any type
-            let roomFound = false;
-            for (const kType of krossbookingRoomTypes) {
-              const matchingActualRoom = kType.rooms.find(
-                actualRoom => actualRoom.id_room.toString() === configuredRoom.room_id
-              );
-              if (matchingActualRoom) {
-                // It's an actual room. Use the user-defined name for it.
-                flattenedUserRooms.push({
-                  id: configuredRoom.id,
-                  user_id: configuredRoom.user_id,
-                  room_id: matchingActualRoom.id_room.toString(),
-                  room_name: configuredRoom.room_name,
-                });
-                roomFound = true;
-                break; // Found it, move to the next configured room
-              }
-            }
-            if (!roomFound) {
-              console.warn(`Configured room with ID ${configuredRoom.room_id} and name "${configuredRoom.room_name}" was not found in any Krossbooking room type.`);
-            }
+            console.warn(`Configured room with ID ${configuredRoom.room_id} and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
           }
         });
 
         // 4. Finalize list of unique rooms and fetch reservations for them.
-        const uniqueFlattenedUserRooms = Array.from(new Map(flattenedUserRooms.map(room => [room.room_id, room])).values());
-        setUserRooms(uniqueFlattenedUserRooms);
+        // Ensure uniqueness by room_id, as a user might accidentally configure the same room twice
+        const uniqueValidUserRooms = Array.from(new Map(validUserRooms.map(room => [room.room_id, room])).values());
+        setUserRooms(uniqueValidUserRooms);
 
-        if (uniqueFlattenedUserRooms.length > 0) {
-          const fetchedReservations = await fetchKrossbookingReservations(uniqueFlattenedUserRooms);
+        if (uniqueValidUserRooms.length > 0) {
+          const fetchedReservations = await fetchKrossbookingReservations(uniqueValidUserRooms);
           setReservations(fetchedReservations);
         } else {
-          // This can happen if configured IDs don't match anything in Krossbooking
-          console.warn("No matching rooms or room types found in Krossbooking for the current configuration.");
+          console.warn("No matching rooms found in Krossbooking for the current configuration.");
           setReservations([]);
         }
 

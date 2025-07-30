@@ -9,7 +9,7 @@ import { PlusCircle, DollarSign } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes } from '@/lib/krossbooking';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
@@ -30,11 +30,43 @@ const CalendarPage: React.FC = () => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const fetchedUserRooms = await getUserRooms();
-        setUserRooms(fetchedUserRooms);
+        // 1. Fetch the user-configured room types (where room_id is id_room_type)
+        const configuredRoomTypes = await getUserRooms();
+        if (configuredRoomTypes.length === 0) {
+          setUserRooms([]);
+          setReservations([]);
+          setLoadingData(false);
+          return;
+        }
 
-        const fetchedReservations = await fetchKrossbookingReservations(fetchedUserRooms);
+        // 2. Fetch all room type definitions from Krossbooking to get the actual rooms
+        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes();
+
+        // 3. Create a flattened list of actual rooms to be displayed in the calendar grid
+        const flattenedUserRooms: UserRoom[] = [];
+        configuredRoomTypes.forEach(configuredType => {
+          const matchingKrossbookingType = krossbookingRoomTypes.find(
+            kType => kType.id_room_type.toString() === configuredType.room_id
+          );
+
+          if (matchingKrossbookingType && matchingKrossbookingType.rooms) {
+            matchingKrossbookingType.rooms.forEach(actualRoom => {
+              flattenedUserRooms.push({
+                id: `${configuredType.id}-${actualRoom.id_room}`, // Create a unique ID for React keys
+                user_id: configuredType.user_id,
+                room_id: actualRoom.id_room.toString(), // This is the ACTUAL room ID
+                room_name: actualRoom.label, // This is the ACTUAL room name
+              });
+            });
+          }
+        });
+        setUserRooms(flattenedUserRooms); // This state now holds individual rooms for rendering rows
+
+        // 4. Fetch reservations using the original configured types (for efficiency)
+        //    and pass the flattened list for correct name mapping.
+        const fetchedReservations = await fetchKrossbookingReservations(configuredRoomTypes, flattenedUserRooms);
         setReservations(fetchedReservations);
+
       } catch (error) {
         console.error("Error fetching data for CalendarPage:", error);
       } finally {

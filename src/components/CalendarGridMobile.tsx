@@ -108,25 +108,28 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ refreshTrigger,
   const getEventsForDay = (day: Date) => {
     const events: any[] = [];
     userRooms.forEach(room => {
-      reservations.forEach(res => {
-        const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-        const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+      // Filter reservations for the current room
+      reservations
+        .filter(res => res.krossbooking_room_id === room.room_id)
+        .forEach(res => {
+          const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+          const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
-        if (!checkIn || !checkOut) return;
+          if (!checkIn || !checkOut) return;
 
-        const isCheckInDay = isSameDay(checkIn, day);
-        const isCheckOutDay = isSameDay(checkOut, day);
-        const isStayDay = day > checkIn && day < checkOut;
+          const isCheckInDay = isSameDay(checkIn, day);
+          const isCheckOutDay = isSameDay(checkOut, day);
+          const isStayDay = day > checkIn && day < checkOut;
 
-        if (isCheckInDay || isCheckOutDay || isStayDay) {
-          let type: 'check_in' | 'check_out' | 'stay' | 'check_in_out' = 'stay';
-          if (isCheckInDay) type = 'check_in';
-          if (isCheckOutDay && !isCheckInDay) type = 'check_out';
-          if (isCheckInDay && isCheckOutDay) type = 'check_in_out';
+          if (isCheckInDay || isCheckOutDay || isStayDay) {
+            let type: 'check_in' | 'check_out' | 'stay' | 'check_in_out' = 'stay';
+            if (isCheckInDay) type = 'check_in';
+            if (isCheckOutDay && !isCheckInDay) type = 'check_out';
+            if (isCheckInDay && isCheckOutDay) type = 'check_in_out';
 
-          events.push({ type, data: res, roomName: room.room_name, roomId: room.room_id });
-        }
-      });
+            events.push({ type, data: res, roomName: room.room_name, roomId: room.room_id });
+          }
+        });
 
       housekeepingTasks.forEach(task => {
         const taskDate = isValid(parseISO(task.date)) ? parseISO(task.date) : null;

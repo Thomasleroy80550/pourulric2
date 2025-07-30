@@ -112,6 +112,7 @@ serve(async (req) => {
         try {
           requestBody = await req.json();
           action = requestBody.action;
+          console.log(`DEBUG (Edge Function): Full requestBody received: ${JSON.stringify(requestBody)}`); // NEW LOG
         } catch (jsonParseError) {
           console.error("Error parsing request body as JSON:", jsonParseError);
           return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
@@ -247,6 +248,7 @@ serve(async (req) => {
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/channel/save-cm`;
         krossbookingMethod = 'POST';
         krossbookingBody = JSON.stringify({ cm: cmPayload }); // Wrap in 'cm' object as per Krossbooking example
+        console.log(`DEBUG (Edge Function): Krossbooking Body being sent for save_channel_manager: ${krossbookingBody}`); // NEW LOG
         break;
 
       default:
@@ -265,15 +267,20 @@ serve(async (req) => {
       body: krossbookingBody,
     });
 
+    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Status: ${response.status}`); // NEW LOG
+    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Status Text: ${response.statusText}`); // NEW LOG
+    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`); // NEW LOG
+    const rawKrossbookingResponseText = await response.clone().text(); // Clone to read text without consuming stream // MODIFIED
+    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Body: ${rawKrossbookingResponseText}`); // NEW LOG
+
     if (!response.ok) {
-      const errorBody = await response.text();
       console.error(`Krossbooking API returned non-OK status: ${response.status} ${response.statusText}`);
-      console.error("Krossbooking API Error Body:", errorBody);
-      throw new Error(`Krossbooking API error: ${response.status} ${response.statusText} - ${errorBody}`);
+      console.error("Krossbooking API Error Body:", rawKrossbookingResponseText); // MODIFIED
+      throw new Error(`Krossbooking API error: ${response.status} ${response.statusText} - ${rawKrossbookingResponseText}`); // MODIFIED
     }
 
-    const data = await response.json();
-    console.log("Krossbooking API response (full data):", data); 
+    const data = JSON.parse(rawKrossbookingResponseText); // MODIFIED
+    console.log("Krossbooking API response (parsed JSON):", data); 
 
     // Conditionally return data based on the action
     if (returnFullData) {

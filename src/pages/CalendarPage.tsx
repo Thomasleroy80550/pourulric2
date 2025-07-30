@@ -50,9 +50,8 @@ const CalendarPage: React.FC = () => {
           return;
         }
 
-        // 3. Process configured rooms to build a list for display and a list for fetching reservations
+        // 3. Process configured rooms to build a flat list of actual rooms to display and fetch reservations for.
         const flattenedUserRooms: UserRoom[] = [];
-        const roomTypesToFetchReservationsFor = new Map<string, UserRoom>();
 
         configuredUserRooms.forEach(configuredRoom => {
           // Case A: Check if the configured ID matches a ROOM TYPE ID
@@ -61,11 +60,7 @@ const CalendarPage: React.FC = () => {
           );
 
           if (matchingKrossbookingType) {
-            // It's a room type. Add its parent type for fetching reservations.
-            if (!roomTypesToFetchReservationsFor.has(configuredRoom.room_id)) {
-              roomTypesToFetchReservationsFor.set(configuredRoom.room_id, configuredRoom);
-            }
-            // Add all its actual rooms to the display list.
+            // It's a room type. Add all its actual rooms to the display list.
             matchingKrossbookingType.rooms.forEach(actualRoom => {
               flattenedUserRooms.push({
                 id: `${configuredRoom.id}-${actualRoom.id_room}`,
@@ -88,30 +83,18 @@ const CalendarPage: React.FC = () => {
                   room_id: matchingActualRoom.id_room.toString(),
                   room_name: matchingActualRoom.label,
                 });
-                
-                // Add its parent room type for fetching reservations.
-                const parentRoomTypeAsUserRoom: UserRoom = {
-                  id: kType.id_room_type.toString(),
-                  user_id: configuredRoom.user_id,
-                  room_id: kType.id_room_type.toString(),
-                  room_name: kType.label
-                };
-                if (!roomTypesToFetchReservationsFor.has(parentRoomTypeAsUserRoom.room_id)) {
-                  roomTypesToFetchReservationsFor.set(parentRoomTypeAsUserRoom.room_id, parentRoomTypeAsUserRoom);
-                }
                 break; // Found it, move to the next configured room
               }
             }
           }
         });
 
-        // 4. Finalize lists and fetch reservations
+        // 4. Finalize list of unique rooms and fetch reservations for them.
         const uniqueFlattenedUserRooms = Array.from(new Map(flattenedUserRooms.map(room => [room.room_id, room])).values());
         setUserRooms(uniqueFlattenedUserRooms);
 
-        if (roomTypesToFetchReservationsFor.size > 0) {
-          const reservationTypes = Array.from(roomTypesToFetchReservationsFor.values());
-          const fetchedReservations = await fetchKrossbookingReservations(reservationTypes, uniqueFlattenedUserRooms);
+        if (uniqueFlattenedUserRooms.length > 0) {
+          const fetchedReservations = await fetchKrossbookingReservations(uniqueFlattenedUserRooms);
           setReservations(fetchedReservations);
         } else {
           // This can happen if configured IDs don't match anything in Krossbooking

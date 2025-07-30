@@ -163,29 +163,27 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
 
 /**
  * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy for multiple rooms.
- * @param configuredRoomTypes An array of UserRoom objects representing the configured ROOM TYPES.
- * @param allActualRooms An array of UserRoom objects representing all the individual ACTUAL rooms, used for mapping.
+ * @param roomsToFetch An array of UserRoom objects representing the actual rooms to fetch reservations for.
  * @returns A promise that resolves to an array of KrossbookingReservation objects.
  */
 export async function fetchKrossbookingReservations(
-  configuredRoomTypes: UserRoom[],
-  allActualRooms: UserRoom[]
+  roomsToFetch: UserRoom[]
 ): Promise<KrossbookingReservation[]> {
   let allReservations: KrossbookingReservation[] = [];
-  // We fetch by room type for efficiency
-  const roomTypeIds = configuredRoomTypes.map(room => room.room_id);
+  
+  const roomIdsToFetch = roomsToFetch.map(room => room.room_id);
 
-  for (const roomTypeId of roomTypeIds) {
+  for (const roomId of roomIdsToFetch) {
     try {
-      // The API call uses the room type ID
-      const data = await callKrossbookingProxy('get_reservations', { id_room: roomTypeId });
+      // The API call now uses the actual room ID
+      const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
       if (Array.isArray(data)) {
-        const roomTypeReservations = data.map((res: any) => {
+        const roomReservations = data.map((res: any) => {
           // For each reservation, find the actual room ID and name
           const actualRoomId = res.rooms?.[0]?.id_room?.toString();
-          const actualRoom = allActualRooms.find(ur => ur.room_id === actualRoomId);
+          const actualRoom = roomsToFetch.find(ur => ur.room_id === actualRoomId);
           
-          // The propertyName is now the name of the actual room, not the type
+          // The propertyName is now the name of the actual room
           const propertyName = actualRoom ? actualRoom.room_name : 'Chambre inconnue';
 
           return {
@@ -205,16 +203,17 @@ export async function fetchKrossbookingReservations(
             tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
           };
         });
-        allReservations = allReservations.concat(roomTypeReservations);
+        allReservations = allReservations.concat(roomReservations);
       } else {
-        console.warn(`Unexpected Krossbooking API response structure for reservations for room type ${roomTypeId} or no data array:`, data);
+        console.warn(`Unexpected Krossbooking API response structure for reservations for room ${roomId} or no data array:`, data);
       }
     } catch (error) {
-      console.error(`Error fetching reservations for room type ${roomTypeId}:`, error);
+      console.error(`Error fetching reservations for room ${roomId}:`, error);
       // Continue fetching for other rooms even if one fails
     }
   }
-  return allReservations;
+  // Remove potential duplicates if a reservation spans multiple rooms in a single call (unlikely but safe)
+  return Array.from(new Map(allReservations.map(res => [res.id, res])).values());
 }
 
 /**

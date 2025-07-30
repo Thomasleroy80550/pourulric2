@@ -3,7 +3,7 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
 import CalendarGridMobile from '@/components/CalendarGridMobile';
-import { useIsMobile } => '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile'; // Correction ici
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';

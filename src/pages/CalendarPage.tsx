@@ -3,7 +3,7 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
 import CalendarGridMobile from '@/components/CalendarGridMobile';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile'; // Corrected import path
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
@@ -11,7 +11,7 @@ import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes } from '@/lib/krossbooking';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLocation } from 'react-router-dom';
+import { useLocation } => 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 

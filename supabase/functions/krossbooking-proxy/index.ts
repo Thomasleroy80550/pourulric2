@@ -8,66 +8,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to get the authentication token from Krossbooking
 async function getAuthToken(): Promise<string> {
   const KROSSBOOKING_API_KEY = Deno.env.get('KROSSBOOKING_API_KEY');
-  const KROSSBOOKING_HOTEL_ID_STR = Deno.env.get('KROSSBOOKING_HOTEL_ID'); // Get as string
+  const KROSSBOOKING_HOTEL_ID = Deno.env.get('KROSSBOOKING_HOTEL_ID');
   const KROSSBOOKING_USERNAME = Deno.env.get('KROSSBOOKING_USERNAME');
   const KROSSBOOKING_PASSWORD = Deno.env.get('KROSSBOOKING_PASSWORD');
 
-  console.log("--- Krossbooking Auth Attempt ---");
-  console.log(`DEBUG: KROSSBOOKING_API_KEY (set?): ${!!KROSSBOOKING_API_KEY}`);
-  console.log(`DEBUG: KROSSBOOKING_HOTEL_ID_STR (value): '${KROSSBOOKING_HOTEL_ID_STR}'`);
-  console.log(`DEBUG: KROSSBOOKING_USERNAME (set?): ${!!KROSSBOOKING_USERNAME}`);
-  console.log(`DEBUG: KROSSBOOKING_PASSWORD (set?): ${!!KROSSBOOKING_PASSWORD}`);
-
-  if (!KROSSBOOKING_API_KEY || !KROSSBOOKING_HOTEL_ID_STR || !KROSSBOOKING_USERNAME || !KROSSBOOKING_PASSWORD) {
+  if (!KROSSBOOKING_API_KEY || !KROSSBOOKING_HOTEL_ID || !KROSSBOOKING_USERNAME || !KROSSBOOKING_PASSWORD) {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
   }
 
-  // IMPORTANT: Based on Krossbooking documentation, hotel_id is a string.
-  // We will pass it as a string directly.
-  const KROSSBOOKING_HOTEL_ID = KROSSBOOKING_HOTEL_ID_STR;
-
   const authPayload = {
     api_key: KROSSBOOKING_API_KEY,
-    hotel_id: KROSSBOOKING_HOTEL_ID, // Now explicitly a string
+    hotel_id: KROSSBOOKING_HOTEL_ID,
     username: KROSSBOOKING_USERNAME,
     password: KROSSBOOKING_PASSWORD,
   };
 
-  console.log("Auth Payload sent:", JSON.stringify(authPayload));
-
   const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...corsHeaders,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(authPayload),
   });
 
-  console.log(`Krossbooking Auth Response Status: ${response.status}`);
-  console.log(`Krossbooking Auth Response Status Text: ${response.statusText}`);
-
-  const clonedResponse = response.clone();
-  const rawResponseText = await clonedResponse.text();
-  console.log("Krossbooking Raw Auth Response Body:", rawResponseText);
-
   if (!response.ok) {
-    let errorData;
-    try {
-      errorData = JSON.parse(rawResponseText);
-    } catch (e) {
-      errorData = rawResponseText;
-    }
-    console.error("Failed to get Krossbooking token. Error data:", errorData);
-    throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${JSON.stringify(errorData)}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${errorText}`);
   }
 
   const data = await response.json();
-  console.log("Krossbooking token response data (parsed JSON):", data);
-  if (data && data.auth_token) { 
+  if (data && data.auth_token) {
     return data.auth_token;
   } else {
     throw new Error("Krossbooking token not found in response.");
@@ -80,7 +50,6 @@ serve(async (req) => {
   }
 
   try {
-    // Authenticate with Supabase to get the user's session
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -89,232 +58,155 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      console.error("Authentication error:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
         status: 401,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    const authToken = await getAuthToken();
-    console.log("Successfully obtained Krossbooking auth token.");
-
-    let action: string | undefined;
-    let requestBody: any = {}; // Initialize requestBody
-
-    const contentLength = req.headers.get('content-length');
-    console.log(`Received Content-Length: ${contentLength}`);
-
-    if (req.method === 'POST') {
-      const contentType = req.headers.get('content-type');
-      console.log(`Received Content-Type for POST: ${contentType}`);
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          requestBody = await req.json();
-          action = requestBody.action;
-          console.log(`DEBUG (Edge Function): Full requestBody received: ${JSON.stringify(requestBody)}`); // NEW LOG
-        } catch (jsonParseError) {
-          console.error("Error parsing request body as JSON:", jsonParseError);
-          return new Response(JSON.stringify({ error: "Invalid JSON in request body." }), {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            },
-          });
-        }
-      } else {
-        console.error(`Received POST request with unexpected Content-Type: ${contentType}`);
-        return new Response(JSON.stringify({ error: "Expected 'application/json' for POST requests." }), {
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
+    if (req.method !== 'POST') {
+        return new Response(JSON.stringify({ error: `Unsupported HTTP method: ${req.method}` }), {
+            status: 405,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
-      }
-    } else {
-      console.warn(`Received unsupported HTTP method: ${req.method}`);
-      return new Response(JSON.stringify({ error: `Unsupported HTTP method: ${req.method}` }), {
-        status: 405,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      });
     }
 
-    console.log(`Received action: ${action}, requestBody:`, requestBody); 
+    const requestBody = await req.json();
+    const { action } = requestBody;
+
+    if (!action) {
+        return new Response(JSON.stringify({ error: "Missing 'action' in request body." }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+    }
+
+    const authToken = await getAuthToken();
 
     let krossbookingUrl = '';
-    let krossbookingMethod = 'POST'; 
+    let krossbookingMethod = 'POST';
     let krossbookingBody: string | undefined;
-    let returnFullData = false; // Flag to determine if full data should be returned
+    let returnFullData = false;
 
     switch (action) {
       case 'get_reservations':
-        const getReservationsPayload: any = {
-          with_rooms: true, 
-        };
-        if (requestBody.id_room) { 
-          getReservationsPayload.id_room = Number(requestBody.id_room); // Ensure it's a number
-        }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
-        krossbookingBody = JSON.stringify(getReservationsPayload);
+        krossbookingBody = JSON.stringify({
+          with_rooms: true,
+          id_room: requestBody.id_room ? Number(requestBody.id_room) : undefined,
+        });
         break;
 
       case 'get_housekeeping_tasks':
-        const { date_from, date_to } = requestBody; 
+        const { date_from, date_to } = requestBody;
         if (!date_from || !date_to) {
-          throw new Error("Missing required parameters: date_from and date_to for get_housekeeping_tasks.");
-        }
-        const getTasksPayload: any = {
-          date_from,
-          date_to,
-        };
-        if (requestBody.id_property) { // Use requestBody.id_property directly
-          getTasksPayload.id_property = Number(requestBody.id_property); // Ensure it's a number
-        }
-        if (requestBody.id_room) { 
-          getTasksPayload.id_room = Number(requestBody.id_room); // Ensure it's a number
+          throw new Error("Missing date_from/date_to for get_housekeeping_tasks.");
         }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/housekeeping/get-tasks`;
-        krossbookingBody = JSON.stringify(getTasksPayload);
+        krossbookingBody = JSON.stringify({
+          date_from,
+          date_to,
+          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined,
+          id_room: requestBody.id_room ? Number(requestBody.id_room) : undefined,
+        });
         break;
 
       case 'save_reservation':
-        const { id_reservation, label, arrival, departure, email, phone, cod_reservation_status, id_room } = requestBody; 
-        if (!label || !arrival || !departure || !cod_reservation_status || !id_room) { 
+        const { id_reservation, label, arrival, departure, cod_reservation_status, id_room } = requestBody;
+        if (!label || !arrival || !departure || !cod_reservation_status || !id_room) {
           throw new Error("Missing required parameters for save_reservation.");
         }
-        const saveReservationPayload: any = { // Use any to allow id_reservation
+        const savePayload: any = {
           label,
           arrival,
           departure,
-          email: email || '',
-          phone: phone || '',
+          email: requestBody.email || '',
+          phone: requestBody.phone || '',
           cod_reservation_status,
-          id_property: 1, // Hardcoded to 1 as per clarification
-          rooms: [ // Room details now in an array
-            {
-              id_room: Number(id_room), // Corrected from id_room_type
-              guests: 1 // Default guests to 1 for owner reservations
-            }
-          ]
+          id_property: 1,
+          rooms: [{ id_room: Number(id_room), guests: 1 }]
         };
-
         if (id_reservation) {
-          saveReservationPayload.id_reservation = Number(id_reservation); // Add id_reservation for updates
+          savePayload.id_reservation = Number(id_reservation);
         }
-
-        console.log("DEBUG (Edge Function): Payload sent to Krossbooking reservations/save:", JSON.stringify(saveReservationPayload));
-
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/save`;
-        krossbookingMethod = 'POST';
-        krossbookingBody = JSON.stringify(saveReservationPayload);
+        krossbookingBody = JSON.stringify(savePayload);
         break;
 
-      case 'get_messages': // This action gets a list of threads for a reservation
-        const { id_reservation: msgReservationId } = requestBody;
-        if (!msgReservationId) {
-          throw new Error("Missing required parameter: id_reservation for get_messages.");
+      case 'get_messages':
+        if (!requestBody.id_reservation) {
+          throw new Error("Missing id_reservation for get_messages.");
         }
-        const messagesPayload = {
-          id_reservation: Number(msgReservationId), // Ensure it's a number
-        };
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/messaging/get-threads`;
-        krossbookingBody = JSON.stringify(messagesPayload);
+        krossbookingBody = JSON.stringify({ id_reservation: Number(requestBody.id_reservation) });
         break;
 
-      case 'get_single_message_thread': // This new action gets a single thread with its messages
-        const { id_thread } = requestBody;
-        if (!id_thread) {
-          throw new Error("Missing required parameter: id_thread for get_single_message_thread.");
+      case 'get_single_message_thread':
+        if (!requestBody.id_thread) {
+          throw new Error("Missing id_thread for get_single_message_thread.");
         }
-        const singleThreadPayload = {
-          id_thread: Number(id_thread), // Ensure it's a number
-        };
-        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/messaging/get-thread`; // This is the singular endpoint
-        krossbookingBody = JSON.stringify(singleThreadPayload);
-        returnFullData = true; // Set flag to return full data for this specific action
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/messaging/get-thread`;
+        krossbookingBody = JSON.stringify({ id_thread: Number(requestBody.id_thread) });
+        returnFullData = true;
         break;
 
       case 'save_channel_manager':
-        const cmPayload = requestBody.cm; // This will be the object with dynamic keys
-        if (!cmPayload || typeof cmPayload !== 'object') {
-            throw new Error("Invalid 'cm' payload for save_channel_manager.");
+        const { cm } = requestBody;
+        if (!cm || typeof cm !== 'object') {
+          throw new Error("Invalid 'cm' payload for save_channel_manager.");
         }
-        // Krossbooking expects the 'cm' object directly as the body
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/channel/save-cm`;
-        krossbookingMethod = 'POST';
-        krossbookingBody = JSON.stringify({ cm: cmPayload }); // Wrap in 'cm' object as per Krossbooking example
-        console.log(`DEBUG (Edge Function): Krossbooking Body being sent for save_channel_manager: ${krossbookingBody}`); // NEW LOG
+        krossbookingBody = JSON.stringify({ cm });
         break;
 
       case 'get_room_types':
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/settings/get-room-types?with_rooms=true`;
         krossbookingMethod = 'GET';
-        krossbookingBody = undefined; // GET requests don't have a body
+        krossbookingBody = undefined;
         break;
 
       default:
         throw new Error(`Unsupported action: ${action}`);
     }
 
-    console.log(`Calling Krossbooking API with URL: ${krossbookingUrl}, Method: ${krossbookingMethod}, Body: ${krossbookingBody || 'N/A'}`);
-
-    const response = await fetch(krossbookingUrl, {
+    const krossbookingResponse = await fetch(krossbookingUrl, {
       method: krossbookingMethod,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`,
-        ...corsHeaders,
       },
       body: krossbookingBody,
     });
 
-    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Status: ${response.status}`); // NEW LOG
-    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Status Text: ${response.statusText}`); // NEW LOG
-    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`); // NEW LOG
-    const rawKrossbookingResponseText = await response.clone().text(); // Clone to read text without consuming stream // MODIFIED
-    console.log(`DEBUG (Edge Function): Krossbooking API Raw Response Body: ${rawKrossbookingResponseText}`); // NEW LOG
-
-    if (!response.ok) {
-      console.error(`Krossbooking API returned non-OK status: ${response.status} ${response.statusText}`);
-      console.error("Krossbooking API Error Body:", rawKrossbookingResponseText); // MODIFIED
-      throw new Error(`Krossbooking API error: ${response.status} ${response.statusText} - ${rawKrossbookingResponseText}`); // MODIFIED
+    if (!krossbookingResponse.ok) {
+      const errorText = await krossbookingResponse.text();
+      throw new Error(`Krossbooking API error: ${krossbookingResponse.status} - ${errorText}`);
     }
 
-    const data = JSON.parse(rawKrossbookingResponseText); // MODIFIED
-    console.log("Krossbooking API response (parsed JSON):", data); 
+    const data = await krossbookingResponse.json();
 
-    // Conditionally return data based on the action
+    let responsePayload;
     if (returnFullData) {
-      return new Response(JSON.stringify({ data: data }), { // Return the entire 'data' object from Krossbooking
-        status: response.status,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      });
+        responsePayload = { data: data };
     } else {
-      // For other actions, continue to return data.data or empty array if not present
-      return new Response(JSON.stringify({ data: data.data || [], total_count: data.total_count, count: data.count, limit: data.limit, offset: data.offset }), {
-        status: response.status,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      });
+        responsePayload = { 
+            data: data.data || [], 
+            total_count: data.total_count, 
+            count: data.count, 
+            limit: data.limit, 
+            offset: data.offset 
+        };
     }
+    
+    return new Response(JSON.stringify(responsePayload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+
   } catch (error: any) {
-    console.error("Error in krossbooking-proxy function:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders,
-      },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
 });

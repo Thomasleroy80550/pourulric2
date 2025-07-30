@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import EditUserRoomDialog from '@/components/EditUserRoomDialog'; // Import the new component
 
 const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -57,10 +58,11 @@ const editUserSchema = z.object({
   kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional(),
 });
 
-const roomSchema = z.object({
+// This schema is now only for the add room form, not for the edit dialog
+const addRoomFormSchema = z.object({
   room_id: z.string().min(1, "L'ID de la chambre est requis."),
   room_name: z.string().min(1, "Le nom de la chambre est requis."),
-  room_id_2: z.string().optional().nullable(), // New field
+  room_id_2: z.string().optional().nullable(),
 });
 
 const getKycStatusText = (status?: string) => {
@@ -118,6 +120,10 @@ const AdminUsersPage: React.FC = () => {
   const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string }>({});
   const navigate = useNavigate();
 
+  // State for editing rooms
+  const [isEditRoomDialogOpen, setIsEditRoomDialogOpen] = useState(false);
+  const [roomToEdit, setRoomToEdit] = useState<UserRoom | null>(null);
+
   const addUserForm = useForm<z.infer<typeof newUserSchema>>({
     resolver: zodResolver(newUserSchema),
     defaultValues: { first_name: '', last_name: '', email: '', password: '', role: 'user' },
@@ -127,9 +133,9 @@ const AdminUsersPage: React.FC = () => {
     resolver: zodResolver(editUserSchema),
   });
 
-  const addRoomForm = useForm<z.infer<typeof roomSchema>>({
-    resolver: zodResolver(roomSchema),
-    defaultValues: { room_id: '', room_name: '', room_id_2: '' }, // Initialize new field
+  const addRoomForm = useForm<z.infer<typeof addRoomFormSchema>>({
+    resolver: zodResolver(addRoomFormSchema),
+    defaultValues: { room_id: '', room_name: '', room_id_2: '' },
   });
 
   const fetchUsers = async () => {
@@ -274,7 +280,7 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const handleAddRoom = async (values: z.infer<typeof roomSchema>) => {
+  const handleAddRoom = async (values: z.infer<typeof addRoomFormSchema>) => {
     if (!editingUser) return;
     try {
         const newRoom = await adminAddUserRoom(editingUser.id, values.room_id, values.room_name, values.room_id_2 || undefined);
@@ -284,6 +290,28 @@ const AdminUsersPage: React.FC = () => {
     } catch (error: any) {
         toast.error(`Erreur: ${error.message}`);
     }
+  };
+
+  const handleEditRoomClick = (room: UserRoom) => {
+    setRoomToEdit(room);
+    setIsEditRoomDialogOpen(true);
+  };
+
+  const handleRoomSaved = (savedRoom: UserRoom) => {
+    // Update the list of user rooms after an add or edit operation
+    setUserRooms(prevRooms => {
+      const existingIndex = prevRooms.findIndex(r => r.id === savedRoom.id);
+      if (existingIndex > -1) {
+        // Room was updated
+        const updatedRooms = [...prevRooms];
+        updatedRooms[existingIndex] = savedRoom;
+        return updatedRooms;
+      } else {
+        // Room was added
+        return [...prevRooms, savedRoom];
+      }
+    });
+    setRoomToEdit(null); // Clear the room being edited
   };
 
   const handleDeleteRoom = async (roomId: string) => {
@@ -692,8 +720,8 @@ const AdminUsersPage: React.FC = () => {
                               <TableRow>
                                 <TableHead>Nom</TableHead>
                                 <TableHead>ID Krossbooking</TableHead>
-                                <TableHead>ID 2</TableHead> {/* New column header */}
-                                <TableHead className="text-right">Action</TableHead>
+                                <TableHead>ID 2</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -701,9 +729,12 @@ const AdminUsersPage: React.FC = () => {
                                 <TableRow key={room.id}>
                                   <TableCell>{room.room_name}</TableCell>
                                   <TableCell>{room.room_id}</TableCell>
-                                  <TableCell>{room.room_id_2 || 'N/A'}</TableCell> {/* Display new field */}
-                                  <TableCell className="text-right">
-                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteRoom(room.id)}>
+                                  <TableCell>{room.room_id_2 || 'N/A'}</TableCell>
+                                  <TableCell className="text-right space-x-2">
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditRoomClick(room)} title="Modifier la chambre">
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="destructive" size="icon" onClick={() => handleDeleteRoom(room.id)} title="Supprimer la chambre">
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </TableCell>
@@ -727,6 +758,17 @@ const AdminUsersPage: React.FC = () => {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Room Dialog (newly added) */}
+      {editingUser && (
+        <EditUserRoomDialog
+          isOpen={isEditRoomDialogOpen}
+          onOpenChange={setIsEditRoomDialogOpen}
+          userId={editingUser.id}
+          initialRoom={roomToEdit}
+          onRoomSaved={handleRoomSaved}
+        />
+      )}
     </AdminLayout>
   );
 };

@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, PlusCircle } from 'lucide-react';
+import { Trash2, PlusCircle, Check, ChevronsUpDown } from 'lucide-react';
 import { KrossbookingRoomType, fetchKrossbookingRoomTypes } from '@/lib/krossbooking';
 import { UserRoom, getUserRooms, addUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 import { Skeleton } from './ui/skeleton';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 interface KrossbookingRoomOption {
   id: string;
@@ -20,6 +22,7 @@ const ManageRooms: React.FC<{ onRoomsUpdate: () => void }> = ({ onRoomsUpdate })
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openCombobox, setOpenCombobox] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -119,18 +122,50 @@ const ManageRooms: React.FC<{ onRoomsUpdate: () => void }> = ({ onRoomsUpdate })
         <div>
           <h3 className="font-medium mb-2">Ajouter un logement</h3>
           <div className="flex items-center gap-2">
-            <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un logement ou un type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableRooms.map(room => (
-                  <SelectItem key={room.id} value={room.id} disabled={userRooms.some(ur => ur.room_id === room.id)}>
-                    {room.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openCombobox}
+                  className="w-full justify-between"
+                >
+                  {selectedRoom
+                    ? availableRooms.find((room) => room.id === selectedRoom)?.name
+                    : "Sélectionner un logement..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Rechercher un logement..." />
+                  <CommandList>
+                    <CommandEmpty>Aucun logement trouvé.</CommandEmpty>
+                    <CommandGroup>
+                      {availableRooms.map((room) => (
+                        <CommandItem
+                          key={room.id}
+                          value={room.name}
+                          onSelect={() => {
+                            setSelectedRoom(room.id);
+                            setOpenCombobox(false);
+                          }}
+                          disabled={userRooms.some(ur => ur.room_id === room.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedRoom === room.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {room.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <Button onClick={handleAddRoom} disabled={loading || !selectedRoom}>
               <PlusCircle className="h-4 w-4 mr-2" />
               Ajouter

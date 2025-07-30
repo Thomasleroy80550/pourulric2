@@ -15,7 +15,7 @@ import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Profile } from '@/lib/profile-api';
+import { Profile } from '@/lib/profile-api'; // Import de Profile
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -31,7 +31,7 @@ interface BookingPlanningGridProps {
   userRooms: UserRoom[];
   reservations: KrossbookingReservation[];
   onReservationChange: () => void;
-  profile: Profile | null;
+  profile: Profile | null; // Ajout de la prop profile
 }
 
 const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile }) => {
@@ -352,7 +352,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
                             <span className="flex-grow text-center px-1 truncate">
                               <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
-                              <span className="mr-1">€ {numberOfNights}</span>
+                              <span className="mr-1">{numberOfNights}n</span>
                               <span className="mx-1">|</span>
                               <span className="truncate">{reservation.guest_name}</span>
                             </span>
@@ -362,6 +362,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                         </TooltipTrigger>
                         <TooltipContent className="p-2 text-sm">
                           <p className="font-bold">{reservation.guest_name}</p>
+                          <p>Chambre: {reservation.property_name}</p>
                           <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
                           <p>{numberOfNights} nuit(s)</p>
                           <p>Statut: {reservation.status}</p>

@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
-import { Profile } from '@/lib/profile-api';
+import { Profile } from '@/lib/profile-api'; // Import de Profile
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
@@ -28,7 +28,7 @@ interface CalendarGridMobileProps {
   userRooms: UserRoom[];
   reservations: KrossbookingReservation[];
   onReservationChange: () => void;
-  profile: Profile | null;
+  profile: Profile | null; // Ajout de la prop profile
 }
 
 const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, reservations, onReservationChange, profile }) => {

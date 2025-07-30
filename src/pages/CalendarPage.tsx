@@ -16,7 +16,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 
 const CalendarPage: React.FC = () => {
-  const { profile, session } = useSession(); // Added session to dependencies for logging
+  const { profile, session } = useSession();
   const isMobile = useIsMobile();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false);
@@ -29,14 +29,11 @@ const CalendarPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
-      console.log("CalendarPage: Starting fetchData. Current user ID:", session?.user?.id);
       try {
         // 1. Fetch the user-configured room types (where room_id is id_room_type)
         const configuredRoomTypes = await getUserRooms();
-        console.log("CalendarPage: configuredRoomTypes from getUserRooms:", configuredRoomTypes);
 
         if (configuredRoomTypes.length === 0) {
-          console.log("CalendarPage: No configured room types found for user.");
           setUserRooms([]);
           setReservations([]);
           setLoadingData(false);
@@ -45,7 +42,6 @@ const CalendarPage: React.FC = () => {
 
         // 2. Fetch all room type definitions from Krossbooking to get the actual rooms
         const krossbookingRoomTypes = await fetchKrossbookingRoomTypes();
-        console.log("CalendarPage: krossbookingRoomTypes from Krossbooking API:", krossbookingRoomTypes);
 
         // 3. Create a flattened list of actual rooms to be displayed in the calendar grid
         const flattenedUserRooms: UserRoom[] = [];
@@ -63,33 +59,27 @@ const CalendarPage: React.FC = () => {
                 room_name: actualRoom.label, // This is the ACTUAL room name
               });
             });
-          } else {
-            console.warn(`CalendarPage: No matching Krossbooking room type found for configuredType.room_id: ${configuredType.room_id} or no rooms associated.`);
           }
         });
-        console.log("CalendarPage: flattenedUserRooms (actual rooms for display):", flattenedUserRooms);
         setUserRooms(flattenedUserRooms); // This state now holds individual rooms for rendering rows
 
         // 4. Fetch reservations using the original configured types (for efficiency)
         //    and pass the flattened list for correct name mapping.
         const fetchedReservations = await fetchKrossbookingReservations(configuredRoomTypes, flattenedUserRooms);
-        console.log("CalendarPage: fetchedReservations:", fetchedReservations);
         setReservations(fetchedReservations);
 
       } catch (error) {
-        console.error("CalendarPage: Error fetching data for CalendarPage:", error);
+        console.error("Error fetching data for CalendarPage:", error);
       } finally {
         setLoadingData(false);
-        console.log("CalendarPage: fetchData finished. Loading state set to false.");
       }
     };
     if (!profile?.is_banned) {
       fetchData();
     } else {
       setLoadingData(false);
-      console.log("CalendarPage: User is banned, skipping data fetch.");
     }
-  }, [refreshTrigger, profile, session]); // Added session to dependencies
+  }, [refreshTrigger, profile, session]);
 
   useEffect(() => {
     if (location.state?.openOwnerReservationDialog) {

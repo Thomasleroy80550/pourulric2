@@ -251,6 +251,11 @@ serve(async (req) => {
         console.log(`DEBUG (Edge Function): Krossbooking Body being sent for save_channel_manager: ${krossbookingBody}`); // NEW LOG
         break;
 
+      case 'get_room_types':
+        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/settings/get-room-types`;
+        krossbookingBody = JSON.stringify({ with_rooms: true }); // Fetch rooms within types
+        break;
+
       default:
         throw new Error(`Unsupported action: ${action}`);
     }

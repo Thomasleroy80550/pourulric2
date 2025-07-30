@@ -30,7 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { UserRoom } from '@/lib/user-room-api';
-import { saveChannelManagerSettings } from '@/lib/krossbooking';
+import { saveChannelManagerSettings, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -122,6 +122,8 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 }) => {
   const [overrides, setOverrides] = useState<PriceOverride[]>([]);
   const [isLoadingOverrides, setIsLoadingOverrides] = useState(true);
+  const [roomTypes, setRoomTypes] = useState<KrossbookingRoomType[]>([]);
+  const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(true);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -137,29 +139,48 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     },
   });
 
-  const fetchOverrides = async () => {
+  const fetchDialogData = async () => {
     setIsLoadingOverrides(true);
+    setIsLoadingRoomTypes(true);
     try {
-      const data = await getOverrides();
-      setOverrides(data);
+      const [overridesData, roomTypesData] = await Promise.all([
+        getOverrides(),
+        fetchKrossbookingRoomTypes(),
+      ]);
+      setOverrides(overridesData);
+      setRoomTypes(roomTypesData);
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(`Erreur lors du chargement des données : ${error.message}`);
     } finally {
       setIsLoadingOverrides(false);
+      setIsLoadingRoomTypes(false);
     }
   };
 
   useEffect(() => {
     if (isOpen) {
-      fetchOverrides();
+      fetchDialogData();
       form.reset();
     }
   }, [isOpen, form]);
 
+  const findRoomTypeId = (roomId: string): number | undefined => {
+    const selectedRoomIdNumber = parseInt(roomId, 10);
+    if (isNaN(selectedRoomIdNumber)) return undefined;
+
+    for (const type of roomTypes) {
+      if (type.rooms.some(room => room.id_room === selectedRoomIdNumber)) {
+        return type.id_room_type;
+      }
+    }
+    return undefined;
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const roomIdNumber = parseInt(values.roomId);
-    if (isNaN(roomIdNumber)) {
-      toast.error(`ID de chambre invalide sélectionné (${values.roomId}).`);
+    const roomTypeId = findRoomTypeId(values.roomId);
+
+    if (!roomTypeId) {
+      toast.error("Impossible de trouver la typologie de chambre pour la chambre sélectionnée. Assurez-vous que la configuration dans Krossbooking est correcte.");
       return;
     }
 
@@ -190,7 +211,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const cmPayload: { [key: string]: any } = {};
     dateRanges.forEach((range, index) => {
         const cmBlock: any = {
-            id_room_type: roomIdNumber, // Corrected to id_room_type
+            id_room_type: roomTypeId,
             id_rate: 1,
             cod_channel: 'BE',
             date_from: range.from,
@@ -246,20 +267,20 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       return;
     }
 
+    const roomTypeId = findRoomTypeId(override.room_id);
+    if (!roomTypeId) {
+      toast.error(`Impossible de trouver la typologie pour la chambre ${override.room_name}. La suppression a été annulée.`);
+      return;
+    }
+
     const priceInput = window.prompt("Pour restaurer le prix, entrez une nouvelle valeur. Laissez vide pour ne pas modifier le prix actuel.", "");
 
     if (priceInput === null) {
       return; // User clicked Cancel
     }
 
-    const roomIdNumber = parseInt(override.room_id);
-    if (isNaN(roomIdNumber)) {
-      toast.error(`ID de chambre invalide dans l'historique (${override.room_id}). Impossible de continuer.`);
-      return;
-    }
-
     const resetCmBlock: any = {
-      id_room_type: roomIdNumber, // Corrected to id_room_type
+      id_room_type: roomTypeId,
       id_rate: 1,
       cod_channel: 'BE',
       date_from: override.start_date,
@@ -285,7 +306,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       await deleteOverride(override.id);
 
       toast.success("Modification supprimée et valeurs par défaut restaurées.", { id: toastId });
-      fetchOverrides();
+      fetchDialogData(); // Refresh both overrides and room types
     } catch (error: any) {
       toast.error(`Erreur lors de la suppression : ${error.message}`, { id: toastId });
       console.error("Error during override deletion:", error);
@@ -422,14 +443,14 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                 )} />
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sauvegarde...</>) : ('Sauvegarder')}</Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting || isLoadingRoomTypes}>{form.formState.isSubmitting || isLoadingRoomTypes ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sauvegarde...</>) : ('Sauvegarder')}</Button>
                 </DialogFooter>
               </form>
             </Form>
           </TabsContent>
           <TabsContent value="history">
             <ScrollArea className="h-96 w-full rounded-md border p-4 mt-4">
-              {isLoadingOverrides ? (
+              {isLoadingOverrides || isLoadingRoomTypes ? (
                 <div className="space-y-4">
                   <Skeleton className="h-16 w-full" />
                   <Skeleton className="h-16 w-full" />

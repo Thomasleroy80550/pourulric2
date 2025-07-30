@@ -91,6 +91,16 @@ export interface ChannelManagerPayload {
   };
 }
 
+// New interface for Krossbooking Room Types
+export interface KrossbookingRoomType {
+  id_room_type: number;
+  label: string;
+  rooms: {
+    id_room: number;
+    label: string;
+  }[];
+}
+
 // Define the base URL for your Supabase Edge Function
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
@@ -331,4 +341,26 @@ export async function fetchKrossbookingMessageThreads(reservationId: string): Pr
  */
 export async function saveChannelManagerSettings(payload: ChannelManagerPayload): Promise<any> {
   return callKrossbookingProxy('save_channel_manager', payload);
+}
+
+/**
+ * Fetches room types and their associated rooms from Krossbooking.
+ * @returns A promise that resolves to an array of KrossbookingRoomType objects.
+ */
+export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType[]> {
+  try {
+    const data = await callKrossbookingProxy('get_room_types');
+    if (Array.isArray(data)) {
+      return data.map((rt: any) => ({
+        id_room_type: rt.id_room_type,
+        label: rt.label,
+        rooms: rt.rooms || [],
+      }));
+    }
+    console.warn('Unexpected Krossbooking API response for room types:', data);
+    return [];
+  } catch (error) {
+    console.error('Error fetching Krossbooking room types:', error);
+    throw error;
+  }
 }

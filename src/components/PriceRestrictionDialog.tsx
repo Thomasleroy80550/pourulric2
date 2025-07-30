@@ -170,14 +170,22 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log("DEBUG: onSubmit values:", values);
-    const roomTypeId = parseInt(values.roomId, 10); // Directly use roomId as roomTypeId
-
-    if (isNaN(roomTypeId)) {
-      toast.error("L'ID de la chambre sélectionnée n'est pas valide. Veuillez vérifier votre configuration.");
-      console.error("ERROR: Parsed roomTypeId is NaN. Check userRooms configuration.");
+    
+    const selectedRoom = userRooms.find(r => r.room_id === values.roomId);
+    if (!selectedRoom) {
+      toast.error("Chambre sélectionnée introuvable dans votre configuration.");
       return;
     }
-    console.log(`DEBUG: Using roomTypeId for submission: ${roomTypeId}`);
+
+    // Prioritize room_id_2 for Krossbooking API calls, fallback to room_id
+    const krossbookingRoomTypeId = selectedRoom.room_id_2 ? parseInt(selectedRoom.room_id_2, 10) : parseInt(selectedRoom.room_id, 10);
+
+    if (isNaN(krossbookingRoomTypeId)) {
+      toast.error("L'ID de la chambre (ou ID 2) sélectionnée n'est pas un nombre valide. Veuillez vérifier votre configuration.");
+      console.error("ERROR: Parsed krossbookingRoomTypeId is NaN. Check userRooms configuration, especially room_id_2.");
+      return;
+    }
+    console.log(`DEBUG: Using Krossbooking Room Type ID for submission: ${krossbookingRoomTypeId}`);
 
     let dateRanges: { from: string; to: string }[] = [];
     let toastMessage = "Prix et restrictions mis à jour avec succès !";
@@ -206,7 +214,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const cmPayload: { [key: string]: any } = {};
     dateRanges.forEach((range, index) => {
         const cmBlock: any = {
-            id_room_type: roomTypeId, // Corrected to id_room_type
+            id_room_type: krossbookingRoomTypeId, // Use the derived ID here
             id_rate: 1, // Hardcoded to 1
             cod_channel: 'BE', // Hardcoded to 'BE'
             date_from: range.from,
@@ -233,10 +241,10 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     const payload = { cm: cmPayload };
     console.log(`DEBUG: Final cmPayload before sending: ${JSON.stringify(payload)}`);
 
-    const selectedRoom = userRooms.find(r => r.room_id === values.roomId);
     const overridesToSave: NewPriceOverride[] = dateRanges.map(range => ({
         room_id: values.roomId,
         room_name: selectedRoom?.room_name || 'N/A',
+        room_id_2: selectedRoom?.room_id_2 || undefined, // Store room_id_2 in the override
         start_date: range.from,
         end_date: range.to,
         price: values.price !== '' ? values.price : undefined,
@@ -263,13 +271,14 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       return;
     }
 
-    const roomTypeId = parseInt(override.room_id, 10); // Directly use override.room_id as roomTypeId
-    if (isNaN(roomTypeId)) {
-      toast.error(`L'ID de la chambre dans l'historique n'est pas valide (${override.room_id}). Impossible de continuer.`);
-      console.error(`ERROR: Parsed roomTypeId is NaN for override deletion. Override roomId: ${override.room_id}`);
+    // Prioritize room_id_2 for Krossbooking API calls, fallback to room_id
+    const roomTypeIdToDelete = override.room_id_2 ? parseInt(override.room_id_2, 10) : parseInt(override.room_id, 10);
+    if (isNaN(roomTypeIdToDelete)) {
+      toast.error(`L'ID de la chambre (ou ID 2) dans l'historique n'est pas valide (${override.room_id}, ${override.room_id_2}). Impossible de continuer.`);
+      console.error(`ERROR: Parsed roomTypeIdToDelete is NaN for override deletion. Override roomId: ${override.room_id}, room_id_2: ${override.room_id_2}`);
       return;
     }
-    console.log(`DEBUG: Using roomTypeId for deletion: ${roomTypeId}`);
+    console.log(`DEBUG: Using Krossbooking Room Type ID for deletion: ${roomTypeIdToDelete}`);
 
     const priceInput = window.prompt("Pour restaurer le prix, entrez une nouvelle valeur. Laissez vide pour ne pas modifier le prix actuel.", "");
 
@@ -278,7 +287,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
     }
 
     const resetCmBlock: any = {
-      id_room_type: roomTypeId, // Corrected to id_room_type
+      id_room_type: roomTypeIdToDelete, // Use the derived ID here
       id_rate: 1, // Hardcoded to 1
       cod_channel: 'BE', // Hardcoded to 'BE'
       date_from: override.start_date,
@@ -470,6 +479,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                           {override.price && `Prix: ${override.price}€ `}
                           {override.min_stay && `Min: ${override.min_stay}n `}
                           {override.closed && `Fermé `}
+                          {override.room_id_2 && `(ID2: ${override.room_id_2})`}
                         </div>
                       </div>
                       <Button variant="destructive" size="icon" onClick={() => handleDeleteOverride(override)}>

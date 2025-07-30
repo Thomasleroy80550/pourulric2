@@ -5,6 +5,7 @@ export interface PriceOverride {
   user_id: string;
   room_id: string;
   room_name: string;
+  room_id_2?: string; // Ajout de ce champ
   start_date: string; // ISO date string
   end_date: string; // ISO date string
   price?: number;

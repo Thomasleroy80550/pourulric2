@@ -3,7 +3,7 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
 import CalendarGridMobile from '@/components/CalendarGridMobile';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } => '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
@@ -32,6 +32,7 @@ const CalendarPage: React.FC = () => {
       try {
         // 1. Fetch the user's configured rooms from Supabase
         const configuredUserRooms = await getUserRooms();
+        console.log("DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
 
         if (configuredUserRooms.length === 0) {
           setUserRooms([]);
@@ -42,6 +43,8 @@ const CalendarPage: React.FC = () => {
 
         // 2. Fetch all room definitions from Krossbooking to validate configured rooms
         const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(); // This returns room types, each containing individual rooms
+        console.log("DEBUG: krossbookingRoomTypes (from Krossbooking):", krossbookingRoomTypes);
+
         if (krossbookingRoomTypes.length === 0) {
           console.warn("Krossbooking returned no room types. Calendar will be empty.");
           setUserRooms([]);
@@ -54,6 +57,7 @@ const CalendarPage: React.FC = () => {
         krossbookingRoomTypes.forEach(type => {
           flattenedKrossbookingRooms.push(...type.rooms);
         });
+        console.log("DEBUG: flattenedKrossbookingRooms (all Krossbooking rooms):", flattenedKrossbookingRooms);
 
         // 3. Process configured rooms to build a flat list of actual rooms to display and fetch reservations for.
         const validUserRooms: UserRoom[] = [];
@@ -75,10 +79,12 @@ const CalendarPage: React.FC = () => {
             console.warn(`Configured room with ID ${configuredRoom.room_id} and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
           }
         });
+        console.log("DEBUG: validUserRooms (after Krossbooking validation):", validUserRooms);
 
         // 4. Finalize list of unique rooms and fetch reservations for them.
         // Ensure uniqueness by room_id, as a user might accidentally configure the same room twice
         const uniqueValidUserRooms = Array.from(new Map(validUserRooms.map(room => [room.room_id, room])).values());
+        console.log("DEBUG: uniqueValidUserRooms (after uniqueness check by Krossbooking room_id):", uniqueValidUserRooms);
         setUserRooms(uniqueValidUserRooms);
 
         if (uniqueValidUserRooms.length > 0) {

@@ -5,15 +5,17 @@ export interface UserRoom {
   user_id: string;
   room_id: string; // The Krossbooking room ID
   room_name: string; // A user-friendly name for the room
+  room_id_2?: string; // New field for secondary room ID (e.g., for price/restriction systems)
 }
 
 /**
  * Adds a new room configuration for the current user.
  * @param room_id The Krossbooking room ID.
  * @param room_name A user-friendly name for the room.
+ * @param room_id_2 An optional secondary room ID.
  * @returns The created UserRoom object.
  */
-export async function addUserRoom(room_id: string, room_name: string): Promise<UserRoom> {
+export async function addUserRoom(room_id: string, room_name: string, room_id_2?: string): Promise<UserRoom> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     throw new Error("User not authenticated.");
@@ -21,7 +23,7 @@ export async function addUserRoom(room_id: string, room_name: string): Promise<U
 
   const { data, error } = await supabase
     .from('user_rooms')
-    .insert({ user_id: user.id, room_id, room_name })
+    .insert({ user_id: user.id, room_id, room_name, room_id_2 })
     .select()
     .single();
 
@@ -93,12 +95,13 @@ export async function getUserRoomsByUserId(userId: string): Promise<UserRoom[]> 
  * @param user_id The ID of the user.
  * @param room_id The Krossbooking room ID.
  * @param room_name A user-friendly name for the room.
+ * @param room_id_2 An optional secondary room ID.
  * @returns The created UserRoom object.
  */
-export async function adminAddUserRoom(user_id: string, room_id: string, room_name: string): Promise<UserRoom> {
+export async function adminAddUserRoom(user_id: string, room_id: string, room_name: string, room_id_2?: string): Promise<UserRoom> {
   const { data, error } = await supabase
     .from('user_rooms')
-    .insert({ user_id, room_id, room_name })
+    .insert({ user_id, room_id, room_name, room_id_2 })
     .select()
     .single();
 

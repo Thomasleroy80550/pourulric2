@@ -60,6 +60,7 @@ const editUserSchema = z.object({
 const roomSchema = z.object({
   room_id: z.string().min(1, "L'ID de la chambre est requis."),
   room_name: z.string().min(1, "Le nom de la chambre est requis."),
+  room_id_2: z.string().optional().nullable(), // New field
 });
 
 const getKycStatusText = (status?: string) => {
@@ -128,7 +129,7 @@ const AdminUsersPage: React.FC = () => {
 
   const addRoomForm = useForm<z.infer<typeof roomSchema>>({
     resolver: zodResolver(roomSchema),
-    defaultValues: { room_id: '', room_name: '' },
+    defaultValues: { room_id: '', room_name: '', room_id_2: '' }, // Initialize new field
   });
 
   const fetchUsers = async () => {
@@ -276,7 +277,7 @@ const AdminUsersPage: React.FC = () => {
   const handleAddRoom = async (values: z.infer<typeof roomSchema>) => {
     if (!editingUser) return;
     try {
-        const newRoom = await adminAddUserRoom(editingUser.id, values.room_id, values.room_name);
+        const newRoom = await adminAddUserRoom(editingUser.id, values.room_id, values.room_name, values.room_id_2 || undefined);
         setUserRooms(prev => [...prev, newRoom]);
         addRoomForm.reset();
         toast.success("Chambre ajoutée avec succès !");
@@ -666,19 +667,19 @@ const AdminUsersPage: React.FC = () => {
                     <CardContent className="space-y-6">
                       <div>
                         <h3 className="text-lg font-medium mb-2">Ajouter une chambre</h3>
-                        {/* Removed <Form {...addRoomForm}> and <form onSubmit={...}> */}
-                        <div className="flex items-start gap-4">
-                            <FormField control={addRoomForm.control} name="room_id" render={({ field }) => (<FormItem className="flex-1"><FormLabel>ID Chambre (Krossbooking)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <FormField control={addRoomForm.control} name="room_name" render={({ field }) => (<FormItem className="flex-1"><FormLabel>Nom de la chambre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                            <div className="pt-8">
-                              <Button
-                                type="button" // Changed type to "button"
-                                onClick={addRoomForm.handleSubmit(handleAddRoom)} // Attached handleSubmit to onClick
-                                disabled={addRoomForm.formState.isSubmitting}
-                              >
-                                {addRoomForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ajouter"}
-                              </Button>
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField control={addRoomForm.control} name="room_id" render={({ field }) => (<FormItem><FormLabel>ID Chambre (Krossbooking)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={addRoomForm.control} name="room_name" render={({ field }) => (<FormItem><FormLabel>Nom de la chambre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={addRoomForm.control} name="room_id_2" render={({ field }) => (<FormItem><FormLabel>ID Chambre Numéro 2 (Prix/Restrictions)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        </div>
+                        <div className="flex justify-end mt-4">
+                          <Button
+                            type="button"
+                            onClick={addRoomForm.handleSubmit(handleAddRoom)}
+                            disabled={addRoomForm.formState.isSubmitting}
+                          >
+                            {addRoomForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ajouter"}
+                          </Button>
                         </div>
                       </div>
                       <div>
@@ -691,6 +692,7 @@ const AdminUsersPage: React.FC = () => {
                               <TableRow>
                                 <TableHead>Nom</TableHead>
                                 <TableHead>ID Krossbooking</TableHead>
+                                <TableHead>ID 2</TableHead> {/* New column header */}
                                 <TableHead className="text-right">Action</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -699,6 +701,7 @@ const AdminUsersPage: React.FC = () => {
                                 <TableRow key={room.id}>
                                   <TableCell>{room.room_name}</TableCell>
                                   <TableCell>{room.room_id}</TableCell>
+                                  <TableCell>{room.room_id_2 || 'N/A'}</TableCell> {/* Display new field */}
                                   <TableCell className="text-right">
                                     <Button variant="destructive" size="icon" onClick={() => handleDeleteRoom(room.id)}>
                                       <Trash2 className="h-4 w-4" />

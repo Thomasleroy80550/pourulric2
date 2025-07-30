@@ -23,6 +23,7 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
   'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
   'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
+  'OWNER_BLOCK': { name: 'Bloqué', bgColor: 'bg-slate-700', textColor: 'text-white' },
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
 
@@ -318,7 +319,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
                     
                     const barClasses = cn(
-                      `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm cursor-pointer hover:opacity-90 transition-opacity`,
+                      `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm transition-opacity`,
+                      reservation.channel_identifier !== 'OWNER_BLOCK' && 'cursor-pointer hover:opacity-90',
                       isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                       {
                         'rounded-full': isSingleDayStay,
@@ -344,7 +346,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                               justifyContent: 'space-between',
                               alignItems: 'center',
                             }}
-                            onClick={() => handleReservationClick(reservation)}
+                            onClick={() => {
+                              if (reservation.channel_identifier !== 'OWNER_BLOCK') {
+                                handleReservationClick(reservation);
+                              }
+                            }}
                           >
                             {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                             

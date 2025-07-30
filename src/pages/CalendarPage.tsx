@@ -10,10 +10,12 @@ import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes } from '@/lib/krossbooking';
+import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
+import { addDays, format } from 'date-fns';
 
 const CalendarPage: React.FC = () => {
   const { profile, session } = useSession();
@@ -42,7 +44,7 @@ const CalendarPage: React.FC = () => {
         }
 
         // 2. Fetch all room definitions from Krossbooking to validate configured rooms
-        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(); // This returns room types, each containing individual rooms
+        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes();
         console.log("DEBUG: krossbookingRoomTypes (from Krossbooking):", krossbookingRoomTypes);
 
         if (krossbookingRoomTypes.length === 0) {
@@ -68,12 +70,11 @@ const CalendarPage: React.FC = () => {
           );
 
           if (matchingActualRoom) {
-            // It's an actual room. Use the user-defined name for it.
             validUserRooms.push({
               id: configuredRoom.id,
               user_id: configuredRoom.user_id,
               room_id: matchingActualRoom.id_room.toString(),
-              room_name: configuredRoom.room_name, // Use the user-defined name directly
+              room_name: configuredRoom.room_name,
             });
           } else {
             console.warn(`Configured room with ID "${configuredRoom.room_id}" and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
@@ -84,18 +85,41 @@ const CalendarPage: React.FC = () => {
         console.log("DEBUG: validUserRooms (after Krossbooking validation):", validUserRooms);
 
         // 4. Finalize list of unique rooms and fetch reservations for them.
-        // Ensure uniqueness by room_id, as a user might accidentally configure the same room twice
         const uniqueValidUserRooms = Array.from(new Map(validUserRooms.map(room => [room.room_id, room])).values());
         console.log("DEBUG: uniqueValidUserRooms (after uniqueness check by Krossbooking room_id):", uniqueValidUserRooms);
         setUserRooms(uniqueValidUserRooms);
 
+        let fetchedReservations: KrossbookingReservation[] = [];
         if (uniqueValidUserRooms.length > 0) {
-          const fetchedReservations = await fetchKrossbookingReservations(uniqueValidUserRooms);
-          setReservations(fetchedReservations);
+          fetchedReservations = await fetchKrossbookingReservations(uniqueValidUserRooms);
         } else {
           console.warn("No matching rooms found in Krossbooking for the current configuration.");
-          setReservations([]);
         }
+
+        // 5. Fetch price overrides and convert them to reservation-like blocks
+        const priceOverrides = await getOverrides();
+        const closedBlocks = priceOverrides
+          .filter(override => override.closed)
+          .map((override): KrossbookingReservation => ({
+            id: `override-${override.id}`, // Prefix to avoid ID collision
+            guest_name: 'Période bloquée',
+            property_name: override.room_name,
+            krossbooking_room_id: override.room_id,
+            check_in_date: override.start_date,
+            // end_date is inclusive, so checkout is the next day
+            check_out_date: format(addDays(new Date(override.end_date), 1), 'yyyy-MM-dd'),
+            status: 'BLOCKED',
+            amount: '',
+            cod_channel: 'OWNER_BLOCK',
+            channel_identifier: 'OWNER_BLOCK',
+            email: '',
+            phone: '',
+            tourist_tax_amount: 0,
+          }));
+        
+        console.log("DEBUG: Owner blocks created from overrides:", closedBlocks);
+
+        setReservations([...fetchedReservations, ...closedBlocks]);
 
       } catch (error) {
         console.error("Error fetching data for CalendarPage:", error);

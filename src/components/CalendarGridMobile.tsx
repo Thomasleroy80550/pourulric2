@@ -20,6 +20,7 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
   'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
   'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
+  'OWNER_BLOCK': { name: 'Bloqué', bgColor: 'bg-slate-700', textColor: 'text-white' },
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
 
@@ -145,8 +146,17 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, rese
                           return (
                             <div
                               key={res.id}
-                              className={cn("p-2 rounded-md flex justify-between items-center cursor-pointer", channelInfo.bgColor, channelInfo.textColor)}
-                              onClick={() => handleReservationClick(res)}
+                              className={cn(
+                                "p-2 rounded-md flex justify-between items-center",
+                                channelInfo.bgColor,
+                                channelInfo.textColor,
+                                res.channel_identifier !== 'OWNER_BLOCK' && 'cursor-pointer'
+                              )}
+                              onClick={() => {
+                                if (res.channel_identifier !== 'OWNER_BLOCK') {
+                                  handleReservationClick(res);
+                                }
+                              }}
                             >
                               <div>
                                 <p className="font-bold text-sm">{res.guest_name}</p>

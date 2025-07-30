@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle } from 'lucide-react';
+import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Home } from 'lucide-react';
 import { getUserRooms } from '@/lib/user-room-api';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
@@ -15,8 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { differenceInDays, format, parseISO, isValid } from 'date-fns';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs components
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import KycForm from '@/components/KycForm';
+import ManageRooms from '@/components/ManageRooms';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -182,9 +183,10 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5"> {/* Adjusted grid-cols */}
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-6">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
-            <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger> {/* Combined tab */}
+            <TabsTrigger value="my-properties">Mes logements</TabsTrigger>
+            <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
@@ -225,8 +227,12 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="payment-preferences"> {/* Combined tab content */}
-            <Card className="mb-6"> {/* Added margin-bottom for separation */}
+          <TabsContent value="my-properties">
+            <ManageRooms onRoomsUpdate={fetchProfileData} />
+          </TabsContent>
+
+          <TabsContent value="payment-preferences">
+            <Card className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Airbnb/Booking.com</CardTitle>
                 <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Airbnb et Booking.com.</CardDescription>

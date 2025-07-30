@@ -197,7 +197,7 @@ serve(async (req) => {
           id_property: 1, // Hardcoded to 1 as per clarification
           rooms: [ // Room details now in an array
             {
-              id_room_type: Number(id_room), // Use id_room from requestBody as id_room_type
+              id_room: Number(id_room), // Corrected from id_room_type
               guests: 1 // Default guests to 1 for owner reservations
             }
           ]

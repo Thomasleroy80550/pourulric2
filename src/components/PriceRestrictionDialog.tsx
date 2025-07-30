@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -42,6 +42,57 @@ interface PriceRestrictionDialogProps {
   userRooms: UserRoom[];
   onSettingsSaved: () => void;
 }
+
+const seasons = [
+  {
+    name: 'Week-end +',
+    ranges: [
+      { from: '18/04/2025', to: '20/04/2025' },
+      { from: '30/04/2025', to: '03/05/2025' },
+      { from: '07/05/2025', to: '10/05/2025' },
+      { from: '28/05/2025', to: '31/05/2025' },
+      { from: '06/06/2025', to: '08/06/2025' },
+      { from: '11/07/2025', to: '14/07/2025' },
+      { from: '14/08/2025', to: '16/08/2025' },
+      { from: '31/10/2025', to: '01/11/2025' },
+      { from: '07/11/2025', to: '10/11/2025' },
+    ],
+  },
+  {
+    name: 'Haute saison',
+    ranges: [
+      { from: '04/04/2025', to: '29/04/2025' },
+      { from: '27/06/2025', to: '06/09/2025' },
+      { from: '17/10/2025', to: '30/10/2025' },
+      { from: '19/12/2025', to: '03/01/2026' },
+    ],
+  },
+  {
+    name: 'Moyenne saison',
+    ranges: [
+      { from: '07/02/2025', to: '03/04/2025' },
+      { from: '04/05/2025', to: '06/05/2025' },
+      { from: '11/05/2025', to: '27/05/2025' },
+      { from: '01/06/2025', to: '05/06/2025' },
+      { from: '09/06/2025', to: '26/06/2025' },
+      { from: '07/09/2025', to: '27/09/2025' },
+    ],
+  },
+  {
+    name: 'Basse saison',
+    ranges: [
+      { from: '28/09/2025', to: '16/10/2025' },
+      { from: '09/03/2025', to: '03/04/2025' },
+      { from: '02/11/2025', to: '06/11/2025' },
+      { from: '11/11/2025', to: '18/12/2025' },
+    ],
+  },
+];
+
+const parseDateString = (dateStr: string): Date => {
+  const [day, month, year] = dateStr.split('/');
+  return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+};
 
 const formSchema = z.object({
   roomId: z.string().min(1, { message: 'Veuillez sélectionner une chambre.' }),
@@ -237,6 +288,36 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormItem>
+                  <FormLabel>Saisons Prédéfinies</FormLabel>
+                  <Select onValueChange={(value) => {
+                      if (value) {
+                          const [fromStr, toStr] = value.split('_');
+                          form.setValue('dateRange', {
+                              from: parseDateString(fromStr),
+                              to: parseDateString(toStr),
+                          }, { shouldValidate: true });
+                      }
+                  }}>
+                      <FormControl>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Optionnel: choisir une saison pour pré-remplir les dates" />
+                          </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                          {seasons.map(season => (
+                              <SelectGroup key={season.name}>
+                                  <SelectLabel>{season.name}</SelectLabel>
+                                  {season.ranges.map((range, index) => (
+                                      <SelectItem key={`${season.name}-${index}`} value={`${range.from}_${range.to}`}>
+                                          Du {range.from} au {range.to}
+                                      </SelectItem>
+                                  ))}
+                              </SelectGroup>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                </FormItem>
                 <FormField control={form.control} name="dateRange" render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Dates</FormLabel>

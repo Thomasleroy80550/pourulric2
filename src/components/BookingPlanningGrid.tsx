@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingHousekeepingTasks, KrossbookingHousekeepingTask, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
+import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { UserRoom } from '@/lib/user-room-api';
@@ -36,7 +36,7 @@ interface BookingPlanningGridProps {
 
 const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [housekeepingTasks, setHousekeepingTasks] = useState<KrossbookingHousekeepingTask[]>([]);
+  const [housekeepingTasks, setHousekeepingTasks] = useState<any[]>([]); // Changed to any[] for now, as KrossbookingHousekeepingTask is not fully defined here
   const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -222,7 +222,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   style={{ gridRow: `${3 + roomIndex}` }}>
                   <Home className="h-4 w-4 mr-2 text-gray-500" />
                   <span className="font-medium text-sm truncate">
-                    {profile?.property_address ? `${profile.property_address} - ${room.room_name}` : room.room_name}
+                    {room.room_name}
                   </span>
                 </div>
 

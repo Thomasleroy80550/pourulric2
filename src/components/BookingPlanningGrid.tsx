@@ -21,6 +21,7 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
   'BOOKING': { name: 'Booking.com', bgColor: 'bg-[#013b94]', textColor: 'text-white' },
   'ABRITEL': { name: 'Abritel', bgColor: 'bg-[#1668e3]', textColor: 'text-white' },
+  'HOMEAWAY': { name: 'Abritel', bgColor: 'bg-[#1668e3]', textColor: 'text-white' }, // Mapping 'HOMEAWAY' to 'ABRITEL' style
   'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-[#255f85]', textColor: 'text-white' },
   'DIRECT': { name: 'Hello Keys', bgColor: 'bg-[#255f85]', textColor: 'text-white' }, // Mapping 'DIRECT' to 'HELLOKEYS' style
   'PROPRI': { name: 'Propriétaire (Ménage)', bgColor: 'bg-rose-500', textColor: 'text-white' }, // Krossbooking status for owner block with cleaning

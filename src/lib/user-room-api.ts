@@ -8,6 +8,10 @@ export interface UserRoom {
   room_id_2?: string; // New field for secondary room ID (e.g., for price/restriction systems)
   keybox_code?: string;
   wifi_code?: string;
+  property_type?: string;
+  arrival_instructions?: string;
+  parking_info?: string;
+  house_rules?: string;
 }
 
 /**

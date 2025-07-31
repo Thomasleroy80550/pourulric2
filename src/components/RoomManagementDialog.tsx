@@ -7,17 +7,21 @@ import { RoomGeneralInfoForm } from './RoomGeneralInfoForm';
 import { RoomAccessInfoForm } from './RoomAccessInfoForm';
 import { RoomFurnitureList } from './RoomFurnitureList';
 import { RoomHouseRulesForm } from './RoomHouseRulesForm';
-import { RoomUtilitiesForm } from './RoomUtilitiesForm';
-import { Info, KeyRound, Lamp, BookText, GaugeCircle } from 'lucide-react';
+import { RoomParkingForm } from './RoomParkingForm';
+import { RoomEquipmentForm } from './RoomEquipmentForm';
+import { RoomSafetyForm } from './RoomSafetyForm';
+import { Info, KeyRound, Lamp, BookText, Car, Shield, Sofa } from 'lucide-react';
 
-type Section = 'general' | 'access' | 'furniture' | 'rules' | 'utilities';
+type Section = 'general' | 'access' | 'parking' | 'rules' | 'equipment' | 'furniture' | 'safety';
 
 const sections: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'general', label: 'Infos Générales', icon: Info },
-  { id: 'access', label: 'Accès & Codes', icon: KeyRound },
-  { id: 'furniture', label: 'Inventaire', icon: Lamp },
+  { id: 'access', label: 'Accès & Wi-Fi', icon: KeyRound },
+  { id: 'parking', label: 'Stationnement', icon: Car },
   { id: 'rules', label: 'Règlement', icon: BookText },
-  { id: 'utilities', label: 'Compteurs', icon: GaugeCircle },
+  { id: 'equipment', label: 'Équipements', icon: Sofa },
+  { id: 'furniture', label: 'Inventaire Mobilier', icon: Lamp },
+  { id: 'safety', label: 'Sécurité & Logistique', icon: Shield },
 ];
 
 interface RoomManagementDialogProps {
@@ -37,7 +41,7 @@ export function RoomManagementDialog({ room }: RoomManagementDialogProps) {
           <DialogTitle className="text-2xl">Gérer : {room.room_name}</DialogTitle>
         </DialogHeader>
         <div className="flex-grow flex overflow-hidden">
-          <nav className="w-1/4 border-r p-4 space-y-2">
+          <nav className="w-1/4 border-r p-4 space-y-2 overflow-y-auto">
             {sections.map((section) => (
               <Button
                 key={section.id}
@@ -53,9 +57,11 @@ export function RoomManagementDialog({ room }: RoomManagementDialogProps) {
           <div className="w-3/4 p-6 overflow-y-auto">
             {activeSection === 'general' && <RoomGeneralInfoForm room={room} />}
             {activeSection === 'access' && <RoomAccessInfoForm room={room} />}
-            {activeSection === 'furniture' && <RoomFurnitureList userRoomId={room.id} />}
+            {activeSection === 'parking' && <RoomParkingForm room={room} />}
             {activeSection === 'rules' && <RoomHouseRulesForm room={room} />}
-            {activeSection === 'utilities' && <RoomUtilitiesForm room={room} />}
+            {activeSection === 'equipment' && <RoomEquipmentForm room={room} />}
+            {activeSection === 'furniture' && <RoomFurnitureList userRoomId={room.id} />}
+            {activeSection === 'safety' && <RoomSafetyForm room={room} />}
           </div>
         </div>
       </DialogContent>

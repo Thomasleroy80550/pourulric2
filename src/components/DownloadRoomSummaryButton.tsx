@@ -23,51 +23,100 @@ interface DownloadRoomSummaryButtonProps {
 }
 
 const InfoSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-2 text-blue-800">{title}</h3>
-      <div className="text-sm text-gray-600 space-y-1">{children}</div>
+    <div className="mb-6 break-inside-avoid">
+      <h3 className="text-lg font-semibold mb-2 text-blue-800 border-b border-blue-200 pb-1">{title}</h3>
+      <div className="text-sm text-gray-600 space-y-2">{children}</div>
     </div>
   );
   
-const InfoPair = ({ label, value }: { label: string; value?: string | null }) => (
-<div className="flex justify-between">
-    <span className="font-medium text-black">{label}</span>
-    <span className="text-gray-800">{value || 'Non défini'}</span>
-</div>
+const InfoPair = ({ label, value }: { label: string; value?: string | number | null | boolean }) => {
+    let displayValue: React.ReactNode = 'Non défini';
+    if (typeof value === 'boolean') {
+        displayValue = value ? <span className="font-bold text-green-600">Oui</span> : <span className="font-bold text-red-600">Non</span>;
+    } else if (value) {
+        displayValue = <span className="text-gray-800">{value}</span>;
+    }
+
+    return (
+        <div className="flex justify-between items-start">
+            <span className="font-medium text-black w-1/2">{label}</span>
+            <div className="w-1/2 text-right">{displayValue}</div>
+        </div>
+    );
+};
+
+const InfoText = ({ label, value }: { label: string; value?: string | null }) => (
+    <div>
+        <h4 className="font-medium text-black mt-2 mb-1">{label}</h4>
+        <p className="whitespace-pre-wrap text-gray-800 text-xs bg-gray-50 p-2 rounded">{value || 'Non défini'}</p>
+    </div>
 );
+
 
 const SummaryContent = ({ room, furniture }: { room: UserRoom, furniture: Furniture[] | null }) => {
     return (
         <div className="p-8 bg-white text-black" style={{ width: '800px' }}>
-            <div className="mb-6 border-b pb-4">
+            <div className="mb-8 border-b pb-4">
                 <h2 className="text-3xl font-bold text-gray-900">Fiche d'information : {room.room_name}</h2>
                 <p className="text-lg text-gray-500">{room.property_type}</p>
             </div>
             
-            <InfoSection title="Informations Générales">
-                <InfoPair label="Nom du logement" value={room.room_name} />
-                <InfoPair label="Type de propriété" value={room.property_type} />
-                <InfoPair label="ID Krossbooking" value={room.room_id} />
-                <InfoPair label="ID Secondaire" value={room.room_id_2} />
-            </InfoSection>
+            <div className="columns-2 gap-8">
+                <InfoSection title="Informations Générales">
+                    <InfoPair label="Nom du logement" value={room.room_name} />
+                    <InfoPair label="Type de propriété" value={room.property_type} />
+                    <InfoPair label="ID Krossbooking" value={room.room_id} />
+                    <InfoPair label="ID Secondaire" value={room.room_id_2} />
+                    <InfoPair label="Manuel de la maison" value={room.has_house_manual} />
+                    <InfoText label="Instructions d'arrivée" value={room.arrival_instructions} />
+                    <InfoText label="Instructions de départ" value={room.departure_instructions} />
+                    <InfoText label="Particularités du logement" value={room.logement_specificities} />
+                    <InfoText label="Travaux récents" value={room.recent_works} />
+                </InfoSection>
 
-            <InfoSection title="Accès & Codes">
-                <InfoPair label="Code Boîte à clés" value={room.keybox_code} />
-                <InfoPair label="Code Wi-Fi" value={room.wifi_code} />
-                <h4 className="font-medium text-black mt-4 mb-1">Instructions d'arrivée</h4>
-                <p className="whitespace-pre-wrap text-gray-800">{room.arrival_instructions || 'Non définies'}</p>
-                <h4 className="font-medium text-black mt-4 mb-1">Informations Parking</h4>
-                <p className="whitespace-pre-wrap text-gray-800">{room.parking_info || 'Non définies'}</p>
-            </InfoSection>
+                <InfoSection title="Accès & Wi-Fi">
+                    <InfoPair label="Code Boîte à clés" value={room.keybox_code} />
+                    <InfoPair label="Nom du réseau (SSID)" value={room.wifi_ssid} />
+                    <InfoPair label="Mot de passe Wi-Fi" value={room.wifi_code} />
+                    <InfoText label="Localisation de la box" value={room.wifi_box_location} />
+                </InfoSection>
 
-            <InfoSection title="Compteurs">
-                <h4 className="font-medium text-black mb-1">Emplacement des compteurs</h4>
-                <p className="whitespace-pre-wrap text-gray-800">{room.utility_locations || 'Non défini'}</p>
-            </InfoSection>
+                <InfoSection title="Stationnement">
+                    <InfoPair label="Adresse" value={room.parking_address} />
+                    <InfoPair label="Nombre de places" value={room.parking_spots} />
+                    <InfoPair label="Type" value={room.parking_type} />
+                    <InfoPair label="Badge/disque fourni" value={room.parking_badge_or_disk} />
+                    <InfoText label="Instructions zone réglementée" value={room.parking_regulated_zone_instructions} />
+                    <InfoText label="Autres infos parking" value={room.parking_info} />
+                </InfoSection>
 
-            <InfoSection title="Règlement Intérieur">
-                <p className="whitespace-pre-wrap text-gray-800">{room.house_rules || 'Non défini'}</p>
-            </InfoSection>
+                <InfoSection title="Sécurité & Logistique">
+                    <InfoPair label="Alarme / Vidéosurveillance" value={room.has_alarm_or_cctv} />
+                    <InfoPair label="Détecteur de fumée" value={room.has_smoke_detector} />
+                    <InfoPair label="Détecteur de CO" value={room.has_co_detector} />
+                    <InfoText label="Emplacement des compteurs" value={room.utility_locations} />
+                    <InfoText label="Local technique / produits" value={room.technical_room_location} />
+                </InfoSection>
+
+                <InfoSection title="Règlement Intérieur">
+                    <InfoPair label="Non-fumeur" value={room.is_non_smoking} />
+                    <InfoPair label="Animaux autorisés" value={room.are_pets_allowed} />
+                    <InfoPair label="Bruit toléré jusqu'à" value={room.noise_limit_time} />
+                    <InfoText label="Consignes de tri" value={room.waste_sorting_instructions} />
+                    <InfoText label="Espaces interdits" value={room.forbidden_areas} />
+                    <InfoText label="Autres règles" value={room.house_rules} />
+                </InfoSection>
+
+                <InfoSection title="Équipements">
+                    <InfoPair label="Lit bébé" value={room.has_baby_cot} />
+                    <InfoPair label="Chaise haute" value={room.has_high_chair} />
+                    <InfoPair label="Matériel de ménage" value={room.has_cleaning_equipment} />
+                    <InfoText label="Couchages" value={room.bedding_description} />
+                    <InfoText label="Électroménagers" value={room.appliances_list} />
+                    <InfoText label="Appareils spécifiques" value={room.specific_appliances} />
+                    <InfoText label="Équipement extérieur" value={room.outdoor_equipment} />
+                </InfoSection>
+            </div>
 
             <InfoSection title="Inventaire du mobilier">
                 {furniture && furniture.length > 0 ? (

@@ -4,16 +4,19 @@ import * as z from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserRoom, updateUserRoom } from '@/lib/user-room-api';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from './ui/switch';
 
 const generalInfoSchema = z.object({
   property_type: z.string().optional(),
   arrival_instructions: z.string().optional(),
-  parking_info: z.string().optional(),
+  departure_instructions: z.string().optional(),
+  logement_specificities: z.string().optional(),
+  recent_works: z.string().optional(),
+  has_house_manual: z.boolean().optional(),
 });
 
 interface RoomGeneralInfoFormProps {
@@ -27,7 +30,10 @@ export function RoomGeneralInfoForm({ room }: RoomGeneralInfoFormProps) {
     defaultValues: {
       property_type: room.property_type || '',
       arrival_instructions: room.arrival_instructions || '',
-      parking_info: room.parking_info || '',
+      departure_instructions: room.departure_instructions || '',
+      logement_specificities: room.logement_specificities || '',
+      recent_works: room.recent_works || '',
+      has_house_manual: room.has_house_manual || false,
     },
   });
 
@@ -85,14 +91,54 @@ export function RoomGeneralInfoForm({ room }: RoomGeneralInfoFormProps) {
         />
         <FormField
           control={form.control}
-          name="parking_info"
+          name="departure_instructions"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Informations sur le parking</FormLabel>
+              <FormLabel>Instructions de départ</FormLabel>
               <FormControl>
-                <Textarea placeholder="Où se garer ? Y a-t-il des règles spécifiques ?" {...field} rows={3} />
+                <Textarea placeholder="Que doivent faire les locataires avant de partir ?" {...field} rows={5} />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="logement_specificities"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Particularités du logement</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Bruit, voisinage, sol glissant, etc." {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="recent_works"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Derniers travaux ou équipements récents</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Travaux réalisés, nouveaux équipements installés..." {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="has_house_manual"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel>Manuel de la maison disponible ?</FormLabel>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
             </FormItem>
           )}
         />

@@ -13,6 +13,35 @@ export interface UserRoom {
   parking_info?: string;
   house_rules?: string;
   utility_locations?: string;
+
+  // New fields from user request
+  has_alarm_or_cctv?: boolean;
+  wifi_ssid?: string;
+  wifi_box_location?: string;
+  parking_address?: string;
+  parking_spots?: number;
+  parking_type?: string;
+  parking_badge_or_disk?: boolean;
+  parking_regulated_zone_instructions?: string;
+  is_non_smoking?: boolean;
+  are_pets_allowed?: boolean;
+  noise_limit_time?: string;
+  waste_sorting_instructions?: string;
+  forbidden_areas?: string;
+  appliances_list?: string;
+  bedding_description?: string;
+  has_baby_cot?: boolean;
+  has_high_chair?: boolean;
+  outdoor_equipment?: string;
+  specific_appliances?: string;
+  has_cleaning_equipment?: boolean;
+  technical_room_location?: string;
+  recent_works?: string;
+  logement_specificities?: string;
+  departure_instructions?: string;
+  has_house_manual?: boolean;
+  has_smoke_detector?: boolean;
+  has_co_detector?: boolean;
 }
 
 /**

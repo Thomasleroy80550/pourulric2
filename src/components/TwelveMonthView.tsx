@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { KrossbookingReservation } from '@/lib/krossbooking';
 import { UserRoom } from '@/lib/user-room-api';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, startOfDay, addDays, isValid, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 interface TwelveMonthViewProps {
   userRooms: UserRoom[];
@@ -15,25 +16,46 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
   const today = new Date();
   const months = Array.from({ length: 12 }, (_, i) => addMonths(today, i));
 
-  const isDayBooked = (day: Date): boolean => {
+  const getDayStatus = useCallback((day: Date) => {
     const dayStart = startOfDay(day);
+    
+    const arrivals = new Set<string>();
+    const departures = new Set<string>();
+    const bookedRooms = new Set<string>();
+
     for (const reservation of reservations) {
-      // Skip cancelled or blocked reservations for this view
-      if (reservation.status === 'CANC' || reservation.status === 'BLOCKED') continue;
+      if (reservation.status === 'CANC') continue;
 
       const checkIn = parseISO(reservation.check_in_date);
       const checkOut = parseISO(reservation.check_out_date);
 
-      if (isValid(checkIn) && isValid(checkOut) && checkOut > checkIn) {
-        // Interval is inclusive of start, exclusive of end for booking purposes
-        const interval = { start: startOfDay(checkIn), end: startOfDay(addDays(checkOut, -1)) };
-        if (isWithinInterval(dayStart, interval)) {
-          return true;
+      if (isValid(checkIn) && isValid(checkOut)) {
+        if (isSameDay(dayStart, checkIn)) {
+          arrivals.add(reservation.krossbooking_room_id);
+        }
+        if (isSameDay(dayStart, checkOut)) {
+          departures.add(reservation.krossbooking_room_id);
+        }
+        if (checkOut > checkIn) {
+          const interval = { start: startOfDay(checkIn), end: startOfDay(addDays(checkOut, -1)) };
+          if (isWithinInterval(dayStart, interval)) {
+            bookedRooms.add(reservation.krossbooking_room_id);
+          }
         }
       }
     }
-    return false;
-  };
+
+    const userRoomIds = new Set(userRooms.map(r => r.room_id));
+
+    const isArrival = [...arrivals].some(id => userRoomIds.has(id));
+    const isDeparture = [...departures].some(id => userRoomIds.has(id));
+    
+    const bookedUserRoomsCount = userRooms.filter(room => bookedRooms.has(room.room_id)).length;
+    
+    const allRoomsBooked = userRooms.length > 0 && bookedUserRoomsCount >= userRooms.length;
+
+    return { isArrival, isDeparture, allRoomsBooked };
+  }, [reservations, userRooms]);
 
   if (userRooms.length === 0) {
     return (
@@ -50,7 +72,6 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
           const monthStart = startOfMonth(month);
           const monthEnd = endOfMonth(month);
           const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-          // Adjust for Monday-first week (fr locale)
           const startingDayOffset = monthStart.getDay() === 0 ? 6 : monthStart.getDay() - 1;
 
           return (
@@ -75,17 +96,23 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                     <div key={`empty-${i}`} />
                   ))}
                   {days.map((day, dayIndex) => {
-                    const booked = isDayBooked(day);
+                    const { isArrival, isDeparture, allRoomsBooked } = getDayStatus(day);
                     return (
                       <div
                         key={dayIndex}
                         className={cn(
-                          'h-8 w-8 flex items-center justify-center rounded-full text-xs',
-                          booked ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800',
+                          'h-8 w-8 flex items-center justify-center rounded-full text-xs relative overflow-hidden',
+                          allRoomsBooked ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800',
                           isSameDay(day, today) && 'ring-2 ring-blue-500'
                         )}
                       >
-                        {format(day, 'd')}
+                        {isArrival && (
+                          <div className="absolute left-0 top-0 h-full w-1/2 bg-black/20" style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }} />
+                        )}
+                        {isDeparture && (
+                          <div className="absolute right-0 top-0 h-full w-1/2 bg-black/20" style={{ clipPath: 'polygon(100% 0, 0 50%, 100% 100%)' }} />
+                        )}
+                        <span className="relative z-10 font-semibold">{format(day, 'd')}</span>
                       </div>
                     );
                   })}
@@ -97,14 +124,26 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
       </div>
       <div className="mt-8 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
         <h3 className="text-md font-semibold mb-3">Légende</h3>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
           <div className="flex items-center">
             <span className="w-4 h-4 rounded-full mr-2 bg-green-200"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">Disponible</span>
           </div>
           <div className="flex items-center">
             <span className="w-4 h-4 rounded-full mr-2 bg-red-200"></span>
-            <span className="text-sm text-gray-700 dark:text-gray-300">Réservé</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Tout réservé</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 relative mr-2">
+              <div className="absolute left-0 top-0 h-full w-1/2 bg-black/20" style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }} />
+            </div>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 relative mr-2">
+              <div className="absolute right-0 top-0 h-full w-1/2 bg-black/20" style={{ clipPath: 'polygon(100% 0, 0 50%, 100% 100%)' }} />
+            </div>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ</span>
           </div>
         </div>
       </div>

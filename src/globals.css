@@ -245,78 +245,78 @@
 .tunnel-stars:nth-child(28) { --random-x: 0.38; --random-y: 0.62; }
 .tunnel-stars:nth-child(29) { --random-x: 0.62; --random-y: 0.48; }
 .tunnel-stars:nth-child(30) { --random-x: 0.08; --random-y: 0.18; }
-.tunnel-stars:nth-child(31) { --random-x: 0.92; --random-y: 0.82; }
-.tunnel-stars:nth-child(32) { --random-x: 0.28; --random-y: 0.72; }
-.tunnel-stars:nth-child(33) { --random-x: 0.72; --random-y: 0.08; }
-.tunnel-stars:nth-child(34) { --random-x: 0.42; --random-y: 0.58; }
-.tunnel-stars:nth-child(35) { --random-x: 0.18; --random-y: 0.92; }
-.tunnel-stars:nth-child(36) { --random-x: 0.82; --random-y: 0.28; }
-.tunnel-stars:nth-child(37) { --random-x: 0.35; --random-y: 0.65; }
-.tunnel-stars:nth-child(38) { --random-x: 0.65; --random-y: 0.45; }
-.tunnel-stars:nth-child(39) { --random-x: 0.55; --random-y: 0.05; }
-.tunnel-stars:nth-child(40) { --random-x: 0.05; --random-y: 0.55; }
-.tunnel-stars:nth-child(41) { --random-x: 0.11; --random-y: 0.21; }
-.tunnel-stars:nth-child(42) { --random-x: 0.89; --random-y: 0.79; }
-.tunnel-stars:nth-child(43) { --random-x: 0.31; --random-y: 0.69; }
-.tunnel-stars:nth-child(44) { --random-x: 0.69; --random-y: 0.11; }
-.tunnel-stars:nth-child(45) { --random-x: 0.49; --random-y: 0.51; }
-.tunnel-stars:nth-child(46) { --random-x: 0.21; --random-y: 0.89; }
-.tunnel-stars:nth-child(47) { --random-x: 0.79; --random-y: 0.31; }
-.tunnel-stars:nth-child(48) { --random-x: 0.39; --random-y: 0.61; }
-.tunnel-stars:nth-child(49) { --random-x: 0.61; --random-y: 0.49; }
-.tunnel-stars:nth-child(50) { --random-x: 0.09; --random-y: 0.19; }
 /* Add more stars for a denser effect */
-.tunnel-stars:nth-child(51) { --random-x: 0.13; --random-y: 0.23; animation-delay: 0.05s; }
-.tunnel-stars:nth-child(52) { --random-x: 0.87; --random-y: 0.77; animation-delay: 0.15s; }
-.tunnel-stars:nth-child(53) { --random-x: 0.33; --random-y: 0.67; animation-delay: 0.25s; }
-.tunnel-stars:nth-child(54) { --random-x: 0.67; --random-y: 0.13; animation-delay: 0.35s; }
-.tunnel-stars:nth-child(55) { --random-x: 0.47; --random-y: 0.53; animation-delay: 0.45s; }
-.tunnel-stars:nth-child(56) { --random-x: 0.23; --random-y: 0.87; animation-delay: 0.55s; }
-.tunnel-stars:nth-child(57) { --random-x: 0.77; --random-y: 0.33; animation-delay: 0.65s; }
-.tunnel-stars:nth-child(58) { --random-x: 0.37; --random-y: 0.63; animation-delay: 0.75s; }
-.tunnel-stars:nth-child(59) { --random-x: 0.63; --random-y: 0.47; animation-delay: 0.85s; }
-.tunnel-stars:nth-child(60) { --random-x: 0.07; --random-y: 0.17; animation-delay: 0.95s; }
-.tunnel-stars:nth-child(61) { --random-x: 0.93; --random-y: 0.83; animation-delay: 1.05s; }
-.tunnel-stars:nth-child(62) { --random-x: 0.27; --random-y: 0.73; animation-delay: 1.15s; }
-.tunnel-stars:nth-child(63) { --random-x: 0.73; --random-y: 0.07; animation-delay: 1.25s; }
-.tunnel-stars:nth-child(64) { --random-x: 0.43; --random-y: 0.57; animation-delay: 1.35s; }
-.tunnel-stars:nth-child(65) { --random-x: 0.17; --random-y: 0.93; animation-delay: 1.45s; }
-.tunnel-stars:nth-child(66) { --random-x: 0.83; --random-y: 0.27; animation-delay: 1.55s; }
-.tunnel-stars:nth-child(67) { --random-x: 0.36; --random-y: 0.66; animation-delay: 1.65s; }
-.tunnel-stars:nth-child(68) { --random-x: 0.66; --random-y: 0.46; animation-delay: 1.75s; }
-.tunnel-stars:nth-child(69) { --random-x: 0.56; --random-y: 0.06; animation-delay: 1.85s; }
-.tunnel-stars:nth-child(70) { --random-x: 0.06; --random-y: 0.56; animation-delay: 1.95s; }
-.tunnel-stars:nth-child(71) { --random-x: 0.14; --random-y: 0.24; animation-delay: 0.02s; }
-.tunnel-stars:nth-child(72) { --random-x: 0.86; --random-y: 0.76; animation-delay: 0.12s; }
-.tunnel-stars:nth-child(73) { --random-x: 0.34; --random-y: 0.64; animation-delay: 0.22s; }
-.tunnel-stars:nth-child(74) { --random-x: 0.64; --random-y: 0.14; animation-delay: 0.32s; }
-.tunnel-stars:nth-child(75) { --random-x: 0.46; --random-y: 0.54; animation-delay: 0.42s; }
-.tunnel-stars:nth-child(76) { --random-x: 0.24; --random-y: 0.86; animation-delay: 0.52s; }
-.tunnel-stars:nth-child(77) { --random-x: 0.76; --random-y: 0.34; animation-delay: 0.62s; }
-.tunnel-stars:nth-child(78) { --random-x: 0.39; --random-y: 0.61; animation-delay: 0.72s; }
-.tunnel-stars:nth-child(79) { --random-x: 0.61; --random-y: 0.49; animation-delay: 0.82s; }
-.tunnel-stars:nth-child(80) { --random-x: 0.09; --random-y: 0.19; animation-delay: 0.92s; }
-.tunnel-stars:nth-child(81) { --random-x: 0.91; --random-y: 0.81; animation-delay: 1.02s; }
-.tunnel-stars:nth-child(82) { --random-x: 0.29; --random-y: 0.71; animation-delay: 1.12s; }
-.tunnel-stars:nth-child(83) { --random-x: 0.71; --random-y: 0.09; animation-delay: 1.22s; }
-.tunnel-stars:nth-child(84) { --random-x: 0.41; --random-y: 0.59; animation-delay: 1.32s; }
-.tunnel-stars:nth-child(85) { --random-x: 0.19; --random-y: 0.91; animation-delay: 1.42s; }
-.tunnel-stars:nth-child(86) { --random-x: 0.81; --random-y: 0.29; animation-delay: 1.52s; }
-.tunnel-stars:nth-child(87) { --random-x: 0.37; --random-y: 0.63; animation-delay: 1.62s; }
-.tunnel-stars:nth-child(88) { --random-x: 0.63; --random-y: 0.47; animation-delay: 1.72s; }
-.tunnel-stars:nth-child(89) { --random-x: 0.57; --random-y: 0.07; animation-delay: 1.82s; }
-.tunnel-stars:nth-child(90) { --random-x: 0.07; --random-y: 0.57; animation-delay: 1.92s; }
-.tunnel-stars:nth-child(91) { --random-x: 0.15; --random-y: 0.25; animation-delay: 0.03s; }
-.tunnel-stars:nth-child(92) { --random-x: 0.85; --random-y: 0.75; animation-delay: 0.13s; }
-.tunnel-stars:nth-child(93) { --random-x: 0.35; --random-y: 0.65; animation-delay: 0.23s; }
-.tunnel-stars:nth-child(94) { --random-x: 0.65; --random-y: 0.15; animation-delay: 0.33s; }
-.tunnel-stars:nth-child(95) { --random-x: 0.45; --random-y: 0.55; animation-delay: 0.43s; }
-.tunnel-stars:nth-child(96) { --random-x: 0.25; --random-y: 0.85; animation-delay: 0.53s; }
-.tunnel-stars:nth-child(97) { --random-x: 0.75; --random-y: 0.35; animation-delay: 0.63s; }
-.tunnel-stars:nth-child(98) { --random-x: 0.40; --random-y: 0.60; animation-delay: 0.73s; }
-.tunnel-stars:nth-child(99) { --random-x: 0.60; --random-y: 0.50; animation-delay: 0.83s; }
-.tunnel-stars:nth-child(100) { --random-x: 0.10; --random-y: 0.20; animation-delay: 0.93s; }
-
+.tunnel-stars:nth-child(31) { --random-x: 0.13; --random-y: 0.23; animation-delay: 0.05s; }
+.tunnel-stars:nth-child(32) { --random-x: 0.87; --random-y: 0.77; animation-delay: 0.15s; }
+.tunnel-stars:nth-child(33) { --random-x: 0.33; --random-y: 0.67; animation-delay: 0.25s; }
+.tunnel-stars:nth-child(34) { --random-x: 0.67; --random-y: 0.13; animation-delay: 0.35s; }
+.tunnel-stars:nth-child(35) { --random-x: 0.47; --random-y: 0.53; animation-delay: 0.45s; }
+.tunnel-stars:nth-child(36) { --random-x: 0.23; --random-y: 0.87; animation-delay: 0.55s; }
+.tunnel-stars:nth-child(37) { --random-x: 0.77; --random-y: 0.33; animation-delay: 0.65s; }
+.tunnel-stars:nth-child(38) { --random-x: 0.37; --random-y: 0.63; animation-delay: 0.75s; }
+.tunnel-stars:nth-child(39) { --random-x: 0.63; --random-y: 0.47; animation-delay: 0.85s; }
+.tunnel-stars:nth-child(40) { --random-x: 0.07; --random-y: 0.17; animation-delay: 0.95s; }
+.tunnel-stars:nth-child(41) { --random-x: 0.93; --random-y: 0.83; animation-delay: 1.05s; }
+.tunnel-stars:nth-child(42) { --random-x: 0.27; --random-y: 0.73; animation-delay: 1.15s; }
+.tunnel-stars:nth-child(43) { --random-x: 0.73; --random-y: 0.07; animation-delay: 1.25s; }
+.tunnel-stars:nth-child(44) { --random-x: 0.43; --random-y: 0.57; animation-delay: 1.35s; }
+.tunnel-stars:nth-child(45) { --random-x: 0.17; --random-y: 0.93; animation-delay: 1.45s; }
+.tunnel-stars:nth-child(46) { --random-x: 0.83; --random-y: 0.27; animation-delay: 1.55s; }
+.tunnel-stars:nth-child(47) { --random-x: 0.36; --random-y: 0.66; animation-delay: 1.65s; }
+.tunnel-stars:nth-child(48) { --random-x: 0.66; --random-y: 0.46; animation-delay: 1.75s; }
+.tunnel-stars:nth-child(49) { --random-x: 0.56; --random-y: 0.06; animation-delay: 1.85s; }
+.tunnel-stars:nth-child(50) { --random-x: 0.06; --random-y: 0.56; animation-delay: 1.95s; }
+.tunnel-stars:nth-child(51) { --random-x: 0.14; --random-y: 0.24; animation-delay: 0.02s; }
+.tunnel-stars:nth-child(52) { --random-x: 0.86; --random-y: 0.76; animation-delay: 0.12s; }
+.tunnel-stars:nth-child(53) { --random-x: 0.34; --random-y: 0.64; animation-delay: 0.22s; }
+.tunnel-stars:nth-child(54) { --random-x: 0.64; --random-y: 0.14; animation-delay: 0.32s; }
+.tunnel-stars:nth-child(55) { --random-x: 0.46; --random-y: 0.54; animation-delay: 0.42s; }
+.tunnel-stars:nth-child(56) { --random-x: 0.24; --random-y: 0.86; animation-delay: 0.52s; }
+.tunnel-stars:nth-child(57) { --random-x: 0.76; --random-y: 0.34; animation-delay: 0.62s; }
+.tunnel-stars:nth-child(58) { --random-x: 0.39; --random-y: 0.61; animation-delay: 0.72s; }
+.tunnel-stars:nth-child(59) { --random-x: 0.61; --random-y: 0.49; animation-delay: 0.82s; }
+.tunnel-stars:nth-child(60) { --random-x: 0.09; --random-y: 0.19; animation-delay: 0.92s; }
+.tunnel-stars:nth-child(61) { --random-x: 0.91; --random-y: 0.81; animation-delay: 1.02s; }
+.tunnel-stars:nth-child(62) { --random-x: 0.29; --random-y: 0.71; animation-delay: 1.12s; }
+.tunnel-stars:nth-child(63) { --random-x: 0.71; --random-y: 0.09; animation-delay: 1.22s; }
+.tunnel-stars:nth-child(64) { --random-x: 0.41; --random-y: 0.59; animation-delay: 1.32s; }
+.tunnel-stars:nth-child(65) { --random-x: 0.19; --random-y: 0.91; animation-delay: 1.42s; }
+.tunnel-stars:nth-child(66) { --random-x: 0.81; --random-y: 0.29; animation-delay: 1.52s; }
+.tunnel-stars:nth-child(67) { --random-x: 0.37; --random-y: 0.63; animation-delay: 1.62s; }
+.tunnel-stars:nth-child(68) { --random-x: 0.63; --random-y: 0.47; animation-delay: 1.72s; }
+.tunnel-stars:nth-child(69) { --random-x: 0.57; --random-y: 0.07; animation-delay: 1.82s; }
+.tunnel-stars:nth-child(70) { --random-x: 0.07; --random-y: 0.57; animation-delay: 1.92s; }
+.tunnel-stars:nth-child(71) { --random-x: 0.15; --random-y: 0.25; animation-delay: 0.03s; }
+.tunnel-stars:nth-child(72) { --random-x: 0.85; --random-y: 0.75; animation-delay: 0.13s; }
+.tunnel-stars:nth-child(73) { --random-x: 0.35; --random-y: 0.65; animation-delay: 0.23s; }
+.tunnel-stars:nth-child(74) { --random-x: 0.65; --random-y: 0.15; animation-delay: 0.33s; }
+.tunnel-stars:nth-child(75) { --random-x: 0.45; --random-y: 0.55; animation-delay: 0.43s; }
+.tunnel-stars:nth-child(76) { --random-x: 0.25; --random-y: 0.85; animation-delay: 0.53s; }
+.tunnel-stars:nth-child(77) { --random-x: 0.75; --random-y: 0.35; animation-delay: 0.63s; }
+.tunnel-stars:nth-child(78) { --random-x: 0.40; --random-y: 0.60; animation-delay: 0.73s; }
+.tunnel-stars:nth-child(79) { --random-x: 0.60; --random-y: 0.50; animation-delay: 0.83s; }
+.tunnel-stars:nth-child(80) { --random-x: 0.10; --random-y: 0.20; animation-delay: 0.93s; }
+.tunnel-stars:nth-child(81) { --random-x: 0.11; --random-y: 0.21; animation-delay: 0.02s; }
+.tunnel-stars:nth-child(82) { --random-x: 0.89; --random-y: 0.79; animation-delay: 0.12s; }
+.tunnel-stars:nth-child(83) { --random-x: 0.31; --random-y: 0.69; animation-delay: 0.22s; }
+.tunnel-stars:nth-child(84) { --random-x: 0.69; --random-y: 0.11; animation-delay: 0.32s; }
+.tunnel-stars:nth-child(85) { --random-x: 0.39; --random-y: 0.61; animation-delay: 0.72s; }
+.tunnel-stars:nth-child(86) { --random-x: 0.61; --random-y: 0.49; animation-delay: 0.82s; }
+.tunnel-stars:nth-child(87) { --random-x: 0.09; --random-y: 0.19; animation-delay: 0.92s; }
+.tunnel-stars:nth-child(88) { --random-x: 0.91; --random-y: 0.81; animation-delay: 1.02s; }
+.tunnel-stars:nth-child(89) { --random-x: 0.29; --random-y: 0.71; animation-delay: 1.12s; }
+.tunnel-stars:nth-child(90) { --random-x: 0.71; --random-y: 0.09; animation-delay: 1.22s; }
+.tunnel-stars:nth-child(91) { --random-x: 0.41; --random-y: 0.59; animation-delay: 1.32s; }
+.tunnel-stars:nth-child(92) { --random-x: 0.19; --random-y: 0.91; animation-delay: 1.42s; }
+.tunnel-stars:nth-child(93) { --random-x: 0.81; --random-y: 0.29; animation-delay: 1.52s; }
+.tunnel-stars:nth-child(94) { --random-x: 0.37; --random-y: 0.63; animation-delay: 1.62s; }
+.tunnel-stars:nth-child(95) { --random-x: 0.63; --random-y: 0.47; animation-delay: 1.72s; }
+.tunnel-stars:nth-child(96) { --random-x: 0.57; --random-y: 0.07; animation-delay: 1.82s; }
+.tunnel-stars:nth-child(97) { --random-x: 0.07; --random-y: 0.57; animation-delay: 1.92s; }
+.tunnel-stars:nth-child(98) { --random-x: 0.15; --random-y: 0.25; animation-delay: 0.03s; }
+.tunnel-stars:nth-child(99) { --random-x: 0.85; --random-y: 0.75; animation-delay: 0.13s; }
+.tunnel-stars:nth-child(100) { --random-x: 0.35; --random-y: 0.65; animation-delay: 0.23s; }
+}
 
 /* Keyframes for fade-in-up animation (for landing page content) */
 @keyframes fade-in-up {
@@ -430,10 +430,10 @@
   body * {
     visibility: hidden;
   }
-  #statement-to-print, #statement-to-print * {
+  #statement-to-print, #statement-to-print *, #room-summary-to-print, #room-summary-to-print * {
     visibility: visible;
   }
-  #statement-to-print {
+  #statement-to-print, #room-summary-to-print {
     position: absolute;
     left: 0;
     top: 0;

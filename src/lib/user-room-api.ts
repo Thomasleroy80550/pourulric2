@@ -12,6 +12,7 @@ export interface UserRoom {
   arrival_instructions?: string;
   parking_info?: string;
   house_rules?: string;
+  utility_locations?: string;
 }
 
 /**

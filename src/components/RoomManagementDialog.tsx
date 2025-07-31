@@ -7,15 +7,17 @@ import { RoomGeneralInfoForm } from './RoomGeneralInfoForm';
 import { RoomAccessInfoForm } from './RoomAccessInfoForm';
 import { RoomFurnitureList } from './RoomFurnitureList';
 import { RoomHouseRulesForm } from './RoomHouseRulesForm';
-import { Info, KeyRound, Lamp, BookText } from 'lucide-react';
+import { RoomUtilitiesForm } from './RoomUtilitiesForm';
+import { Info, KeyRound, Lamp, BookText, GaugeCircle } from 'lucide-react';
 
-type Section = 'general' | 'access' | 'furniture' | 'rules';
+type Section = 'general' | 'access' | 'furniture' | 'rules' | 'utilities';
 
 const sections: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: 'general', label: 'Infos Générales', icon: Info },
   { id: 'access', label: 'Accès & Codes', icon: KeyRound },
   { id: 'furniture', label: 'Inventaire', icon: Lamp },
   { id: 'rules', label: 'Règlement', icon: BookText },
+  { id: 'utilities', label: 'Compteurs', icon: GaugeCircle },
 ];
 
 interface RoomManagementDialogProps {
@@ -53,6 +55,7 @@ export function RoomManagementDialog({ room }: RoomManagementDialogProps) {
             {activeSection === 'access' && <RoomAccessInfoForm room={room} />}
             {activeSection === 'furniture' && <RoomFurnitureList userRoomId={room.id} />}
             {activeSection === 'rules' && <RoomHouseRulesForm room={room} />}
+            {activeSection === 'utilities' && <RoomUtilitiesForm room={room} />}
           </div>
         </div>
       </DialogContent>

@@ -4,6 +4,7 @@ import MainLayout from '@/components/MainLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
+import { RoomSummarySheet } from '@/components/RoomSummarySheet';
 import { Building } from 'lucide-react';
 
 const MyRoomsPage = () => {
@@ -42,8 +43,9 @@ const MyRoomsPage = () => {
                 <CardContent className="flex-grow">
                   {/* On pourra ajouter un aperçu des infos ici plus tard */}
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="gap-2">
                   <RoomManagementDialog room={room} />
+                  <RoomSummarySheet room={room} />
                 </CardFooter>
               </Card>
             ))}

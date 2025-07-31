@@ -316,7 +316,6 @@
 .tunnel-stars:nth-child(98) { --random-x: 0.15; --random-y: 0.25; animation-delay: 0.03s; }
 .tunnel-stars:nth-child(99) { --random-x: 0.85; --random-y: 0.75; animation-delay: 0.13s; }
 .tunnel-stars:nth-child(100) { --random-x: 0.35; --random-y: 0.65; animation-delay: 0.23s; }
-}
 
 /* Keyframes for fade-in-up animation (for landing page content) */
 @keyframes fade-in-up {

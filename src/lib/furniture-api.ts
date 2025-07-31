@@ -8,6 +8,9 @@ export interface RoomFurniture {
   price?: number;
   invoice_url?: string;
   created_at: string;
+  purchase_date?: string;
+  serial_number?: string;
+  photo_url?: string;
 }
 
 /**
@@ -28,33 +31,51 @@ export async function getFurnitureForRoom(userRoomId: string): Promise<RoomFurni
   return data || [];
 }
 
+interface AddFurniturePayload {
+  userRoomId: string;
+  name: string;
+  price?: number;
+  purchase_date?: Date;
+  serial_number?: string;
+  invoiceFile?: File;
+  photoFile?: File;
+}
+
+function createFileList(file: File): FileList {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    return dt.files;
+}
+
 /**
  * Adds a new piece of furniture to a room.
- * @param userRoomId The ID of the user_room.
- * @param name The name of the furniture.
- * @param price The price of the furniture.
- * @param invoiceFile The invoice file to upload.
+ * @param payload The data for the new furniture.
  * @returns The created RoomFurniture object.
  */
-export async function addFurniture(userRoomId: string, name: string, price?: number, invoiceFile?: File): Promise<RoomFurniture> {
+export async function addFurniture(payload: AddFurniturePayload): Promise<RoomFurniture> {
   let invoiceUrl: string | undefined = undefined;
+  let photoUrl: string | undefined = undefined;
 
-  if (invoiceFile) {
-    const fileList = new DataTransfer();
-    fileList.items.add(invoiceFile);
-    const urls = await uploadFiles(fileList.files, 'furniture-invoices', userRoomId);
-    if (urls.length > 0) {
-      invoiceUrl = urls[0];
-    }
+  if (payload.invoiceFile) {
+    const urls = await uploadFiles(createFileList(payload.invoiceFile), 'furniture-invoices', payload.userRoomId);
+    if (urls.length > 0) invoiceUrl = urls[0];
+  }
+
+  if (payload.photoFile) {
+    const urls = await uploadFiles(createFileList(payload.photoFile), 'furniture-photos', payload.userRoomId);
+    if (urls.length > 0) photoUrl = urls[0];
   }
 
   const { data, error } = await supabase
     .from('room_furniture')
     .insert({
-      user_room_id: userRoomId,
-      name,
-      price,
+      user_room_id: payload.userRoomId,
+      name: payload.name,
+      price: payload.price,
+      purchase_date: payload.purchase_date,
+      serial_number: payload.serial_number,
       invoice_url: invoiceUrl,
+      photo_url: photoUrl,
     })
     .select()
     .single();

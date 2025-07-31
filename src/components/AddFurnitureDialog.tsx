@@ -18,11 +18,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { addFurniture } from '@/lib/furniture-api';
 import { toast } from 'sonner';
 import { PlusCircle } from 'lucide-react';
+import { DatePicker } from './ui/date-picker';
 
 const furnitureSchema = z.object({
   name: z.string().min(1, "Le nom est requis."),
   price: z.coerce.number().optional(),
+  purchase_date: z.date().optional(),
+  serial_number: z.string().optional(),
   invoice: z.instanceof(FileList).optional(),
+  photo: z.instanceof(FileList).optional(),
 });
 
 interface AddFurnitureDialogProps {
@@ -38,13 +42,22 @@ export function AddFurnitureDialog({ userRoomId }: AddFurnitureDialogProps) {
     defaultValues: {
       name: '',
       price: undefined,
+      purchase_date: undefined,
+      serial_number: '',
     },
   });
 
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof furnitureSchema>) => {
-      const invoiceFile = values.invoice?.[0];
-      return addFurniture(userRoomId, values.name, values.price, invoiceFile);
+      return addFurniture({
+        userRoomId,
+        name: values.name,
+        price: values.price,
+        purchase_date: values.purchase_date,
+        serial_number: values.serial_number,
+        invoiceFile: values.invoice?.[0],
+        photoFile: values.photo?.[0],
+      });
     },
     onSuccess: () => {
       toast.success("Meuble ajouté avec succès !");
@@ -69,7 +82,7 @@ export function AddFurnitureDialog({ userRoomId }: AddFurnitureDialogProps) {
           Ajouter un meuble
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Ajouter un meuble</DialogTitle>
           <DialogDescription>
@@ -93,12 +106,51 @@ export function AddFurnitureDialog({ userRoomId }: AddFurnitureDialogProps) {
             />
             <FormField
               control={form.control}
+              name="purchase_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date d'achat</FormLabel>
+                  <FormControl>
+                    <DatePicker value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="price"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Prix (€)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" placeholder="Ex: 499.99" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="serial_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>N° de série / Modèle</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: IKE-403.897.98" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="photo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Photo (JPG, PNG)</FormLabel>
+                  <FormControl>
+                    <Input type="file" accept="image/png, image/jpeg" {...form.register('photo')} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

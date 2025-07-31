@@ -112,9 +112,9 @@ serve(async (req) => {
         break;
 
       case 'save_reservation':
-        const { id_reservation, label, arrival, departure, cod_reservation_status, id_room } = requestBody;
-        if (!label || !arrival || !departure || !cod_reservation_status || !id_room) {
-          throw new Error("Missing required parameters for save_reservation.");
+        const { id_reservation, label, arrival, departure, cod_reservation_status, id_room, id_room_type } = requestBody;
+        if (!label || !arrival || !departure || !cod_reservation_status || !id_room || !id_room_type) {
+          throw new Error("Missing required parameters for save_reservation (label, arrival, departure, cod_reservation_status, id_room, id_room_type).");
         }
         const savePayload: any = {
           label,
@@ -124,7 +124,7 @@ serve(async (req) => {
           phone: requestBody.phone || '',
           cod_reservation_status,
           id_property: 1,
-          rooms: [{ id_room: Number(id_room), guests: 1 }]
+          rooms: [{ id_room: Number(id_room), id_room_type: Number(id_room_type), guests: 1 }]
         };
         if (id_reservation) {
           savePayload.id_reservation = Number(id_reservation);

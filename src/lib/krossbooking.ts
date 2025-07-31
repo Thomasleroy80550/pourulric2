@@ -1,53 +1,51 @@
 import { supabase } from "@/integrations/supabase/client";
-import { UserRoom } from "./user-room-api"; // Import UserRoom
-import { createNotification } from "./notifications-api"; // Import the new function
+import { UserRoom } from "./user-room-api";
+import { createNotification } from "./notifications-api";
 
 interface KrossbookingReservation {
-  id: string; // id_reservation from Krossbooking
+  id: string;
   guest_name: string;
-  property_name: string; // This will now be the actual room name from Krossbooking
-  krossbooking_room_id: string; // Add this to store the actual Krossbooking room ID
+  property_name: string;
+  krossbooking_room_id: string;
   check_in_date: string;
   check_out_date: string;
   status: string;
   amount: string;
-  cod_channel?: string; // Nouveau champ pour le code du canal (ex: 'AIRBNB', 'BOOKING')
-  ota_id?: string;      // Nouveau champ pour l'ID de référence du canal
-  channel_identifier?: string; // Utilisé pour la logique de couleur dans le calendrier
-  email?: string; // Added for owner reservations
-  phone?: string; // Added for owner reservations
-  tourist_tax_amount?: number; // Nouveau champ pour le montant de la taxe de séjour
+  cod_channel?: string;
+  ota_id?: string;
+  channel_identifier?: string;
+  email?: string;
+  phone?: string;
+  tourist_tax_amount?: number;
 }
 
-// Define interface for Housekeeping Task
 export interface KrossbookingHousekeepingTask {
   id_task: number;
   id_room: number;
   room_label: string;
-  date: string; // yyyy-mm-dd
+  date: string;
   status: 'pending' | 'completed' | 'in_progress' | 'cancelled';
   task_type: 'check_in' | 'check_out' | 'daily' | 'extra';
   notes?: string;
   assigned_to?: string;
 }
 
-// Define the payload for saving a reservation (create or update)
 export interface SaveReservationPayload {
-  id_reservation?: string; // Optional: for updating an existing reservation
+  id_reservation?: string;
   label: string;
-  arrival: string; // yyyy-mm-dd
-  departure: string; // yyyy-mm-dd
+  arrival: string;
+  departure: string;
   email: string;
   phone: string;
-  cod_reservation_status: 'PROP0' | 'PROPRI' | 'CANC'; // Added 'CANC' for cancellation
-  id_room: string; // Krossbooking room ID
+  cod_reservation_status: 'PROP0' | 'PROPRI' | 'CANC';
+  id_room: string;
+  id_room_type?: string; // NEW: Krossbooking room type ID
 }
 
-// New interfaces for Krossbooking Messaging
 export interface KrossbookingMessage {
   id_message: number;
   id_thread: number;
-  date: string; // yyyy-mm-dd hh:mm:ss
+  date: string;
   sender: 'guest' | 'host' | 'system';
   text: string;
   is_read: boolean;
@@ -62,24 +60,23 @@ export interface KrossbookingMessageThread {
   messages: KrossbookingMessage[];
 }
 
-// New interfaces for Channel Manager
 export interface Restrictions {
-  MINST?: number; // Minimum stay
-  MINSA?: number; // Minimum stay on arrival
-  MAXST?: number; // Maximum stay
-  MAXSA?: number; // Maximum stay on arrival
-  EXST?: number; // Exact stay
-  EXSTAR?: number; // Exact stay on arrival
-  CLARR?: boolean; // Closed on arrival
-  CLDEP?: boolean; // Closed on departure
+  MINST?: number;
+  MINSA?: number;
+  MAXST?: number;
+  MAXSA?: number;
+  EXST?: number;
+  EXSTAR?: number;
+  CLARR?: boolean;
+  CLDEP?: boolean;
 }
 
 export interface ChannelManagerBlock {
   id_room_type: number;
   id_rate: number;
   cod_channel: string;
-  date_from: string; // yyyy-mm-dd
-  date_to: string; // yyyy-mm-dd
+  date_from: string;
+  date_to: string;
   price?: number;
   closed?: boolean;
   restrictions?: Restrictions;
@@ -87,11 +84,10 @@ export interface ChannelManagerBlock {
 
 export interface ChannelManagerPayload {
   cm: {
-    [key: string]: ChannelManagerBlock; // Dynamic keys like 'my_id_1'
+    [key: string]: ChannelManagerBlock;
   };
 }
 
-// New interface for Krossbooking Room Types
 export interface KrossbookingRoomType {
   id_room_type: number;
   label: string;
@@ -101,27 +97,18 @@ export interface KrossbookingRoomType {
   }[];
 }
 
-// Define the base URL for your Supabase Edge Function
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
-// Simple in-memory cache for room types
 let roomTypesCache: {
   data: KrossbookingRoomType[];
   timestamp: number;
 } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CACHE_DURATION = 5 * 60 * 1000;
 
-/**
- * Calls the Supabase Edge Function proxy for Krossbooking API.
- * @param action The action to perform (e.g., 'get_reservations', 'get_housekeeping_tasks', 'save_reservation', 'get_messages', 'get_single_message_thread', 'save_channel_manager').
- * @param payload The data payload for the action.
- * @returns A promise that resolves to the response data from the Edge Function.
- */
 async function callKrossbookingProxy(action: string, payload?: any): Promise<any> {
   try {
     console.log(`Calling Krossbooking proxy with action: ${action}`);
 
-    // Get the current Supabase session to include the authorization token
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError) {
@@ -138,15 +125,13 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`, // Add the authorization header
+        'Authorization': `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ action, ...payload }), // Send action and payload
+      body: JSON.stringify({ action, ...payload }),
     });
 
     console.log(`Response status from Edge Function: ${response.status}`);
     const responseText = await response.text();
-    // Do not log raw response in production to avoid logging sensitive data
-    // console.log(`Raw response from Edge Function: ${responseText}`);
 
     if (!response.ok) {
       let errorData;
@@ -160,20 +145,14 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
     }
 
     const krossbookingResponse = JSON.parse(responseText);
-    // console.log(`Parsed Krossbooking response from proxy (full data):`, krossbookingResponse); 
 
-    return krossbookingResponse.data; // Return the 'data' array from the proxy response
+    return krossbookingResponse.data;
   } catch (error: any) {
     console.error("Error calling Krossbooking proxy:", error.message);
     throw error;
   }
 }
 
-/**
- * Fetches reservations from Krossbooking API via the Supabase Edge Function proxy for multiple rooms.
- * @param roomsToFetch An array of UserRoom objects representing the actual rooms to fetch reservations for.
- * @returns A promise that resolves to an array of KrossbookingReservation objects.
- */
 export async function fetchKrossbookingReservations(
   roomsToFetch: UserRoom[]
 ): Promise<KrossbookingReservation[]> {
@@ -183,22 +162,19 @@ export async function fetchKrossbookingReservations(
 
   for (const roomId of roomIdsToFetch) {
     try {
-      // The API call now uses the actual room ID
       const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
       if (Array.isArray(data)) {
         const roomReservations = data.map((res: any) => {
-          // For each reservation, find the actual room ID and name
           const actualRoomId = res.rooms?.[0]?.id_room?.toString();
           const actualRoom = roomsToFetch.find(ur => ur.room_id === actualRoomId);
           
-          // The propertyName is now the name of the actual room
           const propertyName = actualRoom ? actualRoom.room_name : 'Chambre inconnue';
 
           return {
             id: res.id_reservation.toString(),
             guest_name: res.label || 'N/A',
-            property_name: propertyName, // Use the actual room name
-            krossbooking_room_id: actualRoomId || '', // Populate with actual room ID
+            property_name: propertyName,
+            krossbooking_room_id: actualRoomId || '',
             check_in_date: res.arrival || '',
             check_out_date: res.departure || '',
             status: res.cod_reservation_status,
@@ -217,25 +193,15 @@ export async function fetchKrossbookingReservations(
       }
     } catch (error) {
       console.error(`Error fetching reservations for room ${roomId}:`, error);
-      // Continue fetching for other rooms even if one fails
     }
   }
-  // Remove potential duplicates if a reservation spans multiple rooms in a single call (unlikely but safe)
   return Array.from(new Map(allReservations.map(res => [res.id, res])).values());
 }
 
-/**
- * Fetches housekeeping tasks from Krossbooking API via the Supabase Edge Function proxy for multiple rooms.
- * @param dateFrom Start date (yyyy-mm-dd).
- * @param dateTo End date (yyyy-mm-dd).
- * @param roomIds An array of Krossbooking room IDs to fetch tasks for.
- * @param idProperty Optional: The ID of the property to fetch tasks for.
- * @returns A promise that resolves to an array of KrossbookingHousekeepingTask objects.
- */
 export async function fetchKrossbookingHousekeepingTasks(
   dateFrom: string,
   dateTo: string,
-  roomIds: number[], // Changed to array of numbers
+  roomIds: number[],
   idProperty?: number,
 ): Promise<KrossbookingHousekeepingTask[]> {
   let allTasks: KrossbookingHousekeepingTask[] = [];
@@ -245,7 +211,7 @@ export async function fetchKrossbookingHousekeepingTasks(
         date_from: dateFrom,
         date_to: dateTo,
         id_property: idProperty,
-        id_room: roomId, // Pass single room ID per call
+        id_room: roomId,
       });
 
       if (Array.isArray(data)) {
@@ -265,43 +231,28 @@ export async function fetchKrossbookingHousekeepingTasks(
       }
     } catch (error) {
       console.error(`Error fetching housekeeping tasks for room ${roomId}:`, error);
-      // Continue fetching for other rooms even if one fails
     }
   }
   return allTasks;
 }
 
-/**
- * Saves a reservation (including owner blocks) to Krossbooking API via the Supabase Edge Function proxy.
- * Can also update an existing reservation if id_reservation is provided.
- * @param payload The reservation data to save/update.
- * @returns A promise that resolves to the response data from the Edge Function.
- */
 export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {
   const response = await callKrossbookingProxy('save_reservation', payload);
 
-  // After successfully saving, create a notification for the user
   const { data: { user } } = await supabase.auth.getUser();
-  if (user && !payload.id_reservation) { // Only notify on creation, not update
+  if (user && !payload.id_reservation) {
     await createNotification(
       user.id,
       `Nouvelle réservation propriétaire créée : ${payload.label}`,
-      '/calendar' // Link to the calendar page
+      '/calendar'
     );
   }
 
   return response;
 }
 
-/**
- * Fetches message threads for a specific reservation from Krossbooking API via the Supabase Edge Function proxy.
- * This function now first gets the list of threads, then fetches messages for each thread.
- * @param reservationId The ID of the reservation to fetch messages for.
- * @returns A promise that resolves to an array of KrossbookingMessageThread objects.
- */
 export async function fetchKrossbookingMessageThreads(reservationId: string): Promise<KrossbookingMessageThread[]> {
   try {
-    // Step 1: Get the list of thread IDs for the reservation
     const threadsMetadata = await callKrossbookingProxy('get_messages', { id_reservation: reservationId });
 
     if (!Array.isArray(threadsMetadata)) {
@@ -309,13 +260,10 @@ export async function fetchKrossbookingMessageThreads(reservationId: string): Pr
       return [];
     }
 
-    // Step 2: For each thread, fetch its detailed messages
     const fullThreadsPromises = threadsMetadata.map(async (threadMetadata: any) => {
       if (threadMetadata.id_thread) {
         const singleThreadData = await callKrossbookingProxy('get_single_message_thread', { id_thread: threadMetadata.id_thread });
         
-        // Krossbooking's get-thread returns a single object, not an array.
-        // The messages array is directly inside this object.
         if (singleThreadData && Array.isArray(singleThreadData.messages)) {
           return {
             id_thread: singleThreadData.id_thread,
@@ -334,10 +282,10 @@ export async function fetchKrossbookingMessageThreads(reservationId: string): Pr
           };
         } else {
           console.warn(`Unexpected Krossbooking API response structure for single message thread ${threadMetadata.id_thread}:`, singleThreadData);
-          return { ...threadMetadata, messages: [] }; // Return metadata with empty messages if structure is unexpected
+          return { ...threadMetadata, messages: [] };
         }
       }
-      return { ...threadMetadata, messages: [] }; // Return metadata with empty messages if no id_thread
+      return { ...threadMetadata, messages: [] };
     });
 
     const fullThreads = await Promise.all(fullThreadsPromises);
@@ -349,21 +297,10 @@ export async function fetchKrossbookingMessageThreads(reservationId: string): Pr
   }
 }
 
-/**
- * Saves channel manager settings (prices and restrictions) to Krossbooking API via the Supabase Edge Function proxy.
- * @param payload The channel manager data to save.
- * @returns A promise that resolves to the response data from the Edge Function.
- */
 export async function saveChannelManagerSettings(payload: ChannelManagerPayload): Promise<any> {
   return callKrossbookingProxy('save_channel_manager', payload);
 }
 
-/**
- * Fetches room types and their associated rooms from Krossbooking.
- * This now calls the /rooms/get-rooms endpoint and reconstructs the hierarchy.
- * It uses a simple in-memory cache to avoid excessive API calls.
- * @returns A promise that resolves to an array of KrossbookingRoomType objects.
- */
 export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType[]> {
   const now = Date.now();
   if (roomTypesCache && (now - roomTypesCache.timestamp < CACHE_DURATION)) {
@@ -373,24 +310,20 @@ export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType
 
   try {
     console.log("Fetching fresh Krossbooking room types from API.");
-    // This calls the 'get_room_types' action, which now points to the /rooms/get-rooms endpoint in the proxy.
     const flatRoomsData = await callKrossbookingProxy('get_room_types');
 
     if (!Array.isArray(flatRoomsData)) {
       console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
-      // Don't cache a bad response
       return [];
     }
 
-    // Group rooms by room type
     const roomTypesMap = new Map<number, KrossbookingRoomType>();
 
     for (const room of flatRoomsData) {
-      // Assuming the structure from the new endpoint. These field names are assumptions.
       const typeId = room.id_room_type;
-      const typeLabel = room.room_type_label || `Type ${typeId}`; // Fallback label
+      const typeLabel = room.room_type_label || `Type ${typeId}`;
 
-      if (!typeId) continue; // Skip rooms without a type
+      if (!typeId) continue;
 
       if (!roomTypesMap.has(typeId)) {
         roomTypesMap.set(typeId, {
@@ -411,7 +344,6 @@ export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType
 
     const processedRoomTypes = Array.from(roomTypesMap.values());
     
-    // Update cache
     roomTypesCache = {
       data: processedRoomTypes,
       timestamp: now,
@@ -421,7 +353,6 @@ export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType
     return processedRoomTypes;
   } catch (error) {
     console.error('Error fetching and processing Krossbooking room types:', error);
-    // In case of error, don't wipe a potentially stale but valid cache
     if (roomTypesCache) {
       console.warn("Returning stale cache due to API error.");
       return roomTypesCache.data;

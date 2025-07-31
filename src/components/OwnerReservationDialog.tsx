@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid, isBefore, isAfter } from 'date-fns'; // Added isAfter
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid, isBefore, isAfter } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import {
@@ -28,7 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { saveKrossbookingReservation, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation
+import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking'; // Import KrossbookingRoomType
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 
@@ -36,9 +36,9 @@ interface OwnerReservationDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   userRooms: UserRoom[];
-  allReservations: KrossbookingReservation[]; // New prop: all reservations to check for conflicts
+  allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
-  initialBooking?: KrossbookingReservation | null; // New prop for editing
+  initialBooking?: KrossbookingReservation | null;
 }
 
 const blockTypes = [
@@ -52,7 +52,7 @@ const formSchema = z.object({
   blockType: z.string().min(1, { message: 'Veuillez sélectionner un type de blocage.' }),
   dateRange: z.object({
     from: z.date({ required_error: 'La date d\'arrivée est requise.' }),
-    to: z.date().optional(), // 'to' can be optional initially for range picker
+    to: z.date().optional(),
   }).refine(data => data.to !== undefined, {
     message: 'La date de départ est requise.',
     path: ['to'],
@@ -69,9 +69,9 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   isOpen,
   onOpenChange,
   userRooms,
-  allReservations, // Destructure new prop
+  allReservations,
   onReservationCreated,
-  initialBooking, // Destructure new prop
+  initialBooking,
 }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -89,11 +89,26 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   });
 
   const selectedRoomId = form.watch('roomId');
+  const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
+  const [loadingKrossbookingRoomTypes, setLoadingKrossbookingRoomTypes] = useState(true);
 
   React.useEffect(() => {
+    const loadRoomTypes = async () => {
+      setLoadingKrossbookingRoomTypes(true);
+      try {
+        const types = await fetchKrossbookingRoomTypes();
+        setKrossbookingRoomTypes(types);
+      } catch (error) {
+        console.error("Error fetching Krossbooking room types:", error);
+        toast.error("Erreur lors du chargement des types de chambres Krossbooking.");
+      } finally {
+        setLoadingKrossbookingRoomTypes(false);
+      }
+    };
+
     if (isOpen) {
+      loadRoomTypes();
       if (initialBooking) {
-        // Pre-fill form for editing
         let blockTypeFound = '';
         for (const type of blockTypes) {
           if (initialBooking.guest_name?.includes(type.value)) {
@@ -114,7 +129,6 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
           phone: initialBooking.phone || '',
         });
       } else {
-        // Reset for new creation
         form.reset({
           roomId: '',
           blockType: '',
@@ -130,14 +144,13 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
   }, [isOpen, initialBooking, form]);
 
-  // Function to determine disabled dates for the range picker
   const getDisabledDates = React.useCallback((date: Date) => {
     if (!selectedRoomId) return false;
 
     const roomReservations = allReservations.filter(res =>
       res.krossbooking_room_id === selectedRoomId &&
-      res.status !== 'CANC' && // Do not consider cancelled reservations as blocking
-      (initialBooking ? res.id !== initialBooking.id : true) // Exclude the current booking if editing
+      res.status !== 'CANC' &&
+      (initialBooking ? res.id !== initialBooking.id : true)
     );
 
     for (const res of roomReservations) {
@@ -145,14 +158,9 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
       if (checkIn && checkOut) {
-        // A date is disabled if it's a night that is strictly within an existing reservation.
-        // This means the date is > checkIn and < checkOut.
-        // Example: CI=15, CO=17. Only 16 is disabled. 15 and 17 are NOT disabled.
         if (isAfter(date, checkIn) && isBefore(date, checkOut)) {
           return true;
         }
-        // Special case for 0-night stays: if CI == CO, then that single day is occupied.
-        // If a reservation is 15-15 (0 nights), then 15 is occupied.
         if (isSameDay(checkIn, checkOut) && isSameDay(date, checkIn)) {
           return true;
         }
@@ -163,11 +171,25 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const formattedArrival = format(values.dateRange.from, 'yyyy-MM-dd');
-    const formattedDeparture = format(values.dateRange.to!, 'yyyy-MM-dd'); // 'to' is guaranteed to be defined by schema refine
+    const formattedDeparture = format(values.dateRange.to!, 'yyyy-MM-dd');
 
     const cod_reservation_status = values.foreseeCleaning ? 'PROPRI' : 'PROP0';
     const cleaningSuffix = values.foreseeCleaning ? ' avec ménage' : ' sans ménage';
     const label = `${values.blockType}${cleaningSuffix}`;
+
+    let id_room_type: string | undefined;
+    for (const type of krossbookingRoomTypes) {
+      const foundRoom = type.rooms.find(room => room.id_room.toString() === values.roomId);
+      if (foundRoom) {
+        id_room_type = type.id_room_type.toString();
+        break;
+      }
+    }
+
+    if (!id_room_type) {
+      toast.error("Impossible de trouver le type de chambre correspondant à la chambre sélectionnée.");
+      return;
+    }
 
     const payload: any = {
       label: label,
@@ -177,6 +199,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       phone: values.phone || '',
       cod_reservation_status: cod_reservation_status,
       id_room: values.roomId,
+      id_room_type: id_room_type, // Add id_room_type
     };
 
     if (initialBooking && initialBooking.id) {
@@ -211,7 +234,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Chambre</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingKrossbookingRoomTypes}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une chambre" />
@@ -297,7 +320,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                         onSelect={field.onChange}
                         numberOfMonths={1}
                         locale={fr}
-                        disabled={getDisabledDates} // Apply disabled dates logic
+                        disabled={getDisabledDates}
                       />
                     </PopoverContent>
                   </Popover>
@@ -359,7 +382,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={form.formState.isSubmitting || loadingKrossbookingRoomTypes}>
                 {form.formState.isSubmitting ? (initialBooking ? 'Mise à jour...' : 'Création...') : (initialBooking ? 'Mettre à jour la Réservation' : 'Créer la Réservation')}
               </Button>
             </DialogFooter>

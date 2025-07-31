@@ -75,6 +75,7 @@ const CalendarPage: React.FC = () => {
               user_id: configuredRoom.user_id,
               room_id: matchingActualRoom.id_room.toString(),
               room_name: configuredRoom.room_name,
+              room_id_2: configuredRoom.room_id_2, // Ensure room_id_2 is passed along
             });
           } else {
             console.warn(`Configured room with ID "${configuredRoom.room_id}" and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);

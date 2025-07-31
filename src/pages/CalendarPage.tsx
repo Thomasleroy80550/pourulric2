@@ -9,7 +9,7 @@ import { PlusCircle, DollarSign } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
 import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'react-router-dom';
@@ -94,7 +94,7 @@ const CalendarPage: React.FC = () => {
 
         let fetchedReservations: KrossbookingReservation[] = [];
         if (uniqueValidUserRooms.length > 0) {
-          fetchedReservations = await fetchKrossbookingReservations(uniqueValidUserRooms);
+          fetchedReservations = await fetchKrossbookingReservations(uniqueValidUserRooms, refreshTrigger > 0);
         } else {
           console.warn("No matching rooms found in Krossbooking for the current configuration.");
         }
@@ -145,6 +145,7 @@ const CalendarPage: React.FC = () => {
   }, [location.state]);
 
   const handleReservationChange = () => {
+    clearReservationsCache();
     setRefreshTrigger(prev => prev + 1);
   };
 

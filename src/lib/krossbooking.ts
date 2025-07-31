@@ -103,7 +103,13 @@ let roomTypesCache: {
   data: KrossbookingRoomType[];
   timestamp: number;
 } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000;
+const ROOM_TYPE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+let reservationsCache: {
+  data: KrossbookingReservation[];
+  timestamp: number;
+} | null = null;
+const RESERVATION_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
 async function callKrossbookingProxy(action: string, payload?: any): Promise<any> {
   try {
@@ -153,87 +159,111 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
   }
 }
 
+export function clearReservationsCache() {
+  reservationsCache = null;
+  console.log("Krossbooking reservations cache cleared.");
+}
+
 export async function fetchKrossbookingReservations(
-  roomsToFetch: UserRoom[]
+  userRooms: UserRoom[],
+  forceRefresh: boolean = false
 ): Promise<KrossbookingReservation[]> {
-  let allReservations: KrossbookingReservation[] = [];
-  
-  const roomIdsToFetch = roomsToFetch.map(room => room.room_id);
-
-  for (const roomId of roomIdsToFetch) {
-    try {
-      const data = await callKrossbookingProxy('get_reservations', { id_room: roomId });
-      if (Array.isArray(data)) {
-        const roomReservations = data.map((res: any) => {
-          const actualRoomId = res.rooms?.[0]?.id_room?.toString();
-          const actualRoom = roomsToFetch.find(ur => ur.room_id === actualRoomId);
-          
-          const propertyName = actualRoom ? actualRoom.room_name : 'Chambre inconnue';
-
-          return {
-            id: res.id_reservation.toString(),
-            guest_name: res.label || 'N/A',
-            property_name: propertyName,
-            krossbooking_room_id: actualRoomId || '',
-            check_in_date: res.arrival || '',
-            check_out_date: res.departure || '',
-            status: res.cod_reservation_status,
-            amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
-            cod_channel: res.cod_channel,
-            ota_id: res.ota_id,
-            channel_identifier: res.cod_channel || 'UNKNOWN',
-            email: res.email || '',
-            phone: res.phone || '',
-            tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
-          };
-        });
-        allReservations = allReservations.concat(roomReservations);
-      } else {
-        console.warn(`Unexpected Krossbooking API response structure for reservations for room ${roomId} or no data array:`, data);
-      }
-    } catch (error) {
-      console.error(`Error fetching reservations for room ${roomId}:`, error);
-    }
+  const now = Date.now();
+  if (!forceRefresh && reservationsCache && (now - reservationsCache.timestamp < RESERVATION_CACHE_DURATION)) {
+    console.log("Returning cached Krossbooking reservations.");
+    return reservationsCache.data;
   }
-  return Array.from(new Map(allReservations.map(res => [res.id, res])).values());
+  
+  console.log("Fetching fresh Krossbooking reservations from API.");
+  try {
+    // Make a single API call to get all reservations for the property
+    const data = await callKrossbookingProxy('get_reservations');
+
+    if (!Array.isArray(data)) {
+      console.warn(`Unexpected Krossbooking API response structure for reservations or no data array:`, data);
+      return [];
+    }
+
+    const allReservations = data.map((res: any): KrossbookingReservation => {
+      const actualRoomId = res.rooms?.[0]?.id_room?.toString();
+      const actualRoom = userRooms.find(ur => ur.room_id === actualRoomId);
+      const propertyName = actualRoom ? actualRoom.room_name : 'Chambre inconnue';
+
+      return {
+        id: res.id_reservation.toString(),
+        guest_name: res.label || 'N/A',
+        property_name: propertyName,
+        krossbooking_room_id: actualRoomId || '',
+        check_in_date: res.arrival || '',
+        check_out_date: res.departure || '',
+        status: res.cod_reservation_status,
+        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
+        cod_channel: res.cod_channel,
+        ota_id: res.ota_id,
+        channel_identifier: res.cod_channel || 'UNKNOWN',
+        email: res.email || '',
+        phone: res.phone || '',
+        tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+      };
+    });
+
+    const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id, res])).values());
+    
+    reservationsCache = {
+      data: uniqueReservations,
+      timestamp: now,
+    };
+    console.log("Krossbooking reservations cached successfully.");
+
+    return uniqueReservations;
+  } catch (error) {
+    console.error(`Error fetching all reservations:`, error);
+    if (reservationsCache) {
+      console.warn("Returning stale reservations cache due to API error.");
+      return reservationsCache.data;
+    }
+    return [];
+  }
 }
 
 export async function fetchKrossbookingHousekeepingTasks(
   dateFrom: string,
   dateTo: string,
-  roomIds: number[],
+  roomIds: number[], // Kept for potential future filtering, but not used for fetching
   idProperty?: number,
 ): Promise<KrossbookingHousekeepingTask[]> {
-  let allTasks: KrossbookingHousekeepingTask[] = [];
-  for (const roomId of roomIds) {
-    try {
-      const data = await callKrossbookingProxy('get_housekeeping_tasks', {
-        date_from: dateFrom,
-        date_to: dateTo,
-        id_property: idProperty,
-        id_room: roomId,
-      });
+  try {
+    // Single call for all tasks in the date range
+    const data = await callKrossbookingProxy('get_housekeeping_tasks', {
+      date_from: dateFrom,
+      date_to: dateTo,
+      id_property: idProperty,
+    });
 
-      if (Array.isArray(data)) {
-        const roomTasks = data.map((task: any) => ({
-          id_task: task.id_task,
-          id_room: task.id_room,
-          room_label: task.room_label || 'N/A',
-          date: task.date || '', 
-          status: task.cod_status, 
-          task_type: task.cod_task_type, 
-          notes: task.notes,
-          assigned_to: task.assigned_to,
-        }));
-        allTasks = allTasks.concat(roomTasks);
-      } else {
-        console.warn(`Unexpected Krossbooking API response structure for housekeeping tasks for room ${roomId} or no data array:`, data);
-      }
-    } catch (error) {
-      console.error(`Error fetching housekeeping tasks for room ${roomId}:`, error);
+    if (!Array.isArray(data)) {
+      console.warn(`Unexpected Krossbooking API response structure for housekeeping tasks or no data array:`, data);
+      return [];
     }
+
+    const allTasks = data.map((task: any) => ({
+      id_task: task.id_task,
+      id_room: task.id_room,
+      room_label: task.room_label || 'N/A',
+      date: task.date || '', 
+      status: task.cod_status, 
+      task_type: task.cod_task_type, 
+      notes: task.notes,
+      assigned_to: task.assigned_to,
+    }));
+    
+    // Filter tasks for the requested rooms on the client side
+    const roomIdsSet = new Set(roomIds);
+    return allTasks.filter(task => roomIdsSet.has(task.id_room));
+
+  } catch (error) {
+    console.error(`Error fetching housekeeping tasks:`, error);
+    return [];
   }
-  return allTasks;
 }
 
 export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {
@@ -247,6 +277,9 @@ export async function saveKrossbookingReservation(payload: SaveReservationPayloa
       '/calendar'
     );
   }
+  
+  // Clear cache after a modification
+  clearReservationsCache();
 
   return response;
 }
@@ -303,7 +336,7 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
 
 export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType[]> {
   const now = Date.now();
-  if (roomTypesCache && (now - roomTypesCache.timestamp < CACHE_DURATION)) {
+  if (roomTypesCache && (now - roomTypesCache.timestamp < ROOM_TYPE_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking room types.");
     return roomTypesCache.data;
   }

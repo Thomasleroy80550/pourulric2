@@ -31,6 +31,7 @@ import TechnicalReportDetailPage from "./pages/TechnicalReportDetailPage";
 import ReservationReportDetailPage from "./pages/ReservationReportDetailPage";
 import TouristTaxPage from "./pages/TouristTaxPage";
 import MyRoomsPage from "./pages/MyRoomsPage"; // Add this line
+import AdminUserRoomsPage from "./pages/AdminUserRoomsPage"; // Add this line
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
@@ -59,6 +60,7 @@ const App = () => (
                 <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
                 <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                 <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
+                <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} /> {/* Add this line */}
                 <Route path="/pages/:slug" element={<ContentPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/blog" element={<BlogPage />} />

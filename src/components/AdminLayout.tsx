@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 const adminNavigationItems = [
   { name: 'Tableau de Bord', href: '/admin', icon: Shield },
   { name: 'Utilisateurs', href: '/admin/users', icon: Users },
+  { name: 'Logements Utilisateurs', href: '/admin/user-rooms', icon: Home },
   { name: 'Pages', href: '/admin/pages', icon: FileText },
   { name: 'Blog', href: '/admin/blog', icon: FileText },
   { name: 'Rapports Tech.', href: '/admin/technical-reports', icon: Wrench },

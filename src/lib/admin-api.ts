@@ -29,6 +29,13 @@ export interface AccountantRequest {
   }
 }
 
+export interface AdminUserRoom extends UserRoom {
+  profiles: {
+    first_name: string;
+    last_name: string;
+  } | null;
+}
+
 /**
  * Fetches all user profiles. This is an admin-only function.
  * @returns A promise that resolves to an array of UserProfile objects.
@@ -238,4 +245,27 @@ export async function createAccountantClientRelation(accountantId: string, clien
     console.error("Error creating accountant-client relation:", error);
     throw new Error(`Erreur lors de la liaison du comptable au client : ${error.message}`);
   }
+}
+
+/**
+ * Fetches all user rooms with associated user profile data. This is an admin-only function.
+ * @returns A promise that resolves to an array of AdminUserRoom objects.
+ */
+export async function getAllUserRooms(): Promise<AdminUserRoom[]> {
+  const { data, error } = await supabase
+    .from('user_rooms')
+    .select(`
+      *,
+      profiles (
+        first_name,
+        last_name
+      )
+    `)
+    .order('room_name', { ascending: true });
+
+  if (error) {
+    console.error("Error fetching all user rooms:", error);
+    throw new Error(`Erreur lors de la récupération de tous les logements utilisateurs : ${error.message}`);
+  }
+  return data || [];
 }

@@ -18,12 +18,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Profile } from '@/lib/profile-api'; // Import de Profile
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
-  'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
-  'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
-  'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
-  'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
-  'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
-  'OWNER_BLOCK': { name: 'Bloqué', bgColor: 'bg-slate-700', textColor: 'text-white' },
+  'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
+  'BOOKING': { name: 'Booking.com', bgColor: 'bg-[#013b94]', textColor: 'text-white' },
+  'ABRITEL': { name: 'Abritel', bgColor: 'bg-[#1668e3]', textColor: 'text-white' },
+  'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-[#255f85]', textColor: 'text-white' },
+  'DIRECT': { name: 'Hello Keys', bgColor: 'bg-[#255f85]', textColor: 'text-white' }, // Mapping 'DIRECT' to 'HELLOKEYS' style
+  'PROPRI': { name: 'Propriétaire (Ménage)', bgColor: 'bg-rose-500', textColor: 'text-white' }, // Krossbooking status for owner block with cleaning
+  'PROP0': { name: 'Propriétaire (Sans Ménage)', bgColor: 'bg-gray-500', textColor: 'text-white' }, // Krossbooking status for owner block without cleaning
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
 
@@ -344,14 +345,17 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                       calculatedWidth = (endIndex - startIndex) * dayCellWidth;
                     }
 
-                    const channelInfo = channelColors[reservation.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                    // Determine the effective channel key for color mapping
+                    const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';
+                    const effectiveChannelKey = isOwnerBlock ? reservation.status : (reservation.channel_identifier || 'UNKNOWN');
+                    const channelInfo = channelColors[effectiveChannelKey] || channelColors['UNKNOWN'];
 
                     const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
                     const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
                     
                     const barClasses = cn(
                       `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm transition-opacity`,
-                      reservation.channel_identifier !== 'OWNER_BLOCK' && 'cursor-pointer hover:opacity-90',
+                      !isOwnerBlock && 'cursor-pointer hover:opacity-90', // Only allow click if not an owner block
                       isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                       {
                         'rounded-full': isSingleDayStay,
@@ -378,7 +382,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                               alignItems: 'center',
                             }}
                             onClick={() => {
-                              if (reservation.channel_identifier !== 'OWNER_BLOCK') {
+                              if (!isOwnerBlock) { // Only allow click if not an owner block
                                 handleReservationClick(reservation);
                               }
                             }}
@@ -402,9 +406,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                           <p>Chambre: {reservation.property_name}</p>
                           <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
                           <p>{numberOfNights} nuit(s)</p>
-                          <p>Statut: {reservation.status}</p>
+                          <p>Statut: {channelInfo.name}</p> {/* Display the descriptive name */}
                           <p>Montant: {reservation.amount}</p>
-                          <p>Canal: {channelInfo.name}</p>
+                          <p>Canal: {reservation.channel_identifier || 'N/A'}</p> {/* Show original channel if available */}
                         </TooltipContent>
                       </Tooltip>
                     );

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut, Plug } from 'lucide-react';
+import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut, Plug, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -31,6 +31,7 @@ const defaultSidebarSections = [
       { name: 'Calendrier', href: '/calendar', icon: CalendarDays },
       { name: 'Réservations', href: '/bookings', icon: Bookmark },
       { name: 'Incidents', href: '/reports', icon: Wrench },
+      { name: 'Mes logements', href: '/my-rooms', icon: Building },
     ],
   },
   {

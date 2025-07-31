@@ -30,6 +30,7 @@ import TechnicalReportsPage from "./pages/TechnicalReportsPage";
 import TechnicalReportDetailPage from "./pages/TechnicalReportDetailPage";
 import ReservationReportDetailPage from "./pages/ReservationReportDetailPage";
 import TouristTaxPage from "./pages/TouristTaxPage";
+import MyRoomsPage from "./pages/MyRoomsPage"; // Add this line
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
@@ -77,6 +78,7 @@ const App = () => (
                 <Route path="/modules" element={<ModulesPage />} />
                 <Route path="/roadmap" element={<RoadmapPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/my-rooms" element={<MyRoomsPage />} /> {/* Add this line */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

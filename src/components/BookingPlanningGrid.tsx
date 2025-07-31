@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
-import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
+import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { UserRoom } from '@/lib/user-room-api';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
@@ -37,7 +37,7 @@ interface BookingPlanningGridProps {
 
 const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [housekeepingTasks, setHousekeepingTasks] = useState<any[]>([]); // Changed to any[] for now, as KrossbookingHousekeepingTask is not fully defined here
+  const [housekeepingTasks, setHousekeepingTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
@@ -47,6 +47,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
+
+  const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
+  const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
 
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
@@ -78,6 +81,22 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
     loadHousekeepingTasks();
   }, [currentMonth, userRooms, refreshTrigger]);
 
+  useEffect(() => {
+    const loadRoomTypes = async () => {
+      setLoadingRoomTypes(true);
+      try {
+        const types = await fetchKrossbookingRoomTypes();
+        setKrossbookingRoomTypes(types);
+      } catch (error) {
+        console.error("Error fetching Krossbooking room types in BookingPlanningGrid:", error);
+        toast.error("Erreur lors du chargement des types de chambres Krossbooking.");
+      } finally {
+        setLoadingRoomTypes(false);
+      }
+    };
+    loadRoomTypes();
+  }, [refreshTrigger]);
+
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -92,9 +111,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  // Adjust widths based on mobile status
   const dayCellWidth = isMobile ? 40 : 80;
-  const propertyColumnWidth = isMobile ? 100 : 250; // Increased width for longer names
+  const propertyColumnWidth = isMobile ? 100 : 250;
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -127,9 +145,21 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         return;
       }
 
-      console.log("DEBUG: Booking object before cancellation payload creation:", bookingToCancel);
+      let id_room_type: string | undefined;
+      for (const type of krossbookingRoomTypes) {
+        const foundRoom = type.rooms.find(room => room.id_room.toString() === bookingToCancel.krossbooking_room_id);
+        if (foundRoom) {
+          id_room_type = type.id_room_type.toString();
+          break;
+        }
+      }
 
-      // Call saveKrossbookingReservation with CANC status, using original booking details
+      if (!id_room_type) {
+        toast.error("Impossible de trouver le type de chambre pour l'annulation.");
+        console.error("Could not find room type for room id:", bookingToCancel.krossbooking_room_id);
+        return;
+      }
+
       await saveKrossbookingReservation({
         id_reservation: bookingToCancel.id,
         label: bookingToCancel.guest_name || "Annulation",
@@ -139,6 +169,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         phone: bookingToCancel.phone || '',
         cod_reservation_status: "CANC",
         id_room: bookingToCancel.krossbooking_room_id,
+        id_room_type: id_room_type,
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false);
@@ -166,7 +197,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         </div>
       </CardHeader>
       <CardContent className="p-4 overflow-x-auto">
-        {(loadingTasks && reservations.length === 0) && (
+        {(loadingTasks || loadingRoomTypes) && reservations.length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Skeleton className="h-48 w-full" />
             <Skeleton className="h-48 w-full" />

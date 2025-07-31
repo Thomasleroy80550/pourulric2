@@ -201,7 +201,7 @@ const MyRoomsPage = () => {
             {rooms.map((room) => (
               <AccordionItem value={room.id} key={room.id}>
                 <AccordionTrigger className="text-xl">{room.room_name}</AccordionTrigger>
-                <AccordionContent className="space-y-6 p-4">
+                <AccordionContent className="space-y-6 p-4 bg-white dark:bg-gray-800 rounded-b-lg border border-t-0 border-gray-200 dark:border-gray-700">
                   <Card>
                     <CardHeader>
                       <CardTitle>Informations d'accès</CardTitle>

@@ -131,10 +131,10 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                         )}
                       >
                         {isArrival && (
-                          <div className="absolute left-0 top-0 h-full w-1/2 bg-black/30" style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }} />
+                          <div className="absolute left-0 top-0 h-full w-1 bg-blue-500" />
                         )}
                         {isDeparture && (
-                          <div className="absolute right-0 top-0 h-full w-1/2 bg-black/30" style={{ clipPath: 'polygon(100% 0, 0 50%, 100% 100%)' }} />
+                          <div className="absolute right-0 top-0 h-full w-1 bg-orange-500" />
                         )}
                         <span className="relative z-10 font-semibold">{format(day, 'd')}</span>
                       </div>
@@ -159,13 +159,13 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
           </div>
           <div className="flex items-center">
             <div className="w-4 h-4 relative mr-2 flex items-center justify-center">
-              <div className="absolute left-0 top-0 h-full w-1/2 bg-black/30" style={{ clipPath: 'polygon(0 0, 100% 50%, 0 100%)' }} />
+              <div className="absolute left-0 top-0 h-full w-1 bg-blue-500" />
             </div>
             <span className="text-sm text-gray-700 dark:text-gray-300 ml-1">Jour d'arrivée</span>
           </div>
           <div className="flex items-center">
             <div className="w-4 h-4 relative mr-2 flex items-center justify-center">
-              <div className="absolute right-0 top-0 h-full w-1/2 bg-black/30" style={{ clipPath: 'polygon(100% 0, 0 50%, 100% 100%)' }} />
+              <div className="absolute right-0 top-0 h-full w-1 bg-orange-500" />
             </div>
             <span className="text-sm text-gray-700 dark:text-gray-300 ml-1">Jour de départ</span>
           </div>

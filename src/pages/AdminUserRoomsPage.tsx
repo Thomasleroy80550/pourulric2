@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Building } from 'lucide-react';
+import { RoomSummarySheet } from '@/components/RoomSummarySheet';
 
 const AdminUserRoomsPage: React.FC = () => {
   const { data: userRooms, isLoading, error } = useQuery<AdminUserRoom[]>({
@@ -47,6 +48,7 @@ const AdminUserRoomsPage: React.FC = () => {
                       <TableHead>Instructions Arrivée</TableHead>
                       <TableHead>Infos Parking</TableHead>
                       <TableHead>Règlement Intérieur</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -60,6 +62,9 @@ const AdminUserRoomsPage: React.FC = () => {
                         <TableCell className="max-w-[200px] truncate">{room.arrival_instructions || '-'}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{room.parking_info || '-'}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{room.house_rules || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <RoomSummarySheet room={room} />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

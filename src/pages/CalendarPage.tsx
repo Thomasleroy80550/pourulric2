@@ -16,6 +16,8 @@ import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import { addDays, format } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TwelveMonthView from '@/components/TwelveMonthView';
 
 const CalendarPage: React.FC = () => {
   const { profile, session } = useSession();
@@ -204,23 +206,37 @@ const CalendarPage: React.FC = () => {
           </div>
         </div>
         
-        {isMobile ? (
-          <CalendarGridMobile 
-            refreshTrigger={refreshTrigger} 
-            userRooms={userRooms} 
-            reservations={reservations}
-            onReservationChange={handleReservationChange}
-            profile={profile}
-          />
-        ) : (
-          <BookingPlanningGrid 
-            refreshTrigger={refreshTrigger} 
-            userRooms={userRooms} 
-            reservations={reservations}
-            onReservationChange={handleReservationChange}
-            profile={profile}
-          />
-        )}
+        <Tabs defaultValue="monthly" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="monthly">Vue Mensuelle</TabsTrigger>
+            <TabsTrigger value="yearly">Vue 12 Mois</TabsTrigger>
+          </TabsList>
+          <TabsContent value="monthly" className="mt-6">
+            {isMobile ? (
+              <CalendarGridMobile 
+                refreshTrigger={refreshTrigger} 
+                userRooms={userRooms} 
+                reservations={reservations}
+                onReservationChange={handleReservationChange}
+                profile={profile}
+              />
+            ) : (
+              <BookingPlanningGrid 
+                refreshTrigger={refreshTrigger} 
+                userRooms={userRooms} 
+                reservations={reservations}
+                onReservationChange={handleReservationChange}
+                profile={profile}
+              />
+            )}
+          </TabsContent>
+          <TabsContent value="yearly" className="mt-6">
+            <TwelveMonthView 
+              userRooms={userRooms}
+              reservations={reservations}
+            />
+          </TabsContent>
+        </Tabs>
       
       </div>
       <OwnerReservationDialog

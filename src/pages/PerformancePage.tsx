@@ -4,11 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Line, AreaChart, Area, ComposedChart } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
+import { Terminal, TrendingUp, BedDouble, Users, CalendarDays, Euro } from 'lucide-react';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from '@/lib/admin-api';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { format, parseISO, isSameMonth, startOfMonth, endOfMonth, eachMonthOfInterval, differenceInDays, getDaysInMonth, getDaysInYear } from 'date-fns';
+import { format, eachMonthOfInterval, startOfMonth, endOfMonth, getDaysInMonth, getDaysInYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import { Button } from '@/components/ui/button';
@@ -19,14 +19,22 @@ const PerformancePage: React.FC = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // State for KPIs
   const [totalRevenues, setTotalRevenues] = useState(0);
   const [occupancyRateYear, setOccupancyRateYear] = useState(0);
   const [averageRating, setAverageRating] = useState('4.7 / 5'); // Hardcoded for now
+  const [revPar, setRevPar] = useState(0);
+  const [adr, setAdr] = useState(0);
+  const [netRevenuePerNight, setNetRevenuePerNight] = useState(0);
+  const [avgStayDuration, setAvgStayDuration] = useState(0);
+  const [avgGuestsPerReservation, setAvgGuestsPerReservation] = useState(0);
 
+  // State for Charts
   const [monthlyFinancialData, setMonthlyFinancialData] = useState<any[]>([]);
   const [monthlyReservationsData, setMonthlyReservationsData] = useState<any[]>([]);
   const [monthlyOccupancyData, setMonthlyOccupancyData] = useState<any[]>([]);
 
+  // State for Dialog
   const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
   const [dialogChartData, setDialogChartData] = useState<any[]>([]);
   const [dialogChartType, setDialogChartType] = useState<'line' | 'bar'>('line');
@@ -54,47 +62,87 @@ const PerformancePage: React.FC = () => {
 
       const statementsForYear = statements.filter(s => s.period.includes(currentYear.toString()));
 
-      // Calculate Total Revenues (CA)
-      const totalCA = statementsForYear.reduce((acc, s) => {
-        const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((itemAcc, item) => itemAcc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
-        return acc + statementCA;
-      }, 0);
-      setTotalRevenues(totalCA);
-
-      // Calculate Monthly Financial, Reservations, and Occupancy Data
+      // --- AGGREGATIONS & MONTHLY DATA PREPARATION ---
       const monthsOfYear = eachMonthOfInterval({
         start: startOfMonth(new Date(currentYear, 0, 1)),
         end: endOfMonth(new Date(currentYear, 11, 1)),
       });
-
       const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
       
       const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
       const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
       const monthlyNights = Array(12).fill(0);
-      let totalNightsForYear = 0;
+
+      let totalCA = 0;
+      let totalNetRevenue = 0;
+      let totalNightsSold = 0;
+      let totalReservations = 0;
+      let totalGuests = 0;
 
       statementsForYear.forEach(s => {
-        totalNightsForYear += s.totals.totalNuits || 0;
+        // Aggregations for yearly KPIs
+        const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((itemAcc, item) => itemAcc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
+        totalCA += statementCA;
 
+        const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
+        totalNetRevenue += statementNetToPay;
+
+        const statementNights = s.totals.totalNuits || 0;
+        totalNightsSold += statementNights;
+
+        const statementReservations = s.invoice_data.length;
+        totalReservations += statementReservations;
+
+        const statementGuests = s.invoice_data.reduce((acc, item) => acc + (item.voyageurs || 0), 0);
+        totalGuests += statementGuests;
+
+        // Logic for monthly charts
         const periodParts = s.period.toLowerCase().split(' ');
         const monthName = periodParts[0];
         const monthIndex = monthFrToNum[monthName];
 
         if (monthIndex !== undefined) {
-          const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
-          const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
-          
           newMonthlyFinancialData[monthIndex].ca += statementCA;
           newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
           newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
           newMonthlyFinancialData[monthIndex].benef += statementNetToPay;
           
-          newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
-          monthlyNights[monthIndex] += s.totals.totalNuits || 0;
+          newMonthlyReservationsData[monthIndex].reservations += statementReservations;
+          monthlyNights[monthIndex] += statementNights;
         }
       });
 
+      // --- YEARLY KPI CALCULATIONS & STATE UPDATES ---
+      setTotalRevenues(totalCA);
+
+      const totalDaysInYear = getDaysInYear(new Date(currentYear, 0, 1));
+      const totalAvailableNightsInYear = userRooms.length * totalDaysInYear;
+
+      // Occupancy Rate
+      const calculatedOccupancyRateYear = totalAvailableNightsInYear > 0 ? (totalNightsSold / totalAvailableNightsInYear) * 100 : 0;
+      setOccupancyRateYear(calculatedOccupancyRateYear);
+
+      // RevPAR
+      const calculatedRevPar = totalAvailableNightsInYear > 0 ? totalCA / totalAvailableNightsInYear : 0;
+      setRevPar(calculatedRevPar);
+
+      // ADR (Average Daily Rate)
+      const calculatedAdr = totalNightsSold > 0 ? totalCA / totalNightsSold : 0;
+      setAdr(calculatedAdr);
+
+      // Net Revenue Per Night
+      const calculatedNetRevenuePerNight = totalNightsSold > 0 ? totalNetRevenue / totalNightsSold : 0;
+      setNetRevenuePerNight(calculatedNetRevenuePerNight);
+
+      // Average Stay Duration
+      const calculatedAvgStayDuration = totalReservations > 0 ? totalNightsSold / totalReservations : 0;
+      setAvgStayDuration(calculatedAvgStayDuration);
+
+      // Average Guests per Reservation
+      const calculatedAvgGuestsPerReservation = totalReservations > 0 ? totalGuests / totalReservations : 0;
+      setAvgGuestsPerReservation(calculatedAvgGuestsPerReservation);
+
+      // --- MONTHLY CHART DATA FINALIZATION & STATE UPDATES ---
       const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
         const daysInMonth = getDaysInMonth(m);
         const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
@@ -105,12 +153,6 @@ const PerformancePage: React.FC = () => {
       setMonthlyFinancialData(newMonthlyFinancialData);
       setMonthlyReservationsData(newMonthlyReservationsData);
       setMonthlyOccupancyData(newMonthlyOccupancyData);
-
-      // Set overall Occupancy Rate for the year
-      const totalDaysInYear = getDaysInYear(new Date(currentYear, 0, 1));
-      const totalAvailableNightsInYear = userRooms.length * totalDaysInYear;
-      const calculatedOccupancyRateYear = totalAvailableNightsInYear > 0 ? (totalNightsForYear / totalAvailableNightsInYear) * 100 : 0;
-      setOccupancyRateYear(calculatedOccupancyRateYear);
 
     } catch (err: any) {
       setError(`Erreur lors du chargement des données de performance : ${err.message}`);
@@ -137,18 +179,14 @@ const PerformancePage: React.FC = () => {
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {loadingData ? (
-            <>
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </>
+            Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
           ) : (
             <>
               <Card className="shadow-md">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold">Chiffre d'Affaires ({currentYear})</CardTitle>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><Euro className="h-5 w-5 text-gray-500" />Chiffre d'Affaires ({currentYear})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-3xl font-bold text-green-600">{totalRevenues.toFixed(2)}€</p>
@@ -157,11 +195,56 @@ const PerformancePage: React.FC = () => {
               </Card>
               <Card className="shadow-md">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold">Taux d'Occupation ({currentYear})</CardTitle>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><TrendingUp className="h-5 w-5 text-gray-500" />Taux d'Occupation ({currentYear})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-3xl font-bold text-blue-600">{occupancyRateYear.toFixed(2)}%</p>
                   <p className="text-sm text-gray-500">Moyenne sur l'année</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><BedDouble className="h-5 w-5 text-gray-500" />RevPAR ({currentYear})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-indigo-600">{revPar.toFixed(2)}€</p>
+                  <p className="text-sm text-gray-500">Revenu par logement disponible</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><Euro className="h-5 w-5 text-gray-500" />Prix Moyen / Nuit (ADR)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-purple-600">{adr.toFixed(2)}€</p>
+                  <p className="text-sm text-gray-500">Tarif moyen par nuitée vendue</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><Euro className="h-5 w-5 text-gray-500" />Revenu Net / Nuit</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-teal-600">{netRevenuePerNight.toFixed(2)}€</p>
+                  <p className="text-sm text-gray-500">Après déduction des frais</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><CalendarDays className="h-5 w-5 text-gray-500" />Durée Moy. Séjour</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-orange-600">{avgStayDuration.toFixed(1)} <span className="text-xl">nuits</span></p>
+                  <p className="text-sm text-gray-500">Nuits par réservation</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><Users className="h-5 w-5 text-gray-500" />Voyageurs / Réservation</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-pink-600">{avgGuestsPerReservation.toFixed(1)}</p>
+                  <p className="text-sm text-gray-500">Moyenne par réservation</p>
                 </CardContent>
               </Card>
               <Card className="shadow-md">

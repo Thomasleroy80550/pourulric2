@@ -40,56 +40,58 @@ import BlogPostPage from "./pages/BlogPostPage"; // Add this line
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <SessionContextProvider>
-            <InvoiceGenerationProvider>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/admin" element={<AdminDashboardPage />} />
-                <Route path="/admin/pages" element={<PageCreator />} />
-                <Route path="/admin/blog" element={<BlogManager />} />
-                <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
-                <Route path="/admin/statements" element={<AdminStatementsPage />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
-                <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
-                <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
-                <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} /> {/* Add this line */}
-                <Route path="/pages/:slug" element={<ContentPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/blog" element={<BlogPage />} />
-                <Route path="/blog/:slug" element={<BlogPostPage />} /> {/* Add this line */}
-                <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
-                <Route path="/promotion" element={<PromotionPage />} />
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/bookings" element={<BookingsPage />} />
-                <Route path="/performance" element={<PerformancePage />} />
-                <Route path="/reviews" element={<ReviewsPage />} />
-                <Route path="/finances" element={<FinancePage />} />
-                <Route path="/tourist-tax" element={<TouristTaxPage />} />
-                <Route path="/reports" element={<TechnicalReportsPage />} />
-                <Route path="/reports/:id" element={<TechnicalReportDetailPage />} />
-                <Route path="/help" element={<HelpPage />} />
-                <Route path="/modules" element={<ModulesPage />} />
-                <Route path="/roadmap" element={<RoadmapPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/my-rooms" element={<MyRoomsPage />} /> {/* Add this line */}
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </InvoiceGenerationProvider>
-          </SessionContextProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <SessionContextProvider>
+              <InvoiceGenerationProvider>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/admin" element={<AdminDashboardPage />} />
+                  <Route path="/admin/pages" element={<PageCreator />} />
+                  <Route path="/admin/blog" element={<BlogManager />} />
+                  <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
+                  <Route path="/admin/statements" element={<AdminStatementsPage />} />
+                  <Route path="/admin/users" element={<AdminUsersPage />} />
+                  <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
+                  <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
+                  <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
+                  <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} /> {/* Add this line */}
+                  <Route path="/pages/:slug" element={<ContentPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/blog" element={<BlogPage />} />
+                  <Route path="/blog/:slug" element={<BlogPostPage />} /> {/* Add this line */}
+                  <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
+                  <Route path="/promotion" element={<PromotionPage />} />
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/bookings" element={<BookingsPage />} />
+                  <Route path="/performance" element={<PerformancePage />} />
+                  <Route path="/reviews" element={<ReviewsPage />} />
+                  <Route path="/finances" element={<FinancePage />} />
+                  <Route path="/tourist-tax" element={<TouristTaxPage />} />
+                  <Route path="/reports" element={<TechnicalReportsPage />} />
+                  <Route path="/reports/:id" element={<TechnicalReportDetailPage />} />
+                  <Route path="/help" element={<HelpPage />} />
+                  <Route path="/modules" element={<ModulesPage />} />
+                  <Route path="/roadmap" element={<RoadmapPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/my-rooms" element={<MyRoomsPage />} /> {/* Add this line */}
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </InvoiceGenerationProvider>
+            </SessionContextProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

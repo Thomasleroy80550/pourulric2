@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getMyStrategies, requestStrategyReview, Strategy } from '@/lib/strategy-api';
+import { getMyStrategies, requestStrategyReview, Strategy, requestStrategyCreation } from '@/lib/strategy-api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,7 @@ const StrategyTab: React.FC = () => {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const fetchStrategies = useCallback(async () => {
     setLoading(true);
@@ -40,6 +41,20 @@ const StrategyTab: React.FC = () => {
     } catch (err: any) {
       toast.error(`Erreur lors de la demande de révision : ${err.message}`);
       console.error(err);
+    }
+  };
+
+  const handleRequestCreation = async () => {
+    setIsRequesting(true);
+    try {
+      await requestStrategyCreation();
+      toast.success('Votre demande de stratégie a été envoyée.');
+      fetchStrategies(); // Refresh the data
+    } catch (err: any) {
+      toast.error(`Erreur lors de la demande : ${err.message}`);
+      console.error(err);
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -81,13 +96,32 @@ const StrategyTab: React.FC = () => {
           <CardTitle>Aucune stratégie définie</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Aucune stratégie n'a encore été définie pour votre compte. L'équipe administrative vous en proposera une prochainement.</p>
+          <p className="mb-4">Aucune stratégie n'a encore été définie pour votre compte. Vous pouvez en demander une à l'équipe administrative.</p>
+          <Button onClick={handleRequestCreation} disabled={isRequesting}>
+            {isRequesting ? 'Envoi en cours...' : 'Demander une stratégie'}
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
   const latestStrategy = strategies[0];
+
+  if (latestStrategy.status === 'creation_requested') {
+    return (
+       <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Demande de Stratégie en Cours</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center text-yellow-600 font-semibold">
+            <Clock className="h-5 w-5 mr-2" />
+            <span>Votre demande de création de stratégie est en attente de traitement par un administrateur.</span>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="mt-6">

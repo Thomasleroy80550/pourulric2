@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "./notifications-api";
 import { UserProfile } from "./profile-api";
+import { Strategy } from "./strategy-api";
 
 export interface SavedInvoice {
   id: string;
@@ -268,4 +269,71 @@ export async function getAllUserRooms(): Promise<AdminUserRoom[]> {
     throw new Error(`Erreur lors de la récupération de tous les logements utilisateurs : ${error.message}`);
   }
   return data || [];
+}
+
+/**
+ * Fetches all strategies from the database. Admin only.
+ * @returns A promise that resolves to an array of Strategy objects.
+ */
+export async function getAllStrategies(): Promise<Strategy[]> {
+  const { data, error } = await supabase
+    .from('strategies')
+    .select(`*`);
+
+  if (error) {
+    console.error("Error fetching all strategies:", error);
+    throw new Error(`Erreur lors de la récupération des stratégies : ${error.message}`);
+  }
+  return data || [];
+}
+
+/**
+ * Creates or updates a strategy for a user. Admin only.
+ * @param userId The ID of the user.
+ * @param adminId The ID of the admin creating the strategy.
+ * @param content The content of the strategy.
+ * @returns The created or updated strategy.
+ */
+export async function upsertStrategy(userId: string, adminId: string, content: string): Promise<Strategy> {
+  const { data, error } = await supabase
+    .from('strategies')
+    .upsert({
+      user_id: userId,
+      created_by: adminId,
+      strategy_content: content,
+      status: 'active', // Reset status to active on any admin update
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error upserting strategy:', error);
+    throw new Error(`Erreur lors de la sauvegarde de la stratégie : ${error.message}`);
+  }
+
+  // Notify the user that their strategy has been updated
+  await createNotification(
+    userId,
+    `Votre stratégie de performance a été mise à jour.`,
+    '/performance'
+  );
+
+  return data;
+}
+
+/**
+ * Deletes a strategy. Typically used to deny a creation request. Admin only.
+ * @param strategyId The ID of the strategy to delete.
+ */
+export async function deleteStrategy(strategyId: string): Promise<void> {
+  const { error } = await supabase
+    .from('strategies')
+    .delete()
+    .eq('id', strategyId);
+
+  if (error) {
+    console.error("Error deleting strategy:", error);
+    throw new Error(`Erreur lors de la suppression de la stratégie : ${error.message}`);
+  }
 }

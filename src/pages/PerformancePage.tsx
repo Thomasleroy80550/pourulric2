@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Line, AreaChart, Area, ComposedChart } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, TrendingUp, BedDouble, Users, CalendarDays, Euro } from 'lucide-react';
+import { Terminal, TrendingUp, BedDouble, Users, CalendarDays, Euro, Wallet } from 'lucide-react';
 import { getMyStatements } from '@/lib/statements-api';
-import { SavedInvoice } from '@/lib/admin-api';
-import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { getUserRooms } from '@/lib/user-room-api';
+import { getExpenses, getRecurringExpenses, generateRecurringInstances } from '@/lib/expenses-api';
 import { format, eachMonthOfInterval, startOfMonth, endOfMonth, getDaysInMonth, getDaysInYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
@@ -21,6 +21,7 @@ const PerformancePage: React.FC = () => {
 
   // State for KPIs
   const [totalRevenues, setTotalRevenues] = useState(0);
+  const [totalNetProfit, setTotalNetProfit] = useState(0);
   const [occupancyRateYear, setOccupancyRateYear] = useState(0);
   const [averageRating, setAverageRating] = useState('4.7 / 5'); // Hardcoded for now
   const [revPar, setRevPar] = useState(0);
@@ -55,10 +56,16 @@ const PerformancePage: React.FC = () => {
     setLoadingData(true);
     setError(null);
     try {
-      const [statements, userRooms] = await Promise.all([
+      const [statements, userRooms, singleExpenses, recurringExpensesRaw] = await Promise.all([
         getMyStatements(),
         getUserRooms(),
+        getExpenses(currentYear),
+        getRecurringExpenses(),
       ]);
+
+      const recurringInstances = generateRecurringInstances(recurringExpensesRaw, currentYear);
+      const allExpenses = [...singleExpenses, ...recurringInstances];
+      const totalOtherExpenses = allExpenses.reduce((acc, expense) => acc + expense.amount, 0);
 
       const statementsForYear = statements.filter(s => s.period.includes(currentYear.toString()));
 
@@ -69,23 +76,30 @@ const PerformancePage: React.FC = () => {
       });
       const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
       
-      const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0 }));
+      const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, depenses: 0, benef: 0 }));
       const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
       const monthlyNights = Array(12).fill(0);
+      const monthlyExpenses = Array(12).fill(0);
+
+      allExpenses.forEach(expense => {
+        const expenseMonth = new Date(expense.expense_date).getUTCMonth();
+        if (expenseMonth >= 0 && expenseMonth < 12) {
+          monthlyExpenses[expenseMonth] += expense.amount;
+        }
+      });
 
       let totalCA = 0;
-      let totalNetRevenue = 0;
+      let totalNetRevenueFromStatements = 0;
       let totalNightsSold = 0;
       let totalReservations = 0;
       let totalGuests = 0;
 
       statementsForYear.forEach(s => {
-        // Aggregations for yearly KPIs
         const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((itemAcc, item) => itemAcc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
         totalCA += statementCA;
 
         const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
-        totalNetRevenue += statementNetToPay;
+        totalNetRevenueFromStatements += statementNetToPay;
 
         const statementNights = s.totals.totalNuits || 0;
         totalNightsSold += statementNights;
@@ -96,7 +110,6 @@ const PerformancePage: React.FC = () => {
         const statementGuests = s.invoice_data.reduce((acc, item) => acc + (item.voyageurs || 0), 0);
         totalGuests += statementGuests;
 
-        // Logic for monthly charts
         const periodParts = s.period.toLowerCase().split(' ');
         const monthName = periodParts[0];
         const monthIndex = monthFrToNum[monthName];
@@ -112,37 +125,36 @@ const PerformancePage: React.FC = () => {
         }
       });
 
+      newMonthlyFinancialData.forEach((monthData, index) => {
+        monthData.depenses = monthlyExpenses[index];
+        monthData.benef -= monthlyExpenses[index];
+      });
+
       // --- YEARLY KPI CALCULATIONS & STATE UPDATES ---
       setTotalRevenues(totalCA);
+      setTotalNetProfit(totalNetRevenueFromStatements - totalOtherExpenses);
 
       const totalDaysInYear = getDaysInYear(new Date(currentYear, 0, 1));
       const totalAvailableNightsInYear = userRooms.length * totalDaysInYear;
 
-      // Occupancy Rate
       const calculatedOccupancyRateYear = totalAvailableNightsInYear > 0 ? (totalNightsSold / totalAvailableNightsInYear) * 100 : 0;
       setOccupancyRateYear(calculatedOccupancyRateYear);
 
-      // RevPAR
       const calculatedRevPar = totalAvailableNightsInYear > 0 ? totalCA / totalAvailableNightsInYear : 0;
       setRevPar(calculatedRevPar);
 
-      // ADR (Average Daily Rate)
       const calculatedAdr = totalNightsSold > 0 ? totalCA / totalNightsSold : 0;
       setAdr(calculatedAdr);
 
-      // Net Revenue Per Night
-      const calculatedNetRevenuePerNight = totalNightsSold > 0 ? totalNetRevenue / totalNightsSold : 0;
+      const calculatedNetRevenuePerNight = totalNightsSold > 0 ? totalNetRevenueFromStatements / totalNightsSold : 0;
       setNetRevenuePerNight(calculatedNetRevenuePerNight);
 
-      // Average Stay Duration
       const calculatedAvgStayDuration = totalReservations > 0 ? totalNightsSold / totalReservations : 0;
       setAvgStayDuration(calculatedAvgStayDuration);
 
-      // Average Guests per Reservation
       const calculatedAvgGuestsPerReservation = totalReservations > 0 ? totalGuests / totalReservations : 0;
       setAvgGuestsPerReservation(calculatedAvgGuestsPerReservation);
 
-      // --- MONTHLY CHART DATA FINALIZATION & STATE UPDATES ---
       const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
         const daysInMonth = getDaysInMonth(m);
         const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
@@ -181,7 +193,7 @@ const PerformancePage: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {loadingData ? (
-            Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
+            Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
           ) : (
             <>
               <Card className="shadow-md">
@@ -191,6 +203,15 @@ const PerformancePage: React.FC = () => {
                 <CardContent>
                   <p className="text-3xl font-bold text-green-600">{totalRevenues.toFixed(2)}€</p>
                   <p className="text-sm text-gray-500">Total brut payé par les voyageurs</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-gray-500" />Bénéfice Net ({currentYear})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold text-green-700">{totalNetProfit.toFixed(2)}€</p>
+                  <p className="text-sm text-gray-500">Après frais et dépenses</p>
                 </CardContent>
               </Card>
               <Card className="shadow-md">
@@ -226,7 +247,7 @@ const PerformancePage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-3xl font-bold text-teal-600">{netRevenuePerNight.toFixed(2)}€</p>
-                  <p className="text-sm text-gray-500">Après déduction des frais</p>
+                  <p className="text-sm text-gray-500">Revenu par nuit (avant dépenses)</p>
                 </CardContent>
               </Card>
               <Card className="shadow-md">
@@ -260,9 +281,8 @@ const PerformancePage: React.FC = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Statistiques Financières Mensuelles Card */}
-          <Card className="shadow-md">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="shadow-md lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
@@ -272,15 +292,16 @@ const PerformancePage: React.FC = () => {
                 [
                   { key: 'ca', name: 'CA', color: 'hsl(var(--primary))' },
                   { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
-                  { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
-                  { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
+                  { key: 'frais', name: 'Frais Plateforme', color: 'hsl(var(--destructive))' },
+                  { key: 'depenses', name: 'Autres Dépenses', color: '#f97316' },
+                  { key: 'benef', name: 'Bénéfice Net', color: '#22c55e' },
                 ],
                 '€'
               )}>
                 Agrandir
               </Button>
             </CardHeader>
-            <CardContent className="h-72">
+            <CardContent className="h-80">
               {loadingData ? (
                 <Skeleton className="h-full w-full" />
               ) : (
@@ -297,17 +318,17 @@ const PerformancePage: React.FC = () => {
                     <YAxis unit="€" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenefPerf)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais Plateforme" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="depenses" stroke="#f97316" name="Autres Dépenses" strokeWidth={2} dot={false} />
+                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenefPerf)" name="Bénéfice Net" strokeWidth={3} />
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
 
-          {/* Réservation / mois Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Réservations / mois</CardTitle>
@@ -337,14 +358,13 @@ const PerformancePage: React.FC = () => {
                     <YAxis allowDecimals={false} className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Bar dataKey="reservations" fill="url(#colorReservationsPerf)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Bar dataKey="reservations" fill="url(#colorReservationsPerf)" name="Réservations" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
 
-          {/* Occupation Mensuelle Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Taux d'Occupation</CardTitle>
@@ -375,7 +395,7 @@ const PerformancePage: React.FC = () => {
                     <YAxis unit="%" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupationPerf)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupationPerf)" name="Occupation" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}

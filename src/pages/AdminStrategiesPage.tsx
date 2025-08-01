@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import AdminLayout from '@/components/AdminLayout';
 import { getAllProfiles, getAllStrategies, deleteStrategy } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { Strategy } from '@/lib/strategy-api';
@@ -100,17 +101,25 @@ const AdminStrategiesPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
-    </div>
+    return (
+      <AdminLayout>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
+        </div>
+      </AdminLayout>
+    )
   }
 
   if (error) {
-    return <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
+    return (
+      <AdminLayout>
+        <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
+      </AdminLayout>
+    )
   }
 
   return (
-    <div>
+    <AdminLayout>
       <h1 className="text-2xl font-bold mb-4">Gestion des Stratégies</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedUsers.map(user => (
@@ -157,7 +166,7 @@ const AdminStrategiesPage: React.FC = () => {
         strategy={selectedStrategy}
         onStrategyUpdate={fetchData}
       />
-    </div>
+    </AdminLayout>
   );
 };
 

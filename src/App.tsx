@@ -30,13 +30,14 @@ import TechnicalReportsPage from "./pages/TechnicalReportsPage";
 import TechnicalReportDetailPage from "./pages/TechnicalReportDetailPage";
 import ReservationReportDetailPage from "./pages/ReservationReportDetailPage";
 import TouristTaxPage from "./pages/TouristTaxPage";
-import MyRoomsPage from "./pages/MyRoomsPage"; // Add this line
-import AdminUserRoomsPage from "./pages/AdminUserRoomsPage"; // Add this line
+import MyRoomsPage from "./pages/MyRoomsPage";
+import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
 import BlogManager from "./components/BlogManager";
-import BlogPostPage from "./pages/BlogPostPage"; // Add this line
+import BlogPostPage from "./pages/BlogPostPage";
+import AdminStrategiesPage from "./pages/AdminStrategiesPage";
 
 const queryClient = new QueryClient();
 
@@ -61,11 +62,12 @@ function App() {
                   <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
                   <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                   <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
-                  <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} /> {/* Add this line */}
+                  <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
+                  <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />
-                  <Route path="/blog/:slug" element={<BlogPostPage />} /> {/* Add this line */}
+                  <Route path="/blog/:slug" element={<BlogPostPage />} />
                   <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                   <Route path="/promotion" element={<PromotionPage />} />
                   <Route path="/" element={<DashboardPage />} />
@@ -81,7 +83,7 @@ function App() {
                   <Route path="/modules" element={<ModulesPage />} />
                   <Route path="/roadmap" element={<RoadmapPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/my-rooms" element={<MyRoomsPage />} /> {/* Add this line */}
+                  <Route path="/my-rooms" element={<MyRoomsPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

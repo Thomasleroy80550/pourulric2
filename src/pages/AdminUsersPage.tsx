@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -55,6 +55,7 @@ const editUserSchema = z.object({
   notify_new_booking_sms: z.boolean().optional(),
   notify_cancellation_sms: z.boolean().optional(),
   is_banned: z.boolean().optional(),
+  can_manage_prices: z.boolean().optional(),
   kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional(),
 });
 
@@ -219,6 +220,7 @@ const AdminUsersPage: React.FC = () => {
       notify_new_booking_sms: user.notify_new_booking_sms ?? false,
       notify_cancellation_sms: user.notify_cancellation_sms ?? false,
       is_banned: user.is_banned || false,
+      can_manage_prices: user.can_manage_prices || false,
       kyc_status: user.kyc_status || 'not_verified',
     });
     setIsEditDialogOpen(true);
@@ -598,7 +600,7 @@ const AdminUsersPage: React.FC = () => {
                     </CardContent>
                   </Card>
                 </TabsContent>
-                <TabsContent value="offer" className="mt-4">
+                <TabsContent value="offer" className="mt-4 space-y-4">
                   <Card>
                     <CardHeader><CardTitle>Détails de l'offre</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
@@ -606,6 +608,31 @@ const AdminUsersPage: React.FC = () => {
                       <FormField control={editUserForm.control} name="linen_type" render={({ field }) => (<FormItem><FormLabel>Type de linge</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="agency" render={({ field }) => (<FormItem><FormLabel>Agence</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Sélectionner une agence" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Côte d'opal">Côte d'opal</SelectItem><SelectItem value="Baie de somme">Baie de somme</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="contract_start_date" render={({ field }) => (<FormItem><FormLabel>Date de début de contrat</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader><CardTitle>Permissions</CardTitle></CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={editUserForm.control}
+                        name="can_manage_prices"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                              <FormLabel>Gérer les prix/restrictions</FormLabel>
+                              <p className="text-xs text-muted-foreground">
+                                Autoriser cet utilisateur à modifier les prix et à bloquer des dates sur le calendrier.
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>

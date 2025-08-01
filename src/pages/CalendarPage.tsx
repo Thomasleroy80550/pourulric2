@@ -19,6 +19,7 @@ import { addDays, format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const COOLDOWN_KEY = 'calendar_refresh_cooldown';
 const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
@@ -28,6 +29,7 @@ const CalendarPage: React.FC = () => {
   const isMobile = useIsMobile();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false);
+  const [isAccessDeniedDialogOpen, setIsAccessDeniedDialogOpen] = useState(false);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -189,6 +191,14 @@ const CalendarPage: React.FC = () => {
     toast.success("Le calendrier est en cours de rafraîchissement.");
   };
 
+  const handlePriceRestrictionClick = () => {
+    if (profile?.can_manage_prices) {
+      setIsPriceRestrictionDialogOpen(true);
+    } else {
+      setIsAccessDeniedDialogOpen(true);
+    }
+  };
+
   const handlePriceRestrictionSaved = () => {
     setIsPriceRestrictionDialogOpen(false);
   };
@@ -240,7 +250,7 @@ const CalendarPage: React.FC = () => {
               <PlusCircle className="h-4 w-4 mr-2" />
               Réservation Propriétaire
             </Button>
-            <Button onClick={() => setIsPriceRestrictionDialogOpen(true)} variant="outline" className="flex items-center w-full sm:w-auto">
+            <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto">
               <DollarSign className="h-4 w-4 mr-2" />
               Configurer Prix & Restrictions
             </Button>
@@ -302,6 +312,19 @@ const CalendarPage: React.FC = () => {
         userRooms={userRooms}
         onSettingsSaved={handlePriceRestrictionSaved}
       />
+      <AlertDialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Accès non autorisé</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vous n'avez pas la permission de configurer les prix et les restrictions. Veuillez contacter un administrateur pour demander l'accès à cette fonctionnalité.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsAccessDeniedDialogOpen(false)}>Compris</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

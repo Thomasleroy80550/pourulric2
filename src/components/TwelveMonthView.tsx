@@ -20,6 +20,16 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
   const getDayStatus = useCallback((day: Date) => {
     const dayStart = startOfDay(day);
     
+    const roomsToConsider = selectedRoomId === 'all'
+      ? userRooms
+      : userRooms.filter(r => r.room_id === selectedRoomId);
+    
+    if (roomsToConsider.length === 0) {
+        return { isArrival: false, isDeparture: false, isBooked: false };
+    }
+
+    const consideredRoomIds = new Set(roomsToConsider.map(r => r.room_id));
+    
     const arrivals = new Set<string>();
     const departures = new Set<string>();
     const bookedRooms = new Set<string>();
@@ -45,12 +55,6 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
         }
       }
     }
-
-    const roomsToConsider = selectedRoomId === 'all'
-      ? userRooms
-      : userRooms.filter(r => r.room_id === selectedRoomId);
-    
-    const consideredRoomIds = new Set(roomsToConsider.map(r => r.room_id));
 
     const isArrival = [...arrivals].some(id => consideredRoomIds.has(id));
     const isDeparture = [...departures].some(id => consideredRoomIds.has(id));
@@ -120,22 +124,29 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                     <div key={`empty-${i}`} />
                   ))}
                   {days.map((day, dayIndex) => {
-                    const { isArrival, isDeparture, isBooked } = getDayStatus(day);
+                    const { isArrival, isBooked } = getDayStatus(day);
+                    const { isDeparture: isNextDayDeparture } = getDayStatus(addDays(day, 1));
+
+                    const isBookingStart = isBooked && isArrival;
+                    const isBookingEnd = isBooked && isNextDayDeparture;
+                    const isMiddle = isBooked && !isArrival && !isNextDayDeparture;
+                    const isOneNightStay = isBooked && isArrival && isNextDayDeparture;
+
                     return (
                       <div
                         key={dayIndex}
                         className={cn(
-                          'h-8 w-8 flex items-center justify-center rounded-full text-xs relative overflow-hidden',
-                          isBooked ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800',
-                          isSameDay(day, today) && 'ring-2 ring-blue-500'
+                          'h-8 w-8 flex items-center justify-center text-xs',
+                          isSameDay(day, today) && 'ring-2 ring-blue-500',
+                          {
+                            'bg-green-200 text-green-800 rounded-full': !isBooked,
+                            'bg-red-200 text-red-800': isBooked,
+                            'rounded-full': isOneNightStay,
+                            'rounded-l-full': isBookingStart && !isOneNightStay,
+                            'rounded-r-full': isBookingEnd && !isOneNightStay,
+                          }
                         )}
                       >
-                        {isArrival && (
-                          <div className="absolute left-0 top-0 h-full w-1 bg-blue-500" />
-                        )}
-                        {isDeparture && (
-                          <div className="absolute right-0 top-0 h-full w-1 bg-orange-500" />
-                        )}
                         <span className="relative z-10 font-semibold">{format(day, 'd')}</span>
                       </div>
                     );
@@ -154,20 +165,8 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
             <span className="text-sm text-gray-700 dark:text-gray-300">Disponible</span>
           </div>
           <div className="flex items-center">
-            <span className="w-4 h-4 rounded-full mr-2 bg-red-200"></span>
+            <span className="w-4 h-4 mr-2 bg-red-200"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">{selectedRoomId === 'all' ? 'Tout réservé' : 'Réservé'}</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 relative mr-2 flex items-center justify-center">
-              <div className="absolute left-0 top-0 h-full w-1 bg-blue-500" />
-            </div>
-            <span className="text-sm text-gray-700 dark:text-gray-300 ml-1">Jour d'arrivée</span>
-          </div>
-          <div className="flex items-center">
-            <div className="w-4 h-4 relative mr-2 flex items-center justify-center">
-              <div className="absolute right-0 top-0 h-full w-1 bg-orange-500" />
-            </div>
-            <span className="text-sm text-gray-700 dark:text-gray-300 ml-1">Jour de départ</span>
           </div>
         </div>
       </div>

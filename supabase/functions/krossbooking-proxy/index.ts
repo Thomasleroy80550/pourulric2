@@ -89,11 +89,14 @@ serve(async (req) => {
     let returnFullData = false;
 
     switch (action) {
-      case 'get_reservations':
+      case 'get_reservations_for_room':
+        if (!requestBody.id_room) {
+          throw new Error("Missing id_room for get_reservations_for_room.");
+        }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
         krossbookingBody = JSON.stringify({
           with_rooms: true,
-          id_room: requestBody.id_rooms ? requestBody.id_rooms.map(Number) : undefined,
+          id_room: Number(requestBody.id_room),
         });
         break;
 

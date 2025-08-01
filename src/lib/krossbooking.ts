@@ -174,31 +174,24 @@ export async function fetchKrossbookingReservations(
     return reservationsCache.data;
   }
   
-  console.log("Fetching fresh Krossbooking reservations from API for user rooms.");
+  console.log("Fetching fresh Krossbooking reservations from API for each user room.");
   try {
-    const roomIds = userRooms.map(room => room.room_id);
-    if (roomIds.length === 0) {
+    if (userRooms.length === 0) {
       console.log("No configured rooms to fetch reservations for.");
       return [];
     }
 
-    const data = await callKrossbookingProxy('get_reservations', { id_rooms: roomIds });
-
-    if (!Array.isArray(data)) {
-      console.warn(`Unexpected Krossbooking API response structure for reservations or no data array:`, data);
-      return [];
-    }
-
-    const allReservations = data.map((res: any): KrossbookingReservation => {
-      const actualRoomId = res.rooms?.[0]?.id_room?.toString();
-      const actualRoom = userRooms.find(ur => ur.room_id === actualRoomId);
-      const propertyName = actualRoom ? actualRoom.room_name : 'Chambre inconnue';
-
-      return {
+    const allReservationsPromises = userRooms.map(async (room) => {
+      const data = await callKrossbookingProxy('get_reservations_for_room', { id_room: room.room_id });
+      if (!Array.isArray(data)) {
+        console.warn(`Unexpected Krossbooking API response for room ${room.room_id}:`, data);
+        return [];
+      }
+      return data.map((res: any): KrossbookingReservation => ({
         id: res.id_reservation.toString(),
         guest_name: res.label || 'N/A',
-        property_name: propertyName,
-        krossbooking_room_id: actualRoomId || '',
+        property_name: room.room_name, // Use the name from the loop context
+        krossbooking_room_id: room.room_id,
         check_in_date: res.arrival || '',
         check_out_date: res.departure || '',
         status: res.cod_reservation_status,
@@ -209,10 +202,13 @@ export async function fetchKrossbookingReservations(
         email: res.email || '',
         phone: res.phone || '',
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
-      };
+      }));
     });
 
-    const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id, res])).values());
+    const reservationsByRoom = await Promise.all(allReservationsPromises);
+    const flattenedReservations = reservationsByRoom.flat();
+    
+    const uniqueReservations = Array.from(new Map(flattenedReservations.map(res => [res.id, res])).values());
     
     reservationsCache = {
       data: uniqueReservations,
@@ -221,6 +217,7 @@ export async function fetchKrossbookingReservations(
     console.log("Krossbooking reservations cached successfully.");
 
     return uniqueReservations;
+
   } catch (error) {
     console.error(`Error fetching all reservations:`, error);
     if (reservationsCache) {

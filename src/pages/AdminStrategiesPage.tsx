@@ -39,7 +39,6 @@ const AdminStrategiesPage: React.FC = () => {
     try {
       const [profiles, strategies] = await Promise.all([getAllProfiles(), getAllStrategies()]);
       const profilesWithStrategies = profiles
-        .filter(p => p.role !== 'admin') // Exclude admins from the list
         .map(profile => {
           const strategy = strategies.find(s => s.user_id === profile.id);
           return { ...profile, strategy };

@@ -37,7 +37,6 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
     for (const reservation of reservations) {
       if (reservation.status === 'CANC') continue;
 
-      // Robustly parse date strings to avoid timezone issues by creating dates at midnight in the local timezone.
       const [ciYear, ciMonth, ciDay] = reservation.check_in_date.split('-').map(Number);
       const checkIn = new Date(ciYear, ciMonth - 1, ciDay);
 
@@ -52,7 +51,6 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
           departures.add(reservation.krossbooking_room_id);
         }
         if (checkOut > checkIn) {
-          // A booking's last night is the day before checkout.
           const interval = { start: checkIn, end: addDays(checkOut, -1) };
           if (isWithinInterval(dayStart, interval)) {
             bookedRooms.add(reservation.krossbooking_room_id);
@@ -129,13 +127,14 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                     <div key={`empty-${i}`} />
                   ))}
                   {days.map((day, dayIndex) => {
-                    const { isArrival, isBooked } = getDayStatus(day);
+                    const { isArrival, isBooked, isDeparture } = getDayStatus(day);
                     const { isDeparture: isNextDayDeparture } = getDayStatus(addDays(day, 1));
 
                     const isBookingStart = isBooked && isArrival;
                     const isBookingEnd = isBooked && isNextDayDeparture;
-                    const isMiddle = isBooked && !isArrival && !isNextDayDeparture;
                     const isOneNightStay = isBooked && isArrival && isNextDayDeparture;
+                    const isChangeover = isDeparture && isBooked && isArrival;
+                    const isOnlyDeparture = isDeparture && !isBooked && !isArrival;
 
                     return (
                       <div
@@ -143,13 +142,14 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                         className={cn(
                           'h-8 w-8 flex items-center justify-center text-xs',
                           isSameDay(day, today) && 'ring-2 ring-blue-500',
-                          {
-                            'bg-green-200 text-green-800 rounded-full': !isBooked,
-                            'bg-red-200 text-red-800': isBooked,
-                            'rounded-full': isOneNightStay,
-                            'rounded-l-full': isBookingStart && !isOneNightStay,
-                            'rounded-r-full': isBookingEnd && !isOneNightStay,
-                          }
+                          isBooked && {
+                            'bg-red-200 text-red-800': true,
+                            'rounded-full': isOneNightStay || isChangeover,
+                            'rounded-l-full': isBookingStart && !isOneNightStay && !isChangeover,
+                            'rounded-r-full': isBookingEnd && !isOneNightStay && !isChangeover,
+                          },
+                          isOnlyDeparture && "bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)] text-gray-800 rounded-full",
+                          !isBooked && !isOnlyDeparture && 'bg-green-200 text-green-800 rounded-full'
                         )}
                       >
                         <span className="relative z-10 font-semibold">{format(day, 'd')}</span>
@@ -172,6 +172,10 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
           <div className="flex items-center">
             <span className="w-4 h-4 mr-2 bg-red-200"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">{selectedRoomId === 'all' ? 'Tout réservé' : 'Réservé'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="w-4 h-4 rounded-full mr-2 bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)]"></span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ</span>
           </div>
         </div>
       </div>

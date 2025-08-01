@@ -18,6 +18,10 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import { addDays, format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
+import { toast } from 'sonner';
+
+const COOLDOWN_KEY = 'calendar_refresh_cooldown';
+const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
 
 const CalendarPage: React.FC = () => {
   const { profile, session } = useSession();
@@ -29,6 +33,31 @@ const CalendarPage: React.FC = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const location = useLocation();
+  const [cooldownEndTime, setCooldownEndTime] = useState<number>(() => {
+    const savedTime = localStorage.getItem(COOLDOWN_KEY);
+    return savedTime ? parseInt(savedTime, 10) : 0;
+  });
+  const [remainingTime, setRemainingTime] = useState<string>('');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const timeLeft = cooldownEndTime - now;
+
+      if (timeLeft > 0) {
+        const minutes = Math.floor((timeLeft / 1000) / 60);
+        const seconds = Math.floor((timeLeft / 1000) % 60);
+        setRemainingTime(`${minutes}m ${seconds.toString().padStart(2, '0')}s`);
+      } else {
+        setRemainingTime('');
+        if (cooldownEndTime !== 0) {
+          setCooldownEndTime(0);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownEndTime]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -145,8 +174,19 @@ const CalendarPage: React.FC = () => {
   }, [location.state]);
 
   const handleReservationChange = () => {
+    const now = Date.now();
+    if (now < cooldownEndTime) {
+      toast.info(`Veuillez attendre la fin du délai avant de rafraîchir à nouveau.`);
+      return;
+    }
+
     clearReservationsCache();
     setRefreshTrigger(prev => prev + 1);
+
+    const newCooldownEndTime = now + COOLDOWN_DURATION;
+    localStorage.setItem(COOLDOWN_KEY, newCooldownEndTime.toString());
+    setCooldownEndTime(newCooldownEndTime);
+    toast.success("Le calendrier est en cours de rafraîchissement.");
   };
 
   const handlePriceRestrictionSaved = () => {
@@ -204,9 +244,14 @@ const CalendarPage: React.FC = () => {
               <DollarSign className="h-4 w-4 mr-2" />
               Configurer Prix & Restrictions
             </Button>
-            <Button onClick={handleReservationChange} variant="outline" className="flex items-center w-full sm:w-auto">
+            <Button 
+              onClick={handleReservationChange} 
+              variant="outline" 
+              className="flex items-center w-full sm:w-auto"
+              disabled={Date.now() < cooldownEndTime}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Rafraîchir
+              {Date.now() < cooldownEndTime ? `Attendre ${remainingTime}` : 'Rafraîchir'}
             </Button>
           </div>
         </div>

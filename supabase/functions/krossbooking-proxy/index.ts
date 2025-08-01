@@ -93,7 +93,7 @@ serve(async (req) => {
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
         krossbookingBody = JSON.stringify({
           with_rooms: true,
-          id_room: requestBody.id_room ? Number(requestBody.id_room) : undefined,
+          id_room: requestBody.id_rooms ? requestBody.id_rooms.map(Number) : undefined,
         });
         break;
 

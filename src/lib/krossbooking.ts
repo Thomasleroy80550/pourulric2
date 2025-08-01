@@ -174,10 +174,15 @@ export async function fetchKrossbookingReservations(
     return reservationsCache.data;
   }
   
-  console.log("Fetching fresh Krossbooking reservations from API.");
+  console.log("Fetching fresh Krossbooking reservations from API for user rooms.");
   try {
-    // Make a single API call to get all reservations for the property
-    const data = await callKrossbookingProxy('get_reservations');
+    const roomIds = userRooms.map(room => room.room_id);
+    if (roomIds.length === 0) {
+      console.log("No configured rooms to fetch reservations for.");
+      return [];
+    }
+
+    const data = await callKrossbookingProxy('get_reservations', { id_rooms: roomIds });
 
     if (!Array.isArray(data)) {
       console.warn(`Unexpected Krossbooking API response structure for reservations or no data array:`, data);

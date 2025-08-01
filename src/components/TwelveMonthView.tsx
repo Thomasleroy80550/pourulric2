@@ -128,11 +128,7 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                   ))}
                   {days.map((day, dayIndex) => {
                     const { isArrival, isBooked, isDeparture } = getDayStatus(day);
-                    const { isDeparture: isNextDayDeparture } = getDayStatus(addDays(day, 1));
-
-                    const isBookingStart = isBooked && isArrival;
-                    const isBookingEnd = isBooked && isNextDayDeparture;
-                    const isOneNightStay = isBooked && isArrival && isNextDayDeparture;
+                    
                     const isChangeover = isDeparture && isBooked && isArrival;
                     const isOnlyDeparture = isDeparture && !isBooked && !isArrival;
                     const isOnlyArrival = isArrival && isBooked && !isDeparture;
@@ -143,19 +139,12 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                         className={cn(
                           'h-8 w-8 flex items-center justify-center text-xs',
                           isSameDay(day, today) && 'ring-2 ring-blue-500',
-                          // Colors
                           {
                             "bg-[linear-gradient(to_bottom_right,theme(colors.red.200)_49%,theme(colors.green.200)_51%)] text-gray-800": isChangeover,
                             "bg-[linear-gradient(to_right,theme(colors.green.200)_60%,theme(colors.red.200)_60%)] text-red-800": isOnlyArrival,
                             "bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)] text-gray-800": isOnlyDeparture,
                             'bg-red-200 text-red-800': isBooked && !isOnlyArrival && !isChangeover,
                             'bg-green-200 text-green-800': !isBooked && !isOnlyDeparture,
-                          },
-                          // Shapes
-                          {
-                            'rounded-full': (!isBooked && !isOnlyDeparture) || isOnlyDeparture || isOneNightStay || isChangeover,
-                            'rounded-l-full': isBookingStart && !isOneNightStay && !isChangeover,
-                            'rounded-r-full': isBookingEnd && !isOneNightStay && !isChangeover,
                           }
                         )}
                       >
@@ -173,7 +162,7 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
         <h3 className="text-md font-semibold mb-3">Légende</h3>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <div className="flex items-center">
-            <span className="w-4 h-4 rounded-full mr-2 bg-green-200"></span>
+            <span className="w-4 h-4 mr-2 bg-green-200"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">Disponible</span>
           </div>
           <div className="flex items-center">
@@ -181,15 +170,15 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
             <span className="text-sm text-gray-700 dark:text-gray-300">{selectedRoomId === 'all' ? 'Tout réservé' : 'Réservé'}</span>
           </div>
           <div className="flex items-center">
-            <span className="w-4 h-4 rounded-full mr-2 bg-[linear-gradient(to_right,theme(colors.green.200)_60%,theme(colors.red.200)_60%)]"></span>
+            <span className="w-4 h-4 mr-2 bg-[linear-gradient(to_right,theme(colors.green.200)_60%,theme(colors.red.200)_60%)]"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">Jour d'arrivée</span>
           </div>
           <div className="flex items-center">
-            <span className="w-4 h-4 rounded-full mr-2 bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)]"></span>
+            <span className="w-4 h-4 mr-2 bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)]"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ</span>
           </div>
           <div className="flex items-center">
-            <span className="w-4 h-4 rounded-full mr-2 bg-[linear-gradient(to_bottom_right,theme(colors.red.200)_49%,theme(colors.green.200)_51%)]"></span>
+            <span className="w-4 h-4 mr-2 bg-[linear-gradient(to_bottom_right,theme(colors.red.200)_49%,theme(colors.green.200)_51%)]"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">Départ & Arrivée</span>
           </div>
         </div>

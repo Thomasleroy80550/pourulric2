@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { KrossbookingReservation } from '@/lib/krossbooking';
 import { UserRoom } from '@/lib/user-room-api';
-import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, startOfDay, addDays, isValid, isSameDay } from 'date-fns';
+import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, startOfDay, addDays, isValid, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -37,9 +37,12 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
     for (const reservation of reservations) {
       if (reservation.status === 'CANC') continue;
 
-      // Correctly parse dates in local time to avoid timezone-related off-by-one errors.
-      const checkIn = new Date(`${reservation.check_in_date}T00:00:00`);
-      const checkOut = new Date(`${reservation.check_out_date}T00:00:00`);
+      // Robustly parse date strings to avoid timezone issues by creating dates at midnight in the local timezone.
+      const [ciYear, ciMonth, ciDay] = reservation.check_in_date.split('-').map(Number);
+      const checkIn = new Date(ciYear, ciMonth - 1, ciDay);
+
+      const [coYear, coMonth, coDay] = reservation.check_out_date.split('-').map(Number);
+      const checkOut = new Date(coYear, coMonth - 1, coDay);
 
       if (isValid(checkIn) && isValid(checkOut)) {
         if (isSameDay(dayStart, checkIn)) {
@@ -50,7 +53,7 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
         }
         if (checkOut > checkIn) {
           // A booking's last night is the day before checkout.
-          const interval = { start: startOfDay(checkIn), end: startOfDay(addDays(checkOut, -1)) };
+          const interval = { start: checkIn, end: addDays(checkOut, -1) };
           if (isWithinInterval(dayStart, interval)) {
             bookedRooms.add(reservation.krossbooking_room_id);
           }

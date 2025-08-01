@@ -145,10 +145,11 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
                           isSameDay(day, today) && 'ring-2 ring-blue-500',
                           // Colors
                           {
-                            'bg-green-200 text-green-800': !isBooked && !isOnlyDeparture,
-                            'bg-red-200 text-red-800': isBooked && !isOnlyArrival,
-                            "bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)] text-gray-800": isOnlyDeparture,
+                            "bg-[linear-gradient(to_bottom_right,theme(colors.red.200)_49%,theme(colors.green.200)_51%)] text-gray-800": isChangeover,
                             "bg-[linear-gradient(to_right,theme(colors.green.200)_60%,theme(colors.red.200)_60%)] text-red-800": isOnlyArrival,
+                            "bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)] text-gray-800": isOnlyDeparture,
+                            'bg-red-200 text-red-800': isBooked && !isOnlyArrival && !isChangeover,
+                            'bg-green-200 text-green-800': !isBooked && !isOnlyDeparture,
                           },
                           // Shapes
                           {
@@ -186,6 +187,10 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
           <div className="flex items-center">
             <span className="w-4 h-4 rounded-full mr-2 bg-[linear-gradient(to_right,theme(colors.red.200)_40%,theme(colors.green.200)_40%)]"></span>
             <span className="text-sm text-gray-700 dark:text-gray-300">Jour de départ</span>
+          </div>
+          <div className="flex items-center">
+            <span className="w-4 h-4 rounded-full mr-2 bg-[linear-gradient(to_bottom_right,theme(colors.red.200)_49%,theme(colors.green.200)_51%)]"></span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">Départ & Arrivée</span>
           </div>
         </div>
       </div>

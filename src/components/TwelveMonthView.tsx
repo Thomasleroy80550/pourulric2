@@ -37,8 +37,9 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
     for (const reservation of reservations) {
       if (reservation.status === 'CANC') continue;
 
-      const checkIn = parseISO(reservation.check_in_date);
-      const checkOut = parseISO(reservation.check_out_date);
+      // Correctly parse dates in local time to avoid timezone-related off-by-one errors.
+      const checkIn = new Date(`${reservation.check_in_date}T00:00:00`);
+      const checkOut = new Date(`${reservation.check_out_date}T00:00:00`);
 
       if (isValid(checkIn) && isValid(checkOut)) {
         if (isSameDay(dayStart, checkIn)) {
@@ -48,6 +49,7 @@ const TwelveMonthView: React.FC<TwelveMonthViewProps> = ({ userRooms, reservatio
           departures.add(reservation.krossbooking_room_id);
         }
         if (checkOut > checkIn) {
+          // A booking's last night is the day before checkout.
           const interval = { start: startOfDay(checkIn), end: startOfDay(addDays(checkOut, -1)) };
           if (isWithinInterval(dayStart, interval)) {
             bookedRooms.add(reservation.krossbooking_room_id);

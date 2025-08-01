@@ -5,7 +5,7 @@ import BookingPlanningGrid from '@/components/BookingPlanningGrid';
 import CalendarGridMobile from '@/components/CalendarGridMobile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign } from 'lucide-react';
+import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -203,6 +203,10 @@ const CalendarPage: React.FC = () => {
             <Button onClick={() => setIsPriceRestrictionDialogOpen(true)} variant="outline" className="flex items-center w-full sm:w-auto">
               <DollarSign className="h-4 w-4 mr-2" />
               Configurer Prix & Restrictions
+            </Button>
+            <Button onClick={handleReservationChange} variant="outline" className="flex items-center w-full sm:w-auto">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Rafraîchir
             </Button>
           </div>
         </div>

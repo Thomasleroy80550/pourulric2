@@ -87,9 +87,19 @@ serve(async (req) => {
     // Update auth.users metadata if there's anything to update
     if (Object.keys(authUpdatePayload).length > 0) {
       console.log(`Attempting to update auth.users metadata for user_id: ${user_id}`);
+      
+      // Fetch existing user to merge metadata, preventing accidental overwrites
+      const { data: { user: targetUser }, error: getUserError } = await adminSupabaseClient.auth.admin.getUserById(user_id);
+      if (getUserError) {
+        console.error("Error fetching user to update metadata:", getUserError);
+        throw new Error(`Failed to get user for update: ${getUserError.message}`);
+      }
+
+      const newMetadata = { ...targetUser.user_metadata, ...authUpdatePayload };
+
       const { error: updateUserError } = await adminSupabaseClient.auth.admin.updateUserById(
         user_id,
-        { user_metadata: authUpdatePayload }
+        { user_metadata: newMetadata } // Use merged metadata
       );
       if (updateUserError) {
         console.error("Error updating auth.users metadata:", updateUserError);

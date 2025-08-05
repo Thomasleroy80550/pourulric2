@@ -9,12 +9,14 @@ import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from './ui/skeleton';
+import { useSession } from "@/components/SessionContextProvider"; // Import useSession
 
 const NotificationBell: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { session } = useSession(); // Get session from context
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -39,13 +41,11 @@ const NotificationBell: React.FC = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications' },
         (payload) => {
-          // Check if the notification is for the current user
-          const { data: { user } } = supabase.auth.getUser().then(({ data }) => {
-            if (data.user && payload.new.user_id === data.user.id) {
-              fetchNotifications();
-              toast.info("Vous avez une nouvelle notification !");
-            }
-          });
+          // Check if the notification is for the current user using session from context
+          if (session?.user && payload.new.user_id === session.user.id) {
+            fetchNotifications();
+            toast.info("Vous avez une nouvelle notification !");
+          }
         }
       )
       .subscribe();
@@ -53,7 +53,7 @@ const NotificationBell: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, session]); // Add session to dependency array
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.is_read) {

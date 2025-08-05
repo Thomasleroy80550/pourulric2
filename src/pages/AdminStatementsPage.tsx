@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2 } from 'lucide-react';
+import { Terminal, Eye, MessageSquare, Trash2, Send } from 'lucide-react';
 import { getSavedInvoices, deleteInvoice, SavedInvoice } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -62,6 +62,18 @@ const AdminStatementsPage: React.FC = () => {
     }
   };
 
+  const handleSendStatement = async (statementId: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir envoyer ce relevé par e-mail au client ?")) {
+      return;
+    }
+    try {
+      await sendStatementByEmail(statementId);
+      toast.success("Relevé mis en file d'attente pour envoi par e-mail !");
+    } catch (err: any) {
+      toast.error(`Erreur lors de l'envoi: ${err.message}`);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -110,6 +122,7 @@ const AdminStatementsPage: React.FC = () => {
                         <TableCell className="text-right space-x-2">
                           <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)}><Eye className="h-4 w-4" /></Button>
                           <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)}><MessageSquare className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement.id)}><Send className="h-4 w-4" /></Button>
                           <Button variant="destructive" size="icon" onClick={() => handleDelete(statement.id)}><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
 import { Menu } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 const adminNavigationItems = [
   { name: 'Tableau de Bord', href: '/admin', icon: Shield },

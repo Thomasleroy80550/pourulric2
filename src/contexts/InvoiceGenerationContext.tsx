@@ -62,7 +62,7 @@ interface InvoiceGenerationContextType {
   recalculateTotals: (data: ProcessedReservation[]) => void;
   processFile: (fileToProcess: File, commissionRate: number) => Promise<void>;
   resetState: () => void;
-  handleGenerateInvoice: (sendEmail: boolean = false) => Promise<void>;
+  handleGenerateInvoice: (sendEmail?: boolean) => Promise<void>;
 }
 
 const InvoiceGenerationContext = createContext<InvoiceGenerationContextType | undefined>(undefined);

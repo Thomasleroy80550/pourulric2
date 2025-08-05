@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
+import { Menu } from 'lucide-react';
 
 const adminNavigationItems = [
   { name: 'Tableau de Bord', href: '/admin', icon: Shield },

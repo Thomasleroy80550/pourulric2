@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Eye, MessageSquare, Trash2, Send } from 'lucide-react';
-import { getSavedInvoices, deleteInvoice, SavedInvoice } from '@/lib/admin-api';
+import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';

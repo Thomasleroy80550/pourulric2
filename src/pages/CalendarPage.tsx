@@ -77,7 +77,7 @@ const CalendarPage: React.FC = () => {
         }
 
         // 2. Fetch all room definitions from Krossbooking to validate configured rooms
-        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes();
+        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(refreshTrigger > 0);
         console.log("DEBUG: krossbookingRoomTypes (from Krossbooking):", krossbookingRoomTypes);
 
         if (krossbookingRoomTypes.length === 0) {

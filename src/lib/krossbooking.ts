@@ -99,17 +99,26 @@ export interface KrossbookingRoomType {
 
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
+// Cache variables and durations
 let roomTypesCache: {
   data: KrossbookingRoomType[];
   timestamp: number;
 } | null = null;
-const ROOM_TYPE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const ROOM_TYPE_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 let reservationsCache: {
   data: KrossbookingReservation[];
   timestamp: number;
 } | null = null;
 const RESERVATION_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+let housekeepingTasksCache: {
+  [key: string]: { // Key will be a combination of dateFrom, dateTo, idProperty
+    data: KrossbookingHousekeepingTask[];
+    timestamp: number;
+  };
+} = {};
+const HOUSEKEEPING_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 async function callKrossbookingProxy(action: string, payload?: any): Promise<any> {
   try {
@@ -162,6 +171,11 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
 export function clearReservationsCache() {
   reservationsCache = null;
   console.log("Krossbooking reservations cache cleared.");
+}
+
+export function clearHousekeepingTasksCache() {
+  housekeepingTasksCache = {}; // Clear all cached housekeeping tasks
+  console.log("Krossbooking housekeeping tasks cache cleared.");
 }
 
 export async function fetchKrossbookingReservations(
@@ -233,8 +247,18 @@ export async function fetchKrossbookingHousekeepingTasks(
   dateTo: string,
   roomIds: number[], // Kept for potential future filtering, but not used for fetching
   idProperty?: number,
+  forceRefresh: boolean = false // Add forceRefresh parameter
 ): Promise<KrossbookingHousekeepingTask[]> {
+  const now = Date.now();
+  const cacheKey = `${dateFrom}-${dateTo}-${idProperty || 'all'}`; // Create a unique cache key
+
+  if (!forceRefresh && housekeepingTasksCache[cacheKey] && (now - housekeepingTasksCache[cacheKey].timestamp < HOUSEKEEPING_CACHE_DURATION)) {
+    console.log(`Returning cached Krossbooking housekeeping tasks for key: ${cacheKey}`);
+    return housekeepingTasksCache[cacheKey].data;
+  }
+
   try {
+    console.log(`Fetching fresh Krossbooking housekeeping tasks from API for key: ${cacheKey}`);
     // Single call for all tasks in the date range
     const data = await callKrossbookingProxy('get_housekeeping_tasks', {
       date_from: dateFrom,
@@ -260,10 +284,22 @@ export async function fetchKrossbookingHousekeepingTasks(
     
     // Filter tasks for the requested rooms on the client side
     const roomIdsSet = new Set(roomIds);
-    return allTasks.filter(task => roomIdsSet.has(task.id_room));
+    const filteredTasks = allTasks.filter(task => roomIdsSet.has(task.id_room));
+
+    housekeepingTasksCache[cacheKey] = {
+      data: filteredTasks,
+      timestamp: now,
+    };
+    console.log(`Krossbooking housekeeping tasks cached successfully for key: ${cacheKey}`);
+
+    return filteredTasks;
 
   } catch (error) {
     console.error(`Error fetching housekeeping tasks:`, error);
+    if (housekeepingTasksCache[cacheKey]) {
+      console.warn("Returning stale housekeeping tasks cache due to API error.");
+      return housekeepingTasksCache[cacheKey].data;
+    }
     return [];
   }
 }
@@ -282,6 +318,7 @@ export async function saveKrossbookingReservation(payload: SaveReservationPayloa
   
   // Clear cache after a modification
   clearReservationsCache();
+  clearHousekeepingTasksCache(); // Also clear housekeeping cache as reservations affect tasks
 
   return response;
 }
@@ -336,9 +373,9 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
   return callKrossbookingProxy('save_channel_manager', payload);
 }
 
-export async function fetchKrossbookingRoomTypes(): Promise<KrossbookingRoomType[]> {
+export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> { // Add forceRefresh
   const now = Date.now();
-  if (roomTypesCache && (now - roomTypesCache.timestamp < ROOM_TYPE_CACHE_DURATION)) {
+  if (!forceRefresh && roomTypesCache && (now - roomTypesCache.timestamp < ROOM_TYPE_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking room types.");
     return roomTypesCache.data;
   }

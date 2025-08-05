@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useCallback, ReactNode, use
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
-import { saveInvoice } from '@/lib/admin-api';
+import { saveInvoice, sendStatementByEmail } from '@/lib/admin-api';
 
 // Interface for a processed reservation row
 export interface ProcessedReservation {
@@ -62,7 +62,7 @@ interface InvoiceGenerationContextType {
   recalculateTotals: (data: ProcessedReservation[]) => void;
   processFile: (fileToProcess: File, commissionRate: number) => Promise<void>;
   resetState: () => void;
-  handleGenerateInvoice: () => Promise<void>;
+  handleGenerateInvoice: (sendEmail: boolean = false) => Promise<void>;
 }
 
 const InvoiceGenerationContext = createContext<InvoiceGenerationContextType | undefined>(undefined);
@@ -243,49 +243,53 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     return result;
   }, [selectedReservations, processedData, paymentSources, deductInvoice, deductionSource, totalFacture]);
 
-  const handleGenerateInvoice = useCallback(async () => {
+  const handleGenerateInvoice = useCallback(async (sendEmail: boolean = false) => {
     if (!selectedClientId || !invoicePeriod || processedData.length === 0) {
-      toast.error("Veuillez sélectionner un client, définir une période et importer un fichier.");
+      toast.error("Veuillez sélectionner un client, une période et importer un fichier.");
       return;
     }
 
-    const totalsObject = {
-      totalCA,
+    const totals = {
       totalCommission,
-      totalFraisMenage,
       totalPrixSejour,
+      totalFraisMenage,
       totalTaxeDeSejour,
       totalRevenuGenere,
       totalMontantVerse,
       totalNuits,
       totalVoyageurs,
-      totalFacture,
-      transferDetails: helloKeysCollectsRent ? {
+      totalFacture: totalCommission + totalFraisMenage,
+      transferDetails: {
         sources: transfersBySource,
         deductionInfo: {
           deducted: deductInvoice,
           source: deductionSource,
-        },
-      } : null,
+        }
+      }
     };
 
-    const payload = {
-      user_id: selectedClientId,
-      period: invoicePeriod,
-      invoice_data: processedData,
-      totals: totalsObject,
-    };
+    try {
+      const savedInvoice = await saveInvoice(selectedClientId, invoicePeriod, processedData, totals);
+      
+      if (sendEmail) {
+        await sendStatementByEmail(savedInvoice.id);
+        toast.success("Relevé sauvegardé et e-mail mis en file d'attente pour envoi.");
+      } else {
+        toast.success("Relevé sauvegardé avec succès !");
+      }
 
-    const promise = saveInvoice(payload);
+      // Reset state after generation
+      setFile(null);
+      setFileName('');
+      setProcessedData([]);
+      // Keep client and period for potentially generating another one
+      // setSelectedClientId('');
+      // setInvoicePeriod('');
 
-    toast.promise(promise, {
-      loading: 'Sauvegarde du relevé en cours...',
-      success: () => {
-        resetState();
-        return 'Relevé sauvegardé avec succès !';
-      },
-      error: (err) => `Erreur: ${err.message}`,
-    });
+    } catch (error: any) {
+      console.error("Failed to generate invoice:", error);
+      toast.error(`Erreur lors de la génération : ${error.message}`);
+    }
   }, [selectedClientId, invoicePeriod, processedData, totalCA, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalNuits, totalVoyageurs, totalFacture, helloKeysCollectsRent, transfersBySource, deductInvoice, deductionSource, resetState]);
 
   const value = {

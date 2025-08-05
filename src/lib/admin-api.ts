@@ -119,7 +119,7 @@ export async function updateAccountantRequestStatus(requestId: string, status: '
  * @param totals The calculated totals for the invoice.
  * @returns A promise that resolves when the invoice is saved.
  */
-export async function saveInvoice(userId: any, period: string, invoiceData: any, totals: any): Promise<void> {
+export async function saveInvoice(userId: any, period: string, invoiceData: any, totals: any): Promise<SavedInvoice> {
   const payload = {
     user_id: userId,
     period: period,
@@ -140,7 +140,7 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
   const { data, error } = await supabase
     .from('invoices')
     .insert(payload)
-    .select()
+    .select(`*, profiles(first_name, last_name)`)
     .single();
 
   if (error) {
@@ -155,6 +155,22 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
       `Votre nouveau relevé pour la période "${payload.period}" est disponible.`,
       '/finances' // Link to the finances page
     );
+  }
+  return data;
+}
+
+/**
+ * Triggers an edge function to send the statement via email.
+ * @param invoiceId The ID of the invoice to send.
+ */
+export async function sendStatementByEmail(invoiceId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('send-statement-email', {
+    body: { invoiceId },
+  });
+
+  if (error) {
+    console.error("Error sending statement email:", error);
+    throw new Error(`Erreur lors de l'envoi de l'email : ${error.message}`);
   }
 }
 

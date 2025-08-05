@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, FileText, DollarSign, Loader2, Terminal, Pencil } from 'lucide-react';
+import { Upload, FileText, DollarSign, Loader2, Terminal, Pencil, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import EditReservationDialog from '@/components/EditReservationDialog';
 import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
@@ -192,7 +193,23 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         </>
                       )}
                     </div>
-                    <Button className="w-full" onClick={handleGenerateInvoice} disabled={processedData.length === 0}><FileText className="h-4 w-4 mr-2" />Sauvegarder le Relevé</Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button className="w-full" disabled={processedData.length === 0}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Actions
+                          <ChevronDown className="h-4 w-4 ml-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-full">
+                        <DropdownMenuItem onClick={() => handleGenerateInvoice(false)}>
+                          Sauvegarder le Relevé
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGenerateInvoice(true)}>
+                          Sauvegarder et Envoyer par Email
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </>
                 )}
               </CardContent>

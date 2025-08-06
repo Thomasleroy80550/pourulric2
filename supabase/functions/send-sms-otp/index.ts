@@ -1,17 +1,14 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-import { Resend } from "npm:resend";
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+// Get secrets from environment
+const SMSFACTOR_API_TOKEN = Deno.env.get('SMSFACTOR_API_TOKEN');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-if (!RESEND_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("Missing environment variables.");
+if (!SMSFACTOR_API_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error("Missing environment variables: SMSFACTOR_API_TOKEN, SUPABASE_URL, or SUPABASE_SERVICE_ROLE_KEY are required.");
 }
-
-const resend = new Resend(RESEND_API_KEY);
-const SMS_FACTOR_EMAIL = 'j97LxXQQEQc-alert@mail2sms.smsmarkt.com';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,7 +21,7 @@ serve(async (req) => {
   }
 
   try {
-    // Auth check
+    // Auth check to ensure only authenticated users can trigger this
     const anonKey = req.headers.get('apikey');
     const authHeader = req.headers.get('Authorization');
     if (!anonKey || !authHeader) {
@@ -55,14 +52,14 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Store or update OTP in database
+    // Store or update OTP in the database
     const { error: dbError } = await supabaseAdmin.from('sms_otps').upsert(
       {
         phone_number: phoneNumber,
         otp_code: otp,
         expires_at: expiresAt.toISOString(),
       },
-      { onConflict: 'phone_number' } // Specify the column to check for conflict
+      { onConflict: 'phone_number' }
     );
 
     if (dbError) {
@@ -70,17 +67,34 @@ serve(async (req) => {
       throw new Error('Could not save OTP.');
     }
 
-    // Send email to SMS gateway
-    const { error: emailError } = await resend.emails.send({
-      from: 'Hello Keys OTP <noreply@notifications.hellokeys.fr>',
-      to: [SMS_FACTOR_EMAIL],
-      subject: phoneNumber, // Phone number as subject
-      html: `Votre code de vérification Hello Keys est : ${otp}`,
+    // Send SMS using SMSFactor API
+    const smsFactorPayload = {
+      "sms": {
+        "message": {
+          "text": `Votre code de vérification Hello Keys est : ${otp}`,
+        },
+        "recipients": {
+          "gsm": [
+            { "value": phoneNumber.replace('+', '') }
+          ]
+        }
+      }
+    };
+
+    const smsResponse = await fetch('https://api.smsfactor.com/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${SMSFACTOR_API_TOKEN}`
+      },
+      body: JSON.stringify(smsFactorPayload)
     });
 
-    if (emailError) {
-      console.error('Resend API Error:', emailError);
-      throw new Error('Failed to send OTP SMS.');
+    if (!smsResponse.ok) {
+      const errorBody = await smsResponse.json();
+      console.error('SMSFactor API Error:', errorBody);
+      throw new Error(`Failed to send OTP SMS. Status: ${smsResponse.status}`);
     }
 
     return new Response(JSON.stringify({ message: 'OTP sent successfully' }), {

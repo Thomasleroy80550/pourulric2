@@ -25,7 +25,6 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { sendSmsOtp, verifySmsOtp } from '@/lib/profile-api'; // Importation des fonctions personnalisées
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -57,8 +56,7 @@ const Login = () => {
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [fullPhoneNumber, setFullPhoneNumber] = useState('');
-
+  
   const form = useForm<EmailFormValues | PhoneFormValues>({
     resolver: zodResolver(authMethod === 'email' ? emailSchema : phoneSchema),
     defaultValues: {
@@ -97,26 +95,32 @@ const Login = () => {
   const handlePhoneSubmit = async (values: PhoneFormValues) => {
     setLoading(true);
     const phone = `+${values.countryCode}${values.phone}`;
-    setFullPhoneNumber(phone);
 
     try {
       if (!showOtpInput) {
-        // Step 1: Send OTP using custom Edge Function
-        await sendSmsOtp(phone); // Utilisation de la fonction personnalisée
+        // Step 1: Send OTP via Supabase Auth
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: phone,
+        });
+        if (error) throw error;
         setShowOtpInput(true);
         toast.success("Code de vérification envoyé !");
       } else {
-        // Step 2: Verify OTP using custom Edge Function
-        if (!values.otp || values.otp.length !== 6) {
-          throw new Error("Le code de vérification doit contenir 6 chiffres.");
+        // Step 2: Verify OTP and sign in
+        if (!values.otp) {
+          throw new Error("Le code de vérification est requis.");
         }
-        await verifySmsOtp(phone, values.otp); // Utilisation de la fonction personnalisée
-        toast.success("Vérification réussie ! Connexion en cours...");
+        const { error } = await supabase.auth.verifyOtp({
+          phone: phone,
+          token: values.otp,
+          type: 'sms',
+        });
+        if (error) throw error;
+        toast.success("Connexion réussie ! Redirection...");
         // The onAuthStateChange listener will handle navigation
       }
     } catch (error: any) {
-      const errorMessage = error.message || "Une erreur est survenue.";
-      toast.error(`Erreur: ${errorMessage}`);
+      toast.error(`Erreur: ${error.message}`);
       console.error("Phone auth error:", error);
     } finally {
       setLoading(false);

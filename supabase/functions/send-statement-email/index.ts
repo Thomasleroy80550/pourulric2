@@ -62,7 +62,7 @@ serve(async (req) => {
             'Authorization': `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify({
-            from: 'Hello Keys <noreply@hello-keys.com>', // IMPORTANT: Ce domaine doit être vérifié dans Resend
+            from: 'Hello Keys <noreply@notifications.hellokeys.fr>', // Mis à jour avec le domaine fourni
             to: [userEmail],
             subject: `Votre relevé Hello Keys pour ${period} est disponible`,
             html: `<h1>Bonjour ${userName},</h1><p>Votre nouveau relevé pour la période de <strong>${period}</strong> est disponible sur votre espace client.</p><p>Connectez-vous pour le consulter : <a href="${Deno.env.get('SUPABASE_URL')?.replace('.co', '.app')}/finances">Accéder à mon espace</a></p>`,

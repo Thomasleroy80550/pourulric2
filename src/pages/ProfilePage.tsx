@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Home } from 'lucide-react';
-import { getUserRooms } from '@/lib/user-room-api';
+import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -17,14 +16,12 @@ import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import KycForm from '@/components/KycForm';
-import ManageRooms from '@/components/ManageRooms';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [managedPropertiesCount, setManagedPropertiesCount] = useState(0);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -48,13 +45,9 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [fetchedProfile, fetchedRooms] = await Promise.all([
-        getProfile(),
-        getUserRooms()
-      ]);
+      const fetchedProfile = await getProfile();
       
       setProfile(fetchedProfile);
-      setManagedPropertiesCount(fetchedRooms.length);
 
       if (fetchedProfile) {
         setFirstName(fetchedProfile.first_name || '');
@@ -183,9 +176,8 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
-            <TabsTrigger value="my-properties">Mes logements</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -225,10 +217,6 @@ const ProfilePage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="my-properties">
-            <ManageRooms onRoomsUpdate={fetchProfileData} />
           </TabsContent>
 
           <TabsContent value="payment-preferences">
@@ -284,10 +272,7 @@ const ProfilePage: React.FC = () => {
                   <Label>Mon forfait</Label>
                   <Input value={`${(profile?.commission_rate || 0) * 100}%`} disabled />
                 </div>
-                <div className="space-y-2">
-                  <Label>Nombre de logement en gestion</Label>
-                  <Input value={managedPropertiesCount} disabled />
-                </div>
+                {/* Removed "Nombre de logement en gestion" field */}
                 <div className="space-y-2">
                   <Label htmlFor="linenType">Type de linge</Label>
                   <Input id="linenType" value={linenType} onChange={(e) => setLinenType(e.target.value)} disabled={userProfile?.is_banned} />

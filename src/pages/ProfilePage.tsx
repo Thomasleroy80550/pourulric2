@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Loader2, Phone } from 'lucide-react';
+import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -271,15 +271,19 @@ const ProfilePage: React.FC = () => {
                   <Label htmlFor="phone">Téléphone</Label>
                   <div className="flex items-center gap-2">
                     <Input id="phone" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+33612345678" disabled={userProfile?.is_banned} />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleVerifyPhoneClick}
-                      disabled={userProfile?.is_banned || !phoneNumber || phoneNumber === profile?.phone_number}
-                      title={phoneNumber === profile?.phone_number ? "Numéro déjà vérifié" : "Vérifier ce numéro"}
-                    >
-                      <Phone className="h-4 w-4" />
-                    </Button>
+                    {profile?.phone_number && phoneNumber === profile.phone_number ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" title="Numéro vérifié" />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleVerifyPhoneClick}
+                        disabled={userProfile?.is_banned || !phoneNumber}
+                        title="Vérifier ce numéro"
+                      >
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                   {profile?.phone_number && <p className="text-sm text-muted-foreground">Numéro actuel vérifié : {profile.phone_number}</p>}
                 </div>

@@ -25,6 +25,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { sendSmsOtp, verifySmsOtp } from '@/lib/profile-api'; // Importation des fonctions personnalisées
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -100,24 +101,16 @@ const Login = () => {
 
     try {
       if (!showOtpInput) {
-        // Step 1: Send OTP using Supabase native auth
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: phone,
-        });
-        if (error) throw error;
+        // Step 1: Send OTP using custom Edge Function
+        await sendSmsOtp(phone); // Utilisation de la fonction personnalisée
         setShowOtpInput(true);
         toast.success("Code de vérification envoyé !");
       } else {
-        // Step 2: Verify OTP using Supabase native auth
+        // Step 2: Verify OTP using custom Edge Function
         if (!values.otp || values.otp.length !== 6) {
           throw new Error("Le code de vérification doit contenir 6 chiffres.");
         }
-        const { error } = await supabase.auth.verifyOtp({
-          phone: phone,
-          token: values.otp,
-          type: 'sms',
-        });
-        if (error) throw error;
+        await verifySmsOtp(phone, values.otp); // Utilisation de la fonction personnalisée
         toast.success("Vérification réussie ! Connexion en cours...");
         // The onAuthStateChange listener will handle navigation
       }

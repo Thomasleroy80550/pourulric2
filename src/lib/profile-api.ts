@@ -91,3 +91,28 @@ export async function updateProfile(updates: Partial<Omit<UserProfile, 'id' | 'r
   }
   return data;
 }
+
+export async function sendSmsOtp(phoneNumber: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('send-sms-otp', {
+    body: { phoneNumber },
+  });
+
+  if (error) {
+    console.error("Error sending SMS OTP:", error);
+    throw new Error(error.message);
+  }
+  return data;
+}
+
+export async function verifySmsOtp(phoneNumber: string, otp: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('verify-sms-otp', {
+    body: { phoneNumber, otp },
+  });
+
+  if (error) {
+    console.error("Error verifying SMS OTP:", error);
+    const context = (error as any).context;
+    throw new Error(context?.error || error.message);
+  }
+  return data;
+}

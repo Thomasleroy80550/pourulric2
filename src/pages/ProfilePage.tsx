@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Loader2 } from 'lucide-react';
+import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Loader2, Phone } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -20,6 +20,7 @@ import CGUVModal from '@/components/CGUVModal';
 import AttestationContent from '@/components/AttestationContent';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import PhoneVerificationDialog from '@/components/PhoneVerificationDialog';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -29,10 +30,13 @@ const ProfilePage: React.FC = () => {
   const [isCguvModalOpen, setIsCguvModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const attestationRef = useRef<HTMLDivElement>(null);
+  const [isVerificationDialogOpen, setIsVerificationDialogOpen] = useState(false);
+  const [phoneToVerify, setPhoneToVerify] = useState('');
 
   // Form state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [propertyAddress, setPropertyAddress] = useState('');
   const [propertyCity, setPropertyCity] = useState('');
   const [propertyZipCode, setPropertyZipCode] = useState('');
@@ -59,6 +63,7 @@ const ProfilePage: React.FC = () => {
       if (fetchedProfile) {
         setFirstName(fetchedProfile.first_name || '');
         setLastName(fetchedProfile.last_name || '');
+        setPhoneNumber(fetchedProfile.phone_number || '');
         setPropertyAddress(fetchedProfile.property_address || '');
         setPropertyCity(fetchedProfile.property_city || '');
         setPropertyZipCode(fetchedProfile.property_zip_code || '');
@@ -155,6 +160,23 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleVerifyPhoneClick = () => {
+    if (phoneNumber) {
+      setPhoneToVerify(phoneNumber);
+      setIsVerificationDialogOpen(true);
+    } else {
+      toast.error("Veuillez entrer un numéro de téléphone.");
+    }
+  };
+
+  const handleSmsSwitchChange = (checked: boolean, setter: (val: boolean) => void) => {
+    if (checked && !profile?.phone_number) {
+      toast.error("Veuillez d'abord vérifier votre numéro de téléphone dans l'onglet 'Données personnelles'.");
+      return;
+    }
+    setter(checked);
+  };
+
   const getClientSinceDays = () => {
     if (profile?.contract_start_date) {
       const date = parseISO(profile.contract_start_date);
@@ -241,9 +263,25 @@ const ProfilePage: React.FC = () => {
                   <Label htmlFor="lastName">Nom</Label>
                   <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" value={session?.user?.email || ''} disabled />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Téléphone</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="phone" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+33612345678" disabled={userProfile?.is_banned} />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleVerifyPhoneClick}
+                      disabled={userProfile?.is_banned || !phoneNumber || phoneNumber === profile?.phone_number}
+                      title={phoneNumber === profile?.phone_number ? "Numéro déjà vérifié" : "Vérifier ce numéro"}
+                    >
+                      <Phone className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {profile?.phone_number && <p className="text-sm text-muted-foreground">Numéro actuel vérifié : {profile.phone_number}</p>}
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="address">Adresse du logement</Label>
@@ -373,11 +411,11 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
-                  <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={setNotifyNewBookingSms} disabled={userProfile?.is_banned} />
+                  <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
                 </div>
                 <div className="flex items-center justify-between">
                   <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
-                  <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={setNotifyCancellationSms} disabled={userProfile?.is_banned} />
+                  <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
                 </div>
               </CardContent>
             </Card>
@@ -399,6 +437,13 @@ const ProfilePage: React.FC = () => {
         <div className="absolute -left-[9999px] top-0" aria-hidden="true">
           {profile && <AttestationContent ref={attestationRef} profile={profile} />}
         </div>
+
+        <PhoneVerificationDialog
+          open={isVerificationDialogOpen}
+          onOpenChange={setIsVerificationDialogOpen}
+          phoneNumber={phoneToVerify}
+          onVerified={fetchProfileData}
+        />
       </div>
     </MainLayout>
   );

@@ -13,9 +13,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { updateProfile } from '@/lib/profile-api';
+import { sendSmsOtp, verifySmsOtp } from '@/lib/profile-api';
 
 interface PhoneVerificationDialogProps {
   open: boolean;
@@ -32,10 +31,8 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
   const sendOtp = async () => {
     setLoading(true);
     try {
-      // Use Supabase native method to initiate phone change
-      const { error } = await supabase.auth.updateUser({ phone: `+${phoneNumber}` });
-      if (error) throw error;
-      toast.success(`Code de vérification envoyé à +${phoneNumber}`);
+      await sendSmsOtp(phoneNumber);
+      toast.success(`Code de vérification envoyé à ${phoneNumber}`);
       setResendCooldown(60); // 60 seconds cooldown
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -45,7 +42,7 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
   };
 
   useEffect(() => {
-    if (open) {
+    if (open && phoneNumber) {
       sendOtp();
     }
   }, [open, phoneNumber]);
@@ -60,17 +57,7 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
   const handleVerify = async () => {
     setLoading(true);
     try {
-      // Use Supabase native method to verify the OTP for phone change
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: `+${phoneNumber}`,
-        token: otp,
-        type: 'phone_change',
-      });
-      if (verifyError) throw verifyError;
-
-      // After successful verification in auth.users, update our public.profiles table
-      await updateProfile({ phone_number: `+${phoneNumber}` });
-
+      await verifySmsOtp(phoneNumber, otp);
       toast.success("Numéro de téléphone vérifié et mis à jour !");
       onVerified();
       onOpenChange(false);
@@ -87,7 +74,7 @@ const PhoneVerificationDialog: React.FC<PhoneVerificationDialogProps> = ({ open,
         <DialogHeader>
           <DialogTitle>Vérifier votre numéro de téléphone</DialogTitle>
           <DialogDescription>
-            Nous avons envoyé un code à 6 chiffres à +{phoneNumber}. Entrez-le ci-dessous pour confirmer.
+            Nous avons envoyé un code à 6 chiffres à {phoneNumber}. Entrez-le ci-dessous pour confirmer.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center space-y-4 py-4">

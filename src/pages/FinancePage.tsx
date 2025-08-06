@@ -36,12 +36,12 @@ const FinancePage: React.FC = () => {
           {profile?.role === 'accountant' ? (
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="statements">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices">Factures</TabsTrigger>
+              <TabsTrigger value="invoices" disabled>Factures</TabsTrigger>
             </TabsList>
           ) : (
             <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
               <TabsTrigger value="statements">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices">Factures</TabsTrigger>
+              <TabsTrigger value="invoices" disabled>Factures</TabsTrigger>
               <TabsTrigger value="balances" disabled>Bilans (En développement)</TabsTrigger>
               <TabsTrigger value="reports" disabled>Rapports (En développement)</TabsTrigger>
               {showExpensesTab && <TabsTrigger value="expenses">Dépenses</TabsTrigger>}

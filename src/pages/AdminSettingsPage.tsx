@@ -33,7 +33,7 @@ const AdminSettingsPage: React.FC = () => {
           // Définir un modèle par défaut s'il n'en existe pas
           setTemplate({
             subject: 'Votre relevé Hello Keys pour {{period}} est disponible',
-            body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en cliquant sur le lien ci-dessous et sur votre espace client.\n\nCliquez ici pour télécharger votre relevé : {{pdfLink}}\n\nConnectez-vous pour consulter tous vos relevés : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
+            body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en pièce jointe et sur votre espace client.\n\nConnectez-vous pour le consulter : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
           });
         }
       } catch (error: any) {
@@ -66,8 +66,8 @@ const AdminSettingsPage: React.FC = () => {
             <CardTitle>Modèle d'E-mail pour les Relevés</CardTitle>
             <CardDescription>
               Personnalisez l'e-mail envoyé aux clients avec leur relevé.
-              Variables disponibles : <code>{"{{userName}}"}</code>, <code>{"{{period}}"}</code>, <code>{"{{appUrl}}"}</code>, <code>{"{{pdfLink}}"}</code>.
-              Le relevé sera envoyé sous forme de lien de téléchargement, et non en pièce jointe.
+              Variables disponibles : <code>{"{{userName}}"}</code>, <code>{"{{period}}"}</code>, <code>{"{{appUrl}}"}</code>.
+              Le relevé sera envoyé en pièce jointe.
             </CardDescription>
           </CardHeader>
           <CardContent>

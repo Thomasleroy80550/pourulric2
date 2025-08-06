@@ -31,13 +31,14 @@ import TechnicalReportDetailPage from "./pages/TechnicalReportDetailPage";
 import ReservationReportDetailPage from "./pages/ReservationReportDetailPage";
 import TouristTaxPage from "./pages/TouristTaxPage";
 import MyRoomsPage from "./pages/MyRoomsPage";
-import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
 import BlogManager from "./components/BlogManager";
 import BlogPostPage from "./pages/BlogPostPage";
 import AdminStrategiesPage from "./pages/AdminStrategiesPage";
+import AdminUserRoomsPage from "./pages/AdminUserRoomsPage"; // Added this import
+import AdminSettingsPage from "./pages/AdminSettingsPage"; // Ensure this import is present
 
 const queryClient = new QueryClient();
 

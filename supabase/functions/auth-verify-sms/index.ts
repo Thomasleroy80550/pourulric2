@@ -62,8 +62,10 @@ serve(async (req) => {
     let userEmail;
     let userId;
 
-    // Using listUsers as a workaround for getUserByPhone not being a function
-    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers();
+    // Using listUsers with a high perPage limit to avoid pagination issues
+    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
+      perPage: 1000,
+    });
 
     if (listUsersError) {
       console.error('Error listing users:', listUsersError);

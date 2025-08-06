@@ -62,33 +62,36 @@ serve(async (req) => {
     let userEmail;
     let userId;
 
-    const { data: existingUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserByPhone(phoneNumber);
+    // Using listUsers as a workaround for getUserByPhone not being a function
+    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers();
 
-    if (getUserError) {
-      if (getUserError.message === 'User not found') {
-        // Create new user
-        userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
-        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          phone: phoneNumber,
-          email: userEmail,
-          phone_confirm: true,
-          email_confirm: true,
-        });
-        if (createUserError) {
-          if (createUserError.message.includes('duplicate key value violates unique constraint')) {
+    if (listUsersError) {
+      console.error('Error listing users:', listUsersError);
+      throw new Error('Erreur lors de la recherche de l\'utilisateur.');
+    }
+
+    let existingUser = users.find(u => u.phone === phoneNumber);
+
+    if (!existingUser) {
+      // Create new user
+      userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
+      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+        phone: phoneNumber,
+        email: userEmail,
+        phone_confirm: true,
+        email_confirm: true,
+      });
+      if (createUserError) {
+        if (createUserError.message.includes('duplicate key value violates unique constraint')) {
              return new Response(JSON.stringify({ error: 'Un conflit est survenu. Veuillez réessayer.' }), { status: 409, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
           }
-          console.error('Error creating user:', createUserError);
-          throw new Error('Impossible de créer un nouvel utilisateur.');
-        }
-        userId = newUser.user.id;
-      } else {
-        console.error('Error finding user by phone:', getUserError);
-        throw new Error('Erreur lors de la recherche de l\'utilisateur.');
+        console.error('Error creating user:', createUserError);
+        throw new Error('Impossible de créer un nouvel utilisateur.');
       }
+      userId = newUser.user.id;
     } else {
-      userId = existingUser.user.id;
-      userEmail = existingUser.user.email;
+      userId = existingUser.id;
+      userEmail = existingUser.email;
       if (!userEmail) {
           userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
           const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: userEmail });

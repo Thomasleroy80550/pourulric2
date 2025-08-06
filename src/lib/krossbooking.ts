@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRoom } from "./user-room-api";
-import { createNotification } from "./notifications-api";
+import { createNotification, sendEmail } from "./notifications-api";
+import { getProfile } from "./profile-api";
+import { format, parseISO, isValid } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface KrossbookingReservation {
   id: string;
@@ -183,6 +186,8 @@ export async function fetchKrossbookingReservations(
   forceRefresh: boolean = false
 ): Promise<KrossbookingReservation[]> {
   const now = Date.now();
+  const oldReservationsMap = new Map((reservationsCache?.data || []).map(r => [r.id, r]));
+
   if (!forceRefresh && reservationsCache && (now - reservationsCache.timestamp < RESERVATION_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking reservations.");
     return reservationsCache.data;
@@ -194,6 +199,9 @@ export async function fetchKrossbookingReservations(
       console.log("No configured rooms to fetch reservations for.");
       return [];
     }
+
+    const profile = await getProfile();
+    const userEmail = (await supabase.auth.getUser()).data.user?.email;
 
     const allReservationsPromises = userRooms.map(async (room) => {
       const data = await callKrossbookingProxy('get_reservations_for_room', { id_room: room.room_id });
@@ -223,6 +231,52 @@ export async function fetchKrossbookingReservations(
     const flattenedReservations = reservationsByRoom.flat();
     
     const uniqueReservations = Array.from(new Map(flattenedReservations.map(res => [res.id, res])).values());
+
+    // --- Notification Logic ---
+    if (reservationsCache && profile && userEmail) { // Only run if there's a cache to compare against
+      for (const newRes of uniqueReservations) {
+        const oldRes = oldReservationsMap.get(newRes.id);
+        const checkInDate = isValid(parseISO(newRes.check_in_date)) ? format(parseISO(newRes.check_in_date), 'dd MMMM yyyy', { locale: fr }) : newRes.check_in_date;
+        const checkOutDate = isValid(parseISO(newRes.check_out_date)) ? format(parseISO(newRes.check_out_date), 'dd MMMM yyyy', { locale: fr }) : newRes.check_out_date;
+
+        if (!oldRes) {
+          // New reservation
+          if (profile.notify_new_booking_email) {
+            console.log(`Sending new booking email for reservation ${newRes.id} to ${userEmail}`);
+            const subject = `Nouvelle réservation pour ${newRes.property_name}`;
+            const html = `
+                <h1>Nouvelle réservation</h1>
+                <p>Bonjour ${profile.first_name || ''},</p>
+                <p>Une nouvelle réservation a été enregistrée pour votre logement <strong>${newRes.property_name}</strong>.</p>
+                <ul>
+                    <li><strong>Client :</strong> ${newRes.guest_name}</li>
+                    <li><strong>Arrivée :</strong> ${checkInDate}</li>
+                    <li><strong>Départ :</strong> ${checkOutDate}</li>
+                    <li><strong>Montant :</strong> ${newRes.amount}</li>
+                </ul>
+                <p>Vous pouvez consulter les détails sur votre espace propriétaire.</p>
+            `;
+            sendEmail(userEmail, subject, html).catch(e => console.error("Failed to send new booking email:", e));
+          }
+        } else {
+          // Existing reservation, check for cancellation
+          if (oldRes.status !== 'CANC' && newRes.status === 'CANC') {
+            if (profile.notify_cancellation_email) {
+              console.log(`Sending cancellation email for reservation ${newRes.id} to ${userEmail}`);
+              const subject = `Annulation de réservation pour ${newRes.property_name}`;
+              const html = `
+                  <h1>Annulation de réservation</h1>
+                  <p>Bonjour ${profile.first_name || ''},</p>
+                  <p>La réservation pour <strong>${newRes.guest_name}</strong> dans votre logement <strong>${newRes.property_name}</strong> (arrivée le ${checkInDate}) a été annulée.</p>
+                  <p>Le calendrier a été mis à jour.</p>
+              `;
+              sendEmail(userEmail, subject, html).catch(e => console.error("Failed to send cancellation email:", e));
+            }
+          }
+        }
+      }
+    }
+    // --- End Notification Logic ---
     
     reservationsCache = {
       data: uniqueReservations,

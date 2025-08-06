@@ -35,19 +35,15 @@ export async function getNotifications(): Promise<Notification[]> {
  * Marks a single notification as read.
  * @param notificationId The ID of the notification to mark as read.
  */
-export async function markNotificationAsRead(notificationId: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
+export async function markNotificationAsRead(notificationId: string) {
   const { error } = await supabase
     .from('notifications')
     .update({ is_read: true })
-    .eq('id', notificationId)
-    .eq('user_id', user.id);
+    .eq('id', notificationId);
 
   if (error) {
     console.error("Error marking notification as read:", error);
-    throw new Error("Impossible de marquer la notification comme lue.");
+    throw error;
   }
 }
 
@@ -89,5 +85,33 @@ export async function createNotification(userId: string, message: string, link?:
   if (error) {
     console.error('Error creating notification:', error);
     // We don't throw here to not interrupt the main flow (e.g., invoice creation)
+  }
+}
+
+/**
+ * Sends an email to a specified recipient.
+ * @param to The email address of the recipient.
+ * @param subject The subject of the email.
+ * @param html The HTML content of the email.
+ */
+export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("User not authenticated.");
+
+  const SEND_EMAIL_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/send-email";
+
+  const response = await fetch(SEND_EMAIL_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ to, subject, html }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Failed to send email:", errorData);
+    throw new Error(`Failed to send email: ${errorData.error || 'Unknown error'}`);
   }
 }

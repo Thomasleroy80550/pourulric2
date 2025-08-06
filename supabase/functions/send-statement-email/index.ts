@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
+// import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts"; // Supprimé car le PDF n'est plus attaché
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,21 +45,20 @@ serve(async (req) => {
       .eq('key', 'statement_email_template')
       .single();
 
-    // 2. Télécharger le PDF depuis le stockage
-    const { data: pdfBlob, error: storageError } = await supabaseAdmin.storage
+    // 2. Générer un lien signé pour le PDF au lieu de le télécharger
+    const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
       .from('statements')
-      .download(pdfPath);
+      .createSignedUrl(pdfPath, 3600); // URL valide pour 1 heure (3600 secondes)
 
-    if (storageError) throw storageError;
-    if (!pdfBlob) throw new Error("PDF non trouvé dans le stockage");
+    if (signedUrlError) throw signedUrlError;
+    if (!signedUrlData || !signedUrlData.signedUrl) throw new Error("Impossible de générer l'URL signée pour le PDF");
 
-    const arrayBuffer = await pdfBlob.arrayBuffer();
-    const pdfBase64 = encode(arrayBuffer);
+    const pdfDownloadUrl = signedUrlData.signedUrl;
 
     // 3. Préparer le contenu de l'e-mail
     const defaultTemplate = {
       subject: 'Votre relevé Hello Keys pour {{period}} est disponible',
-      body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en pièce jointe et sur votre espace client.\n\nConnectez-vous pour le consulter : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
+      body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en cliquant sur le lien ci-dessous et sur votre espace client.\n\nCliquez ici pour télécharger votre relevé : {{pdfLink}}\n\nConnectez-vous pour consulter tous vos relevés : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
     };
     const template = templateSetting?.value || defaultTemplate;
     const appUrl = Deno.env.get('SUPABASE_URL')?.replace('.co', '.app') ?? 'https://app.hellokeys.fr';
@@ -68,16 +67,17 @@ serve(async (req) => {
     const period = invoice.period;
 
     let subject = template.subject.replace('{{userName}}', userName).replace('{{period}}', period);
-    let body = template.body.replace(/{{userName}}/g, userName).replace(/{{period}}/g, period).replace(/{{appUrl}}/g, appUrl);
+    let body = template.body
+      .replace(/{{userName}}/g, userName)
+      .replace(/{{period}}/g, period)
+      .replace(/{{appUrl}}/g, appUrl)
+      .replace(/{{pdfLink}}/g, pdfDownloadUrl); // Nouvelle variable pour le lien PDF
     
     const htmlBody = body.replace(/\n/g, '<br>');
 
-    // 4. Envoyer l'e-mail avec la pièce jointe
+    // 4. Envoyer l'e-mail SANS pièce jointe
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) throw new Error("RESEND_API_KEY n'est pas configuré.");
-
-    const clientName = invoice.profiles ? `${invoice.profiles.first_name}_${invoice.profiles.last_name}` : 'Client';
-    const pdfFileName = `Releve_${clientName}_${invoice.period.replace(/\s/g, '_')}.pdf`;
 
     const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -90,12 +90,7 @@ serve(async (req) => {
             to: [user.email],
             subject: subject,
             html: htmlBody,
-            attachments: [
-              {
-                filename: pdfFileName,
-                content: pdfBase64,
-              },
-            ],
+            // attachments: [], // Les pièces jointes sont supprimées
         }),
     });
 
@@ -111,7 +106,7 @@ serve(async (req) => {
       link: '/finances'
     })
 
-    return new Response(JSON.stringify({ message: "E-mail envoyé avec succès avec la pièce jointe PDF" }), {
+    return new Response(JSON.stringify({ message: "E-mail envoyé avec succès avec le lien PDF" }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

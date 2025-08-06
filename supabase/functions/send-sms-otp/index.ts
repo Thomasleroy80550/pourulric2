@@ -55,12 +55,15 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Store OTP in database
-    const { error: dbError } = await supabaseAdmin.from('sms_otps').insert({
-      phone_number: phoneNumber,
-      otp_code: otp,
-      expires_at: expiresAt.toISOString(),
-    });
+    // Store or update OTP in database
+    const { error: dbError } = await supabaseAdmin.from('sms_otps').upsert(
+      {
+        phone_number: phoneNumber,
+        otp_code: otp,
+        expires_at: expiresAt.toISOString(),
+      },
+      { onConflict: 'phone_number' } // Specify the column to check for conflict
+    );
 
     if (dbError) {
       console.error('DB Error storing OTP:', dbError);

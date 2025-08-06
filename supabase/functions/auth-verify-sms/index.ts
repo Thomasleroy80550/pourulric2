@@ -116,13 +116,19 @@ serve(async (req) => {
       throw new Error('Impossible de générer la session de connexion.');
     }
 
+    if (!linkData?.properties?.action_link) {
+      console.error('Error: generateLink did not return an action_link.', linkData);
+      throw new Error('Impossible de générer le lien de connexion. Réponse de l\'API invalide.');
+    }
+
     const url = new URL(linkData.properties.action_link);
     const params = new URLSearchParams(url.hash.substring(1));
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
 
     if (!accessToken || !refreshToken) {
-      throw new Error('Impossible d\'extraire les tokens de session.');
+      console.error('Failed to extract tokens from magic link.', { action_link: linkData.properties.action_link });
+      throw new Error('Impossible d\'extraire les tokens de session. Vérifiez que l\'URL de base de votre application (APP_BASE_URL) est bien ajoutée à la liste des URLs de redirection autorisées dans les paramètres d\'authentification de votre projet Supabase.');
     }
 
     // 4. Return tokens

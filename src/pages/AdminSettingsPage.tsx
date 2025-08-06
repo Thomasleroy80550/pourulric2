@@ -66,7 +66,7 @@ const AdminSettingsPage: React.FC = () => {
             <CardTitle>Modèle d'E-mail pour les Relevés</CardTitle>
             <CardDescription>
               Personnalisez l'e-mail envoyé aux clients avec leur relevé.
-              Variables disponibles : `{{userName}}`, `{{period}}`, `{{appUrl}}`.
+              Variables disponibles : <code>{"{{userName}}"}</code>, <code>{"{{period}}"}</code>, <code>{"{{appUrl}}"}</code>.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -7,8 +7,10 @@ export async function sendLoginOtp(phoneNumber: string): Promise<void> {
 
   if (error) {
     console.error("Error sending login SMS OTP:", error);
-    const context = (error as any).context;
-    throw new Error(context?.error || error.message || "Une erreur est survenue lors de l'envoi du code.");
+    // The error object from invoke for non-2xx status often has a 'details' property
+    // that contains the JSON body returned by the Edge Function.
+    const errorMessage = (error as any).details?.error || error.message || "Une erreur est survenue lors de l'envoi du code.";
+    throw new Error(errorMessage);
   }
   return data;
 }
@@ -20,8 +22,8 @@ export async function verifyLoginOtp(phoneNumber: string, otp: string): Promise<
 
   if (error) {
     console.error("Error verifying login SMS OTP:", error);
-    const context = (error as any).context;
-    throw new Error(context?.error || error.message || "Une erreur est survenue lors de la vérification du code.");
+    const errorMessage = (error as any).details?.error || error.message || "Une erreur est survenue lors de la vérification du code.";
+    throw new Error(errorMessage);
   }
   
   if (!data.access_token || !data.refresh_token) {

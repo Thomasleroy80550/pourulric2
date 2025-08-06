@@ -72,6 +72,20 @@ serve(async (req) => {
 
     let existingUser = users.find(u => u.phone === phoneNumber);
 
+    // If user not found by phone, try finding by the dummy email
+    if (!existingUser) {
+      const dummyEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
+      existingUser = users.find(u => u.email === dummyEmail);
+      if (existingUser && !existingUser.phone) {
+        // If found by dummy email but phone is not set, update the phone
+        const { error: updatePhoneError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { phone: phoneNumber });
+        if (updatePhoneError) {
+          console.error('Error updating user phone:', updatePhoneError);
+          throw new Error('Impossible de mettre à jour le numéro de téléphone de l\'utilisateur existant.');
+        }
+      }
+    }
+
     if (!existingUser) {
       // Create new user
       userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
@@ -89,6 +103,7 @@ serve(async (req) => {
         throw new Error('Impossible de créer un nouvel utilisateur.');
       }
       userId = newUser.user.id;
+      userEmail = newUser.user.email; // Ensure userEmail is set from the newly created user
     } else {
       userId = existingUser.id;
       userEmail = existingUser.email;

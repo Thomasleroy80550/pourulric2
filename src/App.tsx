@@ -59,11 +59,12 @@ function App() {
                   <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
                   <Route path="/admin/statements" element={<AdminStatementsPage />} />
                   <Route path="/admin/users" element={<AdminUsersPage />} />
+                  <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                  <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
                   <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
                   <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                   <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                   <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
-                  <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />

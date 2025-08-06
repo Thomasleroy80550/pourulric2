@@ -1,6 +1,20 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, FileText, FilePlus, Settings, LogOut, Shield, ArrowLeft, Wrench, Target, CircleUser, User } from 'lucide-react';
+import {
+  Home,
+  Users,
+  FileText,
+  LineChart,
+  Briefcase,
+  Wrench,
+  BedDouble,
+  Settings,
+  LogOut,
+  Shield,
+  ArrowLeft,
+  CircleUser,
+  User
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useSession } from './SessionContextProvider';
@@ -21,6 +35,11 @@ const adminNavigationItems = [
   { name: 'Rapports Tech.', href: '/admin/technical-reports', icon: Wrench },
   { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus },
   { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },
+  {
+    href: '/admin/settings',
+    label: 'Paramètres',
+    icon: Settings,
+  },
 ];
 
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -116,7 +135,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   className="flex items-center gap-2"
                 >
                   <Users className="h-5 w-5" />
-                  <span className="text-sm">Utilisateurs</span>
+                  <span className="text-sm">Clients</span>
                 </Link>
                 <Link
                   to="/admin/user-rooms"
@@ -165,7 +184,14 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   className="flex items-center gap-2"
                 >
                   <FileText className="h-5 w-5" />
-                  <span className="text-sm">Relevés Sauvegardés</span>
+                  <span className="text-sm">Relevés</span>
+                </Link>
+                <Link
+                  to="/admin/settings"
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="h-5 w-5" />
+                  <span className="text-sm">Paramètres</span>
                 </Link>
               </nav>
             </SheetContent>

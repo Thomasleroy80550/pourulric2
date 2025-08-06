@@ -3,6 +3,11 @@ import { createNotification } from "./notifications-api";
 import { UserProfile } from "./profile-api";
 import { Strategy } from "./strategy-api";
 
+export interface AppSetting {
+  key: string;
+  value: any;
+}
+
 export interface SavedInvoice {
   id: string;
   user_id: string;
@@ -162,10 +167,11 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
 /**
  * Triggers an edge function to send the statement via email.
  * @param invoiceId The ID of the invoice to send.
+ * @param pdfPath The path of the generated PDF in Supabase Storage.
  */
-export async function sendStatementByEmail(invoiceId: string): Promise<void> {
+export async function sendStatementByEmail(invoiceId: string, pdfPath: string): Promise<void> {
   const { error } = await supabase.functions.invoke('send-statement-email', {
-    body: { invoiceId },
+    body: { invoiceId, pdfPath },
   });
 
   if (error) {
@@ -352,4 +358,32 @@ export async function deleteStrategy(strategyId: string): Promise<void> {
     console.error("Error deleting strategy:", error);
     throw new Error(`Erreur lors de la suppression de la stratégie : ${error.message}`);
   }
+}
+
+export async function getSetting(key: string): Promise<AppSetting | null> {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('*')
+    .eq('key', key)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // Ignorer les erreurs "non trouvé"
+    console.error(`Error fetching setting ${key}:`, error);
+    throw new Error(`Erreur lors de la récupération du paramètre : ${error.message}`);
+  }
+  return data;
+}
+
+export async function updateSetting(key: string, value: any): Promise<AppSetting> {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`Error updating setting ${key}:`, error);
+    throw new Error(`Erreur lors de la mise à jour du paramètre : ${error.message}`);
+  }
+  return data;
 }

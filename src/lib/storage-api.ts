@@ -1,31 +1,50 @@
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Télécharge une liste de fichiers vers un bucket Supabase Storage.
- * @param files La liste des fichiers à télécharger (FileList).
- * @param bucketName Le nom du bucket Supabase Storage.
- * @param folderPath Le chemin du dossier à l'intérieur du bucket (ex: 'report_updates/report_id').
- * @returns Une promesse qui résout en un tableau d'URLs publiques des fichiers téléchargés.
+ * Uploads a file to a specified Supabase Storage bucket.
+ * @param bucketName The name of the bucket.
+ * @param filePath The path and name of the file in the bucket.
+ * @param file The file object to upload.
+ * @returns The public URL of the uploaded file.
  */
-export async function uploadFiles(files: FileList, bucketName: string, folderPath: string): Promise<string[]> {
-  const uploadedUrls: string[] = [];
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    // Créer un chemin de fichier unique pour éviter les collisions
-    const filePath = `${folderPath}/${Date.now()}-${file.name}`;
-    
-    const { data, error } = await supabase.storage.from(bucketName).upload(filePath, file);
+export async function uploadFile(bucketName: string, filePath: string, file: File): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(bucketName)
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true, // Overwrite if file already exists
+    });
 
-    if (error) {
-      console.error('Erreur lors du téléchargement du fichier:', error);
-      throw new Error(`Échec du téléchargement du fichier ${file.name}: ${error.message}`);
-    }
-
-    // Récupérer l'URL publique du fichier téléchargé
-    const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-    if (publicUrlData) {
-      uploadedUrls.push(publicUrlData.publicUrl);
-    }
+  if (error) {
+    console.error('Error uploading file:', error);
+    throw new Error(`Erreur lors du téléversement du fichier : ${error.message}`);
   }
-  return uploadedUrls;
+
+  const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(data.path);
+  return publicUrl;
+}
+
+/**
+ * Uploads a statement PDF to the 'statements' bucket.
+ * @param userId The ID of the user.
+ * @param invoiceId The ID of the invoice.
+ * @param pdfFile The PDF file to upload.
+ * @returns An object containing the path of the uploaded file.
+ */
+export async function uploadStatementPdf(userId: string, invoiceId: string, pdfFile: File): Promise<{ path: string }> {
+  const filePath = `${userId}/${invoiceId}.pdf`;
+
+  const { error, data } = await supabase.storage
+    .from('statements')
+    .upload(filePath, pdfFile, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) {
+    console.error('Error uploading statement PDF:', error);
+    throw new Error(`Erreur lors du téléversement du PDF : ${error.message}`);
+  }
+
+  return { path: data.path };
 }

@@ -5,13 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2, Send } from 'lucide-react';
+import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2 } from 'lucide-react';
 import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import StatementDetailsDialog from '@/components/StatementDetailsDialog';
 import AddCommentDialog from '@/components/AddCommentDialog';
+import { generateStatementPdf } from '@/lib/pdf-utils';
+import { uploadStatementPdf } from '@/lib/storage-api';
 
 const AdminStatementsPage: React.FC = () => {
   const [statements, setStatements] = useState<SavedInvoice[]>([]);
@@ -21,6 +23,7 @@ const AdminStatementsPage: React.FC = () => {
   const [selectedStatement, setSelectedStatement] = useState<SavedInvoice | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
 
   const loadStatements = async () => {
     setLoading(true);
@@ -62,15 +65,31 @@ const AdminStatementsPage: React.FC = () => {
     }
   };
 
-  const handleSendStatement = async (statementId: string) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir envoyer ce relevé par e-mail au client ?")) {
+  const handleSendStatement = async (statement: SavedInvoice) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir générer le PDF et l'envoyer par e-mail au client ?")) {
       return;
     }
+    setSendingStatementId(statement.id);
+    const toastId = toast.loading("Préparation du relevé en cours...");
     try {
-      await sendStatementByEmail(statementId);
-      toast.success("Relevé mis en file d'attente pour envoi par e-mail !");
+      // 1. Générer le PDF
+      toast.info("Génération du PDF...", { id: toastId });
+      const pdfFile = await generateStatementPdf(statement);
+
+      // 2. Téléverser le PDF
+      toast.info("Téléversement du PDF...", { id: toastId });
+      const { path } = await uploadStatementPdf(statement.user_id, statement.id, pdfFile);
+
+      // 3. Déclencher la fonction Edge
+      toast.info("Mise en file d'attente de l'e-mail...", { id: toastId });
+      await sendStatementByEmail(statement.id, path);
+      
+      toast.success("Relevé envoyé avec succès par e-mail !", { id: toastId });
     } catch (err: any) {
-      toast.error(`Erreur lors de l'envoi: ${err.message}`);
+      console.error("Erreur lors de l'envoi du relevé:", err);
+      toast.error(`Erreur lors de l'envoi: ${err.message}`, { id: toastId });
+    } finally {
+      setSendingStatementId(null);
     }
   };
 
@@ -122,7 +141,9 @@ const AdminStatementsPage: React.FC = () => {
                         <TableCell className="text-right space-x-2">
                           <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)}><Eye className="h-4 w-4" /></Button>
                           <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)}><MessageSquare className="h-4 w-4" /></Button>
-                          <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement.id)}><Send className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id}>
+                            {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          </Button>
                           <Button variant="destructive" size="icon" onClick={() => handleDelete(statement.id)}><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>

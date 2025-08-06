@@ -1,0 +1,83 @@
+import React from 'react';
+import { SavedInvoice } from '@/lib/admin-api';
+import StatementPrintLayout from '@/components/StatementPrintLayout';
+import { createRoot } from 'react-dom/client';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+
+export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.width = '1024px'; // Largeur nécessaire pour le calcul de la mise en page
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    const cleanup = () => {
+      root.unmount();
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    };
+
+    const captureAndResolve = async () => {
+      try {
+        const statementElement = container.querySelector('#statement-to-print');
+        if (!statementElement) {
+          throw new Error("Impossible de trouver l'élément du relevé à imprimer.");
+        }
+
+        const canvas = await html2canvas(statementElement as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          width: statementElement.scrollWidth,
+          height: statementElement.scrollHeight,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: 'p',
+          unit: 'mm',
+          format: 'a4',
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const ratio = canvas.width / canvas.height;
+        
+        let finalImgWidth = pdfWidth;
+        let finalImgHeight = pdfWidth / ratio;
+
+        if (finalImgHeight > pdfHeight) {
+          finalImgHeight = pdfHeight;
+          finalImgWidth = pdfHeight * ratio;
+        }
+
+        pdf.addImage(imgData, 'PNG', 0, 0, finalImgWidth, finalImgHeight);
+        
+        const clientName = statement.profiles ? `${statement.profiles.first_name}_${statement.profiles.last_name}` : 'Client';
+        const fileName = `Releve_${clientName}_${statement.period.replace(/\s/g, '_')}.pdf`;
+
+        const pdfBlob = pdf.output('blob');
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        
+        resolve(pdfFile);
+      } catch (error) {
+        reject(error);
+      } finally {
+        cleanup();
+      }
+    };
+
+    root.render(
+      <React.StrictMode>
+        <StatementPrintLayout statement={statement} />
+      </React.StrictMode>
+    );
+    
+    // Attendre que le rendu soit terminé avant de capturer
+    setTimeout(captureAndResolve, 500);
+  });
+};

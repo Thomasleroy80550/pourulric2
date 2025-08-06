@@ -63,7 +63,9 @@ serve(async (req) => {
       body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en pièce jointe et sur votre espace client.\n\nConnectez-vous pour le consulter : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
     };
     const template = templateSetting?.value || defaultTemplate;
-    const appUrl = Deno.env.get('SUPABASE_URL')?.replace('.co', '.app') ?? 'https://app.hellokeys.fr';
+    
+    // Utilisation d'une nouvelle variable d'environnement pour l'URL de l'application
+    const appUrl = Deno.env.get('APP_BASE_URL') ?? (Deno.env.get('SUPABASE_URL')?.replace('.co', '.app') ?? 'https://app.hellokeys.fr');
     
     const userName = invoice.profiles?.first_name || 'Client';
     const period = invoice.period;

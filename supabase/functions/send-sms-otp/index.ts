@@ -69,7 +69,7 @@ serve(async (req) => {
 
     // Send email to SMS gateway
     const { error: emailError } = await resend.emails.send({
-      from: 'Hello Keys OTP <otp@hellokeys.fr>',
+      from: 'Hello Keys OTP <noreply@notifications.hellokeys.fr>',
       to: [SMS_FACTOR_EMAIL],
       subject: phoneNumber, // Phone number as subject
       html: `Votre code de vérification Hello Keys est : ${otp}`,

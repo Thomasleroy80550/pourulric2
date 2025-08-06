@@ -25,6 +25,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { sendLoginOtp, verifyLoginOtp } from '@/lib/auth-api';
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -98,11 +99,8 @@ const Login = () => {
 
     try {
       if (!showOtpInput) {
-        // Step 1: Send OTP via Supabase Auth
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: phone,
-        });
-        if (error) throw error;
+        // Step 1: Send OTP via custom Edge Function
+        await sendLoginOtp(phone);
         setShowOtpInput(true);
         toast.success("Code de vérification envoyé !");
       } else {
@@ -110,12 +108,15 @@ const Login = () => {
         if (!values.otp) {
           throw new Error("Le code de vérification est requis.");
         }
-        const { error } = await supabase.auth.verifyOtp({
-          phone: phone,
-          token: values.otp,
-          type: 'sms',
+        const { access_token, refresh_token } = await verifyLoginOtp(phone, values.otp);
+        
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
         });
+
         if (error) throw error;
+
         toast.success("Connexion réussie ! Redirection...");
         // The onAuthStateChange listener will handle navigation
       }

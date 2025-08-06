@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle } from 'lucide-react';
+import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Loader2 } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -16,12 +16,19 @@ import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import KycForm from '@/components/KycForm';
+import CGUVModal from '@/components/CGUVModal';
+import AttestationContent from '@/components/AttestationContent';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isCguvModalOpen, setIsCguvModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const attestationRef = useRef<HTMLDivElement>(null);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -113,6 +120,41 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleDownloadAttestation = async () => {
+    if (!attestationRef.current || !profile) {
+      toast.error("Impossible de générer l'attestation. Données du profil manquantes.");
+      return;
+    }
+
+    setIsDownloading(true);
+
+    try {
+      const canvas = await html2canvas(attestationRef.current, {
+        scale: 2,
+        useCORS: true,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`attestation-hellokeys-${profile.last_name?.toLowerCase() || 'client'}.pdf`);
+      toast.success("Attestation téléchargée avec succès !");
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF:", error);
+      toast.error("Une erreur est survenue lors de la génération de l'attestation.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const getClientSinceDays = () => {
     if (profile?.contract_start_date) {
       const date = parseISO(profile.contract_start_date);
@@ -141,7 +183,7 @@ const ProfilePage: React.FC = () => {
     </div>
   );
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <MainLayout>
         <div className="container mx-auto py-6">
@@ -272,7 +314,6 @@ const ProfilePage: React.FC = () => {
                   <Label>Mon forfait</Label>
                   <Input value={`${(profile?.commission_rate || 0) * 100}%`} disabled />
                 </div>
-                {/* Removed "Nombre de logement en gestion" field */}
                 <div className="space-y-2">
                   <Label htmlFor="linenType">Type de linge</Label>
                   <Input id="linenType" value={linenType} onChange={(e) => setLinenType(e.target.value)} disabled={userProfile?.is_banned} />
@@ -302,8 +343,15 @@ const ProfilePage: React.FC = () => {
                   <Input value={profile?.cguv_accepted_at && isValid(parseISO(profile.cguv_accepted_at)) ? `${format(parseISO(profile.cguv_accepted_at), 'dd/MM/yyyy')} (v${profile.cguv_version || CURRENT_CGUV_VERSION})` : 'Non signé'} disabled />
                 </div>
                 <div className="flex items-center gap-4 md:col-span-2">
-                  <Button variant="outline">Voir nos CGUV</Button>
-                  <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Télécharger une attestation</Button>
+                  <Button variant="outline" onClick={() => setIsCguvModalOpen(true)}>Voir nos CGUV</Button>
+                  <Button variant="outline" onClick={handleDownloadAttestation} disabled={!profile || isDownloading}>
+                    {isDownloading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    {isDownloading ? 'Téléchargement...' : 'Télécharger une attestation'}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -345,6 +393,12 @@ const ProfilePage: React.FC = () => {
             </Button>
           </div>
         </Tabs>
+
+        <CGUVModal isOpen={isCguvModalOpen} onOpenChange={setIsCguvModalOpen} viewOnly={true} />
+        
+        <div className="absolute -left-[9999px] top-0" aria-hidden="true">
+          {profile && <AttestationContent ref={attestationRef} profile={profile} />}
+        </div>
       </div>
     </MainLayout>
   );

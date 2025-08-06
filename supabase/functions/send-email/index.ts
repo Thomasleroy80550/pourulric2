@@ -44,7 +44,7 @@ serve(async (req) => {
     }
 
     const { data, error } = await resend.emails.send({
-      from: 'Hello Keys <noreply@hellokeys.fr>',
+      from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
       to: [to],
       subject: subject,
       html: html,

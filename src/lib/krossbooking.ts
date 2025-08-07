@@ -192,27 +192,32 @@ export async function fetchKrossbookingReservations(
     return reservationsCache.data;
   }
   
-  console.log("Fetching fresh Krossbooking reservations from API for all user rooms in a single call.");
+  console.log("Fetching fresh Krossbooking reservations from API, room by room.");
   try {
     if (userRooms.length === 0) {
       console.log("No configured rooms to fetch reservations for.");
       return [];
     }
 
-    // NEW: Single call to the proxy for all rooms
-    const data = await callKrossbookingProxy('get_reservations_for_user_rooms', { 
-      rooms: userRooms.map(r => ({ room_id: r.room_id, room_name: r.room_name })) 
-    });
+    const reservationPromises = userRooms.map(room =>
+      callKrossbookingProxy('get_reservations_for_room', { id_room: room.room_id })
+        .catch(error => {
+          console.error(`Failed to fetch reservations for room ${room.room_id} (${room.room_name}):`, error);
+          return []; // Return empty array for the failed room to not break Promise.all
+        })
+    );
 
-    if (!Array.isArray(data)) {
-      console.warn(`Unexpected Krossbooking API response for get_reservations_for_user_rooms:`, data);
+    const results = await Promise.all(reservationPromises);
+    const flattenedReservations = results.flat();
+
+    if (!Array.isArray(flattenedReservations)) {
+      console.warn(`Unexpected Krossbooking API response after flattening:`, flattenedReservations);
       return [];
     }
 
-    // Map room names to room IDs for easy lookup, as the response only has id_room
     const roomNameMap = new Map(userRooms.map(room => [room.room_id, room.room_name]));
 
-    const allReservations = data.map((res: any): KrossbookingReservation => ({
+    const allReservations = flattenedReservations.map((res: any): KrossbookingReservation => ({
       id: res.id_reservation.toString(),
       guest_name: res.label || 'N/A',
       property_name: roomNameMap.get(res.id_room.toString()) || 'Unknown Room',
@@ -240,7 +245,7 @@ export async function fetchKrossbookingReservations(
     return uniqueReservations;
 
   } catch (error) {
-    console.error(`Error fetching all reservations:`, error);
+    console.error(`Error fetching reservations room-by-room:`, error);
     if (reservationsCache) {
       console.warn("Returning stale reservations cache due to API error.");
       return reservationsCache.data;

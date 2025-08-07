@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SimpleLayout from '@/components/SimpleLayout'; // Changé pour le layout de test
+import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +41,7 @@ interface Booking {
   phone?: string;
 }
 
-const BookingsPage: React.FC = () => {
+function BookingsPage() {
   const { profile } = useSession();
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
@@ -65,7 +65,6 @@ const BookingsPage: React.FC = () => {
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
 
-  // Options de statut traduites pour l'affichage
   const commonStatusesDisplay = [
     { value: 'CONFIRMED', label: 'Confirmée' },
     { value: 'PENDING', label: 'En attente' },
@@ -74,7 +73,6 @@ const BookingsPage: React.FC = () => {
     { value: 'PROP0', label: 'Propriétaire (Sans Ménage)' },
   ];
 
-  // Options de canal traduites pour l'affichage
   const commonChannelsDisplay = [
     { value: 'AIRBNB', label: 'Airbnb' },
     { value: 'BOOKING', label: 'Booking.com' },
@@ -92,7 +90,6 @@ const BookingsPage: React.FC = () => {
     }
 
     if (filterStatus !== 'all') {
-      // Le statut de la réservation est déjà normalisé par fetchKrossbookingReservations
       tempBookings = tempBookings.filter(booking => booking.status.toLowerCase() === filterStatus.toLowerCase());
     }
 
@@ -127,8 +124,7 @@ const BookingsPage: React.FC = () => {
       setUserRooms(fetchedUserRooms);
 
       const fetchedBookings = await fetchKrossbookingReservations(fetchedUserRooms);
-      console.log(`Fetched bookings for BookingsPage (Rooms: ${fetchedUserRooms.map(r => r.room_id).join(', ')}):`, fetchedBookings);
-
+      
       const currentYear = new Date().getFullYear();
       const yearStart = startOfYear(new Date(currentYear, 0, 1));
       const yearEnd = endOfYear(new Date(currentYear, 0, 1));
@@ -148,7 +144,6 @@ const BookingsPage: React.FC = () => {
       applyFilters(sortedBookings);
     } catch (err: any) {
       setError(`Erreur lors du chargement des réservations : ${err.message}`);
-      console.error("Error in loadBookings for BookingsPage:", err);
     } finally {
       setLoading(false);
     }
@@ -167,7 +162,7 @@ const BookingsPage: React.FC = () => {
   }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings]);
 
   const getStatusVariant = (status: string) => {
-    switch (status.toUpperCase()) { // Utilise toUpperCase pour la cohérence avec les statuts normalisés
+    switch (status.toUpperCase()) {
       case 'CONFIRMED':
       case 'PROPRI':
         return 'default';
@@ -183,10 +178,8 @@ const BookingsPage: React.FC = () => {
   };
 
   const handleOpenDetails = (booking: Booking) => {
-    console.log("Attempting to open dialog for booking:", booking);
     setSelectedBooking(booking);
     setIsDetailDialogOpen(true);
-    console.log("isDetailDialogOpen after setting:", true);
   };
 
   const handleReportProblem = (booking: Booking) => {
@@ -211,14 +204,14 @@ const BookingsPage: React.FC = () => {
 
   if (profile?.is_banned) {
     return (
-      <SimpleLayout>
+      <MainLayout>
         <BannedUserMessage />
-      </SimpleLayout>
+      </MainLayout>
     );
   }
 
   return (
-    <SimpleLayout>
+    <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
         
@@ -343,7 +336,6 @@ const BookingsPage: React.FC = () => {
               <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear} avec les filtres actuels.</p>
             ) : (
               <>
-                {/* Desktop Table View */}
                 {!isMobile && (
                   <div className="overflow-x-auto">
                     <Table>
@@ -394,7 +386,6 @@ const BookingsPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Mobile Card View */}
                 {isMobile && (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredBookings.map((booking) => (
@@ -451,20 +442,14 @@ const BookingsPage: React.FC = () => {
         </Card>
       </div>
 
-      <Dialog open={isDetailDialogOpen} onOpenChange={(open) => {
-        console.log("Dialog onOpenChange called:", open);
-        setIsDetailDialogOpen(open);
-        if (!open) {
-          setSelectedBooking(null);
-        }
-      }}>
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Détails de la Réservation</DialogTitle>
             <DialogDescription>
               Informations complètes sur la réservation sélectionnée.
             </DialogDescription>
-          </DialogDescription>
+          </DialogHeader>
           {selectedBooking && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 items-center gap-4">
@@ -522,8 +507,8 @@ const BookingsPage: React.FC = () => {
         onOpenChange={setIsMessagesDialogOpen}
         booking={bookingForMessages}
       />
-    </SimpleLayout>
+    </MainLayout>
   );
-};
+}
 
 export default BookingsPage;

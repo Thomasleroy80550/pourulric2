@@ -233,57 +233,8 @@ export async function fetchKrossbookingReservations(
     const uniqueReservations = Array.from(new Map(flattenedReservations.map(res => [res.id, res])).values());
 
     // --- Notification Logic ---
-    // Only run notification logic if the cache was already populated to avoid a storm of notifications on the first load.
-    if (oldReservationsMap.size > 0 && profile && userEmail) {
-      const yesterday = startOfDay(subDays(new Date(), 1));
-
-      for (const newRes of uniqueReservations) {
-        const oldRes = oldReservationsMap.get(newRes.id);
-        const checkInDate = isValid(parseISO(newRes.check_in_date)) ? format(parseISO(newRes.check_in_date), 'dd MMMM yyyy', { locale: fr }) : newRes.check_in_date;
-        const checkOutDate = isValid(parseISO(newRes.check_out_date)) ? format(parseISO(newRes.check_out_date), 'dd MMMM yyyy', { locale: fr }) : newRes.check_out_date;
-
-        if (!oldRes) {
-          // New reservation found
-          const checkInDateObj = parseISO(newRes.check_in_date);
-
-          // Only notify for reservations with a check-in date of today or in the future.
-          if (isValid(checkInDateObj) && isAfter(checkInDateObj, yesterday)) {
-            if (profile.notify_new_booking_email) {
-              console.log(`Sending new booking email for reservation ${newRes.id} to ${userEmail}`);
-              const subject = `Nouvelle réservation pour ${newRes.property_name}`;
-              const html = `
-                  <h1>Nouvelle réservation</h1>
-                  <p>Bonjour ${profile.first_name || ''},</p>
-                  <p>Une nouvelle réservation a été enregistrée pour votre logement <strong>${newRes.property_name}</strong>.</p>
-                  <ul>
-                      <li><strong>Client :</strong> ${newRes.guest_name}</li>
-                      <li><strong>Arrivée :</strong> ${checkInDate}</li>
-                      <li><strong>Départ :</strong> ${checkOutDate}</li>
-                      <li><strong>Montant :</strong> ${newRes.amount}</li>
-                  </ul>
-                  <p>Vous pouvez consulter les détails sur votre espace propriétaire.</p>
-              `;
-              sendEmail(userEmail, subject, html).catch(e => console.error("Failed to send new booking email:", e));
-            }
-          }
-        } else {
-          // Existing reservation, check for cancellation
-          if (oldRes.status !== 'CANC' && newRes.status === 'CANC') {
-            if (profile.notify_cancellation_email) {
-              console.log(`Sending cancellation email for reservation ${newRes.id} to ${userEmail}`);
-              const subject = `Annulation de réservation pour ${newRes.property_name}`;
-              const html = `
-                  <h1>Annulation de réservation</h1>
-                  <p>Bonjour ${profile.first_name || ''},</p>
-                  <p>La réservation pour <strong>${newRes.guest_name}</strong> dans votre logement <strong>${newRes.property_name}</strong> (arrivée le ${checkInDate}) a été annulée.</p>
-                  <p>Le calendrier a été mis à jour.</p>
-              `;
-              sendEmail(userEmail, subject, html).catch(e => console.error("Failed to send cancellation email:", e));
-            }
-          }
-        }
-      }
-    }
+    // This logic is now handled by the server-side `check-new-reservations` Edge Function.
+    // The client-side logic is removed to avoid duplicate notifications and reliance on user activity.
     // --- End Notification Logic ---
     
     reservationsCache = {

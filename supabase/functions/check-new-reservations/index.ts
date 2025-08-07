@@ -128,22 +128,27 @@ serve(async (req) => {
     for (const profile of formattedProfiles) {
       if (!profile.user_rooms || profile.user_rooms.length === 0) continue;
 
-      const { data: reservationsResponse, error: reservationsError } = await supabaseAdmin.functions.invoke('krossbooking-proxy', {
-          headers: {
+      const proxyResponse = await fetch(`${SUPABASE_URL}/functions/v1/krossbooking-proxy`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${CRON_SECRET}`
-          },
-          body: { 
-              action: 'get_reservations_for_user_rooms',
-              rooms: profile.user_rooms 
-          }
+        },
+        body: JSON.stringify({
+            action: 'get_reservations_for_user_rooms',
+            rooms: profile.user_rooms
+        })
       });
 
-      if (reservationsError) {
-          console.error(`Erreur Krossbooking pour l'utilisateur ${profile.id}:`, reservationsError.message);
+      if (!proxyResponse.ok) {
+          const errorText = await proxyResponse.text();
+          console.error(`Erreur Krossbooking pour l'utilisateur ${profile.id}: Proxy a retourné ${proxyResponse.status}. ${errorText}`);
           continue;
       }
-      
+
+      const reservationsResponse = await proxyResponse.json();
       const reservations = reservationsResponse.data;
+
       if (!Array.isArray(reservations)) {
         console.warn(`La réponse de Krossbooking n'est pas un tableau pour l'utilisateur ${profile.id}`);
         continue;

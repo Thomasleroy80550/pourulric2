@@ -123,12 +123,15 @@ serve(async (req) => {
 
     if (profilesError) throw profilesError;
     
-    const formattedProfiles: UserProfile[] = profiles; // No more complex mapping needed
+    const formattedProfiles: UserProfile[] = profiles;
 
     for (const profile of formattedProfiles) {
       if (!profile.user_rooms || profile.user_rooms.length === 0) continue;
 
       const { data: reservationsResponse, error: reservationsError } = await supabaseAdmin.functions.invoke('krossbooking-proxy', {
+          headers: {
+            'Authorization': `Bearer ${CRON_SECRET}`
+          },
           body: { 
               action: 'get_reservations_for_user_rooms',
               rooms: profile.user_rooms 
@@ -171,23 +174,16 @@ serve(async (req) => {
 
         const storedStatus = processedMap.get(currentReservation.id);
 
-        // Logic for sending notifications based on status change
         if (storedStatus && storedStatus !== currentReservation.status) {
           if (storedStatus !== 'CANC' && currentReservation.status === 'CANC' && profile.notify_cancellation_email) {
             console.log(`Annulation détectée: ${currentReservation.id} pour l'utilisateur ${profile.id}`);
             await sendCancellationEmail(profile, currentReservation);
-          } else if (storedStatus === 'CANC' && currentReservation.status !== 'CANC') {
-            console.log(`Réactivation détectée: ${currentReservation.id} pour l'utilisateur ${profile.id}. Pas de notification.`);
-          } else {
-            console.log(`Mise à jour du statut pour la réservation ${currentReservation.id}: de ${storedStatus} à ${currentReservation.status}. Pas de notification spécifique.`);
           }
         } else if (!storedStatus && currentReservation.status !== 'CANC' && profile.notify_new_booking_email) {
-          // This is a brand new reservation that is not cancelled
           console.log(`Nouvelle réservation trouvée: ${currentReservation.id} pour l'utilisateur ${profile.id}`);
           await sendNewBookingEmail(profile, currentReservation);
         }
 
-        // Always upsert to ensure the processed_reservations table is up-to-date
         const { error: upsertError } = await supabaseAdmin
           .from('processed_reservations')
           .upsert(
@@ -197,7 +193,7 @@ serve(async (req) => {
               status: currentReservation.status,
               last_processed_at: new Date().toISOString(),
             },
-            { onConflict: 'user_id,reservation_id' } // Specify the unique constraint columns
+            { onConflict: 'user_id,reservation_id' }
           );
 
         if (upsertError) {

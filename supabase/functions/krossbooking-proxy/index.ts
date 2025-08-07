@@ -50,23 +50,27 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    // --- Authentication Check ---
+    const authHeader = req.headers.get('Authorization');
+    const isCron = authHeader === `Bearer ${Deno.env.get('CRON_SECRET')}`;
 
-    if (authError || !user) {
-      // Allow cron job to pass
-      const isCron = req.headers.get('Authorization') === `Bearer ${Deno.env.get('CRON_SECRET')}`;
-      if (!isCron) {
+    if (!isCron) {
+      // If it's not the cron job, it must be an authenticated user.
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        { global: { headers: { Authorization: authHeader! } } }
+      );
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+      if (authError || !user) {
         return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
           status: 401,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
     }
+    // --- End Authentication Check ---
 
     if (req.method !== 'POST') {
         return new Response(JSON.stringify({ error: `Unsupported HTTP method: ${req.method}` }), {
@@ -87,7 +91,6 @@ serve(async (req) => {
 
     const authToken = await getAuthToken();
 
-    // Handle multi-call actions first
     if (action === 'get_reservations_for_user_rooms') {
         if (!requestBody.rooms || !Array.isArray(requestBody.rooms)) {
           throw new Error("Missing or invalid 'rooms' array for get_reservations_for_user_rooms.");

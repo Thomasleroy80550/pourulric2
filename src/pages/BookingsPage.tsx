@@ -65,8 +65,24 @@ const BookingsPage: React.FC = () => {
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
 
-  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'PROPRI', 'PROP0'];
-  const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
+  // Options de statut traduites pour l'affichage
+  const commonStatusesDisplay = [
+    { value: 'CONFIRMED', label: 'Confirmée' },
+    { value: 'PENDING', label: 'En attente' },
+    { value: 'CANCELLED', label: 'Annulée' },
+    { value: 'PROPRI', label: 'Propriétaire (Ménage)' },
+    { value: 'PROP0', label: 'Propriétaire (Sans Ménage)' },
+  ];
+
+  // Options de canal traduites pour l'affichage
+  const commonChannelsDisplay = [
+    { value: 'AIRBNB', label: 'Airbnb' },
+    { value: 'BOOKING', label: 'Booking.com' },
+    { value: 'ABRITEL', label: 'Abritel' },
+    { value: 'DIRECT', label: 'Direct' },
+    { value: 'HELLOKEYS', label: 'Hello Keys' },
+    { value: 'UNKNOWN', label: 'Autre' },
+  ];
 
   const applyFilters = (bookingsToFilter: Booking[]) => {
     let tempBookings = bookingsToFilter;
@@ -76,6 +92,7 @@ const BookingsPage: React.FC = () => {
     }
 
     if (filterStatus !== 'all') {
+      // Le statut de la réservation est déjà normalisé par fetchKrossbookingReservations
       tempBookings = tempBookings.filter(booking => booking.status.toLowerCase() === filterStatus.toLowerCase());
     }
 
@@ -150,7 +167,7 @@ const BookingsPage: React.FC = () => {
   }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings]);
 
   const getStatusVariant = (status: string) => {
-    switch (status.toUpperCase()) { // Use toUpperCase for consistency with normalized statuses
+    switch (status.toUpperCase()) { // Utilise toUpperCase pour la cohérence avec les statuts normalisés
       case 'CONFIRMED':
       case 'PROPRI':
         return 'default';
@@ -247,8 +264,8 @@ const BookingsPage: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tous les statuts</SelectItem>
-                      {commonStatuses.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                      {commonStatusesDisplay.map(status => (
+                        <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -262,8 +279,8 @@ const BookingsPage: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tous les canaux</SelectItem>
-                      {commonChannels.map(channel => (
-                        <SelectItem key={channel} value={channel}>{channel}</SelectItem>
+                      {commonChannelsDisplay.map(channel => (
+                        <SelectItem key={channel.value} value={channel.value}>{channel.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -447,7 +464,7 @@ const BookingsPage: React.FC = () => {
             <DialogDescription>
               Informations complètes sur la réservation sélectionnée.
             </DialogDescription>
-          </DialogHeader>
+          </DialogDescription>
           {selectedBooking && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 items-center gap-4">

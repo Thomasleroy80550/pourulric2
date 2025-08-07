@@ -262,7 +262,7 @@ export async function fetchKrossbookingHousekeepingTasks(
   idProperty?: number,
   forceRefresh: boolean = false // Add forceRefresh parameter
 ): Promise<KrossbookingHousekeepingTask[]> {
-  const now = Date.Now();
+  const now = Date.now(); // Corrected from Date.Now()
   const cacheKey = `${dateFrom}-${dateTo}-${idProperty || 'all'}`; // Create a unique cache key
 
   if (!forceRefresh && housekeepingTasksCache[cacheKey] && (now - housekeepingTasksCache[cacheKey].timestamp < HOUSEKEEPING_CACHE_DURATION)) {

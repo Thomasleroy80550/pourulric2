@@ -108,6 +108,7 @@ serve(async (req) => {
             body: JSON.stringify({
                 with_rooms: true,
                 id_property: 1, // Assuming all users are under a single property
+                cod_reservation_status: ['CONF', 'PROV', 'CANC', 'PROP0', 'PROPRI']
             }),
         });
 
@@ -146,6 +147,7 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify({
           with_rooms: true,
           id_room: Number(requestBody.id_room),
+          cod_reservation_status: ['CONF', 'PROV', 'CANC', 'PROP0', 'PROPRI']
         });
         break;
 

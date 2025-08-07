@@ -189,35 +189,29 @@ export async function fetchKrossbookingReservations(
 
   if (!forceRefresh && reservationsCache && (now - reservationsCache.timestamp < RESERVATION_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking reservations.");
-    return reservationsCache.data;
+    const userRoomIds = new Set(userRooms.map(room => room.room_id));
+    return reservationsCache.data.filter(res => userRoomIds.has(res.krossbooking_room_id));
   }
   
-  console.log("Fetching fresh Krossbooking reservations from API, room by room.");
+  console.log("Fetching ALL Krossbooking reservations from API and filtering.");
   try {
     if (userRooms.length === 0) {
       console.log("No configured rooms to fetch reservations for.");
       return [];
     }
 
-    const reservationPromises = userRooms.map(room =>
-      callKrossbookingProxy('get_reservations_for_room', { id_room: room.room_id })
-        .catch(error => {
-          console.error(`Failed to fetch reservations for room ${room.room_id} (${room.room_name}):`, error);
-          return []; // Return empty array for the failed room to not break Promise.all
-        })
-    );
+    // Single API call to get all reservations
+    const allReservationsFromApi = await callKrossbookingProxy('get_all_reservations');
 
-    const results = await Promise.all(reservationPromises);
-    const flattenedReservations = results.flat();
-
-    if (!Array.isArray(flattenedReservations)) {
-      console.warn(`Unexpected Krossbooking API response after flattening:`, flattenedReservations);
+    if (!Array.isArray(allReservationsFromApi)) {
+      console.warn(`Unexpected Krossbooking API response for all reservations:`, allReservationsFromApi);
       return [];
     }
 
     const roomNameMap = new Map(userRooms.map(room => [room.room_id, room.room_name]));
+    const userRoomIds = new Set(userRooms.map(room => room.room_id));
 
-    const allReservations = flattenedReservations.map((res: any): KrossbookingReservation => ({
+    const allReservations = allReservationsFromApi.map((res: any): KrossbookingReservation => ({
       id: res.id_reservation.toString(),
       guest_name: res.label || 'N/A',
       property_name: roomNameMap.get(res.id_room.toString()) || 'Unknown Room',
@@ -236,19 +230,24 @@ export async function fetchKrossbookingReservations(
     
     const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id, res])).values());
     
+    // Cache all reservations before filtering for a specific user
     reservationsCache = {
       data: uniqueReservations,
       timestamp: now,
     };
-    console.log("Krossbooking reservations cached successfully.");
+    console.log("ALL Krossbooking reservations cached successfully.");
 
-    return uniqueReservations;
+    // Filter for the current user's rooms
+    const userReservations = uniqueReservations.filter(res => userRoomIds.has(res.krossbooking_room_id));
+
+    return userReservations;
 
   } catch (error) {
-    console.error(`Error fetching reservations room-by-room:`, error);
+    console.error(`Error fetching all reservations:`, error);
     if (reservationsCache) {
       console.warn("Returning stale reservations cache due to API error.");
-      return reservationsCache.data;
+      const userRoomIds = new Set(userRooms.map(room => room.room_id));
+      return reservationsCache.data.filter(res => userRoomIds.has(res.krossbooking_room_id));
     }
     return [];
   }

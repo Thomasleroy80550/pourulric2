@@ -104,7 +104,9 @@ const CalendarPage: React.FC = () => {
         
         console.log("DEBUG: Owner blocks created from overrides:", closedBlocks);
 
-        setReservations([...fetchedReservations, ...closedBlocks]);
+        const allReservationsAndBlocks = [...fetchedReservations, ...closedBlocks];
+        console.log("DEBUG: All reservations and blocks to be displayed:", allReservationsAndBlocks);
+        setReservations(allReservationsAndBlocks);
 
       } catch (error) {
         console.error("Error fetching data for CalendarPage:", error);

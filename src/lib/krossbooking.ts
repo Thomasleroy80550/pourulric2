@@ -202,6 +202,7 @@ export async function fetchKrossbookingReservations(
 
     // Single API call to get all reservations
     const allReservationsFromApi = await callKrossbookingProxy('get_all_reservations');
+    console.log("DEBUG: Raw Krossbooking API response (all reservations):", allReservationsFromApi);
 
     if (!Array.isArray(allReservationsFromApi)) {
       console.warn(`Unexpected Krossbooking API response for all reservations:`, allReservationsFromApi);
@@ -230,7 +231,9 @@ export async function fetchKrossbookingReservations(
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
       }));
     
+    console.log("DEBUG: All processed Krossbooking reservations (before unique/user filter):", allReservations);
     const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id, res])).values());
+    console.log("DEBUG: Unique Krossbooking reservations:", uniqueReservations);
     
     // Cache all reservations before filtering for a specific user
     reservationsCache = {
@@ -241,6 +244,7 @@ export async function fetchKrossbookingReservations(
 
     // Filter for the current user's rooms
     const userReservations = uniqueReservations.filter(res => userRoomIds.has(res.krossbooking_room_id));
+    console.log("DEBUG: Krossbooking reservations filtered for user's rooms:", userReservations);
 
     return userReservations;
 
@@ -262,7 +266,7 @@ export async function fetchKrossbookingHousekeepingTasks(
   idProperty?: number,
   forceRefresh: boolean = false // Add forceRefresh parameter
 ): Promise<KrossbookingHousekeepingTask[]> {
-  const now = Date.now(); // Corrected from Date.Now()
+  const now = Date.now();
   const cacheKey = `${dateFrom}-${dateTo}-${idProperty || 'all'}`; // Create a unique cache key
 
   if (!forceRefresh && housekeepingTasksCache[cacheKey] && (now - housekeepingTasksCache[cacheKey].timestamp < HOUSEKEEPING_CACHE_DURATION)) {

@@ -211,22 +211,24 @@ export async function fetchKrossbookingReservations(
     const roomNameMap = new Map(userRooms.map(room => [room.room_id, room.room_name]));
     const userRoomIds = new Set(userRooms.map(room => room.room_id));
 
-    const allReservations = allReservationsFromApi.map((res: any): KrossbookingReservation => ({
-      id: res.id_reservation.toString(),
-      guest_name: res.label || 'N/A',
-      property_name: roomNameMap.get(res.id_room.toString()) || 'Unknown Room',
-      krossbooking_room_id: res.id_room.toString(),
-      check_in_date: res.arrival || '',
-      check_out_date: res.departure || '',
-      status: res.cod_reservation_status,
-      amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
-      cod_channel: res.cod_channel,
-      ota_id: res.ota_id,
-      channel_identifier: res.cod_channel || 'UNKNOWN',
-      email: res.email || '',
-      phone: res.phone || '',
-      tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
-    }));
+    const allReservations = allReservationsFromApi
+      .filter((res: any) => res.id_reservation !== undefined && res.id_room !== undefined) // Filter out malformed entries
+      .map((res: any): KrossbookingReservation => ({
+        id: res.id_reservation.toString(),
+        guest_name: res.label || 'N/A',
+        property_name: roomNameMap.get(res.id_room.toString()) || 'Unknown Room',
+        krossbooking_room_id: res.id_room.toString(),
+        check_in_date: res.arrival || '',
+        check_out_date: res.departure || '',
+        status: res.cod_reservation_status || 'UNKNOWN', // Add fallback for status
+        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
+        cod_channel: res.cod_channel || 'UNKNOWN', // Add fallback for channel
+        ota_id: res.ota_id,
+        channel_identifier: res.cod_channel || 'UNKNOWN',
+        email: res.email || '',
+        phone: res.phone || '',
+        tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+      }));
     
     const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id, res])).values());
     
@@ -260,7 +262,7 @@ export async function fetchKrossbookingHousekeepingTasks(
   idProperty?: number,
   forceRefresh: boolean = false // Add forceRefresh parameter
 ): Promise<KrossbookingHousekeepingTask[]> {
-  const now = Date.now();
+  const now = Date.Now();
   const cacheKey = `${dateFrom}-${dateTo}-${idProperty || 'all'}`; // Create a unique cache key
 
   if (!forceRefresh && housekeepingTasksCache[cacheKey] && (now - housekeepingTasksCache[cacheKey].timestamp < HOUSEKEEPING_CACHE_DURATION)) {

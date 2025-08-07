@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, differenceInDays, max, min, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Home, LogIn, LogOut, Sparkles } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { UserRoom } from '@/lib/user-room-api';
-import { KrossbookingReservation, saveKrossbookingReservation } from '@/lib/krossbooking';
+import { KrossbookingReservation, saveKrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import ReservationActionsDialog from './ReservationActionsDialog';
@@ -38,6 +38,24 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, rese
   const [selectedBookingForActions, setSelectedBookingForActions] = useState<KrossbookingReservation | null>(null);
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
+  const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
+  const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
+
+  useEffect(() => {
+    const loadRoomTypes = async () => {
+      setLoadingRoomTypes(true);
+      try {
+        const types = await fetchKrossbookingRoomTypes();
+        setKrossbookingRoomTypes(types);
+      } catch (error) {
+        console.error("Error fetching Krossbooking room types in CalendarGridMobile:", error);
+        toast.error("Erreur lors du chargement des types de chambres Krossbooking.");
+      } finally {
+        setLoadingRoomTypes(false);
+      }
+    };
+    loadRoomTypes();
+  }, []); // Empty dependency array means this runs once on mount
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -69,6 +87,22 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, rese
         toast.error("Réservation introuvable pour annulation.");
         return;
       }
+
+      let id_room_type: string | undefined;
+      for (const type of krossbookingRoomTypes) {
+        const foundRoom = type.rooms.find(room => room.id_room.toString() === bookingToCancel.krossbooking_room_id);
+        if (foundRoom) {
+          id_room_type = type.id_room_type.toString();
+          break;
+        }
+      }
+
+      if (!id_room_type) {
+        toast.error("Impossible de trouver le type de chambre pour l'annulation.");
+        console.error("Could not find room type for room id:", bookingToCancel.krossbooking_room_id);
+        return;
+      }
+
       await saveKrossbookingReservation({
         id_reservation: bookingToCancel.id,
         label: bookingToCancel.guest_name || "Annulation",
@@ -78,6 +112,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, rese
         phone: bookingToCancel.phone || '',
         cod_reservation_status: "CANC",
         id_room: bookingToCancel.krossbooking_room_id,
+        id_room_type: id_room_type, // <-- This was missing!
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false);

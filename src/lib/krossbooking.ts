@@ -202,7 +202,7 @@ export async function fetchKrossbookingReservations(
 
     // Single API call to get all reservations
     const allReservationsFromApi = await callKrossbookingProxy('get_all_reservations');
-    console.log("DEBUG: Raw Krossbooking API response (all reservations):", allReservationsFromApi);
+    console.log("DEBUG: Raw Krossbooking API response (first reservation):", allReservationsFromApi[0]); // Log the first element
 
     if (!Array.isArray(allReservationsFromApi)) {
       console.warn(`Unexpected Krossbooking API response for all reservations:`, allReservationsFromApi);

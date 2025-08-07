@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { Resend } from "npm:resend";
 import { format, parseISO, isValid } from 'https://deno.land/std@0.208.0/datetime/mod.ts';
 import { fr } from 'npm:date-fns/locale/fr';
@@ -24,6 +24,8 @@ interface UserProfile {
   first_name: string;
   email: string;
   user_rooms: { room_id: string, room_name: string }[];
+  notify_new_booking_email: boolean;
+  notify_cancellation_email: boolean;
 }
 
 interface KrossbookingReservation {
@@ -33,9 +35,10 @@ interface KrossbookingReservation {
   check_in_date: string;
   check_out_date: string;
   amount: string;
+  status: string; // 'PROP0', 'PROPRI', 'CANC'
 }
 
-async function sendNotificationEmail(profile: UserProfile, reservation: KrossbookingReservation) {
+async function sendNewBookingEmail(profile: UserProfile, reservation: KrossbookingReservation) {
   const checkInDate = isValid(parseISO(reservation.check_in_date)) ? format(parseISO(reservation.check_in_date), 'dd MMMM yyyy', { locale: fr }) : reservation.check_in_date;
   const checkOutDate = isValid(parseISO(reservation.check_out_date)) ? format(parseISO(reservation.check_out_date), 'dd MMMM yyyy', { locale: fr }) : reservation.check_out_date;
   
@@ -66,49 +69,76 @@ async function sendNotificationEmail(profile: UserProfile, reservation: Krossboo
   }
 }
 
+async function sendCancellationEmail(profile: UserProfile, reservation: KrossbookingReservation) {
+  const checkInDate = isValid(parseISO(reservation.check_in_date)) ? format(parseISO(reservation.check_in_date), 'dd MMMM yyyy', { locale: fr }) : reservation.check_in_date;
+  
+  const subject = `Annulation de réservation pour ${reservation.property_name}`;
+  const html = `
+      <h1>Annulation de réservation</h1>
+      <p>Bonjour ${profile.first_name || ''},</p>
+      <p>La réservation suivante pour votre logement <strong>${reservation.property_name}</strong> a été annulée :</p>
+      <ul>
+          <li><strong>Client :</strong> ${reservation.guest_name}</li>
+          <li><strong>Date d'arrivée prévue :</strong> ${checkInDate}</li>
+      </ul>
+      <p>Cette réservation a été retirée de votre calendrier.</p>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
+      to: [profile.email],
+      subject: subject,
+      html: html,
+    });
+    console.log(`Email d'annulation envoyé à ${profile.email} pour la réservation ${reservation.id}`);
+  } catch (error) {
+    console.error(`Erreur lors de l'envoi de l'email d'annulation pour la réservation ${reservation.id}:`, error);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Sécurité : Seul le cron job peut appeler cette fonction
   const authorization = req.headers.get('Authorization');
   if (authorization !== `Bearer ${CRON_SECRET}`) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
-    // 1. Récupérer tous les profils qui veulent des notifications par email
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from('profiles')
       .select(`
         id,
         first_name,
+        notify_new_booking_email,
+        notify_cancellation_email,
         user:users(email),
         user_rooms(room_id, room_name)
       `)
-      .eq('notify_new_booking_email', true);
+      .or('notify_new_booking_email.eq.true,notify_cancellation_email.eq.true');
 
     if (profilesError) throw profilesError;
     
-    const formattedProfiles = profiles.map(p => ({
+    const formattedProfiles: UserProfile[] = profiles
+      .filter(p => p.user)
+      .map(p => ({
         id: p.id,
         first_name: p.first_name,
         email: p.user.email,
-        user_rooms: p.user_rooms
+        user_rooms: p.user_rooms,
+        notify_new_booking_email: p.notify_new_booking_email,
+        notify_cancellation_email: p.notify_cancellation_email,
     }));
 
-    // 2. Pour chaque profil, vérifier les réservations
     for (const profile of formattedProfiles) {
       if (!profile.user_rooms || profile.user_rooms.length === 0) continue;
 
-      // Récupérer les réservations Krossbooking pour cet utilisateur
-      // Note: On ne peut pas utiliser le proxy car il dépend d'une session utilisateur.
-      // On doit appeler Krossbooking directement ou via un proxy qui utilise une clé API de service.
-      // Pour l'instant, on simule en invoquant le proxy avec les droits admin.
       const { data: reservations, error: reservationsError } = await supabaseAdmin.functions.invoke('krossbooking-proxy', {
           body: { 
-              action: 'get_reservations_for_user_rooms', // Action hypothétique à créer dans le proxy
+              action: 'get_reservations_for_user_rooms',
               rooms: profile.user_rooms 
           }
       });
@@ -120,38 +150,62 @@ serve(async (req) => {
       
       if (!Array.isArray(reservations)) continue;
 
-      // 3. Vérifier quelles réservations sont nouvelles
+      const { data: processedReservations, error: processedError } = await supabaseAdmin
+        .from('processed_reservations')
+        .select('reservation_id, status')
+        .eq('user_id', profile.id);
+
+      if (processedError) {
+        console.error(`Erreur de récupération des réservations traitées pour ${profile.id}:`, processedError.message);
+        continue;
+      }
+
+      const processedMap = new Map(processedReservations.map(p => [p.reservation_id.toString(), p.status]));
+
       for (const res of reservations) {
-        const reservation: KrossbookingReservation = {
+        const currentReservation: KrossbookingReservation = {
             id: res.id_reservation.toString(),
             guest_name: res.label || 'N/A',
             property_name: profile.user_rooms.find(r => r.room_id == res.id_room)?.room_name || 'N/A',
             check_in_date: res.arrival || '',
             check_out_date: res.departure || '',
             amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
+            status: res.cod_reservation_status,
         };
 
-        const { data: existing, error: checkError } = await supabaseAdmin
-          .from('processed_reservations')
-          .select('id')
-          .eq('user_id', profile.id)
-          .eq('reservation_id', reservation.id)
-          .maybeSingle();
+        const storedStatus = processedMap.get(currentReservation.id);
 
-        if (checkError) {
-            console.error(`Erreur de vérification de la réservation ${reservation.id}:`, checkError.message);
-            continue;
-        }
-
-        // Si la réservation n'existe pas dans notre registre, elle est nouvelle !
-        if (!existing) {
-          console.log(`Nouvelle réservation trouvée: ${reservation.id} pour l'utilisateur ${profile.id}`);
-          await sendNotificationEmail(profile, reservation);
-
-          // Ajouter la réservation au registre pour ne pas la notifier à nouveau
+        if (!storedStatus && currentReservation.status !== 'CANC') {
+          console.log(`Nouvelle réservation trouvée: ${currentReservation.id} pour l'utilisateur ${profile.id}`);
+          if (profile.notify_new_booking_email) {
+            await sendNewBookingEmail(profile, currentReservation);
+          }
           await supabaseAdmin
             .from('processed_reservations')
-            .insert({ user_id: profile.id, reservation_id: reservation.id });
+            .insert({ 
+              user_id: profile.id, 
+              reservation_id: currentReservation.id,
+              status: currentReservation.status
+            });
+        } 
+        else if (storedStatus && storedStatus !== 'CANC' && currentReservation.status === 'CANC') {
+          console.log(`Annulation détectée: ${currentReservation.id} pour l'utilisateur ${profile.id}`);
+          if (profile.notify_cancellation_email) {
+            await sendCancellationEmail(profile, currentReservation);
+          }
+          await supabaseAdmin
+            .from('processed_reservations')
+            .update({ status: 'CANC', last_processed_at: new Date().toISOString() })
+            .eq('user_id', profile.id)
+            .eq('reservation_id', currentReservation.id);
+        }
+        else if (storedStatus && storedStatus !== currentReservation.status) {
+            console.log(`Mise à jour du statut pour la réservation ${currentReservation.id}: de ${storedStatus} à ${currentReservation.status}`);
+            await supabaseAdmin
+              .from('processed_reservations')
+              .update({ status: currentReservation.status, last_processed_at: new Date().toISOString() })
+              .eq('user_id', profile.id)
+              .eq('reservation_id', currentReservation.id);
         }
       }
     }

@@ -9,7 +9,7 @@ import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations, KrossbookingReservation, clearReservationsCache } from '@/lib/krossbooking';
 import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'react-router-dom';
@@ -75,62 +75,13 @@ const CalendarPage: React.FC = () => {
           setLoadingData(false);
           return;
         }
+        
+        setUserRooms(configuredUserRooms);
 
-        // 2. Fetch all room definitions from Krossbooking to validate configured rooms
-        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(refreshTrigger > 0);
-        console.log("DEBUG: krossbookingRoomTypes (from Krossbooking):", krossbookingRoomTypes);
+        // 2. Fetch reservations for these rooms
+        const fetchedReservations = await fetchKrossbookingReservations(configuredUserRooms, refreshTrigger > 0);
 
-        if (krossbookingRoomTypes.length === 0) {
-          console.warn("Krossbooking returned no room types. Calendar will be empty.");
-          setUserRooms([]);
-          setReservations([]);
-          setLoadingData(false);
-          return;
-        }
-
-        const flattenedKrossbookingRooms: { id_room: number; label: string; }[] = [];
-        krossbookingRoomTypes.forEach(type => {
-          flattenedKrossbookingRooms.push(...type.rooms);
-        });
-        console.log("DEBUG: flattenedKrossbookingRooms (all Krossbooking rooms):", flattenedKrossbookingRooms);
-
-        // 3. Process configured rooms to build a flat list of actual rooms to display and fetch reservations for.
-        const validUserRooms: UserRoom[] = [];
-
-        configuredUserRooms.forEach(configuredRoom => {
-          const matchingActualRoom = flattenedKrossbookingRooms.find(
-            actualRoom => actualRoom.id_room.toString() === configuredRoom.room_id
-          );
-
-          if (matchingActualRoom) {
-            validUserRooms.push({
-              id: configuredRoom.id,
-              user_id: configuredRoom.user_id,
-              room_id: matchingActualRoom.id_room.toString(),
-              room_name: configuredRoom.room_name,
-              room_id_2: configuredRoom.room_id_2, // Ensure room_id_2 is passed along
-            });
-          } else {
-            console.warn(`Configured room with ID "${configuredRoom.room_id}" and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
-            console.warn(`DEBUG: Failed to match configured room:`, configuredRoom);
-            console.warn(`DEBUG: Available Krossbooking room IDs:`, flattenedKrossbookingRooms.map(r => r.id_room));
-          }
-        });
-        console.log("DEBUG: validUserRooms (after Krossbooking validation):", validUserRooms);
-
-        // 4. Finalize list of unique rooms and fetch reservations for them.
-        const uniqueValidUserRooms = Array.from(new Map(validUserRooms.map(room => [room.room_id, room])).values());
-        console.log("DEBUG: uniqueValidUserRooms (after uniqueness check by Krossbooking room_id):", uniqueValidUserRooms);
-        setUserRooms(uniqueValidUserRooms);
-
-        let fetchedReservations: KrossbookingReservation[] = [];
-        if (uniqueValidUserRooms.length > 0) {
-          fetchedReservations = await fetchKrossbookingReservations(uniqueValidUserRooms, refreshTrigger > 0);
-        } else {
-          console.warn("No matching rooms found in Krossbooking for the current configuration.");
-        }
-
-        // 5. Fetch price overrides and convert them to reservation-like blocks
+        // 3. Fetch price overrides and convert them to reservation-like blocks
         const priceOverrides = await getOverrides();
         const closedBlocks = priceOverrides
           .filter(override => override.closed)

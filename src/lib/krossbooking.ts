@@ -213,12 +213,12 @@ export async function fetchKrossbookingReservations(
     const userRoomIds = new Set(userRooms.map(room => room.room_id));
 
     const allReservations = allReservationsFromApi
-      .filter((res: any) => res.id_reservation !== undefined && res.id_room !== undefined) // Filter out malformed entries
+      .filter((res: any) => res.id_reservation !== undefined && res.rooms && res.rooms.length > 0 && res.rooms[0].id_room !== undefined) // Corrected filter
       .map((res: any): KrossbookingReservation => ({
         id: res.id_reservation.toString(),
         guest_name: res.label || 'N/A',
-        property_name: roomNameMap.get(res.id_room.toString()) || 'Unknown Room',
-        krossbooking_room_id: res.id_room.toString(),
+        property_name: roomNameMap.get(res.rooms[0].id_room.toString()) || 'Unknown Room', // Access id_room from nested rooms array
+        krossbooking_room_id: res.rooms[0].id_room.toString(), // Access id_room from nested rooms array
         check_in_date: res.arrival || '',
         check_out_date: res.departure || '',
         status: res.cod_reservation_status || 'UNKNOWN', // Add fallback for status

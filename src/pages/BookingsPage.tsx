@@ -150,19 +150,15 @@ const BookingsPage: React.FC = () => {
   }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings]);
 
   const getStatusVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'confirmed':
-      case 'confirmée':
-      case 'propri':
+    switch (status.toUpperCase()) { // Use toUpperCase for consistency with normalized statuses
+      case 'CONFIRMED':
+      case 'PROPRI':
         return 'default';
-      case 'pending':
-      case 'en attente':
+      case 'PENDING':
         return 'secondary';
-      case 'cancelled':
-      case 'annulée':
-      case 'canc':
+      case 'CANCELLED':
         return 'destructive';
-      case 'prop0':
+      case 'PROP0':
         return 'outline';
       default:
         return 'outline';

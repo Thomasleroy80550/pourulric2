@@ -22,6 +22,11 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
   'OWNER_BLOCK': { name: 'Bloqué', bgColor: 'bg-slate-700', textColor: 'text-white' },
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
+  'CONFIRMED': { name: 'Confirmée', bgColor: 'bg-green-600', textColor: 'text-white' }, // Added for clarity
+  'PENDING': { name: 'En attente', bgColor: 'bg-yellow-600', textColor: 'text-white' }, // Added for clarity
+  'CANCELLED': { name: 'Annulée', bgColor: 'bg-red-600', textColor: 'text-white' }, // Added for clarity
+  'PROPRI': { name: 'Propriétaire (Ménage)', bgColor: 'bg-rose-500', textColor: 'text-white' }, // Added for clarity
+  'PROP0': { name: 'Propriétaire (Sans Ménage)', bgColor: 'bg-gray-500', textColor: 'text-white' }, // Added for clarity
 };
 
 interface CalendarGridMobileProps {
@@ -177,7 +182,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, rese
                         {roomReservations.map(res => {
                           const checkIn = parseISO(res.check_in_date);
                           const checkOut = parseISO(res.check_out_date);
-                          const channelInfo = channelColors[res.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
+                          const channelInfo = channelColors[res.channel_identifier || res.status.toUpperCase()] || channelColors['UNKNOWN']; // Fallback to normalized status
                           return (
                             <div
                               key={res.id}

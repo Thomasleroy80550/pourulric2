@@ -186,56 +186,50 @@ export async function fetchKrossbookingReservations(
   forceRefresh: boolean = false
 ): Promise<KrossbookingReservation[]> {
   const now = Date.now();
-  const oldReservationsMap = new Map((reservationsCache?.data || []).map(r => [r.id, r]));
 
   if (!forceRefresh && reservationsCache && (now - reservationsCache.timestamp < RESERVATION_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking reservations.");
     return reservationsCache.data;
   }
   
-  console.log("Fetching fresh Krossbooking reservations from API for each user room.");
+  console.log("Fetching fresh Krossbooking reservations from API for all user rooms in a single call.");
   try {
     if (userRooms.length === 0) {
       console.log("No configured rooms to fetch reservations for.");
       return [];
     }
 
-    const profile = await getProfile();
-    const userEmail = (await supabase.auth.getUser()).data.user?.email;
-
-    const allReservationsPromises = userRooms.map(async (room) => {
-      const data = await callKrossbookingProxy('get_reservations_for_room', { id_room: room.room_id });
-      if (!Array.isArray(data)) {
-        console.warn(`Unexpected Krossbooking API response for room ${room.room_id}:`, data);
-        return [];
-      }
-      return data.map((res: any): KrossbookingReservation => ({
-        id: res.id_reservation.toString(),
-        guest_name: res.label || 'N/A',
-        property_name: room.room_name, // Use the name from the loop context
-        krossbooking_room_id: room.room_id,
-        check_in_date: res.arrival || '',
-        check_out_date: res.departure || '',
-        status: res.cod_reservation_status,
-        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
-        cod_channel: res.cod_channel,
-        ota_id: res.ota_id,
-        channel_identifier: res.cod_channel || 'UNKNOWN',
-        email: res.email || '',
-        phone: res.phone || '',
-        tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
-      }));
+    // NEW: Single call to the proxy for all rooms
+    const data = await callKrossbookingProxy('get_reservations_for_user_rooms', { 
+      rooms: userRooms.map(r => ({ room_id: r.room_id, room_name: r.room_name })) 
     });
 
-    const reservationsByRoom = await Promise.all(allReservationsPromises);
-    const flattenedReservations = reservationsByRoom.flat();
-    
-    const uniqueReservations = Array.from(new Map(flattenedReservations.map(res => [res.id, res])).values());
+    if (!Array.isArray(data)) {
+      console.warn(`Unexpected Krossbooking API response for get_reservations_for_user_rooms:`, data);
+      return [];
+    }
 
-    // --- Notification Logic ---
-    // This logic is now handled by the server-side `check-new-reservations` Edge Function.
-    // The client-side logic is removed to avoid duplicate notifications and reliance on user activity.
-    // --- End Notification Logic ---
+    // Map room names to room IDs for easy lookup, as the response only has id_room
+    const roomNameMap = new Map(userRooms.map(room => [room.room_id, room.room_name]));
+
+    const allReservations = data.map((res: any): KrossbookingReservation => ({
+      id: res.id_reservation.toString(),
+      guest_name: res.label || 'N/A',
+      property_name: roomNameMap.get(res.id_room.toString()) || 'Unknown Room',
+      krossbooking_room_id: res.id_room.toString(),
+      check_in_date: res.arrival || '',
+      check_out_date: res.departure || '',
+      status: res.cod_reservation_status,
+      amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
+      cod_channel: res.cod_channel,
+      ota_id: res.ota_id,
+      channel_identifier: res.cod_channel || 'UNKNOWN',
+      email: res.email || '',
+      phone: res.phone || '',
+      tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+    }));
+    
+    const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id, res])).values());
     
     reservationsCache = {
       data: uniqueReservations,

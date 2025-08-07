@@ -5,8 +5,19 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 const APP_BASE_URL = Deno.env.get('APP_BASE_URL');
 
+console.log('--- auth-verify-sms function starting ---');
+console.log(`SUPABASE_URL: ${SUPABASE_URL ? 'Loaded' : 'MISSING'}`);
+console.log(`SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? 'Loaded' : 'MISSING'}`);
+console.log(`APP_BASE_URL: ${APP_BASE_URL ? 'Loaded' : 'MISSING'}`);
+
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !APP_BASE_URL) {
-  throw new Error("Missing environment variables.");
+  const missing = [];
+  if (!SUPABASE_URL) missing.push('SUPABASE_URL');
+  if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  if (!APP_BASE_URL) missing.push('APP_BASE_URL');
+  const errorMessage = `Missing environment variables: ${missing.join(', ')}`;
+  console.error(`Critical Error: ${errorMessage}`);
+  throw new Error(errorMessage);
 }
 
 const corsHeaders = {

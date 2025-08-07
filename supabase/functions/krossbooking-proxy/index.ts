@@ -8,8 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const RELEVANT_STATUSES = ['CONF', 'CONFIR', 'CONF0', 'CANC', 'PROPRI', 'PROP0'];
-
 async function getAuthToken(): Promise<string> {
   const KROSSBOOKING_API_KEY = Deno.env.get('KROSSBOOKING_API_KEY');
   const KROSSBOOKING_HOTEL_ID = Deno.env.get('KROSSBOOKING_HOTEL_ID');
@@ -110,7 +108,6 @@ serve(async (req) => {
             body: JSON.stringify({
                 with_rooms: true,
                 id_property: 1, // Assuming all users are under a single property
-                cod_reservation_status: RELEVANT_STATUSES,
             }),
         });
 
@@ -149,7 +146,6 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify({
           with_rooms: true,
           id_room: Number(requestBody.id_room),
-          cod_reservation_status: RELEVANT_STATUSES,
         });
         break;
 

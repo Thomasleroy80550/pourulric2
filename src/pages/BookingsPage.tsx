@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import MainLayout from '@/components/MainLayout';
+import SimpleLayout from '@/components/SimpleLayout'; // Changé pour le layout de test
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -211,14 +211,14 @@ const BookingsPage: React.FC = () => {
 
   if (profile?.is_banned) {
     return (
-      <MainLayout>
+      <SimpleLayout>
         <BannedUserMessage />
-      </MainLayout>
+      </SimpleLayout>
     );
   }
 
   return (
-    <MainLayout>
+    <SimpleLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
         
@@ -522,7 +522,7 @@ const BookingsPage: React.FC = () => {
         onOpenChange={setIsMessagesDialogOpen}
         booking={bookingForMessages}
       />
-    </MainLayout>
+    </SimpleLayout>
   );
 };
 

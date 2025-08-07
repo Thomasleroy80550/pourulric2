@@ -3,10 +3,10 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { fetchKrossbookingReservations, KrossbookingReservation as Booking } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag, MessageSquare } from 'lucide-react';
-import { format, parseISO, isAfter, isBefore, subDays, addDays } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -28,7 +28,20 @@ import MessagesDialog from '@/components/MessagesDialog';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 
-function BookingsPage() {
+interface Booking {
+  id: string;
+  guest_name: string;
+  property_name: string;
+  check_in_date: string;
+  check_out_date: string;
+  status: string;
+  amount: string;
+  cod_channel?: string;
+  email?: string;
+  phone?: string;
+}
+
+const BookingsPage: React.FC = () => {
   const { profile } = useSession();
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
@@ -52,28 +65,14 @@ function BookingsPage() {
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
 
-  const commonStatusesDisplay = [
-    { value: 'CONFIRMED', label: 'Confirmée' },
-    { value: 'PENDING', label: 'En attente' },
-    { value: 'CANCELLED', label: 'Annulée' },
-    { value: 'PROPRI', label: 'Propriétaire (Ménage)' },
-    { value: 'PROP0', label: 'Propriétaire (Sans Ménage)' },
-  ];
-
-  const commonChannelsDisplay = [
-    { value: 'AIRBNB', label: 'Airbnb' },
-    { value: 'BOOKING', label: 'Booking.com' },
-    { value: 'ABRITEL', label: 'Abritel' },
-    { value: 'DIRECT', label: 'Direct' },
-    { value: 'HELLOKEYS', label: 'Hello Keys' },
-    { value: 'UNKNOWN', label: 'Autre' },
-  ];
+  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'PROPRI', 'PROP0'];
+  const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
 
   const applyFilters = (bookingsToFilter: Booking[]) => {
     let tempBookings = bookingsToFilter;
 
     if (filterRoomId !== 'all') {
-      tempBookings = tempBookings.filter(booking => booking.krossbooking_room_id === filterRoomId);
+      tempBookings = tempBookings.filter(booking => booking.property_name === userRooms.find(r => r.room_id === filterRoomId)?.room_name || booking.property_name === filterRoomId);
     }
 
     if (filterStatus !== 'all') {
@@ -111,17 +110,28 @@ function BookingsPage() {
       setUserRooms(fetchedUserRooms);
 
       const fetchedBookings = await fetchKrossbookingReservations(fetchedUserRooms);
-      
-      const sortedBookings = fetchedBookings.sort((a, b) => {
+      console.log(`Fetched bookings for BookingsPage (Rooms: ${fetchedUserRooms.map(r => r.room_id).join(', ')}):`, fetchedBookings);
+
+      const currentYear = new Date().getFullYear();
+      const yearStart = startOfYear(new Date(currentYear, 0, 1));
+      const yearEnd = endOfYear(new Date(currentYear, 0, 1));
+
+      const bookingsForCurrentYear = fetchedBookings.filter(booking => {
+        const checkInDate = parseISO(booking.check_in_date);
+        return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
+      });
+
+      const sortedBookings = bookingsForCurrentYear.sort((a, b) => {
         const dateA = parseISO(a.check_in_date).getTime();
         const dateB = parseISO(b.check_in_date).getTime();
-        return dateB - dateA; // Sort descending to show most recent first
+        return dateA - dateB;
       });
 
       setAllBookings(sortedBookings);
       applyFilters(sortedBookings);
     } catch (err: any) {
       setError(`Erreur lors du chargement des réservations : ${err.message}`);
+      console.error("Error in loadBookings for BookingsPage:", err);
     } finally {
       setLoading(false);
     }
@@ -140,15 +150,19 @@ function BookingsPage() {
   }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings]);
 
   const getStatusVariant = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'CONFIRMED':
-      case 'PROPRI':
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+      case 'confirmée':
+      case 'propri':
         return 'default';
-      case 'PENDING':
+      case 'pending':
+      case 'en attente':
         return 'secondary';
-      case 'CANCELLED':
+      case 'cancelled':
+      case 'annulée':
+      case 'canc':
         return 'destructive';
-      case 'PROP0':
+      case 'prop0':
         return 'outline';
       default:
         return 'outline';
@@ -156,8 +170,10 @@ function BookingsPage() {
   };
 
   const handleOpenDetails = (booking: Booking) => {
+    console.log("Attempting to open dialog for booking:", booking);
     setSelectedBooking(booking);
     setIsDetailDialogOpen(true);
+    console.log("isDetailDialogOpen after setting:", true);
   };
 
   const handleReportProblem = (booking: Booking) => {
@@ -178,6 +194,8 @@ function BookingsPage() {
     setFilterEndDate('');
   };
 
+  const currentYear = new Date().getFullYear();
+
   if (profile?.is_banned) {
     return (
       <MainLayout>
@@ -189,7 +207,7 @@ function BookingsPage() {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Toutes les réservations</h1>
+        <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
         
         <Card className="shadow-md mb-6">
           <CardHeader>
@@ -233,8 +251,8 @@ function BookingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tous les statuts</SelectItem>
-                      {commonStatusesDisplay.map(status => (
-                        <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                      {commonStatuses.map(status => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -248,8 +266,8 @@ function BookingsPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tous les canaux</SelectItem>
-                      {commonChannelsDisplay.map(channel => (
-                        <SelectItem key={channel.value} value={channel.value}>{channel.label}</SelectItem>
+                      {commonChannels.map(channel => (
+                        <SelectItem key={channel} value={channel}>{channel}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -309,9 +327,10 @@ function BookingsPage() {
                 Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
               </p>
             ) : filteredBookings.length === 0 ? (
-              <p className="text-gray-500">Aucune réservation trouvée avec les filtres actuels.</p>
+              <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear} avec les filtres actuels.</p>
             ) : (
               <>
+                {/* Desktop Table View */}
                 {!isMobile && (
                   <div className="overflow-x-auto">
                     <Table>
@@ -362,6 +381,7 @@ function BookingsPage() {
                   </div>
                 )}
 
+                {/* Mobile Card View */}
                 {isMobile && (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredBookings.map((booking) => (
@@ -418,7 +438,13 @@ function BookingsPage() {
         </Card>
       </div>
 
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+      <Dialog open={isDetailDialogOpen} onOpenChange={(open) => {
+        console.log("Dialog onOpenChange called:", open);
+        setIsDetailDialogOpen(open);
+        if (!open) {
+          setSelectedBooking(null);
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Détails de la Réservation</DialogTitle>
@@ -485,6 +511,6 @@ function BookingsPage() {
       />
     </MainLayout>
   );
-}
+};
 
 export default BookingsPage;

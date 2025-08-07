@@ -27,9 +27,6 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'PROPRI': { name: 'Propriétaire (Ménage)', bgColor: 'bg-rose-500', textColor: 'text-white' }, // Krossbooking status for owner block with cleaning
   'PROP0': { name: 'Propriétaire (Sans Ménage)', bgColor: 'bg-gray-500', textColor: 'text-white' }, // Krossbooking status for owner block without cleaning
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
-  'CONFIRMED': { name: 'Confirmée', bgColor: 'bg-green-600', textColor: 'text-white' }, // Added for clarity
-  'PENDING': { name: 'En attente', bgColor: 'bg-yellow-600', textColor: 'text-white' }, // Added for clarity
-  'CANCELLED': { name: 'Annulée', bgColor: 'bg-red-600', textColor: 'text-white' }, // Added for clarity
 };
 
 interface BookingPlanningGridProps {
@@ -352,7 +349,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     // Determine the effective channel key for color mapping
                     const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';
                     const effectiveChannelKey = isOwnerBlock ? reservation.status : (reservation.channel_identifier || 'UNKNOWN');
-                    const channelInfo = channelColors[effectiveChannelKey] || channelColors[reservation.status.toUpperCase()] || channelColors['UNKNOWN']; // Fallback to normalized status
+                    const channelInfo = channelColors[effectiveChannelKey] || channelColors['UNKNOWN'];
 
                     const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
                     const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);

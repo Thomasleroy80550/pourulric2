@@ -5,7 +5,7 @@ import { getProfile } from "./profile-api";
 import { format, parseISO, isValid, isAfter, subDays, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-export interface KrossbookingReservation {
+interface KrossbookingReservation {
   id: string;
   guest_name: string;
   property_name: string;
@@ -181,24 +181,6 @@ export function clearHousekeepingTasksCache() {
   console.log("Krossbooking housekeeping tasks cache cleared.");
 }
 
-// Helper function to normalize Krossbooking status codes
-function normalizeKrossbookingStatus(krossbookingStatus: string): string {
-  switch (krossbookingStatus.toUpperCase()) {
-    case 'CONF':
-    case 'CONFIR':
-    case 'CONF0':
-      return 'CONFIRMED';
-    case 'CANC':
-      return 'CANCELLED';
-    case 'PROPRI':
-      return 'PROPRI';
-    case 'PROP0':
-      return 'PROP0';
-    default:
-      return krossbookingStatus; // Return as is if not a known special case
-  }
-}
-
 export async function fetchKrossbookingReservations(
   userRooms: UserRoom[],
   forceRefresh: boolean = false
@@ -234,7 +216,7 @@ export async function fetchKrossbookingReservations(
         krossbooking_room_id: room.room_id,
         check_in_date: res.arrival || '',
         check_out_date: res.departure || '',
-        status: normalizeKrossbookingStatus(res.cod_reservation_status), // Apply normalization here
+        status: res.cod_reservation_status,
         amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
         cod_channel: res.cod_channel,
         ota_id: res.ota_id,

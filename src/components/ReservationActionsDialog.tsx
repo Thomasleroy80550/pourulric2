@@ -23,15 +23,19 @@ interface ReservationActionsDialogProps {
 }
 
 const getStatusVariant = (status: string) => {
-  switch (status.toUpperCase()) { // Use toUpperCase for consistency with normalized statuses
-    case 'CONFIRMED':
-    case 'PROPRI':
+  switch (status.toLowerCase()) {
+    case 'confirmed':
+    case 'confirmée':
+    case 'propri': // For owner reservations that are active
       return 'default';
-    case 'PENDING':
+    case 'pending':
+    case 'en attente':
       return 'secondary';
-    case 'CANCELLED':
+    case 'cancelled':
+    case 'annulée':
+    case 'canc': // For cancelled owner reservations
       return 'destructive';
-    case 'PROP0':
+    case 'prop0': // Owner reservation without cleaning
       return 'outline';
     default:
       return 'outline';

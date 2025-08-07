@@ -159,7 +159,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
   );
 };
 
-export default function MainLayout({ children }: MainLayoutProps) {
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
@@ -396,4 +396,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
       />
     </div>
   );
-}
+};
+
+export default MainLayout;

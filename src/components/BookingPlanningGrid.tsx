@@ -302,7 +302,6 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 {/* Reservation Bars (Overlay) for this room */}
                 {reservations
                   .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id)
-                  .filter(res => res.status !== 'CANC')
                   .map((reservation) => {
                     const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
                     const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;

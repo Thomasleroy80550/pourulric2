@@ -178,15 +178,25 @@ serve(async (req) => {
         };
 
         const storedStatus = processedMap.get(currentReservation.id);
+        
+        console.log(`Traitement résa ${currentReservation.id}: Statut Actuel='${currentReservation.status}', Statut Stocké='${storedStatus}'`);
 
-        if (storedStatus && storedStatus !== currentReservation.status) {
-          if (storedStatus !== 'CANC' && currentReservation.status === 'CANC' && profile.notify_cancellation_email) {
-            console.log(`Annulation détectée: ${currentReservation.id} pour l'utilisateur ${profile.id}`);
-            await sendCancellationEmail(profile, currentReservation);
+        if (storedStatus) {
+          // Réservation existante, on vérifie si le statut a changé
+          if (storedStatus !== currentReservation.status) {
+            console.log(`Changement de statut détecté pour la réservation ${currentReservation.id}: de '${storedStatus}' à '${currentReservation.status}'`);
+            // On vérifie si c'est une annulation
+            if (storedStatus !== 'CANC' && currentReservation.status === 'CANC' && profile.notify_cancellation_email) {
+              console.log(`-> Condition d'annulation remplie. Envoi de l'email.`);
+              await sendCancellationEmail(profile, currentReservation);
+            }
           }
-        } else if (!storedStatus && currentReservation.status !== 'CANC' && profile.notify_new_booking_email) {
-          console.log(`Nouvelle réservation trouvée: ${currentReservation.id} pour l'utilisateur ${profile.id}`);
-          await sendNewBookingEmail(profile, currentReservation);
+        } else {
+          // Nouvelle réservation
+          if (currentReservation.status !== 'CANC' && profile.notify_new_booking_email) {
+            console.log(`-> Condition de nouvelle réservation remplie. Envoi de l'email.`);
+            await sendNewBookingEmail(profile, currentReservation);
+          }
         }
 
         const { error: upsertError } = await supabaseAdmin

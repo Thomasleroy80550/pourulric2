@@ -95,33 +95,38 @@ serve(async (req) => {
         if (!requestBody.rooms || !Array.isArray(requestBody.rooms)) {
           throw new Error("Missing or invalid 'rooms' array for get_reservations_for_user_rooms.");
         }
-        const rooms = requestBody.rooms as { room_id: string }[];
-        
-        const allReservationsPromises = rooms.map(async (room) => {
-            const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/reservations/get-list`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-                body: JSON.stringify({
-                    with_rooms: true,
-                    id_room: Number(room.room_id),
-                }),
-            });
-            if (!response.ok) {
-                console.error(`Failed to fetch reservations for room ${room.room_id}: ${await response.text()}`);
-                return [];
-            }
-            const data = await response.json();
-            return data.data || [];
+        const userRooms = requestBody.rooms as { room_id: string }[];
+        const userRoomIds = new Set(userRooms.map(r => Number(r.room_id)));
+
+        // OPTIMIZATION: Single API call for the entire property
+        const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/reservations/get-list`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+                with_rooms: true,
+                id_property: 1, // Assuming all users are under a single property
+            }),
         });
 
-        const reservationsByRoom = await Promise.all(allReservationsPromises);
-        const allReservations = reservationsByRoom.flat();
-        const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id_reservation, res])).values());
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Failed to fetch reservations for property: ${errorText}`);
+            return new Response(JSON.stringify({ data: [] }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
+        }
 
-        return new Response(JSON.stringify({ data: uniqueReservations }), {
+        const data = await response.json();
+        const allReservations = data.data || [];
+
+        // Filter reservations on the server to only include those for the user's rooms
+        const userReservations = allReservations.filter((res: any) => userRoomIds.has(res.id_room));
+
+        return new Response(JSON.stringify({ data: userReservations }), {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });

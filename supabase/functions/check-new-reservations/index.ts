@@ -113,25 +113,17 @@ serve(async (req) => {
       .select(`
         id,
         first_name,
+        email,
         notify_new_booking_email,
         notify_cancellation_email,
-        user:users(email),
         user_rooms(room_id, room_name)
       `)
-      .or('notify_new_booking_email.eq.true,notify_cancellation_email.eq.true');
+      .or('notify_new_booking_email.eq.true,notify_cancellation_email.eq.true')
+      .not('email', 'is', null);
 
     if (profilesError) throw profilesError;
     
-    const formattedProfiles: UserProfile[] = profiles
-      .filter(p => p.user)
-      .map(p => ({
-        id: p.id,
-        first_name: p.first_name,
-        email: p.user.email,
-        user_rooms: p.user_rooms,
-        notify_new_booking_email: p.notify_new_booking_email,
-        notify_cancellation_email: p.notify_cancellation_email,
-    }));
+    const formattedProfiles: UserProfile[] = profiles; // No more complex mapping needed
 
     for (const profile of formattedProfiles) {
       if (!profile.user_rooms || profile.user_rooms.length === 0) continue;

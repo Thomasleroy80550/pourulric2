@@ -136,7 +136,7 @@ serve(async (req) => {
     for (const profile of formattedProfiles) {
       if (!profile.user_rooms || profile.user_rooms.length === 0) continue;
 
-      const { data: reservations, error: reservationsError } = await supabaseAdmin.functions.invoke('krossbooking-proxy', {
+      const { data: reservationsResponse, error: reservationsError } = await supabaseAdmin.functions.invoke('krossbooking-proxy', {
           body: { 
               action: 'get_reservations_for_user_rooms',
               rooms: profile.user_rooms 
@@ -148,7 +148,11 @@ serve(async (req) => {
           continue;
       }
       
-      if (!Array.isArray(reservations)) continue;
+      const reservations = reservationsResponse.data;
+      if (!Array.isArray(reservations)) {
+        console.warn(`La réponse de Krossbooking n'est pas un tableau pour l'utilisateur ${profile.id}`);
+        continue;
+      }
 
       const { data: processedReservations, error: processedError } = await supabaseAdmin
         .from('processed_reservations')

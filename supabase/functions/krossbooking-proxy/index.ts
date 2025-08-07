@@ -58,10 +58,14 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      // Allow cron job to pass
+      const isCron = req.headers.get('Authorization') === `Bearer ${Deno.env.get('CRON_SECRET')}`;
+      if (!isCron) {
+        return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
     }
 
     if (req.method !== 'POST') {
@@ -82,6 +86,43 @@ serve(async (req) => {
     }
 
     const authToken = await getAuthToken();
+
+    // Handle multi-call actions first
+    if (action === 'get_reservations_for_user_rooms') {
+        if (!requestBody.rooms || !Array.isArray(requestBody.rooms)) {
+          throw new Error("Missing or invalid 'rooms' array for get_reservations_for_user_rooms.");
+        }
+        const rooms = requestBody.rooms as { room_id: string }[];
+        
+        const allReservationsPromises = rooms.map(async (room) => {
+            const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/reservations/get-list`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({
+                    with_rooms: true,
+                    id_room: Number(room.room_id),
+                }),
+            });
+            if (!response.ok) {
+                console.error(`Failed to fetch reservations for room ${room.room_id}: ${await response.text()}`);
+                return [];
+            }
+            const data = await response.json();
+            return data.data || [];
+        });
+
+        const reservationsByRoom = await Promise.all(allReservationsPromises);
+        const allReservations = reservationsByRoom.flat();
+        const uniqueReservations = Array.from(new Map(allReservations.map(res => [res.id_reservation, res])).values());
+
+        return new Response(JSON.stringify({ data: uniqueReservations }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+    }
 
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST';

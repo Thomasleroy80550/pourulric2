@@ -100,6 +100,7 @@ serve(async (req) => {
       case 'get_all_reservations':
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
         krossbookingBody = JSON.stringify({
+          id_property: 1, // Ajout de id_property
           with_rooms: true,
           cod_reservation_status_all: true,
         });
@@ -111,6 +112,7 @@ serve(async (req) => {
         }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
         krossbookingBody = JSON.stringify({
+          id_property: 1, // Ajout de id_property
           with_rooms: true,
           id_room: Number(requestBody.id_room),
           cod_reservation_status_all: true,
@@ -126,7 +128,7 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify({
           date_from,
           date_to,
-          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined,
+          id_property: requestBody.id_property ? Number(requestBody.id_property) : 1, // Utilise l'id_property fourni ou 1 par défaut
           id_room: requestBody.id_room ? Number(requestBody.id_room) : undefined,
         });
         break;
@@ -143,7 +145,7 @@ serve(async (req) => {
           email: requestBody.email || '',
           phone: requestBody.phone || '',
           cod_reservation_status,
-          id_property: 1,
+          id_property: 1, // Ajout de id_property
           rooms: [{ id_room: Number(id_room), id_room_type: Number(id_room_type), guests: 1 }]
         };
         if (id_reservation) {
@@ -182,7 +184,7 @@ serve(async (req) => {
       case 'get_room_types':
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/rooms/get-rooms`;
         krossbookingMethod = 'POST';
-        krossbookingBody = JSON.stringify({});
+        krossbookingBody = JSON.stringify({ id_property: 1 }); // Ajout de id_property
         break;
 
       default:

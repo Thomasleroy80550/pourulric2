@@ -352,3 +352,49 @@ export async function fetchKrossbookingHousekeepingTasks(
     return [];
   }
 }
+
+export async function fetchKrossbookingMessageThreads(reservationId: string): Promise<KrossbookingMessageThread[]> {
+  try {
+    const threadsMetadata = await callKrossbookingProxy('get_messages', { id_reservation: reservationId });
+
+    if (!Array.isArray(threadsMetadata)) {
+      console.warn(`Unexpected Krossbooking API response structure for message threads metadata:`, threadsMetadata);
+      return [];
+    }
+
+    const fullThreadsPromises = threadsMetadata.map(async (threadMetadata: any) => {
+      if (threadMetadata.id_thread) {
+        const singleThreadData = await callKrossbookingProxy('get_single_message_thread', { id_thread: threadMetadata.id_thread });
+        
+        if (singleThreadData && Array.isArray(singleThreadData.messages)) {
+          return {
+            id_thread: singleThreadData.id_thread,
+            id_reservation: singleThreadData.id_reservation,
+            cod_channel: singleThreadData.cod_channel,
+            last_message_date: singleThreadData.last_message_date,
+            last_message_text: singleThreadData.last_message_text,
+            messages: singleThreadData.messages.map((msg: any) => ({
+              id_message: msg.id_message,
+              id_thread: msg.id_thread,
+              date: msg.date,
+              sender: msg.sender,
+              text: msg.text,
+              is_read: msg.is_read,
+            })),
+          };
+        } else {
+          console.warn(`Unexpected Krossbooking API response structure for single message thread ${threadMetadata.id_thread}:`, singleThreadData);
+          return { ...threadMetadata, messages: [] };
+        }
+      }
+      return { ...threadMetadata, messages: [] };
+    });
+
+    const fullThreads = await Promise.all(fullThreadsPromises);
+    return fullThreads;
+
+  } catch (error) {
+    console.error(`Error fetching message threads for reservation ${reservationId}:`, error);
+    throw error;
+  }
+}

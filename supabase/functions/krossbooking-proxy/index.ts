@@ -101,7 +101,7 @@ serve(async (req) => {
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
         krossbookingBody = JSON.stringify({
           with_rooms: true,
-          cod_reservation_status_all: true, // Added to fetch all statuses including cancelled
+          cod_reservation_status_all: true,
         });
         break;
 
@@ -113,7 +113,7 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify({
           with_rooms: true,
           id_room: Number(requestBody.id_room),
-          cod_reservation_status_all: true, // Added for consistency
+          cod_reservation_status_all: true,
         });
         break;
 

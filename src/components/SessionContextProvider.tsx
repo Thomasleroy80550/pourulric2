@@ -60,6 +60,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
     const currentPath = location.pathname;
 
+    // If there is no session, redirect to login (unless already there)
     if (!session) {
       if (currentPath !== '/login') {
         navigate('/login');
@@ -67,17 +68,23 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    if (!profile) {
-      if (currentPath !== '/login') {
-        navigate('/login');
-      }
-      return;
-    }
-
+    // If there is a session, but user is on login page, redirect to home
     if (currentPath === '/login') {
       navigate('/');
       return;
     }
+
+    // If session exists but profile is null (due to fetch error),
+    // we don't redirect to login. This prevents the "session loss" feeling.
+    // The app might be in a partially broken state, but the user is still authenticated.
+    if (!profile) {
+      console.error("User is authenticated, but profile could not be loaded.");
+      // A toast error is already shown when getProfile fails.
+      // We stop here to avoid incorrect redirection logic based on a null profile.
+      return;
+    }
+
+    // --- All logic below assumes a valid session and profile ---
 
     if (profile.role !== 'admin') {
       const onboardingStatus = profile.onboarding_status || 'estimation_sent';

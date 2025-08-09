@@ -13,8 +13,9 @@ import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 const statusSteps: { status: OnboardingStatus; title: string; description: string; action?: string }[] = [
   { status: 'estimation_sent', title: 'Estimation envoyée', description: 'Nous vous avons envoyé une estimation de revenus. Veuillez la consulter et la valider.' },
   { status: 'estimation_validated', title: 'Validation de l\'estimation', description: 'Vous avez validé l\'estimation. Prochaine étape : accepter nos conditions générales.', action: 'Valider mon estimation' },
-  { status: 'cguv_accepted', title: 'Acceptation des CGUV', description: 'Merci ! Nous allons maintenant organiser la récupération des clés.', action: 'Accepter les CGUV' },
-  { status: 'keys_retrieved', title: 'Récupération des clés', description: 'Nos équipes ont récupéré les clés de votre logement.' },
+  { status: 'cguv_accepted', title: 'Acceptation des CGUV', description: 'Merci ! Veuillez maintenant choisir comment nous faire parvenir les clés.', action: 'Choisir la méthode de remise des clés' },
+  { status: 'keys_pending_reception', title: 'Réception des clés', description: 'Nous attendons de recevoir vos clés. Un membre de notre équipe confirmera la réception prochainement.' },
+  { status: 'keys_retrieved', title: 'Clés récupérées', description: 'Nos équipes ont bien reçu les clés de votre logement.' },
   { status: 'photoshoot_done', title: 'Shooting photo', description: 'Les photos professionnelles de votre bien ont été réalisées.' },
   { status: 'live', title: 'Mise en ligne terminée !', description: 'Félicitations, votre logement est maintenant en ligne et prêt à accueillir des voyageurs.' },
 ];
@@ -24,6 +25,7 @@ const OnboardingStatusPage: React.FC = () => {
   const [profile, setProfile] = useState(sessionProfile);
   const [loading, setLoading] = useState(true);
   const [isCguvModalOpen, setIsCguvModalOpen] = useState(false);
+  const [isSubmittingChoice, setIsSubmittingChoice] = useState(false);
 
   const fetchProfileData = useCallback(async () => {
     setLoading(true);
@@ -76,6 +78,22 @@ const OnboardingStatusPage: React.FC = () => {
       toast.error(`Erreur: ${error.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKeyChoice = async (method: 'deposit' | 'mail') => {
+    setIsSubmittingChoice(true);
+    try {
+      await updateProfile({
+        onboarding_status: 'keys_pending_reception',
+        key_delivery_method: method,
+      });
+      toast.success("Votre choix a été enregistré !");
+      fetchProfileData(); // Refresh profile to show the new status
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setIsSubmittingChoice(false);
     }
   };
 
@@ -160,25 +178,39 @@ const OnboardingStatusPage: React.FC = () => {
                 </ol>
               </CardContent>
             </Card>
-            {profile.onboarding_status === 'keys_retrieved' && (
+            
+            {profile.onboarding_status === 'cguv_accepted' && (
               <Card className="mt-8">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <KeyRound className="h-6 w-6 text-blue-600" /> Informations sur les clés
+                    <KeyRound className="h-6 w-6 text-blue-600" /> Remise des clés
                   </CardTitle>
+                  <CardDescription>
+                    Nous avons besoin de <strong>2 jeux de clés complets</strong> pour assurer la gestion de votre logement.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-700 dark:text-gray-200">Adresse de dépôt/envoi des clés</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {profile.key_deposit_address || "Non spécifié. Veuillez contacter l'agence."}
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-4 border rounded-lg flex flex-col">
+                    <h4 className="font-semibold text-lg mb-2">1. Déposer en agence</h4>
+                    <p className="text-sm text-muted-foreground flex-grow">
+                      Vous pouvez déposer vos clés directement à notre agence.
+                      <br />
+                      <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
                     </p>
+                    <Button onClick={() => handleKeyChoice('deposit')} disabled={isSubmittingChoice} className="mt-4 w-full">
+                      {isSubmittingChoice ? <Loader2 className="animate-spin" /> : "Je choisis le dépôt"}
+                    </Button>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-700 dark:text-gray-200">Jeux de clés nécessaires</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {profile.key_sets_needed ? `${profile.key_sets_needed} jeux complets` : "Non spécifié."}
+                  <div className="p-4 border rounded-lg flex flex-col">
+                    <h4 className="font-semibold text-lg mb-2">2. Envoyer par courrier</h4>
+                    <p className="text-sm text-muted-foreground flex-grow">
+                      Envoyez vos clés en courrier suivi à l'adresse ci-dessous.
+                      <br />
+                      <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
                     </p>
+                    <Button onClick={() => handleKeyChoice('mail')} disabled={isSubmittingChoice} className="mt-4 w-full">
+                      {isSubmittingChoice ? <Loader2 className="animate-spin" /> : "Je choisis l'envoi"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

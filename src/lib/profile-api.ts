@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_retrieved' | 'photoshoot_done' | 'live';
+export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_pending_reception' | 'keys_retrieved' | 'photoshoot_done' | 'live';
 
 export interface UserProfile {
   id: string;
@@ -36,8 +36,7 @@ export interface UserProfile {
   onboarding_status?: OnboardingStatus;
   estimation_details?: string;
   estimated_revenue?: number;
-  key_deposit_address?: string; // Nouvelle colonne
-  key_sets_needed?: number; // Nouvelle colonne
+  key_delivery_method?: 'deposit' | 'mail';
 }
 
 /**
@@ -58,8 +57,7 @@ export async function getProfile(): Promise<UserProfile | null> {
       onboarding_status,
       estimation_details,
       estimated_revenue,
-      key_deposit_address,
-      key_sets_needed
+      key_delivery_method
     `)
     .eq('id', user.id)
     .single();

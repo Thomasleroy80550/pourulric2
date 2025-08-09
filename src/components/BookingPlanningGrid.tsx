@@ -15,6 +15,7 @@ import {
   max,
   min,
   isSameDay,
+  subDays, // Added subDays import
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -26,7 +27,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } => '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -173,17 +174,20 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({
                   return null;
                 }
 
+                const numberOfNights = differenceInDays(checkOut, checkIn);
+
                 const monthStart = startOfMonth(currentMonth);
                 const monthEnd = endOfMonth(currentMonth);
 
-                const numberOfNights = differenceInDays(checkOut, checkIn);
+                // The bar should visually end on the last occupied night, not the checkout day
+                // For a 0-night stay (check-in and check-out same day), the visual end date is the check-in date itself.
+                const barEndDateVisual = (numberOfNights === 0) ? checkIn : subDays(checkOut, 1); 
 
-                const barStartDate = checkIn;
-                const barEndDate = checkOut;
+                // Clamp the bar to the visible month
+                const visibleBarStart = max([checkIn, monthStart]);
+                const visibleBarEnd = min([barEndDateVisual, monthEnd]);
 
-                const visibleBarStart = max([barStartDate, monthStart]);
-                const visibleBarEnd = min([barEndDate, monthEnd]);
-
+                // If the visible range is invalid (e.g., reservation ends before it starts in this month's view)
                 if (visibleBarStart > visibleBarEnd) {
                   return null;
                 }
@@ -191,8 +195,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({
                 const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarStart));
                 const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEnd));
 
-                if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-                  console.warn(`DEBUG: Reservation ${reservation.id} bar dates not found in current month's days array or invalid range. Visible bar range: ${format(visibleBarStart, 'yyyy-MM-dd')} to ${format(visibleBarEnd, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
+                if (startIndex === -1 || endIndex === -1) {
+                  // This should ideally not happen if visibleBarStart/End are clamped to month range
+                  // and daysInMonth is correctly populated.
+                  console.warn(`DEBUG: Reservation ${reservation.id} visible bar dates not found in current month's days array. Visible bar range: ${format(visibleBarStart, 'yyyy-MM-dd')} to ${format(visibleBarEnd, 'yyyy-MM-dd')}. Start Index: ${startIndex}, End Index: ${endIndex}`);
                   return null;
                 }
 
@@ -201,11 +207,13 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({
                 const isSingleDayStay = numberOfNights === 0;
 
                 if (isSingleDayStay) {
+                  // Center the dot in the day cell for 0-night stays
                   calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4);
                   calculatedWidth = dayCellWidth / 2;
                 } else {
-                  calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
-                  calculatedWidth = (endIndex - startIndex) * dayCellWidth;
+                  // For multi-night stays, span from start of check-in day to end of last occupied day
+                  calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth);
+                  calculatedWidth = (endIndex - startIndex + 1) * dayCellWidth; // +1 because it's inclusive range
                 }
 
                 // Determine the effective channel key for color mapping
@@ -233,7 +241,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({
                       <div
                         className={barClasses}
                         style={{
-                          gridRow: `${2 + roomIndex + 1}`, // +1 for the header row, +1 for the days row
+                          gridRow: `${3 + roomIndex}`, // +1 for the header row, +1 for the days row
                           left: `${calculatedLeft}px`,
                           width: `${calculatedWidth}px`,
                           height: '36px',

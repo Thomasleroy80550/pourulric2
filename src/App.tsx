@@ -37,8 +37,9 @@ import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
 import BlogManager from "./components/BlogManager";
 import BlogPostPage from "./pages/BlogPostPage";
 import AdminStrategiesPage from "./pages/AdminStrategiesPage";
-import AdminUserRoomsPage from "./pages/AdminUserRoomsPage"; // Added this import
-import AdminSettingsPage from "./pages/AdminSettingsPage"; // Ensure this import is present
+import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
+import AdminSettingsPage from "./pages/AdminSettingsPage";
+import OnboardingStatusPage from "./pages/OnboardingStatusPage"; // Import the new page
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ function App() {
               <InvoiceGenerationProvider>
                 <Routes>
                   <Route path="/login" element={<Login />} />
+                  <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
                   <Route path="/admin" element={<AdminDashboardPage />} />
                   <Route path="/admin/pages" element={<PageCreator />} />
                   <Route path="/admin/blog" element={<BlogManager />} />

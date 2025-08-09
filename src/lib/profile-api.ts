@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_retrieved' | 'photoshoot_done' | 'live';
+
 export interface UserProfile {
   id: string;
   first_name?: string;
@@ -31,6 +33,9 @@ export interface UserProfile {
   can_manage_prices?: boolean;
   kyc_status?: 'not_verified' | 'pending_review' | 'verified' | 'rejected';
   kyc_documents?: { identity?: string; address?: string; };
+  onboarding_status?: OnboardingStatus;
+  estimation_details?: string;
+  estimated_revenue?: number;
 }
 
 /**
@@ -47,14 +52,10 @@ export async function getProfile(): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select(`
-      id, first_name, last_name, role, phone_number, objective_amount, 
-      cguv_accepted_at, cguv_version, commission_rate, pennylane_customer_id, 
-      expenses_module_enabled, property_address, property_city, property_zip_code,
-      iban_airbnb_booking, bic_airbnb_booking, sync_with_hellokeys, 
-      iban_abritel_hellokeys, bic_abritel_hellokeys, linen_type, agency, 
-      contract_start_date, notify_new_booking_email, notify_cancellation_email, 
-      notify_new_booking_sms, notify_cancellation_sms, is_banned, can_manage_prices,
-      kyc_status, kyc_documents
+      *,
+      onboarding_status,
+      estimation_details,
+      estimated_revenue
     `)
     .eq('id', user.id)
     .single();

@@ -13,10 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
 import { toast } from 'sonner';
 import { getAllProfiles, createUser, updateUser, UpdateUserPayload, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, createAccountantClientRelation } from '@/lib/admin-api';
-import { UserProfile } from '@/lib/profile-api';
+import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn, Trash2 } from 'lucide-react';
@@ -25,7 +25,8 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import EditUserRoomDialog from '@/components/EditUserRoomDialog'; // Import the new component
+import EditUserRoomDialog from '@/components/EditUserRoomDialog';
+import { Textarea } from '@/components/ui/textarea';
 
 const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -33,12 +34,15 @@ const newUserSchema = z.object({
   email: z.string().email("L'email est invalide."),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères."),
   role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
+  estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional(),
+  estimation_details: z.string().optional(),
 });
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
   last_name: z.string().min(1, "Le nom est requis."),
   role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
+  onboarding_status: z.enum(['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_retrieved', 'photoshoot_done', 'live']).optional(),
   property_address: z.string().optional(),
   property_city: z.string().optional(),
   property_zip_code: z.string().optional(),
@@ -107,6 +111,15 @@ const getStatusVariant = (status: string): "default" | "destructive" | "secondar
   }
 };
 
+const onboardingStatusText: Record<OnboardingStatus, string> = {
+  estimation_sent: "Estimation envoyée",
+  estimation_validated: "Estimation validée",
+  cguv_accepted: "CGUV acceptées",
+  keys_retrieved: "Clés récupérées",
+  photoshoot_done: "Shooting photo terminé",
+  live: "En ligne",
+};
+
 const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +141,7 @@ const AdminUsersPage: React.FC = () => {
 
   const addUserForm = useForm<z.infer<typeof newUserSchema>>({
     resolver: zodResolver(newUserSchema),
-    defaultValues: { first_name: '', last_name: '', email: '', password: '', role: 'user' },
+    defaultValues: { first_name: '', last_name: '', email: '', password: '', role: 'user', estimation_details: '', estimated_revenue: 0 },
   });
 
   const editUserForm = useForm<z.infer<typeof editUserSchema>>({
@@ -171,17 +184,22 @@ const AdminUsersPage: React.FC = () => {
 
   const handleAddUser = async (values: z.infer<typeof newUserSchema>) => {
     try {
-      const result = await createUser(values);
-      const newAccountantUser = result?.data?.user;
-
-      if (!newAccountantUser || !newAccountantUser.id) {
-        throw new Error("La création de l'utilisateur n'a pas retourné d'ID valide.");
-      }
+      const result = await createUser({
+        email: values.email,
+        password: values.password,
+        user_metadata: {
+          first_name: values.first_name,
+          last_name: values.last_name,
+          role: values.role,
+          estimation_details: values.estimation_details,
+          estimated_revenue: values.estimated_revenue,
+        }
+      });
       
-      toast.success("Utilisateur comptable créé avec succès !");
+      toast.success("Prospect créé avec succès ! Un email sera envoyé pour l'inviter à s'inscrire.");
 
-      if (pendingApproval) {
-        await createAccountantClientRelation(newAccountantUser.id, pendingApproval.user_id);
+      if (pendingApproval && result?.data?.user?.id) {
+        await createAccountantClientRelation(result.data.user.id, pendingApproval.user_id);
         toast.success("Lien comptable-client établi.");
 
         await updateAccountantRequestStatus(pendingApproval.id, 'approved');
@@ -204,6 +222,7 @@ const AdminUsersPage: React.FC = () => {
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       role: user.role === 'admin' ? 'admin' : (user.role === 'accountant' ? 'accountant' : 'user'),
+      onboarding_status: user.onboarding_status || 'estimation_sent',
       property_address: user.property_address || '',
       property_city: user.property_city || '',
       property_zip_code: user.property_zip_code || '',
@@ -397,7 +416,7 @@ const AdminUsersPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Gestion des Utilisateurs</h1>
           <Button onClick={() => setIsAddUserDialogOpen(true)}>
             <PlusCircle className="h-4 w-4 mr-2" />
-            Ajouter un utilisateur
+            Ajouter un prospect
           </Button>
         </div>
 
@@ -424,10 +443,9 @@ const AdminUsersPage: React.FC = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nom</TableHead>
-                        <TableHead>Prénom</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Rôle</TableHead>
-                        <TableHead>Statut</TableHead>
+                        <TableHead>Statut Intégration</TableHead>
                         <TableHead>Statut KYC</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -435,11 +453,14 @@ const AdminUsersPage: React.FC = () => {
                     <TableBody>
                       {users.map((user) => (
                         <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
-                          <TableCell>{user.last_name}</TableCell>
-                          <TableCell>{user.first_name}</TableCell>
+                          <TableCell>{user.first_name} {user.last_name}</TableCell>
                           <TableCell>{users.find(u => u.id === user.id)?.email || 'N/A'}</TableCell>
                           <TableCell>{user.role}</TableCell>
-                          <TableCell>{user.is_banned ? <span className="text-red-500 font-bold">Banni</span> : 'Actif'}</TableCell>
+                          <TableCell>
+                            <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
+                              {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={getKycStatusVariant(user.kyc_status)}>
                               {getKycStatusText(user.kyc_status)}
@@ -530,17 +551,19 @@ const AdminUsersPage: React.FC = () => {
         }
       }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Ajouter un nouvel utilisateur</DialogTitle><DialogDescription>Le nouvel utilisateur sera créé et un profil associé sera généré.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Ajouter un nouveau prospect</DialogTitle><DialogDescription>Le prospect recevra une invitation à s'inscrire pour voir son estimation.</DialogDescription></DialogHeader>
           <Form {...addUserForm}>
             <form onSubmit={addUserForm.handleSubmit(handleAddUser)} className="space-y-4 py-4">
               <FormField control={addUserForm.control} name="first_name" render={({ field }) => (<FormItem><FormLabel>Prénom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Nom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={addUserForm.control} name="password" render={({ field }) => (<FormItem><FormLabel>Mot de passe</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={addUserForm.control} name="password" render={({ field }) => (<FormItem><FormLabel>Mot de passe temporaire</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+              <FormField control={addUserForm.control} name="estimated_revenue" render={({ field }) => (<FormItem><FormLabel>Revenu Annuel Estimé (€)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={addUserForm.control} name="estimation_details" render={({ field }) => (<FormItem><FormLabel>Détails de l'estimation</FormLabel><FormControl><Textarea {...field} /></FormControl><FormDescription>Ces détails seront visibles par le prospect.</FormDescription><FormMessage /></FormItem>)} />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsAddUserDialogOpen(false)}>Annuler</Button>
-                <Button type="submit" disabled={addUserForm.formState.isSubmitting}>{addUserForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer l'utilisateur"}</Button>
+                <Button type="submit" disabled={addUserForm.formState.isSubmitting}>{addUserForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer le prospect"}</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -557,8 +580,9 @@ const AdminUsersPage: React.FC = () => {
           <Form {...editUserForm}>
             <form onSubmit={editUserForm.handleSubmit(handleUpdateUser)} className="flex-grow overflow-y-auto pr-6 pl-2 space-y-4">
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="personal">Personnel</TabsTrigger>
+                  <TabsTrigger value="onboarding">Intégration</TabsTrigger>
                   <TabsTrigger value="payment">Paiement</TabsTrigger>
                   <TabsTrigger value="offer">Offre</TabsTrigger>
                   <TabsTrigger value="notifications">Notifications</TabsTrigger>
@@ -581,6 +605,32 @@ const AdminUsersPage: React.FC = () => {
                     <CardHeader><CardTitle className="text-red-500 flex items-center gap-2"><AlertTriangle /> Zone de danger</CardTitle></CardHeader>
                     <CardContent>
                       <FormField control={editUserForm.control} name="is_banned" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-red-50 dark:bg-red-900/20"><div className="space-y-0.5"><FormLabel className="text-red-600 dark:text-red-400">Bannir l'utilisateur</FormLabel><p className="text-xs text-red-500 dark:text-red-400/80">L'utilisateur sera déconnecté et ne pourra plus accéder à son compte.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="onboarding" className="mt-4">
+                  <Card>
+                    <CardHeader><CardTitle>Statut d'intégration</CardTitle></CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={editUserForm.control}
+                        name="onboarding_status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Statut actuel</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                {Object.entries(onboardingStatusText).map(([key, value]) => (
+                                  <SelectItem key={key} value={key}>{value}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>Modifiez le statut pour faire avancer le prospect dans le parcours.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>

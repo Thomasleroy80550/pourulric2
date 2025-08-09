@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
-import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
+import { getProfile, UserProfile } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
 
@@ -27,13 +27,11 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const navigate = useNavigate();
   const location = useLocation();
 
-  console.log("SessionContextProvider rendering. Loading:", loading, "Path:", location.pathname);
+  const protectedPaths = ['/login', '/promotion', '/onboarding-status'];
 
   const fetchUserProfile = useCallback(async (userSession: Session) => {
-    console.log("Fetching user profile...");
     try {
       const userProfile = await getProfile();
-      console.log("User profile fetched:", userProfile);
       setProfile(userProfile);
       return userProfile;
     } catch (error) {
@@ -44,7 +42,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, []);
 
   const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
-    setLoading(true); // Start loading
+    setLoading(true);
     if (currentSession) {
       setSession(currentSession);
       const userProfile = await fetchUserProfile(currentSession);
@@ -53,7 +51,20 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         navigate('/');
       }
 
-      if (userProfile && location.pathname !== '/login') {
+      if (userProfile) {
+        // Onboarding redirection logic
+        if (userProfile.onboarding_status && userProfile.onboarding_status !== 'live' && location.pathname !== '/onboarding-status') {
+          navigate('/onboarding-status');
+          setLoading(false);
+          return;
+        }
+        
+        if (userProfile.onboarding_status === 'live' && location.pathname === '/onboarding-status') {
+          navigate('/');
+          setLoading(false);
+          return;
+        }
+
         // Banned status takes precedence over CGUV modal
         if (userProfile.is_banned) {
           setShowCguvModal(false);
@@ -62,15 +73,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           const cguvVersion = userProfile.cguv_version;
 
           if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
-            console.log("CGUV not accepted or version mismatch. Showing modal.");
-            setShowCguvModal(true);
+            if (userProfile.onboarding_status !== 'estimation_sent' && userProfile.onboarding_status !== 'estimation_validated') {
+              setShowCguvModal(true);
+            }
           } else {
-            console.log("CGUV already accepted and up to date.");
             setShowCguvModal(false);
           }
         }
-      } else if (!userProfile && location.pathname !== '/login') {
-        console.log("Session exists but profile not found or error fetching. Checking CGUV status.");
       }
     } else {
       // No session
@@ -78,34 +87,29 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setProfile(null);
       setShowCguvModal(false);
       setShowOnboardingConfetti(false);
-      if (location.pathname !== '/login') {
-        console.log('No session and not on login page, redirecting to /login');
+      if (!protectedPaths.some(path => location.pathname.startsWith(path)) && !location.pathname.startsWith('/pages/')) {
         navigate('/login');
       }
     }
-    setLoading(false); // End loading
+    setLoading(false);
   }, [fetchUserProfile, location.pathname, navigate]);
 
 
   useEffect(() => {
-    console.log("SessionContextProvider useEffect running.");
     let isMounted = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
-      console.log('Auth state changed:', event, currentSession);
       revalidateSessionAndProfile(currentSession);
     });
 
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       if (!isMounted) return;
-      console.log("Initial getSession result:", initialSession);
       revalidateSessionAndProfile(initialSession);
     });
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
-        console.log('Tab became visible. Re-checking session...');
         const { data: { session: refreshedSession } } = await supabase.auth.getSession();
         if (!isMounted) return;
         revalidateSessionAndProfile(refreshedSession);
@@ -122,21 +126,25 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, [revalidateSessionAndProfile]);
 
   const handleAcceptCguv = async () => {
-    console.log("Handling CGUV acceptance...");
     try {
       const wasFirstTimeAccepting = !profile?.cguv_accepted_at;
 
-      const updatedProfile = await updateProfile({
+      const updates: Partial<UserProfile> = {
         cguv_accepted_at: new Date().toISOString(),
         cguv_version: CURRENT_CGUV_VERSION,
-      });
+      };
+
+      if (profile?.onboarding_status === 'estimation_validated') {
+        updates.onboarding_status = 'cguv_accepted';
+      }
+
+      const updatedProfile = await updateProfile(updates);
 
       setProfile(updatedProfile);
       setShowCguvModal(false);
       toast.success("Merci d'avoir accepté les conditions générales.");
 
       if (wasFirstTimeAccepting) {
-        console.log("First time accepting CGUV, showing confetti.");
         setShowOnboardingConfetti(true);
       }
     } catch (error: any) {

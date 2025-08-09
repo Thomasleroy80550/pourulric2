@@ -64,6 +64,8 @@ const editUserSchema = z.object({
   kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional().nullable(),
   estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional().nullable(),
   estimation_details: z.string().optional().nullable(),
+  key_deposit_address: z.string().optional().nullable(), // Nouveau champ
+  key_sets_needed: z.coerce.number().min(0).optional().nullable(), // Nouveau champ
 });
 
 // This schema is now only for the add room form, not for the edit dialog
@@ -237,6 +239,8 @@ const AdminUsersPage: React.FC = () => {
       kyc_status: user.kyc_status || 'not_verified',
       estimated_revenue: user.estimated_revenue || 0,
       estimation_details: user.estimation_details || '',
+      key_deposit_address: user.key_deposit_address || '', // Initialisation du champ
+      key_sets_needed: user.key_sets_needed || 0, // Initialisation du champ
     });
     setIsEditDialogOpen(true);
 
@@ -594,6 +598,8 @@ const AdminUsersPage: React.FC = () => {
                       <FormField control={editUserForm.control} name="property_city" render={({ field }) => (<FormItem><FormLabel>Ville</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="property_zip_code" render={({ field }) => (<FormItem><FormLabel>Code Postal</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      <FormField control={editUserForm.control} name="key_deposit_address" render={({ field }) => (<FormItem><FormLabel>Adresse de dépôt des clés</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={editUserForm.control} name="key_sets_needed" render={({ field }) => (<FormItem><FormLabel>Nombre de jeux de clés nécessaires</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                     </CardContent>
                   </Card>
                   <Card className="border-red-500 border-2">

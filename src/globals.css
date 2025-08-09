@@ -360,6 +360,20 @@
   animation: aurora 15s ease infinite;
 }
 
+/* New keyframes for subtle background effect on estimation page */
+@keyframes subtle-gradient-move {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.estimation-background-effect {
+  background: linear-gradient(270deg, hsl(var(--background)), hsl(var(--primary) / 0.05), hsl(var(--background)));
+  background-size: 200% 200%;
+  animation: subtle-gradient-move 10s ease infinite;
+}
+
+
 /* driver.js custom styling */
 .driver-popover {
   background-color: hsl(var(--popover));

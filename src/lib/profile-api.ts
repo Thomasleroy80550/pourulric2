@@ -36,6 +36,8 @@ export interface UserProfile {
   onboarding_status?: OnboardingStatus;
   estimation_details?: string;
   estimated_revenue?: number;
+  key_deposit_address?: string; // Nouvelle colonne
+  key_sets_needed?: number; // Nouvelle colonne
 }
 
 /**
@@ -55,7 +57,9 @@ export async function getProfile(): Promise<UserProfile | null> {
       *,
       onboarding_status,
       estimation_details,
-      estimated_revenue
+      estimated_revenue,
+      key_deposit_address,
+      key_sets_needed
     `)
     .eq('id', user.id)
     .single();

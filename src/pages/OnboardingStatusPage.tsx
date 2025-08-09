@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CheckCircle, Circle, Loader2, Rocket } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Rocket, KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CGUVModal from '@/components/CGUVModal';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
@@ -113,7 +113,7 @@ const OnboardingStatusPage: React.FC = () => {
   const currentStatusIndex = statusSteps.findIndex(step => step.status === profile.onboarding_status);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 estimation-background-effect">
       <div className="max-w-5xl mx-auto">
         <header className="text-center mb-12">
           <img src="/logo.png" alt="Hello Keys Logo" className="h-12 mx-auto mb-4" />
@@ -160,6 +160,29 @@ const OnboardingStatusPage: React.FC = () => {
                 </ol>
               </CardContent>
             </Card>
+            {profile.onboarding_status === 'keys_retrieved' && (
+              <Card className="mt-8">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <KeyRound className="h-6 w-6 text-blue-600" /> Informations sur les clés
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-700 dark:text-gray-200">Adresse de dépôt/envoi des clés</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {profile.key_deposit_address || "Non spécifié. Veuillez contacter l'agence."}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-700 dark:text-gray-200">Jeux de clés nécessaires</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {profile.key_sets_needed ? `${profile.key_sets_needed} jeux complets` : "Non spécifié."}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div>

@@ -67,9 +67,10 @@ const CalendarPage: React.FC = () => {
       try {
         // 1. Fetch the user's configured rooms from Supabase
         const configuredUserRooms = await getUserRooms();
-        console.log("DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
+        console.log("CalendarPage DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
 
         if (configuredUserRooms.length === 0) {
+          console.log("CalendarPage DEBUG: No configured rooms found for the user.");
           setUserRooms([]);
           setReservations([]);
           setLoadingData(false);
@@ -80,6 +81,8 @@ const CalendarPage: React.FC = () => {
 
         // 2. Fetch reservations for these rooms
         const fetchedReservations = await fetchKrossbookingReservations(configuredUserRooms, refreshTrigger > 0);
+        console.log("CalendarPage DEBUG: fetchedReservations (from Krossbooking API):", fetchedReservations);
+
 
         // 3. Fetch price overrides and convert them to reservation-like blocks
         const priceOverrides = await getOverrides();
@@ -102,10 +105,10 @@ const CalendarPage: React.FC = () => {
             tourist_tax_amount: 0,
           }));
         
-        console.log("DEBUG: Owner blocks created from overrides:", closedBlocks);
+        console.log("CalendarPage DEBUG: Owner blocks created from overrides:", closedBlocks);
 
         const allReservationsAndBlocks = [...fetchedReservations, ...closedBlocks];
-        console.log("DEBUG: All reservations and blocks to be displayed:", allReservationsAndBlocks);
+        console.log("CalendarPage DEBUG: All reservations and blocks to be displayed:", allReservationsAndBlocks);
         setReservations(allReservationsAndBlocks);
 
       } catch (error) {

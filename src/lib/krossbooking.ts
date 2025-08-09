@@ -190,7 +190,10 @@ export async function fetchKrossbookingReservations(
   if (!forceRefresh && reservationsCache && (now - reservationsCache.timestamp < RESERVATION_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking reservations.");
     const userRoomIds = new Set(userRooms.map(room => room.room_id));
-    return reservationsCache.data.filter(res => userRoomIds.has(res.krossbooking_room_id));
+    console.log("DEBUG: Cached reservations - User's configured room IDs:", Array.from(userRoomIds));
+    const filteredCachedReservations = reservationsCache.data.filter(res => userRoomIds.has(res.krossbooking_room_id));
+    console.log("DEBUG: Cached reservations - Filtered for user's rooms:", filteredCachedReservations);
+    return filteredCachedReservations;
   }
   
   console.log("Fetching ALL Krossbooking reservations from API and filtering.");
@@ -211,6 +214,8 @@ export async function fetchKrossbookingReservations(
 
     const roomNameMap = new Map(userRooms.map(room => [room.room_id, room.room_name]));
     const userRoomIds = new Set(userRooms.map(room => room.room_id));
+    console.log("DEBUG: User's configured room IDs:", Array.from(userRoomIds));
+
 
     const allReservations = allReservationsFromApi
       .filter((res: any) => res.id_reservation !== undefined && res.rooms && res.rooms.length > 0 && res.rooms[0].id_room !== undefined) // Corrected filter
@@ -244,7 +249,7 @@ export async function fetchKrossbookingReservations(
 
     // Filter for the current user's rooms
     const userReservations = uniqueReservations.filter(res => userRoomIds.has(res.krossbooking_room_id));
-    console.log("DEBUG: Krossbooking reservations filtered for user's rooms:", userReservations);
+    console.log("DEBUG: Krossbooking reservations filtered for user's rooms (final list):", userReservations);
 
     return userReservations;
 

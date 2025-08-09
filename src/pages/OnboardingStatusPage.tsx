@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CheckCircle, Circle, Loader2, Rocket, KeyRound } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Rocket, KeyRound, Edit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CGUVModal from '@/components/CGUVModal';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
@@ -15,7 +15,8 @@ const statusSteps: { status: OnboardingStatus; title: string; description: strin
   { status: 'estimation_validated', title: 'Validation de l\'estimation', description: 'Vous avez validé l\'estimation. Prochaine étape : accepter nos conditions générales.', action: 'Valider mon estimation' },
   { status: 'cguv_accepted', title: 'Acceptation des CGUV', description: 'Merci ! Veuillez maintenant choisir comment nous faire parvenir les clés.' },
   { status: 'keys_pending_reception', title: 'En attente réception clés', description: 'Nous attendons de recevoir vos clés. Un membre de notre équipe confirmera la réception prochainement.' },
-  { status: 'keys_retrieved', title: 'Clés récupérées', description: 'Nos équipes ont bien reçu les clés de votre logement.' },
+  { status: 'keys_retrieved', title: 'Clés récupérées', description: 'Nos équipes ont bien reçu les clés. Vous pouvez maintenant compléter les informations de votre logement.' },
+  { status: 'info_gathering', title: 'Informations du logement', description: 'Veuillez compléter toutes les informations relatives à votre logement.' },
   { status: 'photoshoot_done', title: 'Shooting photo', description: 'Les photos professionnelles de votre bien ont été réalisées.' },
   { status: 'live', title: 'Mise en ligne terminée !', description: 'Félicitations, votre logement est maintenant en ligne et prêt à accueillir des voyageurs.' },
 ];
@@ -54,7 +55,6 @@ const OnboardingStatusPage: React.FC = () => {
       await updateProfile({ onboarding_status: 'estimation_validated' });
       toast.success("Estimation validée !");
       fetchProfileData();
-      // Automatically open CGUV modal after validation
       setIsCguvModalOpen(true);
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
@@ -89,11 +89,24 @@ const OnboardingStatusPage: React.FC = () => {
         key_delivery_method: method,
       });
       toast.success("Votre choix a été enregistré !");
-      fetchProfileData(); // Refresh profile to show the new status
+      fetchProfileData();
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
     } finally {
       setIsSubmittingChoice(false);
+    }
+  };
+
+  const handleStartInfoGathering = async () => {
+    setLoading(true);
+    try {
+      await updateProfile({ onboarding_status: 'info_gathering' });
+      toast.success("Prêt à compléter les informations !");
+      fetchProfileData();
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -156,7 +169,7 @@ const OnboardingStatusPage: React.FC = () => {
                           <Circle className="h-6 w-6 text-gray-300 dark:text-gray-600" />
                         )}
                         {index < statusSteps.length - 1 && (
-                          <div className={`w-px h-12 mt-2 ${index < currentStatusIndex ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                          <div className={`w-px h-20 mt-2 ${index < currentStatusIndex ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
                         )}
                       </div>
                       <div>
@@ -171,6 +184,18 @@ const OnboardingStatusPage: React.FC = () => {
                           <Button onClick={() => setIsCguvModalOpen(true)} className="mt-2">
                             Lire et accepter les CGUV
                           </Button>
+                        )}
+                        {profile.onboarding_status === 'keys_retrieved' && step.status === 'info_gathering' && (
+                          <Button onClick={handleStartInfoGathering} disabled={loading} className="mt-2">
+                            {loading ? <Loader2 className="animate-spin" /> : 'Commencer'}
+                          </Button>
+                        )}
+                        {profile.onboarding_status === 'info_gathering' && step.status === 'info_gathering' && (
+                           <Link to="/onboarding/property-info">
+                            <Button className="mt-2">
+                              <Edit className="mr-2 h-4 w-4" /> Compléter les informations
+                            </Button>
+                          </Link>
                         )}
                       </div>
                     </li>

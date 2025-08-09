@@ -21,7 +21,7 @@ import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } => 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -184,17 +184,8 @@ const AdminUsersPage: React.FC = () => {
 
   const handleAddUser = async (values: z.infer<typeof newUserSchema>) => {
     try {
-      const result = await createUser({
-        email: values.email,
-        password: values.password,
-        user_metadata: {
-          first_name: values.first_name,
-          last_name: values.last_name,
-          role: values.role,
-          estimation_details: values.estimation_details,
-          estimated_revenue: values.estimated_revenue,
-        }
-      });
+      // Pass the values directly as they match the CreateUserPayload interface
+      const result = await createUser(values);
       
       toast.success("Prospect créé avec succès ! Un email sera envoyé pour l'inviter à s'inscrire.");
 

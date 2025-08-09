@@ -215,15 +215,26 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
   }
 }
 
+// Define the type for the user data expected by the create-user-proxy Edge Function
+export interface CreateUserPayload {
+  email: string;
+  password?: string; // Password is optional if not setting one directly
+  first_name: string;
+  last_name: string;
+  role: string;
+  estimation_details?: string;
+  estimated_revenue?: number;
+}
+
 /**
  * Creates a new user. This is an admin-only function.
  * It invites a user by email.
  * @param userData The user data.
  * @returns A promise that resolves with the created user data.
  */
-export async function createUser(userData: { email: string; first_name: string; last_name: string; role: string; }) {
+export async function createUser(userData: CreateUserPayload) {
   const { data, error } = await supabase.functions.invoke('create-user-proxy', {
-    body: userData,
+    body: userData, // Pass the entire userData object as the body
   });
 
   if (error) {

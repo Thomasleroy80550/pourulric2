@@ -27,8 +27,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Removed protectedPaths as the logic is now handled more explicitly below
-
   const fetchUserProfile = useCallback(async (userSession: Session) => {
     try {
       const userProfile = await getProfile();
@@ -47,35 +45,41 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setSession(currentSession);
       const userProfile = await fetchUserProfile(currentSession);
 
-      if (location.pathname === '/login') {
-        navigate('/');
-      }
-
       if (userProfile) {
+        // If user is on login page but authenticated, redirect to dashboard or appropriate onboarding page
+        if (location.pathname === '/login') {
+          navigate('/'); // Default redirect for authenticated users from login
+          setLoading(false);
+          return;
+        }
+
         // Admins should always have full access, regardless of their onboarding status
         if (userProfile.role !== 'admin') {
           const currentPath = location.pathname;
-          const onboardingStatus = userProfile.onboarding_status;
+          // Ensure onboardingStatus is always a string for comparison, defaulting to 'estimation_sent'
+          const onboardingStatus = userProfile.onboarding_status || 'estimation_sent';
 
-          let expectedOnboardingPath: string | null = null;
+          let requiredOnboardingPath: string | null = null;
 
-          if (onboardingStatus && onboardingStatus !== 'live') {
-            // Determine the expected path based on onboarding status
-            if (['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'photoshoot_done'].includes(onboardingStatus)) {
-                expectedOnboardingPath = '/onboarding-status';
-            } else if (['keys_retrieved', 'info_gathering'].includes(onboardingStatus)) {
-                expectedOnboardingPath = '/onboarding/property-info';
-            }
-
-            // If the user is not on the expected onboarding path, redirect them
-            if (expectedOnboardingPath && currentPath !== expectedOnboardingPath) {
-                navigate(expectedOnboardingPath);
-                setLoading(false);
-                return;
-            }
-          } else if (onboardingStatus === 'live' && currentPath.startsWith('/onboarding')) {
+          if (onboardingStatus === 'live') {
             // If user is 'live' but still on an onboarding page, redirect to dashboard
-            navigate('/');
+            if (currentPath.startsWith('/onboarding')) {
+              requiredOnboardingPath = '/';
+            }
+          } else { // User is not 'live'
+            if (['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'photoshoot_done'].includes(onboardingStatus)) {
+              requiredOnboardingPath = '/onboarding-status';
+            } else if (['keys_retrieved', 'info_gathering'].includes(onboardingStatus)) {
+              requiredOnboardingPath = '/onboarding/property-info';
+            } else {
+              // Fallback for any unexpected onboarding status, or if status is null/undefined
+              requiredOnboardingPath = '/onboarding-status';
+            }
+          }
+
+          // Perform redirection if current path is not the required path
+          if (requiredOnboardingPath && currentPath !== requiredOnboardingPath) {
+            navigate(requiredOnboardingPath);
             setLoading(false);
             return;
           }
@@ -89,6 +93,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           const cguvVersion = userProfile.cguv_version;
 
           if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
+            // Only show CGUV modal if not already on estimation pages
             if (userProfile.onboarding_status !== 'estimation_sent' && userProfile.onboarding_status !== 'estimation_validated') {
               setShowCguvModal(true);
             }
@@ -96,9 +101,16 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
             setShowCguvModal(false);
           }
         }
+      } else {
+        // User is authenticated but profile not found/loaded, redirect to login
+        if (location.pathname !== '/login') {
+          navigate('/login');
+          setLoading(false);
+          return;
+        }
       }
     } else {
-      // No session
+      // No session (user is not authenticated)
       setSession(null);
       setProfile(null);
       setShowCguvModal(false);
@@ -115,21 +127,20 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     let isMounted = true;
 
+    // Listen for auth state changes. This callback is fired immediately on subscription with the current session.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
       revalidateSessionAndProfile(currentSession);
-    });
-
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      if (!isMounted) return;
-      revalidateSessionAndProfile(initialSession);
     });
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
         const { data: { session: refreshedSession } } = await supabase.auth.getSession();
         if (!isMounted) return;
-        revalidateSessionAndProfile(refreshedSession);
+        // Only revalidate if the session actually changed to avoid unnecessary re-renders
+        if (refreshedSession?.user?.id !== session?.user?.id || (refreshedSession && !session) || (!refreshedSession && session)) {
+          revalidateSessionAndProfile(refreshedSession);
+        }
       }
     };
 
@@ -140,7 +151,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [revalidateSessionAndProfile]);
+  }, [revalidateSessionAndProfile, session]);
 
   const handleAcceptCguv = async () => {
     try {

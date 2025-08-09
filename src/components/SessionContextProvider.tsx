@@ -27,7 +27,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const navigate = useNavigate();
   const location = useLocation();
 
-  const protectedPaths = ['/login', '/promotion', '/onboarding-status'];
+  // Removed protectedPaths as the logic is now handled more explicitly below
 
   const fetchUserProfile = useCallback(async (userSession: Session) => {
     try {
@@ -52,23 +52,34 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       }
 
       if (userProfile) {
-        // --- MODIFICATION ICI ---
         // Admins should always have full access, regardless of their onboarding status
         if (userProfile.role !== 'admin') {
-          // Onboarding redirection logic for non-admin users
-          if (userProfile.onboarding_status && userProfile.onboarding_status !== 'live' && location.pathname !== '/onboarding-status') {
-            navigate('/onboarding-status');
-            setLoading(false);
-            return;
-          }
-          
-          if (userProfile.onboarding_status === 'live' && location.pathname === '/onboarding-status') {
+          const currentPath = location.pathname;
+          const onboardingStatus = userProfile.onboarding_status;
+
+          let expectedOnboardingPath: string | null = null;
+
+          if (onboardingStatus && onboardingStatus !== 'live') {
+            // Determine the expected path based on onboarding status
+            if (['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'photoshoot_done'].includes(onboardingStatus)) {
+                expectedOnboardingPath = '/onboarding-status';
+            } else if (['keys_retrieved', 'info_gathering'].includes(onboardingStatus)) {
+                expectedOnboardingPath = '/onboarding/property-info';
+            }
+
+            // If the user is not on the expected onboarding path, redirect them
+            if (expectedOnboardingPath && currentPath !== expectedOnboardingPath) {
+                navigate(expectedOnboardingPath);
+                setLoading(false);
+                return;
+            }
+          } else if (onboardingStatus === 'live' && currentPath.startsWith('/onboarding')) {
+            // If user is 'live' but still on an onboarding page, redirect to dashboard
             navigate('/');
             setLoading(false);
             return;
           }
         }
-        // --- FIN DE LA MODIFICATION ---
 
         // Banned status takes precedence over CGUV modal
         if (userProfile.is_banned) {
@@ -92,7 +103,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setProfile(null);
       setShowCguvModal(false);
       setShowOnboardingConfetti(false);
-      if (!protectedPaths.some(path => location.pathname.startsWith(path)) && !location.pathname.startsWith('/pages/')) {
+      // If there's no session and the user is not on the login page, redirect to login
+      if (location.pathname !== '/login') {
         navigate('/login');
       }
     }

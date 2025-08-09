@@ -52,18 +52,23 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       }
 
       if (userProfile) {
-        // Onboarding redirection logic
-        if (userProfile.onboarding_status && userProfile.onboarding_status !== 'live' && location.pathname !== '/onboarding-status') {
-          navigate('/onboarding-status');
-          setLoading(false);
-          return;
+        // --- MODIFICATION ICI ---
+        // Admins should always have full access, regardless of their onboarding status
+        if (userProfile.role !== 'admin') {
+          // Onboarding redirection logic for non-admin users
+          if (userProfile.onboarding_status && userProfile.onboarding_status !== 'live' && location.pathname !== '/onboarding-status') {
+            navigate('/onboarding-status');
+            setLoading(false);
+            return;
+          }
+          
+          if (userProfile.onboarding_status === 'live' && location.pathname === '/onboarding-status') {
+            navigate('/');
+            setLoading(false);
+            return;
+          }
         }
-        
-        if (userProfile.onboarding_status === 'live' && location.pathname === '/onboarding-status') {
-          navigate('/');
-          setLoading(false);
-          return;
-        }
+        // --- FIN DE LA MODIFICATION ---
 
         // Banned status takes precedence over CGUV modal
         if (userProfile.is_banned) {

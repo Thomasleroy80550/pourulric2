@@ -282,5 +282,73 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
   return callKrossbookingProxy('save_channel_manager', payload);
 }
 
-// ... other functions like fetchKrossbookingHousekeepingTasks, fetchKrossbookingMessageThreads etc. would go here ...
-// They are omitted for brevity as they were not part of the requested change.
+export async function fetchKrossbookingHousekeepingTasks(
+  dateFrom: string,
+  dateTo: string,
+  roomIds: number[], // Kept for potential future filtering, but not used for fetching
+  idProperty?: number,
+  forceRefresh: boolean = false // Add forceRefresh parameter
+): Promise<KrossbookingHousekeepingTask[]> {
+  const now = Date.now();
+  const cacheKey = `${dateFrom}-${dateTo}-${idProperty || 'all'}`; // Create a unique cache key
+
+  // Cache variables and durations (moved from top to here for clarity in this specific fix)
+  let housekeepingTasksCache: {
+    [key: string]: { // Key will be a combination of dateFrom, dateTo, idProperty
+      data: KrossbookingHousekeepingTask[];
+      timestamp: number;
+    };
+  } = {};
+  const HOUSEKEEPING_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  if (!forceRefresh && housekeepingTasksCache[cacheKey] && (now - housekeepingTasksCache[cacheKey].timestamp < HOUSEKEEPING_CACHE_DURATION)) {
+    console.log(`Returning cached Krossbooking housekeeping tasks for key: ${cacheKey}`);
+    return housekeepingTasksCache[cacheKey].data;
+  }
+
+  try {
+    console.log(`Fetching fresh Krossbooking housekeeping tasks from API for key: ${cacheKey}`);
+    // Single call for all tasks in the date range
+    const data = await callKrossbookingProxy('get_housekeeping_tasks', {
+      date_from: dateFrom,
+      date_to: dateTo,
+      id_property: idProperty,
+    });
+
+    if (!Array.isArray(data)) {
+      console.warn(`Unexpected Krossbooking API response structure for housekeeping tasks or no data array:`, data);
+      return [];
+    }
+
+    const allTasks = data.map((task: any) => ({
+      id_task: task.id_task,
+      id_room: task.id_room,
+      room_label: task.room_label || 'N/A',
+      date: task.date || '', 
+      status: task.cod_status, 
+      task_type: task.cod_task_type, 
+      notes: task.notes,
+      assigned_to: task.assigned_to,
+    }));
+    
+    // Filter tasks for the requested rooms on the client side
+    const roomIdsSet = new Set(roomIds);
+    const filteredTasks = allTasks.filter(task => roomIdsSet.has(task.id_room));
+
+    housekeepingTasksCache[cacheKey] = {
+      data: filteredTasks,
+      timestamp: now,
+    };
+    console.log(`Krossbooking housekeeping tasks cached successfully for key: ${cacheKey}`);
+
+    return filteredTasks;
+
+  } catch (error) {
+    console.error(`Error fetching housekeeping tasks:`, error);
+    if (housekeepingTasksCache[cacheKey]) {
+      console.warn("Returning stale housekeeping tasks cache due to API error.");
+      return housekeepingTasksCache[cacheKey].data;
+    }
+    return [];
+  }
+}

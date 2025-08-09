@@ -211,28 +211,6 @@ const OnboardingStatusPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {profile.onboarding_status === 'keys_retrieved' && (
-                  <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                      <KeyRound className="h-6 w-6 text-blue-600" /> Informations sur les clés
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold text-gray-700 dark:text-gray-200">Adresse de dépôt/envoi des clés</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {profile.key_deposit_address || "Non spécifié. Veuillez contacter l'agence."}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-700 dark:text-gray-200">Jeux de clés nécessaires</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {profile.key_sets_needed ? `${profile.key_sets_needed} jeux complets` : "Non spécifié."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { Button } => 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -21,7 +21,7 @@ import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, AlertTriangle, LogIn, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } => 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';

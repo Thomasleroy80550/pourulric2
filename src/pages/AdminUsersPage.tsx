@@ -43,25 +43,27 @@ const editUserSchema = z.object({
   last_name: z.string().min(1, "Le nom est requis."),
   role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
   onboarding_status: z.enum(['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_retrieved', 'photoshoot_done', 'live']).optional(),
-  property_address: z.string().optional(),
-  property_city: z.string().optional(),
-  property_zip_code: z.string().optional(),
-  iban_airbnb_booking: z.string().optional(),
-  bic_airbnb_booking: z.string().optional(),
+  property_address: z.string().optional().nullable(),
+  property_city: z.string().optional().nullable(),
+  property_zip_code: z.string().optional().nullable(),
+  iban_airbnb_booking: z.string().optional().nullable(),
+  bic_airbnb_booking: z.string().optional().nullable(),
   sync_with_hellokeys: z.boolean().optional(),
-  iban_abritel_hellokeys: z.string().optional(),
-  bic_abritel_hellokeys: z.string().optional(),
-  commission_rate: z.coerce.number().min(0).optional(),
-  linen_type: z.string().optional(),
-  agency: z.string().optional(),
-  contract_start_date: z.string().optional(),
+  iban_abritel_hellokeys: z.string().optional().nullable(),
+  bic_abritel_hellokeys: z.string().optional().nullable(),
+  commission_rate: z.coerce.number().min(0).optional().nullable(),
+  linen_type: z.string().optional().nullable(),
+  agency: z.string().optional().nullable(),
+  contract_start_date: z.string().optional().nullable(),
   notify_new_booking_email: z.boolean().optional(),
   notify_cancellation_email: z.boolean().optional(),
   notify_new_booking_sms: z.boolean().optional(),
   notify_cancellation_sms: z.boolean().optional(),
   is_banned: z.boolean().optional(),
   can_manage_prices: z.boolean().optional(),
-  kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional(),
+  kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional().nullable(),
+  estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional().nullable(),
+  estimation_details: z.string().optional().nullable(),
 });
 
 // This schema is now only for the add room form, not for the edit dialog
@@ -233,6 +235,8 @@ const AdminUsersPage: React.FC = () => {
       is_banned: user.is_banned || false,
       can_manage_prices: user.can_manage_prices || false,
       kyc_status: user.kyc_status || 'not_verified',
+      estimated_revenue: user.estimated_revenue || 0,
+      estimation_details: user.estimation_details || '',
     });
     setIsEditDialogOpen(true);
 
@@ -650,6 +654,21 @@ const AdminUsersPage: React.FC = () => {
                       <FormField control={editUserForm.control} name="linen_type" render={({ field }) => (<FormItem><FormLabel>Type de linge</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="agency" render={({ field }) => (<FormItem><FormLabel>Agence</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Sélectionner une agence" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Côte d'opal">Côte d'opal</SelectItem><SelectItem value="Baie de somme">Baie de somme</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                       <FormField control={editUserForm.control} name="contract_start_date" render={({ field }) => (<FormItem><FormLabel>Date de début de contrat</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={editUserForm.control} name="estimated_revenue" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Revenu Annuel Estimé (€)</FormLabel>
+                          <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={editUserForm.control} name="estimation_details" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Détails de l'estimation</FormLabel>
+                          <FormControl><Textarea {...field} /></FormControl>
+                          <FormDescription>Ces détails seront visibles par le prospect sur sa page d'intégration.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
                     </CardContent>
                   </Card>
                   <Card>

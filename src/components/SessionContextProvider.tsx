@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
-import { getProfile, UserProfile } from '@/lib/profile-api';
+import { getProfile, UserProfile, updateProfile } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
 
@@ -27,131 +27,95 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fetchUserProfile = useCallback(async (userSession: Session) => {
-    try {
-      const userProfile = await getProfile();
-      setProfile(userProfile);
-      return userProfile;
-    } catch (error) {
-      console.error("Error fetching user profile in SessionContextProvider:", error);
-      toast.error("Erreur lors du chargement de votre profil.");
-      return null;
-    }
-  }, []);
-
-  const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
+  // Effect for handling auth state changes and fetching profile
+  useEffect(() => {
     setLoading(true);
-    if (currentSession) {
-      setSession(currentSession);
-      const userProfile = await fetchUserProfile(currentSession);
-
-      if (userProfile) {
-        // If user is on login page but authenticated, redirect to dashboard or appropriate onboarding page
-        if (location.pathname === '/login') {
-          navigate('/'); // Default redirect for authenticated users from login
-          setLoading(false);
-          return;
-        }
-
-        // Admins should always have full access, regardless of their onboarding status
-        if (userProfile.role !== 'admin') {
-          const currentPath = location.pathname;
-          // Ensure onboardingStatus is always a string for comparison, defaulting to 'estimation_sent'
-          const onboardingStatus = userProfile.onboarding_status || 'estimation_sent';
-
-          let requiredOnboardingPath: string | null = null;
-
-          if (onboardingStatus === 'live') {
-            // If user is 'live' but still on an onboarding page, redirect to dashboard
-            if (currentPath.startsWith('/onboarding')) {
-              requiredOnboardingPath = '/';
-            }
-          } else { // User is not 'live'
-            if (['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'photoshoot_done'].includes(onboardingStatus)) {
-              requiredOnboardingPath = '/onboarding-status';
-            } else if (['keys_retrieved', 'info_gathering'].includes(onboardingStatus)) {
-              requiredOnboardingPath = '/onboarding/property-info';
-            } else {
-              // Fallback for any unexpected onboarding status, or if status is null/undefined
-              requiredOnboardingPath = '/onboarding-status';
-            }
-          }
-
-          // Perform redirection if current path is not the required path
-          if (requiredOnboardingPath && currentPath !== requiredOnboardingPath) {
-            navigate(requiredOnboardingPath);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Banned status takes precedence over CGUV modal
-        if (userProfile.is_banned) {
-          setShowCguvModal(false);
-        } else {
-          const cguvAccepted = userProfile.cguv_accepted_at;
-          const cguvVersion = userProfile.cguv_version;
-
-          if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
-            // Only show CGUV modal if not already on estimation pages
-            if (userProfile.onboarding_status !== 'estimation_sent' && userProfile.onboarding_status !== 'estimation_validated') {
-              setShowCguvModal(true);
-            }
-          } else {
-            setShowCguvModal(false);
-          }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      if (session) {
+        try {
+          const userProfile = await getProfile();
+          setProfile(userProfile);
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setProfile(null);
+          toast.error("Erreur lors du chargement de votre profil.");
         }
       } else {
-        // User is authenticated but profile not found/loaded, redirect to login
-        if (location.pathname !== '/login') {
-          navigate('/login');
-          setLoading(false);
-          return;
-        }
+        setProfile(null);
       }
-    } else {
-      // No session (user is not authenticated)
-      setSession(null);
-      setProfile(null);
-      setShowCguvModal(false);
-      setShowOnboardingConfetti(false);
-      // If there's no session and the user is not on the login page, redirect to login
-      if (location.pathname !== '/login') {
-        navigate('/login');
-      }
-    }
-    setLoading(false);
-  }, [fetchUserProfile, location.pathname, navigate]);
-
-
-  useEffect(() => {
-    let isMounted = true;
-
-    // Listen for auth state changes. This callback is fired immediately on subscription with the current session.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      if (!isMounted) return;
-      revalidateSessionAndProfile(currentSession);
+      setLoading(false);
     });
 
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        const { data: { session: refreshedSession } } = await supabase.auth.getSession();
-        if (!isMounted) return;
-        // Only revalidate if the session actually changed to avoid unnecessary re-renders
-        if (refreshedSession?.user?.id !== session?.user?.id || (refreshedSession && !session) || (!refreshedSession && session)) {
-          revalidateSessionAndProfile(refreshedSession);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Effect for handling redirection and other side effects based on session/profile state
+  useEffect(() => {
+    if (loading) {
+      return; // Don't do anything while loading
+    }
+
+    const currentPath = location.pathname;
+
+    if (!session) {
+      if (currentPath !== '/login') {
+        navigate('/login');
+      }
+      return;
+    }
+
+    if (!profile) {
+      if (currentPath !== '/login') {
+        navigate('/login');
+      }
+      return;
+    }
+
+    if (currentPath === '/login') {
+      navigate('/');
+      return;
+    }
+
+    if (profile.role !== 'admin') {
+      const onboardingStatus = profile.onboarding_status || 'estimation_sent';
+      let requiredOnboardingPath: string | null = null;
+
+      if (onboardingStatus === 'live') {
+        if (currentPath.startsWith('/onboarding')) {
+          requiredOnboardingPath = '/';
+        }
+      } else {
+        if (['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'photoshoot_done'].includes(onboardingStatus)) {
+          requiredOnboardingPath = '/onboarding/status';
+        } else if (['keys_retrieved', 'info_gathering'].includes(onboardingStatus)) {
+          requiredOnboardingPath = '/onboarding/property-info';
+        } else {
+          requiredOnboardingPath = '/onboarding/status'; // Fallback
         }
       }
-    };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+      if (requiredOnboardingPath && currentPath !== requiredOnboardingPath) {
+        navigate(requiredOnboardingPath);
+        return;
+      }
+    }
 
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [revalidateSessionAndProfile, session]);
+    // Handle CGUV Modal display
+    if (profile.is_banned) {
+      setShowCguvModal(false);
+    } else {
+      const cguvAccepted = profile.cguv_accepted_at;
+      const cguvVersion = profile.cguv_version;
+      if ((!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) && profile.onboarding_status !== 'estimation_sent' && profile.onboarding_status !== 'estimation_validated') {
+        setShowCguvModal(true);
+      } else {
+        setShowCguvModal(false);
+      }
+    }
+  }, [session, profile, loading, location.pathname, navigate]);
 
   const handleAcceptCguv = async () => {
     try {

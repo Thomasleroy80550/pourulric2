@@ -65,14 +65,22 @@ const BookingsPage: React.FC = () => {
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
 
-  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'PROPRI', 'PROP0'];
+  // Updated commonStatuses to match Krossbooking codes
+  const commonStatuses = ['CONFIRMED', 'PENDING', 'CANC', 'PROPRI', 'PROP0'];
   const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
 
   const applyFilters = (bookingsToFilter: Booking[]) => {
     let tempBookings = bookingsToFilter;
 
     if (filterRoomId !== 'all') {
-      tempBookings = tempBookings.filter(booking => booking.property_name === userRooms.find(r => r.room_id === filterRoomId)?.room_name || booking.property_name === filterRoomId);
+      // Corrected filter logic: find the room name corresponding to the selected room ID
+      const selectedRoomName = userRooms.find(r => r.room_id === filterRoomId)?.room_name;
+      if (selectedRoomName) {
+        tempBookings = tempBookings.filter(booking => booking.property_name === selectedRoomName);
+      } else {
+        // If no room name found for the ID, filter out all bookings (or handle as appropriate)
+        tempBookings = [];
+      }
     }
 
     if (filterStatus !== 'all') {
@@ -158,8 +166,7 @@ const BookingsPage: React.FC = () => {
       case 'pending':
       case 'en attente':
         return 'secondary';
-      case 'cancelled':
-      case 'annulée':
+      case 'cancelled': // Keep for display, but filter uses 'canc'
       case 'canc':
         return 'destructive';
       case 'prop0':

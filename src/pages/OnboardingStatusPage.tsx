@@ -13,8 +13,8 @@ import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 const statusSteps: { status: OnboardingStatus; title: string; description: string; action?: string }[] = [
   { status: 'estimation_sent', title: 'Estimation envoyée', description: 'Nous vous avons envoyé une estimation de revenus. Veuillez la consulter et la valider.' },
   { status: 'estimation_validated', title: 'Validation de l\'estimation', description: 'Vous avez validé l\'estimation. Prochaine étape : accepter nos conditions générales.', action: 'Valider mon estimation' },
-  { status: 'cguv_accepted', title: 'Acceptation des CGUV', description: 'Merci ! Veuillez maintenant choisir comment nous faire parvenir les clés.', action: 'Choisir la méthode de remise des clés' },
-  { status: 'keys_pending_reception', title: 'Réception des clés', description: 'Nous attendons de recevoir vos clés. Un membre de notre équipe confirmera la réception prochainement.' },
+  { status: 'cguv_accepted', title: 'Acceptation des CGUV', description: 'Merci ! Veuillez maintenant choisir comment nous faire parvenir les clés.' },
+  { status: 'keys_pending_reception', title: 'En attente réception clés', description: 'Nous attendons de recevoir vos clés. Un membre de notre équipe confirmera la réception prochainement.' },
   { status: 'keys_retrieved', title: 'Clés récupérées', description: 'Nos équipes ont bien reçu les clés de votre logement.' },
   { status: 'photoshoot_done', title: 'Shooting photo', description: 'Les photos professionnelles de votre bien ont été réalisées.' },
   { status: 'live', title: 'Mise en ligne terminée !', description: 'Félicitations, votre logement est maintenant en ligne et prêt à accueillir des voyageurs.' },
@@ -116,7 +116,7 @@ const OnboardingStatusPage: React.FC = () => {
           <CardHeader>
             <Rocket className="h-16 w-16 mx-auto text-green-500" />
             <CardTitle className="text-2xl mt-4">Félicitations, {profile.first_name} !</CardTitle>
-            <CardDescription>Votre logement est en ligne et prêt à générer des revenus.</CardDescription>
+            <CardDescription>Votre logement est en ligne et prêt à accueillir des voyageurs.</CardDescription>
           </CardHeader>
           <CardContent>
             <Link to="/">
@@ -176,45 +176,65 @@ const OnboardingStatusPage: React.FC = () => {
                     </li>
                   ))}
                 </ol>
+                
+                {profile.onboarding_status === 'cguv_accepted' && (
+                  <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <KeyRound className="h-6 w-6 text-blue-600" /> Remise des clés
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Nous avons besoin de <strong>2 jeux de clés complets</strong> pour assurer la gestion de votre logement.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-4 border rounded-lg flex flex-col">
+                        <h4 className="font-semibold text-lg mb-2">1. Déposer en agence</h4>
+                        <p className="text-sm text-muted-foreground flex-grow">
+                          Vous pouvez déposer vos clés directement à notre agence.
+                          <br />
+                          <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
+                        </p>
+                        <Button onClick={() => handleKeyChoice('deposit')} disabled={isSubmittingChoice} className="mt-4 w-full">
+                          {isSubmittingChoice ? <Loader2 className="animate-spin" /> : "Je choisis le dépôt"}
+                        </Button>
+                      </div>
+                      <div className="p-4 border rounded-lg flex flex-col">
+                        <h4 className="font-semibold text-lg mb-2">2. Envoyer par courrier</h4>
+                        <p className="text-sm text-muted-foreground flex-grow">
+                          Envoyez vos clés en courrier suivi à l'adresse ci-dessous.
+                          <br />
+                          <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
+                        </p>
+                        <Button onClick={() => handleKeyChoice('mail')} disabled={isSubmittingChoice} className="mt-4 w-full">
+                          {isSubmittingChoice ? <Loader2 className="animate-spin" /> : "Je choisis l'envoi"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {profile.onboarding_status === 'keys_retrieved' && (
+                  <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                      <KeyRound className="h-6 w-6 text-blue-600" /> Informations sur les clés
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-700 dark:text-gray-200">Adresse de dépôt/envoi des clés</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {profile.key_deposit_address || "Non spécifié. Veuillez contacter l'agence."}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-700 dark:text-gray-200">Jeux de clés nécessaires</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {profile.key_sets_needed ? `${profile.key_sets_needed} jeux complets` : "Non spécifié."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-            
-            {profile.onboarding_status === 'cguv_accepted' && (
-              <Card className="mt-8">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <KeyRound className="h-6 w-6 text-blue-600" /> Remise des clés
-                  </CardTitle>
-                  <CardDescription>
-                    Nous avons besoin de <strong>2 jeux de clés complets</strong> pour assurer la gestion de votre logement.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 border rounded-lg flex flex-col">
-                    <h4 className="font-semibold text-lg mb-2">1. Déposer en agence</h4>
-                    <p className="text-sm text-muted-foreground flex-grow">
-                      Vous pouvez déposer vos clés directement à notre agence.
-                      <br />
-                      <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
-                    </p>
-                    <Button onClick={() => handleKeyChoice('deposit')} disabled={isSubmittingChoice} className="mt-4 w-full">
-                      {isSubmittingChoice ? <Loader2 className="animate-spin" /> : "Je choisis le dépôt"}
-                    </Button>
-                  </div>
-                  <div className="p-4 border rounded-lg flex flex-col">
-                    <h4 className="font-semibold text-lg mb-2">2. Envoyer par courrier</h4>
-                    <p className="text-sm text-muted-foreground flex-grow">
-                      Envoyez vos clés en courrier suivi à l'adresse ci-dessous.
-                      <br />
-                      <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
-                    </p>
-                    <Button onClick={() => handleKeyChoice('mail')} disabled={isSubmittingChoice} className="mt-4 w-full">
-                      {isSubmittingChoice ? <Loader2 className="animate-spin" /> : "Je choisis l'envoi"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           <div>

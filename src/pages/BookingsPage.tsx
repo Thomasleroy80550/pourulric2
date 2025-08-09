@@ -69,34 +69,18 @@ const BookingsPage: React.FC = () => {
   const commonChannels = ['AIRBNB', 'BOOKING', 'ABRITEL', 'DIRECT', 'HELLOKEYS', 'UNKNOWN'];
 
   const applyFilters = (bookingsToFilter: Booking[]) => {
-    console.log("DEBUG BookingsPage: Applying filters. Initial bookings count:", bookingsToFilter.length);
-    console.log("DEBUG BookingsPage: Current filters - Room:", filterRoomId, "Status:", filterStatus, "Channel:", filterChannel, "Start Date:", filterStartDate, "End Date:", filterEndDate);
-
     let tempBookings = bookingsToFilter;
 
     if (filterRoomId !== 'all') {
-      const selectedRoom = userRooms.find(r => r.room_id === filterRoomId);
-      if (selectedRoom) {
-        console.log("DEBUG BookingsPage: Filtering by room. Selected room name:", selectedRoom.room_name, "ID:", filterRoomId);
-        tempBookings = tempBookings.filter(booking => {
-          const matches = booking.property_name === selectedRoom.room_name || booking.property_name === filterRoomId;
-          console.log(`DEBUG BookingsPage: Checking booking ${booking.id} (Prop: ${booking.property_name}) against room ${selectedRoom.room_name} (ID: ${filterRoomId}). Matches: ${matches}`);
-          return matches;
-        });
-      } else {
-        console.warn("DEBUG BookingsPage: Selected room for filter not found in userRooms.");
-        tempBookings = []; // If room not found, no bookings will match
-      }
+      tempBookings = tempBookings.filter(booking => booking.property_name === userRooms.find(r => r.room_id === filterRoomId)?.room_name || booking.property_name === filterRoomId);
     }
 
     if (filterStatus !== 'all') {
       tempBookings = tempBookings.filter(booking => booking.status.toLowerCase() === filterStatus.toLowerCase());
-      console.log("DEBUG BookingsPage: After status filter, count:", tempBookings.length);
     }
 
     if (filterChannel !== 'all') {
       tempBookings = tempBookings.filter(booking => (booking.cod_channel || 'UNKNOWN').toLowerCase() === filterChannel.toLowerCase());
-      console.log("DEBUG BookingsPage: After channel filter, count:", tempBookings.length);
     }
 
     if (filterStartDate) {
@@ -105,7 +89,6 @@ const BookingsPage: React.FC = () => {
         const checkIn = parseISO(booking.check_in_date);
         return isAfter(checkIn, subDays(start, 1));
       });
-      console.log("DEBUG BookingsPage: After start date filter, count:", tempBookings.length);
     }
 
     if (filterEndDate) {
@@ -114,10 +97,8 @@ const BookingsPage: React.FC = () => {
         const checkIn = parseISO(booking.check_in_date);
         return isBefore(checkIn, addDays(end, 1));
       });
-      console.log("DEBUG BookingsPage: After end date filter, count:", tempBookings.length);
     }
 
-    console.log("DEBUG BookingsPage: Final filtered bookings count:", tempBookings.length);
     setFilteredBookings(tempBookings);
   };
 
@@ -127,10 +108,9 @@ const BookingsPage: React.FC = () => {
     try {
       const fetchedUserRooms = await getUserRooms();
       setUserRooms(fetchedUserRooms);
-      console.log("DEBUG BookingsPage: Fetched user rooms:", fetchedUserRooms);
 
       const fetchedBookings = await fetchKrossbookingReservations(fetchedUserRooms);
-      console.log(`DEBUG BookingsPage: Fetched bookings from Krossbooking API (total: ${fetchedBookings.length}):`, fetchedBookings);
+      console.log(`Fetched bookings for BookingsPage (Rooms: ${fetchedUserRooms.map(r => r.room_id).join(', ')}):`, fetchedBookings);
 
       const currentYear = new Date().getFullYear();
       const yearStart = startOfYear(new Date(currentYear, 0, 1));
@@ -140,7 +120,6 @@ const BookingsPage: React.FC = () => {
         const checkInDate = parseISO(booking.check_in_date);
         return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
       });
-      console.log(`DEBUG BookingsPage: Bookings for current year (${currentYear}):`, bookingsForCurrentYear.length);
 
       const sortedBookings = bookingsForCurrentYear.sort((a, b) => {
         const dateA = parseISO(a.check_in_date).getTime();
@@ -149,7 +128,7 @@ const BookingsPage: React.FC = () => {
       });
 
       setAllBookings(sortedBookings);
-      applyFilters(sortedBookings); // Apply filters immediately after loading all bookings
+      applyFilters(sortedBookings);
     } catch (err: any) {
       setError(`Erreur lors du chargement des réservations : ${err.message}`);
       console.error("Error in loadBookings for BookingsPage:", err);
@@ -168,7 +147,7 @@ const BookingsPage: React.FC = () => {
 
   useEffect(() => {
     applyFilters(allBookings);
-  }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings, userRooms]); // Added userRooms to dependency array
+  }, [filterRoomId, filterStatus, filterChannel, filterStartDate, filterEndDate, allBookings]);
 
   const getStatusVariant = (status: string) => {
     switch (status.toLowerCase()) {

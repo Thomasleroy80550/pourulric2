@@ -91,31 +91,61 @@ serve(async (req) => {
 
     const authToken = await getAuthToken();
 
+    if (action === 'get_reservations_for_user_rooms') {
+        if (!requestBody.rooms || !Array.isArray(requestBody.rooms)) {
+          throw new Error("Missing or invalid 'rooms' array for get_reservations_for_user_rooms.");
+        }
+        const userRooms = requestBody.rooms as { room_id: string }[];
+        const userRoomIds = new Set(userRooms.map(r => Number(r.room_id)));
+
+        // OPTIMIZATION: Single API call for the entire property
+        const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/reservations/get-list`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+                with_rooms: true,
+                id_property: 1, // Assuming all users are under a single property
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Failed to fetch reservations for property: ${errorText}`);
+            return new Response(JSON.stringify({ data: [] }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            });
+        }
+
+        const data = await response.json();
+        const allReservations = data.data || [];
+
+        // Filter reservations on the server to only include those for the user's rooms
+        const userReservations = allReservations.filter((res: any) => userRoomIds.has(res.id_room));
+
+        return new Response(JSON.stringify({ data: userReservations }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+    }
+
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST';
     let krossbookingBody: string | undefined;
     let returnFullData = false;
 
     switch (action) {
-      case 'get_all_reservations':
-        krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
-        krossbookingBody = JSON.stringify({
-          id_property: 1, // Ajout de id_property
-          with_rooms: true,
-          cod_reservation_status_all: true,
-        });
-        break;
-
       case 'get_reservations_for_room':
         if (!requestBody.id_room) {
           throw new Error("Missing id_room for get_reservations_for_room.");
         }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/reservations/get-list`;
         krossbookingBody = JSON.stringify({
-          id_property: 1, // Ajout de id_property
           with_rooms: true,
           id_room: Number(requestBody.id_room),
-          cod_reservation_status_all: true,
         });
         break;
 
@@ -128,7 +158,7 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify({
           date_from,
           date_to,
-          id_property: requestBody.id_property ? Number(requestBody.id_property) : 1, // Utilise l'id_property fourni ou 1 par défaut
+          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined,
           id_room: requestBody.id_room ? Number(requestBody.id_room) : undefined,
         });
         break;
@@ -145,7 +175,7 @@ serve(async (req) => {
           email: requestBody.email || '',
           phone: requestBody.phone || '',
           cod_reservation_status,
-          id_property: 1, // Ajout de id_property
+          id_property: 1,
           rooms: [{ id_room: Number(id_room), id_room_type: Number(id_room_type), guests: 1 }]
         };
         if (id_reservation) {
@@ -184,7 +214,7 @@ serve(async (req) => {
       case 'get_room_types':
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/rooms/get-rooms`;
         krossbookingMethod = 'POST';
-        krossbookingBody = JSON.stringify({ id_property: 1 }); // Ajout de id_property
+        krossbookingBody = JSON.stringify({});
         break;
 
       default:

@@ -1,35 +1,26 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRoom } from "./user-room-api";
-import { createNotification } from "./notifications-api";
-import { asString } from "@/lib/utils";
+import { createNotification, sendEmail } from "./notifications-api";
+import { getProfile } from "./profile-api";
+import { format, parseISO, isValid, isAfter, subDays, startOfDay } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-// --- Interfaces ---
-
-// This is the clean, normalized reservation object used throughout the app.
-export interface NormalizedReservation {
+interface KrossbookingReservation {
   id: string;
-  code: string;
   guest_name: string;
   property_name: string;
+  krossbooking_room_id: string;
   check_in_date: string;
   check_out_date: string;
   status: string;
   amount: string;
   cod_channel?: string;
-  channel_ref?: string;
+  ota_id?: string;
+  channel_identifier?: string;
   email?: string;
   phone?: string;
   tourist_tax_amount?: number;
-  rooms: {
-    id_room: string | null;
-    id_room_type: string | null;
-  }[];
 }
-
-// This is a legacy interface, it will be replaced by NormalizedReservation.
-// For now, we keep it to avoid breaking other components immediately.
-export type KrossbookingReservation = NormalizedReservation & { krossbooking_room_id: string };
-
 
 export interface KrossbookingHousekeepingTask {
   id_task: number;
@@ -51,7 +42,7 @@ export interface SaveReservationPayload {
   phone: string;
   cod_reservation_status: 'PROP0' | 'PROPRI' | 'CANC';
   id_room: string;
-  id_room_type?: string;
+  id_room_type?: string; // NEW: Krossbooking room type ID
 }
 
 export interface KrossbookingMessage {
@@ -109,41 +100,75 @@ export interface KrossbookingRoomType {
   }[];
 }
 
-// --- Constants & Cache ---
-
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
-const RESERVATION_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
-let reservationsCache: {
-  data: NormalizedReservation[];
+// Cache variables and durations
+let roomTypesCache: {
+  data: KrossbookingRoomType[];
   timestamp: number;
 } | null = null;
+const ROOM_TYPE_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-// --- Core Functions ---
+let reservationsCache: {
+  data: KrossbookingReservation[];
+  timestamp: number;
+} | null = null;
+const RESERVATION_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
+let housekeepingTasksCache: {
+  [key: string]: { // Key will be a combination of dateFrom, dateTo, idProperty
+    data: KrossbookingHousekeepingTask[];
+    timestamp: number;
+  };
+} = {};
+const HOUSEKEEPING_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 async function callKrossbookingProxy(action: string, payload?: any): Promise<any> {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !session) {
-    throw new Error("User not authenticated. Please log in.");
+  try {
+    console.log(`Calling Krossbooking proxy with action: ${action}`);
+
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error("Error getting Supabase session:", sessionError);
+      throw new Error("Could not retrieve Supabase session for authorization.");
+    }
+
+    if (!session) {
+      console.warn("No active Supabase session found. Cannot authorize Edge Function call.");
+      throw new Error("User not authenticated. Please log in.");
+    }
+
+    const response = await fetch(KROSSBOOKING_PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ action, ...payload }),
+    });
+
+    console.log(`Response status from Edge Function: ${response.status}`);
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        errorData = responseText;
+      }
+      console.error("Error from Edge Function:", errorData);
+      throw new Error(`Failed to perform Krossbooking action: Edge Function returned a non-2xx status code. Details: ${JSON.stringify(errorData)}`);
+    }
+
+    const krossbookingResponse = JSON.parse(responseText);
+
+    return krossbookingResponse.data;
+  } catch (error: any) {
+    console.error("Error calling Krossbooking proxy:", error.message);
+    throw error;
   }
-
-  const response = await fetch(KROSSBOOKING_PROXY_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ action, ...payload }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Error from Edge Function:", errorText);
-    throw new Error(`Edge Function call failed: ${response.statusText}`);
-  }
-
-  const krossbookingResponse = await response.json();
-  return krossbookingResponse.data;
 }
 
 export function clearReservationsCache() {
@@ -151,135 +176,83 @@ export function clearReservationsCache() {
   console.log("Krossbooking reservations cache cleared.");
 }
 
+export function clearHousekeepingTasksCache() {
+  housekeepingTasksCache = {}; // Clear all cached housekeeping tasks
+  console.log("Krossbooking housekeeping tasks cache cleared.");
+}
+
 export async function fetchKrossbookingReservations(
   userRooms: UserRoom[],
   forceRefresh: boolean = false
 ): Promise<KrossbookingReservation[]> {
   const now = Date.now();
+  const oldReservationsMap = new Map((reservationsCache?.data || []).map(r => [r.id, r]));
 
   if (!forceRefresh && reservationsCache && (now - reservationsCache.timestamp < RESERVATION_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking reservations.");
-    // The cache is already filtered, so we can return it directly.
-    // The filtering logic is now part of the fetch function itself.
-    return reservationsCache.data.map(r => ({ ...r, krossbooking_room_id: r.rooms[0]?.id_room ?? '' }));
+    return reservationsCache.data;
   }
   
-  console.log("Fetching ALL Krossbooking reservations from API and filtering.");
-  if (userRooms.length === 0) {
-    console.log("No configured rooms to fetch reservations for.");
-    return [];
-  }
-
+  console.log("Fetching fresh Krossbooking reservations from API for each user room.");
   try {
-    const apiReservations = await callKrossbookingProxy('get_all_reservations');
-    console.debug("DEBUG: First raw reservation from API:", apiReservations?.[0]);
+    if (userRooms.length === 0) {
+      console.log("No configured rooms to fetch reservations for.");
+      return [];
+    }
 
-    const roomNameMap = new Map(userRooms.map(room => [room.room_id, room.room_name]));
+    const profile = await getProfile();
+    const userEmail = (await supabase.auth.getUser()).data.user?.email;
 
-    // 1. Normalize the data defensively
-    const normalizedReservations = (apiReservations ?? []).map((r: any): NormalizedReservation => ({
-      id: asString(r?.id_reservation)!,
-      code: asString(r?.cod_reservation) ?? `Res #${asString(r?.id_reservation)}`,
-      guest_name: asString(r?.label) ?? 'N/A',
-      property_name: roomNameMap.get(asString(r?.rooms?.[0]?.id_room) ?? '') ?? 'Unknown Room',
-      check_in_date: asString(r?.arrival)!,
-      check_out_date: asString(r?.departure)!,
-      status: asString(r?.cod_reservation_status) ?? 'UNKNOWN',
-      amount: r?.charge_total_amount ? `${r.charge_total_amount}€` : '0€',
-      cod_channel: asString(r?.cod_channel),
-      channel_ref: asString(r?.ota_id),
-      email: asString(r?.email),
-      phone: asString(r?.phone),
-      tourist_tax_amount: r?.city_tax_amount ? parseFloat(r.city_tax_amount) : 0,
-      rooms: Array.isArray(r?.rooms)
-        ? r.rooms.map((rm: any) => ({
-            id_room: asString(rm?.id_room) ?? null,
-            id_room_type: asString(rm?.id_room_type) ?? null,
-          }))
-        : [],
-    })).filter(r => r.id && r.check_in_date && r.check_out_date); // Ensure basic data integrity
+    const allReservationsPromises = userRooms.map(async (room) => {
+      const data = await callKrossbookingProxy('get_reservations_for_room', { id_room: room.room_id });
+      if (!Array.isArray(data)) {
+        console.warn(`Unexpected Krossbooking API response for room ${room.room_id}:`, data);
+        return [];
+      }
+      return data.map((res: any): KrossbookingReservation => ({
+        id: res.id_reservation.toString(),
+        guest_name: res.label || 'N/A',
+        property_name: room.room_name, // Use the name from the loop context
+        krossbooking_room_id: room.room_id,
+        check_in_date: res.arrival || '',
+        check_out_date: res.departure || '',
+        status: res.cod_reservation_status,
+        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
+        cod_channel: res.cod_channel,
+        ota_id: res.ota_id,
+        channel_identifier: res.cod_channel || 'UNKNOWN',
+        email: res.email || '',
+        phone: res.phone || '',
+        tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+      }));
+    });
 
-    // 2. Filter by user's rooms
-    const userRoomIds = new Set(userRooms.map(r => r.room_id));
-    console.debug("DEBUG: User's configured room IDs (Set):", userRoomIds);
-
-    const filteredReservations = normalizedReservations.filter(res =>
-      res.rooms.some(rm => {
-        const roomId = rm.id_room;
-        // We only check against room_id for now as per Supabase schema.
-        // If room_id_2 (for room_type) becomes a primary identifier, we can add it here.
-        return roomId !== null && userRoomIds.has(roomId);
-      })
-    );
+    const reservationsByRoom = await Promise.all(allReservationsPromises);
+    const flattenedReservations = reservationsByRoom.flat();
     
-    console.debug(`DEBUG: Found ${filteredReservations.length} reservations for the user.`);
+    const uniqueReservations = Array.from(new Map(flattenedReservations.map(res => [res.id, res])).values());
 
-    // Cache the filtered reservations
+    // --- Notification Logic ---
+    // This logic is now handled by the server-side `check-new-reservations` Edge Function.
+    // The client-side logic is removed to avoid duplicate notifications and reliance on user activity.
+    // --- End Notification Logic ---
+    
     reservationsCache = {
-      data: filteredReservations,
+      data: uniqueReservations,
       timestamp: now,
     };
-    console.log("User-specific Krossbooking reservations cached successfully.");
+    console.log("Krossbooking reservations cached successfully.");
 
-    // Adapt to legacy KrossbookingReservation type for now
-    return filteredReservations.map(r => ({ ...r, krossbooking_room_id: r.rooms[0]?.id_room ?? '' }));
+    return uniqueReservations;
 
   } catch (error) {
-    console.error(`Error in fetchKrossbookingReservations:`, error);
-    return []; // Return empty array on error to prevent UI crashes
-  }
-}
-
-
-// --- Other Functions (unchanged for now, but may need updates) ---
-
-// Note: These functions might need to be updated to use the new NormalizedReservation interface
-// and the asString helper if they handle reservation data.
-
-export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {
-  const response = await callKrossbookingProxy('save_reservation', payload);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user && !payload.id_reservation) {
-    await createNotification(
-      user.id,
-      `Nouvelle réservation propriétaire créée : ${payload.label}`,
-      '/calendar'
-    );
-  }
-  clearReservationsCache();
-  return response;
-}
-
-export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> {
-  try {
-    const flatRoomsData = await callKrossbookingProxy('get_room_types');
-    if (!Array.isArray(flatRoomsData)) return [];
-
-    const roomTypesMap = new Map<number, KrossbookingRoomType>();
-    for (const room of flatRoomsData) {
-      const typeId = room.id_room_type;
-      if (!typeId) continue;
-      if (!roomTypesMap.has(typeId)) {
-        roomTypesMap.set(typeId, {
-          id_room_type: typeId,
-          label: room.room_type_label || `Type ${typeId}`,
-          rooms: [],
-        });
-      }
-      roomTypesMap.get(typeId)?.rooms.push({
-        id_room: room.id_room,
-        label: room.label,
-      });
+    console.error(`Error fetching all reservations:`, error);
+    if (reservationsCache) {
+      console.warn("Returning stale reservations cache due to API error.");
+      return reservationsCache.data;
     }
-    return Array.from(roomTypesMap.values());
-  } catch (error) {
-    console.error('Error fetching Krossbooking room types:', error);
     return [];
   }
-}
-
-export async function saveChannelManagerSettings(payload: ChannelManagerPayload): Promise<any> {
-  return callKrossbookingProxy('save_channel_manager', payload);
 }
 
 export async function fetchKrossbookingHousekeepingTasks(
@@ -291,15 +264,6 @@ export async function fetchKrossbookingHousekeepingTasks(
 ): Promise<KrossbookingHousekeepingTask[]> {
   const now = Date.now();
   const cacheKey = `${dateFrom}-${dateTo}-${idProperty || 'all'}`; // Create a unique cache key
-
-  // Cache variables and durations (moved from top to here for clarity in this specific fix)
-  let housekeepingTasksCache: {
-    [key: string]: { // Key will be a combination of dateFrom, dateTo, idProperty
-      data: KrossbookingHousekeepingTask[];
-      timestamp: number;
-    };
-  } = {};
-  const HOUSEKEEPING_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   if (!forceRefresh && housekeepingTasksCache[cacheKey] && (now - housekeepingTasksCache[cacheKey].timestamp < HOUSEKEEPING_CACHE_DURATION)) {
     console.log(`Returning cached Krossbooking housekeeping tasks for key: ${cacheKey}`);
@@ -353,6 +317,25 @@ export async function fetchKrossbookingHousekeepingTasks(
   }
 }
 
+export async function saveKrossbookingReservation(payload: SaveReservationPayload): Promise<any> {
+  const response = await callKrossbookingProxy('save_reservation', payload);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user && !payload.id_reservation) {
+    await createNotification(
+      user.id,
+      `Nouvelle réservation propriétaire créée : ${payload.label}`,
+      '/calendar'
+    );
+  }
+  
+  // Clear cache after a modification
+  clearReservationsCache();
+  clearHousekeepingTasksCache(); // Also clear housekeeping cache as reservations affect tasks
+
+  return response;
+}
+
 export async function fetchKrossbookingMessageThreads(reservationId: string): Promise<KrossbookingMessageThread[]> {
   try {
     const threadsMetadata = await callKrossbookingProxy('get_messages', { id_reservation: reservationId });
@@ -395,6 +378,70 @@ export async function fetchKrossbookingMessageThreads(reservationId: string): Pr
 
   } catch (error) {
     console.error(`Error fetching message threads for reservation ${reservationId}:`, error);
+    throw error;
+  }
+}
+
+export async function saveChannelManagerSettings(payload: ChannelManagerPayload): Promise<any> {
+  return callKrossbookingProxy('save_channel_manager', payload);
+}
+
+export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> { // Add forceRefresh
+  const now = Date.now();
+  if (!forceRefresh && roomTypesCache && (now - roomTypesCache.timestamp < ROOM_TYPE_CACHE_DURATION)) {
+    console.log("Returning cached Krossbooking room types.");
+    return roomTypesCache.data;
+  }
+
+  try {
+    console.log("Fetching fresh Krossbooking room types from API.");
+    const flatRoomsData = await callKrossbookingProxy('get_room_types');
+
+    if (!Array.isArray(flatRoomsData)) {
+      console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
+      return [];
+    }
+
+    const roomTypesMap = new Map<number, KrossbookingRoomType>();
+
+    for (const room of flatRoomsData) {
+      const typeId = room.id_room_type;
+      const typeLabel = room.room_type_label || `Type ${typeId}`;
+
+      if (!typeId) continue;
+
+      if (!roomTypesMap.has(typeId)) {
+        roomTypesMap.set(typeId, {
+          id_room_type: typeId,
+          label: typeLabel,
+          rooms: [],
+        });
+      }
+
+      const roomType = roomTypesMap.get(typeId);
+      if (roomType) {
+        roomType.rooms.push({
+          id_room: room.id_room,
+          label: room.label,
+        });
+      }
+    }
+
+    const processedRoomTypes = Array.from(roomTypesMap.values());
+    
+    roomTypesCache = {
+      data: processedRoomTypes,
+      timestamp: now,
+    };
+    console.log("Krossbooking room types cached successfully.");
+
+    return processedRoomTypes;
+  } catch (error) {
+    console.error('Error fetching and processing Krossbooking room types:', error);
+    if (roomTypesCache) {
+      console.warn("Returning stale cache due to API error.");
+      return roomTypesCache.data;
+    }
     throw error;
   }
 }

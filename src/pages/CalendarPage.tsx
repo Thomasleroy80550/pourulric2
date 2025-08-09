@@ -9,7 +9,7 @@ import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { fetchKrossbookingReservations, KrossbookingReservation, clearReservationsCache } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
 import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'react-router-dom';
@@ -67,24 +67,70 @@ const CalendarPage: React.FC = () => {
       try {
         // 1. Fetch the user's configured rooms from Supabase
         const configuredUserRooms = await getUserRooms();
-        console.log("CalendarPage DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
+        console.log("DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
 
         if (configuredUserRooms.length === 0) {
-          console.log("CalendarPage DEBUG: No configured rooms found for the user.");
           setUserRooms([]);
           setReservations([]);
           setLoadingData(false);
           return;
         }
-        
-        setUserRooms(configuredUserRooms);
 
-        // 2. Fetch reservations for these rooms
-        const fetchedReservations = await fetchKrossbookingReservations(configuredUserRooms, refreshTrigger > 0);
-        console.log("CalendarPage DEBUG: fetchedReservations (from Krossbooking API):", fetchedReservations);
+        // 2. Fetch all room definitions from Krossbooking to validate configured rooms
+        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(refreshTrigger > 0);
+        console.log("DEBUG: krossbookingRoomTypes (from Krossbooking):", krossbookingRoomTypes);
 
+        if (krossbookingRoomTypes.length === 0) {
+          console.warn("Krossbooking returned no room types. Calendar will be empty.");
+          setUserRooms([]);
+          setReservations([]);
+          setLoadingData(false);
+          return;
+        }
 
-        // 3. Fetch price overrides and convert them to reservation-like blocks
+        const flattenedKrossbookingRooms: { id_room: number; label: string; }[] = [];
+        krossbookingRoomTypes.forEach(type => {
+          flattenedKrossbookingRooms.push(...type.rooms);
+        });
+        console.log("DEBUG: flattenedKrossbookingRooms (all Krossbooking rooms):", flattenedKrossbookingRooms);
+
+        // 3. Process configured rooms to build a flat list of actual rooms to display and fetch reservations for.
+        const validUserRooms: UserRoom[] = [];
+
+        configuredUserRooms.forEach(configuredRoom => {
+          const matchingActualRoom = flattenedKrossbookingRooms.find(
+            actualRoom => actualRoom.id_room.toString() === configuredRoom.room_id
+          );
+
+          if (matchingActualRoom) {
+            validUserRooms.push({
+              id: configuredRoom.id,
+              user_id: configuredRoom.user_id,
+              room_id: matchingActualRoom.id_room.toString(),
+              room_name: configuredRoom.room_name,
+              room_id_2: configuredRoom.room_id_2, // Ensure room_id_2 is passed along
+            });
+          } else {
+            console.warn(`Configured room with ID "${configuredRoom.room_id}" and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
+            console.warn(`DEBUG: Failed to match configured room:`, configuredRoom);
+            console.warn(`DEBUG: Available Krossbooking room IDs:`, flattenedKrossbookingRooms.map(r => r.id_room));
+          }
+        });
+        console.log("DEBUG: validUserRooms (after Krossbooking validation):", validUserRooms);
+
+        // 4. Finalize list of unique rooms and fetch reservations for them.
+        const uniqueValidUserRooms = Array.from(new Map(validUserRooms.map(room => [room.room_id, room])).values());
+        console.log("DEBUG: uniqueValidUserRooms (after uniqueness check by Krossbooking room_id):", uniqueValidUserRooms);
+        setUserRooms(uniqueValidUserRooms);
+
+        let fetchedReservations: KrossbookingReservation[] = [];
+        if (uniqueValidUserRooms.length > 0) {
+          fetchedReservations = await fetchKrossbookingReservations(uniqueValidUserRooms, refreshTrigger > 0);
+        } else {
+          console.warn("No matching rooms found in Krossbooking for the current configuration.");
+        }
+
+        // 5. Fetch price overrides and convert them to reservation-like blocks
         const priceOverrides = await getOverrides();
         const closedBlocks = priceOverrides
           .filter(override => override.closed)
@@ -105,11 +151,9 @@ const CalendarPage: React.FC = () => {
             tourist_tax_amount: 0,
           }));
         
-        console.log("CalendarPage DEBUG: Owner blocks created from overrides:", closedBlocks);
+        console.log("DEBUG: Owner blocks created from overrides:", closedBlocks);
 
-        const allReservationsAndBlocks = [...fetchedReservations, ...closedBlocks];
-        console.log("CalendarPage DEBUG: All reservations and blocks to be displayed:", allReservationsAndBlocks);
-        setReservations(allReservationsAndBlocks);
+        setReservations([...fetchedReservations, ...closedBlocks]);
 
       } catch (error) {
         console.error("Error fetching data for CalendarPage:", error);

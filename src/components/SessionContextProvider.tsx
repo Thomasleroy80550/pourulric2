@@ -34,12 +34,24 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setSession(session);
       if (session) {
         try {
-          const userProfile = await getProfile();
-          setProfile(userProfile);
-        } catch (error) {
+          // Add a timeout to prevent getting stuck on loading
+          const profilePromise = getProfile();
+          const timeoutPromise = new Promise<UserProfile | null>((_, reject) =>
+            setTimeout(() => reject(new Error("Le chargement du profil a pris trop de temps.")), 15000) // 15s timeout
+          );
+
+          const userProfile = await Promise.race([profilePromise, timeoutPromise]);
+
+          if (userProfile) {
+            setProfile(userProfile);
+          } else {
+            // This can happen if getProfile returns null but doesn't throw
+            throw new Error("Profil utilisateur introuvable.");
+          }
+        } catch (error: any) {
           console.error("Error fetching user profile:", error);
           setProfile(null);
-          toast.error("Erreur lors du chargement de votre profil.");
+          toast.error(error.message || "Erreur lors du chargement de votre profil.");
         }
       } else {
         setProfile(null);

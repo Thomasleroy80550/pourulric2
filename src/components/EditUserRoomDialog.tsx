@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { UserRoom, adminAddUserRoom, adminUpdateUserRoom } from '@/lib/user-room-api'; // Changed updateUserRoom to adminUpdateUserRoom
+import { UserRoom, adminAddUserRoom, updateUserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 
 const roomSchema = z.object({
@@ -61,7 +61,7 @@ const EditUserRoomDialog: React.FC<EditUserRoomDialogProps> = ({
       let savedRoom: UserRoom;
       if (initialRoom) {
         // Update existing room
-        savedRoom = await adminUpdateUserRoom(initialRoom.id, { // Changed updateUserRoom to adminUpdateUserRoom
+        savedRoom = await updateUserRoom(initialRoom.id, {
           room_id: values.room_id,
           room_name: values.room_name,
           room_id_2: values.room_id_2 || null,

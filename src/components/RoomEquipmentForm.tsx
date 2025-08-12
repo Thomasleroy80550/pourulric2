@@ -1,123 +1,157 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUserRoomsByUserId, updateRoomAppliances, UserRoom } from '@/lib/user-room-api';
-import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { UserRoom, updateUserRoom } from '@/lib/user-room-api';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from './ui/switch';
+
+const equipmentSchema = z.object({
+  appliances_list: z.string().optional(),
+  bedding_description: z.string().optional(),
+  has_baby_cot: z.boolean().optional(),
+  has_high_chair: z.boolean().optional(),
+  outdoor_equipment: z.string().optional(),
+  specific_appliances: z.string().optional(),
+  has_cleaning_equipment: z.boolean().optional(),
+});
 
 interface RoomEquipmentFormProps {
-  userId: string;
-  onComplete: () => void; // Callback to notify parent when complete
+  room: UserRoom;
 }
 
-const RoomEquipmentForm: React.FC<RoomEquipmentFormProps> = ({ userId, onComplete }) => {
+export function RoomEquipmentForm({ room }: RoomEquipmentFormProps) {
   const queryClient = useQueryClient();
-  const { data: rooms, isLoading: isLoadingRooms, error: roomsError } = useQuery<UserRoom[]>({
-    queryKey: ['userRooms', userId],
-    queryFn: () => getUserRoomsByUserId(userId),
+  const form = useForm<z.infer<typeof equipmentSchema>>({
+    resolver: zodResolver(equipmentSchema),
+    defaultValues: {
+      appliances_list: room.appliances_list || '',
+      bedding_description: room.bedding_description || '',
+      has_baby_cot: room.has_baby_cot || false,
+      has_high_chair: room.has_high_chair || false,
+      outdoor_equipment: room.outdoor_equipment || '',
+      specific_appliances: room.specific_appliances || '',
+      has_cleaning_equipment: room.has_cleaning_equipment || false,
+    },
   });
 
-  const [selectedRoomId, setSelectedRoomId] = useState<string | undefined>(undefined);
-  const [appliancesList, setAppliancesList] = useState<string>('');
-
-  useEffect(() => {
-    if (rooms && rooms.length > 0 && !selectedRoomId) {
-      setSelectedRoomId(rooms[0].id);
-      setAppliancesList(rooms[0].appliances_list || '');
-    }
-  }, [rooms, selectedRoomId]);
-
-  const updateAppliancesMutation = useMutation({
-    mutationFn: ({ roomId, list }: { roomId: string; list: string }) => updateRoomAppliances(roomId, list),
+  const mutation = useMutation({
+    mutationFn: (values: z.infer<typeof equipmentSchema>) => updateUserRoom(room.id, values),
     onSuccess: () => {
-      toast.success("Équipements du logement mis à jour avec succès !");
-      queryClient.invalidateQueries({ queryKey: ['userRooms', userId] });
-      onComplete(); // Trigger onboarding status update in parent
+      toast.success("Équipements mis à jour.");
+      queryClient.invalidateQueries({ queryKey: ['userRooms'] });
     },
-    onError: (error: any) => {
-      toast.error(`Erreur lors de la mise à jour des équipements : ${error.message}`);
+    onError: (error) => {
+      toast.error(`Erreur : ${error.message}`);
     },
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedRoomId) {
-      updateAppliancesMutation.mutate({ roomId: selectedRoomId, list: appliancesList });
-    } else {
-      toast.error("Veuillez sélectionner un logement.");
-    }
-  };
-
-  const handleRoomSelect = (roomId: string) => {
-    setSelectedRoomId(roomId);
-    const room = rooms?.find(r => r.id === roomId);
-    setAppliancesList(room?.appliances_list || '');
-  };
-
-  if (isLoadingRooms) {
-    return <div className="space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-32 w-full" /></div>;
-  }
-
-  if (roomsError) {
-    return <p className="text-red-500">Erreur de chargement des logements: {roomsError.message}</p>;
-  }
-
-  if (!rooms || rooms.length === 0) {
-    return (
-      <Card>
-        <CardHeader><CardTitle>Ajout des paramètres de votre logement</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Aucun logement n'est encore assigné à votre compte. Veuillez contacter l'administrateur.</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Ajout des paramètres de votre logement</CardTitle>
-        <CardDescription>Veuillez renseigner les équipements et spécificités de votre logement pour finaliser sa mise en ligne.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {rooms.length > 1 && (
-            <div>
-              <Label htmlFor="room-select">Sélectionner un logement</Label>
-              <Select onValueChange={handleRoomSelect} value={selectedRoomId}>
-                <SelectTrigger id="room-select">
-                  <SelectValue placeholder="Sélectionner un logement" />
-                </SelectTrigger>
-                <SelectContent>
-                  {rooms.map(room => (
-                    <SelectItem key={room.id} value={room.id}>{room.room_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="bedding_description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nombre et type de couchages</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Ex: 1 lit double (160x200), 1 canapé-lit (140x190)..." {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-          <div>
-            <Label htmlFor="appliances-list">Liste des équipements (séparés par des virgules ou sur des lignes différentes)</Label>
-            <Textarea
-              id="appliances-list"
-              value={appliancesList}
-              onChange={(e) => setAppliancesList(e.target.value)}
-              placeholder="Ex: Lave-linge, Sèche-linge, Four, Micro-ondes, Cafetière Nespresso, Bouilloire, Grille-pain..."
-              rows={6}
+        />
+        <FormField
+          control={form.control}
+          name="appliances_list"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Équipements électroménagers</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Four, cafetière, lave-vaisselle, micro-ondes..." {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="specific_appliances"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Appareils spécifiques</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Sèche-cheveux, aspirateur, fer à repasser..." {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="outdoor_equipment"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Équipement extérieur</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Salon de jardin, barbecue, chaises longues..." {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+                control={form.control}
+                name="has_baby_cot"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                        <FormLabel>Lit bébé</FormLabel>
+                    </div>
+                    <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    </FormItem>
+                )}
             />
-          </div>
-          <Button type="submit" disabled={updateAppliancesMutation.isPending}>
-            {updateAppliancesMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer et continuer"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <FormField
+                control={form.control}
+                name="has_high_chair"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                        <FormLabel>Chaise haute</FormLabel>
+                    </div>
+                    <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="has_cleaning_equipment"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                        <FormLabel>Matériel ménage</FormLabel>
+                    </div>
+                    <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    </FormItem>
+                )}
+            />
+        </div>
+        <Button type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? 'Sauvegarde...' : 'Sauvegarder'}
+        </Button>
+      </form>
+    </Form>
   );
-};
-
-export default RoomEquipmentForm;
+}

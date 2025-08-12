@@ -28,48 +28,31 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const location = useLocation();
 
   useEffect(() => {
-    // 1. Fetch the initial session and profile to unblock the UI
-    const fetchInitialSession = async () => {
-      try {
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
+    setLoading(true);
 
-        setSession(initialSession);
+    // onAuthStateChange is the single source of truth for the user's session.
+    // It fires upon initial load, sign in, sign out, token refresh, etc.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
 
-        if (initialSession?.user) {
-          const userProfile = await getProfile(initialSession.user.id);
-          setProfile(userProfile);
-        } else {
-          setProfile(null);
-        }
-      } catch (error: any) {
-        console.error("Error during initial session fetch:", error.message);
-        toast.error("Erreur de connexion. Impossible de charger votre session.");
-        setSession(null);
-        setProfile(null);
-      } finally {
-        // This is guaranteed to run and stop the loading skeleton
-        setLoading(false);
-      }
-    };
-
-    fetchInitialSession();
-
-    // 2. Listen for subsequent auth changes (login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      setSession(currentSession);
-      
-      if (event === 'SIGNED_IN' && currentSession?.user) {
+      if (session?.user) {
         try {
-          const userProfile = await getProfile(currentSession.user.id);
+          // A session exists. Fetch the corresponding profile.
+          const userProfile = await getProfile(session.user.id);
           setProfile(userProfile);
-        } catch (error: any) {
-          setProfile(null);
-          toast.error(`Impossible de charger le profil : ${error.message}`);
+        } catch (error) {
+          console.error("Error fetching profile on auth state change:", error);
+          setProfile(null); // Clear profile on error to avoid stale data.
+          toast.error("Impossible de rafraîchir les informations de l'utilisateur.");
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else {
+        // No session, so no profile.
         setProfile(null);
       }
+      
+      // The listener is guaranteed to fire at least once on initial load.
+      // After that, we can safely stop the loading indicator.
+      setLoading(false);
     });
 
     return () => {

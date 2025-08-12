@@ -27,36 +27,48 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Effect for handling auth state changes and fetching profile
   useEffect(() => {
-    setLoading(true);
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      if (session && session.user) {
-        try {
-          const userProfile = await getProfile(session.user.id);
-          if (userProfile) {
-            setProfile(userProfile);
-          } else {
-            // Profile doesn't exist. If we had one before, a sync issue might have occurred.
-            // For now, we'll clear it, but we won't throw a big error.
-            setProfile(null);
-            console.warn(`Profile not found for user ${session.user.id}. This may be expected.`);
-          }
-        } catch (error: any) {
-          // THIS IS THE KEY CHANGE:
-          // On a network error, we will NOT wipe the existing profile.
-          // This prevents the user from being "logged out" on a temporary network blip.
-          console.error("Failed to refresh user profile, but keeping existing data:", error.message);
-          toast.error("La connexion a été interrompue. Les données affichées peuvent ne pas être à jour.");
-        } finally {
-          // No matter what, we stop loading after the first attempt.
-          setLoading(false);
+    // 1. Fetch the initial session and profile to unblock the UI
+    const fetchInitialSession = async () => {
+      try {
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        setSession(initialSession);
+
+        if (initialSession?.user) {
+          const userProfile = await getProfile(initialSession.user.id);
+          setProfile(userProfile);
+        } else {
+          setProfile(null);
         }
-      } else {
-        // This is a real sign-out event. Clear everything.
+      } catch (error: any) {
+        console.error("Error during initial session fetch:", error.message);
+        toast.error("Erreur de connexion. Impossible de charger votre session.");
+        setSession(null);
         setProfile(null);
+      } finally {
+        // This is guaranteed to run and stop the loading skeleton
         setLoading(false);
+      }
+    };
+
+    fetchInitialSession();
+
+    // 2. Listen for subsequent auth changes (login, logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setSession(currentSession);
+      
+      if (event === 'SIGNED_IN' && currentSession?.user) {
+        try {
+          const userProfile = await getProfile(currentSession.user.id);
+          setProfile(userProfile);
+        } catch (error: any) {
+          setProfile(null);
+          toast.error(`Impossible de charger le profil : ${error.message}`);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
       }
     });
 
@@ -87,13 +99,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    // If session exists but profile is null (due to fetch error or it not existing),
-    // we don't redirect to login. This prevents the "session loss" feeling.
-    // The app might be in a partially broken state, but the user is still authenticated.
     if (!profile) {
       console.error("User is authenticated, but profile could not be loaded or does not exist.");
-      // A toast error is already shown when getProfile fails.
-      // We stop here to avoid incorrect redirection logic based on a null profile.
       return;
     }
 

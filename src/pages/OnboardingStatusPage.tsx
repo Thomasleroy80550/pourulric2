@@ -5,10 +5,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CheckCircle, Circle, Loader2, Rocket, KeyRound } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Rocket, KeyRound, Home } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CGUVModal from '@/components/CGUVModal';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
+import RoomEquipmentForm from '@/components/RoomEquipmentForm'; // Import the new component
 
 const statusSteps: { status: OnboardingStatus; title: string; description: string; action?: string }[] = [
   { status: 'estimation_sent', title: 'Estimation envoyée', description: 'Nous vous avons envoyé une estimation de revenus. Veuillez la consulter et la valider.' },
@@ -16,6 +17,7 @@ const statusSteps: { status: OnboardingStatus; title: string; description: strin
   { status: 'cguv_accepted', title: 'Acceptation des CGUV', description: 'Merci ! Veuillez maintenant choisir comment nous faire parvenir les clés.' },
   { status: 'keys_pending_reception', title: 'En attente réception clés', description: 'Nous attendons de recevoir vos clés. Un membre de notre équipe confirmera la réception prochainement.' },
   { status: 'keys_retrieved', title: 'Clés récupérées', description: 'Nos équipes ont bien reçu les clés de votre logement.' },
+  { status: 'add_property_details', title: 'Ajout des paramètres de votre logement', description: 'Veuillez renseigner les équipements et spécificités de votre logement pour finaliser sa mise en ligne.' },
   { status: 'photoshoot_done', title: 'Shooting photo', description: 'Les photos professionnelles de votre bien ont été réalisées.' },
   { status: 'live', title: 'Mise en ligne terminée !', description: 'Félicitations, votre logement est maintenant en ligne et prêt à accueillir des voyageurs.' },
 ];
@@ -94,6 +96,20 @@ const OnboardingStatusPage: React.FC = () => {
       toast.error(`Erreur: ${error.message}`);
     } finally {
       setIsSubmittingChoice(false);
+    }
+  };
+
+  const handleEquipmentFormComplete = async () => {
+    if (!profile) return;
+    setLoading(true);
+    try {
+      await updateProfile({ onboarding_status: 'photoshoot_done' });
+      toast.success("Paramètres du logement enregistrés !");
+      fetchProfileData();
+    } catch (error: any) {
+      toast.error(`Erreur lors de la mise à jour du statut : ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -212,25 +228,12 @@ const OnboardingStatusPage: React.FC = () => {
                   </div>
                 )}
 
-                {profile.onboarding_status === 'keys_retrieved' && (
+                {profile.onboarding_status === 'keys_retrieved' && profile.id && (
                   <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                      <KeyRound className="h-6 w-6 text-blue-600" /> Informations sur les clés
+                      <Home className="h-6 w-6 text-blue-600" /> Paramètres du logement
                     </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold text-gray-700 dark:text-gray-200">Adresse de dépôt/envoi des clés</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {profile.key_deposit_address || "Non spécifié. Veuillez contacter l'agence."}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-700 dark:text-gray-200">Jeux de clés nécessaires</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {profile.key_sets_needed ? `${profile.key_sets_needed} jeux complets` : "Non spécifié."}
-                        </p>
-                      </div>
-                    </div>
+                    <RoomEquipmentForm userId={profile.id} onComplete={handleEquipmentFormComplete} />
                   </div>
                 )}
               </CardContent>

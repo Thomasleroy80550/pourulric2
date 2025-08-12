@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_pending_reception' | 'keys_retrieved' | 'photoshoot_done' | 'live';
+export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_pending_reception' | 'keys_retrieved' | 'add_property_details' | 'photoshoot_done' | 'live';
 
 export interface UserProfile {
   id: string;

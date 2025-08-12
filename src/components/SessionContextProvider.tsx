@@ -34,28 +34,30 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setSession(session);
       if (session && session.user) {
         try {
-          // Pass user ID directly to avoid redundant auth check
-          const profilePromise = getProfile(session.user.id);
-          const timeoutPromise = new Promise<UserProfile | null>((_, reject) =>
-            setTimeout(() => reject(new Error("Le chargement du profil a pris trop de temps.")), 8000) // 8s timeout
-          );
-
-          const userProfile = await Promise.race([profilePromise, timeoutPromise]);
-
+          const userProfile = await getProfile(session.user.id);
           if (userProfile) {
             setProfile(userProfile);
           } else {
-            throw new Error("Profil utilisateur introuvable.");
+            // Profile doesn't exist. If we had one before, a sync issue might have occurred.
+            // For now, we'll clear it, but we won't throw a big error.
+            setProfile(null);
+            console.warn(`Profile not found for user ${session.user.id}. This may be expected.`);
           }
         } catch (error: any) {
-          console.error("Error fetching user profile:", error);
-          setProfile(null);
-          toast.error(error.message || "Erreur lors du chargement de votre profil.");
+          // THIS IS THE KEY CHANGE:
+          // On a network error, we will NOT wipe the existing profile.
+          // This prevents the user from being "logged out" on a temporary network blip.
+          console.error("Failed to refresh user profile, but keeping existing data:", error.message);
+          toast.error("La connexion a été interrompue. Les données affichées peuvent ne pas être à jour.");
+        } finally {
+          // No matter what, we stop loading after the first attempt.
+          setLoading(false);
         }
       } else {
+        // This is a real sign-out event. Clear everything.
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -85,11 +87,11 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    // If session exists but profile is null (due to fetch error),
+    // If session exists but profile is null (due to fetch error or it not existing),
     // we don't redirect to login. This prevents the "session loss" feeling.
     // The app might be in a partially broken state, but the user is still authenticated.
     if (!profile) {
-      console.error("User is authenticated, but profile could not be loaded.");
+      console.error("User is authenticated, but profile could not be loaded or does not exist.");
       // A toast error is already shown when getProfile fails.
       // We stop here to avoid incorrect redirection logic based on a null profile.
       return;

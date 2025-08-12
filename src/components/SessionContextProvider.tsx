@@ -32,10 +32,10 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     setLoading(true);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
-      if (session) {
+      if (session && session.user) {
         try {
-          // Add a timeout to prevent getting stuck on loading
-          const profilePromise = getProfile();
+          // Pass user ID directly to avoid redundant auth check
+          const profilePromise = getProfile(session.user.id);
           const timeoutPromise = new Promise<UserProfile | null>((_, reject) =>
             setTimeout(() => reject(new Error("Le chargement du profil a pris trop de temps.")), 8000) // 8s timeout
           );
@@ -45,7 +45,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           if (userProfile) {
             setProfile(userProfile);
           } else {
-            // This can happen if getProfile returns null but doesn't throw
             throw new Error("Profil utilisateur introuvable.");
           }
         } catch (error: any) {

@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_pending_reception' | 'keys_retrieved' | 'info_gathering' | 'photoshoot_done' | 'live';
+export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_pending_reception' | 'keys_retrieved' | 'photoshoot_done' | 'live';
 
 export interface UserProfile {
   id: string;
@@ -37,42 +37,32 @@ export interface UserProfile {
   estimation_details?: string;
   estimated_revenue?: number;
   key_delivery_method?: 'deposit' | 'mail';
-  key_deposit_address?: string;
-  key_sets_needed?: number;
 }
 
 /**
- * Fetches a user's profile. If userId is provided, fetches for that user.
- * Otherwise, fetches for the currently authenticated user.
- * @param userId Optional. The ID of the user whose profile to fetch.
- * @returns The user's profile data or null if not found.
+ * Fetches the current user's profile from the 'profiles' table.
+ * @returns The user's profile data or null if not found/authenticated.
  */
-export async function getProfile(userId?: string): Promise<UserProfile | null> {
-  let effectiveUserId = userId;
-
-  if (!effectiveUserId) {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error("Error getting user for profile:", userError?.message);
-      return null;
-    }
-    effectiveUserId = user.id;
+export async function getProfile(): Promise<UserProfile | null> {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    console.error("Error getting user for profile:", userError?.message);
+    return null;
   }
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
-    .eq('id', effectiveUserId)
+    .select(`
+      *,
+      onboarding_status,
+      estimation_details,
+      estimated_revenue,
+      key_delivery_method
+    `)
+    .eq('id', user.id)
     .single();
 
   if (error) {
-    // .single() throws an error if no row is found. This is not a fatal error,
-    // as a profile might not exist yet. We can return null.
-    if (error.code === 'PGRST116') {
-      console.warn(`Profile not found for user ${effectiveUserId}. This may be expected.`);
-      return null;
-    }
-    // For other errors, we should throw.
     console.error("Error fetching user profile:", error.message);
     throw new Error(`Erreur lors de la récupération du profil : ${error.message}`);
   }

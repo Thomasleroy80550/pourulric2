@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
-import { getProfile, UserProfile, updateProfile } from '@/lib/profile-api';
+import { getProfile, UserProfile } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
 
@@ -27,121 +27,108 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
+  const protectedPaths = ['/login', '/promotion', '/onboarding-status'];
+
+  const fetchUserProfile = useCallback(async (userSession: Session) => {
+    try {
+      const userProfile = await getProfile();
+      setProfile(userProfile);
+      return userProfile;
+    } catch (error) {
+      console.error("Error fetching user profile in SessionContextProvider:", error);
+      toast.error("Erreur lors du chargement de votre profil.");
+      return null;
+    }
+  }, []);
+
+  const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
     setLoading(true);
+    if (currentSession) {
+      setSession(currentSession);
+      const userProfile = await fetchUserProfile(currentSession);
 
-    // 1. Get the session ONCE at the start to unblock the UI.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        try {
-          const userProfile = await getProfile(session.user.id);
-          setProfile(userProfile);
-        } catch (error) {
-          console.error("Error fetching initial profile:", error);
-          setProfile(null);
-        }
+      if (location.pathname === '/login') {
+        navigate('/');
       }
-      setLoading(false);
-    });
 
-    // 2. Subscribe to auth changes for login, logout, and token refreshes.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        setSession(currentSession);
+      if (userProfile) {
+        // --- MODIFICATION ICI ---
+        // Admins should always have full access, regardless of their onboarding status
+        if (userProfile.role !== 'admin') {
+          // Onboarding redirection logic for non-admin users
+          if (userProfile.onboarding_status && userProfile.onboarding_status !== 'live' && location.pathname !== '/onboarding-status') {
+            navigate('/onboarding-status');
+            setLoading(false);
+            return;
+          }
+          
+          if (userProfile.onboarding_status === 'live' && location.pathname === '/onboarding-status') {
+            navigate('/');
+            setLoading(false);
+            return;
+          }
+        }
+        // --- FIN DE LA MODIFICATION ---
 
-        if (event === 'SIGNED_OUT') {
-          // User is explicitly signed out. Clear everything.
-          setProfile(null);
-        } else if (currentSession?.user) {
-          // This handles SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED.
-          try {
-            const userProfile = await getProfile(currentSession.user.id);
-            setProfile(userProfile);
-          } catch (error) {
-            // CRITICAL FIX: If profile fetch fails (e.g., network error on tab focus),
-            // DO NOT set profile to null. Keep the old data to prevent "logout".
-            console.error("Failed to refresh profile, keeping stale data:", error);
-            toast.warning("Connexion instable, les données peuvent ne pas être à jour.", { duration: 2000 });
+        // Banned status takes precedence over CGUV modal
+        if (userProfile.is_banned) {
+          setShowCguvModal(false);
+        } else {
+          const cguvAccepted = userProfile.cguv_accepted_at;
+          const cguvVersion = userProfile.cguv_version;
+
+          if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
+            if (userProfile.onboarding_status !== 'estimation_sent' && userProfile.onboarding_status !== 'estimation_validated') {
+              setShowCguvModal(true);
+            }
+          } else {
+            setShowCguvModal(false);
           }
         }
       }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // Effect for handling redirection and other side effects based on session/profile state
-  useEffect(() => {
-    if (loading) {
-      return; // Don't do anything while loading
-    }
-
-    const currentPath = location.pathname;
-    const publicPaths = ['/login', '/new-owner-site', '/promotion'];
-
-    // If there is no session, redirect to login (unless on a public page)
-    if (!session) {
-      if (!publicPaths.some(p => currentPath.startsWith(p))) {
+    } else {
+      // No session
+      setSession(null);
+      setProfile(null);
+      setShowCguvModal(false);
+      setShowOnboardingConfetti(false);
+      if (!protectedPaths.some(path => location.pathname.startsWith(path)) && !location.pathname.startsWith('/pages/')) {
         navigate('/login');
       }
-      return;
     }
+    setLoading(false);
+  }, [fetchUserProfile, location.pathname, navigate]);
 
-    // If there is a session, but user is on login page, redirect to home
-    if (currentPath === '/login') {
-      navigate('/');
-      return;
-    }
 
-    if (!profile) {
-      if (!currentPath.startsWith('/onboarding')) {
-        console.error("User is authenticated, but profile could not be loaded or does not exist.");
+  useEffect(() => {
+    let isMounted = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (!isMounted) return;
+      revalidateSessionAndProfile(currentSession);
+    });
+
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (!isMounted) return;
+      revalidateSessionAndProfile(initialSession);
+    });
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        revalidateSessionAndProfile(refreshedSession);
       }
-      return;
-    }
+    };
 
-    // --- All logic below assumes a valid session and profile ---
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    if (profile.role !== 'admin') {
-      const onboardingStatus = profile.onboarding_status || 'estimation_sent';
-      let requiredOnboardingPath: string | null = null;
-
-      if (onboardingStatus === 'live') {
-        if (currentPath.startsWith('/onboarding')) {
-          requiredOnboardingPath = '/';
-        }
-      } else {
-        if (['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'photoshoot_done'].includes(onboardingStatus)) {
-          requiredOnboardingPath = '/onboarding/status';
-        } else if (['keys_retrieved', 'info_gathering'].includes(onboardingStatus)) {
-          requiredOnboardingPath = '/onboarding/property-info';
-        } else {
-          requiredOnboardingPath = '/onboarding/status'; // Fallback
-        }
-      }
-
-      if (requiredOnboardingPath && currentPath !== requiredOnboardingPath) {
-        navigate(requiredOnboardingPath);
-        return;
-      }
-    }
-
-    // Handle CGUV Modal display
-    if (profile.is_banned) {
-      setShowCguvModal(false);
-    } else {
-      const cguvAccepted = profile.cguv_accepted_at;
-      const cguvVersion = profile.cguv_version;
-      if ((!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) && profile.onboarding_status !== 'estimation_sent' && profile.onboarding_status !== 'estimation_validated') {
-        setShowCguvModal(true);
-      } else {
-        setShowCguvModal(false);
-      }
-    }
-  }, [session, profile, loading, location.pathname, navigate]);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [revalidateSessionAndProfile]);
 
   const handleAcceptCguv = async () => {
     try {

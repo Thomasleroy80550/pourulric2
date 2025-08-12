@@ -30,30 +30,43 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   useEffect(() => {
     setLoading(true);
 
-    // onAuthStateChange is the single source of truth for the user's session.
-    // It fires upon initial load, sign in, sign out, token refresh, etc.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // 1. Get the session ONCE at the start to unblock the UI.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-
-      if (session?.user) {
+      if (session) {
         try {
-          // A session exists. Fetch the corresponding profile.
           const userProfile = await getProfile(session.user.id);
           setProfile(userProfile);
         } catch (error) {
-          console.error("Error fetching profile on auth state change:", error);
-          setProfile(null); // Clear profile on error to avoid stale data.
-          toast.error("Impossible de rafraîchir les informations de l'utilisateur.");
+          console.error("Error fetching initial profile:", error);
+          setProfile(null);
         }
-      } else {
-        // No session, so no profile.
-        setProfile(null);
       }
-      
-      // The listener is guaranteed to fire at least once on initial load.
-      // After that, we can safely stop the loading indicator.
       setLoading(false);
     });
+
+    // 2. Subscribe to auth changes for login, logout, and token refreshes.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+
+        if (event === 'SIGNED_OUT') {
+          // User is explicitly signed out. Clear everything.
+          setProfile(null);
+        } else if (currentSession?.user) {
+          // This handles SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED.
+          try {
+            const userProfile = await getProfile(currentSession.user.id);
+            setProfile(userProfile);
+          } catch (error) {
+            // CRITICAL FIX: If profile fetch fails (e.g., network error on tab focus),
+            // DO NOT set profile to null. Keep the old data to prevent "logout".
+            console.error("Failed to refresh profile, keeping stale data:", error);
+            toast.warning("Connexion instable, les données peuvent ne pas être à jour.", { duration: 2000 });
+          }
+        }
+      }
+    );
 
     return () => {
       subscription.unsubscribe();
@@ -67,10 +80,11 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     const currentPath = location.pathname;
+    const publicPaths = ['/login', '/new-owner-site', '/promotion'];
 
-    // If there is no session, redirect to login (unless already there)
+    // If there is no session, redirect to login (unless on a public page)
     if (!session) {
-      if (currentPath !== '/login') {
+      if (!publicPaths.some(p => currentPath.startsWith(p))) {
         navigate('/login');
       }
       return;
@@ -83,7 +97,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
 
     if (!profile) {
-      console.error("User is authenticated, but profile could not be loaded or does not exist.");
+      if (!currentPath.startsWith('/onboarding')) {
+        console.error("User is authenticated, but profile could not be loaded or does not exist.");
+      }
       return;
     }
 

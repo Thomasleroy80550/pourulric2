@@ -10,6 +10,12 @@ import { useQuery } from '@tanstack/react-query'; // Import useQuery
 import { getPublishedFaqs } from '@/lib/faq-api'; // Import getPublishedFaqs
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Import Alert components
 import { AlertCircle } from 'lucide-react'; // Import AlertCircle
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"; // Import chart components
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"; // Import Recharts components
 
 const HelpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +24,26 @@ const HelpPage: React.FC = () => {
     queryKey: ['publishedFaqsHelpPage'], // Use a different query key to avoid conflicts with FaqPage
     queryFn: getPublishedFaqs,
   });
+
+  // Invented data for affluence chart
+  const affluenceData = [
+    { hour: '9h', affluence: 150 },
+    { hour: '10h', affluence: 200 },
+    { hour: '11h', affluence: 250 },
+    { hour: '12h', affluence: 180 },
+    { hour: '14h', affluence: 220 },
+    { hour: '15h', affluence: 280 },
+    { hour: '16h', affluence: 300 },
+    { hour: '17h', affluence: 270 },
+    { hour: '18h', affluence: 100 },
+  ];
+
+  const chartConfig = {
+    affluence: {
+      label: "Affluence",
+      color: "hsl(var(--chart-1))",
+    },
+  };
 
   return (
     <MainLayout>
@@ -64,6 +90,40 @@ const HelpPage: React.FC = () => {
           </CardContent>
         </Card>
 
+        <Card className="shadow-md mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Périodes d'Affluence</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Voici les périodes où notre support est le plus sollicité. Pour un temps d'attente réduit, privilégiez les heures creuses.
+            </p>
+            <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+              <BarChart accessibilityLayer data={affluenceData}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="hour"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}`}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  tickFormatter={(value) => `${value}`}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="dashed" />}
+                />
+                <Bar dataKey="affluence" fill="var(--color-affluence)" radius={4} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Contactez-nous</CardTitle>
@@ -81,6 +141,9 @@ const HelpPage: React.FC = () => {
               <>
                 <p className="text-gray-600 dark:text-gray-400">
                   Si vous n'avez pas trouvé la réponse à votre question, n'hésitez pas à nous contacter directement.
+                </p>
+                <p className="text-gray-600 dark:text-gray-400 font-semibold">
+                  Nos horaires : 9h-12h / 14h-18h du lundi au samedi
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button variant="outline" className="w-full sm:w-auto">

@@ -21,72 +21,98 @@ const SessionContext = createContext<SessionContextType | undefined>(undefined);
 export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Initial loading state for the very first load
   const [showCguvModal, setShowCguvModal] = useState(false);
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const protectedPaths = ['/login', '/promotion', '/onboarding-status'];
+  // Paths that do not require authentication
+  const publicPaths = ['/login', '/promotion', '/onboarding-status', '/pages/']; // Added /pages/ for content pages
 
+  // Function to fetch user profile
   const fetchUserProfile = useCallback(async () => {
     try {
       const userProfile = await getProfile();
       setProfile(userProfile);
+      return userProfile;
     } catch (error) {
       console.error("Error fetching user profile in SessionContextProvider:", error);
       toast.error("Erreur lors du chargement de votre profil.");
       setProfile(null);
+      return null;
     }
   }, []);
 
-  // Effect for handling authentication state changes and initial load
+  // Handles initial auth state and subsequent auth state changes
+  const handleAuthAndProfile = useCallback(async (currentSession: Session | null) => {
+    setLoading(true); // Start loading for auth state changes
+    setSession(currentSession);
+    if (currentSession) {
+      await fetchUserProfile();
+    } else {
+      setProfile(null);
+    }
+    setLoading(false); // End loading for auth state changes
+  }, [fetchUserProfile]);
+
+  // Effect for initial session load and auth state changes
   useEffect(() => {
-    const fetchSessionAndProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      if (session) {
-        await fetchUserProfile();
-      }
-      setLoading(false);
-    };
+    let isMounted = true;
 
-    fetchSessionAndProfile();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-        await fetchUserProfile();
-      }
-      if (event === 'SIGNED_OUT') {
-        setProfile(null);
+    // Initial session check
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (isMounted) {
+        await handleAuthAndProfile(initialSession);
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [fetchUserProfile]);
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (isMounted) {
+        await handleAuthAndProfile(currentSession);
+      }
+    });
 
-  // Effect for handling redirects and side-effects based on auth state and location
+    // Re-check session when tab becomes visible (for long-lived sessions)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+        if (isMounted) {
+          await handleAuthAndProfile(refreshedSession);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [handleAuthAndProfile]); // Only depends on handleAuthAndProfile, which itself doesn't depend on location.pathname
+
+  // Effect for handling navigation and modals based on session/profile state
   useEffect(() => {
+    // Only run this logic after the initial loading is complete
     if (loading) {
-      return; // Don't do anything until the initial session load is complete
+      return;
     }
 
-    // Handle redirects and modal logic
-    if (profile && session) {
+    const currentPathIsPublic = publicPaths.some(path => location.pathname.startsWith(path));
+
+    if (session && profile) {
       // User is logged in
       if (location.pathname === '/login') {
-        navigate('/');
+        navigate('/'); // Redirect from login page if already logged in
       }
 
+      // Onboarding status redirection for non-admin users
       if (profile.role !== 'admin') {
         if (profile.onboarding_status && profile.onboarding_status !== 'live' && location.pathname !== '/onboarding-status') {
           navigate('/onboarding-status');
-        }
-        if (profile.onboarding_status === 'live' && location.pathname === '/onboarding-status') {
-          navigate('/');
+        } else if (profile.onboarding_status === 'live' && location.pathname === '/onboarding-status') {
+          navigate('/'); // Redirect from onboarding page if onboarding is complete
         }
       }
 
@@ -96,24 +122,27 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       } else {
         const cguvAccepted = profile.cguv_accepted_at;
         const cguvVersion = profile.cguv_version;
+        // Show CGUV modal if not accepted or version mismatch, AND not on estimation_sent/validated status
         if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
           if (profile.onboarding_status !== 'estimation_sent' && profile.onboarding_status !== 'estimation_validated') {
             setShowCguvModal(true);
+          } else {
+            setShowCguvModal(false); // Hide if on estimation status, as CGUV is handled there
           }
         } else {
-          setShowCguvModal(false);
+          setShowCguvModal(false); // CGUV accepted and up to date
         }
       }
     } else {
       // User is not logged in
       setShowCguvModal(false);
       setShowOnboardingConfetti(false);
-      if (!protectedPaths.some(path => location.pathname.startsWith(path)) && !location.pathname.startsWith('/pages/')) {
+      // Redirect to login if not on a public path
+      if (!currentPathIsPublic) {
         navigate('/login');
       }
     }
-  }, [loading, session, profile, location.pathname, navigate]);
-
+  }, [loading, session, profile, location.pathname, navigate, publicPaths]); // Dependencies for navigation/modal logic
 
   const handleAcceptCguv = async () => {
     if (!profile) return;
@@ -132,7 +161,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Utilisateur non authentifié.");
 
-      // We need to call the specific updateProfile function, not the generic one
       const { data: updatedProfile, error } = await supabase
         .from('profiles')
         .update(updates)
@@ -203,7 +231,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         <CGUVModal
           isOpen={showCguvModal}
           onOpenChange={(open) => {
-            if (!open && (!profile?.cguv_accepted_at || profile?.cguv_version !== CURRENT_CGUV_VERSION)) {
+            // Prevent closing if CGUV not accepted and not on estimation status
+            if (!open && (!profile?.cguv_accepted_at || profile?.cguv_version !== CURRENT_CGUV_VERSION) &&
+                profile?.onboarding_status !== 'estimation_sent' && profile?.onboarding_status !== 'estimation_validated') {
               // Do nothing, keep modal open
             } else {
               setShowCguvModal(open);

@@ -114,8 +114,8 @@ const OnboardingStatusPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 text-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <Rocket className="h-16 w-16 mx-auto text-green-500" />
-            <CardTitle className="text-2xl mt-4">Félicitations, {profile.first_name} !</CardTitle>
+            <Rocket className="h-12 w-12 mx-auto text-green-500" />
+            <CardTitle className="text-xl mt-2">Félicitations, {profile.first_name} !</CardTitle>
             <CardDescription>Votre logement est en ligne et prêt à accueillir des voyageurs.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -131,26 +131,26 @@ const OnboardingStatusPage: React.FC = () => {
   const currentStatusIndex = statusSteps.findIndex(step => step.status === profile.onboarding_status);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 estimation-background-effect">
-      <div className="max-w-6xl mx-auto py-12">
-        <header className="text-center mb-12 pb-8 border-b border-gray-200 dark:border-gray-700">
-          <img src="/logo.png" alt="Hello Keys Logo" className="h-16 mx-auto mb-6" />
-          <h1 className="text-4xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">Bienvenue, {profile.first_name} !</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">Suivez les étapes de notre collaboration pour mettre en ligne votre logement.</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 estimation-background-effect">
+      <div className="max-w-5xl mx-auto py-8">
+        <header className="text-center mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
+          <img src="/logo.png" alt="Hello Keys Logo" className="h-12 mx-auto mb-4" />
+          <h1 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">Bienvenue, {profile.first_name} !</h1>
+          <p className="text-base text-gray-600 dark:text-gray-400">Suivez les étapes de notre collaboration pour mettre en ligne votre logement.</p>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="text-2xl">Suivi de votre intégration</CardTitle>
+                <CardTitle className="text-xl">Suivi de votre intégration</CardTitle>
               </CardHeader>
               <CardContent>
-                <ol className="space-y-6">
+                <ol className="space-y-4">
                   {statusSteps.map((step, index) => (
                     <li
                       key={step.status}
-                      className={`flex items-start gap-4 p-4 rounded-lg transition-all duration-300
+                      className={`flex items-start gap-3 p-3 rounded-lg transition-all duration-300
                         ${index <= currentStatusIndex
                           ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800'
                           : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-md'
@@ -159,24 +159,24 @@ const OnboardingStatusPage: React.FC = () => {
                     >
                       <div className="flex flex-col items-center">
                         {index <= currentStatusIndex ? (
-                          <CheckCircle className="h-7 w-7 text-blue-600 flex-shrink-0" />
+                          <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0" />
                         ) : (
-                          <Circle className="h-7 w-7 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                          <Circle className="h-6 w-6 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                         )}
                         {index < statusSteps.length - 1 && (
-                          <div className={`w-0.5 h-12 mt-2 ${index < currentStatusIndex ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
+                          <div className={`w-0.5 h-10 mt-2 ${index < currentStatusIndex ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}></div>
                         )}
                       </div>
                       <div>
-                        <h3 className={`font-semibold text-lg ${index <= currentStatusIndex ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>{step.title}</h3>
-                        <p className="text-base text-gray-700 dark:text-gray-300 mt-1">{step.description}</p>
+                        <h3 className={`font-semibold text-base ${index <= currentStatusIndex ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300'}`}>{step.title}</h3>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5">{step.description}</p>
                         {profile.onboarding_status === 'estimation_sent' && step.status === 'estimation_validated' && (
-                          <Button onClick={handleValidateEstimation} disabled={loading} className="mt-3">
-                            {loading ? <Loader2 className="animate-spin mr-2" /> : 'Valider mon estimation'}
+                          <Button onClick={handleValidateEstimation} disabled={loading} className="mt-2 text-sm">
+                            {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : 'Valider mon estimation'}
                           </Button>
                         )}
                         {profile.onboarding_status === 'estimation_validated' && step.status === 'cguv_accepted' && (
-                          <Button onClick={() => setIsCguvModalOpen(true)} className="mt-3">
+                          <Button onClick={() => setIsCguvModalOpen(true)} className="mt-2 text-sm">
                             Lire et accepter les CGUV
                           </Button>
                         )}
@@ -186,34 +186,34 @@ const OnboardingStatusPage: React.FC = () => {
                 </ol>
                 
                 {profile.onboarding_status === 'cguv_accepted' && (
-                  <div className="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <h3 className="text-2xl font-bold mb-5 flex items-center gap-3">
-                      <KeyRound className="h-7 w-7 text-blue-600" /> Remise des clés
+                  <div className="mt-8 pt-5 border-t border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                      <KeyRound className="h-6 w-6 text-blue-600" /> Remise des clés
                     </h3>
-                    <p className="text-base text-muted-foreground mb-6">
+                    <p className="text-base text-muted-foreground mb-5">
                       Nous avons besoin de <strong>2 jeux de clés complets</strong> pour assurer la gestion de votre logement.
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="p-6 border rounded-lg flex flex-col bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
-                        <h4 className="font-semibold text-xl mb-3">1. Déposer en agence</h4>
-                        <p className="text-base text-muted-foreground flex-grow mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-5 border rounded-lg flex flex-col bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
+                        <h4 className="font-semibold text-lg mb-2">1. Déposer en agence</h4>
+                        <p className="text-sm text-muted-foreground flex-grow mb-3">
                           Vous pouvez déposer vos clés directement à notre agence.
                           <br />
                           <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
                         </p>
-                        <Button onClick={() => handleKeyChoice('deposit')} disabled={isSubmittingChoice} className="mt-auto w-full">
-                          {isSubmittingChoice ? <Loader2 className="animate-spin mr-2" /> : "Je choisis le dépôt"}
+                        <Button onClick={() => handleKeyChoice('deposit')} disabled={isSubmittingChoice} className="mt-auto w-full text-sm">
+                          {isSubmittingChoice ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : "Je choisis le dépôt"}
                         </Button>
                       </div>
-                      <div className="p-6 border rounded-lg flex flex-col bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
-                        <h4 className="font-semibold text-xl mb-3">2. Envoyer par courrier</h4>
-                        <p className="text-base text-muted-foreground flex-grow mb-4">
+                      <div className="p-5 border rounded-lg flex flex-col bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow duration-300">
+                        <h4 className="font-semibold text-lg mb-2">2. Envoyer par courrier</h4>
+                        <p className="text-sm text-muted-foreground flex-grow mb-3">
                           Envoyez vos clés en courrier suivi à l'adresse ci-dessous.
                           <br />
                           <strong>Adresse :</strong> 14 rue Carnot, 80550 LE CROTOY
                         </p>
-                        <Button onClick={() => handleKeyChoice('mail')} disabled={isSubmittingChoice} className="mt-auto w-full">
-                          {isSubmittingChoice ? <Loader2 className="animate-spin mr-2" /> : "Je choisis l'envoi"}
+                        <Button onClick={() => handleKeyChoice('mail')} disabled={isSubmittingChoice} className="mt-auto w-full text-sm">
+                          {isSubmittingChoice ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : "Je choisis l'envoi"}
                         </Button>
                       </div>
                     </div>
@@ -226,18 +226,18 @@ const OnboardingStatusPage: React.FC = () => {
           <div>
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="text-2xl">Votre estimation personnalisée</CardTitle>
+                <CardTitle className="text-xl">Votre estimation personnalisée</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-5">
                 <div>
-                  <h4 className="font-semibold text-gray-700 dark:text-gray-200 text-lg">Revenu annuel estimé</h4>
-                  <p className="text-4xl font-extrabold text-blue-600 mt-2">
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-200 text-base">Revenu annuel estimé</h4>
+                  <p className="text-3xl font-extrabold text-blue-600 mt-1">
                     {profile.estimated_revenue ? `${profile.estimated_revenue.toLocaleString('fr-FR')} €` : 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-700 dark:text-gray-200 text-lg">Détails et remarques</h4>
-                  <p className="text-base text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-1">
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-200 text-base">Détails et remarques</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-0.5">
                     {profile.estimation_details || "Aucun détail fourni."}
                   </p>
                 </div>

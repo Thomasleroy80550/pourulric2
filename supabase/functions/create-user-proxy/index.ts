@@ -40,9 +40,9 @@ serve(async (req) => {
     }
 
     // 4. Get the new user's data from the request body
-    const { email, password, first_name, last_name, role } = await req.json();
-    if (!email || !password || !first_name || !last_name || !role) {
-      throw new Error("Missing required fields: email, password, first_name, last_name, role.");
+    const { email, first_name, last_name, role, estimation_details, estimated_revenue } = await req.json();
+    if (!email || !first_name || !last_name || !role) {
+      throw new Error("Missing required fields: email, first_name, last_name, role.");
     }
     if (!['user', 'admin', 'accountant'].includes(role)) {
       throw new Error("Invalid role specified.");
@@ -54,24 +54,29 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 6. Create the new user using the admin client
-    const { data: newUser, error: createUserError } = await adminSupabaseClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm the email
-      user_metadata: {
-        first_name,
-        last_name,
-        role, // This will be picked up by the handle_new_user trigger
-      },
-    });
+    // 6. Invite the new user by email
+    const redirectTo = `${Deno.env.get('APP_BASE_URL') || 'http://localhost:5173'}/onboarding-status`;
 
-    if (createUserError) {
-      throw createUserError;
+    const { data: inviteData, error: inviteError } = await adminSupabaseClient.auth.admin.inviteUserByEmail(
+      email,
+      {
+        data: {
+          first_name,
+          last_name,
+          role,
+          estimation_details,
+          estimated_revenue,
+        },
+        redirectTo: redirectTo,
+      }
+    );
+
+    if (inviteError) {
+      throw inviteError;
     }
 
-    return new Response(JSON.stringify({ data: newUser, message: "User created successfully." }), {
-      status: 201,
+    return new Response(JSON.stringify({ data: inviteData, message: "User invited successfully." }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
 

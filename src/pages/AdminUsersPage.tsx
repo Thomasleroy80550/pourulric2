@@ -32,7 +32,6 @@ const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
   last_name: z.string().min(1, "Le nom est requis."),
   email: z.string().email("L'email est invalide."),
-  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères."),
   role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
   estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional(),
   estimation_details: z.string().optional(),
@@ -144,7 +143,7 @@ const AdminUsersPage: React.FC = () => {
 
   const addUserForm = useForm<z.infer<typeof newUserSchema>>({
     resolver: zodResolver(newUserSchema),
-    defaultValues: { first_name: '', last_name: '', email: '', password: '', role: 'user', estimation_details: '', estimated_revenue: 0 },
+    defaultValues: { first_name: '', last_name: '', email: '', role: 'user', estimation_details: '', estimated_revenue: 0 },
   });
 
   const editUserForm = useForm<z.infer<typeof editUserSchema>>({
@@ -190,7 +189,7 @@ const AdminUsersPage: React.FC = () => {
       // Pass the values directly as they match the CreateUserPayload interface
       const result = await createUser(values);
       
-      toast.success("Prospect créé avec succès ! Un email sera envoyé pour l'inviter à s'inscrire.");
+      toast.success("Prospect invité avec succès ! Un email a été envoyé pour l'inviter à créer son compte.");
 
       if (pendingApproval && result?.data?.user?.id) {
         await createAccountantClientRelation(result.data.user.id, pendingApproval.user_id);
@@ -353,7 +352,6 @@ const AdminUsersPage: React.FC = () => {
       first_name: firstName,
       last_name: lastName,
       email: request.accountant_email,
-      password: '',
       role: 'accountant',
     });
     setIsAddUserDialogOpen(true);
@@ -543,23 +541,22 @@ const AdminUsersPage: React.FC = () => {
         setIsAddUserDialogOpen(isOpen);
         if (!isOpen) {
           setPendingApproval(null);
-          addUserForm.reset({ first_name: '', last_name: '', email: '', password: '', role: 'user' });
+          addUserForm.reset({ first_name: '', last_name: '', email: '', role: 'user' });
         }
       }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Ajouter un nouveau prospect</DialogTitle><DialogDescription>Le prospect recevra une invitation à s'inscrire pour voir son estimation.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Ajouter un nouveau prospect</DialogTitle><DialogDescription>Le prospect recevra une invitation par e-mail pour créer son mot de passe et accéder à son espace.</DialogDescription></DialogHeader>
           <Form {...addUserForm}>
             <form onSubmit={addUserForm.handleSubmit(handleAddUser)} className="space-y-4 py-4">
               <FormField control={addUserForm.control} name="first_name" render={({ field }) => (<FormItem><FormLabel>Prénom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Nom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={addUserForm.control} name="password" render={({ field }) => (<FormItem><FormLabel>Mot de passe temporaire</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="estimated_revenue" render={({ field }) => (<FormItem><FormLabel>Revenu Annuel Estimé (€)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
               <FormField control={addUserForm.control} name="estimation_details" render={({ field }) => (<FormItem><FormLabel>Détails de l'estimation</FormLabel><FormControl><Textarea {...field} /></FormControl><FormDescription>Ces détails seront visibles par le prospect.</FormDescription><FormMessage /></FormItem>)} />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsAddUserDialogOpen(false)}>Annuler</Button>
-                <Button type="submit" disabled={addUserForm.formState.isSubmitting}>{addUserForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Créer le prospect"}</Button>
+                <Button type="submit" disabled={addUserForm.formState.isSubmitting}>{addUserForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Inviter le prospect"}</Button>
               </DialogFooter>
             </form>
           </Form>

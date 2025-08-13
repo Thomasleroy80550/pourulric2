@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createUser, createAccountantClientRelation, updateAccountantRequestStatus, AccountantRequest } from '@/lib/admin-api';
+import { createUser, createAccountantClientRelation, updateAccountantRequestStatus, AccountantRequest, CreateUserPayload } from '@/lib/admin-api';
 
 const newUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -54,8 +54,16 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onU
 
   const handleAddUser = async (values: z.infer<typeof newUserSchema>) => {
     try {
-      const result = await createUser(values);
-      toast.success("Prospect invité avec succès ! Un email a été envoyé pour l'inviter à créer son compte.");
+      // Generate a secure temporary password
+      const tempPassword = Math.random().toString(36).substring(2, 10); // 8-char alphanumeric
+
+      const payload: CreateUserPayload = {
+        ...values,
+        password: tempPassword,
+      };
+
+      const result = await createUser(payload);
+      toast.success("Prospect créé avec succès ! Un email avec un mot de passe temporaire a été envoyé.");
 
       if (pendingApproval && result?.data?.user?.id) {
         await createAccountantClientRelation(result.data.user.id, pendingApproval.user_id);

@@ -218,7 +218,7 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
 // Define the type for the user data expected by the create-user-proxy Edge Function
 export interface CreateUserPayload {
   email: string;
-  password?: string; // Password is optional if not setting one directly
+  password: string;
   first_name: string;
   last_name: string;
   role: string;
@@ -228,8 +228,8 @@ export interface CreateUserPayload {
 
 /**
  * Creates a new user. This is an admin-only function.
- * It invites a user by email.
- * @param userData The user data.
+ * It creates a user with a temporary password and sends a welcome email.
+ * @param userData The user data, including a temporary password.
  * @returns A promise that resolves with the created user data.
  */
 export async function createUser(userData: CreateUserPayload) {

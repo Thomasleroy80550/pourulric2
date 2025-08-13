@@ -98,7 +98,7 @@ const HelpPage: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Voici les périodes où notre support est le plus sollicité. Pour un temps d'attente réduit, privilégiez les heures creuses.
             </p>
-            <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
+            <ChartContainer config={chartConfig} className="min-h-[150px] w-full">
               <BarChart accessibilityLayer data={affluenceData}>
                 <CartesianGrid vertical={false} />
                 <XAxis

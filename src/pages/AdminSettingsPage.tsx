@@ -9,7 +9,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getSetting, updateSetting } from '@/lib/admin-api';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { EMAIL_TEMPLATE_KEY, CONTACT_EMAIL_KEY, CONTACT_PHONE_KEY } from '@/lib/constants';
+import {
+  EMAIL_TEMPLATE_KEY,
+  CONTACT_EMAIL_KEY,
+  CONTACT_PHONE_KEY,
+  FAQ_MAIN_TITLE_KEY,
+  FAQ_SUBTITLE_KEY,
+  FAQ_CONTACT_SECTION_TITLE_KEY,
+  FAQ_CONTACT_SECTION_SUBTITLE_KEY,
+} from '@/lib/constants';
 
 interface EmailTemplate {
   subject: string;
@@ -20,6 +28,10 @@ const AdminSettingsPage: React.FC = () => {
   const [template, setTemplate] = useState<EmailTemplate>({ subject: '', body: '' });
   const [contactEmail, setContactEmail] = useState<string>('');
   const [contactPhone, setContactPhone] = useState<string>('');
+  const [faqMainTitle, setFaqMainTitle] = useState<string>('');
+  const [faqSubtitle, setFaqSubtitle] = useState<string>('');
+  const [faqContactSectionTitle, setFaqContactSectionTitle] = useState<string>('');
+  const [faqContactSectionSubtitle, setFaqContactSectionSubtitle] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -27,10 +39,22 @@ const AdminSettingsPage: React.FC = () => {
     const fetchSettings = async () => {
       setLoading(true);
       try {
-        const [emailTemplateSetting, contactEmailSetting, contactPhoneSetting] = await Promise.all([
+        const [
+          emailTemplateSetting,
+          contactEmailSetting,
+          contactPhoneSetting,
+          faqMainTitleSetting,
+          faqSubtitleSetting,
+          faqContactSectionTitleSetting,
+          faqContactSectionSubtitleSetting,
+        ] = await Promise.all([
           getSetting(EMAIL_TEMPLATE_KEY),
           getSetting(CONTACT_EMAIL_KEY),
           getSetting(CONTACT_PHONE_KEY),
+          getSetting(FAQ_MAIN_TITLE_KEY),
+          getSetting(FAQ_SUBTITLE_KEY),
+          getSetting(FAQ_CONTACT_SECTION_TITLE_KEY),
+          getSetting(FAQ_CONTACT_SECTION_SUBTITLE_KEY),
         ]);
 
         if (emailTemplateSetting && emailTemplateSetting.value) {
@@ -55,6 +79,11 @@ const AdminSettingsPage: React.FC = () => {
           setContactPhone('03 22 31 92 70'); // Default value
         }
 
+        setFaqMainTitle(faqMainTitleSetting?.value || 'Foire Aux Questions (FAQ)');
+        setFaqSubtitle(faqSubtitleSetting?.value || 'Trouvez des réponses aux questions les plus fréquemment posées.');
+        setFaqContactSectionTitle(faqContactSectionTitleSetting?.value || 'Vous ne trouvez pas de réponse ?');
+        setFaqContactSectionSubtitle(faqContactSectionSubtitleSetting?.value || 'Notre équipe est là pour vous aider. Contactez-nous directement.');
+
       } catch (error: any) {
         toast.error(error.message);
       } finally {
@@ -70,6 +99,10 @@ const AdminSettingsPage: React.FC = () => {
       await updateSetting(EMAIL_TEMPLATE_KEY, template);
       await updateSetting(CONTACT_EMAIL_KEY, contactEmail);
       await updateSetting(CONTACT_PHONE_KEY, contactPhone);
+      await updateSetting(FAQ_MAIN_TITLE_KEY, faqMainTitle);
+      await updateSetting(FAQ_SUBTITLE_KEY, faqSubtitle);
+      await updateSetting(FAQ_CONTACT_SECTION_TITLE_KEY, faqContactSectionTitle);
+      await updateSetting(FAQ_CONTACT_SECTION_SUBTITLE_KEY, faqContactSectionSubtitle);
       toast.success("Paramètres sauvegardés avec succès !");
     } catch (error: any) {
       toast.error(error.message);
@@ -154,6 +187,62 @@ const AdminSettingsPage: React.FC = () => {
                       type="tel"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Textes de la page FAQ</CardTitle>
+              <CardDescription>
+                Personnalisez les titres et sous-titres de la page FAQ publique.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="faqMainTitle">Titre principal de la FAQ</Label>
+                    <Input
+                      id="faqMainTitle"
+                      value={faqMainTitle}
+                      onChange={(e) => setFaqMainTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="faqSubtitle">Sous-titre de la FAQ</Label>
+                    <Textarea
+                      id="faqSubtitle"
+                      value={faqSubtitle}
+                      onChange={(e) => setFaqSubtitle(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="faqContactSectionTitle">Titre de la section contact</Label>
+                    <Input
+                      id="faqContactSectionTitle"
+                      value={faqContactSectionTitle}
+                      onChange={(e) => setFaqContactSectionTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="faqContactSectionSubtitle">Sous-titre de la section contact</Label>
+                    <Textarea
+                      id="faqContactSectionSubtitle"
+                      value={faqContactSectionSubtitle}
+                      onChange={(e) => setFaqContactSectionSubtitle(e.target.value)}
+                      rows={2}
                     />
                   </div>
                 </div>

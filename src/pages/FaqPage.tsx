@@ -6,8 +6,15 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Mail, Phone, AlertCircle } from 'lucide-react';
-import { getSetting } from '@/lib/admin-api'; // Import getSetting
-import { CONTACT_EMAIL_KEY, CONTACT_PHONE_KEY } from '@/lib/constants'; // Import constants
+import { getSetting } from '@/lib/admin-api';
+import {
+  CONTACT_EMAIL_KEY,
+  CONTACT_PHONE_KEY,
+  FAQ_MAIN_TITLE_KEY,
+  FAQ_SUBTITLE_KEY,
+  FAQ_CONTACT_SECTION_TITLE_KEY,
+  FAQ_CONTACT_SECTION_SUBTITLE_KEY,
+} from '@/lib/constants';
 
 const FaqPage = () => {
   const { data: faqs, isLoading, isError, error } = useQuery({
@@ -15,29 +22,47 @@ const FaqPage = () => {
     queryFn: getPublishedFaqs,
   });
 
-  const { data: contactSettings, isLoading: isLoadingContact, isError: isErrorContact } = useQuery({
-    queryKey: ['contactSettings'],
+  const { data: pageTexts, isLoading: isLoadingPageTexts, isError: isErrorPageTexts } = useQuery({
+    queryKey: ['faqPageTexts'],
     queryFn: async () => {
-      const email = await getSetting(CONTACT_EMAIL_KEY);
-      const phone = await getSetting(CONTACT_PHONE_KEY);
+      const [
+        mainTitle,
+        subtitle,
+        contactSectionTitle,
+        contactSectionSubtitle,
+        contactEmail,
+        contactPhone,
+      ] = await Promise.all([
+        getSetting(FAQ_MAIN_TITLE_KEY),
+        getSetting(FAQ_SUBTITLE_KEY),
+        getSetting(FAQ_CONTACT_SECTION_TITLE_KEY),
+        getSetting(FAQ_CONTACT_SECTION_SUBTITLE_KEY),
+        getSetting(CONTACT_EMAIL_KEY),
+        getSetting(CONTACT_PHONE_KEY),
+      ]);
+
       return {
-        email: email?.value || 'contact@hellokeys.fr', // Default if not set
-        phone: phone?.value || '03 22 31 92 70', // Default if not set
+        mainTitle: mainTitle?.value || 'Foire Aux Questions (FAQ)',
+        subtitle: subtitle?.value || 'Trouvez des réponses aux questions les plus fréquemment posées.',
+        contactSectionTitle: contactSectionTitle?.value || 'Vous ne trouvez pas de réponse ?',
+        contactSectionSubtitle: contactSectionSubtitle?.value || 'Notre équipe est là pour vous aider. Contactez-nous directement.',
+        contactEmail: contactEmail?.value || 'contact@hellokeys.fr',
+        contactPhone: contactPhone?.value || '03 22 31 92 70',
       };
     },
-    staleTime: Infinity, // These settings don't change often
+    staleTime: Infinity,
   });
 
-  const displayLoading = isLoading || isLoadingContact;
-  const displayError = isError || isErrorContact;
+  const displayLoading = isLoading || isLoadingPageTexts;
+  const displayError = isError || isErrorPageTexts;
 
   return (
     <MainLayout>
       <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl font-extrabold text-center mb-4">Foire Aux Questions (FAQ)</h1>
+          <h1 className="text-4xl font-extrabold text-center mb-4">{pageTexts?.mainTitle}</h1>
           <p className="text-center text-muted-foreground mb-12">
-            Trouvez des réponses aux questions les plus fréquemment posées.
+            {pageTexts?.subtitle}
           </p>
 
           {displayLoading && (
@@ -77,18 +102,18 @@ const FaqPage = () => {
           )}
 
           <div className="mt-20 border-t pt-10">
-            <h2 className="text-2xl font-bold text-center mb-6">Vous ne trouvez pas de réponse ?</h2>
+            <h2 className="text-2xl font-bold text-center mb-6">{pageTexts?.contactSectionTitle}</h2>
             <p className="text-center text-muted-foreground mb-8">
-              Notre équipe est là pour vous aider. Contactez-nous directement.
+              {pageTexts?.contactSectionSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-8">
-              <a href={`mailto:${contactSettings?.email}`} className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
+              <a href={`mailto:${pageTexts?.contactEmail}`} className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
                 <Mail className="h-6 w-6" />
-                <span>{contactSettings?.email}</span>
+                <span>{pageTexts?.contactEmail}</span>
               </a>
-              <a href={`tel:${contactSettings?.phone?.replace(/\s/g, '')}`} className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
+              <a href={`tel:${pageTexts?.contactPhone?.replace(/\s/g, '')}`} className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
                 <Phone className="h-6 w-6" />
-                <span>{contactSettings?.phone}</span>
+                <span>{pageTexts?.contactPhone}</span>
               </a>
             </div>
           </div>

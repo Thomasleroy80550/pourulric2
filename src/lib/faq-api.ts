@@ -39,7 +39,7 @@ export const getPublishedFaqs = async (): Promise<Faq[]> => {
 export const createFaq = async (faq: Pick<Faq, 'question' | 'answer'>): Promise<Faq> => {
   const { data, error } = await supabase
     .from('faqs')
-    .insert(faq)
+    .insert({ ...faq, is_published: true }) // Ajout de is_published: true par défaut
     .select()
     .single();
 

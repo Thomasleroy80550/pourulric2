@@ -91,29 +91,29 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
         </div>
       )}
 
-      <div className="p-4">
-        <Button
-          asChild
-          variant="default"
-          className="w-full justify-start bg-blue-600 text-white hover:bg-blue-700"
-          onClick={onLinkClick}
-        >
-          <a
-            href="https://proprietaire.hellokeys.fr"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <LogOut className="h-5 w-5 mr-3" /> {/* Using LogOut icon as a temporary placeholder for 'Retour' */}
-            Retour à Hello Keys V1
-          </a>
-        </Button>
-      </div>
-
       <div className={cn("flex items-center mb-8 p-4", isMobile && "hidden")}>
         <img src="/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mx-auto" />
       </div>
 
       <nav id="tour-sidebar-nav" className="flex-grow space-y-6 px-4 overflow-y-auto">
+        <div className="mb-4">
+          <Button
+            asChild
+            variant="ghost"
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={onLinkClick}
+          >
+            <a
+              href="https://proprietaire.hellokeys.fr"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <LogOut className="h-5 w-5 mr-3" />
+              Retour à Hello Keys V1
+            </a>
+          </Button>
+        </div>
+
         {sidebarSections.map((section) => (
           <div key={section.title}>
             <h3 className="px-4 mb-2 text-xs font-semibold uppercase text-sidebar-foreground/70 tracking-wider">

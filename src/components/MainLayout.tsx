@@ -91,6 +91,24 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
         </div>
       )}
 
+      <div className="p-4">
+        <Button
+          asChild
+          variant="default"
+          className="w-full justify-start bg-blue-600 text-white hover:bg-blue-700"
+          onClick={onLinkClick}
+        >
+          <a
+            href="https://proprietaire.hellokeys.fr"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <LogOut className="h-5 w-5 mr-3" /> {/* Using LogOut icon as a temporary placeholder for 'Retour' */}
+            Retour à Hello Keys V1
+          </a>
+        </Button>
+      </div>
+
       <div className={cn("flex items-center mb-8 p-4", isMobile && "hidden")}>
         <img src="/logo.png" alt="Hello Keys Logo" className="w-40 h-auto mx-auto" />
       </div>

@@ -6,40 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Mail, Phone } from 'lucide-react'; // Removed PlayCircle
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-
-const faqItems = [
-  {
-    question: "Comment puis-je ajouter une nouvelle propriété ?",
-    answer: "Vous pouvez ajouter une nouvelle propriété en allant dans la section 'Gestion' de la barre latérale, puis en cliquant sur 'Ajouter une propriété'."
-  },
-  {
-    question: "Comment fonctionne la synchronisation des calendriers ?",
-    answer: "Notre système se synchronise automatiquement avec les principales plateformes (Airbnb, Booking, Abritel) toutes les heures. Vous pouvez également forcer une synchronisation manuelle depuis la page 'Calendrier'."
-  },
-  {
-    question: "Où puis-je consulter mes bilans financiers ?",
-    answer: "Vos bilans financiers détaillés sont disponibles dans la section 'Comptabilité', sous l'onglet 'Bilans'."
-  },
-  {
-    question: "Comment contacter le support technique ?",
-    answer: "Vous pouvez nous contacter par email à support@hellokeys.com ou par téléphone au +33 1 23 45 67 89. Nos équipes sont disponibles du lundi au vendredi, de 9h à 18h."
-  },
-];
+import { useQuery } from '@tanstack/react-query'; // Import useQuery
+import { getPublishedFaqs } from '@/lib/faq-api'; // Import getPublishedFaqs
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Import Alert components
+import { AlertCircle } from 'lucide-react'; // Import AlertCircle
 
 const HelpPage: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Simulate data fetching
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500); // Simulate 1.5 seconds loading
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Removed handleStartTour function as the tour is being removed
+  const { data: faqs, isLoading, isError, error } = useQuery({
+    queryKey: ['publishedFaqsHelpPage'], // Use a different query key to avoid conflicts with FaqPage
+    queryFn: getPublishedFaqs,
+  });
 
   return (
     <MainLayout>
@@ -53,17 +31,26 @@ const HelpPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Foire Aux Questions (FAQ)</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </div>
-            ) : (
+            ) : isError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Erreur</AlertTitle>
+                <AlertDescription>
+                  Impossible de charger les FAQs. Veuillez réessayer plus tard.
+                  <p className="text-sm text-muted-foreground mt-2">{(error as Error)?.message || 'Erreur inconnue'}</p>
+                </AlertDescription>
+              </Alert>
+            ) : faqs && faqs.length > 0 ? (
               <Accordion type="single" collapsible className="w-full">
-                {faqItems.map((item, index) => (
-                  <AccordionItem key={index} value={`item-${index}`}>
+                {faqs.map((item) => (
+                  <AccordionItem key={item.id} value={item.id}>
                     <AccordionTrigger className="text-left">{item.question}</AccordionTrigger>
                     <AccordionContent>
                       {item.answer}
@@ -71,6 +58,8 @@ const HelpPage: React.FC = () => {
                   </AccordionItem>
                 ))}
               </Accordion>
+            ) : (
+              <p className="text-center text-muted-foreground">Aucune question n'est disponible pour le moment.</p>
             )}
           </CardContent>
         </Card>
@@ -80,7 +69,7 @@ const HelpPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Contactez-nous</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {loading ? (
+            {isLoading ? ( // Use isLoading from FAQ query for contact section as well for simplicity
               <>
                 <Skeleton className="h-16 w-full" />
                 <div className="flex flex-col sm:flex-row gap-3">

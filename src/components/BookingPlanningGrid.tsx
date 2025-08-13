@@ -356,7 +356,6 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     
                     const barClasses = cn(
                       `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm transition-opacity`,
-                      !isOwnerBlock && 'cursor-pointer hover:opacity-90', // Only allow click if not an owner block
                       isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                       {
                         'rounded-full': isSingleDayStay,
@@ -383,9 +382,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                               alignItems: 'center',
                             }}
                             onClick={() => {
-                              if (!isOwnerBlock) { // Only allow click if not an owner block
-                                handleReservationClick(reservation);
-                              }
+                              handleReservationClick(reservation);
                             }}
                           >
                             {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}

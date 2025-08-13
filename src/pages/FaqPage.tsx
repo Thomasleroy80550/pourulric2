@@ -6,12 +6,30 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Mail, Phone, AlertCircle } from 'lucide-react';
+import { getSetting } from '@/lib/admin-api'; // Import getSetting
+import { CONTACT_EMAIL_KEY, CONTACT_PHONE_KEY } from '@/lib/constants'; // Import constants
 
 const FaqPage = () => {
   const { data: faqs, isLoading, isError, error } = useQuery({
     queryKey: ['publishedFaqs'],
     queryFn: getPublishedFaqs,
   });
+
+  const { data: contactSettings, isLoading: isLoadingContact, isError: isErrorContact } = useQuery({
+    queryKey: ['contactSettings'],
+    queryFn: async () => {
+      const email = await getSetting(CONTACT_EMAIL_KEY);
+      const phone = await getSetting(CONTACT_PHONE_KEY);
+      return {
+        email: email?.value || 'contact@hellokeys.fr', // Default if not set
+        phone: phone?.value || '03 22 31 92 70', // Default if not set
+      };
+    },
+    staleTime: Infinity, // These settings don't change often
+  });
+
+  const displayLoading = isLoading || isLoadingContact;
+  const displayError = isError || isErrorContact;
 
   return (
     <MainLayout>
@@ -22,7 +40,7 @@ const FaqPage = () => {
             Trouvez des réponses aux questions les plus fréquemment posées.
           </p>
 
-          {isLoading && (
+          {displayLoading && (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-16 w-full" />
@@ -30,13 +48,13 @@ const FaqPage = () => {
             </div>
           )}
 
-          {isError && (
+          {displayError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Erreur</AlertTitle>
               <AlertDescription>
-                Impossible de charger la FAQ. Veuillez réessayer plus tard.
-                <p className="text-sm text-muted-foreground mt-2">{(error as Error).message}</p>
+                Impossible de charger la FAQ ou les informations de contact. Veuillez réessayer plus tard.
+                <p className="text-sm text-muted-foreground mt-2">{(error as Error)?.message || 'Erreur inconnue'}</p>
               </AlertDescription>
             </Alert>
           )}
@@ -54,7 +72,7 @@ const FaqPage = () => {
             </Accordion>
           )}
 
-          {faqs && faqs.length === 0 && !isLoading && (
+          {faqs && faqs.length === 0 && !displayLoading && (
             <p className="text-center text-muted-foreground">Aucune question n'est disponible pour le moment.</p>
           )}
 
@@ -64,13 +82,13 @@ const FaqPage = () => {
               Notre équipe est là pour vous aider. Contactez-nous directement.
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-8">
-              <a href="mailto:contact@hellokeys.fr" className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
+              <a href={`mailto:${contactSettings?.email}`} className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
                 <Mail className="h-6 w-6" />
-                <span>contact@hellokeys.fr</span>
+                <span>{contactSettings?.email}</span>
               </a>
-              <a href="tel:0322319270" className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
+              <a href={`tel:${contactSettings?.phone?.replace(/\s/g, '')}`} className="flex items-center gap-3 text-lg font-medium text-primary hover:underline">
                 <Phone className="h-6 w-6" />
-                <span>03 22 31 92 70</span>
+                <span>{contactSettings?.phone}</span>
               </a>
             </div>
           </div>

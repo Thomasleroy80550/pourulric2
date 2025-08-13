@@ -127,7 +127,10 @@ const HelpPage: React.FC = () => {
                   <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
                     Ce graphique indique les périodes d'affluence de notre support. Privilégiez les heures creuses pour un temps d'attente réduit.
                   </p>
-                  <ChartContainer config={chartConfig} className="min-h-[60px] w-full">
+                  <p className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2">
+                    Les meilleurs horaires pour nous appeler sont généralement entre 9h et 10h, et après 17h.
+                  </p>
+                  <ChartContainer config={chartConfig} className="min-h-[40px] w-full">
                     <BarChart accessibilityLayer data={affluenceData}>
                       <CartesianGrid vertical={false} />
                       <XAxis

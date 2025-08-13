@@ -373,6 +373,17 @@
   animation: subtle-gradient-move 10s ease infinite;
 }
 
+/* New keyframes for a subtle floating animation */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
 
 /* driver.js custom styling */
 .driver-popover {

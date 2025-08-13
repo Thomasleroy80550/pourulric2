@@ -90,40 +90,6 @@ const HelpPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-md mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Périodes d'Affluence</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Voici les périodes où notre support est le plus sollicité. Pour un temps d'attente réduit, privilégiez les heures creuses.
-            </p>
-            <ChartContainer config={chartConfig} className="min-h-[150px] w-full">
-              <BarChart accessibilityLayer data={affluenceData}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="hour"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => `${value}`}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={10}
-                  tickFormatter={(value) => `${value}`}
-                />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dashed" />}
-                />
-                <Bar dataKey="affluence" fill="var(--color-affluence)" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Contactez-nous</CardTitle>
@@ -154,6 +120,36 @@ const HelpPage: React.FC = () => {
                     <Phone className="h-4 w-4 mr-2" />
                     Appeler le Support
                   </Button>
+                </div>
+
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+                  <h3 className="text-lg font-semibold mb-2">Meilleurs Horaires pour nous Appeler</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+                    Ce graphique indique les périodes d'affluence de notre support. Privilégiez les heures creuses pour un temps d'attente réduit.
+                  </p>
+                  <ChartContainer config={chartConfig} className="min-h-[100px] w-full">
+                    <BarChart accessibilityLayer data={affluenceData}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="hour"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}`}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        tickFormatter={(value) => `${value}`}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="dashed" />}
+                      />
+                      <Bar dataKey="affluence" fill="var(--color-affluence)" radius={4} />
+                    </BarChart>
+                  </ChartContainer>
                 </div>
               </>
             )}

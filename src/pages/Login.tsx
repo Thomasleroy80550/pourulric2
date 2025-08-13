@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import MagicLoginButton from '@/components/MagicLoginButton';
 import {
   InputOTP,
   InputOTPGroup,
@@ -290,7 +289,6 @@ const Login = () => {
               )}
             </form>
           </Form>
-          <MagicLoginButton />
         </div>
       </div>
 

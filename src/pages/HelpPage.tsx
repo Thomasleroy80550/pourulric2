@@ -127,7 +127,7 @@ const HelpPage: React.FC = () => {
                   <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
                     Ce graphique indique les périodes d'affluence de notre support. Privilégiez les heures creuses pour un temps d'attente réduit.
                   </p>
-                  <ChartContainer config={chartConfig} className="min-h-[100px] w-full">
+                  <ChartContainer config={chartConfig} className="min-h-[60px] w-full">
                     <BarChart accessibilityLayer data={affluenceData}>
                       <CartesianGrid vertical={false} />
                       <XAxis
@@ -135,12 +135,6 @@ const HelpPage: React.FC = () => {
                         tickLine={false}
                         tickMargin={10}
                         axisLine={false}
-                        tickFormatter={(value) => `${value}`}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={10}
                         tickFormatter={(value) => `${value}`}
                       />
                       <ChartTooltip

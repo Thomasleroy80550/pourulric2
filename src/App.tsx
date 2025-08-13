@@ -40,6 +40,8 @@ import AdminStrategiesPage from "./pages/AdminStrategiesPage";
 import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import OnboardingStatusPage from "./pages/OnboardingStatusPage"; // Import the new page
+import FaqPage from "./pages/FaqPage";
+import AdminFaqPage from "./pages/AdminFaqPage";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +70,7 @@ function App() {
                   <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                   <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                   <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
+                  <Route path="/admin/faq" element={<AdminFaqPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />
@@ -88,6 +91,7 @@ function App() {
                   <Route path="/roadmap" element={<RoadmapPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/my-rooms" element={<MyRoomsPage />} />
+                  <Route path="/faq" element={<FaqPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

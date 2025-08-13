@@ -9,6 +9,7 @@ import { CheckCircle, Circle, Loader2, Rocket, KeyRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CGUVModal from '@/components/CGUVModal';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
+import OnboardingVisualProgress from '@/components/OnboardingVisualProgress'; // Import the new component
 
 const statusSteps: { status: OnboardingStatus; title: string; description: string; action?: string }[] = [
   { status: 'estimation_sent', title: 'Estimation envoyée', description: 'Nous vous avons envoyé une estimation de revenus. Veuillez la consulter et la valider.' },
@@ -224,6 +225,16 @@ const OnboardingStatusPage: React.FC = () => {
           </div>
 
           <div>
+            {/* New Card for visual progress */}
+            <Card className="shadow-lg mb-6">
+              <CardHeader>
+                <CardTitle className="text-xl">Progression de votre logement</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <OnboardingVisualProgress currentStatusIndex={currentStatusIndex} />
+              </CardContent>
+            </Card>
+
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="text-xl">Votre estimation personnalisée</CardTitle>

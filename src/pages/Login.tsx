@@ -80,15 +80,6 @@ const Login = () => {
     setShowOtpInput(false);
   }, [authMethod, form]);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/');
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
   const handleAuthMethodChange = (checked: boolean) => {
     setAuthMethod(checked ? 'phone' : 'email');
   };
@@ -118,7 +109,7 @@ const Login = () => {
         if (error) throw error;
 
         toast.success("Connexion réussie ! Redirection...");
-        // The onAuthStateChange listener will handle navigation
+        // The onAuthStateChange listener in SessionContextProvider will handle navigation
       }
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
@@ -137,6 +128,7 @@ const Login = () => {
       });
       if (error) throw error;
       toast.success("Connexion réussie !");
+      // The onAuthStateChange listener in SessionContextProvider will handle navigation
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
     } finally {

@@ -44,41 +44,56 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, []);
 
   const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
-    setLoading(true); // Start loading
+    setLoading(true);
     if (currentSession) {
       setSession(currentSession);
       const userProfile = await fetchUserProfile(currentSession);
 
-      if (location.pathname === '/login') {
-        navigate('/');
-      }
+      if (userProfile) {
+        const isAdmin = userProfile.role === 'admin';
+        const isOnboardingComplete = userProfile.onboarding_status === 'live';
 
-      if (userProfile && location.pathname !== '/login') {
+        // --- Redirection Logic ---
+        if (isAdmin) {
+          // Admins are redirected to their dashboard from login/onboarding pages
+          if (location.pathname === '/login' || location.pathname === '/onboarding-status') {
+            navigate('/admin');
+          }
+        } else {
+          // Regular user logic
+          if (!isOnboardingComplete) {
+            // If onboarding is not complete, they must be on the onboarding page.
+            if (location.pathname !== '/onboarding-status') {
+              navigate('/onboarding-status');
+            }
+          } else {
+            // If onboarding is complete, they should not be on the onboarding page.
+            if (location.pathname === '/onboarding-status' || location.pathname === '/login') {
+              navigate('/');
+            }
+          }
+        }
+
+        // --- CGUV Check ---
         const cguvAccepted = userProfile.cguv_accepted_at;
         const cguvVersion = userProfile.cguv_version;
-
         if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
-          console.log("CGUV not accepted or version mismatch. Showing modal.");
           setShowCguvModal(true);
         } else {
-          console.log("CGUV already accepted and up to date.");
           setShowCguvModal(false);
         }
-      } else if (!userProfile && location.pathname !== '/login') {
-        console.log("Session exists but profile not found or error fetching. Checking CGUV status.");
       }
     } else {
-      // No session
+      // No session, redirect to login if not already there
       setSession(null);
       setProfile(null);
       setShowCguvModal(false);
       setShowOnboardingConfetti(false);
       if (location.pathname !== '/login') {
-        console.log('No session and not on login page, redirecting to /login');
         navigate('/login');
       }
     }
-    setLoading(false); // End loading
+    setLoading(false);
   }, [fetchUserProfile, location.pathname, navigate]);
 
 

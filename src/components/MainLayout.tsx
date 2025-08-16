@@ -66,7 +66,6 @@ const accountantSidebarSections = [
 
 const accountNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
-  { name: 'Paramètres', href: '/settings', icon: Settings },
 ];
 
 const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {

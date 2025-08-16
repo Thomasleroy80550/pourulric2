@@ -89,7 +89,6 @@ function App() {
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/modules" element={<ModulesPage />} />
                   <Route path="/roadmap" element={<RoadmapPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/my-rooms" element={<MyRoomsPage />} />
                   <Route path="/faq" element={<FaqPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

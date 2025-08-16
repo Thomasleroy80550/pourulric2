@@ -32,3 +32,11 @@ export async function verifyLoginOtp(phoneNumber: string, otp: string): Promise<
 
   return data;
 }
+
+export async function updateUserPassword(password: string): Promise<void> {
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    console.error("Error updating password:", error);
+    throw new Error(error.message || "Une erreur est survenue lors de la mise à jour du mot de passe.");
+  }
+}

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Bell, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle } from 'lucide-react';
+import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -21,9 +21,12 @@ import AttestationContent from '@/components/AttestationContent';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import PhoneVerificationDialog from '@/components/PhoneVerificationDialog';
+import { useTheme } from 'next-themes';
+import PasswordChangeForm from '@/components/PasswordChangeForm';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
+  const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -51,6 +54,8 @@ const ProfilePage: React.FC = () => {
   const [notifyCancellationEmail, setNotifyCancellationEmail] = useState(true);
   const [notifyNewBookingSms, setNotifyNewBookingSms] = useState(false);
   const [notifyCancellationSms, setNotifyCancellationSms] = useState(false);
+
+  const hasPasswordAuth = session?.user?.identities?.some(i => i.provider === 'email');
 
   const fetchProfileData = useCallback(async () => {
     setLoading(true);
@@ -240,12 +245,13 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-5">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-6">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
+            <TabsTrigger value="settings">Paramètres</TabsTrigger>
+            <TabsTrigger value="security">Sécurité</TabsTrigger>
           </TabsList>
 
           <TabsContent value="personal-data">
@@ -399,25 +405,40 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="notifications">
+          <TabsContent value="kyc">
+            {profile && <KycForm profile={profile} onUpdate={fetchProfileData} />}
+          </TabsContent>
+
+          <TabsContent value="settings">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Bell /> Notifications</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Settings /> Paramètres & Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 border rounded-md">
+                  <div>
+                    <Label htmlFor="darkMode">Mode Sombre</Label>
+                    <p className="text-sm text-gray-500">Activez le thème sombre pour l'application.</p>
+                  </div>
+                  <Switch
+                    id="darkMode"
+                    checked={theme === 'dark'}
+                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 border rounded-md">
                   <Label htmlFor="notif-new-booking-email">Recevoir les nouvelles réservations par email</Label>
                   <Switch id="notif-new-booking-email" checked={notifyNewBookingEmail} onCheckedChange={setNotifyNewBookingEmail} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-email">Recevoir les annulations par email</Label>
                   <Switch id="notif-cancel-email" checked={notifyCancellationEmail} onCheckedChange={setNotifyCancellationEmail} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 border rounded-md">
                   <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
                   <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
                   <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
                 </div>
@@ -425,8 +446,25 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="kyc">
-            {profile && <KycForm profile={profile} onUpdate={fetchProfileData} />}
+          <TabsContent value="security">
+            {hasPasswordAuth ? (
+              <PasswordChangeForm />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><KeyRound /> Sécurité</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Alert>
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Connexion sans mot de passe activée</AlertTitle>
+                    <AlertDescription>
+                      Vous utilisez une méthode de connexion sans mot de passe (par exemple, via un code SMS). La modification du mot de passe n'est pas applicable à votre compte.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <div className="flex justify-end">

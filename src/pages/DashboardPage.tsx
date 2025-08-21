@@ -129,11 +129,14 @@ const DashboardPage = () => {
 
     statementsForYear.forEach(s => {
       const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
+      const managementFees = s.totals.totalFacture || 0;
+      const moneyIn = s.totals.totalMontantVerse || 0;
+      const netFromStatement = moneyIn - managementFees;
+
       totalCA += statementCA;
-      totalRentree += s.totals.totalMontantVerse || 0;
-      totalFrais += s.totals.totalCommission || 0;
-      const netToPayFromStatement = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
-      totalResultat += netToPayFromStatement;
+      totalRentree += moneyIn;
+      totalFrais += managementFees;
+      totalResultat += netFromStatement;
       totalNights += s.totals.totalNuits || 0;
       totalGuests += s.totals.totalVoyageurs || 0;
       totalReservations += s.invoice_data.length;
@@ -144,9 +147,9 @@ const DashboardPage = () => {
 
       if (monthIndex !== undefined) {
         newMonthlyFinancialData[monthIndex].ca += statementCA;
-        newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
-        newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
-        newMonthlyFinancialData[monthIndex].benef += netToPayFromStatement;
+        newMonthlyFinancialData[monthIndex].montantVerse += moneyIn;
+        newMonthlyFinancialData[monthIndex].frais += managementFees;
+        newMonthlyFinancialData[monthIndex].benef += netFromStatement;
         
         newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
         monthlyNights[monthIndex] += s.totals.totalNuits || 0;

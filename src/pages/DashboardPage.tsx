@@ -321,18 +321,6 @@ const DashboardPage = () => {
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
 
-        <div className="flex space-x-2 mb-8">
-          {years.map((year) => (
-            <Button
-              key={year}
-              variant={year === currentYear ? "default" : "outline"}
-              className="rounded-full"
-            >
-              {year}
-            </Button>
-          ))}
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Bilan Financier Card */}
           <Card id="tour-financial-summary" className="shadow-md">
@@ -568,12 +556,6 @@ const DashboardPage = () => {
             <CardContent className="h-72">
               {loadingFinancialData ? (
                 <Skeleton className="h-full w-full" />
-              ) : financialDataError ? (
-                <Alert variant="destructive">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur</AlertTitle>
-                  <AlertDescription>{financialDataError}</AlertDescription>
-                </Alert>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>

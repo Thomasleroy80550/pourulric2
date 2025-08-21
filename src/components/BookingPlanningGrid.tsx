@@ -231,7 +231,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 key={index}
                 className={cn(
                   "grid-cell header-cell text-center font-semibold border-b border-r",
-                  isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-700 border-blue-500"
+                  isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
                 )}
                 style={{ width: `${dayCellWidth}px` }}
               >
@@ -246,7 +246,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 key={`day-name-${index}`}
                 className={cn(
                   "grid-cell header-cell text-center text-xs text-gray-500 border-b border-r",
-                  isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-700 border-blue-500"
+                  isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
                 )}
                 style={{ width: `${dayCellWidth}px` }}
               >
@@ -277,7 +277,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                       key={`${room.id}-${format(day, 'yyyy-MM-dd')}-bg`}
                       className={cn(
                         `grid-cell border-b border-r relative flex flex-col justify-center items-center`,
-                        isSameDay(day, new Date()) ? 'bg-blue-100 dark:bg-blue-800 border-2 border-blue-500' : 'bg-gray-50 dark:bg-gray-800'
+                        isSameDay(day, new Date()) ? 'bg-blue-200 dark:bg-blue-700 border-3 border-blue-600 dark:border-blue-300' : 'bg-gray-50 dark:bg-gray-800'
                       )}
                       style={{ width: `${dayCellWidth}px`, gridRow: `${3 + roomIndex}` }}
                     >

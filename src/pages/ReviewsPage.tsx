@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
 import DOMPurify from 'dompurify';
+import { Badge } from '@/components/ui/badge'; // Import the Badge component
 
 const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -33,6 +34,16 @@ const ReviewsPage: React.FC = () => {
   const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
     : 'N/A';
+
+  // Determine badge variant based on average rating
+  const getBadgeVariant = (rating: string) => {
+    const numRating = parseFloat(rating);
+    if (isNaN(numRating)) return "outline"; // For "N/A"
+    if (numRating >= 4.5) return "default"; // Green-like (primary)
+    if (numRating >= 3.5) return "secondary"; // Blue-like (secondary)
+    if (numRating >= 2.5) return "destructive"; // Red-like (destructive) - using destructive for average/below average
+    return "destructive"; // Below 2.5, also destructive
+  };
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -105,9 +116,9 @@ const ReviewsPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold flex items-center justify-between">
               <span>Vos avis et notes</span>
               {reviews.length > 0 && (
-                <span className="text-base font-normal text-gray-600 dark:text-gray-300">
-                  Note moyenne : <span className="font-semibold">{averageRating}</span> / 5
-                </span>
+                <Badge variant={getBadgeVariant(averageRating)} className="text-base px-3 py-1">
+                  Note moyenne : {averageRating} / 5
+                </Badge>
               )}
             </CardTitle>
           </CardHeader>

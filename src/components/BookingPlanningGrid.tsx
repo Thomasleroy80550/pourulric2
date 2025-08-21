@@ -229,7 +229,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
             {daysInMonth.map((day, index) => (
               <div
                 key={index}
-                className="grid-cell header-cell text-center font-semibold border-b border-r"
+                className={cn(
+                  "grid-cell header-cell text-center font-semibold border-b border-r",
+                  isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-700 border-blue-500"
+                )}
                 style={{ width: `${dayCellWidth}px` }}
               >
                 {format(day, 'dd', { locale: fr })}
@@ -241,7 +244,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
             {daysInMonth.map((day, index) => (
               <div
                 key={`day-name-${index}`}
-                className="grid-cell header-cell text-center text-xs text-gray-500 border-b border-r"
+                className={cn(
+                  "grid-cell header-cell text-center text-xs text-gray-500 border-b border-r",
+                  isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-700 border-blue-500"
+                )}
                 style={{ width: `${dayCellWidth}px` }}
               >
                 {format(day, 'EEE', { locale: fr })}
@@ -269,7 +275,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   return (
                     <div
                       key={`${room.id}-${format(day, 'yyyy-MM-dd')}-bg`}
-                      className={`grid-cell border-b border-r relative flex flex-col justify-center items-center ${isSameDay(day, new Date()) ? 'bg-blue-50 dark:bg-blue-950' : 'bg-gray-50 dark:bg-gray-800'}`}
+                      className={cn(
+                        `grid-cell border-b border-r relative flex flex-col justify-center items-center`,
+                        isSameDay(day, new Date()) ? 'bg-blue-100 dark:bg-blue-800 border-2 border-blue-500' : 'bg-gray-50 dark:bg-gray-800'
+                      )}
                       style={{ width: `${dayCellWidth}px`, gridRow: `${3 + roomIndex}` }}
                     >
                       {/* Housekeeping Tasks Icon */}

@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +65,7 @@ const ReviewsPage: React.FC = () => {
             ) : error ? (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Erreur</Alert-Title>
+                <AlertTitle>Erreur</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : reviews.length > 0 ? (

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, AlertTriangle } from 'lucide-react';
+import { Star, AlertTriangle, Languages } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,18 +16,18 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
-import DOMPurify from 'dompurify'; // Import DOMPurify
+import DOMPurify from 'dompurify';
 
 const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set()); // State for "Voir plus"
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
   const { profile } = useSession();
   
   const reviewsPerPage = 9;
-  const MAX_COMMENT_LENGTH = 150; // Max characters before truncating
+  const MAX_COMMENT_LENGTH = 150;
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -67,6 +67,11 @@ const ReviewsPage: React.FC = () => {
       }
       return newSet;
     });
+  };
+
+  const handleTranslate = (text: string) => {
+    const url = `https://translate.google.com/?sl=auto&tl=fr&text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const renderSkeletons = () => (
@@ -115,39 +120,51 @@ const ReviewsPage: React.FC = () => {
                       : sanitizedComment;
 
                     return (
-                      <Card key={review.id} className="p-4">
-                        <div className="flex items-center mb-2">
-                          <Avatar className="h-9 w-9 mr-3">
-                            <AvatarImage src={review.avatar} alt={review.author} />
-                            <AvatarFallback>{review.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{review.author}</p>
-                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                              <div className="flex items-center text-yellow-500">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
-                                ))}
+                      <Card key={review.id} className="p-4 flex flex-col">
+                        <div className="flex-grow">
+                          <div className="flex items-center mb-2">
+                            <Avatar className="h-9 w-9 mr-3">
+                              <AvatarImage src={review.avatar} alt={review.author} />
+                              <AvatarFallback>{review.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{review.author}</p>
+                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center text-yellow-500">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+                                  ))}
+                                </div>
+                                <span className="ml-2">{review.date}</span>
                               </div>
-                              <span className="ml-2">{review.date}</span>
+                              {review.source && (
+                                <p className="text-xs text-muted-foreground mt-1">Source: {review.source}</p>
+                              )}
                             </div>
-                            {review.source && (
-                              <p className="text-xs text-muted-foreground mt-1">Source: {review.source}</p>
-                            )}
                           </div>
+                          <p 
+                            className="text-gray-700 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: displayedComment }}
+                          />
                         </div>
-                        <p 
-                          className="text-gray-700 dark:text-gray-300"
-                          dangerouslySetInnerHTML={{ __html: displayedComment }}
-                        />
-                        {needsTruncation && (
-                          <button 
-                            onClick={() => toggleExpand(review.id)} 
-                            className="text-blue-500 hover:underline text-sm mt-1"
+                        <div className="flex items-center mt-2 space-x-4">
+                          {needsTruncation && (
+                            <button 
+                              onClick={() => toggleExpand(review.id)} 
+                              className="text-blue-500 hover:underline text-sm"
+                            >
+                              {isExpanded ? 'Voir moins' : 'Voir plus'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleTranslate(review.comment)}
+                            className="text-gray-500 hover:text-gray-700 text-sm flex items-center"
+                            title="Traduire l'avis"
                           >
-                            {isExpanded ? 'Voir moins' : 'Voir plus'}
+                            <Languages className="h-4 w-4 mr-1" />
+                            Traduire
                           </button>
-                        )}
+                        </div>
                       </Card>
                     );
                   })}

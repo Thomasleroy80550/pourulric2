@@ -63,7 +63,7 @@ serve(async (req) => {
     const template = templateSetting?.value || defaultTemplate;
     
     // Utilisation de la variable d'environnement APP_BASE_URL
-    const appUrl = Deno.env.get('APP_BASE_URL') ?? 'https://app.hellokeys.fr';
+    const appUrl = Deno.env.get('APP_BASE_URL') ?? 'https://beta.proprietaire.hellokeys.fr';
     
     const userName = invoice.profiles?.first_name || 'Client';
     const period = invoice.period;

@@ -34,9 +34,9 @@ const ReviewsPage: React.FC = () => {
   }, [profile]);
 
   const renderSkeletons = () => (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {[...Array(3)].map((_, index) => (
-        <div key={index} className="border-b pb-4 last:border-b-0 last:pb-0">
+        <Card key={index} className="p-4">
           <div className="flex items-center mb-2">
             <Skeleton className="h-9 w-9 rounded-full mr-3" />
             <div className="space-y-2">
@@ -45,7 +45,7 @@ const ReviewsPage: React.FC = () => {
             </div>
           </div>
           <Skeleton className="h-12 w-full mt-2" />
-        </div>
+        </Card>
       ))}
     </div>
   );
@@ -64,13 +64,13 @@ const ReviewsPage: React.FC = () => {
             ) : error ? (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Erreur</AlertTitle>
+                <AlertTitle>Erreur</Alert-Title>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : reviews.length > 0 ? (
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {reviews.map((review) => (
-                  <div key={review.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                  <Card key={review.id} className="p-4">
                     <div className="flex items-center mb-2">
                       <Avatar className="h-9 w-9 mr-3">
                         <AvatarImage src={review.avatar} alt={review.author} />
@@ -88,8 +88,8 @@ const ReviewsPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <p className="text-gray-700 dark:text-gray-300 pl-12">{review.comment}</p>
-                  </div>
+                    <p className="text-gray-700 dark:text-gray-300">{review.comment}</p>
+                  </Card>
                 ))}
               </div>
             ) : (

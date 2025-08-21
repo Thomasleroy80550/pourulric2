@@ -31,6 +31,7 @@ interface RevyoosReviewDTO {
   score_reviews: number;
   date: string;
   content_reviews: string;
+  type_source_reviews: string; // Added field
 }
 
 interface ReviewsResponse {
@@ -131,6 +132,7 @@ serve(async (req) => {
       rating: reviewDto.score_reviews,
       date: format(parseISO(reviewDto.date), 'd MMMM yyyy', { locale: fr }),
       comment: reviewDto.content_reviews,
+      source: reviewDto.type_source_reviews, // Map the new field
     }));
 
     return new Response(JSON.stringify(formattedReviews), {

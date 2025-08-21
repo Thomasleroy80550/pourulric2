@@ -7,6 +7,7 @@ export interface Review {
   rating: number;
   date: string;
   comment: string;
+  source: string; // Added field
 }
 
 /**

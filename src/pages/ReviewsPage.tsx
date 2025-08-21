@@ -16,15 +16,18 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
+import DOMPurify from 'dompurify'; // Import DOMPurify
 
 const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set()); // State for "Voir plus"
   const { profile } = useSession();
   
   const reviewsPerPage = 9;
+  const MAX_COMMENT_LENGTH = 150; // Max characters before truncating
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -53,6 +56,18 @@ const ReviewsPage: React.FC = () => {
   const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
   const currentReviews = reviews.slice(indexOfFirstReview, indexOfLastReview);
   const pageCount = Math.ceil(reviews.length / reviewsPerPage);
+
+  const toggleExpand = (reviewId: string) => {
+    setExpandedReviews((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId);
+      } else {
+        newSet.add(reviewId);
+      }
+      return newSet;
+    });
+  };
 
   const renderSkeletons = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -91,28 +106,51 @@ const ReviewsPage: React.FC = () => {
             ) : reviews.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {currentReviews.map((review) => (
-                    <Card key={review.id} className="p-4">
-                      <div className="flex items-center mb-2">
-                        <Avatar className="h-9 w-9 mr-3">
-                          <AvatarImage src={review.avatar} alt={review.author} />
-                          <AvatarFallback>{review.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{review.author}</p>
-                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                            <div className="flex items-center text-yellow-500">
-                              {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
-                              ))}
+                  {currentReviews.map((review) => {
+                    const isExpanded = expandedReviews.has(review.id);
+                    const sanitizedComment = DOMPurify.sanitize(review.comment);
+                    const needsTruncation = sanitizedComment.length > MAX_COMMENT_LENGTH;
+                    const displayedComment = needsTruncation && !isExpanded
+                      ? sanitizedComment.substring(0, MAX_COMMENT_LENGTH) + '...'
+                      : sanitizedComment;
+
+                    return (
+                      <Card key={review.id} className="p-4">
+                        <div className="flex items-center mb-2">
+                          <Avatar className="h-9 w-9 mr-3">
+                            <AvatarImage src={review.avatar} alt={review.author} />
+                            <AvatarFallback>{review.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{review.author}</p>
+                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                              <div className="flex items-center text-yellow-500">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+                                ))}
+                              </div>
+                              <span className="ml-2">{review.date}</span>
                             </div>
-                            <span className="ml-2">{review.date}</span>
+                            {review.source && (
+                              <p className="text-xs text-muted-foreground mt-1">Source: {review.source}</p>
+                            )}
                           </div>
                         </div>
-                      </div>
-                      <p className="text-gray-700 dark:text-gray-300 line-clamp-3">{review.comment}</p>
-                    </Card>
-                  ))}
+                        <p 
+                          className="text-gray-700 dark:text-gray-300"
+                          dangerouslySetInnerHTML={{ __html: displayedComment }}
+                        />
+                        {needsTruncation && (
+                          <button 
+                            onClick={() => toggleExpand(review.id)} 
+                            className="text-blue-500 hover:underline text-sm mt-1"
+                          >
+                            {isExpanded ? 'Voir moins' : 'Voir plus'}
+                          </button>
+                        )}
+                      </Card>
+                    );
+                  })}
                 </div>
                 {pageCount > 1 && (
                   <div className="mt-8">

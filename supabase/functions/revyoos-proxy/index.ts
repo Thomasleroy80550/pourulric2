@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { sha1 } from 'https://esm.sh/js-sha1@0.7.0';
-import { format, parseISO } from 'npm:date-fns'; // Corrected import
+import { format, parseISO } from 'npm:date-fns';
 import { fr } from 'npm:date-fns/locale/fr';
 
 const corsHeaders = {
@@ -13,7 +13,7 @@ const REVOOYS_EMAIL = Deno.env.get('REVOOYS_EMAIL');
 const REVOOYS_PASSWORD = Deno.env.get('REVOOYS_PASSWORD');
 const API_BASE_URL = 'https://www.revyoos.com/lapi';
 
-// Simple in-memory cache for the token. Edge functions can be long-lived.
+// Simple in-memory cache for the token.
 let revyoosToken: string | null = null;
 let tokenExpiry: number | null = null;
 
@@ -64,13 +64,38 @@ async function getRevyoosToken(): Promise<string> {
   return revyoosToken;
 }
 
+// Helper function to fetch all reviews for a single holding, handling pagination.
+async function fetchAllReviewsForHolding(id_holding: string, token: string): Promise<RevyoosReviewDTO[]> {
+  let allHoldingReviews: RevyoosReviewDTO[] = [];
+  let page = 1;
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    const url = `${API_BASE_URL}/reviews?token=${token}&id_holding=${id_holding}&page=${page}`;
+    const response = await fetch(url);
+    const data: ReviewsResponse = await response.json();
+
+    if (!data.b_valid || !data.a_reviews) {
+      console.warn(`Failed to fetch Revyoos reviews for holding ${id_holding} on page ${page}: ${data.s_message || 'Invalid response'}`);
+      hasMorePages = false; // Stop if the request is invalid
+    } else if (data.a_reviews.length > 0) {
+      allHoldingReviews = allHoldingReviews.concat(data.a_reviews);
+      page++; // Prepare for the next page
+    } else {
+      hasMorePages = false; // No more reviews on this page, so we're done.
+    }
+  }
+  return allHoldingReviews;
+}
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Auth check for the user calling the function
+    // Auth check
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -88,21 +113,15 @@ serve(async (req) => {
 
     const token = await getRevyoosToken();
 
-    const reviewPromises = holdingIds.map(async (id_holding) => {
-      const url = `${API_BASE_URL}/reviews?token=${token}&id_holding=${id_holding}`;
-      const response = await fetch(url);
-      const data: ReviewsResponse = await response.json();
-
-      if (!data.b_valid || !data.a_reviews) {
-        console.warn(`Failed to fetch Revyoos reviews for holding ${id_holding}: ${data.s_message || 'Invalid response'}`);
-        return [];
-      }
-      return data.a_reviews;
-    });
+    // Use the new paginated fetch function for each holding ID.
+    const reviewPromises = holdingIds.map(id_holding => 
+      fetchAllReviewsForHolding(id_holding, token)
+    );
 
     const results = await Promise.all(reviewPromises);
     const allReviews = results.flat();
 
+    // Deduplicate reviews in case multiple holdings return the same review.
     const uniqueReviews = Array.from(new Map(allReviews.map(review => [review._id, review])).values());
 
     const formattedReviews = uniqueReviews.map((reviewDto) => ({

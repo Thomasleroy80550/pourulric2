@@ -9,13 +9,14 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import AddUserDialog from '@/components/admin/AddUserDialog';
 import EditUserDialog from '@/components/admin/EditUserDialog';
+import ImportUsersDialog from '@/components/admin/ImportUsersDialog';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -73,6 +74,7 @@ const AdminUsersPage: React.FC = () => {
   const [requests, setRequests] = useState<AccountantRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [pendingApproval, setPendingApproval] = useState<AccountantRequest | null>(null);
@@ -114,6 +116,10 @@ const AdminUsersPage: React.FC = () => {
   };
 
   const handleUserUpdated = () => {
+    fetchUsers();
+  };
+
+  const handleImportComplete = () => {
     fetchUsers();
   };
 
@@ -174,10 +180,16 @@ const AdminUsersPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Gestion des Utilisateurs</h1>
-          <Button onClick={() => setIsAddUserDialogOpen(true)}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Ajouter un prospect
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Importer des utilisateurs
+            </Button>
+            <Button onClick={() => setIsAddUserDialogOpen(true)}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Ajouter un prospect
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="users" className="w-full">
@@ -308,6 +320,12 @@ const AdminUsersPage: React.FC = () => {
         onUserAdded={handleUserAdded}
         pendingApproval={pendingApproval}
         setPendingApproval={setPendingApproval}
+      />
+
+      <ImportUsersDialog
+        isOpen={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={handleImportComplete}
       />
 
       <EditUserDialog

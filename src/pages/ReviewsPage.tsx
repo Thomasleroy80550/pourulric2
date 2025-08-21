@@ -29,6 +29,11 @@ const ReviewsPage: React.FC = () => {
   const reviewsPerPage = 9;
   const MAX_COMMENT_LENGTH = 150;
 
+  // Calculate average rating
+  const averageRating = reviews.length > 0
+    ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
+    : 'N/A';
+
   useEffect(() => {
     const fetchReviews = async () => {
       if (!profile?.revyoos_holding_ids) {
@@ -97,7 +102,14 @@ const ReviewsPage: React.FC = () => {
         <h1 className="text-3xl font-bold mb-6">Mes Avis</h1>
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Vos avis et notes</CardTitle>
+            <CardTitle className="text-lg font-semibold flex items-center justify-between">
+              <span>Vos avis et notes</span>
+              {reviews.length > 0 && (
+                <span className="text-base font-normal text-gray-600 dark:text-gray-300">
+                  Note moyenne : <span className="font-semibold">{averageRating}</span> / 5
+                </span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (

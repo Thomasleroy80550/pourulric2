@@ -47,6 +47,7 @@ const editUserSchema = z.object({
   kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional().nullable(),
   estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional().nullable(),
   estimation_details: z.string().optional().nullable(),
+  revyoos_holding_ids: z.string().optional().nullable(),
 });
 
 const addRoomFormSchema = z.object({
@@ -116,6 +117,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         kyc_status: user.kyc_status || 'not_verified',
         estimated_revenue: user.estimated_revenue || 0,
         estimation_details: user.estimation_details || '',
+        revyoos_holding_ids: user.revyoos_holding_ids?.join(', ') || '',
       });
 
       setLoadingRooms(true);
@@ -153,10 +155,12 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
     if (!user) return;
     try {
+      const { revyoos_holding_ids, ...restOfValues } = values;
       const payload: UpdateUserPayload = {
         user_id: user.id,
-        ...values,
+        ...restOfValues,
         commission_rate: values.commission_rate !== undefined ? values.commission_rate / 100 : undefined,
+        revyoos_holding_ids: revyoos_holding_ids ? revyoos_holding_ids.split(',').map(s => s.trim()).filter(Boolean) : [],
       };
       await updateUser(payload);
       toast.success("Utilisateur mis à jour avec succès !");
@@ -321,6 +325,14 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                           <FormLabel>Détails de l'estimation</FormLabel>
                           <FormControl><Textarea {...field} /></FormControl>
                           <FormDescription>Ces détails seront visibles par le prospect sur sa page d'intégration.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="revyoos_holding_ids" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IDs Revyoos</FormLabel>
+                          <FormControl><Textarea {...field} value={field.value ?? ''} placeholder="Entrez les IDs séparés par des virgules" /></FormControl>
+                          <FormDescription>IDs des propriétés sur Revyoos pour récupérer les avis.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )} />

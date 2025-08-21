@@ -61,7 +61,7 @@ serve(async (req) => {
       if (Object.prototype.hasOwnProperty.call(updateData, key)) {
         let value = updateData[key];
 
-        // Convert empty strings to null for all fields, especially relevant for dates and optional text
+        // Convert empty strings to null for all fields, except for revyoos_holding_ids which is an array
         if (typeof value === 'string' && value.trim() === '') {
           value = null;
         }

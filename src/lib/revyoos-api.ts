@@ -67,21 +67,35 @@ async function signIn(): Promise<string> {
 
 /**
  * Fetches reviews from the Revyoos API.
+ * @param holdingIds Optional array of holding IDs to filter reviews.
  */
-export async function getReviews(): Promise<Review[]> {
+export async function getReviews(holdingIds?: string[]): Promise<Review[]> {
+  if (!holdingIds || holdingIds.length === 0) {
+    return [];
+  }
+
   try {
     const token = await signIn();
-    const url = `${API_BASE_URL}/reviews?token=${token}`;
 
-    const response = await fetch(url);
-    const data: ReviewsResponse = await response.json();
+    const reviewPromises = holdingIds.map(async (id_holding) => {
+      const url = `${API_BASE_URL}/reviews?token=${token}&id_holding=${id_holding}`;
+      const response = await fetch(url);
+      const data: ReviewsResponse = await response.json();
+      if (!data.b_valid || !data.reviews) {
+        console.warn(`Failed to fetch Revyoos reviews for holding ${id_holding}: ${data.s_message || 'Invalid response'}`);
+        return [];
+      }
+      return data.reviews;
+    });
 
-    if (!data.b_valid || !data.reviews) {
-      throw new Error(`Failed to fetch Revyoos reviews: ${data.s_message || 'Invalid response'}`);
-    }
+    const results = await Promise.all(reviewPromises);
+    const allReviews = results.flat();
+
+    // Remove duplicates, just in case
+    const uniqueReviews = Array.from(new Map(allReviews.map(review => [review.id_review, review]))).values();
 
     // Transform the DTOs into the format expected by the UI
-    return data.reviews.map((reviewDto) => ({
+    return uniqueReviews.map((reviewDto) => ({
       id: reviewDto.id_review,
       author: reviewDto.s_name,
       avatar: reviewDto.s_photo,
@@ -91,8 +105,6 @@ export async function getReviews(): Promise<Review[]> {
     }));
   } catch (error) {
     console.error("Error fetching reviews from Revyoos:", error);
-    // In case of an error, return an empty array to avoid crashing the page.
-    // The error is logged for debugging.
-    return [];
+    throw error;
   }
 }

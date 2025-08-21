@@ -6,18 +6,20 @@ import { Star, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useSession } from '@/components/SessionContextProvider';
 
 const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { profile } = useSession();
 
   useEffect(() => {
     const fetchReviews = async () => {
       setLoading(true);
       setError(null);
       try {
-        const fetchedReviews = await getReviews();
+        const fetchedReviews = await getReviews(profile?.revyoos_holding_ids);
         setReviews(fetchedReviews);
       } catch (err: any) {
         const errorMessage = `Erreur lors de la récupération des avis : ${err.message}`;
@@ -29,7 +31,7 @@ const ReviewsPage: React.FC = () => {
     };
 
     fetchReviews();
-  }, []);
+  }, [profile]);
 
   const renderSkeletons = () => (
     <div className="space-y-6">

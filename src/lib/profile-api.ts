@@ -38,6 +38,7 @@ export interface UserProfile {
   estimation_details?: string;
   estimated_revenue?: number;
   key_delivery_method?: 'deposit' | 'mail';
+  revyoos_holding_ids?: string[];
 }
 
 /**
@@ -58,7 +59,8 @@ export async function getProfile(): Promise<UserProfile | null> {
       onboarding_status,
       estimation_details,
       estimated_revenue,
-      key_delivery_method
+      key_delivery_method,
+      revyoos_holding_ids
     `)
     .eq('id', user.id)
     .single();

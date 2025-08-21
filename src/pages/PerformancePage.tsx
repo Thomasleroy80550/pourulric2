@@ -99,7 +99,8 @@ const PerformanceDashboard = () => {
         const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((itemAcc, item) => itemAcc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
         totalCA += statementCA;
 
-        const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalTaxeDeSejour || 0) - (s.totals.totalFraisMenage || 0) - (s.totals.totalCommission || 0);
+        // Corrected calculation for net revenue from statement
+        const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalFacture || 0);
         totalNetRevenueFromStatements += statementNetToPay;
 
         const statementNights = s.totals.totalNuits || 0;
@@ -118,7 +119,7 @@ const PerformanceDashboard = () => {
         if (monthIndex !== undefined) {
           newMonthlyFinancialData[monthIndex].ca += statementCA;
           newMonthlyFinancialData[monthIndex].montantVerse += s.totals.totalMontantVerse || 0;
-          newMonthlyFinancialData[monthIndex].frais += s.totals.totalCommission || 0;
+          newMonthlyFinancialData[monthIndex].frais += s.totals.totalFacture || 0; // Use totalFacture for fees
           newMonthlyFinancialData[monthIndex].benef += statementNetToPay;
           
           newMonthlyReservationsData[monthIndex].reservations += statementReservations;

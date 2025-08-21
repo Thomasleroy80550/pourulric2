@@ -18,18 +18,18 @@ interface SignInResponse {
 }
 
 interface RevyoosReviewDTO {
-  id_review: string;
-  s_name: string;
-  s_photo: string;
-  i_rating: number;
-  d_created: string;
-  s_comment: string;
+  _id: string; // Corrected field name
+  name_user_reviews: string; // Corrected field name
+  img_user_reviews: string; // Corrected field name
+  score_reviews: number; // Corrected field name
+  date: string; // Corrected field name
+  content_reviews: string; // Corrected field name
 }
 
 interface ReviewsResponse {
   b_valid: boolean;
   code: number;
-  reviews: RevyoosReviewDTO[];
+  a_reviews: RevyoosReviewDTO[]; // Corrected field name
   s_message?: string;
 }
 
@@ -81,27 +81,29 @@ export async function getReviews(holdingIds?: string[]): Promise<Review[]> {
       const url = `${API_BASE_URL}/reviews?token=${token}&id_holding=${id_holding}`;
       const response = await fetch(url);
       const data: ReviewsResponse = await response.json();
-      if (!data.b_valid || !data.reviews) {
+
+      if (!data.b_valid || !data.a_reviews) { // Corrected field name
         console.warn(`Failed to fetch Revyoos reviews for holding ${id_holding}: ${data.s_message || 'Invalid response'}`);
         return [];
       }
-      return data.reviews;
+
+      return data.a_reviews;
     });
 
     const results = await Promise.all(reviewPromises);
     const allReviews = results.flat();
 
     // Remove duplicates, just in case
-    const uniqueReviews = Array.from(new Map(allReviews.map(review => [review.id_review, review]))).values();
+    const uniqueReviews = Array.from(new Map(allReviews.map(review => [review._id, review]))).values();
 
     // Transform the DTOs into the format expected by the UI
     return uniqueReviews.map((reviewDto) => ({
-      id: reviewDto.id_review,
-      author: reviewDto.s_name,
-      avatar: reviewDto.s_photo,
-      rating: reviewDto.i_rating,
-      date: format(parseISO(reviewDto.d_created), 'd MMMM yyyy', { locale: fr }),
-      comment: reviewDto.s_comment,
+      id: reviewDto._id, // Corrected mapping
+      author: reviewDto.name_user_reviews, // Corrected mapping
+      avatar: reviewDto.img_user_reviews, // Corrected mapping
+      rating: reviewDto.score_reviews, // Corrected mapping
+      date: format(parseISO(reviewDto.date), 'd MMMM yyyy', { locale: fr }), // Corrected mapping
+      comment: reviewDto.content_reviews, // Corrected mapping
     }));
   } catch (error) {
     console.error("Error fetching reviews from Revyoos:", error);

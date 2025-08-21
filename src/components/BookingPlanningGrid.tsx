@@ -303,6 +303,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 {reservations
                   .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id)
                   .map((reservation) => {
+                    // Filter out cancelled reservations
+                    if (reservation.status === 'CANC') {
+                      return null;
+                    }
+
                     const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
                     const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
+import { Badge, BadgeProps } from '@/components/ui/badge';
 import { getPublicChangelog, ChangelogEntry } from '@/lib/changelog-api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -11,6 +11,19 @@ interface WhatsNewSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
 }
+
+const getCategoryBadgeVariant = (category?: string): BadgeProps['variant'] => {
+  switch (category?.toLowerCase()) {
+    case 'nouveauté':
+      return 'default';
+    case 'amélioration':
+      return 'secondary';
+    case 'correction':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
+};
 
 const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ isOpen, onOpenChange }) => {
   const { data: entries, isLoading, error } = useQuery<ChangelogEntry[]>({
@@ -39,12 +52,15 @@ const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ isOpen, onOpenChange }) =
                 <p className="text-xs text-muted-foreground mb-1">
                   {format(new Date(entry.created_at), 'd MMMM yyyy', { locale: fr })}
                 </p>
-                <h3 className="font-semibold text-lg flex items-center gap-2">
+                <h3 className="font-semibold text-lg">
                   {entry.title}
-                  <Badge variant="outline">{entry.version}</Badge>
                 </h3>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant={getCategoryBadgeVariant(entry.category)}>{entry.category || 'Info'}</Badge>
+                  <Badge variant="outline">{entry.version}</Badge>
+                </div>
                 {entry.description && (
-                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{entry.description}</p>
+                  <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{entry.description}</p>
                 )}
               </div>
             ))}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlusCircle, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { Badge, BadgeProps } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +40,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const getCategoryBadgeVariant = (category?: string): BadgeProps['variant'] => {
+  switch (category?.toLowerCase()) {
+    case 'nouveauté':
+      return 'default';
+    case 'amélioration':
+      return 'secondary';
+    case 'correction':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
+};
 
 const AdminChangelogPage = () => {
   const queryClient = useQueryClient();
@@ -114,6 +127,7 @@ const AdminChangelogPage = () => {
             <TableRow>
               <TableHead>Version</TableHead>
               <TableHead>Titre</TableHead>
+              <TableHead>Catégorie</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead>Date de création</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -124,6 +138,11 @@ const AdminChangelogPage = () => {
               <TableRow key={entry.id}>
                 <TableCell className="font-medium">{entry.version}</TableCell>
                 <TableCell>{entry.title}</TableCell>
+                <TableCell>
+                  <Badge variant={getCategoryBadgeVariant(entry.category)}>
+                    {entry.category}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <Badge variant={entry.is_public ? 'default' : 'secondary'}>
                     {entry.is_public ? 'Public' : 'Privé'}

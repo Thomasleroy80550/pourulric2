@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
 import { ChangelogEntry, ChangelogEntryPayload } from '@/lib/changelog-api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ChangelogEntryDialogProps {
   isOpen: boolean;
@@ -24,7 +24,10 @@ const formSchema = z.object({
   title: z.string().min(1, 'Le titre est requis.'),
   description: z.string().optional(),
   is_public: z.boolean(),
+  category: z.string().min(1, 'La catégorie est requise.'),
 });
+
+const categories = ['Nouveauté', 'Amélioration', 'Correction'];
 
 const ChangelogEntryDialog: React.FC<ChangelogEntryDialogProps> = ({ isOpen, onOpenChange, onSave, entry }) => {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -34,6 +37,7 @@ const ChangelogEntryDialog: React.FC<ChangelogEntryDialogProps> = ({ isOpen, onO
       title: '',
       description: '',
       is_public: false,
+      category: 'Amélioration',
     },
   });
 
@@ -44,6 +48,7 @@ const ChangelogEntryDialog: React.FC<ChangelogEntryDialogProps> = ({ isOpen, onO
         title: entry.title,
         description: entry.description || '',
         is_public: entry.is_public,
+        category: entry.category || 'Amélioration',
       });
     } else {
       form.reset({
@@ -51,6 +56,7 @@ const ChangelogEntryDialog: React.FC<ChangelogEntryDialogProps> = ({ isOpen, onO
         title: '',
         description: '',
         is_public: false,
+        category: 'Amélioration',
       });
     }
   }, [entry, form]);
@@ -76,6 +82,28 @@ const ChangelogEntryDialog: React.FC<ChangelogEntryDialogProps> = ({ isOpen, onO
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catégorie</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez une catégorie" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="version"

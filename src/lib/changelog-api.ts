@@ -7,6 +7,7 @@ export interface ChangelogEntry {
   description?: string;
   is_public: boolean;
   created_at: string;
+  category: string;
 }
 
 export type ChangelogEntryPayload = Omit<ChangelogEntry, 'id' | 'created_at'>;

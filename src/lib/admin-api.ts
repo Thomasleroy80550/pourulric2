@@ -3,6 +3,7 @@ import { createNotification } from "./notifications-api";
 import { UserProfile } from "./profile-api";
 import { Strategy } from "./strategy-api";
 import { UserRoom } from "./user-room-api"; // Import UserRoom type
+import { Idea } from "./ideas-api";
 
 export interface AppSetting {
   key: string;
@@ -37,6 +38,13 @@ export interface AccountantRequest {
 }
 
 export interface AdminUserRoom extends UserRoom {
+  profiles: {
+    first_name: string;
+    last_name: string;
+  } | null;
+}
+
+export interface AdminIdea extends Idea {
   profiles: {
     first_name: string;
     last_name: string;
@@ -384,6 +392,66 @@ export async function deleteStrategy(strategyId: string): Promise<void> {
   if (error) {
     console.error("Error deleting strategy:", error);
     throw new Error(`Erreur lors de la suppression de la stratégie : ${error.message}`);
+  }
+}
+
+/**
+ * Fetches all ideas from the database. Admin only.
+ * @returns A promise that resolves to an array of AdminIdea objects.
+ */
+export async function getAllIdeas(): Promise<AdminIdea[]> {
+  const { data, error } = await supabase
+    .from('ideas')
+    .select(`
+      *,
+      profiles (
+        first_name,
+        last_name
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching all ideas:", error);
+    throw new Error(`Erreur lors de la récupération des idées : ${error.message}`);
+  }
+  return data || [];
+}
+
+/**
+ * Updates the status of an idea. Admin only.
+ * @param ideaId The ID of the idea to update.
+ * @param status The new status.
+ * @returns The updated idea.
+ */
+export async function updateIdeaStatus(ideaId: string, status: string): Promise<Idea> {
+  const { data, error } = await supabase
+    .from('ideas')
+    .update({ status })
+    .eq('id', ideaId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating idea status:', error);
+    throw new Error(`Erreur lors de la mise à jour du statut de l'idée : ${error.message}`);
+  }
+  return data;
+}
+
+/**
+ * Deletes an idea. Admin only.
+ * @param ideaId The ID of the idea to delete.
+ */
+export async function deleteIdea(ideaId: string): Promise<void> {
+  const { error } = await supabase
+    .from('ideas')
+    .delete()
+    .eq('id', ideaId);
+
+  if (error) {
+    console.error("Error deleting idea:", error);
+    throw new Error(`Erreur lors de la suppression de l'idée : ${error.message}`);
   }
 }
 

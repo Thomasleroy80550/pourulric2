@@ -17,7 +17,8 @@ import {
   Target,
   FilePlus,
   MessageSquare,
-  Gift
+  Gift,
+  Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -45,6 +46,7 @@ const adminNavigationItems = [
   { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },
   { name: 'FAQ', href: '/admin/faq', icon: MessageSquare },
   { name: 'Changelog', href: '/admin/changelog', icon: Gift },
+  { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
   {
     href: '/admin/settings',
     label: 'Paramètres',
@@ -87,7 +89,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <nav className="flex-grow">
           <ul>
             {adminNavigationItems.map((item) => (
-              <li key={item.name} className="mb-2">
+              <li key={item.name || item.label} className="mb-2">
                 <Link
                   to={item.href}
                   className={cn(
@@ -96,7 +98,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   )}
                 >
                   <item.icon className="h-5 w-5 mr-3" />
-                  {item.name}
+                  {item.name || item.label}
                 </Link>
               </li>
             ))}
@@ -209,6 +211,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 >
                   <Gift className="h-5 w-5" />
                   <span className="text-sm">Changelog</span>
+                </Link>
+                <Link
+                  to="/admin/ideas"
+                  className="flex items-center gap-2"
+                >
+                  <Lightbulb className="h-5 w-5" />
+                  <span className="text-sm">Idées</span>
                 </Link>
                 <Link
                   to="/admin/settings"

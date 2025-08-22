@@ -43,6 +43,7 @@ import OnboardingStatusPage from "./pages/OnboardingStatusPage"; // Import the n
 import FaqPage from "./pages/FaqPage";
 import AdminFaqPage from "./pages/AdminFaqPage";
 import AdminChangelogPage from "./pages/AdminChangelogPage";
+import AdminIdeasPage from "./pages/AdminIdeasPage";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ function App() {
                   <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
                   <Route path="/admin/faq" element={<AdminFaqPage />} />
                   <Route path="/admin/changelog" element={<AdminChangelogPage />} />
+                  <Route path="/admin/ideas" element={<AdminIdeasPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />

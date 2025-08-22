@@ -29,28 +29,60 @@ import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
 import { Menu } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const adminNavigationItems = [
-  { name: 'Tableau de Bord', href: '/admin', icon: Shield },
-  { name: 'Utilisateurs', href: '/admin/users', icon: Users },
-  { name: 'Logements Utilisateurs', href: '/admin/user-rooms', icon: Home },
-  { name: 'Stratégies', href: '/admin/strategies', icon: Target },
-  { name: 'Pages', href: '/admin/pages', icon: FileText },
-  { name: 'Blog', href: '/admin/blog', icon: FileText },
-  { name: 'Rapports Tech.', href: '/admin/technical-reports', icon: Wrench },
-  { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus },
-  { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },
-  { name: 'FAQ', href: '/admin/faq', icon: MessageSquare },
-  { name: 'Changelog', href: '/admin/changelog', icon: Gift },
-  { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
+const adminNavigationCategories = [
   {
-    href: '/admin/settings',
-    label: 'Paramètres',
-    icon: Settings,
+    categoryName: 'Général',
+    items: [
+      { name: 'Tableau de Bord', href: '/admin', icon: Home },
+    ]
+  },
+  {
+    categoryName: 'Gestion des Utilisateurs',
+    items: [
+      { name: 'Utilisateurs', href: '/admin/users', icon: Users },
+      { name: 'Logements Utilisateurs', href: '/admin/user-rooms', icon: BedDouble },
+    ]
+  },
+  {
+    categoryName: 'Contenu & Communication',
+    items: [
+      { name: 'Pages', href: '/admin/pages', icon: FileText },
+      { name: 'Blog', href: '/admin/blog', icon: FileText },
+      { name: 'FAQ', href: '/admin/faq', icon: MessageSquare },
+      { name: 'Changelog', href: '/admin/changelog', icon: Gift },
+      { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
+    ]
+  },
+  {
+    categoryName: 'Finances',
+    items: [
+      { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus },
+      { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },
+    ]
+  },
+  {
+    categoryName: 'Opérations & Support',
+    items: [
+      { name: 'Rapports Tech.', href: '/admin/technical-reports', icon: Wrench },
+      { name: 'Stratégies', href: '/admin/strategies', icon: Target },
+    ]
+  },
+  {
+    categoryName: 'Paramètres',
+    items: [
+      { name: 'Paramètres', href: '/admin/settings', icon: Settings },
+    ]
   },
 ];
 
@@ -87,22 +119,33 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <h1 className="text-xl font-bold">Admin Hello Keys</h1>
         </div>
         <nav className="flex-grow">
-          <ul>
-            {adminNavigationItems.map((item) => (
-              <li key={item.name || item.label} className="mb-2">
-                <Link
-                  to={item.href}
-                  className={cn(
-                    "flex items-center p-2 rounded-md hover:bg-gray-700 transition-colors",
-                    location.pathname === item.href && "bg-gray-900"
-                  )}
-                >
-                  <item.icon className="h-5 w-5 mr-3" />
-                  {item.name || item.label}
-                </Link>
-              </li>
+          <Accordion type="multiple" className="w-full">
+            {adminNavigationCategories.map((category, index) => (
+              <AccordionItem value={`item-${index}`} key={category.categoryName}>
+                <AccordionTrigger className="py-2 text-white hover:no-underline hover:bg-gray-700 rounded-md px-2">
+                  {category.categoryName}
+                </AccordionTrigger>
+                <AccordionContent className="pb-0">
+                  <ul>
+                    {category.items.map((item) => (
+                      <li key={item.name} className="mb-1">
+                        <Link
+                          to={item.href}
+                          className={cn(
+                            "flex items-center p-2 rounded-md hover:bg-gray-700 transition-colors ml-4",
+                            location.pathname === item.href && "bg-gray-900"
+                          )}
+                        >
+                          <item.icon className="h-5 w-5 mr-3" />
+                          {item.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </ul>
+          </Accordion>
         </nav>
         <div className="mt-auto">
           <Button variant="ghost" className="w-full justify-start text-left mb-2 hover:bg-gray-700 hover:text-white" asChild>
@@ -135,97 +178,29 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   <img src="/logo.png" alt="Logo" className="h-6 w-auto" />
                   <span className="">Hello Keys</span>
                 </Link>
-                <Link
-                  to="/admin/dashboard"
-                  className="flex items-center gap-2"
-                >
-                  <Shield className="h-5 w-5" />
-                  <span className="text-sm">Tableau de Bord</span>
-                </Link>
-                <Link
-                  to="/admin/users"
-                  className="flex items-center gap-2"
-                >
-                  <Users className="h-5 w-5" />
-                  <span className="text-sm">Clients</span>
-                </Link>
-                <Link
-                  to="/admin/user-rooms"
-                  className="flex items-center gap-2"
-                >
-                  <Home className="h-5 w-5" />
-                  <span className="text-sm">Logements Utilisateurs</span>
-                </Link>
-                <Link
-                  to="/admin/strategies"
-                  className="flex items-center gap-2"
-                >
-                  <Target className="h-5 w-5" />
-                  <span className="text-sm">Stratégies</span>
-                </Link>
-                <Link
-                  to="/admin/pages"
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-5 w-5" />
-                  <span className="text-sm">Pages</span>
-                </Link>
-                <Link
-                  to="/admin/blog"
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-5 w-5" />
-                  <span className="text-sm">Blog</span>
-                </Link>
-                <Link
-                  to="/admin/technical-reports"
-                  className="flex items-center gap-2"
-                >
-                  <Wrench className="h-5 w-5" />
-                  <span className="text-sm">Rapports Tech.</span>
-                </Link>
-                <Link
-                  to="/admin/invoice-generation"
-                  className="flex items-center gap-2"
-                >
-                  <FilePlus className="h-5 w-5" />
-                  <span className="text-sm">Générer Relevé</span>
-                </Link>
-                <Link
-                  to="/admin/statements"
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-5 w-5" />
-                  <span className="text-sm">Relevés</span>
-                </Link>
-                <Link
-                  to="/admin/faq"
-                  className="flex items-center gap-2"
-                >
-                  <MessageSquare className="h-5 w-5" />
-                  <span className="text-sm">FAQ</span>
-                </Link>
-                <Link
-                  to="/admin/changelog"
-                  className="flex items-center gap-2"
-                >
-                  <Gift className="h-5 w-5" />
-                  <span className="text-sm">Changelog</span>
-                </Link>
-                <Link
-                  to="/admin/ideas"
-                  className="flex items-center gap-2"
-                >
-                  <Lightbulb className="h-5 w-5" />
-                  <span className="text-sm">Idées</span>
-                </Link>
-                <Link
-                  to="/admin/settings"
-                  className="flex items-center gap-2"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span className="text-sm">Paramètres</span>
-                </Link>
+                <Accordion type="multiple" className="w-full">
+                  {adminNavigationCategories.map((category, index) => (
+                    <AccordionItem value={`item-${index}`} key={category.categoryName}>
+                      <AccordionTrigger className="py-2 text-base hover:no-underline">
+                        {category.categoryName}
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-0">
+                        <div className="grid gap-2 pl-4">
+                          {category.items.map((item) => (
+                            <Link
+                              key={item.name}
+                              to={item.href}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <item.icon className="h-5 w-5" />
+                              {item.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               </nav>
             </SheetContent>
           </Sheet>

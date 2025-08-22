@@ -36,7 +36,7 @@ const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ isOpen, onOpenChange }) =
               <div key={entry.id} className="relative pl-6 pb-6 border-b border-dashed last:border-b-0 last:pb-0">
                 <div className="absolute left-0 top-1 h-3 w-3 rounded-full bg-primary"></div>
                 <div className="absolute left-[5px] top-4 h-full w-px bg-border"></div>
-                <p className="text-sm text-muted-foreground mb-1">
+                <p className="text-xs text-muted-foreground mb-1">
                   {format(new Date(entry.created_at), 'd MMMM yyyy', { locale: fr })}
                 </p>
                 <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -44,7 +44,7 @@ const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ isOpen, onOpenChange }) =
                   <Badge variant="outline">{entry.version}</Badge>
                 </h3>
                 {entry.description && (
-                  <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{entry.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{entry.description}</p>
                 )}
               </div>
             ))}

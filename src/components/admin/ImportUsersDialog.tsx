@@ -144,9 +144,7 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
               role: 'user',
             });
             
-            if (!newUserResponse?.user?.id) {
-                throw new Error("La création de l'utilisateur n'a pas retourné d'ID valide.");
-            }
+            // newUserResponse is now guaranteed to have user.id if no error was thrown
             const newUserId = newUserResponse.user.id;
 
             // 3. Add user room, passing room_id_2

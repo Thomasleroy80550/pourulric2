@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createNotification } from "./notifications-api";
 import { UserProfile } from "./profile-api";
 import { Strategy } from "./strategy-api";
+import { UserRoom } from "./user-room-api"; // Import UserRoom type
 
 export interface AppSetting {
   key: string;
@@ -226,13 +227,18 @@ export interface CreateUserPayload {
   estimated_revenue?: number;
 }
 
+export interface CreatedUserResponse {
+  user: { id: string; email: string; };
+  message: string;
+}
+
 /**
  * Creates a new user. This is an admin-only function.
  * It creates a user with a temporary password and sends a welcome email.
  * @param userData The user data, including a temporary password.
  * @returns A promise that resolves with the created user data.
  */
-export async function createUser(userData: CreateUserPayload) {
+export async function createUser(userData: CreateUserPayload): Promise<CreatedUserResponse> {
   const { data, error } = await supabase.functions.invoke('create-user-proxy', {
     body: userData, // Pass the entire userData object as the body
   });
@@ -242,7 +248,17 @@ export async function createUser(userData: CreateUserPayload) {
     throw new Error(`Erreur lors de la création de l'utilisateur : ${error.message}`);
   }
 
-  return data;
+  // The edge function returns { data: { user: User, session: Session | null }, message: "User created successfully." }
+  // We want to extract the `user` object directly from this nested structure.
+  const createdUserData = data?.data?.user;
+  const message = data?.message;
+
+  if (!createdUserData || !createdUserData.id) {
+    console.error('Edge function did not return a valid user object:', data);
+    throw new Error("La création de l'utilisateur n'a pas retourné d'ID valide depuis la fonction Edge.");
+  }
+
+  return { user: { id: createdUserData.id, email: createdUserData.email }, message };
 }
 
 export type UpdateUserPayload = { user_id: string } & Partial<Omit<UserProfile, 'id'>>;

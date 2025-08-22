@@ -33,7 +33,7 @@ const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ isOpen, onOpenChange }) =
             {isLoading && <p>Chargement des nouveautés...</p>}
             {error && <p className="text-red-500">Erreur: {error.message}</p>}
             {entries?.map((entry) => (
-              <div key={entry.id} className="relative pl-6">
+              <div key={entry.id} className="relative pl-6 pb-6 border-b border-dashed last:border-b-0 last:pb-0">
                 <div className="absolute left-0 top-1 h-3 w-3 rounded-full bg-primary"></div>
                 <div className="absolute left-[5px] top-4 h-full w-px bg-border"></div>
                 <p className="text-sm text-muted-foreground mb-1">

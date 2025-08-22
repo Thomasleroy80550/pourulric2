@@ -16,7 +16,8 @@ import {
   User,
   Target,
   FilePlus,
-  MessageSquare
+  MessageSquare,
+  Gift
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -43,6 +44,7 @@ const adminNavigationItems = [
   { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus },
   { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },
   { name: 'FAQ', href: '/admin/faq', icon: MessageSquare },
+  { name: 'Changelog', href: '/admin/changelog', icon: Gift },
   {
     href: '/admin/settings',
     label: 'Paramètres',
@@ -200,6 +202,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 >
                   <MessageSquare className="h-5 w-5" />
                   <span className="text-sm">FAQ</span>
+                </Link>
+                <Link
+                  to="/admin/changelog"
+                  className="flex items-center gap-2"
+                >
+                  <Gift className="h-5 w-5" />
+                  <span className="text-sm">Changelog</span>
                 </Link>
                 <Link
                   to="/admin/settings"

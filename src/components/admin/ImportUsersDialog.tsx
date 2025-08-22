@@ -66,6 +66,17 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = "first_name,last_name,email,room_name,room_id,revyoos_holding_ids";
+    const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(headers);
+    const link = document.createElement("a");
+    link.setAttribute("href", csvContent);
+    link.setAttribute("download", "modele_import_utilisateurs.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleImport = async () => {
     if (!file) {
       toast.error('Aucun fichier sélectionné', {
@@ -236,9 +247,14 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
 
         <DialogFooter>
           {!result ? (
-            <Button onClick={handleImport} disabled={!file || isImporting}>
-              {isImporting ? 'Importation en cours...' : 'Importer'}
-            </Button>
+            <>
+              <Button variant="outline" onClick={handleDownloadTemplate} disabled={isImporting}>
+                Télécharger le modèle
+              </Button>
+              <Button onClick={handleImport} disabled={!file || isImporting}>
+                {isImporting ? 'Importation en cours...' : 'Importer'}
+              </Button>
+            </>
           ) : (
             <Button onClick={handleClose}>Fermer</Button>
           )}

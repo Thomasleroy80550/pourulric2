@@ -44,7 +44,7 @@ const WhatsNewSheet: React.FC<WhatsNewSheetProps> = ({ isOpen, onOpenChange }) =
                   <Badge variant="outline">{entry.version}</Badge>
                 </h3>
                 {entry.description && (
-                  <p className="text-muted-foreground mt-1">{entry.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{entry.description}</p>
                 )}
               </div>
             ))}

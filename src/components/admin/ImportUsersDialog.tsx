@@ -31,6 +31,7 @@ interface UserImportData {
   email: string;
   room_name: string;
   room_id: string;
+  room_id_2?: string; // Added room_id_2
   revyoos_holding_ids?: string;
 }
 
@@ -67,7 +68,8 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
   };
 
   const handleDownloadTemplate = () => {
-    const headers = "first_name,last_name,email,room_name,room_id,revyoos_holding_ids";
+    // Updated headers to include room_id_2
+    const headers = "first_name,last_name,email,room_name,room_id,room_id_2,revyoos_holding_ids";
     const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(headers);
     const link = document.createElement("a");
     link.setAttribute("href", csvContent);
@@ -103,7 +105,8 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
 
         for (let i = 0; i < totalUsers; i++) {
           const user = json[i];
-          const { email, first_name, last_name, room_name, room_id, revyoos_holding_ids } = user;
+          // Destructure room_id_2
+          const { email, first_name, last_name, room_name, room_id, room_id_2, revyoos_holding_ids } = user;
 
           if (!email || !first_name || !last_name || !room_name || !room_id) {
             currentResult.errors.push({ email: email || `Ligne ${i + 2}`, error: 'Données manquantes (email, first_name, last_name, room_name, room_id sont requis).' });
@@ -146,8 +149,8 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
             }
             const newUserId = newUserResponse.user.id;
 
-            // 3. Add user room
-            await adminAddUserRoom(newUserId, room_id, room_name);
+            // 3. Add user room, passing room_id_2
+            await adminAddUserRoom(newUserId, room_id, room_name, room_id_2);
 
             // 4. Update profile with onboarding status and revyoos id
             await updateUser({
@@ -187,7 +190,7 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
           <DialogTitle>Importer des utilisateurs en masse</DialogTitle>
           <DialogDescription>
             Sélectionnez un fichier Excel (.xlsx, .xls) pour importer des utilisateurs.
-            Le fichier doit contenir les colonnes : `first_name`, `last_name`, `email`, `room_name`, `room_id`, et `revyoos_holding_ids` (optionnel).
+            Le fichier doit contenir les colonnes : `first_name`, `last_name`, `email`, `room_name`, `room_id`, `room_id_2` (optionnel), et `revyoos_holding_ids` (optionnel).
           </DialogDescription>
         </DialogHeader>
         

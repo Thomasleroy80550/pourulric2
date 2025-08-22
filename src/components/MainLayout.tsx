@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut, Plug, Building } from 'lucide-react';
+import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut, Plug, Building, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -18,6 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import BottomNavBar from './BottomNavBar';
+import WhatsNewSheet from './WhatsNewSheet';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -180,6 +181,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -307,6 +309,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
               <Sparkles className="h-5 w-5 text-blue-500" />
             </Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsWhatsNewOpen(true)}>
+              <Gift className="h-5 w-5" />
+            </Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -411,6 +416,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onOpenChange={setIsAICopilotDialogOpen}
         navigate={navigate}
       />
+      <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
     </div>
   );
 };

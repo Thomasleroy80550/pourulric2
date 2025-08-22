@@ -28,6 +28,10 @@ import NotificationBell from './NotificationBell';
 import { Menu } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
+interface AdminLayoutProps {
+  children: React.ReactNode;
+}
+
 const adminNavigationItems = [
   { name: 'Tableau de Bord', href: '/admin', icon: Shield },
   { name: 'Utilisateurs', href: '/admin/users', icon: Users },
@@ -46,7 +50,7 @@ const adminNavigationItems = [
   },
 ];
 
-const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, loading } = useSession();

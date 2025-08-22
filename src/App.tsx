@@ -42,6 +42,7 @@ import AdminSettingsPage from "./pages/AdminSettingsPage";
 import OnboardingStatusPage from "./pages/OnboardingStatusPage"; // Import the new page
 import FaqPage from "./pages/FaqPage";
 import AdminFaqPage from "./pages/AdminFaqPage";
+import AdminChangelogPage from "./pages/AdminChangelogPage";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ function App() {
                   <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                   <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
                   <Route path="/admin/faq" element={<AdminFaqPage />} />
+                  <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />

@@ -54,14 +54,14 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+          DEFAULT: "hsl(210 30% 98%)", // Very light grey
+          foreground: "hsl(222.2 47.4% 11.2%)", // Dark grey
+          primary: "hsl(200 70% 30%)", // Main brand blue
+          "primary-foreground": "hsl(0 0% 100%)", // White
+          accent: "hsl(210 40% 96.1%)", // Slightly darker grey for hover/active
+          "accent-foreground": "hsl(222.2 47.4% 11.2%)", // Dark grey
+          border: "hsl(214.3 31.8% 91.4%)", // Light grey border
+          ring: "hsl(222.2 84% 4.9%)", // Consistent with main ring
         },
       },
       borderRadius: {

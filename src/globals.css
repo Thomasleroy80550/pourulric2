@@ -31,16 +31,6 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-
-    /* Custom Sidebar Colors */
-    --sidebar-background: 210 30% 98%; /* Very light grey */
-    --sidebar-foreground: 222.2 47.4% 11.2%; /* Dark grey */
-    --sidebar-primary: 200 70% 30%; /* Main brand blue */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 210 40% 96.1%; /* Slightly darker grey for hover/active */
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%; /* Dark grey */
-    --sidebar-border: 214.3 31.8% 91.4%; /* Light grey border */
-    --sidebar-ring: 222.2 84% 4.9%; /* Consistent with main ring */
   }
 
   .dark {
@@ -71,16 +61,6 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-
-    /* Custom Sidebar Colors for dark mode */
-    --sidebar-background: 220 10% 10%; /* Deep dark blue/grey */
-    --sidebar-foreground: 210 40% 98%; /* Light grey */
-    --sidebar-primary: 200 70% 50%; /* Brighter brand blue */
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%; /* Dark text */
-    --sidebar-accent: 217.2 32.6% 17.5%; /* Slightly lighter dark blue/grey for hover */
-    --sidebar-accent-foreground: 210 40% 98%; /* Light grey */
-    --sidebar-border: 217.2 32.6% 17.5%; /* Slightly lighter dark grey border */
-    --sidebar-ring: 217.2 91.2% 59.8%; /* Consistent with main ring */
   }
 }
 

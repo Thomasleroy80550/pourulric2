@@ -40,6 +40,7 @@ import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense 
 import { toast } from 'sonner';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
+import { getReviews, Review } from '@/lib/revyoos-api';
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -85,6 +86,9 @@ const DashboardPage = () => {
   const [netPricePerNight, setNetPricePerNight] = useState(0);
   const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
   const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
+  const [averageRating, setAverageRating] = useState<number | null>(null);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
 
   const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
   const [dialogChartData, setDialogChartData] = useState<any[]>([]);
@@ -218,11 +222,19 @@ const DashboardPage = () => {
     setFinancialDataError(null);
     setLoadingKrossbookingStats(true);
     setKrossbookingStatsError(null);
+    setLoadingReviews(true);
+    setReviewsError(null);
 
     try {
       const userProfile = await getProfile();
       if (userProfile) {
         setExpensesModuleEnabled(userProfile.expenses_module_enabled || false);
+      } else {
+        setFinancialDataError("Impossible de charger le profil utilisateur.");
+        setLoadingFinancialData(false);
+        setLoadingKrossbookingStats(false);
+        setLoadingReviews(false);
+        return;
       }
 
       let allExpenses: Expense[] = [];
@@ -235,9 +247,10 @@ const DashboardPage = () => {
         allExpenses = [...singleExpenses, ...recurringInstances];
       }
 
-      const [statements, fetchedUserRooms] = await Promise.all([
+      const [statements, fetchedUserRooms, reviews] = await Promise.all([
         getMyStatements(),
         getUserRooms(),
+        getReviews(userProfile.revyoos_holding_ids)
       ]);
 
       const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
@@ -251,6 +264,14 @@ const DashboardPage = () => {
         }));
       } else {
         setFinancialDataError("Impossible de charger le profil utilisateur.");
+      }
+
+      // Calculate average rating
+      if (reviews && reviews.length > 0) {
+        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+        setAverageRating(totalRating / reviews.length);
+      } else {
+        setAverageRating(null);
       }
 
       const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
@@ -281,10 +302,12 @@ const DashboardPage = () => {
       const errorMsg = `Erreur lors du chargement des données : ${err.message}`;
       setFinancialDataError(errorMsg);
       setKrossbookingStatsError(errorMsg);
+      setReviewsError(errorMsg);
       console.error("Error fetching dashboard data:", err);
     } finally {
       setLoadingFinancialData(false);
       setLoadingKrossbookingStats(false);
+      setLoadingReviews(false);
     }
   }, [currentYear]);
 
@@ -403,7 +426,7 @@ const DashboardPage = () => {
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {loadingKrossbookingStats || loadingFinancialData ? (
+              {loadingKrossbookingStats || loadingFinancialData || loadingReviews ? (
                 <div className="space-y-4">
                   <Skeleton className="h-8 w-1/2" />
                   <Skeleton className="h-4 w-3/4" />
@@ -417,11 +440,11 @@ const DashboardPage = () => {
                   </div>
                   <Skeleton className="h-4 w-1/3" />
                 </div>
-              ) : krossbookingStatsError || financialDataError ? (
+              ) : krossbookingStatsError || financialDataError || reviewsError ? (
                 <Alert variant="destructive">
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{krossbookingStatsError || financialDataError}</AlertDescription>
+                  <AlertDescription>{krossbookingStatsError || financialDataError || reviewsError}</AlertDescription>
                 </Alert>
               ) : (
                 <>
@@ -460,7 +483,9 @@ const DashboardPage = () => {
                       <p className="text-sm text-gray-500">Prix net / nuit</p>
                     </div>
                     <div>
-                      <p className="text-xl font-bold">4.4/5</p>
+                      <p className="text-xl font-bold">
+                        {averageRating !== null ? `${averageRating.toFixed(1)}/5` : 'N/A'}
+                      </p>
                       <p className="text-sm text-gray-500">Votre note</p>
                     </div>
                   </div>

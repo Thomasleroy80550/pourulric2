@@ -148,8 +148,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                       ? "bg-admin-panel-accent text-admin-panel-accent-foreground" // Active item background and text
                       : ""
                   )}>
-                    <subItem.icon className="mr-2 h-4 w-4" />
-                    <span>{subItem.name}</span>
+                    {/* Wrap children of Link in a single span */}
+                    <span className="flex items-center gap-2">
+                      <subItem.icon className="mr-2 h-4 w-4" />
+                      <span>{subItem.name}</span>
+                    </span>
                   </Link>
                 </DropdownMenuItem>
               ))}

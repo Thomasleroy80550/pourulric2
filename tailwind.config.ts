@@ -1,12 +1,12 @@
-import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss"
 
-export default {
+const config = {
   darkMode: ["class"],
   content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
   ],
   prefix: "",
   theme: {
@@ -14,8 +14,7 @@ export default {
       center: true,
       padding: "2rem",
       screens: {
-        "2xl": "1600px", // Increased from 1400px
-        "3xl": "1920px", // Added new breakpoint
+        "2xl": "1400px",
       },
     },
     extend: {
@@ -53,41 +52,29 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Custom colors for the main layout sidebar
         sidebar: {
-          DEFAULT: "hsl(210 30% 98%)", // Very light grey (for user interface)
-          foreground: "hsl(222.2 47.4% 11.2%)", // Dark grey
-          primary: "hsl(200 70% 30%)", // Main brand blue
-          "primary-foreground": "hsl(0 0% 100%)", // White
-          accent: "hsl(210 40% 96.1%)", // Slightly darker grey for hover/active
-          "accent-foreground": "hsl(222.2 47.4% 11.2%)", // Dark grey
-          border: "hsl(214.3 31.8% 91.4%)", // Light grey border
-          ring: "hsl(222.2 84% 4.9%)", // Consistent with main ring
-        },
-        "admin-panel": { // Nouvelle palette pour l'interface d'administration
-          DEFAULT: "hsl(0 0% 100%)", // Blanc pour le fond
-          foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte (#255f85)
-          primary: {
-            DEFAULT: "hsl(205 100% 94%)", // Bleu très clair pour le fond du menu supérieur
-            foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte sur le primaire (#255f85)
-          },
-          secondary: {
-            DEFAULT: "hsl(200 53% 69%)", // Bleu Clair pour les éléments secondaires
-            foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte sur le secondaire (#255f85)
-          },
-          muted: {
-            DEFAULT: "hsl(0 0% 95%)", // Gris très clair pour le fond muted
-            foreground: "hsl(200 10% 50%)", // Gris plus foncé pour le texte muted
-          },
+          DEFAULT: "hsl(var(--sidebar))",
+          foreground: "hsl(var(--sidebar-foreground))",
           accent: {
-            DEFAULT: "hsl(35 90% 57%)", // Jaune-Orangé pour l'accent
-            foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte sur l'accent (#255f85)
+            DEFAULT: "hsl(var(--sidebar-accent))",
+            foreground: "hsl(var(--sidebar-accent-foreground))",
           },
-          destructive: {
-            DEFAULT: "hsl(20 90% 52%)", // Orange Vif pour les actions destructives
-            foreground: "hsl(0 0% 100%)", // Blanc pour le texte sur le destructif
+          border: "hsl(var(--sidebar-border))",
+        },
+        // Custom colors for the admin panel
+        "admin-panel": {
+          DEFAULT: "hsl(var(--admin-panel))",
+          primary: {
+            DEFAULT: "hsl(var(--admin-panel-primary))",
+            foreground: "hsl(var(--admin-panel-primary-foreground))",
           },
-          border: "hsl(200 10% 90%)", // Gris-bleu clair pour les bordures
-          ring: "hsl(35 90% 57%)", // Jaune-Orangé pour l'anneau de focus
+          foreground: "hsl(var(--admin-panel-foreground))",
+          accent: {
+            DEFAULT: "hsl(var(--admin-panel-accent))",
+            foreground: "hsl(var(--admin-panel-accent-foreground))",
+          },
+          border: "hsl(var(--admin-panel-border))",
         },
       },
       borderRadius: {
@@ -97,20 +84,12 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
@@ -120,4 +99,6 @@ export default {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+} satisfies Config
+
+export default config

@@ -65,14 +65,14 @@ export default {
         },
         "admin-panel": { // Nouvelle palette pour l'interface d'administration
           DEFAULT: "hsl(0 0% 100%)", // Blanc pour le fond
-          foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte
+          foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte (#255f85)
           primary: {
             DEFAULT: "hsl(205 100% 94%)", // Bleu très clair pour le fond du menu supérieur
-            foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte sur le primaire
+            foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte sur le primaire (#255f85)
           },
           secondary: {
             DEFAULT: "hsl(200 53% 69%)", // Bleu Clair pour les éléments secondaires
-            foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte sur le secondaire
+            foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte sur le secondaire (#255f85)
           },
           muted: {
             DEFAULT: "hsl(0 0% 95%)", // Gris très clair pour le fond muted
@@ -80,7 +80,7 @@ export default {
           },
           accent: {
             DEFAULT: "hsl(35 90% 57%)", // Jaune-Orangé pour l'accent
-            foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte sur l'accent
+            foreground: "hsl(200 53% 33%)", // Bleu Foncé pour le texte sur l'accent (#255f85)
           },
           destructive: {
             DEFAULT: "hsl(20 90% 52%)", // Orange Vif pour les actions destructives

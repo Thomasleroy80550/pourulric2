@@ -118,8 +118,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         : "hidden md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6"
     )}>
       <Link to="/admin" className="flex items-center gap-2 text-lg font-semibold md:text-base mb-4 md:mb-0">
-        <Shield className="h-6 w-6 text-sidebar-primary-foreground" />
-        <span className="text-sidebar-primary-foreground">Admin Hello Keys</span>
+        <Shield className="h-6 w-6 text-admin-panel-primary-foreground" />
+        <span className="text-admin-panel-primary-foreground">Admin Hello Keys</span>
       </Link>
       {adminNavItems.map(item => (
         item.subItems ? (
@@ -128,10 +128,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <Button
                 variant="ghost"
                 className={cn(
-                  "flex items-center gap-2 transition-colors hover:text-sidebar-primary-foreground",
+                  "flex items-center gap-2 transition-colors hover:bg-transparent", // Added hover:bg-transparent
                   item.subItems.some(subItem => location.pathname.startsWith(subItem.href))
-                    ? "text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground",
+                    ? "text-admin-panel-primary-foreground" // Active state text color
+                    : "text-admin-panel-foreground", // Inactive state text color
                   isMobile && "text-lg w-full justify-start"
                 )}
               >
@@ -141,11 +141,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
               {item.subItems.map(subItem => (
-                <DropdownMenuItem key={subItem.name} asChild>
+                <DropdownMenuItem key={subItem.name} asChild className="data-[highlighted]:bg-transparent"> {/* Added data-[highlighted]:bg-transparent */}
                   <Link to={subItem.href} className={cn(
                     "flex items-center",
                     location.pathname.startsWith(subItem.href)
-                      ? "bg-accent text-accent-foreground"
+                      ? "bg-admin-panel-accent text-admin-panel-accent-foreground" // Active item background and text
                       : ""
                   )}>
                     <subItem.icon className="mr-2 h-4 w-4" />
@@ -160,10 +160,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             key={item.name}
             to={item.href}
             className={cn(
-              "flex items-center gap-2 transition-colors hover:text-sidebar-primary-foreground",
+              "flex items-center gap-2 transition-colors hover:bg-transparent", // Added hover:bg-transparent
               location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href))
-                ? "text-sidebar-primary-foreground"
-                : "text-sidebar-foreground",
+                ? "text-admin-panel-primary-foreground" // Active state text color
+                : "text-admin-panel-foreground", // Inactive state text color
               isMobile && "text-lg"
             )}
           >

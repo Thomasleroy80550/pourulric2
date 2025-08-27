@@ -18,11 +18,12 @@ import {
   FilePlus,
   Target,
   ArrowLeft,
-  BookOpen, // For Blog Posts
-  MessageSquareText, // For Review Replies
-  ListChecks, // For FAQs
-  ScrollText, // For Changelog
-  LightbulbOff // For Ideas (using Lightbulb for ideas, so LightbulbOff for ideas management)
+  BookOpen,
+  MessageSquareText,
+  ListChecks,
+  ScrollText,
+  LayoutDashboard, // Icon for general management
+  MessageSquareMore, // Icon for general communication
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -45,18 +46,44 @@ interface AdminLayoutProps {
 }
 
 const adminNavItems = [
-  { name: 'Dashboard', href: '/admin', icon: Home },
-  { name: 'Utilisateurs', href: '/admin/users', icon: Users },
-  { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble },
-  { name: 'Contenu', href: '/admin/pages', icon: FileText },
-  { name: 'Finances', href: '/admin/invoice-generation', icon: FilePlus },
-  { name: 'Support', href: '/admin/technical-reports', icon: Wrench },
-  { name: 'FAQ', href: '/admin/faq', icon: ListChecks },
-  { name: 'Changelog', href: '/admin/changelog', icon: ScrollText },
-  { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
-  { name: 'Blog', href: '/admin/blog', icon: BookOpen },
-  { name: 'Réponses Avis', href: '/admin/review-replies', icon: MessageSquareText },
-  { name: 'Paramètres', href: '/admin/settings', icon: Settings },
+  { name: 'Tableau de bord', href: '/admin', icon: Home },
+  {
+    name: 'Gestion',
+    icon: LayoutDashboard,
+    subItems: [
+      { name: 'Utilisateurs', href: '/admin/users', icon: Users },
+      { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble },
+      { name: 'Facturation', href: '/admin/invoice-generation', icon: FilePlus },
+      { name: 'Relevés', href: '/admin/statements', icon: FileText },
+      { name: 'Rapports Techniques', href: '/admin/technical-reports', icon: Wrench },
+    ],
+  },
+  {
+    name: 'Contenu',
+    icon: BookOpen,
+    subItems: [
+      { name: 'Pages', href: '/admin/pages', icon: FileText },
+      { name: 'Blog', href: '/admin/blog', icon: BookOpen },
+      { name: 'FAQ', href: '/admin/faq', icon: ListChecks },
+      { name: 'Changelog', href: '/admin/changelog', icon: ScrollText },
+    ],
+  },
+  {
+    name: 'Communication',
+    icon: MessageSquareMore,
+    subItems: [
+      { name: 'Réponses Avis', href: '/admin/review-replies', icon: MessageSquareText },
+      { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
+    ],
+  },
+  {
+    name: 'Paramètres',
+    icon: Settings,
+    subItems: [
+      { name: 'Général', href: '/admin/settings', icon: Settings },
+      { name: 'Stratégies', href: '/admin/strategies', icon: Target },
+    ],
+  },
 ];
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
@@ -86,8 +113,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   const NavLinks: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => (
     <nav className={cn(
-      isMobile 
-        ? "grid gap-6 text-lg font-medium" 
+      isMobile
+        ? "grid gap-6 text-lg font-medium"
         : "hidden md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6"
     )}>
       <Link to="/admin" className="flex items-center gap-2 text-lg font-semibold md:text-base mb-4 md:mb-0">
@@ -95,20 +122,55 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <span className="text-sidebar-primary-foreground">Admin Hello Keys</span>
       </Link>
       {adminNavItems.map(item => (
-        <Link
-          key={item.name}
-          to={item.href}
-          className={cn(
-            "flex items-center gap-2 transition-colors hover:text-sidebar-primary-foreground",
-            location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href))
-              ? "text-sidebar-primary-foreground"
-              : "text-sidebar-foreground",
-            isMobile && "text-lg"
-          )}
-        >
-          <item.icon className="h-5 w-5" />
-          {item.name}
-        </Link>
+        item.subItems ? (
+          <DropdownMenu key={item.name}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "flex items-center gap-2 transition-colors hover:text-sidebar-primary-foreground",
+                  item.subItems.some(subItem => location.pathname.startsWith(subItem.href))
+                    ? "text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground",
+                  isMobile && "text-lg w-full justify-start"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.name}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              {item.subItems.map(subItem => (
+                <DropdownMenuItem key={subItem.name} asChild>
+                  <Link to={subItem.href} className={cn(
+                    "flex items-center",
+                    location.pathname.startsWith(subItem.href)
+                      ? "bg-accent text-accent-foreground"
+                      : ""
+                  )}>
+                    <subItem.icon className="mr-2 h-4 w-4" />
+                    <span>{subItem.name}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Link
+            key={item.name}
+            to={item.href}
+            className={cn(
+              "flex items-center gap-2 transition-colors hover:text-sidebar-primary-foreground",
+              location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href))
+                ? "text-sidebar-primary-foreground"
+                : "text-sidebar-foreground",
+              isMobile && "text-lg"
+            )}
+          >
+            <item.icon className="h-5 w-5" />
+            {item.name}
+          </Link>
+        )
       ))}
     </nav>
   );

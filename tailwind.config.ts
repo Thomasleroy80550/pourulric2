@@ -67,8 +67,8 @@ export default {
           DEFAULT: "hsl(0 0% 100%)", // Blanc pour le fond
           foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte
           primary: {
-            DEFAULT: "hsl(200 30% 34%)", // Bleu Foncé pour les éléments principaux
-            foreground: "hsl(0 0% 100%)", // Blanc pour le texte sur le primaire
+            DEFAULT: "hsl(205 100% 94%)", // Bleu très clair pour le fond du menu supérieur
+            foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte sur le primaire
           },
           secondary: {
             DEFAULT: "hsl(200 53% 69%)", // Bleu Clair pour les éléments secondaires

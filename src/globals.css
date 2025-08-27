@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 100%; /* Fond du site en blanc */
+    --foreground: 222.2 84% 4.9%; /* Texte principal sombre */
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
@@ -34,21 +34,21 @@
 
     --radius: 0.5rem;
 
-    /* Sidebar colors (user menu) - Harmonized with Admin Panel for a distinct blue */
-    --sidebar: 210 100% 15%; /* Very dark blue background */
-    --sidebar-foreground: 210 40% 98%; /* Light text */
-    --sidebar-accent: 210 100% 30%; /* Medium blue for hover/active */
-    --sidebar-accent-foreground: 210 40% 98%; /* Light text on accent */
-    --sidebar-border: 210 100% 25%; /* Darker blue for borders */
+    /* Sidebar colors (user menu) */
+    --sidebar: 210 100% 94%; /* Bleu clair #e0f2ff */
+    --sidebar-foreground: 222.2 47.4% 11.2%; /* Texte sombre pour le menu */
+    --sidebar-accent: 210 100% 88%; /* Bleu légèrement plus foncé pour le survol/actif */
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%; /* Texte sombre sur l'accent */
+    --sidebar-border: 210 100% 88%; /* Bordure bleu légèrement plus foncé */
 
-    /* Admin Panel colors - Harmonized with Sidebar for a distinct blue */
-    --admin-panel: 210 100% 15%; /* Very dark blue background */
-    --admin-panel-primary: 210 100% 20%; /* Dark blue primary */
-    --admin-panel-primary-foreground: 210 40% 98%; /* Light text */
-    --admin-panel-foreground: 210 40% 98%; /* Light text */
-    --admin-panel-accent: 210 100% 30%; /* Medium blue for accent/hover */
-    --admin-panel-accent-foreground: 210 40% 98%; /* Light text on accent */
-    --admin-panel-border: 210 100% 25%; /* Darker blue for borders */
+    /* Admin Panel colors */
+    --admin-panel: 210 100% 94%; /* Bleu clair #e0f2ff */
+    --admin-panel-primary: 210 100% 94%; /* Bleu clair #e0f2ff pour l'en-tête */
+    --admin-panel-primary-foreground: 222.2 47.4% 11.2%; /* Texte sombre */
+    --admin-panel-foreground: 222.2 47.4% 11.2%; /* Texte sombre */
+    --admin-panel-accent: 210 100% 88%; /* Bleu légèrement plus foncé pour l'accent */
+    --admin-panel-accent-foreground: 222.2 47.4% 11.2%; /* Texte sombre sur l'accent */
+    --admin-panel-border: 210 100% 88%; /* Bordure bleu légèrement plus foncé */
   }
 
   .dark {

@@ -44,6 +44,7 @@ import FaqPage from "./pages/FaqPage";
 import AdminFaqPage from "./pages/AdminFaqPage";
 import AdminChangelogPage from "./pages/AdminChangelogPage";
 import AdminIdeasPage from "./pages/AdminIdeasPage";
+import AdminReviewRepliesPage from "./pages/AdminReviewRepliesPage";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ function App() {
                   <Route path="/admin/faq" element={<AdminFaqPage />} />
                   <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                   <Route path="/admin/ideas" element={<AdminIdeasPage />} />
+                  <Route path="/admin/review-replies" element={<AdminReviewRepliesPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />

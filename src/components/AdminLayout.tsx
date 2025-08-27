@@ -18,7 +18,9 @@ import {
   FilePlus,
   MessageSquare,
   Gift,
-  Lightbulb
+  Lightbulb,
+  HelpCircle,
+  GitMerge
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -59,9 +61,10 @@ const adminNavigationCategories = [
     items: [
       { name: 'Pages', href: '/admin/pages', icon: FileText },
       { name: 'Blog', href: '/admin/blog', icon: FileText },
-      { name: 'FAQ', href: '/admin/faq', icon: MessageSquare },
-      { name: 'Changelog', href: '/admin/changelog', icon: Gift },
+      { name: 'FAQ', href: '/admin/faq', icon: HelpCircle },
+      { name: 'Changelog', href: '/admin/changelog', icon: GitMerge },
       { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
+      { name: 'Réponses Avis', href: '/admin/review-replies', icon: MessageSquare },
     ]
   },
   {

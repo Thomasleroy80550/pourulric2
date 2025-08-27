@@ -17,7 +17,10 @@ import {
 } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
 import DOMPurify from 'dompurify';
-import { Badge } from '@/components/ui/badge'; // Import the Badge component
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ReplyReviewDialog } from '@/components/ReplyReviewDialog';
+import { getReviewRepliesForUser, ReviewReply } from '@/lib/review-replies-api';
 
 const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -26,6 +29,9 @@ const ReviewsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
   const { profile } = useSession();
+  const [replies, setReplies] = useState<Map<string, ReviewReply>>(new Map());
+  const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   
   const reviewsPerPage = 9;
   const MAX_COMMENT_LENGTH = 150;
@@ -45,27 +51,32 @@ const ReviewsPage: React.FC = () => {
     return "destructive"; // Below 2.5, also destructive
   };
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      if (!profile?.revyoos_holding_ids) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setError(null);
-      try {
-        const fetchedReviews = await getReviews(profile.revyoos_holding_ids);
-        setReviews(fetchedReviews);
-      } catch (err: any) {
-        const errorMessage = `Erreur lors de la récupération des avis : ${err.message}`;
-        setError(errorMessage);
-        console.error(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchReviewsAndReplies = async () => {
+    if (!profile?.revyoos_holding_ids) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const [fetchedReviews, fetchedReplies] = await Promise.all([
+        getReviews(profile.revyoos_holding_ids),
+        getReviewRepliesForUser()
+      ]);
+      setReviews(fetchedReviews);
+      const repliesMap = new Map(fetchedReplies.map(reply => [reply.review_id, reply]));
+      setReplies(repliesMap);
+    } catch (err: any) {
+      const errorMessage = `Erreur lors de la récupération des données : ${err.message}`;
+      setError(errorMessage);
+      console.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchReviews();
+  useEffect(() => {
+    fetchReviewsAndReplies();
   }, [profile]);
 
   const indexOfLastReview = currentPage * reviewsPerPage;
@@ -83,6 +94,15 @@ const ReviewsPage: React.FC = () => {
       }
       return newSet;
     });
+  };
+
+  const handleReplyClick = (review: Review) => {
+    setSelectedReview(review);
+    setIsReplyDialogOpen(true);
+  };
+
+  const handleReplySuccess = () => {
+    fetchReviewsAndReplies();
   };
 
   const handleTranslate = (text: string) => {
@@ -141,6 +161,7 @@ const ReviewsPage: React.FC = () => {
                     const displayedComment = needsTruncation && !isExpanded
                       ? sanitizedComment.substring(0, MAX_COMMENT_LENGTH) + '...'
                       : sanitizedComment;
+                    const existingReply = replies.get(review.id);
 
                     return (
                       <Card key={review.id} className="p-4 flex flex-col">
@@ -170,23 +191,43 @@ const ReviewsPage: React.FC = () => {
                             dangerouslySetInnerHTML={{ __html: displayedComment }}
                           />
                         </div>
-                        <div className="flex items-center mt-2 space-x-4">
-                          {needsTruncation && (
-                            <button 
-                              onClick={() => toggleExpand(review.id)} 
-                              className="text-blue-500 hover:underline text-sm"
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                          <div className="flex items-center space-x-2">
+                            {needsTruncation && (
+                              <button 
+                                onClick={() => toggleExpand(review.id)} 
+                                className="text-blue-500 hover:underline text-sm"
+                              >
+                                {isExpanded ? 'Voir moins' : 'Voir plus'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleTranslate(review.comment)}
+                              className="text-gray-500 hover:text-gray-700 text-sm flex items-center"
+                              title="Traduire l'avis"
                             >
-                              {isExpanded ? 'Voir moins' : 'Voir plus'}
+                              <Languages className="h-4 w-4 mr-1" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleTranslate(review.comment)}
-                            className="text-gray-500 hover:text-gray-700 text-sm flex items-center"
-                            title="Traduire l'avis"
-                          >
-                            <Languages className="h-4 w-4 mr-1" />
-                            Traduire
-                          </button>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            {existingReply ? (
+                              <>
+                                {existingReply.status === 'pending_approval' && <Badge variant="secondary">En attente</Badge>}
+                                {existingReply.status === 'approved' && <Badge variant="default">Publiée</Badge>}
+                                {existingReply.status === 'rejected' && <Badge variant="destructive">Rejetée</Badge>}
+                                {(existingReply.status === 'pending_approval' || existingReply.status === 'rejected') && (
+                                  <Button variant="outline" size="sm" onClick={() => handleReplyClick(review)}>
+                                    Modifier
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              <Button variant="default" size="sm" onClick={() => handleReplyClick(review)}>
+                                Répondre
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </Card>
                     );
@@ -233,6 +274,13 @@ const ReviewsPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        <ReplyReviewDialog
+          isOpen={isReplyDialogOpen}
+          onOpenChange={setIsReplyDialogOpen}
+          review={selectedReview}
+          existingReply={selectedReview ? replies.get(selectedReview.id) : undefined}
+          onSuccess={handleReplySuccess}
+        />
       </div>
     </MainLayout>
   );

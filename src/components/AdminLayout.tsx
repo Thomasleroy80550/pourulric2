@@ -127,11 +127,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
+                asChild={true} // Explicitly set asChild
                 className={cn(
-                  "flex items-center gap-2 transition-colors hover:bg-transparent", // Added hover:bg-transparent
+                  "flex items-center gap-2 transition-colors hover:bg-transparent",
                   item.subItems.some(subItem => location.pathname.startsWith(subItem.href))
-                    ? "text-admin-panel-primary-foreground" // Active state text color
-                    : "text-admin-panel-foreground", // Inactive state text color
+                    ? "text-admin-panel-primary-foreground"
+                    : "text-admin-panel-foreground",
                   isMobile && "text-lg w-full justify-start"
                 )}
               >
@@ -141,14 +142,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
               {item.subItems.map(subItem => (
-                <DropdownMenuItem key={subItem.name} asChild className="data-[highlighted]:bg-transparent"> {/* Added data-[highlighted]:bg-transparent */}
+                <DropdownMenuItem key={subItem.name} asChild className="data-[highlighted]:bg-transparent">
                   <Link to={subItem.href} className={cn(
                     "flex items-center",
                     location.pathname.startsWith(subItem.href)
-                      ? "bg-admin-panel-accent text-admin-panel-accent-foreground" // Active item background and text
+                      ? "bg-admin-panel-accent text-admin-panel-accent-foreground"
                       : ""
                   )}>
-                    {/* Wrap children of Link in a single span */}
                     <span className="flex items-center gap-2">
                       <subItem.icon className="mr-2 h-4 w-4" />
                       <span>{subItem.name}</span>
@@ -163,10 +163,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             key={item.name}
             to={item.href}
             className={cn(
-              "flex items-center gap-2 transition-colors hover:bg-transparent", // Added hover:bg-transparent
+              "flex items-center gap-2 transition-colors hover:bg-transparent",
               location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href))
-                ? "text-admin-panel-primary-foreground" // Active state text color
-                : "text-admin-panel-foreground", // Inactive state text color
+                ? "text-admin-panel-primary-foreground"
+                : "text-admin-panel-foreground",
               isMobile && "text-lg"
             )}
           >
@@ -189,7 +189,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         {/* Mobile Navigation */}
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+            <Button variant="outline" size="icon" asChild={true} className="shrink-0 md:hidden"> {/* Explicitly set asChild */}
               <Menu className="h-5 w-5" />
               <span className="sr-only">Ouvrir le menu de navigation</span>
             </Button>

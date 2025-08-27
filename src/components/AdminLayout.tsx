@@ -1,14 +1,56 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Home,
+  Users,
+  FileText,
+  Wrench,
+  Settings,
+  LogOut,
+  Shield,
+  CircleUser,
+  Menu,
+  BedDouble,
+  HelpCircle,
+  GitMerge,
+  Lightbulb,
+  MessageSquare,
+  FilePlus,
+  Target,
+  ArrowLeft
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useSession } from './SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import NotificationBell from './NotificationBell';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+const adminNavItems = [
+  { name: 'Dashboard', href: '/admin', icon: Home },
+  { name: 'Utilisateurs', href: '/admin/users', icon: Users },
+  { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble },
+  { name: 'Contenu', href: '/admin/pages', icon: FileText },
+  { name: 'Finances', href: '/admin/invoice-generation', icon: FilePlus },
+  { name: 'Support', href: '/admin/technical-reports', icon: Wrench },
+  { name: 'Paramètres', href: '/admin/settings', icon: Settings },
+];
+
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { profile, loading } = useSession();
 
@@ -32,16 +74,87 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     return null;
   }
 
+  const NavLinks: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => (
+    <nav className={cn(
+      isMobile 
+        ? "grid gap-6 text-lg font-medium" 
+        : "hidden md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6"
+    )}>
+      <Link to="/admin" className="flex items-center gap-2 text-lg font-semibold md:text-base mb-4 md:mb-0">
+        <Shield className="h-6 w-6 text-primary" />
+        <span className="">Admin Hello Keys</span>
+      </Link>
+      {adminNavItems.map(item => (
+        <Link
+          key={item.name}
+          to={item.href}
+          className={cn(
+            "flex items-center gap-2 transition-colors hover:text-foreground",
+            location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href))
+              ? "text-foreground"
+              : "text-muted-foreground",
+            isMobile && "text-lg"
+          )}
+        >
+          <item.icon className="h-5 w-5" />
+          {item.name}
+        </Link>
+      ))}
+    </nav>
+  );
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <header style={{ padding: '1rem', borderBottom: '1px solid #ccc' }}>
-        <h1>Admin Panel (Debug Mode)</h1>
-        <nav>
-          <Link to="/admin">Dashboard</Link> | <Link to="/admin/users">Users</Link>
-        </nav>
-        <button onClick={handleLogout}>Déconnexion</button>
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-50">
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex md:flex-1 md:items-center md:gap-5 lg:gap-6">
+          <NavLinks />
+        </div>
+
+        {/* Mobile Navigation */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Ouvrir le menu de navigation</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <NavLinks isMobile />
+          </SheetContent>
+        </Sheet>
+
+        {/* Header Right Side */}
+        <div className="flex w-full items-center justify-end gap-4 md:w-auto md:ml-auto">
+          <NotificationBell />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" className="rounded-full">
+                <CircleUser className="h-5 w-5" />
+                <span className="sr-only">Ouvrir le menu utilisateur</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>
+                {profile.first_name} {profile.last_name}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  <span>Retour au site</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Déconnexion</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
-      <main style={{ flex: 1, padding: '1rem' }}>
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 overflow-auto">
         {children}
       </main>
     </div>

@@ -114,8 +114,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   );
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-sidebar">
-      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-sidebar-primary px-4 md:px-6 z-50">
+    <div className="flex min-h-screen w-full flex-col bg-admin-panel">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-admin-panel-primary px-4 md:px-6 z-50">
         {/* Desktop Navigation */}
         <div className="hidden md:flex md:flex-1 md:items-center md:gap-5 lg:gap-6">
           <NavLinks />

@@ -54,7 +54,7 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         sidebar: {
-          DEFAULT: "hsl(210 30% 98%)", // Very light grey
+          DEFAULT: "hsl(210 30% 98%)", // Very light grey (for user interface)
           foreground: "hsl(222.2 47.4% 11.2%)", // Dark grey
           primary: "hsl(200 70% 30%)", // Main brand blue
           "primary-foreground": "hsl(0 0% 100%)", // White
@@ -62,6 +62,16 @@ export default {
           "accent-foreground": "hsl(222.2 47.4% 11.2%)", // Dark grey
           border: "hsl(214.3 31.8% 91.4%)", // Light grey border
           ring: "hsl(222.2 84% 4.9%)", // Consistent with main ring
+        },
+        "admin-panel": { // New palette for admin interface
+          DEFAULT: "hsl(220 10% 10%)", // Deep dark blue/grey for background
+          foreground: "hsl(210 40% 98%)", // Light grey for text
+          primary: "hsl(200 70% 50%)", // Brighter brand blue for header/accents
+          "primary-foreground": "hsl(222.2 47.4% 11.2%)", // Dark text on primary
+          accent: "hsl(217.2 32.6% 17.5%)", // Slightly lighter dark blue/grey for hover
+          "accent-foreground": "hsl(210 40% 98%)", // Light grey on accent
+          border: "hsl(217.2 32.6% 17.5%)", // Border color
+          ring: "hsl(217.2 91.2% 59.8%)", // Ring color
         },
       },
       borderRadius: {

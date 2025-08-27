@@ -466,6 +466,37 @@ export async function deleteIdea(ideaId: string): Promise<void> {
 }
 
 /**
+ * Fetches counts for various admin dashboard stats.
+ */
+export async function getDashboardStats() {
+  const [
+    usersResult,
+    roomsResult,
+    repliesResult
+  ] = await Promise.allSettled([
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('user_rooms').select('id', { count: 'exact', head: true }),
+    supabase.from('review_replies').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval')
+  ]);
+
+  const getCount = (result: PromiseSettledResult<any>) => {
+    if (result.status === 'fulfilled' && result.value.count !== null) {
+      return result.value.count;
+    }
+    if (result.status === 'rejected') {
+      console.error("Error fetching stat:", result.reason);
+    }
+    return 0;
+  };
+
+  return {
+    users: getCount(usersResult),
+    rooms: getCount(roomsResult),
+    pendingReplies: getCount(repliesResult),
+  };
+}
+
+/**
  * Fetches all review replies for the admin dashboard.
  */
 export async function getAllReviewReplies(): Promise<ReviewReplyWithProfile[]> {

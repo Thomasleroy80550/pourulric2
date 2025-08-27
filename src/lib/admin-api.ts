@@ -472,11 +472,7 @@ export async function getAllReviewReplies(): Promise<ReviewReplyWithProfile[]> {
   const { data, error } = await supabase
     .from('review_replies')
     .select(`
-      *,
-      profiles (
-        first_name,
-        last_name
-      )
+      *
     `)
     .order('created_at', { ascending: false });
 

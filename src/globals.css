@@ -33,13 +33,13 @@
     --ring: 222.2 84% 4.9%;
 
     /* Custom Sidebar Colors */
-    --sidebar-background: 205 100% 94%; /* #e1f2ff */
-    --sidebar-foreground: 205 55% 33%; /* #255F85 */
-    --sidebar-primary: 205 55% 33%; /* Logo text color, same as foreground */
-    --sidebar-primary-foreground: 0 0% 100%; /* Keep as white for potential future use with dark primary bg */
-    --sidebar-accent: 205 100% 90%; /* Lighter shade of background for hover/active */
-    --sidebar-accent-foreground: 205 55% 33%; /* Text color on hover/active background, same as foreground */
-    --sidebar-border: 205 100% 85%; /* Slightly darker than background for border */
+    --sidebar-background: 210 30% 98%; /* Very light grey */
+    --sidebar-foreground: 222.2 47.4% 11.2%; /* Dark grey */
+    --sidebar-primary: 200 70% 30%; /* Main brand blue */
+    --sidebar-primary-foreground: 0 0% 100%; /* White */
+    --sidebar-accent: 210 40% 96.1%; /* Slightly darker grey for hover/active */
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%; /* Dark grey */
+    --sidebar-border: 214.3 31.8% 91.4%; /* Light grey border */
     --sidebar-ring: 222.2 84% 4.9%; /* Consistent with main ring */
   }
 
@@ -73,13 +73,13 @@
     --ring: 212.7 26.8% 83.9%;
 
     /* Custom Sidebar Colors for dark mode */
-    --sidebar-background: 220 10% 15%; /* Dark blue */
-    --sidebar-foreground: 205 55% 70%; /* Lighter version of #255F85 for contrast */
-    --sidebar-primary: 205 55% 70%; /* Logo text color */
-    --sidebar-primary-foreground: 220 10% 15%; /* Dark text */
-    --sidebar-accent: 205 55% 25%; /* Slightly darker blue for hover */
-    --sidebar-accent-foreground: 205 55% 70%; /* Light blue text */
-    --sidebar-border: 220 10% 25%; /* Dark grey/blue border */
+    --sidebar-background: 220 10% 10%; /* Deep dark blue/grey */
+    --sidebar-foreground: 210 40% 98%; /* Light grey */
+    --sidebar-primary: 200 70% 50%; /* Brighter brand blue */
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%; /* Dark text */
+    --sidebar-accent: 217.2 32.6% 17.5%; /* Slightly lighter dark blue/grey for hover */
+    --sidebar-accent-foreground: 210 40% 98%; /* Light grey */
+    --sidebar-border: 217.2 32.6% 17.5%; /* Slightly lighter dark grey border */
     --sidebar-ring: 217.2 91.2% 59.8%; /* Consistent with main ring */
   }
 }
@@ -201,18 +201,6 @@
 }
 
 /* Random positioning for stars */
-/* Increased number of stars by duplicating and adjusting delays */
-.tunnel-stars:nth-child(odd) {
-  left: calc(var(--random-x, 0) * 100vw);
-  top: calc(var(--random-y, 0) * 100vh);
-}
-
-.tunnel-stars:nth-child(even) {
-  right: calc(var(--random-x, 0) * 100vw);
-  bottom: calc(var(--random-y, 0) * 100vh);
-}
-
-/* Generate random positions for stars using CSS variables */
 /* This is a trick to simulate random positions with static CSS.
    In a real app, you might generate these with JS for more variety. */
 .tunnel-stars:nth-child(1) { --random-x: 0.1; --random-y: 0.2; }
@@ -235,16 +223,16 @@
 .tunnel-stars:nth-child(18) { --random-x: 0.7; --random-y: 0.4; }
 .tunnel-stars:nth-child(19) { --random-x: 0.5; --random-y: 0.0; }
 .tunnel-stars:nth-child(20) { --random-x: 0.0; --random-y: 0.5; }
-.tunnel-stars:nth-child(21) { --random-x: 0.12; --random-y: 0.22; }
-.tunnel-stars:nth-child(22) { --random-x: 0.88; --random-y: 0.78; }
-.tunnel-stars:nth-child(23) { --random-x: 0.32; --random-y: 0.68; }
-.tunnel-stars:nth-child(24) { --random-x: 0.68; --random-y: 0.12; }
-.tunnel-stars:nth-child(25) { --random-x: 0.48; --random-y: 0.52; }
-.tunnel-stars:nth-child(26) { --random-x: 0.22; --random-y: 0.88; }
-.tunnel-stars:nth-child(27) { --random-x: 0.78; --random-y: 0.32; }
-.tunnel-stars:nth-child(28) { --random-x: 0.38; --random-y: 0.62; }
-.tunnel-stars:nth-child(29) { --random-x: 0.62; --random-y: 0.48; }
-.tunnel-stars:nth-child(30) { --random-x: 0.08; --random-y: 0.18; }
+.tunnel-stars:nth-child(21) { --random-x: 0.12; --random-y: 0.22; animation-delay: 0.02s; }
+.tunnel-stars:nth-child(22) { --random-x: 0.88; --random-y: 0.78; animation-delay: 0.12s; }
+.tunnel-stars:nth-child(23) { --random-x: 0.32; --random-y: 0.68; animation-delay: 0.22s; }
+.tunnel-stars:nth-child(24) { --random-x: 0.68; --random-y: 0.12; animation-delay: 0.32s; }
+.tunnel-stars:nth-child(25) { --random-x: 0.48; --random-y: 0.52; animation-delay: 0.42s; }
+.tunnel-stars:nth-child(26) { --random-x: 0.22; --random-y: 0.88; animation-delay: 0.52s; }
+.tunnel-stars:nth-child(27) { --random-x: 0.78; --random-y: 0.32; animation-delay: 0.62s; }
+.tunnel-stars:nth-child(28) { --random-x: 0.38; --random-y: 0.62; animation-delay: 0.72s; }
+.tunnel-stars:nth-child(29) { --random-x: 0.62; --random-y: 0.48; animation-delay: 0.82s; }
+.tunnel-stars:nth-child(30) { --random-x: 0.08; --random-y: 0.18; animation-delay: 0.92s; }
 /* Add more stars for a denser effect */
 .tunnel-stars:nth-child(31) { --random-x: 0.13; --random-y: 0.23; animation-delay: 0.05s; }
 .tunnel-stars:nth-child(32) { --random-x: 0.87; --random-y: 0.77; animation-delay: 0.15s; }

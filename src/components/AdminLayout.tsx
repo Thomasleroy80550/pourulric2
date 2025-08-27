@@ -17,7 +17,12 @@ import {
   MessageSquare,
   FilePlus,
   Target,
-  ArrowLeft
+  ArrowLeft,
+  BookOpen, // For Blog Posts
+  MessageSquareText, // For Review Replies
+  ListChecks, // For FAQs
+  ScrollText, // For Changelog
+  LightbulbOff // For Ideas (using Lightbulb for ideas, so LightbulbOff for ideas management)
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -46,6 +51,11 @@ const adminNavItems = [
   { name: 'Contenu', href: '/admin/pages', icon: FileText },
   { name: 'Finances', href: '/admin/invoice-generation', icon: FilePlus },
   { name: 'Support', href: '/admin/technical-reports', icon: Wrench },
+  { name: 'FAQ', href: '/admin/faq', icon: ListChecks },
+  { name: 'Changelog', href: '/admin/changelog', icon: ScrollText },
+  { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
+  { name: 'Blog', href: '/admin/blog', icon: BookOpen },
+  { name: 'Réponses Avis', href: '/admin/review-replies', icon: MessageSquareText },
   { name: 'Paramètres', href: '/admin/settings', icon: Settings },
 ];
 

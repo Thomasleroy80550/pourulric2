@@ -24,6 +24,7 @@ import {
   ScrollText,
   LayoutDashboard, // Icon for general management
   MessageSquareMore, // Icon for general communication
+  MessagesSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -72,6 +73,7 @@ const adminNavItems = [
     name: 'Communication',
     icon: MessageSquareMore,
     subItems: [
+      { name: 'Messagerie', href: '/admin/messages', icon: MessagesSquare },
       { name: 'Réponses Avis', href: '/admin/review-replies', icon: MessageSquareText },
       { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
     ],

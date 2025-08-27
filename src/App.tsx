@@ -45,6 +45,9 @@ import AdminFaqPage from "./pages/AdminFaqPage";
 import AdminChangelogPage from "./pages/AdminChangelogPage";
 import AdminIdeasPage from "./pages/AdminIdeasPage";
 import AdminReviewRepliesPage from "./pages/AdminReviewRepliesPage";
+import MessagesPage from "./pages/MessagesPage";
+import ConversationDetailPage from "./pages/ConversationDetailPage";
+import AdminMessagesPage from "./pages/AdminMessagesPage";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +80,8 @@ function App() {
                   <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                   <Route path="/admin/ideas" element={<AdminIdeasPage />} />
                   <Route path="/admin/review-replies" element={<AdminReviewRepliesPage />} />
+                  <Route path="/admin/messages" element={<AdminMessagesPage />} />
+                  <Route path="/admin/messages/:id" element={<ConversationDetailPage isAdmin />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />
@@ -96,6 +101,8 @@ function App() {
                   <Route path="/modules" element={<ModulesPage />} />
                   <Route path="/roadmap" element={<RoadmapPage />} />
                   <Route path="/my-rooms" element={<MyRoomsPage />} />
+                  <Route path="/messages" element={<MessagesPage />} />
+                  <Route path="/messages/:id" element={<ConversationDetailPage />} />
                   <Route path="/faq" element={<FaqPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />

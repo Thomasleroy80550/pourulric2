@@ -34,21 +34,21 @@
 
     --radius: 0.5rem;
 
-    /* Sidebar colors (user menu) */
-    --sidebar: 222.2 47.4% 11.2%; /* Dark background */
+    /* Sidebar colors (user menu) - Harmonized with Admin Panel for a distinct blue */
+    --sidebar: 210 100% 15%; /* Very dark blue background */
     --sidebar-foreground: 210 40% 98%; /* Light text */
-    --sidebar-accent: 217.2 32.6% 17.5%; /* Slightly lighter dark for hover/active */
+    --sidebar-accent: 210 100% 30%; /* Medium blue for hover/active */
     --sidebar-accent-foreground: 210 40% 98%; /* Light text on accent */
-    --sidebar-border: 217.2 32.6% 17.5%; /* Dark border */
+    --sidebar-border: 210 100% 25%; /* Darker blue for borders */
 
-    /* Admin Panel colors */
-    --admin-panel: 222.2 47.4% 11.2%; /* Same dark background as sidebar */
-    --admin-panel-primary: 222.2 47.4% 11.2%; /* Same dark primary as sidebar */
-    --admin-panel-primary-foreground: 210 40% 98%; /* Same light text as sidebar */
-    --admin-panel-foreground: 210 40% 98%; /* Same light text as sidebar */
-    --admin-panel-accent: 217.2 32.6% 17.5%; /* Same accent as sidebar */
-    --admin-panel-accent-foreground: 210 40% 98%; /* Same accent foreground as sidebar */
-    --admin-panel-border: 217.2 32.6% 17.5%; /* Same border as sidebar */
+    /* Admin Panel colors - Harmonized with Sidebar for a distinct blue */
+    --admin-panel: 210 100% 15%; /* Very dark blue background */
+    --admin-panel-primary: 210 100% 20%; /* Dark blue primary */
+    --admin-panel-primary-foreground: 210 40% 98%; /* Light text */
+    --admin-panel-foreground: 210 40% 98%; /* Light text */
+    --admin-panel-accent: 210 100% 30%; /* Medium blue for accent/hover */
+    --admin-panel-accent-foreground: 210 40% 98%; /* Light text on accent */
+    --admin-panel-border: 210 100% 25%; /* Darker blue for borders */
   }
 
   .dark {
@@ -80,21 +80,21 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
 
-    /* Sidebar colors (user menu) */
-    --sidebar: 222.2 47.4% 11.2%; /* Dark background */
+    /* Sidebar colors (user menu) - Harmonized with Admin Panel for a distinct blue */
+    --sidebar: 210 100% 15%; /* Very dark blue background */
     --sidebar-foreground: 210 40% 98%; /* Light text */
-    --sidebar-accent: 217.2 32.6% 17.5%; /* Slightly lighter dark for hover/active */
+    --sidebar-accent: 210 100% 30%; /* Medium blue for hover/active */
     --sidebar-accent-foreground: 210 40% 98%; /* Light text on accent */
-    --sidebar-border: 217.2 32.6% 17.5%; /* Dark border */
+    --sidebar-border: 210 100% 25%; /* Darker blue for borders */
 
-    /* Admin Panel colors */
-    --admin-panel: 222.2 47.4% 11.2%; /* Same dark background as sidebar */
-    --admin-panel-primary: 222.2 47.4% 11.2%; /* Same dark primary as sidebar */
-    --admin-panel-primary-foreground: 210 40% 98%; /* Same light text as sidebar */
-    --admin-panel-foreground: 210 40% 98%; /* Same light text as sidebar */
-    --admin-panel-accent: 217.2 32.6% 17.5%; /* Same accent as sidebar */
-    --admin-panel-accent-foreground: 210 40% 98%; /* Same accent foreground as sidebar */
-    --admin-panel-border: 217.2 32.6% 17.5%; /* Same border as sidebar */
+    /* Admin Panel colors - Harmonized with Sidebar for a distinct blue */
+    --admin-panel: 210 100% 15%; /* Very dark blue background */
+    --admin-panel-primary: 210 100% 20%; /* Dark blue primary */
+    --admin-panel-primary-foreground: 210 40% 98%; /* Light text */
+    --admin-panel-foreground: 210 40% 98%; /* Light text */
+    --admin-panel-accent: 210 100% 30%; /* Medium blue for accent/hover */
+    --admin-panel-accent-foreground: 210 40% 98%; /* Light text on accent */
+    --admin-panel-border: 210 100% 25%; /* Darker blue for borders */
   }
 }
 

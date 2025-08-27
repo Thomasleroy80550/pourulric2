@@ -53,7 +53,12 @@ export function ReplyReviewDialog({ isOpen, onOpenChange, review, existingReply,
     if (!review) return;
     setIsSubmitting(true);
     try {
-      await submitReviewReply(review.id, values.reply_content);
+      await submitReviewReply(review.id, values.reply_content, {
+        author: review.author,
+        date: review.date,
+        rating: review.rating,
+        comment: review.comment,
+      });
       toast.success("Votre réponse a été soumise pour approbation.");
       onSuccess();
       onOpenChange(false);

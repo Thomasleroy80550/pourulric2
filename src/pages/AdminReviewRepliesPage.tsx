@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Loader2, Star } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getAllReviewReplies, updateReviewReplyStatus, ReviewReplyWithProfile } from '@/lib/admin-api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -68,6 +69,7 @@ const AdminReviewRepliesPage: React.FC = () => {
     [...Array(5)].map((_, i) => (
       <TableRow key={i}>
         <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+        <TableCell><Skeleton className="h-10 w-40" /></TableCell>
         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -96,9 +98,10 @@ const AdminReviewRepliesPage: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Utilisateur</TableHead>
-                  <TableHead>Réponse</TableHead>
+                  <TableHead>Avis Original</TableHead>
+                  <TableHead>Réponse Fournie</TableHead>
                   <TableHead>Statut</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Date Soumission</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -108,10 +111,38 @@ const AdminReviewRepliesPage: React.FC = () => {
                     const isUpdating = updatingIds.has(reply.id);
                     return (
                       <TableRow key={reply.id}>
-                        <TableCell>{reply.profiles?.first_name} {reply.profiles?.last_name}</TableCell>
-                        <TableCell className="max-w-sm">
+                        <TableCell>
+                          <div className="font-medium">{reply.profiles?.first_name} {reply.profiles?.last_name}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="link" className="p-0 h-auto text-left">
+                                <div className="flex flex-col items-start">
+                                  <span className="font-medium">{reply.review_author}</span>
+                                  <span className="text-xs text-muted-foreground">Cliquer pour voir l'avis</span>
+                                </div>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80">
+                              <p className="text-sm font-semibold">Avis original :</p>
+                              <blockquote className="mt-1 border-l-2 pl-3 italic text-sm">
+                                {reply.review_comment}
+                              </blockquote>
+                            </PopoverContent>
+                          </Popover>
+                          <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} className={`h-3 w-3 ${i < (reply.review_rating || 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                              ))}
+                              <span className="ml-1">({reply.review_rating}/5)</span>
+                            </div>
+                            <div>{reply.review_date}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
                           <p className="truncate" title={reply.reply_content}>{reply.reply_content}</p>
-                          <p className="text-xs text-muted-foreground mt-1">ID Avis: {reply.review_id}</p>
                         </TableCell>
                         <TableCell>{getStatusBadge(reply.status)}</TableCell>
                         <TableCell>{format(new Date(reply.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>

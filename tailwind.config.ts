@@ -64,24 +64,30 @@ export default {
           ring: "hsl(222.2 84% 4.9%)", // Consistent with main ring
         },
         "admin-panel": { // Nouvelle palette pour l'interface d'administration
-          DEFAULT: "hsl(220 10% 12%)", // Gris très foncé, presque noir
-          foreground: "hsl(210 20% 90%)", // Blanc cassé pour le texte
-          primary: "hsl(200 70% 50%)", // Bleu vif pour les accents et éléments principaux
-          "primary-foreground": "hsl(0 0% 100%)", // Texte blanc sur le primaire
+          DEFAULT: "hsl(0 0% 100%)", // Blanc pour le fond
+          foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte
+          primary: {
+            DEFAULT: "hsl(200 30% 34%)", // Bleu Foncé pour les éléments principaux
+            foreground: "hsl(0 0% 100%)", // Blanc pour le texte sur le primaire
+          },
           secondary: {
-            DEFAULT: "hsl(217.2 32.6% 17.5%)", // Gris foncé légèrement plus clair pour les éléments secondaires
-            foreground: "hsl(210 20% 90%)", // Texte blanc cassé
+            DEFAULT: "hsl(200 53% 69%)", // Bleu Clair pour les éléments secondaires
+            foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte sur le secondaire
           },
           muted: {
-            DEFAULT: "hsl(217.2 32.6% 17.5%)",
-            foreground: "hsl(215 20.2% 65.1%)",
+            DEFAULT: "hsl(0 0% 95%)", // Gris très clair pour le fond muted
+            foreground: "hsl(200 10% 50%)", // Gris plus foncé pour le texte muted
           },
           accent: {
-            DEFAULT: "hsl(217.2 32.6% 25%)", // Gris foncé plus clair pour les états de survol/actif
-            foreground: "hsl(210 20% 90%)", // Texte blanc cassé
+            DEFAULT: "hsl(35 90% 57%)", // Jaune-Orangé pour l'accent
+            foreground: "hsl(200 30% 34%)", // Bleu Foncé pour le texte sur l'accent
           },
-          border: "hsl(217.2 32.6% 20%)", // Bordure subtile
-          ring: "hsl(200 70% 60%)", // Anneau de focus bleu plus lumineux
+          destructive: {
+            DEFAULT: "hsl(20 90% 52%)", // Orange Vif pour les actions destructives
+            foreground: "hsl(0 0% 100%)", // Blanc pour le texte sur le destructif
+          },
+          border: "hsl(200 10% 90%)", // Gris-bleu clair pour les bordures
+          ring: "hsl(35 90% 57%)", // Jaune-Orangé pour l'anneau de focus
         },
       },
       borderRadius: {

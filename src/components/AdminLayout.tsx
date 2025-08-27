@@ -81,18 +81,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         : "hidden md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6"
     )}>
       <Link to="/admin" className="flex items-center gap-2 text-lg font-semibold md:text-base mb-4 md:mb-0">
-        <Shield className="h-6 w-6 text-primary" />
-        <span className="">Admin Hello Keys</span>
+        <Shield className="h-6 w-6 text-sidebar-primary-foreground" />
+        <span className="text-sidebar-primary-foreground">Admin Hello Keys</span>
       </Link>
       {adminNavItems.map(item => (
         <Link
           key={item.name}
           to={item.href}
           className={cn(
-            "flex items-center gap-2 transition-colors hover:text-foreground",
+            "flex items-center gap-2 transition-colors hover:text-sidebar-primary-foreground",
             location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href))
-              ? "text-foreground"
-              : "text-muted-foreground",
+              ? "text-sidebar-primary-foreground"
+              : "text-sidebar-foreground",
             isMobile && "text-lg"
           )}
         >
@@ -104,8 +104,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   );
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40">
-      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-50">
+    <div className="flex min-h-screen w-full flex-col bg-sidebar">
+      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-sidebar-primary px-4 md:px-6 z-50">
         {/* Desktop Navigation */}
         <div className="hidden md:flex md:flex-1 md:items-center md:gap-5 lg:gap-6">
           <NavLinks />

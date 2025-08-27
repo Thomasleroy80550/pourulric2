@@ -260,7 +260,7 @@ const AdminDashboardPage: React.FC = () => {
                       <link.icon className="h-4 w-4 mr-2" />
                       {link.label}
                     </Link>
-                  </Link>
+                  </Button>
                 ))}
               </CardContent>
             </Card>

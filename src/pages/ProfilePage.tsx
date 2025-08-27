@@ -54,6 +54,7 @@ const ProfilePage: React.FC = () => {
   const [notifyCancellationEmail, setNotifyCancellationEmail] = useState(true);
   const [notifyNewBookingSms, setNotifyNewBookingSms] = useState(false);
   const [notifyCancellationSms, setNotifyCancellationSms] = useState(false);
+  const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false); // New state for expenses module
 
   const hasPasswordAuth = session?.user?.identities?.some(i => i.provider === 'email');
 
@@ -83,6 +84,7 @@ const ProfilePage: React.FC = () => {
         setNotifyCancellationEmail(fetchedProfile.notify_cancellation_email ?? true);
         setNotifyNewBookingSms(fetchedProfile.notify_new_booking_sms ?? false);
         setNotifyCancellationSms(fetchedProfile.notify_cancellation_sms ?? false);
+        setExpensesModuleEnabled(fetchedProfile.expenses_module_enabled ?? false); // Initialize new state
       }
     } catch (err: any) {
       const errorMessage = `Erreur lors du chargement des données : ${err.message}`;
@@ -117,6 +119,7 @@ const ProfilePage: React.FC = () => {
         notify_cancellation_email: notifyCancellationEmail,
         notify_new_booking_sms: notifyNewBookingSms,
         notify_cancellation_sms: notifyCancellationSms,
+        expenses_module_enabled: expensesModuleEnabled, // Include in updates
       };
       await updateProfile(updates);
       toast.success("Profil mis à jour avec succès !");
@@ -441,6 +444,13 @@ const ProfilePage: React.FC = () => {
                 <div className="flex items-center justify-between p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
                   <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
+                </div>
+                <div className="flex items-center justify-between p-3 border rounded-md">
+                  <div>
+                    <Label htmlFor="expenses-module">Activer le module de dépenses</Label>
+                    <p className="text-sm text-gray-500">Permet de gérer vos dépenses directement depuis l'application.</p>
+                  </div>
+                  <Switch id="expenses-module" checked={expensesModuleEnabled} onCheckedChange={setExpensesModuleEnabled} disabled={userProfile?.is_banned} />
                 </div>
               </CardContent>
             </Card>

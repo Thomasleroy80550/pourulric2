@@ -111,8 +111,6 @@ export const generateCguvPdf = (): Promise<void> => {
         const canvas = await html2canvas(cguvElement as HTMLElement, {
           scale: 2,
           useCORS: true,
-          windowWidth: cguvElement.scrollWidth,
-          windowHeight: cguvElement.scrollHeight,
         });
 
         const pdf = new jsPDF({
@@ -155,6 +153,6 @@ export const generateCguvPdf = (): Promise<void> => {
       </React.StrictMode>
     );
 
-    setTimeout(captureAndResolve, 500);
+    setTimeout(captureAndResolve, 1000); // Increased delay to 1000ms
   });
 };

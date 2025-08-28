@@ -23,6 +23,7 @@ import EditUserRoomDialog from '@/components/EditUserRoomDialog';
 import { generateCguvPdf } from '@/lib/pdf-utils';
 import { uploadFile } from '@/lib/storage-api';
 import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
+import { Label } from '@/components/ui/label';
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),

@@ -3,7 +3,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning } from 'lucide-react';
+import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning, FilePlus } from 'lucide-react';
 import { getAdminReportsByStatus, TechnicalReport } from '@/lib/technical-reports-api';
 import { getAdminReservationReports, ReservationReport } from '@/lib/reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -203,7 +203,7 @@ const AdminDashboardPage: React.FC = () => {
             <CardContent className="flex flex-col space-y-2">
               <Button asChild variant="outline"><Link to="/admin/users"><UserPlus className="mr-2 h-4 w-4" /> Gérer les Utilisateurs</Link></Button>
               <Button asChild variant="outline"><Link to="/admin/invoice-generation"><FilePlus className="mr-2 h-4 w-4" /> Générer un Relevé</Link></Button>
-              <Button asChild variant="outline"><Link to="/admin/strategies"><Target className="mr-2 h-4 w-4" /> Gérer les Stratégies</Link></Button>
+              <Button asChild variant="outline"><Link to="/admin/strategies"><Wrench className="mr-2 h-4 w-4" /> Gérer les Stratégies</Link></Button>
               <Button asChild variant="outline"><Link to="/admin/settings"><Settings className="mr-2 h-4 w-4" /> Paramètres</Link></Button>
             </CardContent>
           </Card>

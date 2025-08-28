@@ -43,8 +43,8 @@
 
     /* Admin Panel colors */
     --admin-panel: 205 100% 94%; /* Bleu clair #e0f2ff (Secondaire) */
-    --admin-panel-primary: 205 100% 94%; /* Bleu clair #e0f2ff pour l'en-tête */
-    --admin-panel-primary-foreground: 226 27% 20%; /* Texte sombre */
+    --admin-panel-primary: 0 0% 100%; /* Header en blanc */
+    --admin-panel-primary-foreground: 226 27% 20%; /* Texte sombre pour le header blanc */
     --admin-panel-foreground: 226 27% 20%; /* Texte sombre */
     --admin-panel-accent: 205 100% 88%; /* Bleu légèrement plus foncé pour l'accent */
     --admin-panel-accent-foreground: 226 27% 20%; /* Texte sombre sur l'accent */
@@ -89,8 +89,8 @@
 
     /* Admin Panel colors - Dark mode */
     --admin-panel: 205 100% 15%; /* Bleu très foncé */
-    --admin-panel-primary: 205 100% 20%; /* Bleu foncé */
-    --admin-panel-primary-foreground: 210 40% 98%; /* Texte clair */
+    --admin-panel-primary: var(--background); /* Header en mode sombre suit le fond */
+    --admin-panel-primary-foreground: var(--foreground); /* Texte du header en mode sombre suit le texte principal */
     --admin-panel-foreground: 210 40% 98%; /* Texte clair */
     --admin-panel-accent: 205 100% 30%; /* Bleu moyen pour l'accent */
     --admin-panel-accent-foreground: 210 40% 98%; /* Texte clair sur l'accent */

@@ -72,7 +72,7 @@ serve(async (req) => {
       console.warn("RESEND_API_KEY is not set. Skipping welcome email.");
     } else {
       const resend = new Resend(RESEND_API_KEY);
-      const loginUrl = Deno.env.get('APP_BASE_URL') ? `${Deno.env.get('APP_BASE_URL')}/login` : 'http://localhost:5173/login';
+      const loginUrl = Deno.env.get('APP_BASE_URL') ? `${Deno.env.get('APP_BASE_URL')}/login` : 'http://beta';
       
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">

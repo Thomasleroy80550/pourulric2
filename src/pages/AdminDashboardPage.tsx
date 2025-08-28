@@ -3,7 +3,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning, FilePlus } from 'lucide-react';
+import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning, FilePlus, Settings } from 'lucide-react';
 import { getAdminReportsByStatus, TechnicalReport } from '@/lib/technical-reports-api';
 import { getAdminReservationReports, ReservationReport } from '@/lib/reports-api';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -16,6 +16,7 @@ import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Profile } from '@/lib/profile-api'; // Import de Profile
+import { channelColors } from '@/lib/constants';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
@@ -433,8 +434,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         <div className="mt-8 p-4 border rounded-md bg-gray-50 dark:bg-gray-800">
           <h3 className="text-md font-semibold mb-3">Légende des plateformes</h3>
           <div className="flex flex-wrap gap-4">
-            {Object.entries(channelColors).map(([key, value]) => (
-              <div key={key} className="flex items-center">
+            {Object.values(channelColors).filter((value, index, self) => 
+              index === self.findIndex((v) => v.name === value.name)
+            ).map((value) => (
+              <div key={value.name} className="flex items-center">
                 <span className={`w-4 h-4 rounded-full mr-2 ${value.bgColor}`}></span>
                 <span className="text-sm text-gray-700 dark:text-gray-300">{value.name}</span>
               </div>

@@ -1,10 +1,14 @@
-export const EMAIL_TEMPLATE_KEY = 'statement_email_template';
-export const CONTACT_EMAIL_KEY = 'contact_email';
-export const CONTACT_PHONE_KEY = 'contact_phone';
-export const CURRENT_CGUV_VERSION = '1.0';
+export const CGUV_VERSION = '1.0';
 
-// New FAQ page content keys
-export const FAQ_MAIN_TITLE_KEY = 'faq_main_title';
-export const FAQ_SUBTITLE_KEY = 'faq_subtitle';
-export const FAQ_CONTACT_SECTION_TITLE_KEY = 'faq_contact_section_title';
-export const FAQ_CONTACT_SECTION_SUBTITLE_KEY = 'faq_contact_section_subtitle';
+export const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
+  'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-500', textColor: 'text-white' },
+  'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
+  'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-500', textColor: 'text-white' },
+  'HOMEAWAY': { name: 'Abritel', bgColor: 'bg-orange-500', textColor: 'text-white' },
+  'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
+  'DIRECT': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
+  'PROPRI': { name: 'Propriétaire (Ménage)', bgColor: 'bg-purple-600', textColor: 'text-white' },
+  'PROP0': { name: 'Propriétaire (Sans Ménage)', bgColor: 'bg-slate-500', textColor: 'text-white' },
+  'OWNER_BLOCK': { name: 'Période bloquée', bgColor: 'bg-gray-700', textColor: 'text-white' },
+  'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-400', textColor: 'text-white' },
+};

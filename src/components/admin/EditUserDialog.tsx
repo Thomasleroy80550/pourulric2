@@ -13,13 +13,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Edit, AlertTriangle, Trash2 } from 'lucide-react';
+import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { updateUser, UpdateUserPayload } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { supabase } from '@/integrations/supabase/client';
 import EditUserRoomDialog from '@/components/EditUserRoomDialog';
+import { generateCguvPdf } from '@/lib/pdf-utils';
+import { uploadFile } from '@/lib/storage-api';
+import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -76,9 +79,11 @@ interface EditUserDialogProps {
 const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, user, onUserUpdated }) => {
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
-  const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string }>({});
+  const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string; cguv?: string }>({});
   const [isEditRoomDialogOpen, setIsEditRoomDialogOpen] = useState(false);
   const [roomToEdit, setRoomToEdit] = useState<UserRoom | null>(null);
+  const [cguvFile, setCguvFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -127,9 +132,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         .finally(() => setLoadingRooms(false));
 
       setDocumentUrls({});
-      if (user.kyc_documents) {
+      if (user.kyc_documents || user.cguv_signed_document_url) {
         const fetchUrls = async () => {
-          const urls: { identity?: string; address?: string } = {};
+          const urls: { identity?: string; address?: string; cguv?: string } = {};
           const expiresIn = 60 * 5;
           try {
             if (user.kyc_documents?.identity) {
@@ -142,6 +147,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
               if (error) throw error;
               urls.address = data.signedUrl;
             }
+            if (user.cguv_signed_document_url) {
+              const { data, error } = await supabase.storage.from('cguv-documents').createSignedUrl(user.cguv_signed_document_url, expiresIn);
+              if (error) throw error;
+              urls.cguv = data.signedUrl;
+            }
             setDocumentUrls(urls);
           } catch (error: any) {
             toast.error(`Erreur de chargement des documents: ${error.message}`);
@@ -151,6 +161,57 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
       }
     }
   }, [isOpen, user, form]);
+
+  const handleDownloadCguv = async () => {
+    try {
+      toast.info("Génération du PDF en cours...");
+      await generateCguvPdf();
+    } catch (error: any) {
+      toast.error(`Erreur lors de la génération du PDF: ${error.message}`);
+    }
+  };
+
+  const handleCguvFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        toast.error("Veuillez sélectionner un fichier PDF.");
+        return;
+      }
+      setCguvFile(file);
+    }
+  };
+
+  const handleConfirmCguvSignature = async () => {
+    if (!user || !cguvFile) return;
+
+    setIsUploading(true);
+    try {
+      const versionMatch = CGUV_HTML_CONTENT.match(/Version ([\d\.]+)/i);
+      const cguvVersion = versionMatch ? versionMatch[1] : 'unknown';
+
+      const filePath = `${user.id}/cguv-signed-v${cguvVersion}-${Date.now()}.pdf`;
+      const publicUrl = await uploadFile('cguv-documents', filePath, cguvFile);
+
+      const payload: UpdateUserPayload = {
+        user_id: user.id,
+        onboarding_status: 'cguv_accepted',
+        cguv_accepted_at: new Date().toISOString(),
+        cguv_version: cguvVersion,
+        cguv_signed_document_url: filePath, // Store the path, not the full URL
+      };
+
+      await updateUser(payload);
+      toast.success("CGUV signées et document téléversé avec succès !");
+      onUserUpdated();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(`Erreur lors de la confirmation : ${error.message}`);
+    } finally {
+      setIsUploading(false);
+      setCguvFile(null);
+    }
+  };
 
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
     if (!user) return;
@@ -283,6 +344,37 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                           <p className="text-sm text-muted-foreground p-2 bg-muted rounded-md">
                             {user.key_delivery_method === 'deposit' ? 'Dépôt en agence' : 'Envoi par courrier'}
                           </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Signature des CGUV en Agence</CardTitle>
+                      <CardDescription>Pour les clients signant les documents en format papier.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Button type="button" variant="outline" className="w-full" onClick={handleDownloadCguv}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Télécharger les CGUV pour impression
+                      </Button>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="cguv-upload">Téléverser le document signé (PDF)</Label>
+                        <Input id="cguv-upload" type="file" accept="application/pdf" onChange={handleCguvFileUpload} />
+                        {cguvFile && <p className="text-sm text-muted-foreground">Fichier sélectionné : {cguvFile.name}</p>}
+                      </div>
+
+                      <Button type="button" className="w-full" onClick={handleConfirmCguvSignature} disabled={!cguvFile || isUploading}>
+                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        Marquer comme signé et téléverser
+                      </Button>
+
+                      {documentUrls.cguv && (
+                        <div className="text-sm">
+                          <a href={documentUrls.cguv} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                            Voir le dernier document CGUV téléversé
+                          </a>
                         </div>
                       )}
                     </CardContent>
@@ -429,6 +521,20 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                                   {documentUrls.address ? (
                                     <Button asChild variant="link" className="p-0 h-auto">
                                       <a href={documentUrls.address} target="_blank" rel="noopener noreferrer">
+                                        Voir le document
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <span className="text-muted-foreground">Chargement...</span>
+                                  )}
+                                </li>
+                              )}
+                              {user.cguv_signed_document_url && (
+                                <li className="flex items-center justify-between">
+                                  <span>CGUV signées</span>
+                                  {documentUrls.cguv ? (
+                                    <Button asChild variant="link" className="p-0 h-auto">
+                                      <a href={documentUrls.cguv} target="_blank" rel="noopener noreferrer">
                                         Voir le document
                                       </a>
                                     </Button>

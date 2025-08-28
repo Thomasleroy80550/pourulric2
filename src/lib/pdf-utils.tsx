@@ -4,6 +4,8 @@ import StatementPrintLayout from '@/components/StatementPrintLayout';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import CguvPrintLayout from '@/components/CguvPrintLayout';
+import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
 
 export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -78,6 +80,81 @@ export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => 
     );
     
     // Attendre que le rendu soit terminé avant de capturer
+    setTimeout(captureAndResolve, 500);
+  });
+};
+
+export const generateCguvPdf = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.width = '1024px';
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    const cleanup = () => {
+      root.unmount();
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    };
+
+    const captureAndResolve = async () => {
+      try {
+        const cguvElement = container.querySelector('#cguv-to-print');
+        if (!cguvElement) {
+          throw new Error("Impossible de trouver l'élément des CGUV à imprimer.");
+        }
+
+        const canvas = await html2canvas(cguvElement as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          windowWidth: cguvElement.scrollWidth,
+          windowHeight: cguvElement.scrollHeight,
+        });
+
+        const pdf = new jsPDF({
+          orientation: 'p',
+          unit: 'mm',
+          format: 'a4',
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(canvas, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(canvas, 'PNG', 0, position, pdfWidth, imgHeight);
+          heightLeft -= pdf.internal.pageSize.getHeight();
+        }
+
+        const versionMatch = CGUV_HTML_CONTENT.match(/Version ([\d\.]+)/i);
+        const version = versionMatch ? versionMatch[1] : 'latest';
+        const fileName = `CGUV_HelloKeys_v${version}.pdf`;
+
+        pdf.save(fileName);
+        resolve();
+      } catch (error) {
+        reject(error);
+      } finally {
+        cleanup();
+      }
+    };
+
+    root.render(
+      <React.StrictMode>
+        <CguvPrintLayout />
+      </React.StrictMode>
+    );
+
     setTimeout(captureAndResolve, 500);
   });
 };

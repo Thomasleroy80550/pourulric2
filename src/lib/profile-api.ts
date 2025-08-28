@@ -39,6 +39,7 @@ export interface UserProfile {
   estimated_revenue?: number;
   key_delivery_method?: 'deposit' | 'mail';
   revyoos_holding_ids?: string[];
+  cguv_signed_document_url?: string;
 }
 
 /**

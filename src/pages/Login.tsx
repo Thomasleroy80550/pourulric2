@@ -290,10 +290,10 @@ const Login = () => {
       </div>
 
       <div className="hidden md:flex w-full md:w-1/2 items-center justify-center p-8 relative overflow-hidden bg-gradient-to-br from-primary to-secondary">
-        <div className="absolute -top-1/2 -right-1/2 w-[800px] h-[800px] bg-blue-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-1/2 -left-1/2 w-[600px] h-[600px] bg-purple-600/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute -top-1/2 -right-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full filter blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-1/2 -left-1/2 w-[600px] h-[600px] bg-secondary/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
         <div className="text-center text-admin-panel-primary-foreground space-y-6 relative z-10">
-          <Home size={80} className="mx-auto mb-4 text-admin-panel-primary-foreground animate-float" /> {/* New house icon with animation */}
+          <Home size={80} className="mx-auto mb-4 text-white animate-float" /> {/* New house icon with animation */}
           <h2 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-300 drop-shadow-lg">
             La gestion locative, réinventée.
           </h2>

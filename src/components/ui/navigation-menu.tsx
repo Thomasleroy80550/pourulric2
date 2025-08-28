@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+// Ensure NavigationMenuViewport is defined before NavigationMenu
 const NavigationMenuViewport = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Viewport>,
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Viewport>

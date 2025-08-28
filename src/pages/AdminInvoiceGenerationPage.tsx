@@ -17,6 +17,10 @@ import EditReservationDialog from '@/components/EditReservationDialog';
 import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { useInvoiceGeneration, ProcessedReservation } from '@/contexts/InvoiceGenerationContext';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const AdminInvoiceGenerationPage: React.FC = () => {
   const {
@@ -50,6 +54,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingReservation, setEditingReservation] = useState<{ data: ProcessedReservation; index: number } | null>(null);
+  const [open, setOpen] = useState(false); // State for combobox open/close
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -141,10 +146,49 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                   <>
                     <div>
                       <Label htmlFor="client-select">Sélectionner un client</Label>
-                      <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                        <SelectTrigger id="client-select"><SelectValue placeholder="Choisir un client..." /></SelectTrigger>
-                        <SelectContent>{profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            className="w-full justify-between"
+                          >
+                            {selectedClientId
+                              ? profiles.find((profile) => profile.id === selectedClientId)?.first_name + " " + profiles.find((profile) => profile.id === selectedClientId)?.last_name
+                              : "Choisir un client..."}
+                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Rechercher un client..." />
+                            <CommandList>
+                              <CommandEmpty>Aucun client trouvé.</CommandEmpty>
+                              <CommandGroup>
+                                {profiles.map((profile) => (
+                                  <CommandItem
+                                    key={profile.id}
+                                    value={`${profile.first_name} ${profile.last_name}`} // Value for search
+                                    onSelect={() => {
+                                      setSelectedClientId(profile.id === selectedClientId ? "" : profile.id);
+                                      setOpen(false);
+                                    }}
+                                  >
+                                    {profile.first_name} {profile.last_name}
+                                    <Check
+                                      className={cn(
+                                        "ml-auto h-4 w-4",
+                                        profile.id === selectedClientId ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div>
                       <Label htmlFor="invoice-period">Période de facturation</Label>

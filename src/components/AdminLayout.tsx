@@ -183,35 +183,35 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const DesktopNav = () => (
     <NavigationMenu className="hidden md:flex">
       <NavigationMenuList>
-        {adminNavigationCategories.map((category) =>
-          category.items.length === 1 ? (
-            <NavigationMenuItem key={category.categoryName}>
+        {adminNavigationCategories.map((category) => (
+          <NavigationMenuItem key={category.categoryName}>
+            {category.items.length === 1 ? (
               <Link to={category.items[0].href} legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   <category.items[0].icon className="h-4 w-4 mr-2" />
                   {category.items[0].name}
                 </NavigationMenuLink>
               </Link>
-            </NavigationMenuItem>
-          ) : (
-            <NavigationMenuItem key={category.categoryName}>
-              <NavigationMenuTrigger>{category.categoryName}</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
-                  {category.items.map((item) => (
-                    <ListItem
-                      key={item.name}
-                      title={item.name}
-                      href={item.href}
-                    >
-                      {item.description}
-                    </ListItem>
-                  ))}
-                </ul>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-          )
-        )}
+            ) : (
+              <>
+                <NavigationMenuTrigger>{category.categoryName}</NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                    {category.items.map((item) => (
+                      <ListItem
+                        key={item.name}
+                        title={item.name}
+                        href={item.href}
+                      >
+                        {item.description}
+                      </ListItem>
+                    ))}
+                  </ul>
+                </NavigationMenuContent>
+              </>
+            )}
+          </NavigationMenuItem>
+        ))}
       </NavigationMenuList>
     </NavigationMenu>
   );

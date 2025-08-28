@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Home,
   Users,
@@ -18,7 +18,6 @@ import {
   Gift,
   Lightbulb,
   Menu,
-  BarChart2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -114,6 +113,44 @@ const ListItem = React.forwardRef<
 });
 ListItem.displayName = "ListItem";
 
+const DesktopNav = () => {
+  return (
+    <NavigationMenu className="hidden md:flex">
+      <NavigationMenuList>
+        {adminNavigationCategories.map((category) => (
+          <NavigationMenuItem key={category.categoryName}>
+            {category.items.length === 1 ? (
+              <Link to={category.items[0].href} legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <category.items[0].icon className="h-4 w-4 mr-2" />
+                  {category.items[0].name}
+                </NavigationMenuLink>
+              </Link>
+            ) : (
+              <>
+                <NavigationMenuTrigger>{category.categoryName}</NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
+                    {category.items.map((item) => (
+                      <ListItem
+                        key={item.name}
+                        title={item.name}
+                        href={item.href}
+                      >
+                        {item.description}
+                      </ListItem>
+                    ))}
+                  </ul>
+                </NavigationMenuContent>
+              </>
+            )}
+          </NavigationMenuItem>
+        ))}
+      </NavigationMenuList>
+    </NavigationMenu>
+  );
+};
+
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const { profile, loading } = useSession();
@@ -178,42 +215,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         </nav>
       </SheetContent>
     </Sheet>
-  );
-
-  const DesktopNav = () => (
-    <NavigationMenu className="hidden md:flex">
-      <NavigationMenuList>
-        {adminNavigationCategories.map((category) => (
-          <NavigationMenuItem key={category.categoryName}>
-            {category.items.length === 1 ? (
-              <Link to={category.items[0].href} legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  <category.items[0].icon className="h-4 w-4 mr-2" />
-                  {category.items[0].name}
-                </NavigationMenuLink>
-              </Link>
-            ) : (
-              <>
-                <NavigationMenuTrigger>{category.categoryName}</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
-                    {category.items.map((item) => (
-                      <ListItem
-                        key={item.name}
-                        title={item.name}
-                        href={item.href}
-                      >
-                        {item.description}
-                      </ListItem>
-                    ))}
-                  </ul>
-                </NavigationMenuContent>
-              </>
-            )}
-          </NavigationMenuItem>
-        ))}
-      </NavigationMenuList>
-    </NavigationMenu>
   );
 
   return (

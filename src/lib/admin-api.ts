@@ -4,7 +4,6 @@ import { UserProfile } from "./profile-api";
 import { Strategy } from "./strategy-api";
 import { UserRoom } from "./user-room-api"; // Import UserRoom type
 import { Idea } from "./ideas-api";
-import { ReviewReply } from './review-replies-api';
 
 export interface AppSetting {
   key: string;
@@ -23,8 +22,6 @@ export interface SavedInvoice {
     first_name: string;
     last_name: string;
   }
-  totalMontantVerse: number;
-  totalFacture: number;
 }
 
 export interface AccountantRequest {
@@ -51,13 +48,6 @@ export interface AdminIdea extends Idea {
   profiles: {
     first_name: string;
     last_name: string;
-  } | null;
-}
-
-export interface ReviewReplyWithProfile extends ReviewReply {
-  profiles: {
-    first_name: string | null;
-    last_name: string | null;
   } | null;
 }
 
@@ -463,79 +453,6 @@ export async function deleteIdea(ideaId: string): Promise<void> {
     console.error("Error deleting idea:", error);
     throw new Error(`Erreur lors de la suppression de l'idée : ${error.message}`);
   }
-}
-
-/**
- * Fetches counts for various admin dashboard stats.
- */
-export async function getDashboardStats() {
-  const [
-    usersResult,
-    roomsResult,
-    repliesResult
-  ] = await Promise.allSettled([
-    supabase.from('profiles').select('id', { count: 'exact', head: true }),
-    supabase.from('user_rooms').select('id', { count: 'exact', head: true }),
-    supabase.from('review_replies').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval')
-  ]);
-
-  const getCount = (result: PromiseSettledResult<any>) => {
-    if (result.status === 'fulfilled' && result.value.count !== null) {
-      return result.value.count;
-    }
-    if (result.status === 'rejected') {
-      console.error("Error fetching stat:", result.reason);
-    }
-    return 0;
-  };
-
-  return {
-    users: getCount(usersResult),
-    rooms: getCount(roomsResult),
-    pendingReplies: getCount(repliesResult),
-  };
-}
-
-/**
- * Fetches all review replies for the admin dashboard.
- */
-export async function getAllReviewReplies(): Promise<ReviewReplyWithProfile[]> {
-  const { data, error } = await supabase
-    .from('review_replies')
-    .select(`
-      *,
-      profiles (
-        first_name,
-        last_name
-      )
-    `)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error("Error fetching all review replies:", error);
-    throw new Error("Impossible de récupérer les réponses aux avis.");
-  }
-  return data || [];
-}
-
-/**
- * Updates the status of a review reply.
- * @param replyId The ID of the reply to update.
- * @param status The new status ('approved' or 'rejected').
- */
-export async function updateReviewReplyStatus(replyId: string, status: 'approved' | 'rejected'): Promise<ReviewReply> {
-  const { data, error } = await supabase
-    .from('review_replies')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', replyId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error updating review reply status:", error);
-    throw new Error("Erreur lors de la mise à jour du statut de la réponse.");
-  }
-  return data;
 }
 
 export async function getSetting(key: string): Promise<AppSetting | null> {

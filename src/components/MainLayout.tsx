@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut, Plug, Building, Gift, MessagesSquare } from 'lucide-react';
+import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut, Plug, Building, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -47,7 +47,6 @@ const defaultSidebarSections = [
   {
     title: 'Ressources',
     items: [
-      { name: 'Messages', href: '/messages', icon: MessagesSquare },
       { name: 'Blog', href: '/blog', icon: Newspaper },
       { name: 'Aides', href: '/help', icon: LifeBuoy },
       { name: 'Modules', href: '/modules', icon: Plug },
@@ -80,14 +79,14 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
   return (
     <div className="flex flex-col h-full">
       {isMobile && profile && (
-        <div className="flex items-center p-4 border-b border-admin-panel-border">
+        <div className="flex items-center p-4 border-b border-sidebar-border">
           <Avatar className="h-10 w-10">
             <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
             <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
           </Avatar>
           <div className="ml-3">
-            <p className="text-sm font-semibold text-admin-panel-foreground">{profile.first_name} {profile.last_name}</p>
-            <p className="text-xs text-admin-panel-foreground/80">{session?.user?.email}</p>
+            <p className="text-sm font-semibold text-sidebar-foreground">{profile.first_name} {profile.last_name}</p>
+            <p className="text-xs text-sidebar-foreground/80">{session?.user?.email}</p>
           </div>
         </div>
       )}
@@ -101,7 +100,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
           <Button
             asChild
             variant="ghost"
-            className="w-full justify-start text-admin-panel-foreground hover:bg-admin-panel-accent hover:text-admin-panel-accent-foreground"
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             onClick={onLinkClick}
           >
             <a
@@ -117,7 +116,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
 
         {sidebarSections.map((section) => (
           <div key={section.title}>
-            <h3 className="px-4 mb-2 text-xs font-semibold uppercase text-admin-panel-foreground/70 tracking-wider">
+            <h3 className="px-4 mb-2 text-xs font-semibold uppercase text-sidebar-foreground/70 tracking-wider">
               {section.title}
             </h3>
             <ul>
@@ -126,9 +125,9 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center px-4 py-2.5 rounded-md text-sm text-admin-panel-foreground font-medium tracking-wide transition-all",
-                      "hover:bg-admin-panel-accent hover:text-admin-panel-accent-foreground",
-                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) ? 'bg-admin-panel-accent text-admin-panel-accent-foreground' : ''
+                      "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
+                      "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
                     )}
                     onClick={onLinkClick}
                   >
@@ -142,11 +141,11 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
         ))}
       </nav>
 
-      <nav className="mt-auto p-4 border-t border-admin-panel-border">
+      <nav className="mt-auto p-4 border-t border-sidebar-border">
         {profile?.role === 'admin' && (
           <div className="mb-2">
             <Link to="/admin" onClick={onLinkClick}>
-              <Button variant="outline" className="w-full justify-start bg-admin-panel-accent text-admin-panel-accent-foreground hover:bg-admin-panel-accent/90">
+              <Button variant="outline" className="w-full justify-start bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90">
                 <Shield className="h-5 w-5 mr-3" />
                 Administration
               </Button>
@@ -160,9 +159,9 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
                 <Link
                   to={item.href}
                   className={cn(
-                    "flex items-center px-4 py-2.5 rounded-md text-sm text-admin-panel-foreground font-medium tracking-wide transition-all",
-                    "hover:bg-admin-panel-accent hover:text-admin-panel-accent-foreground",
-                    location.pathname.startsWith(item.href) ? 'bg-admin-panel-accent text-admin-panel-accent-foreground' : ''
+                    "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    location.pathname.startsWith(item.href) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
                   )}
                   onClick={onLinkClick}
                 >
@@ -272,24 +271,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex min-h-screen bg-admin-panel text-admin-panel-foreground">
+    <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {!isMobile && (
-        <aside className="w-64 bg-admin-panel text-admin-panel-foreground flex flex-col border-r border-admin-panel-border shadow-lg">
+        <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
           <SidebarContent />
         </aside>
       )}
 
       <div className="flex-1 flex flex-col">
-        <header className="bg-admin-panel-primary p-4 border-b border-admin-panel-border flex items-center justify-between shadow-sm md:px-6 z-40">
+        <header className="bg-background p-4 border-b flex items-center justify-between shadow-sm md:px-6 z-40">
           <div className="w-1/3 md:w-auto">
             {isMobile && (
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6 text-admin-panel-primary-foreground" />
+                    <Menu className="h-6 w-6" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0 bg-admin-panel text-admin-panel-foreground flex flex-col">
+                <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
                   <SidebarContent onLinkClick={handleLinkClick} />
                 </SheetContent>
               </Sheet>
@@ -303,20 +302,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
 
           <div className="w-1/3 md:w-auto flex items-center justify-end space-x-2 sm:space-x-4">
-            <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4 bg-admin-panel-accent text-admin-panel-accent-foreground hover:bg-admin-panel-accent/90">
+            <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4">
               <Plus className="h-4 w-4" />
               <span className="ml-2 hidden xl:inline-block">Actions rapides</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)} className="text-admin-panel-foreground hover:bg-admin-panel-accent">
+            <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
               <Sparkles className="h-5 w-5 text-blue-500" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsWhatsNewOpen(true)} className="text-admin-panel-foreground hover:bg-admin-panel-accent">
+            <Button variant="ghost" size="icon" onClick={() => setIsWhatsNewOpen(true)}>
               <Gift className="h-5 w-5" />
             </Button>
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative text-admin-panel-foreground hover:bg-admin-panel-accent">
+                <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500"></span>}
                 </Button>
@@ -336,7 +335,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className={cn("cursor-pointer", !notif.is_read && "bg-blue-50 dark:bg-blue-900/20")}>
                       <div className="flex items-start space-x-3">
                         {!notif.is_read && <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5"></div>}
-                        <div className="flex-1">
+                        <div className={cn("flex-1", notif.is_read && "pl-5")}>
                           <p className="text-sm">{notif.message}</p>
                           <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: fr })}</p>
                         </div>
@@ -352,14 +351,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2 text-admin-panel-foreground hover:bg-admin-panel-accent">
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
                       <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
                     </Avatar>
                     <div className="hidden xl:flex flex-col items-start ml-2">
                       <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
-                      <span className="text-xs leading-none text-admin-panel-foreground/70">
+                      <span className="text-xs leading-none text-gray-500 dark:text-gray-400">
                         {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : (profile?.role === 'accountant' ? 'Compte comptable' : 'Compte utilisateur'))}
                       </span>
                     </div>
@@ -405,7 +404,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </Alert>
         )}
 
-        <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6 bg-[#f9fafb]">
+        <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6">
           {children}
         </main>
       </div>

@@ -13,7 +13,16 @@ import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Profile } from '@/lib/profile-api'; // Import de Profile
-import { channelColors } from '@/lib/constants';
+
+const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
+  'AIRBNB': { name: 'Airbnb', bgColor: 'bg-red-600', textColor: 'text-white' },
+  'BOOKING': { name: 'Booking.com', bgColor: 'bg-blue-700', textColor: 'text-white' },
+  'ABRITEL': { name: 'Abritel', bgColor: 'bg-orange-600', textColor: 'text-white' },
+  'DIRECT': { name: 'Direct', bgColor: 'bg-purple-600', textColor: 'text-white' },
+  'HELLOKEYS': { name: 'Hello Keys', bgColor: 'bg-green-600', textColor: 'text-white' },
+  'OWNER_BLOCK': { name: 'Bloqué', bgColor: 'bg-slate-700', textColor: 'text-white' },
+  'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
+};
 
 interface CalendarGridMobileProps {
   refreshTrigger: number;
@@ -168,11 +177,7 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, rese
                         {roomReservations.map(res => {
                           const checkIn = parseISO(res.check_in_date);
                           const checkOut = parseISO(res.check_out_date);
-                          
-                          const isOwnerReservation = res.status === 'PROPRI' || res.status === 'PROP0';
-                          const effectiveChannelKey = isOwnerReservation ? res.status : (res.channel_identifier || 'UNKNOWN');
-                          const channelInfo = channelColors[effectiveChannelKey] || channelColors['UNKNOWN'];
-
+                          const channelInfo = channelColors[res.channel_identifier || 'UNKNOWN'] || channelColors['UNKNOWN'];
                           return (
                             <div
                               key={res.id}

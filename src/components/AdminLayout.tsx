@@ -4,27 +4,21 @@ import {
   Home,
   Users,
   FileText,
+  LineChart,
+  Briefcase,
   Wrench,
+  BedDouble,
   Settings,
   LogOut,
   Shield,
-  CircleUser,
-  Menu,
-  BedDouble,
-  HelpCircle,
-  GitMerge,
-  Lightbulb,
-  MessageSquare,
-  FilePlus,
-  Target,
   ArrowLeft,
-  BookOpen,
-  MessageSquareText,
-  ListChecks,
-  ScrollText,
-  LayoutDashboard, // Icon for general management
-  MessageSquareMore, // Icon for general communication
-  MessagesSquare,
+  CircleUser,
+  User,
+  Target,
+  FilePlus,
+  MessageSquare,
+  Gift,
+  Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -33,58 +27,62 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
+import { Menu } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const adminNavItems = [
-  { name: 'Tableau de bord', href: '/admin', icon: Home },
+const adminNavigationCategories = [
   {
-    name: 'Gestion',
-    icon: LayoutDashboard,
-    subItems: [
+    categoryName: 'Général',
+    items: [
+      { name: 'Tableau de Bord', href: '/admin', icon: Home },
+    ]
+  },
+  {
+    categoryName: 'Gestion des Utilisateurs',
+    items: [
       { name: 'Utilisateurs', href: '/admin/users', icon: Users },
-      { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble },
-      { name: 'Facturation', href: '/admin/invoice-generation', icon: FilePlus },
-      { name: 'Relevés', href: '/admin/statements', icon: FileText },
-      { name: 'Rapports Techniques', href: '/admin/technical-reports', icon: Wrench },
-    ],
+      { name: 'Logements Utilisateurs', href: '/admin/user-rooms', icon: BedDouble },
+    ]
   },
   {
-    name: 'Contenu',
-    icon: BookOpen,
-    subItems: [
+    categoryName: 'Contenu & Communication',
+    items: [
       { name: 'Pages', href: '/admin/pages', icon: FileText },
-      { name: 'Blog', href: '/admin/blog', icon: BookOpen },
-      { name: 'FAQ', href: '/admin/faq', icon: ListChecks },
-      { name: 'Changelog', href: '/admin/changelog', icon: ScrollText },
-    ],
-  },
-  {
-    name: 'Communication',
-    icon: MessageSquareMore,
-    subItems: [
-      { name: 'Messagerie', href: '/admin/messages', icon: MessagesSquare },
-      { name: 'Réponses Avis', href: '/admin/review-replies', icon: MessageSquareText },
+      { name: 'Blog', href: '/admin/blog', icon: FileText },
+      { name: 'FAQ', href: '/admin/faq', icon: MessageSquare },
+      { name: 'Changelog', href: '/admin/changelog', icon: Gift },
       { name: 'Idées', href: '/admin/ideas', icon: Lightbulb },
-    ],
+    ]
   },
   {
-    name: 'Paramètres',
-    icon: Settings,
-    subItems: [
-      { name: 'Général', href: '/admin/settings', icon: Settings },
+    categoryName: 'Finances',
+    items: [
+      { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus },
+      { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText },
+    ]
+  },
+  {
+    categoryName: 'Opérations & Support',
+    items: [
+      { name: 'Rapports Tech.', href: '/admin/technical-reports', icon: Wrench },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target },
-    ],
+    ]
+  },
+  {
+    categoryName: 'Paramètres',
+    items: [
+      { name: 'Paramètres', href: '/admin/settings', icon: Settings },
+    ]
   },
 ];
 
@@ -106,134 +104,135 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Chargement...</div>;
+    return <div className="flex items-center justify-center h-screen">Chargement de la session admin...</div>;
   }
 
   if (profile?.role !== 'admin') {
-    return null;
+    return null; // Or a dedicated "Access Denied" component
   }
 
-  const NavLinks: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => (
-    <nav className={cn(
-      isMobile
-        ? "grid gap-6 text-lg font-medium"
-        : "hidden md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6"
-    )}>
-      <Link to="/admin" className="flex items-center gap-2 text-lg font-semibold md:text-base mb-4 md:mb-0">
-        <Shield className="h-6 w-6 text-admin-panel-primary-foreground" />
-        <span className="text-admin-panel-primary-foreground">Admin Hello Keys</span>
-      </Link>
-      {adminNavItems.map(item => (
-        item.subItems ? (
-          <DropdownMenu key={item.name}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                asChild={true} // Explicitly set asChild
-                className={cn(
-                  "flex items-center gap-2 transition-colors hover:bg-transparent",
-                  item.subItems.some(subItem => location.pathname.startsWith(subItem.href))
-                    ? "text-admin-panel-primary-foreground"
-                    : "text-admin-panel-foreground",
-                  isMobile && "text-lg w-full justify-start"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.name}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              {item.subItems.map(subItem => (
-                <DropdownMenuItem key={subItem.name} asChild className="data-[highlighted]:bg-transparent">
-                  <Link to={subItem.href} className={cn(
-                    "flex items-center",
-                    location.pathname.startsWith(subItem.href)
-                      ? "bg-admin-panel-accent text-admin-panel-accent-foreground"
-                      : ""
-                  )}>
-                    <span className="flex items-center gap-2">
-                      <subItem.icon className="mr-2 h-4 w-4" />
-                      <span>{subItem.name}</span>
-                    </span>
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Link
-            key={item.name}
-            to={item.href}
-            className={cn(
-              "flex items-center gap-2 transition-colors hover:bg-transparent",
-              location.pathname === item.href || (item.href !== '/admin' && location.pathname.startsWith(item.href))
-                ? "text-admin-panel-primary-foreground"
-                : "text-admin-panel-foreground",
-              isMobile && "text-lg"
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            {item.name}
-          </Link>
-        )
-      ))}
-    </nav>
-  );
-
   return (
-    <div className="flex min-h-screen w-full flex-col bg-admin-panel">
-      <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-admin-panel-primary px-4 md:px-6 z-50">
-        {/* Desktop Navigation */}
-        <div className="hidden md:flex md:flex-1 md:items-center md:gap-5 lg:gap-6">
-          <NavLinks />
+    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+      <aside className="w-64 bg-gray-800 text-white p-4 flex-col hidden md:flex">
+        <div className="flex items-center mb-8">
+          <Shield className="h-8 w-8 mr-2 text-yellow-400" />
+          <h1 className="text-xl font-bold">Admin Hello Keys</h1>
         </div>
-
-        {/* Mobile Navigation */}
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" asChild={true} className="shrink-0 md:hidden"> {/* Explicitly set asChild */}
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Ouvrir le menu de navigation</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left">
-            <NavLinks isMobile />
-          </SheetContent>
-        </Sheet>
-
-        {/* Header Right Side */}
-        <div className="flex w-full items-center justify-end gap-4 md:w-auto md:ml-auto">
-          <NotificationBell />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-full">
-                <CircleUser className="h-5 w-5" />
-                <span className="sr-only">Ouvrir le menu utilisateur</span>
+        <nav className="flex-grow">
+          <Accordion type="multiple" className="w-full">
+            {adminNavigationCategories.map((category, index) => (
+              <AccordionItem value={`item-${index}`} key={category.categoryName}>
+                <AccordionTrigger className="py-2 text-white hover:no-underline hover:bg-gray-700 rounded-md px-2">
+                  {category.categoryName}
+                </AccordionTrigger>
+                <AccordionContent className="pb-0">
+                  <ul>
+                    {category.items.map((item) => (
+                      <li key={item.name} className="mb-1">
+                        <Link
+                          to={item.href}
+                          className={cn(
+                            "flex items-center p-2 rounded-md hover:bg-gray-700 transition-colors ml-4",
+                            location.pathname === item.href && "bg-gray-900"
+                          )}
+                        >
+                          <item.icon className="h-5 w-5 mr-3" />
+                          {item.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </nav>
+        <div className="mt-auto">
+          <Button variant="ghost" className="w-full justify-start text-left mb-2 hover:bg-gray-700 hover:text-white" asChild>
+            <Link to="/">
+              <ArrowLeft className="h-5 w-5 mr-3" />
+              Retour au site
+            </Link>
+          </Button>
+          <Button variant="destructive" className="w-full" onClick={handleLogout}>
+            <LogOut className="h-5 w-5 mr-3" />
+            Déconnexion
+          </Button>
+        </div>
+      </aside>
+      <div className="flex-1 flex flex-col">
+        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>
-                {profile.first_name} {profile.last_name}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  <span>Retour au site</span>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex flex-col">
+              <nav className="grid gap-2 text-lg font-medium">
+                <Link
+                  to="#"
+                  className="flex items-center gap-2 text-lg font-semibold"
+                >
+                  <img src="/logo.png" alt="Logo" className="h-6 w-auto" />
+                  <span className="">Hello Keys</span>
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Déconnexion</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 overflow-auto">
-        {children}
-      </main>
+                <Accordion type="multiple" className="w-full">
+                  {adminNavigationCategories.map((category, index) => (
+                    <AccordionItem value={`item-${index}`} key={category.categoryName}>
+                      <AccordionTrigger className="py-2 text-base hover:no-underline">
+                        {category.categoryName}
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-0">
+                        <div className="grid gap-2 pl-4">
+                          {category.items.map((item) => (
+                            <Link
+                              key={item.name}
+                              to={item.href}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <item.icon className="h-5 w-5" />
+                              {item.name}
+                            </Link>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </nav>
+            </SheetContent>
+          </Sheet>
+          <div className="w-full flex-1">
+            {/* Breadcrumb can be dynamically generated here */}
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" className="rounded-full">
+                  <CircleUser className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  <User className="h-4 w-4 mr-2" />
+                  {profile?.name}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+        <main className="flex-1 p-6 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 };

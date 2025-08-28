@@ -157,7 +157,7 @@ const AdminDashboardPage: React.FC = () => {
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   Pensez à vérifier les performances du mois dernier pour ajuster les stratégies de prix.
                 </p>
-                <Button variant="ghost" className="text-blue-600 dark:text-blue-300 p-0 h-auto hover:bg-transparent" asChild>
+                <Button variant="link" className="text-blue-600 dark:text-blue-300 p-0 h-auto hover:bg-transparent" asChild>
                   <Link to="/performance">
                     Analyser les performances <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import DigitalBookletForm, { TBookletSchema } from '@/components/DigitalBookletForm';
 import { Loader2, QrCode, Printer } from 'lucide-react';
-import { QRCode } from 'qrcode.react'; // Changed to named import
+import { QRCodeSVG as QRCode } from 'qrcode.react'; // Importe QRCodeSVG et l'alias en QRCode
 
 type Option = 'digital' | 'print';
 

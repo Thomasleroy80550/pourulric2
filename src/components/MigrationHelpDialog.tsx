@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { sendEmail } from '@/lib/notifications-api'; // Assuming this function exists
+import { sendUnauthenticatedEmail } from '@/lib/unauthenticated-email-api'; // Import the new function
 
 const formSchema = z.object({
   email: z.string().email({ message: "Veuillez entrer une adresse email valide." }),
@@ -63,7 +63,7 @@ const MigrationHelpDialog: React.FC<MigrationHelpDialogProps> = ({ isOpen, onOpe
         <p>${values.message}</p>
       `;
 
-      await sendEmail('contact@hellokeys.fr', subject, htmlContent);
+      await sendUnauthenticatedEmail('contact@hellokeys.fr', subject, htmlContent); // Use the new function
       toast.success("Votre demande d'aide a été envoyée avec succès !");
       form.reset();
       onOpenChange(false);

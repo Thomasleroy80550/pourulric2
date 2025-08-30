@@ -530,13 +530,13 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="documents">
             <DocumentsTab />
           </TabsContent>
-
-          <div className="flex justify-end">
-            <Button onClick={handleUpdateProfile} disabled={loading || userProfile?.is_banned}>
-              {loading ? 'Sauvegarde...' : 'Enregistrer les modifications'}
-            </Button>
-          </div>
         </Tabs>
+
+        <div className="flex justify-end mt-6">
+          <Button onClick={handleUpdateProfile} disabled={loading || userProfile?.is_banned}>
+            {loading ? 'Sauvegarde...' : 'Enregistrer les modifications'}
+          </Button>
+        </div>
 
         <CGUVModal isOpen={isCguvModalOpen} onOpenChange={setIsCguvModalOpen} viewOnly={true} />
         

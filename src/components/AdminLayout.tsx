@@ -18,6 +18,7 @@ import {
   Gift,
   Lightbulb,
   Menu,
+  Puzzle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -59,6 +60,7 @@ const adminNavigationCategories = [
       { name: 'Utilisateurs', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils utilisateurs.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },
+      { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
     ]
   },
   {

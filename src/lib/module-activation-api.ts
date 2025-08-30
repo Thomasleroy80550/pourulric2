@@ -7,6 +7,10 @@ export interface ModuleActivationRequest {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   updated_at: string;
+  profiles?: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 /**
@@ -56,7 +60,13 @@ export async function createModuleActivationRequest(moduleName: string): Promise
 export async function getAllModuleActivationRequests(): Promise<ModuleActivationRequest[]> {
   const { data, error } = await supabase
     .from('module_activation_requests')
-    .select('*')
+    .select(`
+      *,
+      profiles (
+        first_name,
+        last_name
+      )
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {

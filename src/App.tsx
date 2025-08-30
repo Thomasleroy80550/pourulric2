@@ -39,6 +39,7 @@ import BlogPostPage from "./pages/BlogPostPage";
 import AdminStrategiesPage from "./pages/AdminStrategiesPage";
 import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
+import AdminModuleRequestsPage from "./pages/AdminModuleRequestsPage";
 import OnboardingStatusPage from "./pages/OnboardingStatusPage"; // Import the new page
 import FaqPage from "./pages/FaqPage";
 import AdminFaqPage from "./pages/AdminFaqPage";
@@ -68,6 +69,7 @@ function App() {
                   <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/admin/settings" element={<AdminSettingsPage />} />
                   <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
+                  <Route path="/admin/module-requests" element={<AdminModuleRequestsPage />} />
                   <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
                   <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                   <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />

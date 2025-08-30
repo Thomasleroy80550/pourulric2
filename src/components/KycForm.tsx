@@ -24,7 +24,7 @@ interface KycFormProps {
 const KycForm: React.FC<KycFormProps> = ({ profile, onUpdate, className }) => {
   const { session } = useSession();
   const [kycStatus, setKycStatus] = useState(profile.kyc_status || 'not_verified');
-  const [kycDocuments, setKycDocuments] = useState<KycDocument[]>(profile.kyc_documents || []);
+  const [kycDocuments, setKycDocuments] = useState<KycDocument[]>(Array.isArray(profile.kyc_documents) ? profile.kyc_documents : []);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -32,7 +32,7 @@ const KycForm: React.FC<KycFormProps> = ({ profile, onUpdate, className }) => {
 
   useEffect(() => {
     setKycStatus(profile.kyc_status || 'not_verified');
-    setKycDocuments(profile.kyc_documents || []);
+    setKycDocuments(Array.isArray(profile.kyc_documents) ? profile.kyc_documents : []);
   }, [profile]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {

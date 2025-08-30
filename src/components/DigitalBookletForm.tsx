@@ -16,11 +16,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useEffect } from "react";
 import { PlusCircle, Trash2 } from "lucide-react";
+import IconPicker from "./IconPicker"; // Import du nouveau composant
 
 const customSectionSchema = z.object({
   title: z.string().min(1, "Le titre est requis."),
   description: z.string().min(1, "La description est requise."),
-  icon: z.string().optional(), // Nouveau champ pour le nom de l'icône
+  icon: z.string().optional(),
 });
 
 const bookletSchema = z.object({
@@ -132,7 +133,7 @@ export default function DigitalBookletForm({ initialData, onSave, isSaving, onDa
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ title: "", description: "", icon: "" })} // Ajout du champ icon
+                onClick={() => append({ title: "", description: "", icon: "" })}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Ajouter
@@ -183,11 +184,11 @@ export default function DigitalBookletForm({ initialData, onSave, isSaving, onDa
                   name={`customSections.${index}.icon`}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Icône (nom Lucide)</FormLabel>
+                      <FormLabel>Icône</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: Utensils, MapPin" {...field} />
+                        <IconPicker value={field.value} onChange={field.onChange} />
                       </FormControl>
-                      <FormDescription>Nom de l'icône Lucide (ex: 'Utensils', 'MapPin'). Laissez vide pour l'icône par défaut.</FormDescription>
+                      <FormDescription>Choisissez une icône pour représenter cette section.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

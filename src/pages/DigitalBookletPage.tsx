@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import DigitalBookletForm, { TBookletSchema } from '@/components/DigitalBookletForm';
 import { Loader2, QrCode, Printer } from 'lucide-react';
-import { QRCode } from 'qrcode.react';
+import * as QRCodeModule from 'qrcode.react';
 
 type Option = 'digital' | 'print';
 
@@ -102,7 +102,7 @@ export default function DigitalBookletPage() {
                     <Card>
                       <CardHeader><CardTitle>Votre QR Code</CardTitle></CardHeader>
                       <CardContent className="flex flex-col items-center space-y-2">
-                        <QRCode value={bookletUrl} size={128} />
+                        <QRCodeModule.default value={bookletUrl} size={128} />
                         <p className="text-sm text-center text-muted-foreground">Scannez ce code pour voir votre livret numérique.</p>
                       </CardContent>
                     </Card>

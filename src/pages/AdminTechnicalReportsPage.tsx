@@ -16,13 +16,16 @@ import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { getAdminReportsByStatus, createTechnicalReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Archive, ArchiveRestore } from 'lucide-react';
+import { PlusCircle, Loader2, Archive, ArchiveRestore, Check, ChevronsUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { uploadFiles } from '@/lib/storage-api'; // Import the uploadFiles function
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 const reportSchema = z.object({
   user_id: z.string().min(1, "Veuillez sélectionner un propriétaire."),
@@ -41,6 +44,8 @@ const AdminTechnicalReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const [openUserSelect, setOpenUserSelect] = useState(false); // New state for combobox
+  const [userSearchQuery, setUserSearchQuery] = useState(''); // New state for combobox search
 
   const form = useForm<z.infer<typeof reportSchema>>({
     resolver: zodResolver(reportSchema),
@@ -183,16 +188,71 @@ const AdminTechnicalReportsPage: React.FC = () => {
           <DialogHeader><DialogTitle>Créer un nouvel incident</DialogTitle></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleCreateReport)} className="space-y-4 py-4">
-              <FormField control={form.control} name="user_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Propriétaire</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Sélectionner un propriétaire" /></SelectTrigger></FormControl>
-                    <SelectContent>{profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.first_name} {p.last_name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="user_id"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Propriétaire</FormLabel>
+                    <Popover open={openUserSelect} onOpenChange={setOpenUserSelect}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openUserSelect}
+                            className="w-full justify-between"
+                          >
+                            {field.value
+                              ? profiles.find((profile) => profile.id === field.value)?.first_name + ' ' + profiles.find((profile) => profile.id === field.value)?.last_name
+                              : "Sélectionner un propriétaire..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Rechercher un propriétaire..."
+                            value={userSearchQuery}
+                            onValueChange={setUserSearchQuery}
+                          />
+                          <CommandEmpty>Aucun propriétaire trouvé.</CommandEmpty>
+                          <CommandGroup>
+                            {profiles
+                              .filter(profile =>
+                                (profile.first_name?.toLowerCase() + ' ' + profile.last_name?.toLowerCase()).includes(userSearchQuery.toLowerCase()) ||
+                                profile.email?.toLowerCase().includes(userSearchQuery.toLowerCase())
+                              )
+                              .map((profile) => (
+                                <CommandItem
+                                  value={`${profile.first_name} ${profile.last_name}`} // Value for search
+                                  key={profile.id}
+                                  onSelect={() => {
+                                    form.setValue("user_id", profile.id);
+                                    setOpenUserSelect(false);
+                                    setUserSearchQuery(''); // Clear search after selection
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      profile.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {profile.first_name} {profile.last_name} ({profile.email})
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField control={form.control} name="property_name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Propriété</FormLabel>

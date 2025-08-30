@@ -251,8 +251,8 @@ const ProfilePage: React.FC = () => {
           </Alert>
         )}
 
-        <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="flex flex-col w-full space-y-1">
+        <Tabs defaultValue="personal-data" className="flex space-x-6">
+          <TabsList className="flex flex-col w-64 space-y-1">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
@@ -263,7 +263,7 @@ const ProfilePage: React.FC = () => {
             <TabsTrigger value="documents"><Lock className="h-4 w-4 mr-2" />Coffre-Fort</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="personal-data">
+          <TabsContent value="personal-data" className="flex-1">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><User /> Données personnelles</CardTitle>

@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { useEffect } from "react";
+import { PlusCircle, Trash2 } from "lucide-react";
+
+const customSectionSchema = z.object({
+  title: z.string().min(1, "Le titre est requis."),
+  description: z.string().min(1, "La description est requise."),
+});
 
 const bookletSchema = z.object({
   welcomeMessage: z.string().min(1, "Le message de bienvenue est requis."),
@@ -23,6 +30,7 @@ const bookletSchema = z.object({
   emergencyContactName: z.string().min(1, "Le nom du contact d'urgence est requis."),
   emergencyContactPhone: z.string().min(1, "Le téléphone du contact d'urgence est requis."),
   checkOutInstructions: z.string().optional(),
+  customSections: z.array(customSectionSchema).optional(),
 });
 
 export type TBookletSchema = z.infer<typeof bookletSchema>;
@@ -31,9 +39,10 @@ interface DigitalBookletFormProps {
   initialData: TBookletSchema | null;
   onSave: (data: TBookletSchema) => Promise<void>;
   isSaving: boolean;
+  onDataChange: (data: TBookletSchema) => void;
 }
 
-export default function DigitalBookletForm({ initialData, onSave, isSaving }: DigitalBookletFormProps) {
+export default function DigitalBookletForm({ initialData, onSave, isSaving, onDataChange }: DigitalBookletFormProps) {
   const form = useForm<TBookletSchema>({
     resolver: zodResolver(bookletSchema),
     defaultValues: initialData || {
@@ -44,8 +53,19 @@ export default function DigitalBookletForm({ initialData, onSave, isSaving }: Di
       emergencyContactName: "",
       emergencyContactPhone: "",
       checkOutInstructions: "",
+      customSections: [],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "customSections",
+  });
+
+  const watchedData = form.watch();
+  useEffect(() => {
+    onDataChange(watchedData);
+  }, [watchedData, onDataChange]);
 
   return (
     <Form {...form}>
@@ -104,6 +124,70 @@ export default function DigitalBookletForm({ initialData, onSave, isSaving }: Di
         </Card>
 
         <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Sections Personnalisées</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ title: "", description: "" })}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Ajouter
+              </Button>
+            </div>
+            <FormDescription>Ajoutez des informations utiles comme vos restaurants préférés, les lieux à visiter, etc.</FormDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {fields.map((field, index) => (
+              <div key={field.id} className="p-4 border rounded-lg relative space-y-4 bg-muted/50">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1 right-1 text-muted-foreground hover:text-destructive"
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <FormField
+                  control={form.control}
+                  name={`customSections.${index}.title`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Titre de la section</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Restaurants recommandés" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`customSections.${index}.description`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Listez ici vos recommandations..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ))}
+            {fields.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucune section personnalisée.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle>Contacts d'Urgence</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="emergencyContactName" render={({ field }) => (
@@ -123,7 +207,7 @@ export default function DigitalBookletForm({ initialData, onSave, isSaving }: Di
           </CardContent>
         </Card>
 
-        <Button type="submit" disabled={isSaving}>
+        <Button type="submit" disabled={isSaving} size="lg" className="w-full">
           {isSaving ? "Enregistrement..." : "Enregistrer le livret"}
         </Button>
       </form>

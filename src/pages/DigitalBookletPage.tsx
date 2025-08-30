@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import DigitalBookletForm, { TBookletSchema } from '@/components/DigitalBookletForm';
 import { Loader2, QrCode, Printer } from 'lucide-react';
-import { QRCodeSVG as QRCode } from 'qrcode.react'; // Importe QRCodeSVG et l'alias en QRCode
+import { QRCodeSVG as QRCode } from 'qrcode.react';
+import BookletPreview from '@/components/BookletPreview';
 
 type Option = 'digital' | 'print';
 
 export default function DigitalBookletPage() {
   const [selectedOption, setSelectedOption] = useState<Option | null>(null);
+  const [previewData, setPreviewData] = useState<TBookletSchema | null>(null);
   const queryClient = useQueryClient();
 
   const { data: bookletData, isLoading: isLoadingBooklet } = useQuery({
@@ -41,7 +43,7 @@ export default function DigitalBookletPage() {
     });
   };
   
-  const bookletUrl = bookletData ? `${window.location.origin}/booklet/preview` : ''; // Placeholder URL
+  const bookletUrl = bookletData ? `${window.location.origin}/booklet/preview` : '';
 
   return (
     <MainLayout>
@@ -52,7 +54,7 @@ export default function DigitalBookletPage() {
         </header>
 
         {!selectedOption && (
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <Card className="cursor-pointer hover:border-primary transition-colors" onClick={() => setSelectedOption('digital')}>
               <CardHeader>
                 <QrCode className="w-10 h-10 mb-4 text-primary" />
@@ -93,31 +95,40 @@ export default function DigitalBookletPage() {
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
             ) : (
-              <div className="grid lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                  <DigitalBookletForm initialData={bookletData} onSave={handleSave} isSaving={isSaving} />
+              <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                <div className="xl:col-span-3">
+                  <DigitalBookletForm 
+                    initialData={bookletData} 
+                    onSave={handleSave} 
+                    isSaving={isSaving}
+                    onDataChange={setPreviewData}
+                  />
                 </div>
-                <div className="space-y-4">
-                  {selectedOption === 'digital' && bookletData && (
-                    <Card>
-                      <CardHeader><CardTitle>Votre QR Code</CardTitle></CardHeader>
-                      <CardContent className="flex flex-col items-center space-y-2">
-                        <QRCode value={bookletUrl} size={128} />
-                        <p className="text-sm text-center text-muted-foreground">Scannez ce code pour voir votre livret numérique.</p>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {selectedOption === 'print' && (
-                     <Card>
-                      <CardHeader><CardTitle>Finaliser la commande</CardTitle></CardHeader>
-                      <CardContent className="space-y-4">
-                        <p>Une fois votre livret enregistré, vous pourrez commander la version imprimée.</p>
-                        <Button onClick={handlePrintOrder} className="w-full" disabled={!bookletData}>
-                          <Printer className="mr-2 h-4 w-4" /> Commander l'impression (29,99€)
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )}
+                <div className="xl:col-span-2">
+                  <BookletPreview data={previewData ?? bookletData} />
+                  <div className="space-y-4 mt-8">
+                    {selectedOption === 'digital' && bookletData && (
+                      <Card>
+                        <CardHeader><CardTitle>Votre QR Code</CardTitle></CardHeader>
+                        <CardContent className="flex flex-col items-center space-y-2">
+                          <QRCode value={bookletUrl} size={128} />
+                          <p className="text-sm text-center text-muted-foreground">Scannez ce code pour voir votre livret numérique.</p>
+                          <Button variant="link" size="sm" onClick={() => toast.info("Bientôt disponible !", { description: "Le lien public pour votre livret sera bientôt fonctionnel." })}>Copier le lien</Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {selectedOption === 'print' && (
+                       <Card>
+                        <CardHeader><CardTitle>Finaliser la commande</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                          <p>Une fois votre livret enregistré, vous pourrez commander la version imprimée.</p>
+                          <Button onClick={handlePrintOrder} className="w-full" disabled={!bookletData}>
+                            <Printer className="mr-2 h-4 w-4" /> Commander l'impression (29,99€)
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

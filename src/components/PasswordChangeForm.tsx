@@ -11,6 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Loader2 } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle, CheckCircle, KeyRound } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 interface PasswordChangeFormProps {
   className?: string; // Add className prop

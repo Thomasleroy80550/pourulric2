@@ -40,7 +40,7 @@ export function RoomManagementDialog({ room }: RoomManagementDialogProps) {
       <DialogTrigger asChild>
         <Button>Gérer le logement</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl h-[80vh] flex flex-col p-0">
+      <DialogContent className="max-w-7xl h-[80vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle className="text-2xl">Gérer : {room.room_name}</DialogTitle>
         </DialogHeader>

@@ -20,6 +20,7 @@ import { PlusCircle, Trash2 } from "lucide-react";
 const customSectionSchema = z.object({
   title: z.string().min(1, "Le titre est requis."),
   description: z.string().min(1, "La description est requise."),
+  icon: z.string().optional(), // Nouveau champ pour le nom de l'icône
 });
 
 const bookletSchema = z.object({
@@ -131,7 +132,7 @@ export default function DigitalBookletForm({ initialData, onSave, isSaving, onDa
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => append({ title: "", description: "" })}
+                onClick={() => append({ title: "", description: "", icon: "" })} // Ajout du champ icon
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Ajouter
@@ -173,6 +174,20 @@ export default function DigitalBookletForm({ initialData, onSave, isSaving, onDa
                       <FormControl>
                         <Textarea placeholder="Listez ici vos recommandations..." {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name={`customSections.${index}.icon`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Icône (nom Lucide)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Utensils, MapPin" {...field} />
+                      </FormControl>
+                      <FormDescription>Nom de l'icône Lucide (ex: 'Utensils', 'MapPin'). Laissez vide pour l'icône par défaut.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -1,6 +1,7 @@
 import { TBookletSchema } from './DigitalBookletForm';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Wifi, Shield, Home, Phone, LogOut, Info, Sparkles } from 'lucide-react';
+import * as LucideIcons from 'lucide-react'; // Importe toutes les icônes Lucide
 
 interface BookletPreviewProps {
   data: TBookletSchema | null;
@@ -13,6 +14,12 @@ const defaultData: TBookletSchema = {
   emergencyContactName: "Non spécifié",
   emergencyContactPhone: "Non spécifié",
   customSections: [],
+};
+
+// Fonction utilitaire pour obtenir le composant d'icône à partir de son nom
+const getIconComponent = (iconName: string) => {
+  const IconComponent = LucideIcons[iconName as keyof typeof LucideIcons];
+  return IconComponent || Sparkles; // Retourne l'icône par défaut si non trouvée
 };
 
 export default function BookletPreview({ data }: BookletPreviewProps) {
@@ -57,17 +64,20 @@ export default function BookletPreview({ data }: BookletPreviewProps) {
               </Card>
             )}
 
-            {displayData.customSections?.map((section, index) => (
-              <Card key={index}>
-                <CardHeader className="flex-row items-center space-x-3 p-3">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-base">{section.title || "Titre de la section"}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0 text-xs whitespace-pre-wrap">
-                  {section.description || "Description de la section"}
-                </CardContent>
-              </Card>
-            ))}
+            {displayData.customSections?.map((section, index) => {
+              const IconComponent = getIconComponent(section.icon || ''); // Utilise l'icône spécifiée ou Sparkles par défaut
+              return (
+                <Card key={index}>
+                  <CardHeader className="flex-row items-center space-x-3 p-3">
+                    <IconComponent className="w-5 h-5 text-primary" />
+                    <CardTitle className="text-base">{section.title || "Titre de la section"}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0 text-xs whitespace-pre-wrap">
+                    {section.description || "Description de la section"}
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             {displayData.checkOutInstructions && (
               <Card>

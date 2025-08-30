@@ -23,7 +23,6 @@ import jsPDF from 'jspdf';
 import PhoneVerificationDialog from '@/components/PhoneVerificationDialog';
 import { useTheme } from 'next-themes';
 import PasswordChangeForm from '@/components/PasswordChangeForm';
-import ReferralTab from '@/components/ReferralTab'; // Import the new component
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -249,11 +248,10 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-6">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
-            <TabsTrigger value="referral">Parrainage</TabsTrigger> {/* Add new tab trigger */}
             <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
             <TabsTrigger value="security">Sécurité</TabsTrigger>
@@ -408,10 +406,6 @@ const ProfilePage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="referral">
-            <ReferralTab />
           </TabsContent>
 
           <TabsContent value="kyc">

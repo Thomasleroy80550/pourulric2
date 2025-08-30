@@ -29,65 +29,72 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
   console.log("SessionContextProvider rendering. Loading:", loading, "Path:", location.pathname);
 
-  const fetchSessionAndProfile = useCallback(async (currentSession: Session | null) => {
-    setSession(currentSession);
-    if (currentSession) {
-      try {
-        const userProfile = await getProfile();
-        setProfile(userProfile);
-        if (userProfile?.is_banned) {
-          console.warn("User is banned. Limited access.");
-        }
-        if (userProfile) {
-          updateUserLastSeen();
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        setProfile(null);
-      }
-    } else {
-      setProfile(null);
+  const fetchUserProfile = useCallback(async (userSession: Session) => {
+    console.log("Fetching user profile...");
+    try {
+      const userProfile = await getProfile();
+      console.log("User profile fetched:", userProfile);
+      setProfile(userProfile);
+      return userProfile;
+    } catch (error) {
+      console.error("Error fetching user profile in SessionContextProvider:", error);
+      toast.error("Erreur lors du chargement de votre profil.");
+      return null;
     }
-    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth event: ${event}`);
-      
-      if (event === 'SIGNED_IN') {
-        await fetchSessionAndProfile(session);
-        
-        // Check for referral code after sign-in
-        const referralCode = localStorage.getItem('referral_code');
-        if (referralCode && session) {
-          try {
-            await supabase.functions.invoke('process-referral', {
-              body: { referral_code: referralCode },
-            });
-            // Remove the code after processing to prevent re-use
-            localStorage.removeItem('referral_code');
-          } catch (error) {
-            console.error('Erreur lors du traitement du parrainage:', error);
-            // We can decide to show a toast here, but it might be confusing for the new user.
-            // For now, just log it.
-            localStorage.removeItem('referral_code'); // Also remove on error
+  const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
+    setLoading(true);
+    if (currentSession) {
+      setSession(currentSession);
+      const userProfile = await fetchUserProfile(currentSession);
+
+      if (userProfile) {
+        const isAdmin = userProfile.role === 'admin';
+        const isOnboardingComplete = userProfile.onboarding_status === 'live';
+
+        // --- Redirection Logic ---
+        if (isAdmin) {
+          // Admins are redirected to their dashboard from login/onboarding pages
+          if (location.pathname === '/login' || location.pathname === '/onboarding-status') {
+            navigate('/admin');
+          }
+        } else {
+          // Regular user logic
+          if (!isOnboardingComplete) {
+            // If onboarding is not complete, they must be on the onboarding page.
+            if (location.pathname !== '/onboarding-status') {
+              navigate('/onboarding-status');
+            }
+          } else {
+            // If onboarding is complete, they should not be on the onboarding page.
+            if (location.pathname === '/onboarding-status' || location.pathname === '/login') {
+              navigate('/');
+            }
           }
         }
-      } else if (event === 'SIGNED_OUT') {
-        await fetchSessionAndProfile(null);
-        navigate('/login');
-      } else if (event === 'INITIAL_SESSION') {
-        await fetchSessionAndProfile(session);
-      } else if (event === 'USER_UPDATED') {
-        await fetchSessionAndProfile(session);
-      }
-    });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [fetchSessionAndProfile, navigate]);
+        // --- CGUV Check ---
+        const cguvAccepted = userProfile.cguv_accepted_at;
+        const cguvVersion = userProfile.cguv_version;
+        if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
+          setShowCguvModal(true);
+        } else {
+          setShowCguvModal(false);
+        }
+      }
+    } else {
+      // No session, redirect to login if not already there
+      setSession(null);
+      setProfile(null);
+      setShowCguvModal(false);
+      setShowOnboardingConfetti(false);
+      if (location.pathname !== '/login') {
+        navigate('/login');
+      }
+    }
+    setLoading(false);
+  }, [fetchUserProfile, location.pathname, navigate]);
 
   // Heartbeat effect to update last_seen_at
   useEffect(() => {
@@ -109,6 +116,40 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       }
     };
   }, [session]);
+
+  useEffect(() => {
+    console.log("SessionContextProvider useEffect running.");
+    let isMounted = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (!isMounted) return;
+      console.log('Auth state changed:', event, currentSession);
+      revalidateSessionAndProfile(currentSession);
+    });
+
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (!isMounted) return;
+      console.log("Initial getSession result:", initialSession);
+      revalidateSessionAndProfile(initialSession);
+    });
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Tab became visible. Re-checking session...');
+        const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+        revalidateSessionAndProfile(refreshedSession);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [revalidateSessionAndProfile]);
 
   const handleAcceptCguv = async () => {
     console.log("Handling CGUV acceptance...");

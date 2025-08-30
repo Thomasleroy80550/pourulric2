@@ -417,7 +417,7 @@ const PerformancePage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-8">Tableau de Bord des Performances</h1>
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto text-center">
             <TabsTrigger value="dashboard">Tableau de Bord</TabsTrigger>
             <TabsTrigger value="strategy">Stratégie</TabsTrigger>
           </TabsList>

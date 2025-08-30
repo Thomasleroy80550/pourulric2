@@ -9,8 +9,13 @@ import { Download, Loader2 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils'; // Import cn utility
 
-const DocumentsTab = () => {
+interface DocumentsTabProps {
+  className?: string; // Add className prop
+}
+
+const DocumentsTab: React.FC<DocumentsTabProps> = ({ className }) => {
   const { session } = useSession();
   const [documents, setDocuments] = useState<AdminDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +55,7 @@ const DocumentsTab = () => {
   };
 
   return (
-    <Card>
+    <Card className={cn("w-full", className)}> {/* Apply className here */}
       <CardHeader>
         <CardTitle>Mon Coffre-Fort</CardTitle>
         <CardDescription>Retrouvez ici tous les documents importants partagés par votre gestionnaire.</CardDescription>

@@ -6,82 +6,122 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { updateUserPassword } from '@/lib/auth-api';
+import { updatePassword } from '@/lib/auth-api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useSession } from '@/components/SessionContextProvider';
+import { cn } from '@/lib/utils';
 
-const passwordSchema = z.object({
-  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères."),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas.",
-  path: ["confirmPassword"],
-});
+interface PasswordChangeFormProps {
+  className?: string; // Add className prop
+}
 
-const PasswordChangeForm: React.FC = () => {
+const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ className }) => {
+  const { session } = useSession();
+  const [currentPassword, setCurrentPassword] = React.useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const form = useForm<z.infer<typeof passwordSchema>>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      password: '',
-      confirmPassword: '',
-    },
-  });
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
 
-  const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (newPassword !== confirmNewPassword) {
+      setError("Les nouveaux mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await updateUserPassword(values.password);
-      toast.success("Mot de passe mis à jour avec succès !");
-      form.reset();
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
+      await updatePassword(newPassword);
+      setSuccess("Votre mot de passe a été mis à jour avec succès !");
+      toast.success("Mot de passe mis à jour !");
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err: any) {
+      setError(err.message || "Une erreur est survenue lors de la mise à jour du mot de passe.");
+      toast.error("Erreur lors de la mise à jour du mot de passe.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card>
+    <Card className={cn("w-full", className)}> {/* Apply className here */}
       <CardHeader>
-        <CardTitle>Changer le mot de passe</CardTitle>
-        <CardDescription>Entrez un nouveau mot de passe pour votre compte.</CardDescription>
+        <CardTitle className="flex items-center gap-2"><KeyRound /> Changer le mot de passe</CardTitle>
+        <CardDescription>Mettez à jour votre mot de passe pour renforcer la sécurité de votre compte.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nouveau mot de passe</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword">Mot de passe actuel</Label>
+            <Input
+              id="currentPassword"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              disabled={loading}
             />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmer le nouveau mot de passe</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">Nouveau mot de passe</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              disabled={loading}
             />
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Mettre à jour le mot de passe
-            </Button>
-          </form>
-        </Form>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmNewPassword">Confirmer le nouveau mot de passe</Label>
+            <Input
+              id="confirmNewPassword"
+              type="password"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erreur</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertTitle>Succès</AlertTitle>
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+          <Button type="submit" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Mise à jour...
+              </>
+            ) : (
+              'Mettre à jour le mot de passe'
+            )}
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );

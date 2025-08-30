@@ -264,7 +264,7 @@ const ProfilePage: React.FC = () => {
           </TabsList>
 
           <TabsContent value="personal-data" className="flex-1">
-            <Card>
+            <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><User /> Données personnelles</CardTitle>
                 <CardDescription>Les informations fournies ci-dessous figureront sur vos factures.</CardDescription>
@@ -318,8 +318,8 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="payment-preferences">
-            <Card className="mb-6">
+          <TabsContent value="payment-preferences" className="flex-1">
+            <Card className="w-full mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Airbnb/Booking.com</CardTitle>
                 <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Airbnb et Booking.com.</CardDescription>
@@ -336,7 +336,7 @@ const ProfilePage: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Abritel/Hello Keys</CardTitle>
                 <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Abritel et notre site.</CardDescription>
@@ -360,8 +360,8 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="my-offer">
-            <Card>
+          <TabsContent value="my-offer" className="flex-1">
+            <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Briefcase /> Mon offre</CardTitle>
                 <CardDescription>Les informations fournies ci-dessous constituent les détails de votre offre.</CardDescription>
@@ -414,8 +414,8 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="referral">
-            <Card>
+          <TabsContent value="referral" className="flex-1">
+            <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Gift /> Programme de Parrainage</CardTitle>
                 <CardDescription>Partagez votre code de parrainage et gagnez des crédits pour chaque nouvel utilisateur qui nous rejoint grâce à vous !</CardDescription>
@@ -451,12 +451,12 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="kyc">
-            {profile && <KycForm profile={profile} onUpdate={fetchProfileData} />}
+          <TabsContent value="kyc" className="flex-1">
+            {profile && <KycForm profile={profile} onUpdate={fetchProfileData} className="w-full" />}
           </TabsContent>
 
-          <TabsContent value="settings">
-            <Card>
+          <TabsContent value="settings" className="flex-1">
+            <Card className="w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Settings /> Paramètres & Notifications</CardTitle>
               </CardHeader>
@@ -506,11 +506,11 @@ const ProfilePage: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="security">
+          <TabsContent value="security" className="flex-1">
             {hasPasswordAuth ? (
-              <PasswordChangeForm />
+              <PasswordChangeForm className="w-full" />
             ) : (
-              <Card>
+              <Card className="w-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><KeyRound /> Sécurité</CardTitle>
                 </CardHeader>
@@ -527,8 +527,8 @@ const ProfilePage: React.FC = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="documents">
-            <DocumentsTab />
+          <TabsContent value="documents" className="flex-1">
+            <DocumentsTab className="w-full" />
           </TabsContent>
         </Tabs>
 

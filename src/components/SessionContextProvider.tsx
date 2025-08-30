@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
-import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
+import { getProfile, updateProfile, UserProfile, updateUserLastSeen } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
 
@@ -96,6 +96,26 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     setLoading(false);
   }, [fetchUserProfile, location.pathname, navigate]);
 
+  // Heartbeat effect to update last_seen_at
+  useEffect(() => {
+    let intervalId: number | undefined;
+
+    if (session) {
+      // Update immediately on session load
+      updateUserLastSeen();
+
+      // Then update every 60 seconds
+      intervalId = window.setInterval(() => {
+        updateUserLastSeen();
+      }, 60000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [session]);
 
   useEffect(() => {
     console.log("SessionContextProvider useEffect running.");

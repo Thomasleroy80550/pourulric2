@@ -9,14 +9,15 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import AddUserDialog from '@/components/admin/AddUserDialog';
 import EditUserDialog from '@/components/admin/EditUserDialog';
 import ImportUsersDialog from '@/components/admin/ImportUsersDialog';
+import { Input } from '@/components/ui/input';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -79,6 +80,7 @@ const AdminUsersPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [pendingApproval, setPendingApproval] = useState<AccountantRequest | null>(null);
   const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   const fetchUsers = useCallback(async () => {
@@ -175,6 +177,13 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const filteredUsers = users.filter(user => {
+    const term = searchTerm.toLowerCase();
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    return fullName.includes(term) || email.includes(term);
+  });
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -204,7 +213,18 @@ const AdminUsersPage: React.FC = () => {
           </TabsList>
           <TabsContent value="users" className="mt-4">
             <Card className="shadow-md">
-              <CardHeader><CardTitle>Liste des utilisateurs</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Liste des utilisateurs</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full md:w-1/3"
+                  />
+                </div>
+              </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="space-y-2">
@@ -219,13 +239,22 @@ const AdminUsersPage: React.FC = () => {
                         <TableHead>Rôle</TableHead>
                         <TableHead>Statut Intégration</TableHead>
                         <TableHead>Statut KYC</TableHead>
+                        <TableHead>Dernière Connexion</TableHead>
+                        <TableHead>Acceptation CGUV</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user) => (
+                      {filteredUsers.map((user) => {
+                        const isOnline = user.last_seen_at && (new Date().getTime() - new Date(user.last_seen_at).getTime()) < 2 * 60 * 1000;
+                        return (
                         <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
-                          <TableCell>{user.first_name} {user.last_name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {isOnline && <span className="h-2 w-2 rounded-full bg-green-500" title="En ligne"></span>}
+                              {user.first_name} {user.last_name}
+                            </div>
+                          </TableCell>
                           <TableCell>{user.email || 'N/A'}</TableCell>
                           <TableCell>{user.role}</TableCell>
                           <TableCell>
@@ -237,6 +266,12 @@ const AdminUsersPage: React.FC = () => {
                             <Badge variant={getKycStatusVariant(user.kyc_status)}>
                               {getKycStatusText(user.kyc_status)}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {user.last_sign_in_at ? formatDistanceToNow(new Date(user.last_sign_in_at), { addSuffix: true, locale: fr }) : 'Jamais'}
+                          </TableCell>
+                          <TableCell>
+                            {user.cguv_accepted_at ? format(new Date(user.cguv_accepted_at), 'dd/MM/yy HH:mm', { locale: fr }) : 'Non accepté'}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier l'utilisateur">

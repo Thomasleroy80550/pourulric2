@@ -40,6 +40,8 @@ export interface UserProfile {
   key_delivery_method?: 'deposit' | 'mail';
   revyoos_holding_ids?: string[];
   cguv_signed_document_url?: string;
+  last_seen_at?: string; // Ajout du champ
+  last_sign_in_at?: string; // Ajout du champ
 }
 
 /**
@@ -71,6 +73,25 @@ export async function getProfile(): Promise<UserProfile | null> {
     throw new Error(`Erreur lors de la récupération du profil : ${error.message}`);
   }
   return data;
+}
+
+/**
+ * Updates the last_seen_at timestamp for the current user.
+ */
+export async function updateUserLastSeen(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq('id', user.id);
+
+  if (error) {
+    // This might fail if the user is offline, so we don't want to throw a visible error.
+    // We can just log it for debugging purposes.
+    console.warn("Could not update user's last_seen_at timestamp:", error.message);
+  }
 }
 
 /**

@@ -56,13 +56,10 @@ export interface AdminIdea extends Idea {
  * @returns A promise that resolves to an array of UserProfile objects.
  */
 export async function getAllProfiles(): Promise<UserProfile[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('first_name', { ascending: true });
+  const { data, error } = await supabase.functions.invoke('get-all-users-admin');
 
   if (error) {
-    console.error("Error fetching all profiles:", error);
+    console.error("Error fetching all profiles via edge function:", error);
     throw new Error(`Erreur lors de la récupération des profils : ${error.message}`);
   }
   return data || [];

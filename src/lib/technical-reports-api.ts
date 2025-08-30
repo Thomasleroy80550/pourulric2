@@ -1,5 +1,5 @@
 import { supabase } from '../integrations/supabase/client';
-import { Notification } from './notifications-api'; // Import Notification interface
+import { Notification, sendEmail } from './notifications-api'; // Import Notification interface and sendEmail
 
 export interface TechnicalReport {
   id: string;
@@ -58,6 +58,38 @@ export async function createTechnicalReport(report: Omit<TechnicalReport, 'id' |
     console.error("Erreur lors de la création de la notification pour le rapport technique :", notificationError.message);
     // Do not throw error here, as report creation was successful
   }
+
+  // NEW: Send email to the user
+  try {
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('email, first_name')
+      .eq('id', data.user_id)
+      .single();
+
+    if (profileError) {
+      console.error("Erreur lors de la récupération de l'email de l'utilisateur pour le rapport technique :", profileError.message);
+    } else if (profileData?.email) {
+      const userFirstName = profileData.first_name || 'Cher utilisateur';
+      const subject = `Nouveau rapport technique créé : ${data.title}`;
+      const htmlContent = `
+        <p>Bonjour ${userFirstName},</p>
+        <p>Un nouveau rapport technique a été créé pour votre propriété :</p>
+        <p><strong>Titre :</strong> ${data.title}</p>
+        <p><strong>Description :</strong> ${data.description || 'N/A'}</p>
+        <p>Vous pouvez consulter les détails et suivre l'avancement de ce rapport en cliquant sur le lien ci-dessous :</p>
+        <p><a href="${import.meta.env.VITE_APP_BASE_URL}/reports/${data.id}">Voir le rapport technique</a></p>
+        <p>Merci de votre confiance.</p>
+        <p>L'équipe Hello Keys</p>
+      `;
+      await sendEmail(profileData.email, subject, htmlContent);
+      console.log(`Email de rapport technique envoyé à ${profileData.email}`);
+    }
+  } catch (emailError: any) {
+    console.error("Erreur lors de l'envoi de l'email de rapport technique :", emailError.message);
+    // Do not throw error here, as report creation was successful
+  }
+  // END NEW
 
   return data;
 }

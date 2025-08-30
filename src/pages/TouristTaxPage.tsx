@@ -3,22 +3,23 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking'; // Import KrossbookingReservation
-import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { getUserRooms } from '@/lib/user-room-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
-import { parseISO, differenceInDays, getMonth, format, getYear } from 'date-fns'; // Import getYear
+import { parseISO, differenceInDays, getMonth, format, getYear } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Info, Terminal, CheckCircle, CalendarDays, Clock } from 'lucide-react'; // Add new icons
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Import Dialog components
+import { Info, Terminal, CheckCircle, CalendarDays, Clock, BedDouble } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MonthlyTaxData {
   month: string;
   monthIndex: number;
   taxableNights: number;
   totalActualTax: number;
-  reservations: KrossbookingReservation[]; // Add reservations for detail view
+  reservations: KrossbookingReservation[];
 }
 
 const TouristTaxPage: React.FC = () => {
@@ -29,6 +30,7 @@ const TouristTaxPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState<boolean>(false);
   const [selectedMonthReservations, setSelectedMonthReservations] = useState<KrossbookingReservation[]>([]);
   const [selectedMonthName, setSelectedMonthName] = useState<string>('');
+  const isMobile = useIsMobile();
 
   const currentMonthIndex = getMonth(new Date());
   const currentYear = getYear(new Date());
@@ -63,12 +65,10 @@ const TouristTaxPage: React.FC = () => {
           const status = (booking.status || '').toUpperCase();
           const checkInDate = parseISO(booking.check_in_date);
 
-          // Filter by current year
           if (getYear(checkInDate) !== currentYear) {
             return;
           }
 
-          // Exclure les réservations Airbnb, Booking.com et les réservations annulées
           if (channel === 'AIRBNB' || channel === 'BOOKING' || status === 'CANCELLED' || status === 'CANC') {
             return;
           }
@@ -85,7 +85,7 @@ const TouristTaxPage: React.FC = () => {
         });
 
         const formattedData = Object.entries(dataByMonth).map(([monthIndex, data]) => {
-          const monthName = format(new Date(currentYear, parseInt(monthIndex)), 'MMMM', { locale: fr }); // Use currentYear for date
+          const monthName = format(new Date(currentYear, parseInt(monthIndex)), 'MMMM', { locale: fr });
           return {
             month: monthName.charAt(0).toUpperCase() + monthName.slice(1),
             monthIndex: parseInt(monthIndex),
@@ -106,7 +106,7 @@ const TouristTaxPage: React.FC = () => {
     };
 
     loadTaxData();
-  }, [profile, currentYear]); // Add currentYear to dependencies
+  }, [profile, currentYear]);
 
   const handleMonthClick = (data: MonthlyTaxData) => {
     setSelectedMonthReservations(data.reservations);
@@ -121,6 +121,103 @@ const TouristTaxPage: React.FC = () => {
       </MainLayout>
     );
   }
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <Alert variant="destructive">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Erreur</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      );
+    }
+
+    if (isMobile) {
+      return (
+        <div className="grid grid-cols-1 gap-4">
+          {monthlyData.map((data) => {
+            const isPastMonth = data.monthIndex < currentMonthIndex;
+            const isCurrentMonth = data.monthIndex === currentMonthIndex;
+            
+            let icon = null;
+            if (isPastMonth) icon = <CheckCircle className="h-4 w-4 text-green-600" />;
+            else if (isCurrentMonth) icon = <CalendarDays className="h-4 w-4 text-blue-600" />;
+            else icon = <Clock className="h-4 w-4 text-gray-500" />;
+
+            return (
+              <Card key={data.monthIndex} onClick={() => handleMonthClick(data)} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center justify-between">
+                    <span className="flex items-center gap-2">{icon} {data.month}</span>
+                    <span className="font-bold text-lg">{data.totalActualTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <p className="flex items-center text-muted-foreground">
+                    <BedDouble className="h-4 w-4 mr-2" />
+                    {data.taxableNights} Nuitées Taxables
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Mois</TableHead>
+              <TableHead className="text-center">Nombre de Nuitées Taxables</TableHead>
+              <TableHead className="text-right">Taxe de Séjour Prévisionnelle</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {monthlyData.map((data) => {
+              const isPastMonth = data.monthIndex < currentMonthIndex;
+              const isCurrentMonth = data.monthIndex === currentMonthIndex;
+              
+              let rowClasses = "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800";
+              let icon = null;
+
+              if (isPastMonth) {
+                rowClasses += " bg-green-50/20 dark:bg-green-900/10";
+                icon = <CheckCircle className="h-4 w-4 text-green-600 mr-2" />;
+              } else if (isCurrentMonth) {
+                rowClasses += " bg-blue-50/20 dark:bg-blue-900/10 font-semibold";
+                icon = <CalendarDays className="h-4 w-4 text-blue-600 mr-2" />;
+              } else {
+                icon = <Clock className="h-4 w-4 text-gray-500 mr-2" />;
+              }
+
+              return (
+                <TableRow key={data.monthIndex} onClick={() => handleMonthClick(data)} className={rowClasses}>
+                  <TableCell className="font-medium flex items-center">
+                    {icon}
+                    {data.month}
+                  </TableCell>
+                  <TableCell className="text-center">{data.taxableNights}</TableCell>
+                  <TableCell className="text-right font-bold">{data.totalActualTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   return (
     <MainLayout>
@@ -140,59 +237,7 @@ const TouristTaxPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Déclaration par mois pour l'année en cours</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-              </div>
-            ) : error ? (
-              <Alert variant="destructive">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Erreur</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mois</TableHead>
-                      <TableHead className="text-center">Nombre de Nuitées Taxables</TableHead>
-                      <TableHead className="text-right">Taxe de Séjour Prévisionnelle</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {monthlyData.map((data) => {
-                      const isPastMonth = data.monthIndex < currentMonthIndex;
-                      const isCurrentMonth = data.monthIndex === currentMonthIndex;
-                      
-                      let rowClasses = "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800";
-                      let icon = null;
-
-                      if (isPastMonth) {
-                        rowClasses += " bg-green-50/20 dark:bg-green-900/10"; // Light green tint for past months
-                        icon = <CheckCircle className="h-4 w-4 text-green-600 mr-2" />;
-                      } else if (isCurrentMonth) {
-                        rowClasses += " bg-blue-50/20 dark:bg-blue-900/10 font-semibold"; // Light blue tint for current month
-                        icon = <CalendarDays className="h-4 w-4 text-blue-600 mr-2" />;
-                      } else { // Future month
-                        icon = <Clock className="h-4 w-4 text-gray-500 mr-2" />;
-                      }
-
-                      return (
-                        <TableRow key={data.monthIndex} onClick={() => handleMonthClick(data)} className={rowClasses}>
-                          <TableCell className="font-medium flex items-center">
-                            {icon}
-                            {data.month}
-                          </TableCell>
-                          <TableCell className="text-center">{data.taxableNights}</TableCell>
-                          <TableCell className="text-right font-bold">{data.totalActualTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            {renderContent()}
           </CardContent>
         </Card>
       </div>

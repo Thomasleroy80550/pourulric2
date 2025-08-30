@@ -19,6 +19,7 @@ import {
   FAQ_CONTACT_SECTION_SUBTITLE_KEY,
   MIGRATION_NOTICE_KEY,
 } from '@/lib/constants';
+import { Switch } from '@/components/ui/switch';
 
 interface EmailTemplate {
   subject: string;

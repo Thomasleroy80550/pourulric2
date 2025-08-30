@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plug, Settings, TrendingUp, MessageSquare, Shield, Banknote, Wrench, Sparkles, CheckCheck, Info, UserCheck } from 'lucide-react'; // Added new icons and Info
+import { Plug, Settings, TrendingUp, MessageSquare, Shield, Banknote, Wrench, Sparkles, CheckCheck, Info, UserCheck, BookOpen } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Import Tooltip components
-import AccountantAccessDialog from '@/components/AccountantAccessDialog'; // Import the new dialog
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AccountantAccessDialog from '@/components/AccountantAccessDialog';
+import { useSession } from '@/components/SessionContextProvider';
+import { updateProfile } from '@/lib/profile-api';
+import { toast } from 'sonner';
 
 interface Module {
   name: string;
@@ -20,8 +23,19 @@ interface Module {
 }
 
 const ModulesPage: React.FC = () => {
+  const { profile, refreshProfile } = useSession();
   const [loading, setLoading] = useState(true);
   const [isAccountantDialogOpen, setIsAccountantDialogOpen] = useState(false);
+
+  const handleActivateBooklet = async () => {
+    try {
+      await updateProfile({ digital_booklet_enabled: true });
+      toast.success("Module Livret d'accueil activé !");
+      await refreshProfile();
+    } catch (error) {
+      toast.error("Erreur lors de l'activation du module.");
+    }
+  };
 
   const modules: Module[] = [
     {
@@ -34,6 +48,17 @@ const ModulesPage: React.FC = () => {
       buttonVariant: 'default',
       buttonDisabled: false,
       onClick: () => setIsAccountantDialogOpen(true),
+    },
+    {
+      name: "Livret d'accueil numérique",
+      description: "Créez un livret d'accueil numérique pour vos voyageurs, accessible depuis la fiche de votre logement.",
+      icon: BookOpen,
+      status: profile?.digital_booklet_enabled ? 'Activé' : 'Nouveau',
+      info: 'Inclus dans votre forfait',
+      actionText: profile?.digital_booklet_enabled ? 'Activé' : 'Activer',
+      buttonVariant: profile?.digital_booklet_enabled ? 'outline' : 'default',
+      buttonDisabled: profile?.digital_booklet_enabled || false,
+      onClick: handleActivateBooklet,
     },
     {
       name: 'Smart Pricing',
@@ -113,7 +138,7 @@ const ModulesPage: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-8">Ajoutez des services sur-mesure pour optimiser la gestion et la rentabilité de votre bien.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
+          {loading || !profile ? (
             <>
               <Skeleton className="h-48 w-full" />
               <Skeleton className="h-48 w-full" />
@@ -131,7 +156,7 @@ const ModulesPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{module.description}</p>
-                  <div className="flex items-center justify-between mt-auto"> {/* Use mt-auto to push to bottom */}
+                  <div className="flex items-center justify-between mt-auto">
                     <div className="flex items-center text-sm font-medium">
                       <TooltipProvider>
                         <Tooltip>
@@ -147,7 +172,7 @@ const ModulesPage: React.FC = () => {
                         ${module.status === 'Activé' ? 'text-green-600' :
                           module.status === 'Bientôt disponible' ? 'text-yellow-600' :
                           module.status === 'Nouveau' ? 'text-blue-600' :
-                          'text-gray-600' // For 'Sur devis'
+                          'text-gray-600'
                         }`}>
                         {module.status}
                       </span>

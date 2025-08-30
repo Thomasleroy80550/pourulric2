@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy } from 'lucide-react';
+import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy, Lock } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -23,6 +23,7 @@ import jsPDF from 'jspdf';
 import PhoneVerificationDialog from '@/components/PhoneVerificationDialog';
 import { useTheme } from 'next-themes';
 import PasswordChangeForm from '@/components/PasswordChangeForm';
+import DocumentsTab from '@/components/DocumentsTab';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -54,7 +55,8 @@ const ProfilePage: React.FC = () => {
   const [notifyCancellationEmail, setNotifyCancellationEmail] = useState(true);
   const [notifyNewBookingSms, setNotifyNewBookingSms] = useState(false);
   const [notifyCancellationSms, setNotifyCancellationSms] = useState(false);
-  const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false); // New state for expenses module
+  const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
+  const [digitalBookletEnabled, setDigitalBookletEnabled] = useState(false);
 
   const hasPasswordAuth = session?.user?.identities?.some(i => i.provider === 'email');
 
@@ -84,7 +86,8 @@ const ProfilePage: React.FC = () => {
         setNotifyCancellationEmail(fetchedProfile.notify_cancellation_email ?? true);
         setNotifyNewBookingSms(fetchedProfile.notify_new_booking_sms ?? false);
         setNotifyCancellationSms(fetchedProfile.notify_cancellation_sms ?? false);
-        setExpensesModuleEnabled(fetchedProfile.expenses_module_enabled ?? false); // Initialize new state
+        setExpensesModuleEnabled(fetchedProfile.expenses_module_enabled ?? false);
+        setDigitalBookletEnabled(fetchedProfile.digital_booklet_enabled ?? false);
       }
     } catch (err: any) {
       const errorMessage = `Erreur lors du chargement des données : ${err.message}`;
@@ -119,7 +122,8 @@ const ProfilePage: React.FC = () => {
         notify_cancellation_email: notifyCancellationEmail,
         notify_new_booking_sms: notifyNewBookingSms,
         notify_cancellation_sms: notifyCancellationSms,
-        expenses_module_enabled: expensesModuleEnabled, // Include in updates
+        expenses_module_enabled: expensesModuleEnabled,
+        digital_booklet_enabled: digitalBookletEnabled,
       };
       await updateProfile(updates);
       toast.success("Profil mis à jour avec succès !");
@@ -248,7 +252,7 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-8">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
@@ -256,6 +260,7 @@ const ProfilePage: React.FC = () => {
             <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
             <TabsTrigger value="security">Sécurité</TabsTrigger>
+            <TabsTrigger value="documents"><Lock className="h-4 w-4 mr-2" />Coffre-Fort</TabsTrigger>
           </TabsList>
 
           <TabsContent value="personal-data">
@@ -490,6 +495,13 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <Switch id="expenses-module" checked={expensesModuleEnabled} onCheckedChange={setExpensesModuleEnabled} disabled={userProfile?.is_banned} />
                 </div>
+                <div className="flex items-center justify-between p-3 border rounded-md">
+                  <div>
+                    <Label htmlFor="digital-booklet-module">Activer le livret d'accueil numérique</Label>
+                    <p className="text-sm text-gray-500">Permet de créer et gérer un livret d'accueil pour vos voyageurs.</p>
+                  </div>
+                  <Switch id="digital-booklet-module" checked={digitalBookletEnabled} onCheckedChange={setDigitalBookletEnabled} disabled={userProfile?.is_banned} />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -513,6 +525,10 @@ const ProfilePage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="documents">
+            <DocumentsTab />
           </TabsContent>
 
           <div className="flex justify-end">

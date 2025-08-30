@@ -46,8 +46,6 @@ import AdminFaqPage from "./pages/AdminFaqPage";
 import AdminChangelogPage from "./pages/AdminChangelogPage";
 import AdminIdeasPage from "./pages/AdminIdeasPage";
 import NewVersionPage from "./pages/NewVersionPage"; // Import the new page
-import DigitalBookletPage from "./pages/DigitalBookletPage";
-import DocumentsPage from "./pages/DocumentsPage";
 import AdminDocumentsPage from "./pages/AdminDocumentsPage";
 
 const queryClient = new QueryClient();
@@ -103,8 +101,6 @@ function App() {
                   <Route path="/roadmap" element={<RoadmapPage />} />
                   <Route path="/my-rooms" element={<MyRoomsPage />} />
                   <Route path="/faq" element={<FaqPage />} />
-                  <Route path="/digital-booklet" element={<DigitalBookletPage />} />
-                  <Route path="/documents" element={<DocumentsPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

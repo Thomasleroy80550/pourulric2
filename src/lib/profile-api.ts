@@ -15,6 +15,7 @@ export interface UserProfile {
   commission_rate?: number;
   pennylane_customer_id?: string;
   expenses_module_enabled?: boolean;
+  digital_booklet_enabled?: boolean;
   property_address?: string;
   property_city?: string;
   property_zip_code?: string;

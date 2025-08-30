@@ -366,7 +366,53 @@ const DashboardPage = () => {
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* To-Do List Card */}
+        <div className="mt-6">
+          <Card id="tour-todo-list" className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center">
+                <ListChecks className="mr-2 h-5 w-5" />
+                Mes actions requises
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingTasks ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : tasksError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{tasksError}</AlertDescription>
+                </Alert>
+              ) : todoTasks.length > 0 ? (
+                <ul className="space-y-2">
+                  {todoTasks.map(task => (
+                    <li key={task.id}>
+                      <Link to={`/reports/${task.id}`} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
+                        <div>
+                          <p className="font-medium text-sm">{task.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                  <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
+                  <p className="font-semibold">Vous êtes à jour !</p>
+                  <p className="text-sm">Aucune action n'est requise de votre part.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {/* Bilan Financier Card */}
           <Card id="tour-financial-summary" className="shadow-md">
             <CardHeader>
@@ -573,52 +619,6 @@ const DashboardPage = () => {
                   </div>
                   <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
                 </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* To-Do List Card */}
-        <div className="mt-6">
-          <Card id="tour-todo-list" className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center">
-                <ListChecks className="mr-2 h-5 w-5" />
-                Mes actions requises
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingTasks ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : tasksError ? (
-                <Alert variant="destructive">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{tasksError}</AlertDescription>
-                </Alert>
-              ) : todoTasks.length > 0 ? (
-                <ul className="space-y-2">
-                  {todoTasks.map(task => (
-                    <li key={task.id}>
-                      <Link to={`/reports/${task.id}`} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
-                        <div>
-                          <p className="font-medium text-sm">{task.title}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
-                  <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
-                  <p className="font-semibold">Vous êtes à jour !</p>
-                  <p className="text-sm">Aucune action n'est requise de votre part.</p>
-                </div>
               )}
             </CardContent>
           </Card>

@@ -45,6 +45,7 @@ import FaqPage from "./pages/FaqPage";
 import AdminFaqPage from "./pages/AdminFaqPage";
 import AdminChangelogPage from "./pages/AdminChangelogPage";
 import AdminIdeasPage from "./pages/AdminIdeasPage";
+import NewVersionPage from "./pages/NewVersionPage"; // Import the new page
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ function App() {
                   <Route path="/blog/:slug" element={<BlogPostPage />} />
                   <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                   <Route path="/promotion" element={<PromotionPage />} />
+                  <Route path="/new-version" element={<NewVersionPage />} /> {/* Add new route here */}
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/bookings" element={<BookingsPage />} />

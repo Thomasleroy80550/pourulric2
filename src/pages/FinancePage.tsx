@@ -39,7 +39,7 @@ const FinancePage: React.FC = () => {
               <TabsTrigger value="invoices" disabled>Factures</TabsTrigger>
             </TabsList>
           ) : (
-            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-5' : 'md:grid-cols-4'} text-center`}>
               <TabsTrigger value="statements">Relevés</TabsTrigger>
               <TabsTrigger value="invoices" disabled>Factures</TabsTrigger>
               <TabsTrigger value="balances" disabled>Bilans (En développement)</TabsTrigger>

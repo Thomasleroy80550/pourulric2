@@ -328,6 +328,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       )}
 
       <div className="flex-1 flex flex-col">
+        {migrationNotice?.isVisible && migrationNotice.message && (
+          <MigrationNotice message={migrationNotice.message} />
+        )}
         <header className="bg-background p-4 border-b flex items-center justify-between shadow-sm md:px-6 z-40">
           <div className="w-1/3 md:w-auto">
             {isMobile && (
@@ -451,10 +454,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </Button>
             </AlertDescription>
           </Alert>
-        )}
-
-        {migrationNotice?.isVisible && migrationNotice.message && (
-          <MigrationNotice message={migrationNotice.message} />
         )}
 
         <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6">

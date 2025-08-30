@@ -2,7 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Bell, ChevronDown, Settings, Home, CalendarDays, Bookmark, TrendingUp, MessageSquare, Banknote, LifeBuoy, User, Menu, Plus, Newspaper, Sparkles, Shield, CheckCheck, Wrench, AlertTriangle, LogOut, Plug, Building, Gift } from 'lucide-react';
+import {
+  Home,
+  Calendar,
+  Book,
+  BarChart2,
+  Star,
+  HelpCircle,
+  Settings,
+  Grid,
+  FileText,
+  Building,
+  BookOpen,
+} from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -32,8 +44,8 @@ const defaultSidebarSections = [
     title: 'Pilotage',
     items: [
       { name: 'Aperçu', href: '/', icon: Home },
-      { name: 'Calendrier', href: '/calendar', icon: CalendarDays },
-      { name: 'Réservations', href: '/bookings', icon: Bookmark },
+      { name: 'Calendrier', href: '/calendar', icon: Calendar },
+      { name: 'Réservations', href: '/bookings', icon: Book },
       { name: 'Incidents', href: '/reports', icon: Wrench },
       { name: 'Mes logements', href: '/my-rooms', icon: Building },
     ],
@@ -41,17 +53,17 @@ const defaultSidebarSections = [
   {
     title: 'Analyse & Suivi',
     items: [
-      { name: 'Performances', href: '/performance', icon: TrendingUp },
+      { name: 'Performances', href: '/performance', icon: BarChart2 },
       { name: 'Finances', href: '/finances', icon: Banknote },
       { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
-      { name: 'Mes Avis', href: '/reviews', icon: MessageSquare },
+      { name: 'Mes Avis', href: '/reviews', icon: Star },
     ],
   },
   {
     title: 'Ressources',
     items: [
       { name: 'Blog', href: '/blog', icon: Newspaper },
-      { name: 'Aides', href: '/help', icon: LifeBuoy },
+      { name: 'Aides', href: '/help', icon: HelpCircle },
       { name: 'Modules', href: '/modules', icon: Plug },
       { name: 'Nouveautés', href: '/new-version', icon: Sparkles }, // Add this new item
     ],

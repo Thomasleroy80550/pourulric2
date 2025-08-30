@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, FileText, Eye, Trash2, ShieldCheck } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { UserProfile, updateProfile } from '@/lib/profile-api';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -22,7 +23,7 @@ interface KycDocument {
 interface KycFormProps {
   profile: UserProfile;
   onUpdate: () => void;
-  className?: string; // Add className prop
+  className?: string;
 }
 
 const KycForm: React.FC<KycFormProps> = ({ profile, onUpdate, className }) => {
@@ -121,7 +122,7 @@ const KycForm: React.FC<KycFormProps> = ({ profile, onUpdate, className }) => {
   };
 
   return (
-    <Card className={cn("w-full", className)}> {/* Apply className here */}
+    <Card className={cn("w-full", className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><ShieldCheck /> KYC / Vérification</CardTitle>
         <CardDescription>Gérez vos documents de vérification d'identité (KYC).</CardDescription>

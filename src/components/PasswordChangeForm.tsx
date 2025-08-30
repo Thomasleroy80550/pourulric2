@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { updatePassword } from '@/lib/auth-api';
+import { updateUserPassword } from '@/lib/auth-api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
@@ -42,7 +42,7 @@ const PasswordChangeForm: React.FC<PasswordChangeFormProps> = ({ className }) =>
 
     setLoading(true);
     try {
-      await updatePassword(newPassword);
+      await updateUserPassword(newPassword);
       setSuccess("Votre mot de passe a été mis à jour avec succès !");
       toast.success("Mot de passe mis à jour !");
       setCurrentPassword('');

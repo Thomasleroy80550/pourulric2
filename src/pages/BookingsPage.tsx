@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations } from '@/lib/krossbooking';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag, MessageSquare } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays, isValid } from 'date-fns'; // Import isValid
+import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -93,27 +93,17 @@ const BookingsPage: React.FC = () => {
 
     if (filterStartDate) {
       const start = parseISO(filterStartDate);
-      if (!isValid(start)) { 
-        console.warn(`Invalid filter start date: ${filterStartDate}`);
-        setFilteredBookings([]); // Clear bookings if filter date is invalid
-        return;
-      }
       tempBookings = tempBookings.filter(booking => {
         const checkIn = parseISO(booking.check_in_date);
-        return isValid(checkIn) && isAfter(checkIn, subDays(start, 1));
+        return isAfter(checkIn, subDays(start, 1));
       });
     }
 
     if (filterEndDate) {
       const end = parseISO(filterEndDate);
-      if (!isValid(end)) { 
-        console.warn(`Invalid filter end date: ${filterEndDate}`);
-        setFilteredBookings([]); // Clear bookings if filter date is invalid
-        return;
-      }
       tempBookings = tempBookings.filter(booking => {
         const checkIn = parseISO(booking.check_in_date);
-        return isValid(checkIn) && isBefore(checkIn, addDays(end, 1));
+        return isBefore(checkIn, addDays(end, 1));
       });
     }
 
@@ -136,11 +126,6 @@ const BookingsPage: React.FC = () => {
 
       const bookingsForCurrentYear = fetchedBookings.filter(booking => {
         const checkInDate = parseISO(booking.check_in_date);
-        // Validate here before using checkInDate
-        if (!isValid(checkInDate)) {
-          console.warn(`Skipping booking ${booking.id} in BookingsPage due to invalid check_in_date: ${booking.check_in_date}`);
-          return false; // Filter out invalid bookings
-        }
         return isWithinInterval(checkInDate, { start: yearStart, end: yearEnd });
       });
 
@@ -376,8 +361,8 @@ const BookingsPage: React.FC = () => {
                             <TableCell>{booking.guest_name}</TableCell>
                             <TableCell>{booking.property_name}</TableCell>
                             <TableCell>{booking.cod_channel || 'N/A'}</TableCell>
-                            <TableCell>{isValid(parseISO(booking.check_in_date)) ? format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}</TableCell>
-                            <TableCell>{isValid(parseISO(booking.check_out_date)) ? format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}</TableCell>
+                            <TableCell>{format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                            <TableCell>{format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                             <TableCell>
                               <Badge variant={getStatusVariant(booking.status)}>
                                 {booking.status}
@@ -425,7 +410,7 @@ const BookingsPage: React.FC = () => {
                           </p>
                           <p className="flex items-center">
                             <CalendarDays className="h-4 w-4 mr-2 text-gray-500" />
-                            {isValid(parseISO(booking.check_in_date)) ? format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr }) : 'N/A'} - {isValid(parseISO(booking.check_out_date)) ? format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                            {format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })} - {format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}
                           </p>
                           <p className="flex items-center">
                             <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
@@ -494,11 +479,11 @@ const BookingsPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
                 <Label className="text-right">Arrivée:</Label>
-                <span className="col-span-2">{isValid(parseISO(selectedBooking.check_in_date)) ? format(parseISO(selectedBooking.check_in_date), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}</span>
+                <span className="col-span-2">{format(parseISO(selectedBooking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
                 <Label className="text-right">Départ:</Label>
-                <span className="col-span-2">{isValid(parseISO(selectedBooking.check_out_date)) ? format(parseISO(selectedBooking.check_out_date), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}</span>
+                <span className="col-span-2">{format(parseISO(selectedBooking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
                 <Label className="text-right">Statut:</Label>

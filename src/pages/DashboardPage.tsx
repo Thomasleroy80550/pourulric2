@@ -297,20 +297,9 @@ const DashboardPage = () => {
       today.setHours(0, 0, 0, 0);
       let nextArrivalCandidate: KrossbookingReservation | null = null;
       allReservations.forEach(res => {
-        const checkIn = parseISO(res.check_in_date);
-        if (isValid(checkIn)) { // Only proceed if checkIn is valid
-          if ((isSameDay(checkIn, today) || isAfter(checkIn, today))) {
-            if (!nextArrivalCandidate) {
-              nextArrivalCandidate = res;
-            } else {
-              const existingCheckIn = parseISO(nextArrivalCandidate.check_in_date);
-              if (isValid(existingCheckIn) && isBefore(checkIn, existingCheckIn)) { // Validate existing one too
-                nextArrivalCandidate = res;
-              }
-            }
-          }
-        } else {
-          console.warn(`Skipping reservation ${res.id} in DashboardPage due to invalid check_in_date: ${res.check_in_date}`);
+        const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+        if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
+          nextArrivalCandidate = res;
         }
       });
       setNextArrival(nextArrivalCandidate);
@@ -525,7 +514,7 @@ const DashboardPage = () => {
               ) : (
                 <>
                   <div>
-                    {nextArrival && isValid(parseISO(nextArrival.check_in_date)) ? (
+                    {nextArrival ? (
                       <p className="text-xl font-bold">
                         {format(parseISO(nextArrival.check_in_date), 'dd MMMM', { locale: fr })}
                       </p>

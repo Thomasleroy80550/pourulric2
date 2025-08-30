@@ -17,6 +17,7 @@ import {
   FAQ_SUBTITLE_KEY,
   FAQ_CONTACT_SECTION_TITLE_KEY,
   FAQ_CONTACT_SECTION_SUBTITLE_KEY,
+  MIGRATION_NOTICE_KEY,
 } from '@/lib/constants';
 
 interface EmailTemplate {
@@ -32,6 +33,8 @@ const AdminSettingsPage: React.FC = () => {
   const [faqSubtitle, setFaqSubtitle] = useState<string>('');
   const [faqContactSectionTitle, setFaqContactSectionTitle] = useState<string>('');
   const [faqContactSectionSubtitle, setFaqContactSectionSubtitle] = useState<string>('');
+  const [isMigrationNoticeVisible, setIsMigrationNoticeVisible] = useState<boolean>(false);
+  const [migrationNoticeMessage, setMigrationNoticeMessage] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -47,6 +50,7 @@ const AdminSettingsPage: React.FC = () => {
           faqSubtitleSetting,
           faqContactSectionTitleSetting,
           faqContactSectionSubtitleSetting,
+          migrationNoticeSetting,
         ] = await Promise.all([
           getSetting(EMAIL_TEMPLATE_KEY),
           getSetting(CONTACT_EMAIL_KEY),
@@ -55,6 +59,7 @@ const AdminSettingsPage: React.FC = () => {
           getSetting(FAQ_SUBTITLE_KEY),
           getSetting(FAQ_CONTACT_SECTION_TITLE_KEY),
           getSetting(FAQ_CONTACT_SECTION_SUBTITLE_KEY),
+          getSetting(MIGRATION_NOTICE_KEY),
         ]);
 
         if (emailTemplateSetting && emailTemplateSetting.value) {
@@ -83,6 +88,15 @@ const AdminSettingsPage: React.FC = () => {
         setFaqSubtitle(faqSubtitleSetting?.value || 'Trouvez des réponses aux questions les plus fréquemment posées.');
         setFaqContactSectionTitle(faqContactSectionTitleSetting?.value || 'Vous ne trouvez pas de réponse ?');
         setFaqContactSectionSubtitle(faqContactSectionSubtitleSetting?.value || 'Notre équipe est là pour vous aider. Contactez-nous directement.');
+        
+        // Set migration notice states
+        if (migrationNoticeSetting && migrationNoticeSetting.value) {
+          setIsMigrationNoticeVisible(migrationNoticeSetting.value.isVisible || false);
+          setMigrationNoticeMessage(migrationNoticeSetting.value.message || '');
+        } else {
+          // Default message for migration notice
+          setMigrationNoticeMessage('Migration des données en cours, vos anciennes données qui sont liées à l\'ancien système seront bien transférées sur la nouvelle version. Cette tâche étant manuelle et client par client, cela prend du temps.');
+        }
 
       } catch (error: any) {
         toast.error(error.message);
@@ -103,6 +117,11 @@ const AdminSettingsPage: React.FC = () => {
       await updateSetting(FAQ_SUBTITLE_KEY, faqSubtitle);
       await updateSetting(FAQ_CONTACT_SECTION_TITLE_KEY, faqContactSectionTitle);
       await updateSetting(FAQ_CONTACT_SECTION_SUBTITLE_KEY, faqContactSectionSubtitle);
+      // Save migration notice setting
+      await updateSetting(MIGRATION_NOTICE_KEY, {
+        isVisible: isMigrationNoticeVisible,
+        message: migrationNoticeMessage,
+      });
       toast.success("Paramètres sauvegardés avec succès !");
     } catch (error: any) {
       toast.error(error.message);
@@ -243,6 +262,46 @@ const AdminSettingsPage: React.FC = () => {
                       value={faqContactSectionSubtitle}
                       onChange={(e) => setFaqContactSectionSubtitle(e.target.value)}
                       rows={2}
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* New Card for Migration Notice */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Notice de Migration des Données</CardTitle>
+              <CardDescription>
+                Affichez une bannière d'information pour tous les utilisateurs concernant la migration des données.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="migration-notice-toggle"
+                      checked={isMigrationNoticeVisible}
+                      onCheckedChange={setIsMigrationNoticeVisible}
+                    />
+                    <Label htmlFor="migration-notice-toggle">Afficher la notice de migration</Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="migration-notice-message">Message de la notice</Label>
+                    <Textarea
+                      id="migration-notice-message"
+                      value={migrationNoticeMessage}
+                      onChange={(e) => setMigrationNoticeMessage(e.target.value)}
+                      rows={4}
+                      placeholder="Migration des données en cours..."
+                      disabled={!isMigrationNoticeVisible}
                     />
                   </div>
                 </div>

@@ -19,6 +19,9 @@ import { fr } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import BottomNavBar from './BottomNavBar';
 import WhatsNewSheet from './WhatsNewSheet';
+import MigrationNotice from './MigrationNotice'; // Import the new component
+import { getSetting } from '@/lib/admin-api'; // Import getSetting
+import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new constant
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -187,11 +190,26 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const { profile, session } = useSession();
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null); // New state for migration notice
 
   useEffect(() => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');
     setIsImpersonating(!!impersonationSession);
   }, [profile]);
+
+  useEffect(() => {
+    const fetchMigrationNotice = async () => {
+      try {
+        const setting = await getSetting(MIGRATION_NOTICE_KEY);
+        if (setting && setting.value) {
+          setMigrationNotice(setting.value);
+        }
+      } catch (error) {
+        console.error("Failed to fetch migration notice setting:", error);
+      }
+    };
+    fetchMigrationNotice();
+  }, []); // Fetch once on mount
 
   const fetchNotifications = async () => {
     try {
@@ -402,6 +420,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </Button>
             </AlertDescription>
           </Alert>
+        )}
+
+        {migrationNotice?.isVisible && migrationNotice.message && (
+          <MigrationNotice message={migrationNotice.message} />
         )}
 
         <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6">

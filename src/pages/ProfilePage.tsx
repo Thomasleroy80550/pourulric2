@@ -251,7 +251,7 @@ const ProfilePage: React.FC = () => {
           </Alert>
         )}
 
-        <Tabs defaultValue="personal-data" className="flex space-x-6">
+        <Tabs defaultValue="personal-data" className="flex space-x-6 h-full">
           <TabsList className="flex flex-col w-64 space-y-1">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>

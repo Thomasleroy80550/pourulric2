@@ -14,11 +14,13 @@ import {
   User,
   Target,
   FilePlus,
-  MessageSquare,
-  Gift,
+  Newspaper,
+  HelpCircle,
+  GitMerge,
   Lightbulb,
   Menu,
   Puzzle,
+  FolderLock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -68,9 +70,10 @@ const adminNavigationCategories = [
     items: [
       { name: 'Pages', href: '/admin/pages', icon: FileText, description: 'Créer et modifier les pages de contenu.' },
       { name: 'Blog', href: '/admin/blog', icon: FileText, description: 'Gérer les articles du blog.' },
-      { name: 'FAQ', href: '/admin/faq', icon: MessageSquare, description: 'Gérer la foire aux questions.' },
-      { name: 'Changelog', href: '/admin/changelog', icon: Gift, description: 'Publier les nouveautés de l\'application.' },
+      { name: 'FAQ', href: '/admin/faq', icon: HelpCircle, description: 'Gérer la foire aux questions.' },
+      { name: 'Changelog', href: '/admin/changelog', icon: GitMerge, description: 'Publier les nouveautés de l\'application.' },
       { name: 'Idées', href: '/admin/ideas', icon: Lightbulb, description: 'Consulter les suggestions des utilisateurs.' },
+      { name: 'Documents', href: '/admin/documents', icon: FolderLock, description: 'Gérer les documents.' },
     ]
   },
   {
@@ -184,7 +187,7 @@ const DesktopNav = () => {
   )
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const { profile, loading } = useSession();
 

@@ -30,6 +30,7 @@ import {
   Menu,
   Plus,
   Gift,
+  Lock,
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -83,6 +84,7 @@ const defaultSidebarSections = [
       { name: 'Modules', href: '/modules', icon: Plug },
       { name: 'Nouveautés', href: '/new-version', icon: Sparkles },
       { name: 'Livret d\'Accueil', href: '/digital-booklet', icon: BookOpen },
+      { name: 'Mon Coffre-Fort', href: '/documents', icon: Lock },
     ],
   },
 ];

@@ -13,9 +13,9 @@ import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate
 import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { format } = from 'date-fns';
-import { fr } = from 'date-fns/locale';
-import { useSession } = from '@/components/SessionContextProvider';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { useSession } from '@/components/SessionContextProvider';
 
 interface TechnicalReportDetailPageProps {
   isAdmin?: boolean;

@@ -38,7 +38,7 @@ serve(async (req) => {
     }
 
     // 2. Get new user data from request body
-    const { email, password, first_name, last_name, role, estimation_details, estimated_revenue } = await req.json();
+    const { email, password, first_name, last_name, role, estimation_details, estimated_revenue, referral_code } = await req.json();
     if (!email || !password || !first_name || !last_name || !role) {
       throw new Error("Missing required fields: email, password, first_name, last_name, role.");
     }
@@ -65,6 +65,44 @@ serve(async (req) => {
 
     if (createError) {
       throw createError;
+    }
+
+    // Handle referral if a code was provided
+    if (referral_code && createData.user) {
+      // Find the referrer
+      const { data: referrerProfile, error: referrerError } = await adminSupabaseClient
+        .from('profiles')
+        .select('id, referral_credits')
+        .eq('referral_code', referral_code.toUpperCase())
+        .single();
+
+      if (referrerError) {
+        console.warn(`Referral code "${referral_code}" not found or invalid.`, referrerError.message);
+      } else if (referrerProfile) {
+        const referrerId = referrerProfile.id;
+        const newUserId = createData.user.id;
+        const creditsToAward = 10;
+
+        // 1. Create a record in the referrals table
+        await adminSupabaseClient.from('referrals').insert({
+          referrer_id: referrerId,
+          referred_id: newUserId,
+        });
+
+        // 2. Update the referrer's credit balance
+        const newCreditBalance = (referrerProfile.referral_credits || 0) + creditsToAward;
+        await adminSupabaseClient
+          .from('profiles')
+          .update({ referral_credits: newCreditBalance })
+          .eq('id', referrerId);
+
+        // 3. Log the credit transaction
+        await adminSupabaseClient.from('credit_transactions').insert({
+          user_id: referrerId,
+          amount: creditsToAward,
+          description: `Parrainage de ${first_name} ${last_name}`,
+        });
+      }
     }
 
     // 5. Send welcome email with temporary password via Resend

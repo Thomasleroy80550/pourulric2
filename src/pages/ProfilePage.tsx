@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound } from 'lucide-react';
+import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -248,10 +248,11 @@ const ProfilePage: React.FC = () => {
         )}
 
         <Tabs defaultValue="personal-data" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-1 md:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
+            <TabsTrigger value="referral">Parrainage</TabsTrigger>
             <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
             <TabsTrigger value="security">Sécurité</TabsTrigger>
@@ -403,6 +404,43 @@ const ProfilePage: React.FC = () => {
                     )}
                     {isDownloading ? 'Téléchargement...' : 'Télécharger une attestation'}
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="referral">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Gift /> Programme de Parrainage</CardTitle>
+                <CardDescription>Partagez votre code de parrainage et gagnez des crédits pour chaque nouvel utilisateur qui nous rejoint grâce à vous !</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label htmlFor="referralCode">Votre code de parrainage unique</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input id="referralCode" value={profile?.referral_code || 'Génération...'} readOnly className="font-mono text-lg" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        if (profile?.referral_code) {
+                          navigator.clipboard.writeText(profile.referral_code);
+                          toast.success("Code copié dans le presse-papiers !");
+                        }
+                      }}
+                      disabled={!profile?.referral_code}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <Label>Vos crédits de parrainage</Label>
+                  <div className="text-4xl font-bold text-primary mt-1">
+                    {profile?.referral_credits || 0}
+                  </div>
+                  <p className="text-sm text-muted-foreground">Utilisez vos crédits pour obtenir des réductions sur nos services.</p>
                 </div>
               </CardContent>
             </Card>

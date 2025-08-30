@@ -42,6 +42,8 @@ export interface UserProfile {
   cguv_signed_document_url?: string;
   last_seen_at?: string; // Ajout du champ
   last_sign_in_at?: string; // Ajout du champ
+  referral_code?: string; // Ajout du champ
+  referral_credits?: number; // Ajout du champ
 }
 
 /**

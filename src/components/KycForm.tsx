@@ -12,6 +12,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
 
+interface KycDocument {
+  name: string;
+  path: string;
+  uploaded_at: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
 interface KycFormProps {
   profile: UserProfile;
   onUpdate: () => void;

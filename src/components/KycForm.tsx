@@ -8,17 +8,12 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, FileText, Eye, Trash2, ShieldCheck } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { UserProfile, updateProfile } from '@/lib/profile-api';
+import { UserProfile, updateProfile, KycDocument } from '@/lib/profile-api'; // Import KycDocument
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
 
-interface KycDocument {
-  name: string;
-  path: string;
-  uploaded_at: string;
-  status: 'pending' | 'approved' | 'rejected';
-}
+// Removed local KycDocument interface as it's now imported
 
 interface KycFormProps {
   profile: UserProfile;

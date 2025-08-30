@@ -2,6 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type OnboardingStatus = 'estimation_sent' | 'estimation_validated' | 'cguv_accepted' | 'keys_pending_reception' | 'keys_retrieved' | 'photoshoot_done' | 'live';
 
+export interface KycDocument {
+  name: string;
+  path: string;
+  uploaded_at: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
 export interface UserProfile {
   id: string;
   first_name?: string;
@@ -34,7 +41,7 @@ export interface UserProfile {
   is_banned?: boolean;
   can_manage_prices?: boolean;
   kyc_status?: 'not_verified' | 'pending_review' | 'verified' | 'rejected';
-  kyc_documents?: { identity?: string; address?: string; };
+  kyc_documents?: KycDocument[]; // Changed to array of KycDocument
   onboarding_status?: OnboardingStatus;
   estimation_details?: string;
   estimated_revenue?: number;
@@ -66,8 +73,9 @@ export async function getProfile(): Promise<UserProfile | null> {
       estimation_details,
       estimated_revenue,
       key_delivery_method,
-      revyoos_holding_ids
-    `)
+      revyoos_holding_ids,
+      kyc_documents
+    `) // Ensure kyc_documents is selected
     .eq('id', user.id)
     .single();
 

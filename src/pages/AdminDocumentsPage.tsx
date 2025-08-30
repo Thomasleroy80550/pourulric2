@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getAllUsers, UserProfile } from '@/lib/admin-api';
+import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { uploadDocument, getDocumentsForUser, deleteDocument, AdminDocument } from '@/lib/documents-api';
 import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
@@ -26,7 +26,7 @@ const AdminDocumentsPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const allUsers = await getAllUsers();
+        const allUsers = await getAllProfiles();
         setUsers(allUsers);
       } catch (error) {
         toast.error("Erreur lors de la récupération des utilisateurs.");

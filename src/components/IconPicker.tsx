@@ -6,9 +6,9 @@ import { ChevronsUpDown, Check, Sparkles } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Filtrer pour ne garder que les composants d'icônes de lucide-react
+// Filtrer pour ne garder que les composants d'icônes de lucide-react (qui sont des fonctions)
 const iconNames = Object.keys(LucideIcons).filter(key => 
-  typeof LucideIcons[key as keyof typeof LucideIcons] === 'object' && 
+  typeof LucideIcons[key as keyof typeof LucideIcons] === 'function' && 
   key !== 'createLucideIcon' && 
   key !== 'icons' &&
   /^[A-Z]/.test(key) // S'assurer que c'est un nom de composant

@@ -81,7 +81,8 @@ const defaultSidebarSections = [
       { name: 'Blog', href: '/blog', icon: Newspaper },
       { name: 'Aides', href: '/help', icon: HelpCircle },
       { name: 'Modules', href: '/modules', icon: Plug },
-      { name: 'Nouveautés', href: '/new-version', icon: Sparkles }, // Add this new item
+      { name: 'Nouveautés', href: '/new-version', icon: Sparkles },
+      { name: 'Livret d\'Accueil', href: '/digital-booklet', icon: BookOpen },
     ],
   },
 ];

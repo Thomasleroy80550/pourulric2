@@ -26,6 +26,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { sendLoginOtp, verifyLoginOtp } from '@/lib/auth-api';
 import { Home } from 'lucide-react'; // Import the Home icon
+import MigrationHelpDialog from '@/components/MigrationHelpDialog'; // Import the new dialog component
 
 // Zod schemas for validation
 const emailSchema = z.object({
@@ -57,6 +58,7 @@ const Login = () => {
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isMigrationHelpDialogOpen, setIsMigrationHelpDialogOpen] = useState(false); // New state for dialog
   
   const form = useForm<EmailFormValues | PhoneFormValues>({
     resolver: zodResolver(authMethod === 'email' ? emailSchema : phoneSchema),
@@ -286,6 +288,14 @@ const Login = () => {
               )}
             </form>
           </Form>
+          <Button
+            variant="link"
+            className="w-full text-sm text-gray-600 dark:text-gray-400 mt-4"
+            onClick={() => setIsMigrationHelpDialogOpen(true)} // Open the dialog
+            disabled={loading}
+          >
+            Besoin d'aide pour la migration ?
+          </Button>
         </div>
       </div>
 
@@ -302,6 +312,11 @@ const Login = () => {
           </p>
         </div>
       </div>
+
+      <MigrationHelpDialog
+        isOpen={isMigrationHelpDialogOpen}
+        onOpenChange={setIsMigrationHelpDialogOpen}
+      />
     </div>
   );
 };

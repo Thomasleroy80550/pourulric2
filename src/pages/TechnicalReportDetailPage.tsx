@@ -9,13 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore } from 'lucide-react';
-import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, TechnicalReport } from '@/lib/technical-reports-api';
 import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { useSession } from '@/components/SessionContextProvider';
+import { format } = from 'date-fns';
+import { fr } = from 'date-fns/locale';
+import { useSession } = from '@/components/SessionContextProvider';
 
 interface TechnicalReportDetailPageProps {
   isAdmin?: boolean;
@@ -127,15 +127,24 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const handleArchiveToggle = async () => {
     if (!id || report === null) return;
     try {
-      // The archiveReport function in technical-reports-api.ts already handles setting status to 'archived'
-      // and is_archived to true. If we want to unarchive, we need to use updateTechnicalReport.
       if (report.is_archived) {
-        await updateTechnicalReport(id, { is_archived: false, status: 'pending_owner_action' }); // Or previous status
+        await updateTechnicalReport(id, { is_archived: false, status: 'pending_owner_action' });
         toast.success(`Rapport désarchivé avec succès !`);
       } else {
-        await archiveReport(id); // This function sets is_archived to true and status to 'archived'
+        await archiveReport(id);
         toast.success(`Rapport archivé avec succès !`);
       }
+      fetchReport();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
+  const handleRequestOwnerAction = async () => {
+    if (!id || !profile?.id) return;
+    try {
+      await requestOwnerAction(id, profile.id);
+      toast.success("Demande d'action envoyée au propriétaire.");
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -274,6 +283,9 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
               <CardContent className="space-y-2">
                 {report.status !== 'resolved' && (
                   <Button className="w-full" onClick={handleResolve}><CheckCircle className="h-4 w-4 mr-2" />Marquer comme résolu</Button>
+                )}
+                {report.status !== 'pending_owner_action' && report.status !== 'resolved' && report.status !== 'archived' && (
+                  <Button className="w-full" onClick={handleRequestOwnerAction} variant="secondary"><User className="h-4 w-4 mr-2" />Demander action propriétaire</Button>
                 )}
                 <Button variant="outline" className="w-full" onClick={handleArchiveToggle}>
                   {report.is_archived ? <><ArchiveRestore className="h-4 w-4 mr-2" />Désarchiver</> : <><Archive className="h-4 w-4 mr-2" />Archiver</>}

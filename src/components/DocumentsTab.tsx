@@ -6,7 +6,7 @@ import { getDocumentsForUser, AdminDocument } from '@/lib/documents-api';
 import { useSession } from '@/components/SessionContextProvider';
 import { toast } from 'sonner';
 import { Download, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -76,7 +76,11 @@ const DocumentsTab = () => {
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">{doc.name}</TableCell>
                     <TableCell>{doc.category || 'N/A'}</TableCell>
-                    <TableCell>{format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                    <TableCell>
+                      {doc.created_at && isValid(new Date(doc.created_at))
+                        ? format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: fr })
+                        : 'N/A'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" onClick={() => handleDownload(doc.file_path, doc.name)}>
                         <Download className="h-4 w-4 mr-2" />

@@ -52,6 +52,7 @@ const editUserSchema = z.object({
   estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional().nullable(),
   estimation_details: z.string().optional().nullable(),
   revyoos_holding_ids: z.string().optional().nullable(),
+  referral_credits: z.coerce.number().min(0, "Les crédits de parrainage doivent être positifs.").optional().nullable(),
 });
 
 const addRoomFormSchema = z.object({
@@ -124,6 +125,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         estimated_revenue: user.estimated_revenue || 0,
         estimation_details: user.estimation_details || '',
         revyoos_holding_ids: user.revyoos_holding_ids?.join(', ') || '',
+        referral_credits: user.referral_credits || 0,
       });
 
       setLoadingRooms(true);
@@ -217,12 +219,13 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
     if (!user) return;
     try {
-      const { revyoos_holding_ids, ...restOfValues } = values;
+      const { revyoos_holding_ids, referral_credits, ...restOfValues } = values;
       const payload: UpdateUserPayload = {
         user_id: user.id,
         ...restOfValues,
         commission_rate: values.commission_rate !== undefined ? values.commission_rate / 100 : undefined,
         revyoos_holding_ids: revyoos_holding_ids ? revyoos_holding_ids.split(',').map(s => s.trim()).filter(Boolean) : [],
+        referral_credits: referral_credits !== undefined ? referral_credits : undefined,
       };
       await updateUser(payload);
       toast.success("Utilisateur mis à jour avec succès !");
@@ -426,6 +429,14 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                           <FormLabel>IDs Revyoos</FormLabel>
                           <FormControl><Textarea {...field} value={field.value ?? ''} placeholder="Entrez les IDs séparés par des virgules" /></FormControl>
                           <FormDescription>IDs des propriétés sur Revyoos pour récupérer les avis.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="referral_credits" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Crédits de parrainage</FormLabel>
+                          <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                          <FormDescription>Nombre de crédits de parrainage disponibles pour l'utilisateur.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )} />

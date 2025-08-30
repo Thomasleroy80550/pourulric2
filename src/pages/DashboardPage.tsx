@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react"; 
+import { Terminal, ListChecks, ChevronRight, CheckCircle } from "lucide-react"; 
 import {
   ResponsiveContainer,
   PieChart,
@@ -23,6 +23,7 @@ import {
   Line,
 } from "recharts";
 import React, { useState, useEffect, useCallback } from "react";
+import { Link } from 'react-router-dom';
 import ObjectiveDialog from "@/components/ObjectiveDialog";
 import { getProfile, UserProfile } from "@/lib/profile-api";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,6 +42,7 @@ import { toast } from 'sonner';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
+import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
@@ -100,6 +102,10 @@ const DashboardPage = () => {
   const [isForecastDialogOpen, setIsForecastDialogOpen] = useState(false);
   const [forecastAmount, setForecastAmount] = useState(0); // Ensured this line is present and correct
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
+
+  const [todoTasks, setTodoTasks] = useState<TechnicalReport[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
 
   const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
     setDialogChartData(data);
@@ -224,16 +230,23 @@ const DashboardPage = () => {
     setKrossbookingStatsError(null);
     setLoadingReviews(true);
     setReviewsError(null);
+    setLoadingTasks(true);
+    setTasksError(null);
 
     try {
       const userProfile = await getProfile();
       if (userProfile) {
         setExpensesModuleEnabled(userProfile.expenses_module_enabled || false);
       } else {
-        setFinancialDataError("Impossible de charger le profil utilisateur.");
+        const errorMsg = "Impossible de charger le profil utilisateur.";
+        setFinancialDataError(errorMsg);
+        setKrossbookingStatsError(errorMsg);
+        setReviewsError(errorMsg);
+        setTasksError(errorMsg);
         setLoadingFinancialData(false);
         setLoadingKrossbookingStats(false);
         setLoadingReviews(false);
+        setLoadingTasks(false);
         return;
       }
 
@@ -247,11 +260,15 @@ const DashboardPage = () => {
         allExpenses = [...singleExpenses, ...recurringInstances];
       }
 
-      const [statements, fetchedUserRooms, reviews] = await Promise.all([
+      const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
         getMyStatements(),
         getUserRooms(),
-        getReviews(userProfile.revyoos_holding_ids)
+        getReviews(userProfile.revyoos_holding_ids),
+        getTechnicalReportsByUserId(userProfile.id)
       ]);
+
+      const pendingTasks = technicalReports.filter(report => report.status === 'pending_owner_action' && !report.is_archived);
+      setTodoTasks(pendingTasks);
 
       const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
 
@@ -303,11 +320,13 @@ const DashboardPage = () => {
       setFinancialDataError(errorMsg);
       setKrossbookingStatsError(errorMsg);
       setReviewsError(errorMsg);
+      setTasksError(errorMsg);
       console.error("Error fetching dashboard data:", err);
     } finally {
       setLoadingFinancialData(false);
       setLoadingKrossbookingStats(false);
       setLoadingReviews(false);
+      setLoadingTasks(false);
     }
   }, [currentYear]);
 
@@ -554,6 +573,52 @@ const DashboardPage = () => {
                   </div>
                   <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
                 </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* To-Do List Card */}
+        <div className="mt-6">
+          <Card id="tour-todo-list" className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center">
+                <ListChecks className="mr-2 h-5 w-5" />
+                Mes actions requises
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingTasks ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : tasksError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{tasksError}</AlertDescription>
+                </Alert>
+              ) : todoTasks.length > 0 ? (
+                <ul className="space-y-2">
+                  {todoTasks.map(task => (
+                    <li key={task.id}>
+                      <Link to={`/reports/${task.id}`} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
+                        <div>
+                          <p className="font-medium text-sm">{task.title}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                  <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
+                  <p className="font-semibold">Vous êtes à jour !</p>
+                  <p className="text-sm">Aucune action n'est requise de votre part.</p>
+                </div>
               )}
             </CardContent>
           </Card>

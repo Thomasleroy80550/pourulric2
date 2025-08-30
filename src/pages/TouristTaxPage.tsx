@@ -8,7 +8,7 @@ import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
-import { parseISO, differenceInDays, getMonth, format, getYear } from 'date-fns'; // Import getYear
+import { parseISO, differenceInDays, getMonth, format, getYear, isValid } from 'date-fns'; // Import isValid
 import { fr } from 'date-fns/locale';
 import { Info, Terminal, CheckCircle, CalendarDays, Clock } from 'lucide-react'; // Add new icons
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'; // Import Dialog components
@@ -59,9 +59,18 @@ const TouristTaxPage: React.FC = () => {
         }
 
         bookings.forEach(booking => {
+          const checkInDate = parseISO(booking.check_in_date);
+          const checkOutDate = parseISO(booking.check_out_date);
+
+          // Validate dates immediately
+          if (!isValid(checkInDate) || !isValid(checkOutDate)) {
+            console.warn(`Skipping booking ${booking.id} in TouristTaxPage due to invalid date format: check_in_date=${booking.check_in_date}, check_out_date=${booking.check_out_date}`);
+            return; // Skip this booking
+          }
+
           const channel = (booking.cod_channel || 'UNKNOWN').toUpperCase();
           const status = (booking.status || '').toUpperCase();
-          const checkInDate = parseISO(booking.check_in_date);
+          
 
           // Filter by current year
           if (getYear(checkInDate) !== currentYear) {
@@ -73,7 +82,6 @@ const TouristTaxPage: React.FC = () => {
             return;
           }
 
-          const checkOutDate = parseISO(booking.check_out_date);
           const nights = differenceInDays(checkOutDate, checkInDate);
           const monthIndex = getMonth(checkInDate);
 
@@ -222,8 +230,8 @@ const TouristTaxPage: React.FC = () => {
                     <TableRow key={reservation.id}>
                       <TableCell>{reservation.guest_name}</TableCell>
                       <TableCell>{reservation.property_name}</TableCell>
-                      <TableCell>{format(parseISO(reservation.check_in_date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{format(parseISO(reservation.check_out_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>{isValid(parseISO(reservation.check_in_date)) ? format(parseISO(reservation.check_in_date), 'dd/MM/yyyy') : 'N/A'}</TableCell>
+                      <TableCell>{isValid(parseISO(reservation.check_out_date)) ? format(parseISO(reservation.check_out_date), 'dd/MM/yyyy') : 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         {(reservation.tourist_tax_amount || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                       </TableCell>

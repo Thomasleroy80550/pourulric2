@@ -288,7 +288,7 @@ const AdminUsersPage: React.FC = () => {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )})}
                     </TableBody>
                   </Table>
                 )}

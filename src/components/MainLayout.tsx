@@ -129,13 +129,14 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
-                      "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                      "flex items-center px-4 py-2.5 rounded-md text-sm font-medium tracking-wide transition-all",
+                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", // Default styles
+                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) && 'bg-sidebar-accent text-sidebar-accent-foreground', // Active state styles
+                      item.name === 'Nouveautés' && 'bg-primary text-primary-foreground hover:bg-primary/90', // Highlight for "Nouveautés"
                     )}
                     onClick={onLinkClick}
                   >
-                    <item.icon className="h-5 w-5 mr-3" />
+                    <item.icon className={cn("h-5 w-5 mr-3", item.name === 'Nouveautés' && 'text-primary-foreground')} />
                     {item.name}
                   </Link>
                 </li>

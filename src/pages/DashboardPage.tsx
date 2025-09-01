@@ -44,6 +44,16 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 
+// Nouvelle interface pour les tâches à faire
+interface TodoTask {
+  id: string; // ID unique pour la tâche
+  title: string; // Titre principal de la tâche
+  description?: string; // Description optionnelle
+  link: string; // URL vers laquelle naviguer
+  category: 'technical_report' | 'room_setup'; // Catégorie de la tâche
+  property_name?: string; // Spécifique aux rapports techniques
+}
+
 const DONUT_CATEGORIES = [
   { name: 'Airbnb', color: '#FF5A5F' },
   { name: 'Booking', color: '#003580' },
@@ -103,7 +113,7 @@ const DashboardPage = () => {
   const [forecastAmount, setForecastAmount] = useState(0); // Ensured this line is present and correct
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
 
-  const [todoTasks, setTodoTasks] = useState<TechnicalReport[]>([]);
+  const [todoTasks, setTodoTasks] = useState<TodoTask[]>([]); // Type mis à jour
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
 
@@ -135,7 +145,7 @@ const DashboardPage = () => {
     const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
     const monthlyNights = Array(12).fill(0);
     
-    const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
+    const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
 
     statementsForYear.forEach(s => {
       const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
@@ -267,8 +277,32 @@ const DashboardPage = () => {
         getTechnicalReportsByUserId(userProfile.id)
       ]);
 
-      const pendingTasks = technicalReports.filter(report => report.status === 'pending_owner_action' && !report.is_archived);
-      setTodoTasks(pendingTasks);
+      let allTodoTasks: TodoTask[] = [];
+
+      // Ajouter les rapports techniques en attente
+      const pendingTechnicalReports: TodoTask[] = technicalReports
+        .filter(report => report.status === 'pending_owner_action' && !report.is_archived)
+        .map(report => ({
+          id: report.id,
+          title: report.title,
+          link: `/reports/${report.id}`,
+          category: 'technical_report',
+          property_name: report.property_name,
+        }));
+      allTodoTasks = allTodoTasks.concat(pendingTechnicalReports);
+
+      // Ajouter la tâche de configuration des logements si aucun logement n'est renseigné
+      if (fetchedUserRooms.length === 0) {
+        allTodoTasks.push({
+          id: 'room-setup-required', // ID fixe pour cette tâche
+          title: 'Renseignez les informations de vos logements',
+          description: 'Pour une gestion optimale, veuillez ajouter les détails de vos logements.',
+          link: '/my-rooms',
+          category: 'room_setup',
+        });
+      }
+
+      setTodoTasks(allTodoTasks); // Mettre à jour l'état avec toutes les tâches
 
       const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
 
@@ -391,10 +425,15 @@ const DashboardPage = () => {
                 <ul className="space-y-2">
                   {todoTasks.map(task => (
                     <li key={task.id}>
-                      <Link to={`/reports/${task.id}`} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
+                      <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
                         <div>
                           <p className="font-medium text-sm">{task.title}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
+                          {task.property_name && ( // Afficher property_name si c'est un rapport technique
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
+                          )}
+                          {task.description && !task.property_name && ( // Afficher la description pour les autres tâches
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
+                          )}
                         </div>
                         <ChevronRight className="h-5 w-5 text-gray-400" />
                       </Link>

@@ -1,4 +1,6 @@
-import MainLayout from "../components/MainLayout";
+"use client";
+
+import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -51,14 +53,6 @@ const DONUT_CATEGORIES = [
   { name: 'Autre', color: '#6b7280' },
 ];
 
-// Define the common interface for tasks
-interface DashboardTask {
-  id: string;
-  title: string;
-  description?: string; // Can be property_name for TechnicalReport, or a general description for SetupTask
-  link: string; // This will be the dynamic link
-}
-
 const DashboardPage = () => {
   const { profile } = useSession();
   const currentYear = new Date().getFullYear();
@@ -109,8 +103,7 @@ const DashboardPage = () => {
   const [forecastAmount, setForecastAmount] = useState(0); // Ensured this line is present and correct
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
 
-  // Change todoTasks type to DashboardTask[]
-  const [todoTasks, setTodoTasks] = useState<DashboardTask[]>([]);
+  const [todoTasks, setTodoTasks] = useState<TechnicalReport[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
 
@@ -274,31 +267,8 @@ const DashboardPage = () => {
         getTechnicalReportsByUserId(userProfile.id)
       ]);
 
-      // Prepare the list of tasks
-      let combinedTasks: DashboardTask[] = [];
-
-      // Add technical reports as tasks
-      const pendingTechnicalReports = technicalReports.filter(report => report.status === 'pending_owner_action' && !report.is_archived);
-      pendingTechnicalReports.forEach(report => {
-        combinedTasks.push({
-          id: report.id,
-          title: report.title,
-          description: report.property_name, // Use property_name as description
-          link: `/reports/${report.id}`,
-        });
-      });
-
-      // Add "fill room info" task if no rooms are found
-      if (fetchedUserRooms.length === 0) {
-        combinedTasks.push({
-          id: 'setup-room-info', // Unique ID for this task
-          title: 'Renseigner les informations de votre logement',
-          description: 'Ajoutez les détails de votre propriété pour une gestion complète.',
-          link: '/my-rooms', // Link to the MyRoomsPage
-        });
-      }
-
-      setTodoTasks(combinedTasks); // Set the combined tasks
+      const pendingTasks = technicalReports.filter(report => report.status === 'pending_owner_action' && !report.is_archived);
+      setTodoTasks(pendingTasks);
 
       const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
 
@@ -421,10 +391,10 @@ const DashboardPage = () => {
                 <ul className="space-y-2">
                   {todoTasks.map(task => (
                     <li key={task.id}>
-                      <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
+                      <Link to={`/reports/${task.id}`} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
                         <div>
                           <p className="font-medium text-sm">{task.title}</p>
-                          {task.description && <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>}
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
                         </div>
                         <ChevronRight className="h-5 w-5 text-gray-400" />
                       </Link>
@@ -775,7 +745,7 @@ const DashboardPage = () => {
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
-                  </ComposedChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               )}
             </CardContent>

@@ -22,7 +22,7 @@ export async function verifyLoginOtp(phoneNumber: string, otp: string): Promise<
 
   if (error) {
     console.error("Error verifying login SMS OTP:", error);
-    const errorMessage = (error as any).context?.error || error.message || "Une erreur est survenue lors de la vérification du code.";
+    const errorMessage = (error as any).details?.error || error.message || "Une erreur est survenue lors de la vérification du code.";
     throw new Error(errorMessage);
   }
   

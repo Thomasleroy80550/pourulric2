@@ -1,4 +1,4 @@
-import MainLayout from "@/components/MainLayout";
+import MainLayout from "../components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

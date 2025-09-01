@@ -41,9 +41,6 @@ const ProfilePage: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [propertyAddress, setPropertyAddress] = useState('');
-  const [propertyCity, setPropertyCity] = useState('');
-  const [propertyZipCode, setPropertyZipCode] = useState('');
   const [ibanAirbnbBooking, setIbanAirbnbBooking] = useState('');
   const [bicAirbnbBooking, setBicAirbnbBooking] = useState('');
   const [syncWithHellokeys, setSyncWithHellokeys] = useState(false);
@@ -57,6 +54,9 @@ const ProfilePage: React.FC = () => {
   const [notifyCancellationSms, setNotifyCancellationSms] = useState(false);
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
   const [digitalBookletEnabled, setDigitalBookletEnabled] = useState(false);
+  const [isEditingKyc, setIsEditingKyc] = useState(false);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
+  const [isEditingPropertyInfo, setIsEditingPropertyInfo] = useState(false); // New state for property info editing
 
   const hasPasswordAuth = session?.user?.identities?.some(i => i.provider === 'email');
 
@@ -222,7 +222,46 @@ const ProfilePage: React.FC = () => {
       <MainLayout>
         <div className="container mx-auto py-6">
           <h1 className="text-3xl font-bold mb-6">Mon Profil</h1>
-          {renderSkeleton()}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Informations Générales</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Informations du Logement</CardTitle> {/* New section skeleton */}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-24" />
+              </CardContent>
+            </Card>
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Sécurité</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-24" />
+              </CardContent>
+            </Card>
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Vérification d'identité (KYC)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-48 w-full" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </MainLayout>
     );
@@ -251,286 +290,108 @@ const ProfilePage: React.FC = () => {
           </Alert>
         )}
 
-        <Tabs defaultValue="personal-data" className="flex flex-col lg:flex-row lg:space-x-6 h-full">
-          <TabsList className="flex flex-row lg:flex-col w-full lg:w-64 space-x-2 lg:space-x-0 lg:space-y-1 overflow-x-auto pb-2 lg:pb-0">
-            <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
-            <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
-            <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
-            <TabsTrigger value="referral">Parrainage</TabsTrigger>
-            <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
-            <TabsTrigger value="settings">Paramètres</TabsTrigger>
-            <TabsTrigger value="security">Sécurité</TabsTrigger>
-            <TabsTrigger value="documents"><Lock className="h-4 w-4 mr-2" />Coffre-Fort</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* General Info Card */}
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Informations Générales</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Prénom</p>
+                <p className="text-lg font-semibold">{profile?.first_name || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Nom</p>
+                <p className="text-lg font-semibold">{profile?.last_name || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Email</p>
+                <p className="text-lg font-semibold">{profile?.email || 'N/A'}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="personal-data" className="flex-1">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><User /> Données personnelles</CardTitle>
-                <CardDescription>Les informations fournies ci-dessous figureront sur vos factures.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">Prénom</Label>
-                  <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Nom</Label>
-                  <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" value={session?.user?.email || ''} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
-                  <div className="flex items-center gap-2">
-                    <Input id="phone" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+33612345678" disabled={userProfile?.is_banned} />
-                    {profile?.phone_number && phoneNumber === profile.phone_number ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" title="Numéro vérifié" />
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleVerifyPhoneClick}
-                        disabled={userProfile?.is_banned || !phoneNumber}
-                        title="Vérifier ce numéro"
-                      >
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {profile?.phone_number && <p className="text-sm text-muted-foreground">Numéro actuel vérifié : {profile.phone_number}</p>}
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Adresse du logement</Label>
-                  <Input id="address" value={propertyAddress} onChange={(e) => setPropertyAddress(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">Ville</Label>
-                  <Input id="city" value={propertyCity} onChange={(e) => setPropertyCity(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zipCode">Code postal</Label>
-                  <Input id="zipCode" value={propertyZipCode} onChange={(e) => setPropertyZipCode(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="payment-preferences" className="flex-1">
-            <Card className="w-full mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Airbnb/Booking.com</CardTitle>
-                <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Airbnb et Booking.com.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="ibanAirbnb">IBAN</Label>
-                  <Input id="ibanAirbnb" value={ibanAirbnbBooking} onChange={(e) => setIbanAirbnbBooking(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bicAirbnb">BIC</Label>
-                  <Input id="bicAirbnb" value={bicAirbnbBooking} onChange={(e) => setBicAirbnbBooking(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Abritel/Hello Keys</CardTitle>
-                <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Abritel et notre site.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center space-x-2">
-                  <Switch id="syncHellokeys" checked={syncWithHellokeys} onCheckedChange={setSyncWithHellokeys} disabled={userProfile?.is_banned} />
-                  <Label htmlFor="syncHellokeys">Je synchronise mon compte avec Hello Keys</Label>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Property Info Card */}
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Informations du Logement</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isEditingPropertyInfo ? (
+                <>
                   <div className="space-y-2">
-                    <Label htmlFor="ibanAbritel">IBAN</Label>
-                    <Input id="ibanAbritel" value={ibanAbritelHellokeys} onChange={(e) => setIbanAbritelHellokeys(e.target.value)} disabled={!syncWithHellokeys || userProfile?.is_banned} />
+                    <Label htmlFor="propertyAddress">Adresse du logement</Label>
+                    <Input
+                      id="propertyAddress"
+                      value={propertyAddress}
+                      onChange={(e) => setPropertyAddress(e.target.value)}
+                      placeholder="Ex: 123 Rue de la Paix"
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="bicAbritel">BIC</Label>
-                    <Input id="bicAbritel" value={bicAbritelHellokeys} onChange={(e) => setBicAbritelHellokeys(e.target.value)} disabled={!syncWithHellokeys || userProfile?.is_banned} />
+                    <Label htmlFor="propertyCity">Ville</Label>
+                    <Input
+                      id="propertyCity"
+                      value={propertyCity}
+                      onChange={(e) => setPropertyCity(e.target.value)}
+                      placeholder="Ex: Paris"
+                    />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="my-offer" className="flex-1">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Briefcase /> Mon offre</CardTitle>
-                <CardDescription>Les informations fournies ci-dessous constituent les détails de votre offre.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label>Mon forfait</Label>
-                  <Input value={`${(profile?.commission_rate || 0) * 100}%`} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linenType">Type de linge</Label>
-                  <Input id="linenType" value={linenType} onChange={(e) => setLinenType(e.target.value)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="agency">Mon agence</Label>
-                  <Select value={agency} onValueChange={setAgency} disabled={userProfile?.is_banned}>
-                    <SelectTrigger id="agency">
-                      <SelectValue placeholder="Sélectionner une agence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Côte d'opal">Côte d'opal</SelectItem>
-                      <SelectItem value="Baie de somme">Baie de somme</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Date de début de votre contrat</Label>
-                  <Input value={profile?.contract_start_date && isValid(parseISO(profile.contract_start_date)) ? format(parseISO(profile.contract_start_date), 'dd/MM/yyyy') : 'N/A'} disabled />
-                </div>
-                <div className="space-y-2">
-                  <Label>Client depuis</Label>
-                  <Input value={`${getClientSinceDays()} jours`} disabled />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Dernière signature CGUV</Label>
-                  <Input value={profile?.cguv_accepted_at && isValid(parseISO(profile.cguv_accepted_at)) ? `${format(parseISO(profile.cguv_accepted_at), 'dd/MM/yyyy')} (v${profile.cguv_version || CURRENT_CGUV_VERSION})` : 'Non signé'} disabled />
-                </div>
-                <div className="flex items-center gap-4 md:col-span-2">
-                  <Button variant="outline" onClick={() => setIsCguvModalOpen(true)}>Voir nos CGUV</Button>
-                  <Button variant="outline" onClick={handleDownloadAttestation} disabled={!profile || isDownloading}>
-                    {isDownloading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="mr-2 h-4 w-4" />
-                    )}
-                    {isDownloading ? 'Téléchargement...' : 'Télécharger une attestation'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="referral" className="flex-1">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Gift /> Programme de Parrainage</CardTitle>
-                <CardDescription>Partagez votre code de parrainage et gagnez des crédits pour chaque nouvel utilisateur qui nous rejoint grâce à vous !</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label htmlFor="referralCode">Votre code de parrainage unique</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input id="referralCode" value={profile?.referral_code || 'Génération...'} readOnly className="font-mono text-lg" />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        if (profile?.referral_code) {
-                          navigator.clipboard.writeText(profile.referral_code);
-                          toast.success("Code copié dans le presse-papiers !");
-                        }
-                      }}
-                      disabled={!profile?.referral_code}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="propertyZipCode">Code Postal</Label>
+                    <Input
+                      id="propertyZipCode"
+                      value={propertyZipCode}
+                      onChange={(e) => setPropertyZipCode(e.target.value)}
+                      placeholder="Ex: 75001"
+                    />
                   </div>
-                </div>
-                <div>
-                  <Label>Vos crédits de parrainage</Label>
-                  <div className="text-4xl font-bold text-primary mt-1">
-                    {profile?.referral_credits || 0}
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setIsEditingPropertyInfo(false)}>Annuler</Button>
+                    <Button onClick={handleSavePropertyInfo}>Enregistrer</Button>
                   </div>
-                  <p className="text-sm text-muted-foreground">Utilisez vos crédits pour obtenir des réductions sur nos services.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="kyc" className="flex-1">
-            {profile && <KycForm profile={profile} onUpdate={fetchProfileData} className="w-full" />}
-          </TabsContent>
-
-          <TabsContent value="settings" className="flex-1">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Settings /> Paramètres & Notifications</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                </>
+              ) : (
+                <>
                   <div>
-                    <Label htmlFor="darkMode">Mode Sombre</Label>
-                    <p className="text-sm text-gray-500">Activez le thème sombre pour l'application.</p>
+                    <p className="text-sm font-medium text-gray-500">Adresse du logement</p>
+                    <p className="text-lg font-semibold">{profile?.property_address || 'Non renseignée'}</p>
                   </div>
-                  <Switch
-                    id="darkMode"
-                    checked={theme === 'dark'}
-                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                  />
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
-                  <Label htmlFor="notif-new-booking-email">Recevoir les nouvelles réservations par email</Label>
-                  <Switch id="notif-new-booking-email" checked={notifyNewBookingEmail} onCheckedChange={setNotifyNewBookingEmail} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
-                  <Label htmlFor="notif-cancel-email">Recevoir les annulations par email</Label>
-                  <Switch id="notif-cancel-email" checked={notifyCancellationEmail} onCheckedChange={setNotifyCancellationEmail} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
-                  <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
-                  <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
-                  <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
-                  <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
                   <div>
-                    <Label htmlFor="expenses-module">Activer le module de dépenses</Label>
-                    <p className="text-sm text-gray-500">Permet de gérer vos dépenses directement depuis l'application.</p>
+                    <p className="text-sm font-medium text-gray-500">Ville</p>
+                    <p className="text-lg font-semibold">{profile?.property_city || 'Non renseignée'}</p>
                   </div>
-                  <Switch id="expenses-module" checked={expensesModuleEnabled} onCheckedChange={setExpensesModuleEnabled} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
                   <div>
-                    <Label htmlFor="digital-booklet-module">Activer le livret d'accueil numérique</Label>
-                    <p className="text-sm text-gray-500">Permet de créer et gérer un livret d'accueil pour vos voyageurs.</p>
+                    <p className="text-sm font-medium text-gray-500">Code Postal</p>
+                    <p className="text-lg font-semibold">{profile?.property_zip_code || 'Non renseigné'}</p>
                   </div>
-                  <Switch id="digital-booklet-module" checked={digitalBookletEnabled} onCheckedChange={setDigitalBookletEnabled} disabled={userProfile?.is_banned} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  <Button onClick={() => setIsEditingPropertyInfo(true)}>Modifier</Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-          <TabsContent value="security" className="flex-1">
-            {hasPasswordAuth ? (
-              <PasswordChangeForm className="w-full" />
-            ) : (
-              <Card className="w-full">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><KeyRound /> Sécurité</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Alert>
-                    <Terminal className="h-4 w-4" />
-                    <AlertTitle>Connexion sans mot de passe activée</AlertTitle>
-                    <AlertDescription>
-                      Vous utilisez une méthode de connexion sans mot de passe (par exemple, via un code SMS). La modification du mot de passe n'est pas applicable à votre compte.
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+          {/* Security Card */}
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Sécurité</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <PasswordChangeForm />
+            </CardContent>
+          </Card>
 
-          <TabsContent value="documents" className="flex-1">
-            <DocumentsTab className="w-full" />
-          </TabsContent>
-        </Tabs>
+          {/* KYC Card */}
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Vérification d'identité (KYC)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <KycForm />
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="flex justify-end mt-6">
           <Button onClick={handleUpdateProfile} disabled={loading || userProfile?.is_banned}>

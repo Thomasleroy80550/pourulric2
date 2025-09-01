@@ -237,28 +237,33 @@ const DashboardPage = () => {
       const userProfile = await getProfile();
       if (userProfile) {
         setExpensesModuleEnabled(userProfile.expenses_module_enabled || false);
-      } else {
-        const errorMsg = "Impossible de charger le profil utilisateur.";
-        setFinancialDataError(errorMsg);
-        setKrossbookingStatsError(errorMsg);
-        setReviewsError(errorMsg);
-        setTasksError(errorMsg);
-        setLoadingFinancialData(false);
-        setLoadingKrossbookingStats(false);
-        setLoadingReviews(false);
-        setLoadingTasks(false);
-        return;
-      }
 
-      let allExpenses: Expense[] = [];
-      if (userProfile?.expenses_module_enabled) {
-        const [singleExpenses, recurringTemplates] = await Promise.all([
-          getExpenses(currentYear),
-          getRecurringExpenses()
-        ]);
-        const recurringInstances = generateRecurringInstances(recurringTemplates, currentYear);
-        allExpenses = [...singleExpenses, ...recurringInstances];
-      }
+        // Check for missing property info and add a task if needed
+        const newTodoTasks: TechnicalReport[] = [];
+        if (!userProfile.property_address || !userProfile.property_city || !userProfile.property_zip_code) {
+          newTodoTasks.push({
+            id: 'complete-property-info',
+            title: 'Compléter les informations de votre logement',
+            description: 'Veuillez renseigner l\'adresse complète de votre propriété pour débloquer toutes les fonctionnalités.',
+            property_name: 'Informations du compte',
+            status: 'pending_owner_action',
+            is_archived: false,
+            user_id: userProfile.id,
+            created_at: new Date().toISOString(),
+            priority: 'high',
+            category: 'Onboarding',
+          });
+        }
+
+        let allExpenses: Expense[] = [];
+        if (userProfile?.expenses_module_enabled) {
+          const [singleExpenses, recurringTemplates] = await Promise.all([
+            getExpenses(currentYear),
+            getRecurringExpenses()
+          ]);
+          const recurringInstances = generateRecurringInstances(recurringTemplates, currentYear);
+          allExpenses = [...singleExpenses, ...recurringInstances];
+        }
 
       const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
         getMyStatements(),
@@ -268,7 +273,7 @@ const DashboardPage = () => {
       ]);
 
       const pendingTasks = technicalReports.filter(report => report.status === 'pending_owner_action' && !report.is_archived);
-      setTodoTasks(pendingTasks);
+      setTodoTasks([...newTodoTasks, ...pendingTasks]); // Combine new tasks with existing ones
 
       const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
 

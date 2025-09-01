@@ -270,12 +270,14 @@ const DashboardPage = () => {
         allExpenses = [...singleExpenses, ...recurringInstances];
       }
 
-      const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
-        getMyStatements(),
-        getUserRooms(),
-        getReviews(userProfile.revyoos_holding_ids),
-        getTechnicalReportsByUserId(userProfile.id)
-      ]);
+      const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise(
+        Promise.all([
+          getMyStatements(),
+          getUserRooms(),
+          getReviews(userProfile.revyoos_holding_ids),
+          getTechnicalReportsByUserId(userProfile.id)
+        ])
+      );
 
       let allTodoTasks: TodoTask[] = [];
 
@@ -291,12 +293,31 @@ const DashboardPage = () => {
         }));
       allTodoTasks = allTodoTasks.concat(pendingTechnicalReports);
 
-      // Ajouter la tâche de configuration des logements si aucun logement n'est renseigné
+      // Vérifier si des informations de logement sont incomplètes
+      let hasIncompleteRooms = false;
       if (fetchedUserRooms.length === 0) {
+        hasIncompleteRooms = true; // Si aucun logement n'est enregistré, la configuration est requise
+      } else {
+        for (const room of fetchedUserRooms) {
+          // Définir ce qui rend un logement incomplet (champs clés manquants)
+          if (
+            !room.property_type || room.property_type.trim() === '' ||
+            !room.keybox_code || room.keybox_code.trim() === '' ||
+            !room.wifi_code || room.wifi_code.trim() === '' ||
+            !room.arrival_instructions || room.arrival_instructions.trim() === '' ||
+            !room.house_rules || room.house_rules.trim() === ''
+          ) {
+            hasIncompleteRooms = true;
+            break; // Au moins un logement est incomplet, pas besoin de vérifier les autres
+          }
+        }
+      }
+
+      if (hasIncompleteRooms) {
         allTodoTasks.push({
-          id: 'room-setup-required', // ID fixe pour cette tâche
-          title: 'Renseignez les informations de vos logements',
-          description: 'Pour une gestion optimale, veuillez ajouter les détails de vos logements.',
+          id: 'room-info-incomplete',
+          title: 'Complétez les informations de vos logements',
+          description: 'Certains de vos logements ont des informations manquantes. Veuillez les renseigner pour une gestion optimale.',
           link: '/my-rooms',
           category: 'room_setup',
         });

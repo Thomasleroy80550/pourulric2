@@ -270,14 +270,12 @@ const DashboardPage = () => {
         allExpenses = [...singleExpenses, ...recurringInstances];
       }
 
-      const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise(
-        Promise.all([
+      const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
           getMyStatements(),
           getUserRooms(),
           getReviews(userProfile.revyoos_holding_ids),
           getTechnicalReportsByUserId(userProfile.id)
-        ])
-      );
+        ]);
 
       let allTodoTasks: TodoTask[] = [];
 

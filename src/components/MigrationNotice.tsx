@@ -15,11 +15,11 @@ const MigrationNotice: React.FC<MigrationNoticeProps> = ({ message }) => {
       variant="default"
       className={cn(
         "m-4 max-w-2xl mx-auto",
-        "border-blue-400", // Bordure bleue pour le mode clair
-        "dark:border-blue-600" // Bordure bleue plus foncée pour le mode sombre
+        "bg-blue-100 border-blue-300 text-blue-800", // Mode clair: fond bleu clair, bordure bleue, texte bleu foncé
+        "dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300" // Mode sombre: fond bleu foncé, bordure plus foncée, texte bleu clair
       )}
     >
-      <Info className="h-4 w-4 text-blue-700 dark:text-blue-400" /> {/* Icône bleue */}
+      <Info className="h-4 w-4 text-blue-700 dark:text-blue-400 animate-pulse" /> {/* Icône bleue avec effet de pulsation */}
       <AlertTitle>Migration des données en cours</AlertTitle>
       <AlertDescription>
         {message}

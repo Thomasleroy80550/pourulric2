@@ -4,13 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getCompSetAnalysis, CompSetAnalysis } from '@/lib/comp-set-api';
-import { AlertTriangle, Trophy, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { getPerformanceAnalysis, PerformanceAnalysis } from '@/lib/performance-api';
+import { AlertTriangle, Trophy, Users, TrendingUp, TrendingDown, Percent, Briefcase, BarChart } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const CompSetPage: React.FC = () => {
   const [analysis, setAnalysis] = useState<CompSetAnalysis | null>(null);
+  const [performance, setPerformance] = useState<PerformanceAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [perfLoading, setPerfLoading] = useState(true);
+  const [perfError, setPerfError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -26,7 +30,21 @@ const CompSetPage: React.FC = () => {
       }
     };
 
+    const fetchPerformance = async () => {
+      try {
+        setPerfLoading(true);
+        setPerfError(null);
+        const result = await getPerformanceAnalysis();
+        setPerformance(result);
+      } catch (err: any) {
+        setPerfError(err.message);
+      } finally {
+        setPerfLoading(false);
+      }
+    };
+
     fetchAnalysis();
+    fetchPerformance();
   }, []);
 
   const renderScoreCard = (title: string, score: number, maxScore: number, icon: React.ElementType) => {
@@ -42,6 +60,22 @@ const CompSetPage: React.FC = () => {
           <div className="text-2xl font-bold">{score.toFixed(1)} / {maxScore}</div>
           <p className="text-xs text-muted-foreground">Score d'équipement</p>
           <Progress value={percentage} className="mt-2" />
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderPerfCard = (title: string, value: string, description: string, icon: React.ElementType) => {
+    const Icon = icon;
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{value}</div>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </CardContent>
       </Card>
     );
@@ -71,13 +105,13 @@ const CompSetPage: React.FC = () => {
     };
   };
 
-  const performance = getPerformanceMessage();
+  const performanceMessage = getPerformanceMessage();
 
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-2">Analyse Concurrentielle</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-8">Comparez la performance de votre logement par rapport à des biens similaires.</p>
+        <h1 className="text-3xl font-bold mb-2">Analyse Concurrentielle & Performance</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-8">Comparez vos équipements et analysez votre performance financière et d'occupation.</p>
 
         {loading && (
           <div className="space-y-6">
@@ -92,7 +126,7 @@ const CompSetPage: React.FC = () => {
         {error && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Erreur d'analyse</AlertTitle>
+            <AlertTitle>Erreur d'analyse concurrentielle</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -101,14 +135,14 @@ const CompSetPage: React.FC = () => {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Synthèse de la performance</CardTitle>
-                <CardDescription>Basé sur une comparaison avec {analysis.competitorCount} logement(s) similaire(s) dans votre ville.</CardDescription>
+                <CardTitle>Synthèse de la Compétitivité (Équipements)</CardTitle>
+                <CardDescription>Basé sur une comparaison avec {analysis.competitorCount} logement(s) similaire(s).</CardDescription>
               </CardHeader>
               <CardContent>
-                {performance && (
-                  <div className={`flex items-center ${performance.color}`}>
-                    <performance.Icon className="h-6 w-6 mr-3" />
-                    <p className="font-semibold">{performance.message}</p>
+                {performanceMessage && (
+                  <div className={`flex items-center ${performanceMessage.color}`}>
+                    <performanceMessage.Icon className="h-6 w-6 mr-3" />
+                    <p className="font-semibold">{performanceMessage.message}</p>
                   </div>
                 )}
               </CardContent>
@@ -120,6 +154,63 @@ const CompSetPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        <div className="mt-8 space-y-6">
+          <h2 className="text-2xl font-bold">Votre Performance Personnelle</h2>
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Note sur les données</AlertTitle>
+            <AlertDescription>
+              L'analyse de performance financière et d'occupation est privée et concerne uniquement vos logements. Pour des raisons techniques et de confidentialité, il n'est pas possible d'afficher ces données pour vos concurrents.
+            </AlertDescription>
+          </Alert>
+
+          {perfLoading && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Skeleton className="h-36 w-full" />
+              <Skeleton className="h-36 w-full" />
+              <Skeleton className="h-36 w-full" />
+              <Skeleton className="h-36 w-full" />
+            </div>
+          )}
+
+          {perfError && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Erreur d'analyse de performance</AlertTitle>
+              <AlertDescription>{perfError}</AlertDescription>
+            </Alert>
+          )}
+
+          {!perfLoading && !perfError && performance && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {renderPerfCard(
+                "Taux d'occupation",
+                `${performance.occupancyRate.toFixed(1)}%`,
+                `Sur les ${performance.analysisPeriodDays} derniers jours`,
+                Percent
+              )}
+              {renderPerfCard(
+                "Prix moyen / nuit (ADR)",
+                `${performance.adr.toFixed(2)}€`,
+                `Basé sur ${performance.totalBookedNights} nuits réservées`,
+                TrendingUp
+              )}
+              {renderPerfCard(
+                "Revenu / logement (RevPAR)",
+                `${performance.revPar.toFixed(2)}€`,
+                `Sur les ${performance.analysisPeriodDays} derniers jours`,
+                Briefcase
+              )}
+              {renderPerfCard(
+                "Revenu Total",
+                `${performance.totalRevenue.toFixed(2)}€`,
+                `Sur les ${performance.analysisPeriodDays} derniers jours`,
+                BarChart
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </MainLayout>
   );

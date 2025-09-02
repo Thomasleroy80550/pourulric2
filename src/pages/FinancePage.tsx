@@ -34,10 +34,11 @@ const FinancePage: React.FC = () => {
         <h1 className="text-3xl font-bold mb-6">Finances</h1>
         <Tabs defaultValue="statements" className="w-full">
           {profile?.role === 'accountant' ? (
-            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto text-center">
-              <TabsTrigger value="statements" className="w-full justify-center">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices" disabled className="text-center">Factures</TabsTrigger>
-            </TabsList>
+<TabsList className="grid w-full grid-cols-2 max-w-md mx-auto text-center justify-items-center">
+  <TabsTrigger value="statements" className="w-full justify-center">Relevés</TabsTrigger>
+  <TabsTrigger value="invoices" disabled className="w-full justify-center">Factures</TabsTrigger>
+</TabsList>
+
           ) : (
             <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-5' : 'md:grid-cols-4'} max-w-full mx-auto text-center`}>
               <TabsTrigger value="statements" className="text-center">Relevés</TabsTrigger>

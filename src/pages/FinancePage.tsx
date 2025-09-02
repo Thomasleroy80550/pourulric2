@@ -43,7 +43,7 @@ const FinancePage: React.FC = () => {
               <TabsTrigger value="statements" className="text-center">Relevés</TabsTrigger>
               <TabsTrigger value="invoices" disabled className="text-center">Factures</TabsTrigger>
               <TabsTrigger value="balances" disabled className="text-center">Bilans (En développement)</TabsTrigger>
-              <TabsTrigger value="reports" disabled className="text-center">Rapports (En développement)</TabsTrigger>
+              <TabsTrigger value="reports" disabled className="w-full justify-center">Rapports (En développement)</TabsTrigger>
               {showExpensesTab && <TabsTrigger value="expenses" className="text-center">Dépenses</TabsTrigger>}
             </TabsList>
           )}

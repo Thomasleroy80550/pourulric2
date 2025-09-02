@@ -83,8 +83,9 @@ const adminNavigationCategories = [
   {
     categoryName: 'Finances',
     items: [
-      { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus, description: 'Créer de nouveaux relevés mensuels.' },
+      { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus2, description: 'Créer de nouveaux relevés mensuels.' },
       { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText, description: 'Consulter les relevés existants.' },
+      { name: 'Créer Facture (Pennylane)', href: '/admin/create-pennylane-invoice', icon: FilePlus, description: 'Créer une facture client via Pennylane.' },
     ]
   },
   {
@@ -93,17 +94,6 @@ const adminNavigationCategories = [
       { name: 'Rapports Techniques', href: '/admin/technical-reports', icon: Wrench, description: 'Suivre les problèmes techniques signalés.' },
     ]
   },
-];
-
-const navLinks = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Utilisateurs", icon: Users },
-  { href: "/admin/statements", label: "Relevés", icon: FileText },
-  { href: "/admin/invoice-generation", label: "Générer Relevé", icon: FilePlus2 },
-  { href: "/admin/create-pennylane-invoice", label: "Créer Facture (Pennylane)", icon: FilePlus },
-  { href: "/admin/user-rooms", label: "Logements", icon: Home },
-  { href: "/admin/strategies", label: "Stratégies", icon: Target },
-  { href: "/admin/technical-reports", label: "Rapports Tech.", icon: Wrench },
 ];
 
 const ListItem = React.forwardRef<

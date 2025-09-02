@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { sha1 } from 'https://esm.sh/js-sha1@0.7.0'; // Import sha1 for hashing
+import { sha1 } from 'https://esm.sh/js-sha1@0.7.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,7 +41,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Generate a unique hash for the holdingIds array for caching
     const sortedHoldingIds = [...holdingIds].sort();
     const holdingIdsHash = sha1(JSON.stringify(sortedHoldingIds));
 
@@ -52,20 +51,22 @@ serve(async (req) => {
       .eq('holding_ids_hash', holdingIdsHash)
       .single();
 
-    if (cacheError && cacheError.code !== 'PGRST116') { // PGRST116 means no rows found
+    if (cacheError && cacheError.code !== 'PGRST116') {
       console.error("Error fetching from cache:", cacheError);
-      // Continue without cache if there's an error, but log it
     }
 
     if (cachedData) {
-      const cachedAt = new Date(cachedData.cached_at).getTime() / 1000; // Convert to seconds
-      const now = Date.now() / 1000; // Convert to seconds
+      const cachedAt = new Date(cachedData.cached_at).getTime() / 1000;
+      const now = Date.now() / 1000;
       if (now - cachedAt < CACHE_EXPIRY_SECONDS) {
-        console.log("Returning cached improvement points.");
-        return new Response(JSON.stringify(cachedData.improvement_points), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
+        const synthesis = cachedData.improvement_points?.synthesis;
+        if (synthesis) {
+          console.log("Returning cached synthesis.");
+          return new Response(JSON.stringify(synthesis), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          });
+        }
       } else {
         console.log("Cached data expired, re-fetching.");
       }
@@ -74,9 +75,7 @@ serve(async (req) => {
     // 2. If not in cache or expired, fetch reviews and analyze
     const { data: reviewsData, error: reviewsError } = await adminSupabaseClient.functions.invoke('revyoos-proxy', {
       body: { holdingIds },
-      headers: {
-        Authorization: authorization
-      }
+      headers: { Authorization: authorization }
     });
 
     if (reviewsError) {
@@ -85,16 +84,14 @@ serve(async (req) => {
     }
 
     const reviews = reviewsData as { comment: string }[];
-
     if (!reviews || reviews.length === 0) {
-      return new Response(JSON.stringify([]), {
+      return new Response(JSON.stringify(""), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
 
     const allComments = reviews.map(r => r.comment).join("\n\n");
-
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not set in environment variables.");
@@ -107,15 +104,15 @@ serve(async (req) => {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
-            content: "Vous êtes un assistant qui analyse les avis clients pour un hébergement et en extrait les principaux points d'amélioration. Fournissez une liste concise de points d'amélioration basée sur les avis. Répondez uniquement avec un objet JSON contenant une seule clé 'improvement_points' qui est un tableau de chaînes de caractères. N'incluez aucun autre texte. La réponse doit être en français.",
+            content: "Vous êtes un assistant qui analyse les avis clients pour un hébergement. Votre tâche est de rédiger une synthèse concise des retours concernant UNIQUEMENT le logement et ses équipements.\n\n**Règles strictes à suivre :**\n1. Ne mentionnez JAMAIS la propreté.\n2. Ne mentionnez JAMAIS le service de conciergerie, l'accueil, la communication ou le personnel.\n3. Concentrez-vous exclusivement sur les aspects physiques du logement : l'état des lieux, les meubles, les appareils électroménagers, la literie, l'isolation, etc.\n4. Rédigez une synthèse fluide et naturelle en 2-3 phrases maximum.\n5. La réponse doit être en français.\n6. Répondez uniquement avec un objet JSON contenant une seule clé `synthesis` qui est une chaîne de caractères. N'incluez aucun autre texte.",
           },
           {
             role: "user",
-            content: `Analysez les avis d'hébergement suivants et listez les points d'amélioration clés :\n\n${allComments}\n\nExemple de sortie : { "improvement_points": ["Propreté des salles de bain", "Isolation phonique", "Qualité de la literie"] }`,
+            content: `Analysez les avis suivants et générez la synthèse en respectant toutes les règles :\n\n${allComments}\n\nExemple de sortie : { "synthesis": "Les voyageurs apprécient la qualité de la literie, mais suggèrent d'améliorer l'isolation phonique. Certains équipements de cuisine pourraient être modernisés." }`,
           },
         ],
         response_format: { type: "json_object" },
@@ -128,18 +125,22 @@ serve(async (req) => {
     }
 
     const aiData = await response.json();
-    const improvementPointsContent = aiData.choices[0].message.content;
-    let parsedPoints: string[] = [];
+    const synthesisContent = aiData.choices[0].message.content;
+    let synthesisText: string = "";
+    let synthesisObjectForCache: { synthesis: string };
+
     try {
-        const jsonContent = JSON.parse(improvementPointsContent);
-        if (Array.isArray(jsonContent.improvement_points)) {
-            parsedPoints = jsonContent.improvement_points;
-        } else {
-            throw new Error("AI response is not a valid array of improvement points under 'improvement_points' key.");
-        }
+      const jsonContent = JSON.parse(synthesisContent);
+      if (typeof jsonContent.synthesis === 'string') {
+        synthesisText = jsonContent.synthesis;
+        synthesisObjectForCache = { synthesis: synthesisText };
+      } else {
+        throw new Error("AI response is not a valid object with a 'synthesis' key.");
+      }
     } catch (parseError) {
-        console.error("Failed to parse AI response:", improvementPointsContent, parseError);
-        parsedPoints = ["Erreur d'analyse des points d'amélioration (format inattendu de l'IA)."];
+      console.error("Failed to parse AI response:", synthesisContent, parseError);
+      synthesisText = "Erreur d'analyse de la synthèse (format inattendu de l'IA).";
+      synthesisObjectForCache = { synthesis: synthesisText };
     }
 
     // 3. Cache the new results
@@ -148,7 +149,7 @@ serve(async (req) => {
       .upsert({
         holding_ids_hash: holdingIdsHash,
         holding_ids: sortedHoldingIds,
-        improvement_points: parsedPoints,
+        improvement_points: synthesisObjectForCache,
         cached_at: new Date().toISOString(),
       }, { onConflict: 'holding_ids_hash' });
 
@@ -156,7 +157,7 @@ serve(async (req) => {
       console.error("Error upserting cache:", upsertError);
     }
 
-    return new Response(JSON.stringify(parsedPoints), {
+    return new Response(JSON.stringify(synthesisText), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });

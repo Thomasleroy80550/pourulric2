@@ -7,7 +7,7 @@ export interface Review {
   rating: number;
   date: string;
   comment: string;
-  source: string; // Added field
+  source: string;
 }
 
 /**
@@ -28,7 +28,6 @@ export async function getReviews(holdingIds?: string[]): Promise<Review[]> {
       throw error;
     }
 
-    // The data returned from the function should already be in the correct format.
     return data;
   } catch (error: any) {
     console.error("Error fetching reviews from Revyoos proxy:", error);
@@ -37,12 +36,12 @@ export async function getReviews(holdingIds?: string[]): Promise<Review[]> {
 }
 
 /**
- * Fetches improvement points from the review-analyzer Supabase Edge Function.
+ * Fetches a synthesis from the review-analyzer Supabase Edge Function.
  * @param holdingIds Array of holding IDs to analyze reviews for.
  */
-export async function getImprovementPoints(holdingIds?: string[]): Promise<string[]> {
+export async function getReviewSynthesis(holdingIds?: string[]): Promise<string> {
   if (!holdingIds || holdingIds.length === 0) {
-    return [];
+    return "";
   }
 
   try {
@@ -54,9 +53,9 @@ export async function getImprovementPoints(holdingIds?: string[]): Promise<strin
       throw error;
     }
 
-    return data as string[];
+    return data as string;
   } catch (error: any) {
-    console.error("Error fetching improvement points from review-analyzer proxy:", error);
-    throw new Error(`Erreur lors de la récupération des points d'amélioration : ${error.message}`);
+    console.error("Error fetching synthesis from review-analyzer proxy:", error);
+    throw new Error(`Erreur lors de la récupération de la synthèse des avis : ${error.message}`);
   }
 }

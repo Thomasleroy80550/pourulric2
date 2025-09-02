@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, AlertTriangle, Languages, Lightbulb } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getReviews, getImprovementPoints, Review } from '@/lib/revyoos-api'; // Import getImprovementPoints
+import { getReviews, getReviewSynthesis, Review } from '@/lib/revyoos-api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSession } from '@/components/SessionContextProvider';
 import {
@@ -31,56 +31,52 @@ const ReviewsPage: React.FC = () => {
   const { profile } = useSession();
   const [isRequestingActivation, setIsRequestingActivation] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
-  const [improvementPoints, setImprovementPoints] = useState<string[]>([]); // New state for improvement points
-  const [loadingImprovementPoints, setLoadingImprovementPoints] = useState(false); // New loading state
+  const [reviewSynthesis, setReviewSynthesis] = useState<string>("");
+  const [loadingSynthesis, setLoadingSynthesis] = useState(false);
 
   const reviewsPerPage = 9;
   const MAX_COMMENT_LENGTH = 150;
 
-  // Calculate average rating
   const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
     : 'N/A';
 
-  // Determine badge variant based on average rating
   const getBadgeVariant = (rating: string) => {
     const numRating = parseFloat(rating);
-    if (isNaN(numRating)) return "outline"; // For "N/A"
-    if (numRating >= 4.5) return "default"; // Green-like (primary)
-    if (numRating >= 3.5) return "secondary"; // Blue-like (secondary)
-    if (numRating >= 2.5) return "destructive"; // Red-like (destructive) - using destructive for average/below average
-    return "destructive"; // Below 2.5, also destructive
+    if (isNaN(numRating)) return "outline";
+    if (numRating >= 4.5) return "default";
+    if (numRating >= 3.5) return "secondary";
+    return "destructive";
   };
 
   useEffect(() => {
-    const fetchReviewsAndPoints = async () => {
+    const fetchReviewsAndSynthesis = async () => {
       if (!profile?.revyoos_holding_ids || profile.revyoos_holding_ids.length === 0) {
         setLoading(false);
-        setLoadingImprovementPoints(false);
+        setLoadingSynthesis(false);
         return;
       }
       setLoading(true);
-      setLoadingImprovementPoints(true);
+      setLoadingSynthesis(true);
       setError(null);
       try {
         const fetchedReviews = await getReviews(profile.revyoos_holding_ids);
         setReviews(fetchedReviews);
 
-        // Fetch improvement points
-        const fetchedImprovementPoints = await getImprovementPoints(profile.revyoos_holding_ids);
-        setImprovementPoints(fetchedImprovementPoints);
+        const fetchedSynthesis = await getReviewSynthesis(profile.revyoos_holding_ids);
+        setReviewSynthesis(fetchedSynthesis);
 
       } catch (err: any) {
-        const errorMessage = `Erreur lors de la récupération des avis ou des points d'amélioration : ${err.message}`;
+        const errorMessage = `Erreur lors de la récupération des avis ou de la synthèse : ${err.message}`;
         setError(errorMessage);
         console.error(errorMessage);
       } finally {
         setLoading(false);
-        setLoadingImprovementPoints(false);
+        setLoadingSynthesis(false);
       }
     };
 
-    fetchReviewsAndPoints();
+    fetchReviewsAndSynthesis();
   }, [profile]);
 
   const indexOfLastReview = currentPage * reviewsPerPage;
@@ -111,14 +107,14 @@ const ReviewsPage: React.FC = () => {
       await createModuleActivationRequest('revyoos');
       toast({
         title: "Demande envoyée",
-        description: "Votre demande d'activation du module Revyoos a été envoyée. Un administrateur la traitera bientôt.",
+        description: "Votre demande d'activation du module Revyoos a été envoyée.",
         variant: "default",
       });
       setRequestSent(true);
     } catch (err: any) {
       toast({
         title: "Erreur",
-        description: err.message || "Une erreur est survenue lors de l'envoi de la demande.",
+        description: err.message || "Une erreur est survenue.",
         variant: "destructive",
       });
     } finally {
@@ -147,7 +143,7 @@ const ReviewsPage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Mes Avis</h1>
-        <Card className="shadow-md mb-6"> {/* Added mb-6 for spacing */}
+        <Card className="shadow-md mb-6">
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center justify-between">
               <span>Vos avis et notes</span>
@@ -159,28 +155,25 @@ const ReviewsPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingImprovementPoints ? (
+            {loadingSynthesis ? (
               <div className="mb-6 space-y-2">
+                <Skeleton className="h-6 w-1/3 mb-2" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-4/5" />
               </div>
-            ) : improvementPoints.length > 0 ? (
+            ) : reviewSynthesis ? (
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-3">Points d'amélioration clés</h2>
-                <ul className="space-y-2">
-                  {improvementPoints.map((point, index) => (
-                    <li key={index} className="flex items-start text-gray-700 dark:text-gray-300">
-                      <Lightbulb className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-1" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
+                <h2 className="text-xl font-semibold mb-3">Synthèse des avis</h2>
+                <Alert>
+                  <Lightbulb className="h-4 w-4" />
+                  <AlertTitle>Analyse rapide</AlertTitle>
+                  <AlertDescription>{reviewSynthesis}</AlertDescription>
+                </Alert>
               </div>
             ) : (
               !loading && reviews.length > 0 && (
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  Aucun point d'amélioration clé identifié pour le moment.
+                  Aucune synthèse n'a pu être générée pour le moment.
                 </p>
               )
             )}
@@ -200,11 +193,11 @@ const ReviewsPage: React.FC = () => {
                 </p>
                 {requestSent ? (
                   <p className="text-green-600 dark:text-green-400">
-                    Votre demande a été envoyée. Nous vous contacterons bientôt.
+                    Votre demande a été envoyée.
                   </p>
                 ) : (
                   <Button onClick={handleRequestActivation} disabled={isRequestingActivation}>
-                    {isRequestingActivation ? "Envoi en cours..." : "Demandez l'activation de ce module"}
+                    {isRequestingActivation ? "Envoi en cours..." : "Demander l'activation"}
                   </Button>
                 )}
               </div>

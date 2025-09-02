@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { sha1 } from 'https://esm.sh/js-sha1@0.7.0'; // Import sha1 for hashing
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const CACHE_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,10 +15,8 @@ serve(async (req) => {
   }
 
   try {
-    // Récupérer le token d'authentification de l'utilisateur
     const authorization = req.headers.get('Authorization')!;
 
-    // Vérifier que l'utilisateur est bien authentifié
     const userSupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -35,13 +36,42 @@ serve(async (req) => {
       });
     }
 
-    // Utiliser le client admin pour les opérations nécessitant des droits élevés
     const adminSupabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Étape 1: Récupérer les avis en transmettant le token de l'utilisateur
+    // Generate a unique hash for the holdingIds array for caching
+    const sortedHoldingIds = [...holdingIds].sort();
+    const holdingIdsHash = sha1(JSON.stringify(sortedHoldingIds));
+
+    // 1. Check cache
+    const { data: cachedData, error: cacheError } = await adminSupabaseClient
+      .from('cached_improvement_points')
+      .select('improvement_points, cached_at')
+      .eq('holding_ids_hash', holdingIdsHash)
+      .single();
+
+    if (cacheError && cacheError.code !== 'PGRST116') { // PGRST116 means no rows found
+      console.error("Error fetching from cache:", cacheError);
+      // Continue without cache if there's an error, but log it
+    }
+
+    if (cachedData) {
+      const cachedAt = new Date(cachedData.cached_at).getTime() / 1000; // Convert to seconds
+      const now = Date.now() / 1000; // Convert to seconds
+      if (now - cachedAt < CACHE_EXPIRY_SECONDS) {
+        console.log("Returning cached improvement points.");
+        return new Response(JSON.stringify(cachedData.improvement_points), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      } else {
+        console.log("Cached data expired, re-fetching.");
+      }
+    }
+
+    // 2. If not in cache or expired, fetch reviews and analyze
     const { data: reviewsData, error: reviewsError } = await adminSupabaseClient.functions.invoke('revyoos-proxy', {
       body: { holdingIds },
       headers: {
@@ -65,7 +95,6 @@ serve(async (req) => {
 
     const allComments = reviews.map(r => r.comment).join("\n\n");
 
-    // Étape 2: Envoyer les commentaires à l'IA pour analyse
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not set in environment variables.");
@@ -111,6 +140,20 @@ serve(async (req) => {
     } catch (parseError) {
         console.error("Failed to parse AI response:", improvementPointsContent, parseError);
         parsedPoints = ["Erreur d'analyse des points d'amélioration (format inattendu de l'IA)."];
+    }
+
+    // 3. Cache the new results
+    const { error: upsertError } = await adminSupabaseClient
+      .from('cached_improvement_points')
+      .upsert({
+        holding_ids_hash: holdingIdsHash,
+        holding_ids: sortedHoldingIds,
+        improvement_points: parsedPoints,
+        cached_at: new Date().toISOString(),
+      }, { onConflict: 'holding_ids_hash' });
+
+    if (upsertError) {
+      console.error("Error upserting cache:", upsertError);
     }
 
     return new Response(JSON.stringify(parsedPoints), {

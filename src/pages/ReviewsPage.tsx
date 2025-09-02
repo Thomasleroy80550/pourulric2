@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, AlertTriangle, Languages } from 'lucide-react';
+import { Star, AlertTriangle, Languages, Lightbulb } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getReviews, getImprovementPoints, Review } from '@/lib/revyoos-api'; // Import getImprovementPoints
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -168,13 +168,14 @@ const ReviewsPage: React.FC = () => {
             ) : improvementPoints.length > 0 ? (
               <div className="mb-6">
                 <h2 className="text-xl font-semibold mb-3">Points d'amélioration clés</h2>
-                <div className="flex flex-wrap gap-2">
+                <ul className="space-y-2">
                   {improvementPoints.map((point, index) => (
-                    <Badge key={index} variant="outline" className="text-sm px-3 py-1">
-                      {point}
-                    </Badge>
+                    <li key={index} className="flex items-start text-gray-700 dark:text-gray-300">
+                      <Lightbulb className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-1" />
+                      <span>{point}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             ) : (
               !loading && reviews.length > 0 && (

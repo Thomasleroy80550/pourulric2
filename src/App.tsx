@@ -22,6 +22,7 @@ import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
+import AdminCreatePennylaneInvoicePage from "./pages/AdminCreatePennylaneInvoicePage"; // Import new page
 import AdminStatementsPage from "./pages/AdminStatementsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import FinancePage from "./pages/FinancePage";
@@ -68,6 +69,7 @@ function App() {
                   <Route path="/admin/pages" element={<PageCreator />} />
                   <Route path="/admin/blog" element={<BlogManager />} />
                   <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
+                  <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} /> {/* Add new route */}
                   <Route path="/admin/statements" element={<AdminStatementsPage />} />
                   <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/admin/settings" element={<AdminSettingsPage />} />

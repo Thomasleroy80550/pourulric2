@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const PENNYLANE_API_BASE_URL = "https://app.pennylane.com/api/external/v2";
+const PENNYLANE_API_URL = "https://app.pennylane.com/api/external/v2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -98,27 +98,59 @@ serve(async (req) => {
       throw new Error("Erreur de configuration : Clé API Pennylane manquante sur le serveur.");
     }
 
-    const url = new URL(`${PENNYLANE_API_BASE_URL}/customer_invoices`);
-    url.searchParams.append('customer_id', pennylaneCustomerId);
-    url.searchParams.append('sort', '-date');
-    url.searchParams.append('limit', '100');
+    const { action, ...payload } = body;
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${PENNYLANE_API_KEY}` },
-    });
+    let url: string;
+    let options: RequestInit;
 
-    const responseBodyText = await response.text();
-    if (!response.ok) {
-      throw new Error(`Pennylane API error: ${response.status} ${response.statusText}. Response: ${responseBodyText}`);
+    switch (action) {
+      case 'create_customer_invoice':
+        url = `${PENNYLANE_API_URL}/customer_invoices`;
+        options = {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'X-Api-Key': PENNYLANE_API_KEY,
+          },
+          body: JSON.stringify(payload),
+        };
+        break;
+      case 'list_invoices':
+        const params = new URLSearchParams();
+        if (payload.field && payload.operator && payload.value) {
+          params.append('q[s]', `${payload.field} ${payload.operator} ${payload.value}`);
+        }
+        if (payload.limit) {
+          params.append('limit', payload.limit.toString());
+        }
+        url = `${PENNYLANE_API_URL}/customer_invoices?${params.toString()}`;
+        options = {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json',
+            'X-Api-Key': PENNYLANE_API_KEY,
+          },
+        };
+        break;
+      default:
+        return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const data = JSON.parse(responseBodyText);
-    console.log(`Received ${data.items?.length || 0} invoices from Pennylane for customer ID ${pennylaneCustomerId}.`);
+    const response = await fetch(url, options);
+    const responseData = await response.json();
 
-    return new Response(JSON.stringify(data), {
+    if (!response.ok) {
+      console.error("Pennylane API Error:", responseData);
+      const errorMessage = responseData?.errors?.[0]?.detail || responseData?.message || "An unknown error occurred with Pennylane API.";
+      throw new Error(errorMessage);
+    }
+
+    const dataToReturn = action === 'list_invoices' ? { invoices: responseData.items } : responseData;
+
+    return new Response(JSON.stringify(dataToReturn), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
 
   } catch (error: any) {

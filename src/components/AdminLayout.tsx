@@ -21,6 +21,10 @@ import {
   Menu,
   Puzzle,
   FolderLock,
+  LayoutDashboard,
+  FilePlus2,
+  GitBranch,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -89,6 +93,17 @@ const adminNavigationCategories = [
       { name: 'Rapports Techniques', href: '/admin/technical-reports', icon: Wrench, description: 'Suivre les problèmes techniques signalés.' },
     ]
   },
+];
+
+const navLinks = [
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/users", label: "Utilisateurs", icon: Users },
+  { href: "/admin/statements", label: "Relevés", icon: FileText },
+  { href: "/admin/invoice-generation", label: "Générer Relevé", icon: FilePlus2 },
+  { href: "/admin/create-pennylane-invoice", label: "Créer Facture (Pennylane)", icon: FilePlus },
+  { href: "/admin/user-rooms", label: "Logements", icon: Home },
+  { href: "/admin/strategies", label: "Stratégies", icon: Target },
+  { href: "/admin/technical-reports", label: "Rapports Tech.", icon: Wrench },
 ];
 
 const ListItem = React.forwardRef<

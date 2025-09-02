@@ -31,6 +31,7 @@ import {
   Plus,
   Gift,
   Lock,
+  Copy, // Add new icon
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -74,6 +75,7 @@ const defaultSidebarSections = [
       { name: 'Finances', href: '/finances', icon: Banknote },
       { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
       { name: 'Mes Avis', href: '/reviews', icon: Star },
+      { name: 'Analyse Concurrentielle', href: '/comp-set', icon: Copy },
     ],
   },
   {

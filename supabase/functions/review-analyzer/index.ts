@@ -82,11 +82,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an assistant that analyzes customer reviews for an accommodation and extracts key areas for improvement. Provide a concise list of improvement points based on the reviews. Respond only with a JSON object containing a single key 'improvement_points' which is an array of strings. Do not include any other text.",
+            content: "Vous êtes un assistant qui analyse les avis clients pour un hébergement et en extrait les principaux points d'amélioration. Fournissez une liste concise de points d'amélioration basée sur les avis. Répondez uniquement avec un objet JSON contenant une seule clé 'improvement_points' qui est un tableau de chaînes de caractères. N'incluez aucun autre texte. La réponse doit être en français.",
           },
           {
             role: "user",
-            content: `Analyze the following accommodation reviews and list key improvement points:\n\n${allComments}\n\nExample output: { "improvement_points": ["Propreté des salles de bain", "Isolation phonique", "Qualité de la literie"] }`,
+            content: `Analysez les avis d'hébergement suivants et listez les points d'amélioration clés :\n\n${allComments}\n\nExemple de sortie : { "improvement_points": ["Propreté des salles de bain", "Isolation phonique", "Qualité de la literie"] }`,
           },
         ],
         response_format: { type: "json_object" },

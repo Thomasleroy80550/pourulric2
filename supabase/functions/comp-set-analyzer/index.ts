@@ -56,33 +56,20 @@ serve(async (req) => {
     }
     const userRoom = userRooms[0];
 
-    // Get city from user's profile for comparison
-    const { data: userProfile, error: profileError } = await adminSupabaseClient
-      .from('profiles')
-      .select('property_city')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.property_city) {
-        return new Response(JSON.stringify({ error: "User city not found or user has no rooms." }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    const city = userProfile.property_city;
-
-    // 2. Find competitors
+    // 2. Find competitors based on property_type only (no city filter)
     const { data: competitorProfiles, error: competitorsError } = await adminSupabaseClient
       .from('profiles')
       .select('id, user_rooms(property_type, wifi_code, parking_info, has_alarm_or_cctv, parking_badge_or_disk, is_non_smoking, are_pets_allowed, has_baby_cot, has_high_chair, has_cleaning_equipment, has_house_manual, has_smoke_detector, has_co_detector)')
-      .eq('property_city', city)
       .neq('id', user.id); // Exclude the current user
 
     if (competitorsError) throw competitorsError;
 
     const competitorRooms = competitorProfiles
       .flatMap(p => p.user_rooms || []) // Ensure p.user_rooms is an array, even if null
-      .filter(room => room.property_type === userRoom.property_type);
+      .filter(room => room.property_type === userRoom.property_type); // Filter by property_type
 
     if (competitorRooms.length === 0) {
-      return new Response(JSON.stringify({ error: "No competitors found." }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: "No competitors found with the same property type." }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // 3. Calculate scores

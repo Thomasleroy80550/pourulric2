@@ -47,6 +47,7 @@ serve(async (req) => {
 
     // 2. Fetch reservations for each room
     const allReservations: Reservation[] = [];
+    let successfulFetches = 0;
     for (const room of userRooms) {
         const response = await fetch(KROSSBOOKING_PROXY_URL, {
             method: 'POST',
@@ -58,9 +59,11 @@ serve(async (req) => {
         });
 
         if (!response.ok) {
-            console.warn(`Failed to fetch reservations for room ${room.room_id}`);
+            const errorBody = await response.text();
+            console.warn(`Failed to fetch reservations for room ${room.room_id}. Status: ${response.status}. Body: ${errorBody}`);
             continue; // Skip this room on error
         }
+        successfulFetches++;
 
         const krossbookingResponse = await response.json();
         const reservationsData = krossbookingResponse.data;
@@ -75,6 +78,10 @@ serve(async (req) => {
             }));
             allReservations.push(...mappedReservations);
         }
+    }
+    
+    if (userRooms.length > 0 && successfulFetches === 0) {
+        throw new Error("Could not fetch any reservation data from the booking service proxy. Performance analysis failed.");
     }
     
     // 3. Calculate metrics for the last 90 days

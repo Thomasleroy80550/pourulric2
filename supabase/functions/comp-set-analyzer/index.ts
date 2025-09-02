@@ -78,7 +78,7 @@ serve(async (req) => {
     if (competitorsError) throw competitorsError;
 
     const competitorRooms = competitorProfiles
-      .flatMap(p => p.user_rooms)
+      .flatMap(p => p.user_rooms || []) // Ensure p.user_rooms is an array, even if null
       .filter(room => room.property_type === userRoom.property_type);
 
     if (competitorRooms.length === 0) {

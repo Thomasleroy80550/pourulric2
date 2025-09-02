@@ -127,10 +127,10 @@ const InvoicesTab: React.FC = () => {
                     variant="outline"
                     size="sm"
                     className="w-full"
-                    disabled={!invoice.public_file_url}
+                    disabled={!invoice.file_url}
                     asChild
                   >
-                    <a href={invoice.public_file_url || '#'} target="_blank" rel="noopener noreferrer">
+                    <a href={invoice.file_url || '#'} target="_blank" rel="noopener noreferrer">
                       <Download className="h-4 w-4 mr-2" />
                       Télécharger
                     </a>

@@ -35,3 +35,28 @@ export async function getReviews(holdingIds?: string[]): Promise<Review[]> {
     throw new Error(`Erreur lors de la récupération des avis : ${error.message}`);
   }
 }
+
+/**
+ * Fetches improvement points from the review-analyzer Supabase Edge Function.
+ * @param holdingIds Array of holding IDs to analyze reviews for.
+ */
+export async function getImprovementPoints(holdingIds?: string[]): Promise<string[]> {
+  if (!holdingIds || holdingIds.length === 0) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('review-analyzer', {
+      body: { holdingIds },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data as string[];
+  } catch (error: any) {
+    console.error("Error fetching improvement points from review-analyzer proxy:", error);
+    throw new Error(`Erreur lors de la récupération des points d'amélioration : ${error.message}`);
+  }
+}

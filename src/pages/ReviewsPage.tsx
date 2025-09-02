@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, AlertTriangle, Languages } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getReviews, Review } from '@/lib/revyoos-api';
+import { getReviews, getImprovementPoints, Review } from '@/lib/revyoos-api'; // Import getImprovementPoints
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useSession } from '@/components/SessionContextProvider';
 import {
@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/pagination";
 import { cn } from '@/lib/utils';
 import DOMPurify from 'dompurify';
-import { Badge } from '@/components/ui/badge'; // Import the Badge component
-import { Button } from '@/components/ui/button'; // Import Button component
-import { toast } from '@/components/ui/use-toast'; // Import toast
-import { createModuleActivationRequest } from '@/lib/module-activation-api'; // Import new API function
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/use-toast';
+import { createModuleActivationRequest } from '@/lib/module-activation-api';
 
 const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -31,7 +31,9 @@ const ReviewsPage: React.FC = () => {
   const { profile } = useSession();
   const [isRequestingActivation, setIsRequestingActivation] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
-  
+  const [improvementPoints, setImprovementPoints] = useState<string[]>([]); // New state for improvement points
+  const [loadingImprovementPoints, setLoadingImprovementPoints] = useState(false); // New loading state
+
   const reviewsPerPage = 9;
   const MAX_COMMENT_LENGTH = 150;
 
@@ -51,26 +53,34 @@ const ReviewsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchReviews = async () => {
+    const fetchReviewsAndPoints = async () => {
       if (!profile?.revyoos_holding_ids || profile.revyoos_holding_ids.length === 0) {
         setLoading(false);
+        setLoadingImprovementPoints(false);
         return;
       }
       setLoading(true);
+      setLoadingImprovementPoints(true);
       setError(null);
       try {
         const fetchedReviews = await getReviews(profile.revyoos_holding_ids);
         setReviews(fetchedReviews);
+
+        // Fetch improvement points
+        const fetchedImprovementPoints = await getImprovementPoints(profile.revyoos_holding_ids);
+        setImprovementPoints(fetchedImprovementPoints);
+
       } catch (err: any) {
-        const errorMessage = `Erreur lors de la récupération des avis : ${err.message}`;
+        const errorMessage = `Erreur lors de la récupération des avis ou des points d'amélioration : ${err.message}`;
         setError(errorMessage);
         console.error(errorMessage);
       } finally {
         setLoading(false);
+        setLoadingImprovementPoints(false);
       }
     };
 
-    fetchReviews();
+    fetchReviewsAndPoints();
   }, [profile]);
 
   const indexOfLastReview = currentPage * reviewsPerPage;
@@ -137,7 +147,7 @@ const ReviewsPage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Mes Avis</h1>
-        <Card className="shadow-md">
+        <Card className="shadow-md mb-6"> {/* Added mb-6 for spacing */}
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center justify-between">
               <span>Vos avis et notes</span>
@@ -149,6 +159,31 @@ const ReviewsPage: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {loadingImprovementPoints ? (
+              <div className="mb-6 space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/5" />
+              </div>
+            ) : improvementPoints.length > 0 ? (
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-3">Points d'amélioration clés</h2>
+                <div className="flex flex-wrap gap-2">
+                  {improvementPoints.map((point, index) => (
+                    <Badge key={index} variant="outline" className="text-sm px-3 py-1">
+                      {point}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              !loading && reviews.length > 0 && (
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  Aucun point d'amélioration clé identifié pour le moment.
+                </p>
+              )
+            )}
+
             {loading ? (
               renderSkeletons()
             ) : error ? (
@@ -206,15 +241,15 @@ const ReviewsPage: React.FC = () => {
                               )}
                             </div>
                           </div>
-                          <p 
+                          <p
                             className="text-gray-700 dark:text-gray-300"
                             dangerouslySetInnerHTML={{ __html: displayedComment }}
                           />
                         </div>
                         <div className="flex items-center mt-2 space-x-4">
                           {needsTruncation && (
-                            <button 
-                              onClick={() => toggleExpand(review.id)} 
+                            <button
+                              onClick={() => toggleExpand(review.id)}
                               className="text-blue-500 hover:underline text-sm"
                             >
                               {isExpanded ? 'Voir moins' : 'Voir plus'}

@@ -6,7 +6,7 @@ import StatementsTab from '@/components/finance/StatementsTab';
 import BalancesTab from '@/components/finance/BalancesTab';
 import ReportsTab from '@/components/finance/ReportsTab';
 import ExpensesTab from '@/components/finance/ExpensesTab';
-import { useSession } => '@/components/SessionContextProvider';
+import { useSession } from '@/components/SessionContextProvider';
 import BannedUserMessage from "@/components/BannedUserMessage";
 
 const FinancePage: React.FC = () => {

@@ -12,6 +12,21 @@ serve(async (req) => {
   }
 
   try {
+    // Récupérer le token d'authentification de l'utilisateur
+    const authorization = req.headers.get('Authorization')!;
+
+    // Vérifier que l'utilisateur est bien authentifié
+    const userSupabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authorization } } }
+    );
+    const { data: { user }, error: authError } = await userSupabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.error("Auth error in review-analyzer:", authError);
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const { holdingIds } = await req.json();
     if (!holdingIds || !Array.isArray(holdingIds) || holdingIds.length === 0) {
       return new Response(JSON.stringify({ error: "Missing or invalid holdingIds" }), {
@@ -20,18 +35,23 @@ serve(async (req) => {
       });
     }
 
-    const supabaseClient = createClient(
+    // Utiliser le client admin pour les opérations nécessitant des droits élevés
+    const adminSupabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Étape 1: Récupérer les avis en utilisant la fonction revyoos-proxy existante
-    const { data: reviewsData, error: reviewsError } = await supabaseClient.functions.invoke('revyoos-proxy', {
+    // Étape 1: Récupérer les avis en transmettant le token de l'utilisateur
+    const { data: reviewsData, error: reviewsError } = await adminSupabaseClient.functions.invoke('revyoos-proxy', {
       body: { holdingIds },
+      headers: {
+        Authorization: authorization
+      }
     });
 
     if (reviewsError) {
-      throw new Error(`Error fetching reviews: ${reviewsError.message}`);
+      console.error("Error from revyoos-proxy:", reviewsError.message);
+      throw new Error(`Error fetching reviews via proxy: ${reviewsError.message}`);
     }
 
     const reviews = reviewsData as { comment: string }[];
@@ -45,9 +65,7 @@ serve(async (req) => {
 
     const allComments = reviews.map(r => r.comment).join("\n\n");
 
-    // Étape 2: Envoyer les commentaires à un service d'IA externe pour analyse
-    // IMPORTANT: Remplacez ceci par un appel réel à l'API d'IA (par exemple, OpenAI)
-    // Vous devrez configurer une variable d'environnement pour votre clé API d'IA dans Supabase.
+    // Étape 2: Envoyer les commentaires à l'IA pour analyse
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not set in environment variables.");
@@ -60,7 +78,7 @@ serve(async (req) => {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo", // Ou gpt-4o, etc.
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",

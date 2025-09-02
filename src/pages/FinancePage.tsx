@@ -6,7 +6,7 @@ import StatementsTab from '@/components/finance/StatementsTab';
 import BalancesTab from '@/components/finance/BalancesTab';
 import ReportsTab from '@/components/finance/ReportsTab';
 import ExpensesTab from '@/components/finance/ExpensesTab';
-import { useSession } from '@/components/SessionContextProvider';
+import { useSession } => '@/components/SessionContextProvider';
 import BannedUserMessage from "@/components/BannedUserMessage";
 
 const FinancePage: React.FC = () => {
@@ -35,16 +35,16 @@ const FinancePage: React.FC = () => {
         <Tabs defaultValue="statements" className="w-full">
           {profile?.role === 'accountant' ? (
             <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto text-center">
-              <TabsTrigger value="statements">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices" disabled>Factures</TabsTrigger>
+              <TabsTrigger value="statements" className="text-center">Relevés</TabsTrigger>
+              <TabsTrigger value="invoices" disabled className="text-center">Factures</TabsTrigger>
             </TabsList>
           ) : (
             <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-5' : 'md:grid-cols-4'} max-w-full mx-auto text-center`}>
-              <TabsTrigger value="statements">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices" disabled>Factures</TabsTrigger>
-              <TabsTrigger value="balances" disabled>Bilans (En développement)</TabsTrigger>
-              <TabsTrigger value="reports" disabled>Rapports (En développement)</TabsTrigger>
-              {showExpensesTab && <TabsTrigger value="expenses">Dépenses</TabsTrigger>}
+              <TabsTrigger value="statements" className="text-center">Relevés</TabsTrigger>
+              <TabsTrigger value="invoices" disabled className="text-center">Factures</TabsTrigger>
+              <TabsTrigger value="balances" disabled className="text-center">Bilans (En développement)</TabsTrigger>
+              <TabsTrigger value="reports" disabled className="text-center">Rapports (En développement)</TabsTrigger>
+              {showExpensesTab && <TabsTrigger value="expenses" className="text-center">Dépenses</TabsTrigger>}
             </TabsList>
           )}
           <TabsContent value="statements">

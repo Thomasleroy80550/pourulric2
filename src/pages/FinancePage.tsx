@@ -35,7 +35,7 @@ const FinancePage: React.FC = () => {
         <Tabs defaultValue="statements" className="w-full">
           {profile?.role === 'accountant' ? (
             <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto text-center">
-              <TabsTrigger value="statements" className="text-center">Relevés</TabsTrigger>
+              <TabsTrigger value="statements" className="w-full justify-center">Relevés</TabsTrigger>
               <TabsTrigger value="invoices" disabled className="text-center">Factures</TabsTrigger>
             </TabsList>
           ) : (

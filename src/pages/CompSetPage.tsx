@@ -5,16 +5,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getCompSetAnalysis, CompSetAnalysis } from '@/lib/comp-set-api';
 import { getPerformanceAnalysis, PerformanceAnalysis } from '@/lib/performance-api';
-import { AlertTriangle, Trophy, Users, TrendingUp, TrendingDown, Percent, Briefcase, BarChart } from 'lucide-react';
+import { getPricePositionAnalysis, PricePositionAnalysis } from '@/lib/price-position-api';
+import { PricePositionChart } from '@/components/PricePositionChart';
+import { AlertTriangle, Trophy, Users, TrendingUp, TrendingDown, Percent, Briefcase, BarChart, DollarSign } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const CompSetPage: React.FC = () => {
   const [analysis, setAnalysis] = useState<CompSetAnalysis | null>(null);
   const [performance, setPerformance] = useState<PerformanceAnalysis | null>(null);
+  const [priceAnalysis, setPriceAnalysis] = useState<PricePositionAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [perfLoading, setPerfLoading] = useState(true);
   const [perfError, setPerfError] = useState<string | null>(null);
+  const [priceLoading, setPriceLoading] = useState(true);
+  const [priceError, setPriceError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -43,8 +48,22 @@ const CompSetPage: React.FC = () => {
       }
     };
 
+    const fetchPriceAnalysis = async () => {
+      try {
+        setPriceLoading(true);
+        setPriceError(null);
+        const result = await getPricePositionAnalysis();
+        setPriceAnalysis(result);
+      } catch (err: any) {
+        setPriceError(err.message);
+      } finally {
+        setPriceLoading(false);
+      }
+    };
+
     fetchAnalysis();
     fetchPerformance();
+    fetchPriceAnalysis();
   }, []);
 
   const renderScoreCard = (title: string, score: number, maxScore: number, icon: React.ElementType) => {
@@ -105,7 +124,34 @@ const CompSetPage: React.FC = () => {
     };
   };
 
+  const getPriceMessage = () => {
+    if (!priceAnalysis || priceAnalysis.competitorAveragePrice === 0) return null;
+    const difference = priceAnalysis.userAveragePrice - priceAnalysis.competitorAveragePrice;
+    const percentageDiff = (difference / priceAnalysis.competitorAveragePrice) * 100;
+
+    if (percentageDiff > 5) {
+      return {
+        Icon: TrendingUp,
+        color: "text-green-600",
+        message: `Votre prix moyen est ${percentageDiff.toFixed(0)}% plus élevé que la concurrence.`,
+      };
+    }
+    if (percentageDiff < -5) {
+      return {
+        Icon: TrendingDown,
+        color: "text-orange-600",
+        message: `Votre prix moyen est ${Math.abs(percentageDiff).toFixed(0)}% plus bas que la concurrence.`,
+      };
+    }
+    return {
+      Icon: DollarSign,
+      color: "text-blue-600",
+      message: "Votre prix moyen est aligné avec celui de la concurrence.",
+    };
+  };
+
   const performanceMessage = getPerformanceMessage();
+  const priceMessage = getPriceMessage();
 
   return (
     <MainLayout>
@@ -152,6 +198,34 @@ const CompSetPage: React.FC = () => {
               {renderScoreCard("Votre Score", analysis.userScore, analysis.maxScore, Trophy)}
               {renderScoreCard("Moyenne des Concurrents", analysis.averageCompetitorScore, analysis.maxScore, Users)}
             </div>
+
+            {priceLoading && <Skeleton className="h-80 w-full mt-6" />}
+            {priceError && (
+              <Alert variant="destructive" className="mt-6">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Erreur d'analyse tarifaire</AlertTitle>
+                <AlertDescription>{priceError}</AlertDescription>
+              </Alert>
+            )}
+            {!priceLoading && !priceError && priceAnalysis && (
+              <div className="mt-6 space-y-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Synthèse du Positionnement Tarifaire</CardTitle>
+                        <CardDescription>Basé sur une comparaison avec {priceAnalysis.competitorCount} logement(s) similaire(s).</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {priceMessage && (
+                        <div className={`flex items-center ${priceMessage.color}`}>
+                            <priceMessage.Icon className="h-6 w-6 mr-3" />
+                            <p className="font-semibold">{priceMessage.message}</p>
+                        </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <PricePositionChart data={priceAnalysis} />
+              </div>
+            )}
           </div>
         )}
 

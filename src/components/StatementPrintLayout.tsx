@@ -55,7 +55,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
             </div>
             <div className="flex justify-between items-center">
               <p className="text-gray-600">Total de notre facture</p>
-              <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€</p>
+              <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€ TTC</p>
             </div>
             {totalTaxeDeSejour > 0 && (
               <div className="flex justify-between items-center">

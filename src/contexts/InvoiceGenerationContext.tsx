@@ -58,6 +58,8 @@ interface InvoiceGenerationContextType {
   deductionSource: string;
   setDeductionSource: React.Dispatch<React.SetStateAction<string>>;
   transfersBySource: { [key: string]: { reservations: ProcessedReservation[], total: number } };
+  ownerCleaningFee: number;
+  setOwnerCleaningFee: React.Dispatch<React.SetStateAction<number>>;
   
   recalculateTotals: (data: ProcessedReservation[]) => void;
   processFile: (fileToProcess: File, commissionRate: number) => Promise<void>;
@@ -89,8 +91,9 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
   const [paymentSources, setPaymentSources] = useState<string[]>([]);
   const [deductInvoice, setDeductInvoice] = useState(false);
   const [deductionSource, setDeductionSource] = useState('');
+  const [ownerCleaningFee, setOwnerCleaningFee] = useState(0);
 
-  const totalFacture = totalCommission + totalFraisMenage;
+  const totalFacture = totalCommission + totalFraisMenage + ownerCleaningFee;
 
   const resetState = useCallback(() => {
     setFile(null);
@@ -106,6 +109,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     setTotalNuits(0);
     setTotalVoyageurs(0);
     setSelectedReservations(new Set());
+    setOwnerCleaningFee(0);
     // Do not reset client and period
   }, []);
 
@@ -258,7 +262,8 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       totalMontantVerse,
       totalNuits,
       totalVoyageurs,
-      totalFacture: totalCommission + totalFraisMenage,
+      totalFacture: totalCommission + totalFraisMenage + ownerCleaningFee,
+      ownerCleaningFee,
       transferDetails: {
         sources: transfersBySource,
         deductionInfo: {
@@ -282,6 +287,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       setFile(null);
       setFileName('');
       setProcessedData([]);
+      setOwnerCleaningFee(0);
       // Keep client and period for potentially generating another one
       // setSelectedClientId('');
       // setInvoicePeriod('');
@@ -290,7 +296,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       console.error("Failed to generate invoice:", error);
       toast.error(`Erreur lors de la génération : ${error.message}`);
     }
-  }, [selectedClientId, invoicePeriod, processedData, totalCA, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalNuits, totalVoyageurs, totalFacture, helloKeysCollectsRent, transfersBySource, deductInvoice, deductionSource, resetState]);
+  }, [selectedClientId, invoicePeriod, processedData, totalCA, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalNuits, totalVoyageurs, totalFacture, helloKeysCollectsRent, transfersBySource, deductInvoice, deductionSource, resetState, ownerCleaningFee]);
 
   const value = {
     file, setFile,
@@ -315,6 +321,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     deductInvoice, setDeductInvoice,
     deductionSource, setDeductionSource,
     transfersBySource,
+    ownerCleaningFee, setOwnerCleaningFee,
     recalculateTotals,
     processFile,
     resetState,

@@ -14,14 +14,15 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   // Defensive checks for all needed values
   const totalMontantVerse = totals.totalMontantVerse || 0;
   const totalCommission = totals.totalCommission || 0;
-  const totalFraisMenage = totals.totalFraisMenage || 0;
+  const totalFraisMenage = totals.totalFraisMenage || 0; // This is from reservations
   const totalTaxeDeSejour = totals.totalTaxeDeSejour || 0;
+  const ownerCleaningFee = totals.ownerCleaningFee || 0; // New field
   
   // Calculate totalFacture with a fallback for older records that might not have this field
-  const totalFacture = totals.totalFacture !== undefined ? totals.totalFacture : (totalCommission + totalFraisMenage);
+  const totalFacture = totals.totalFacture !== undefined ? totals.totalFacture : (totalCommission + totalFraisMenage + ownerCleaningFee); // Updated calculation
   
   // The final, correct calculation for the owner's payout, starting from the total amount transferred
-  const netToPay = totalMontantVerse - totalTaxeDeSejour - totalFraisMenage - totalCommission;
+  const netToPay = totalMontantVerse - totalTaxeDeSejour - totalFraisMenage - totalCommission - ownerCleaningFee; // Updated calculation
 
   const transferDetails = totals.transferDetails;
 
@@ -82,6 +83,12 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
               <p className="text-gray-600">Total frais de ménage</p>
               <p className="font-semibold">{totalFraisMenage.toFixed(2)}€</p>
             </div>
+            {ownerCleaningFee > 0 && ( // Display only if greater than 0
+              <div className="flex justify-between items-center">
+                <p className="text-gray-600">Frais de ménage propriétaire</p>
+                <p className="font-semibold">{ownerCleaningFee.toFixed(2)}€</p>
+              </div>
+            )}
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center">
               <p className="font-bold">Total Facture Hello Keys</p>

@@ -24,6 +24,26 @@ export interface SavedInvoice {
   }
 }
 
+export interface InvoiceTotals {
+  totalCommission: number;
+  totalPrixSejour: number;
+  totalFraisMenage: number; // This is from reservations
+  totalTaxeDeSejour: number;
+  totalRevenuGenere: number;
+  totalMontantVerse: number;
+  totalNuits: number;
+  totalVoyageurs: number;
+  totalFacture: number;
+  ownerCleaningFee: number; // New field for owner cleaning fee
+  transferDetails: {
+    sources: { [key: string]: { reservations: any[], total: number } };
+    deductionInfo: {
+      deducted: boolean;
+      source: string;
+    };
+  };
+}
+
 export interface AccountantRequest {
   id: string;
   user_id: string;

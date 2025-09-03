@@ -45,6 +45,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     deductInvoice, setDeductInvoice,
     deductionSource, setDeductionSource,
     transfersBySource,
+    ownerCleaningFee, setOwnerCleaningFee, // Get from context
     recalculateTotals,
     processFile,
     handleGenerateInvoice,
@@ -126,7 +127,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     }
   };
 
-  const totalFacture = totalCommission + totalFraisMenage;
+  const totalFacture = totalCommission + totalFraisMenage + ownerCleaningFee; // Updated calculation for display
   const factureHT = totalFacture / 1.2;
   const tva = totalFacture - factureHT;
 
@@ -218,6 +219,17 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                     <div className="text-sm space-y-1">
                       <p>Total Commission (TTC): <span className="font-bold">{totalCommission.toFixed(2)}€</span></p>
                       <p>Total Frais de Ménage (TTC): <span className="font-bold">{totalFraisMenage.toFixed(2)}€</span></p>
+                      <div className="space-y-2">
+                        <Label htmlFor="owner-cleaning-fee">Frais de ménage propriétaire (TTC)</Label>
+                        <Input
+                          id="owner-cleaning-fee"
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={ownerCleaningFee === 0 ? '' : ownerCleaningFee}
+                          onChange={(e) => setOwnerCleaningFee(parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
                       <p>Facture HT: <span className="font-bold">{factureHT.toFixed(2)}€</span></p>
                       <p>TVA (20%): <span className="font-bold">{tva.toFixed(2)}€</span></p>
                     </div>

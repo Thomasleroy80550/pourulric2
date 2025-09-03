@@ -169,7 +169,11 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold bg-gray-100">
-                        <TableCell>Total à virer ({transferDetails.deductionInfo?.deducted && transferDetails.deductionInfo?.source === source ? "facture déduite de notre virement" : ""})</TableCell>
+                        <TableCell>
+                          {transferDetails.deductionInfo?.deducted && transferDetails.deductionInfo?.source === source
+                            ? "Virement en transit vers votre compte (nous avons déduit le montant de votre facture, vous n'avez rien a payé)"
+                            : "Total à virer"}
+                        </TableCell>
                         <TableCell className="text-right">{data.total.toFixed(2)}€</TableCell>
                       </TableRow>
                     </TableFooter>

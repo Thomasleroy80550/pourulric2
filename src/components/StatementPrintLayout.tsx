@@ -68,6 +68,11 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
               <p className="font-bold">Résultat</p>
               <p className="font-extrabold text-2xl text-green-600">{netToPay.toFixed(2)}€</p>
             </div>
+            {transferDetails?.deductionInfo?.deducted && Math.abs(netToPay) < 0.01 && (
+              <p className="text-sm text-gray-500 mt-2">
+                Comme Hello Keys perçoit les loyers et que la facture a été déduite, vous n'avez rien à nous régler.
+              </p>
+            )}
           </div>
         </div>
 

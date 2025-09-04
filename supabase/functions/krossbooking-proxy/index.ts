@@ -175,7 +175,7 @@ serve(async (req) => {
           email: requestBody.email || '',
           phone: requestBody.phone || '',
           cod_reservation_status,
-          id_property: 1,
+          id_property: 2,
           rooms: [{ id_room: Number(id_room), id_room_type: Number(id_room_type), guests: 1 }]
         };
         if (id_reservation) {

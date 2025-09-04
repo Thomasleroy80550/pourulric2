@@ -214,7 +214,9 @@ serve(async (req) => {
       case 'get_room_types':
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/rooms/get-rooms`;
         krossbookingMethod = 'POST';
-        krossbookingBody = JSON.stringify({});
+        krossbookingBody = JSON.stringify({
+          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined
+        });
         break;
 
       default:

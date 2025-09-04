@@ -52,6 +52,7 @@ export interface UserProfile {
   last_sign_in_at?: string; // Ajout du champ
   referral_code?: string; // Ajout du champ
   referral_credits?: number; // Ajout du champ
+  krossbooking_property_id?: number;
 }
 
 /**

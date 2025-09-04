@@ -53,10 +53,11 @@ serve(async (req) => {
     // --- Authentication Check ---
     const authHeader = req.headers.get('Authorization');
     const isCron = authHeader === `Bearer ${Deno.env.get('CRON_SECRET')}`;
+    let supabaseClient;
 
     if (!isCron) {
       // If it's not the cron job, it must be an authenticated user.
-      const supabaseClient = createClient(
+      supabaseClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_ANON_KEY') ?? '',
         { global: { headers: { Authorization: authHeader! } } }
@@ -91,50 +92,6 @@ serve(async (req) => {
 
     const authToken = await getAuthToken();
 
-    if (action === 'get_reservations_for_user_rooms') {
-        if (!requestBody.rooms || !Array.isArray(requestBody.rooms)) {
-          throw new Error("Missing or invalid 'rooms' array for get_reservations_for_user_rooms.");
-        }
-        const userRooms = requestBody.rooms as { room_id: string; property_id: number }[];
-        const userRoomIds = new Set(userRooms.map(r => Number(r.room_id)));
-
-        const uniquePropertyIds = [...new Set(userRooms.map(r => r.property_id))];
-        let allReservations: any[] = [];
-
-        for (const propId of uniquePropertyIds) {
-            const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/reservations/get-list`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
-                },
-                body: JSON.stringify({
-                    with_rooms: true,
-                    id_property: propId, // Dynamic property_id
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`Failed to fetch reservations for property ${propId}: ${errorText}`);
-                continue; // Continue to next property if one fails
-            }
-
-            const data = await response.json();
-            if (data && Array.isArray(data.data)) {
-                allReservations = allReservations.concat(data.data);
-            }
-        }
-
-        // Filter reservations on the server to only include those for the user's rooms
-        const userReservations = allReservations.filter((res: any) => userRoomIds.has(res.id_room));
-
-        return new Response(JSON.stringify({ data: userReservations }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-    }
-
     let krossbookingUrl = '';
     let krossbookingMethod = 'POST';
     let krossbookingBody: string | undefined;
@@ -153,7 +110,7 @@ serve(async (req) => {
         break;
 
       case 'get_housekeeping_tasks':
-        const { date_from, date_to } = requestBody;
+        const { date_from, date_to, id_property } = requestBody;
         if (!date_from || !date_to) {
           throw new Error("Missing date_from/date_to for get_housekeeping_tasks.");
         }
@@ -161,7 +118,7 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify({
           date_from,
           date_to,
-          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined,
+          id_property: id_property ? Number(id_property) : undefined,
         });
         break;
 
@@ -177,7 +134,7 @@ serve(async (req) => {
           email: requestBody.email || '',
           phone: requestBody.phone || '',
           cod_reservation_status,
-          id_property: Number(property_id), // Dynamic property_id
+          id_property: Number(property_id), // Dynamic property_id from client
           rooms: [{ id_room: Number(id_room), id_room_type: Number(id_room_type), guests: 1 }]
         };
         if (id_reservation) {

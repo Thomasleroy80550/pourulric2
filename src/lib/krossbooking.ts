@@ -20,6 +20,7 @@ interface KrossbookingReservation {
   email?: string;
   phone?: string;
   tourist_tax_amount?: number;
+  property_id: number;
 }
 
 export interface KrossbookingHousekeepingTask {
@@ -43,6 +44,7 @@ export interface SaveReservationPayload {
   cod_reservation_status: 'PROP0' | 'PROPRI' | 'CANC';
   id_room: string;
   id_room_type?: string; // NEW: Krossbooking room type ID
+  property_id: number;
 }
 
 export interface KrossbookingMessage {
@@ -224,6 +226,7 @@ export async function fetchKrossbookingReservations(
         email: res.email || '',
         phone: res.phone || '',
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+        property_id: res.property_id,
       }));
     });
 

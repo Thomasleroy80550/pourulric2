@@ -39,6 +39,7 @@ interface OwnerReservationDialogProps {
   allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null;
+  profile: UserProfile | null;
 }
 
 const blockTypes = [
@@ -72,6 +73,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   allReservations,
   onReservationCreated,
   initialBooking,
+  profile,
 }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -170,6 +172,11 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   }, [selectedRoomId, allReservations, initialBooking]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!profile || !profile.krossbooking_property_id) {
+      toast.error("L'ID de propriété Krossbooking n'est pas défini sur le profil de l'utilisateur. Veuillez le configurer dans la section admin.");
+      return;
+    }
+
     const formattedArrival = format(values.dateRange.from, 'yyyy-MM-dd');
     const formattedDeparture = format(values.dateRange.to!, 'yyyy-MM-dd');
 
@@ -191,7 +198,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       return;
     }
 
-    const payload: any = {
+    const payload: SaveReservationPayload = {
       label: label,
       arrival: formattedArrival,
       departure: formattedDeparture,
@@ -199,7 +206,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       phone: values.phone || '',
       cod_reservation_status: cod_reservation_status,
       id_room: values.roomId,
-      id_room_type: id_room_type, // Add id_room_type
+      id_room_type: id_room_type,
+      property_id: profile.krossbooking_property_id,
     };
 
     if (initialBooking && initialBooking.id) {

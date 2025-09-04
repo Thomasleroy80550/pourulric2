@@ -206,7 +206,11 @@ export async function fetchKrossbookingReservations(
     const userEmail = (await supabase.auth.getUser()).data.user?.email;
 
     const allReservationsPromises = userRooms.map(async (room) => {
-      const data = await callKrossbookingProxy('get_reservations_for_room', { id_room: room.room_id });
+      // Pass property_id if available from the user's profile
+      const data = await callKrossbookingProxy('get_reservations_for_room', { 
+        id_room: room.room_id,
+        id_property: profile?.krossbooking_property_id // Pass the property ID
+      });
       if (!Array.isArray(data)) {
         console.warn(`Unexpected Krossbooking API response for room ${room.room_id}:`, data);
         return [];
@@ -283,7 +287,7 @@ export async function fetchKrossbookingHousekeepingTasks(
     });
 
     if (!Array.isArray(data)) {
-      console.warn(`Unexpected Krossbooking API response structure for housekeeping tasks or no data array:`, data);
+      console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', data);
       return [];
     }
 
@@ -398,7 +402,10 @@ export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false):
 
   try {
     console.log("Fetching fresh Krossbooking room types from API.");
-    const flatRoomsData = await callKrossbookingProxy('get_room_types');
+    const profile = await getProfile(); // Fetch profile to get krossbooking_property_id
+    const flatRoomsData = await callKrossbookingProxy('get_room_types', {
+      id_property: profile?.krossbooking_property_id // Pass the property ID
+    });
 
     if (!Array.isArray(flatRoomsData)) {
       console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);

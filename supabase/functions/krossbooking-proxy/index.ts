@@ -106,6 +106,7 @@ serve(async (req) => {
         krossbookingBody = JSON.stringify({
           with_rooms: true,
           id_room: Number(requestBody.id_room),
+          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined, // Use property ID if provided
         });
         break;
 
@@ -174,7 +175,7 @@ serve(async (req) => {
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/rooms/get-rooms`;
         krossbookingMethod = 'POST';
         krossbookingBody = JSON.stringify({
-          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined
+          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined // Use property ID if provided
         });
         break;
 

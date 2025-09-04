@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getProfile, getProfileByUserId } from "./profile-api";
 
 export interface UserRoom {
   id: string;
@@ -6,6 +7,7 @@ export interface UserRoom {
   room_id: string; // The Krossbooking room ID
   room_name: string; // A user-friendly name for the room
   room_id_2?: string; // New field for secondary room ID (e.g., for price/restriction systems)
+  property_id?: number; // The Krossbooking property ID (1 for Baie de Somme, 2 for Berck)
   keybox_code?: string;
   wifi_code?: string;
   property_type?: string;
@@ -57,9 +59,17 @@ export async function addUserRoom(room_id: string, room_name: string, room_id_2?
     throw new Error("User not authenticated.");
   }
 
+  const profile = await getProfile();
+  let propertyId: number | undefined;
+  if (profile?.agency === 'Agence Baie de Somme') {
+    propertyId = 1;
+  } else if (profile?.agency === 'Agence Berck') {
+    propertyId = 2;
+  }
+
   const { data, error } = await supabase
     .from('user_rooms')
-    .insert({ user_id: user.id, room_id, room_name, room_id_2 })
+    .insert({ user_id: user.id, room_id, room_name, room_id_2, property_id: propertyId })
     .select()
     .single();
 
@@ -135,9 +145,17 @@ export async function getUserRoomsByUserId(userId: string): Promise<UserRoom[]> 
  * @returns The created UserRoom object.
  */
 export async function adminAddUserRoom(user_id: string, room_id: string, room_name: string, room_id_2?: string): Promise<UserRoom> {
+  const profile = await getProfileByUserId(user_id);
+  let propertyId: number | undefined;
+  if (profile?.agency === 'Agence Baie de Somme') {
+    propertyId = 1;
+  } else if (profile?.agency === 'Agence Berck') {
+    propertyId = 2;
+  }
+
   const { data, error } = await supabase
     .from('user_rooms')
-    .insert({ user_id, room_id, room_name, room_id_2 })
+    .insert({ user_id, room_id, room_name, room_id_2, property_id: propertyId })
     .select()
     .single();
 

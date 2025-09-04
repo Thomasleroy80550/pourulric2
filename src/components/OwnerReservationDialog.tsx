@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType, SaveReservationPayload } from '@/lib/krossbooking';
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
+import { Profile } from '@/lib/profile-api'; // Import Profile type
 
 interface OwnerReservationDialogProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ interface OwnerReservationDialogProps {
   allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null;
+  profile: Profile | null; // Add profile prop
 }
 
 const blockTypes = [
@@ -72,6 +74,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   allReservations,
   onReservationCreated,
   initialBooking,
+  profile, // Destructure profile
 }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -191,10 +194,16 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       return;
     }
 
-    const selectedRoom = userRooms.find(room => room.room_id === values.roomId);
-    if (!selectedRoom) {
-      toast.error("La chambre sélectionnée n'a pas été trouvée dans la liste des chambres de l'utilisateur.");
-      return;
+    // Determine property_id based on current user's agency from profile
+    let propertyIdToSend: number | undefined;
+    if (profile?.agency === 'Baie de Somme') {
+      propertyIdToSend = 1;
+    } else if (profile?.agency === 'Côte d\'opal') {
+      propertyIdToSend = 2;
+    } else {
+      // Fallback or error if agency is not recognized
+      console.warn("User agency not recognized or missing, defaulting property_id to 2.");
+      propertyIdToSend = 2; 
     }
 
     const payload: SaveReservationPayload = {
@@ -206,7 +215,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       cod_reservation_status: cod_reservation_status,
       id_room: values.roomId,
       id_room_type: id_room_type,
-      property_id: selectedRoom.property_id,
+      property_id: propertyIdToSend, // Use the determined propertyId
     };
 
     if (initialBooking && initialBooking.id) {

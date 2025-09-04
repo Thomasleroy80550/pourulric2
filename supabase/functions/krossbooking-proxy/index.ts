@@ -107,7 +107,7 @@ serve(async (req) => {
             },
             body: JSON.stringify({
                 with_rooms: true,
-                id_property: 1, // Assuming all users are under a single property
+                id_property: 2, // Assuming all users are under a single property
             }),
         });
 

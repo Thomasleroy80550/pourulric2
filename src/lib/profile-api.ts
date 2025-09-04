@@ -75,7 +75,8 @@ export async function getProfile(): Promise<UserProfile | null> {
       estimated_revenue,
       key_delivery_method,
       revyoos_holding_ids,
-      kyc_documents
+      kyc_documents,
+      krossbooking_property_id
     `) // Ensure kyc_documents is selected
     .eq('id', user.id)
     .single();

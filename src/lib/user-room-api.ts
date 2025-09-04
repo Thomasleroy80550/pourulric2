@@ -61,9 +61,9 @@ export async function addUserRoom(room_id: string, room_name: string, room_id_2?
 
   const profile = await getProfile();
   let propertyId: number | undefined;
-  if (profile?.agency === 'Agence Baie de Somme') {
+  if (profile?.agency === 'Baie de Somme') {
     propertyId = 1;
-  } else if (profile?.agency === 'Côte d\'opal') { // Corrected from 'Agence Berck'
+  } else if (profile?.agency === 'Côte d\'opal') {
     propertyId = 2;
   }
 
@@ -147,9 +147,9 @@ export async function getUserRoomsByUserId(userId: string): Promise<UserRoom[]> 
 export async function adminAddUserRoom(user_id: string, room_id: string, room_name: string, room_id_2?: string): Promise<UserRoom> {
   const profile = await getProfileByUserId(user_id);
   let propertyId: number | undefined;
-  if (profile?.agency === 'Agence Baie de Somme') {
+  if (profile?.agency === 'Baie de Somme') {
     propertyId = 1;
-  } else if (profile?.agency === 'Côte d\'opal') { // Corrected from 'Agence Berck'
+  } else if (profile?.agency === 'Côte d\'opal') {
     propertyId = 2;
   }
 

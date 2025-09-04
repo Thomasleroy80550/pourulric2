@@ -42,7 +42,8 @@ export interface SaveReservationPayload {
   phone: string;
   cod_reservation_status: 'PROP0' | 'PROPRI' | 'CANC';
   id_room: string;
-  id_room_type?: string; // NEW: Krossbooking room type ID
+  id_room_type?: string;
+  property_id?: number;
 }
 
 export interface KrossbookingMessage {

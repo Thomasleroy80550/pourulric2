@@ -28,7 +28,7 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking'; // Import KrossbookingRoomType
+import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType, SaveReservationPayload } from '@/lib/krossbooking';
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 
@@ -191,7 +191,13 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       return;
     }
 
-    const payload: any = {
+    const selectedRoom = userRooms.find(room => room.room_id === values.roomId);
+    if (!selectedRoom) {
+      toast.error("La chambre sélectionnée n'a pas été trouvée dans la liste des chambres de l'utilisateur.");
+      return;
+    }
+
+    const payload: SaveReservationPayload = {
       label: label,
       arrival: formattedArrival,
       departure: formattedDeparture,
@@ -199,7 +205,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       phone: values.phone || '',
       cod_reservation_status: cod_reservation_status,
       id_room: values.roomId,
-      id_room_type: id_room_type, // Add id_room_type
+      id_room_type: id_room_type,
+      property_id: selectedRoom.property_id,
     };
 
     if (initialBooking && initialBooking.id) {

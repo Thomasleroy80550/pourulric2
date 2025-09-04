@@ -164,7 +164,7 @@ serve(async (req) => {
         break;
 
       case 'save_reservation':
-        const { id_reservation, label, arrival, departure, cod_reservation_status, id_room, id_room_type } = requestBody;
+        const { id_reservation, label, arrival, departure, cod_reservation_status, id_room, id_room_type, property_id } = requestBody;
         if (!label || !arrival || !departure || !cod_reservation_status || !id_room || !id_room_type) {
           throw new Error("Missing required parameters for save_reservation (label, arrival, departure, cod_reservation_status, id_room, id_room_type).");
         }
@@ -175,7 +175,7 @@ serve(async (req) => {
           email: requestBody.email || '',
           phone: requestBody.phone || '',
           cod_reservation_status,
-          id_property: 2,
+          id_property: property_id ? Number(property_id) : 2, // Use provided property_id, default to 2
           rooms: [{ id_room: Number(id_room), id_room_type: Number(id_room_type), guests: 1 }]
         };
         if (id_reservation) {

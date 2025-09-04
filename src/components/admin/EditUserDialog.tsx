@@ -56,6 +56,12 @@ const editUserSchema = z.object({
   krossbooking_property_id: z.coerce.number().optional().nullable(),
 });
 
+const addRoomFormSchema = z.object({
+  room_id: z.string().min(1, "L'ID de la chambre est requis."),
+  room_name: z.string().min(1, "Le nom de la chambre est requis."),
+  room_id_2: z.string().optional().nullable(),
+});
+
 const onboardingStatusText: Record<OnboardingStatus, string> = {
   estimation_sent: "Estimation envoyée",
   estimation_validated: "Estimation validée",

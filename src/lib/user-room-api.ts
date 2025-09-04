@@ -63,7 +63,7 @@ export async function addUserRoom(room_id: string, room_name: string, room_id_2?
   let propertyId: number | undefined;
   if (profile?.agency === 'Agence Baie de Somme') {
     propertyId = 1;
-  } else if (profile?.agency === 'Agence Berck') {
+  } else if (profile?.agency === 'Côte d\'opal') { // Corrected from 'Agence Berck'
     propertyId = 2;
   }
 
@@ -149,7 +149,7 @@ export async function adminAddUserRoom(user_id: string, room_id: string, room_na
   let propertyId: number | undefined;
   if (profile?.agency === 'Agence Baie de Somme') {
     propertyId = 1;
-  } else if (profile?.agency === 'Agence Berck') {
+  } else if (profile?.agency === 'Côte d\'opal') { // Corrected from 'Agence Berck'
     propertyId = 2;
   }
 

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parseISO, isSameDay, isValid, isBefore, isAfter } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay, addDays, subDays, isValid, isBefore, isAfter } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,10 +28,9 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType, SaveReservationPayload } from '@/lib/krossbooking';
+import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking'; // Import KrossbookingRoomType
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
-import { Profile } from '@/lib/profile-api';
 
 interface OwnerReservationDialogProps {
   isOpen: boolean;
@@ -40,7 +39,6 @@ interface OwnerReservationDialogProps {
   allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null;
-  profile: Profile | null;
 }
 
 const blockTypes = [
@@ -74,14 +72,16 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   allReservations,
   onReservationCreated,
   initialBooking,
-  profile,
 }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       roomId: '',
       blockType: '',
-      dateRange: { from: undefined, to: undefined },
+      dateRange: {
+        from: undefined,
+        to: undefined,
+      },
       foreseeCleaning: false,
       email: '',
       phone: '',
@@ -90,25 +90,13 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
 
   const selectedRoomId = form.watch('roomId');
   const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
-  const [loadingKrossbookingRoomTypes, setLoadingKrossbookingRoomTypes] = useState(false);
+  const [loadingKrossbookingRoomTypes, setLoadingKrossbookingRoomTypes] = useState(true);
 
   React.useEffect(() => {
-    const loadRoomTypesForSelectedRoom = async () => {
-      if (!selectedRoomId) {
-        setKrossbookingRoomTypes([]);
-        return;
-      }
-      
-      const selectedUserRoom = userRooms.find(room => room.room_id === selectedRoomId);
-      if (!selectedUserRoom || !selectedUserRoom.property_id) {
-        toast.error("La propriété (agence) pour cette chambre n'est pas définie.");
-        setKrossbookingRoomTypes([]);
-        return;
-      }
-
+    const loadRoomTypes = async () => {
       setLoadingKrossbookingRoomTypes(true);
       try {
-        const types = await fetchKrossbookingRoomTypes(selectedUserRoom.property_id);
+        const types = await fetchKrossbookingRoomTypes();
         setKrossbookingRoomTypes(types);
       } catch (error) {
         console.error("Error fetching Krossbooking room types:", error);
@@ -119,12 +107,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     };
 
     if (isOpen) {
-      loadRoomTypesForSelectedRoom();
-    }
-  }, [isOpen, selectedRoomId, userRooms]);
-
-  React.useEffect(() => {
-    if (isOpen) {
+      loadRoomTypes();
       if (initialBooking) {
         let blockTypeFound = '';
         for (const type of blockTypes) {
@@ -133,6 +116,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
             break;
           }
         }
+
         form.reset({
           roomId: initialBooking.krossbooking_room_id,
           blockType: blockTypeFound,
@@ -148,7 +132,10 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
         form.reset({
           roomId: '',
           blockType: '',
-          dateRange: { from: undefined, to: undefined },
+          dateRange: {
+            from: undefined,
+            to: undefined,
+          },
           foreseeCleaning: false,
           email: '',
           phone: '',
@@ -159,17 +146,24 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
 
   const getDisabledDates = React.useCallback((date: Date) => {
     if (!selectedRoomId) return false;
+
     const roomReservations = allReservations.filter(res =>
       res.krossbooking_room_id === selectedRoomId &&
       res.status !== 'CANC' &&
       (initialBooking ? res.id !== initialBooking.id : true)
     );
+
     for (const res of roomReservations) {
       const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
+
       if (checkIn && checkOut) {
-        if (isAfter(date, checkIn) && isBefore(date, checkOut)) return true;
-        if (isSameDay(checkIn, checkOut) && isSameDay(date, checkIn)) return true;
+        if (isAfter(date, checkIn) && isBefore(date, checkOut)) {
+          return true;
+        }
+        if (isSameDay(checkIn, checkOut) && isSameDay(date, checkIn)) {
+          return true;
+        }
       }
     }
     return false;
@@ -178,16 +172,10 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const formattedArrival = format(values.dateRange.from, 'yyyy-MM-dd');
     const formattedDeparture = format(values.dateRange.to!, 'yyyy-MM-dd');
+
     const cod_reservation_status = values.foreseeCleaning ? 'PROPRI' : 'PROP0';
     const cleaningSuffix = values.foreseeCleaning ? ' avec ménage' : ' sans ménage';
     const label = `${values.blockType}${cleaningSuffix}`;
-
-    const selectedUserRoom = userRooms.find(room => room.room_id === values.roomId);
-    if (!selectedUserRoom || !selectedUserRoom.property_id) {
-        toast.error("La propriété (agence) pour cette chambre n'est pas définie. Impossible de continuer.");
-        return;
-    }
-    const propertyIdToSend = selectedUserRoom.property_id;
 
     let id_room_type: string | undefined;
     for (const type of krossbookingRoomTypes) {
@@ -199,11 +187,11 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
 
     if (!id_room_type) {
-      toast.error("Impossible de trouver le type de chambre correspondant pour cette propriété. La réservation ne peut pas être créée.");
+      toast.error("Impossible de trouver le type de chambre correspondant à la chambre sélectionnée.");
       return;
     }
 
-    const payload: SaveReservationPayload = {
+    const payload: any = {
       label: label,
       arrival: formattedArrival,
       departure: formattedDeparture,
@@ -211,8 +199,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       phone: values.phone || '',
       cod_reservation_status: cod_reservation_status,
       id_room: values.roomId,
-      id_room_type: id_room_type,
-      property_id: propertyIdToSend,
+      id_room_type: id_room_type, // Add id_room_type
     };
 
     if (initialBooking && initialBooking.id) {
@@ -247,7 +234,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Chambre</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingKrossbookingRoomTypes}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une chambre" />
@@ -276,7 +263,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner un type" />
-                      </Trigger>
+                      </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {blockTypes.map((type) => (
@@ -396,7 +383,6 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                 Annuler
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting || loadingKrossbookingRoomTypes}>
-                {form.formState.isSubmitting || loadingKrossbookingRoomTypes ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {form.formState.isSubmitting ? (initialBooking ? 'Mise à jour...' : 'Création...') : (initialBooking ? 'Mettre à jour la Réservation' : 'Créer la Réservation')}
               </Button>
             </DialogFooter>

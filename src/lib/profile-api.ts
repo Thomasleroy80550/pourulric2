@@ -155,30 +155,3 @@ export async function verifySmsOtp(phoneNumber: string, otp: string): Promise<vo
   }
   return data;
 }
-
-/**
- * Fetches a user's profile by their ID. Admin use.
- * @param userId The ID of the user.
- * @returns The user's profile data or null if not found.
- */
-export async function getProfileByUserId(userId: string): Promise<UserProfile | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select(`
-      *,
-      onboarding_status,
-      estimation_details,
-      estimated_revenue,
-      key_delivery_method,
-      revyoos_holding_ids,
-      kyc_documents
-    `)
-    .eq('id', userId)
-    .single();
-
-  if (error && error.code !== 'PGRST116') { // Ignore 'not found' error
-    console.error(`Error fetching profile for user ${userId}:`, error.message);
-    throw new Error(`Erreur lors de la récupération du profil pour l'utilisateur ${userId}: ${error.message}`);
-  }
-  return data;
-}

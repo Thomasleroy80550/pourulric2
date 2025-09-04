@@ -164,7 +164,7 @@ serve(async (req) => {
         break;
 
       case 'save_reservation':
-        const { id_reservation, label, arrival, departure, cod_reservation_status, id_room, id_room_type, property_id } = requestBody;
+        const { id_reservation, label, arrival, departure, cod_reservation_status, id_room, id_room_type } = requestBody;
         if (!label || !arrival || !departure || !cod_reservation_status || !id_room || !id_room_type) {
           throw new Error("Missing required parameters for save_reservation (label, arrival, departure, cod_reservation_status, id_room, id_room_type).");
         }
@@ -175,7 +175,7 @@ serve(async (req) => {
           email: requestBody.email || '',
           phone: requestBody.phone || '',
           cod_reservation_status,
-          id_property: property_id ? Number(property_id) : 2, // Use provided property_id, default to 2
+          id_property: 1,
           rooms: [{ id_room: Number(id_room), id_room_type: Number(id_room_type), guests: 1 }]
         };
         if (id_reservation) {
@@ -214,9 +214,7 @@ serve(async (req) => {
       case 'get_room_types':
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/rooms/get-rooms`;
         krossbookingMethod = 'POST';
-        krossbookingBody = JSON.stringify({
-          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined
-        });
+        krossbookingBody = JSON.stringify({});
         break;
 
       default:

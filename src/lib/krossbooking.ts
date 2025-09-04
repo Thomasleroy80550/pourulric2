@@ -42,8 +42,7 @@ export interface SaveReservationPayload {
   phone: string;
   cod_reservation_status: 'PROP0' | 'PROPRI' | 'CANC';
   id_room: string;
-  id_room_type?: string;
-  property_id?: number;
+  id_room_type?: string; // NEW: Krossbooking room type ID
 }
 
 export interface KrossbookingMessage {
@@ -105,10 +104,8 @@ const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functio
 
 // Cache variables and durations
 let roomTypesCache: {
-  [key: string]: { // key will be property_id or 'all'
-    data: KrossbookingRoomType[];
-    timestamp: number;
-  }
+  data: KrossbookingRoomType[];
+  timestamp: number;
 } | null = null;
 const ROOM_TYPE_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
@@ -389,18 +386,16 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
   return callKrossbookingProxy('save_channel_manager', payload);
 }
 
-export async function fetchKrossbookingRoomTypes(idProperty?: number, forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> {
+export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> { // Add forceRefresh
   const now = Date.now();
-  const cacheKey = idProperty ? idProperty.toString() : 'all';
-
-  if (!forceRefresh && roomTypesCache && roomTypesCache[cacheKey] && (now - roomTypesCache[cacheKey].timestamp < ROOM_TYPE_CACHE_DURATION)) {
-    console.log(`Returning cached Krossbooking room types for property: ${cacheKey}`);
-    return roomTypesCache[cacheKey].data;
+  if (!forceRefresh && roomTypesCache && (now - roomTypesCache.timestamp < ROOM_TYPE_CACHE_DURATION)) {
+    console.log("Returning cached Krossbooking room types.");
+    return roomTypesCache.data;
   }
 
   try {
-    console.log(`Fetching fresh Krossbooking room types from API for property: ${cacheKey}`);
-    const flatRoomsData = await callKrossbookingProxy('get_room_types', { id_property: idProperty });
+    console.log("Fetching fresh Krossbooking room types from API.");
+    const flatRoomsData = await callKrossbookingProxy('get_room_types');
 
     if (!Array.isArray(flatRoomsData)) {
       console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
@@ -434,21 +429,18 @@ export async function fetchKrossbookingRoomTypes(idProperty?: number, forceRefre
 
     const processedRoomTypes = Array.from(roomTypesMap.values());
     
-    if (!roomTypesCache) {
-      roomTypesCache = {};
-    }
-    roomTypesCache[cacheKey] = {
+    roomTypesCache = {
       data: processedRoomTypes,
       timestamp: now,
     };
-    console.log(`Krossbooking room types cached successfully for property: ${cacheKey}`);
+    console.log("Krossbooking room types cached successfully.");
 
     return processedRoomTypes;
   } catch (error) {
-    console.error(`Error fetching and processing Krossbooking room types for property ${cacheKey}:`, error);
-    if (roomTypesCache && roomTypesCache[cacheKey]) {
+    console.error('Error fetching and processing Krossbooking room types:', error);
+    if (roomTypesCache) {
       console.warn("Returning stale cache due to API error.");
-      return roomTypesCache[cacheKey].data;
+      return roomTypesCache.data;
     }
     throw error;
   }

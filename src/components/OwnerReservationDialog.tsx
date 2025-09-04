@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType, SaveReservationPayload } from '@/lib/krossbooking';
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
-import { Profile } from '@/lib/profile-api'; // Import Profile type
+import { Profile, getProfile } from '@/lib/profile-api'; // Import getProfile
 
 interface OwnerReservationDialogProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ interface OwnerReservationDialogProps {
   allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null;
-  profile: Profile | null; // Add profile prop
+  profile: Profile | null; // Keep for now, might be useful for other things
 }
 
 const blockTypes = [
@@ -194,15 +194,18 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       return;
     }
 
-    // Determine property_id based on current user's agency from profile
+    // Fetch fresh profile to ensure we have the latest agency information
+    const userProfile = await getProfile();
+
+    // Determine property_id based on the freshly fetched profile
     let propertyIdToSend: number | undefined;
-    if (profile?.agency === 'Baie de Somme') {
+    if (userProfile?.agency === 'Baie de Somme') {
       propertyIdToSend = 1;
-    } else if (profile?.agency === 'Côte d\'opal') {
+    } else if (userProfile?.agency === 'Côte d\'opal') {
       propertyIdToSend = 2;
     } else {
       // Fallback or error if agency is not recognized
-      console.warn("User agency not recognized or missing, defaulting property_id to 2.");
+      console.warn(`User agency '${userProfile?.agency}' not recognized or missing, defaulting property_id to 2.`);
       propertyIdToSend = 2; 
     }
 

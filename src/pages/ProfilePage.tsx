@@ -383,7 +383,7 @@ const ProfilePage: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Côte d'opal">Côte d'opal</SelectItem>
-                      <SelectItem value="Baie de somme">Baie de somme</SelectItem>
+                      <SelectItem value="Baie de Somme">Baie de Somme</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

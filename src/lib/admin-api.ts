@@ -556,8 +556,16 @@ export async function updateSetting(key: string, value: any): Promise<AppSetting
  * @param userId The ID of the user the invoice belongs to.
  * @param period The period the invoice covers (e.g., "Juin 2024").
  * @param totals The calculated totals for the invoice.
+ * @param dateEmission The date the invoice was issued (YYYY-MM-DD).
+ * @param deadlinePaiement The payment deadline date (YYYY-MM-DD).
  */
-export async function sendStatementDataToMakeWebhook(userId: string, period: string, totals: InvoiceTotals): Promise<void> {
+export async function sendStatementDataToMakeWebhook(
+  userId: string,
+  period: string,
+  totals: InvoiceTotals,
+  dateEmission: string,
+  deadlinePaiement: string
+): Promise<void> {
   try {
     // Fetch the user's profile to get pennylane_customer_id
     const { data: profileData, error: profileError } = await supabase
@@ -579,6 +587,8 @@ export async function sendStatementDataToMakeWebhook(userId: string, period: str
       commission_hello_keys: totals.totalCommission,
       total_frais_menage: totals.totalFraisMenage,
       owner_cleaning_fee: totals.ownerCleaningFee,
+      date_emission: dateEmission,
+      deadline_paiement: deadlinePaiement,
     };
 
     console.log("Sending statement data to Make.com webhook:", payload);

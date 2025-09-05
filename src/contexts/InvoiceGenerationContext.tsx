@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
 import { saveInvoice, sendStatementByEmail, sendStatementDataToMakeWebhook } from '@/lib/admin-api';
+import { addDays, format, parseISO } from 'date-fns';
 
 // Interface for a processed reservation row
 export interface ProcessedReservation {
@@ -276,8 +277,20 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     try {
       const savedInvoice = await saveInvoice(selectedClientId, invoicePeriod, processedData, totals);
       
+      // Calculate dates for webhook
+      const emissionDate = parseISO(savedInvoice.created_at);
+      const deadlineDate = addDays(emissionDate, 15);
+      const formattedEmissionDate = format(emissionDate, 'yyyy-MM-dd');
+      const formattedDeadlineDate = format(deadlineDate, 'yyyy-MM-dd');
+
       // Send data to Make.com webhook
-      await sendStatementDataToMakeWebhook(selectedClientId, invoicePeriod, totals);
+      await sendStatementDataToMakeWebhook(
+        selectedClientId,
+        invoicePeriod,
+        totals,
+        formattedEmissionDate,
+        formattedDeadlineDate
+      );
 
       if (sendEmail) {
         await sendStatementByEmail(savedInvoice.id);

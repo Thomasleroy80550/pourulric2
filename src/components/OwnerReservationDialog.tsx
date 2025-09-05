@@ -146,6 +146,9 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
   }, [isOpen, initialBooking, form]);
 
+  console.log("OwnerReservationDialog - Profile prop:", profile);
+  console.log("OwnerReservationDialog - krossbooking_property_id from profile:", profile?.krossbooking_property_id);
+
   const getDisabledDates = React.useCallback((date: Date) => {
     if (!selectedRoomId) return false;
 

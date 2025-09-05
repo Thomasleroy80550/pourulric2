@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking'; // Import KrossbookingRoomType
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
+import { Profile } from '@/lib/profile-api';
 
 interface OwnerReservationDialogProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ interface OwnerReservationDialogProps {
   allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null;
-  profile: UserProfile | null;
+  profile: Profile | null;
 }
 
 const blockTypes = [
@@ -90,9 +91,11 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     },
   });
 
-  const selectedRoomId = form.watch('roomId');
+  const [selectedRoomId, setSelectedRoomId] = useState<string>('');
   const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
   const [loadingKrossbookingRoomTypes, setLoadingKrossbookingRoomTypes] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   React.useEffect(() => {
     const loadRoomTypes = async () => {
@@ -147,7 +150,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   }, [isOpen, initialBooking, form]);
 
   console.log("OwnerReservationDialog - Profile prop:", profile);
-  console.log("OwnerReservationDialog - krossbooking_property_id from profile:", profile?.krossbooking_property_id);
+  const krossbookingPropertyId = profile?.krossbooking_property_id;
+  console.log("OwnerReservationDialog - krossbooking_property_id from profile:", krossbookingPropertyId);
 
   const getDisabledDates = React.useCallback((date: Date) => {
     if (!selectedRoomId) return false;
@@ -175,7 +179,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   }, [selectedRoomId, allReservations, initialBooking]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!profile || !profile.krossbooking_property_id) {
+    if (!profile || !krossbookingPropertyId) {
       toast.error("L'ID de propriété Krossbooking n'est pas défini sur le profil de l'utilisateur. Veuillez le configurer dans la section admin.");
       return;
     }
@@ -210,7 +214,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       cod_reservation_status: cod_reservation_status,
       id_room: values.roomId,
       id_room_type: id_room_type,
-      property_id: profile.krossbooking_property_id,
+      property_id: krossbookingPropertyId,
     };
 
     if (initialBooking && initialBooking.id) {
@@ -218,6 +222,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
 
     try {
+      setIsLoading(true);
       await saveKrossbookingReservation(payload);
       toast.success(initialBooking ? "Réservation mise à jour avec succès !" : "Réservation propriétaire créée avec succès !");
       onReservationCreated();
@@ -225,6 +230,9 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     } catch (error: any) {
       toast.error(`Erreur lors de la ${initialBooking ? 'mise à jour' : 'création'} de la réservation : ${error.message}`);
       console.error("Error saving owner reservation:", error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -393,7 +401,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting || loadingKrossbookingRoomTypes}>
+              <Button type="submit" disabled={form.formState.isSubmitting || loadingKrossbookingRoomTypes || isLoading}>
                 {form.formState.isSubmitting ? (initialBooking ? 'Mise à jour...' : 'Création...') : (initialBooking ? 'Mettre à jour la Réservation' : 'Créer la Réservation')}
               </Button>
             </DialogFooter>

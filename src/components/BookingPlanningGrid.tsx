@@ -136,27 +136,17 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
     setIsActionsDialogOpen(false);
   };
 
-  const handleDeleteReservation = async (bookingId: string) => {
+  const handleDeleteReservation = async (bookingToCancel: KrossbookingReservation) => {
     if (!window.confirm("Êtes-vous sûr de vouloir annuler cette réservation ?")) {
       return;
     }
     try {
-      const bookingToCancel = reservations.find(b => b.id === bookingId);
       if (!bookingToCancel) {
         toast.error("Réservation introuvable pour annulation.");
         return;
       }
 
-      let id_room_type: string | undefined;
-      for (const type of krossbookingRoomTypes) {
-        const foundRoom = type.rooms.find(room => room.id_room.toString() === bookingToCancel.krossbooking_room_id);
-        if (foundRoom) {
-          id_room_type = type.id_room_type.toString();
-          break;
-        }
-      }
-
-      if (!id_room_type) {
+      if (!bookingToCancel.id_room_type) {
         toast.error("Impossible de trouver le type de chambre pour l'annulation.");
         console.error("Could not find room type for room id:", bookingToCancel.krossbooking_room_id);
         return;
@@ -171,7 +161,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         phone: bookingToCancel.phone || '',
         cod_reservation_status: "CANC",
         id_room: bookingToCancel.krossbooking_room_id,
-        id_room_type: id_room_type,
+        id_room_type: bookingToCancel.id_room_type,
+        property_id: bookingToCancel.property_id,
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false);
@@ -458,6 +449,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         allReservations={reservations}
         onReservationCreated={onReservationChange}
         initialBooking={bookingToEdit}
+        profile={profile}
       />
     </Card>
   );

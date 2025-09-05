@@ -5,6 +5,8 @@ import { Strategy } from "./strategy-api";
 import { UserRoom } from "./user-room-api"; // Import UserRoom type
 import { Idea } from "./ideas-api";
 
+const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/jnnkji5edohpm7i8mstnq1vwqka0iqj9";
+
 export interface AppSetting {
   key: string;
   value: any;
@@ -547,4 +549,57 @@ export async function updateSetting(key: string, value: any): Promise<AppSetting
     throw new Error(`Erreur lors de la mise à jour du paramètre : ${error.message}`);
   }
   return data;
+}
+
+/**
+ * Sends statement data to a Make.com webhook.
+ * @param userId The ID of the user the invoice belongs to.
+ * @param period The period the invoice covers (e.g., "Juin 2024").
+ * @param totals The calculated totals for the invoice.
+ */
+export async function sendStatementDataToMakeWebhook(userId: string, period: string, totals: InvoiceTotals): Promise<void> {
+  try {
+    // Fetch the user's profile to get pennylane_customer_id
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('pennylane_customer_id')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching profile for webhook:", profileError);
+      throw new Error(`Failed to fetch profile for webhook: ${profileError.message}`);
+    }
+
+    const pennylaneCustomerId = profileData?.pennylane_customer_id || null;
+
+    const payload = {
+      pennylane_customer_id: pennylaneCustomerId,
+      invoice_period: period,
+      commission_hello_keys: totals.totalCommission,
+      total_frais_menage: totals.totalFraisMenage,
+      owner_cleaning_fee: totals.ownerCleaningFee,
+    };
+
+    console.log("Sending statement data to Make.com webhook:", payload);
+
+    const response = await fetch(MAKE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Failed to send data to Make.com webhook:", response.status, errorText);
+      throw new Error(`Failed to send data to Make.com webhook: ${response.status} - ${errorText}`);
+    }
+
+    console.log("Statement data successfully sent to Make.com webhook.");
+  } catch (error: any) {
+    console.error("Error in sendStatementDataToMakeWebhook:", error.message);
+    // Do not re-throw, as this should not block invoice generation
+  }
 }

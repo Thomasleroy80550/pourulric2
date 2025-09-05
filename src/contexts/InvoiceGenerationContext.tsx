@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useCallback, ReactNode, use
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
-import { saveInvoice, sendStatementByEmail } from '@/lib/admin-api';
+import { saveInvoice, sendStatementByEmail, sendStatementDataToMakeWebhook } from '@/lib/admin-api';
 
 // Interface for a processed reservation row
 export interface ProcessedReservation {
@@ -276,6 +276,9 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     try {
       const savedInvoice = await saveInvoice(selectedClientId, invoicePeriod, processedData, totals);
       
+      // Send data to Make.com webhook
+      await sendStatementDataToMakeWebhook(selectedClientId, invoicePeriod, totals);
+
       if (sendEmail) {
         await sendStatementByEmail(savedInvoice.id);
         toast.success("Relevé sauvegardé et e-mail mis en file d'attente pour envoi.");

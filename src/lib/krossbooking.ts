@@ -21,6 +21,7 @@ interface KrossbookingReservation {
   phone?: string;
   tourist_tax_amount?: number;
   property_id: number;
+  id_room_type?: string; // Add this line
 }
 
 export interface KrossbookingHousekeepingTask {
@@ -231,6 +232,7 @@ export async function fetchKrossbookingReservations(
         phone: res.phone || '',
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
         property_id: res.property_id,
+        id_room_type: res.id_room_type ? res.id_room_type.toString() : undefined, // Map id_room_type
       }));
     });
 

@@ -19,7 +19,7 @@ interface ReservationActionsDialogProps {
   onOpenChange: (open: boolean) => void;
   booking: KrossbookingReservation | null;
   onEdit: (booking: KrossbookingReservation) => void;
-  onDelete: (bookingId: string) => void;
+  onDelete: (booking: KrossbookingReservation) => void; // Change from bookingId to full booking
 }
 
 const getStatusVariant = (status: string) => {
@@ -107,7 +107,7 @@ const ReservationActionsDialog: React.FC<ReservationActionsDialogProps> = ({
               <Button variant="secondary" onClick={() => onEdit(booking)}>
                 Modifier
               </Button>
-              <Button variant="destructive" onClick={() => onDelete(booking.id)}>
+              <Button variant="destructive" onClick={() => onDelete(booking)}> {/* Pass full booking */}
                 Supprimer
               </Button>
             </>

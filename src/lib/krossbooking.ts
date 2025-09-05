@@ -206,6 +206,15 @@ export async function fetchKrossbookingReservations(
     const profile = await getProfile();
     const userEmail = (await supabase.auth.getUser()).data.user?.email;
 
+    // Fetch room types to map room_id to room_type_id
+    const roomTypes = await fetchKrossbookingRoomTypes(forceRefresh);
+    const roomIdToRoomTypeMap = new Map<string, string>();
+    roomTypes.forEach(type => {
+      type.rooms.forEach(room => {
+        roomIdToRoomTypeMap.set(room.id_room.toString(), type.id_room_type.toString());
+      });
+    });
+
     const allReservationsPromises = userRooms.map(async (room) => {
       // Pass property_id if available from the user's profile
       const data = await callKrossbookingProxy('get_reservations_for_room', { 
@@ -232,7 +241,7 @@ export async function fetchKrossbookingReservations(
         phone: res.phone || '',
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
         property_id: res.property_id,
-        id_room_type: res.id_room_type ? res.id_room_type.toString() : undefined, // Map id_room_type
+        id_room_type: res.id_room_type ? res.id_room_type.toString() : roomIdToRoomTypeMap.get(room.room_id),
       }));
     });
 

@@ -27,7 +27,7 @@ export interface PennylaneInvoiceLine {
 }
 
 export interface PennylaneInvoicePayload {
-  customer_id: string;
+  customer_id: number; // Changement ici
   label: string;
   date: string; // YYYY-MM-DD
   draft: boolean;

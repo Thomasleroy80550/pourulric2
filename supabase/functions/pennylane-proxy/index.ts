@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: string): Promise<string | null> {
+async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: string): Promise<number | null> {
   const { data, error } = await supabaseClient
     .from('profiles')
     .select('pennylane_customer_id')
@@ -20,7 +20,7 @@ async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: st
     throw new Error(`Impossible de récupérer le profil pour l'utilisateur ${userId}.`);
   }
 
-  return data?.pennylane_customer_id || null;
+  return data?.pennylane_customer_id ? parseInt(data.pennylane_customer_id) : null;
 }
 
 serve(async (req) => {
@@ -66,14 +66,14 @@ serve(async (req) => {
       throw new Error("Erreur lors de la vérification des permissions de l'utilisateur.");
     }
 
-    let pennylaneCustomerId: string | null = null;
+    let pennylaneCustomerId: number | null = null;
     const body = await req.json().catch(() => ({}));
 
     if (isAdmin) {
       const requestedCustomerId = body.customer_id;
       if (requestedCustomerId) {
         // Admin is requesting a specific customer's invoices
-        pennylaneCustomerId = requestedCustomerId;
+        pennylaneCustomerId = parseInt(requestedCustomerId);
         console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${pennylaneCustomerId}`);
       } else {
         // Admin is viewing their own finance page, so fetch their own ID
@@ -115,10 +115,6 @@ serve(async (req) => {
         };
         break;
       case 'list_invoices':
-        // Validate that the ID is a number before making the call
-        if (isNaN(parseInt(pennylaneCustomerId))) {
-          throw new Error(`L'ID client Pennylane ('${pennylaneCustomerId}') n'est pas un identifiant valide.`);
-        }
         console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);
         
         const params = new URLSearchParams();

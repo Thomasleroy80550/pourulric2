@@ -71,6 +71,56 @@ export interface AdminIdea extends Idea {
   } | null;
 }
 
+export interface UserProfile {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  role?: string | null;
+  google_sheet_id?: string | null;
+  google_sheet_tab?: string | null;
+  objective_amount?: number | null;
+  cguv_accepted_at?: string | null;
+  cguv_version?: string | null;
+  pennylane_customer_id?: number | null; // Changement ici
+  pennylane_customer_id?: string | null;
+  commission_rate?: number | null;
+  phone_number?: string | null;
+  expenses_module_enabled?: boolean | null;
+  property_address?: string | null;
+  property_city?: string | null;
+  property_zip_code?: string | null;
+  iban_airbnb_booking?: string | null;
+  bic_airbnb_booking?: string | null;
+  sync_with_hellokeys: boolean;
+  iban_abritel_hellokeys?: string | null;
+  bic_abritel_hellokeys?: string | null;
+  linen_type?: string | null;
+  agency?: string | null;
+  contract_start_date?: string | null;
+  notify_new_booking_email: boolean;
+  notify_cancellation_email: boolean;
+  notify_new_booking_sms: boolean;
+  notify_cancellation_sms: boolean;
+  is_banned: boolean;
+  kyc_status?: string | null;
+  kyc_documents?: any | null;
+  can_manage_prices: boolean;
+  email?: string | null;
+  onboarding_status?: string | null;
+  estimation_details?: string | null;
+  estimated_revenue?: number | null;
+  key_deposit_address?: string | null;
+  key_sets_needed?: number | null;
+  key_delivery_method?: string | null;
+  revyoos_holding_ids?: string[] | null;
+  cguv_signed_document_url?: string | null;
+  last_seen_at?: string | null;
+  referral_code?: string | null;
+  referral_credits: number;
+  digital_booklet_enabled?: boolean | null;
+  krossbooking_property_id?: number | null;
+}
+
 /**
  * Fetches all user profiles. This is an admin-only function.
  * @returns A promise that resolves to an array of UserProfile objects.

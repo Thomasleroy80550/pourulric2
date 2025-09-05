@@ -35,7 +35,7 @@ const invoiceLineSchema = z.object({
 });
 
 const invoiceSchema = z.object({
-  customer_id: z.string().min(1, "Veuillez sélectionner un client."),
+  customer_id: z.coerce.number().min(1, "Veuillez sélectionner un client valide."),
   label: z.string().min(1, "Le titre de la facture est requis."),
   date: z.date({ required_error: "La date de la facture est requise." }),
   draft: z.boolean().default(true),
@@ -137,7 +137,7 @@ const AdminCreatePennylaneInvoicePage: React.FC = () => {
                         </FormControl>
                         <SelectContent>
                           {profiles.map(p => (
-                            <SelectItem key={p.id} value={p.pennylane_customer_id!}>
+                            <SelectItem key={p.id} value={p.pennylane_customer_id!.toString()}>
                               {p.first_name} {p.last_name}
                             </SelectItem>
                           ))}

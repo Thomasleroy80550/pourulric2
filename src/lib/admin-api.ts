@@ -81,8 +81,7 @@ export interface UserProfile {
   objective_amount?: number | null;
   cguv_accepted_at?: string | null;
   cguv_version?: string | null;
-  pennylane_customer_id?: number | null; // Changement ici
-  pennylane_customer_id?: string | null;
+  pennylane_customer_id?: number | null; // Ceci est la bonne définition
   commission_rate?: number | null;
   phone_number?: string | null;
   expenses_module_enabled?: boolean | null;

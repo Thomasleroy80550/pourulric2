@@ -112,7 +112,8 @@ const CalendarGridMobile: React.FC<CalendarGridMobileProps> = ({ userRooms, rese
         phone: bookingToCancel.phone || '',
         cod_reservation_status: "CANC",
         id_room: bookingToCancel.krossbooking_room_id,
-        id_room_type: id_room_type, // <-- This was missing!
+        id_room_type: id_room_type,
+        property_id: bookingToCancel.property_id, // Ajout de cette ligne
       });
       toast.success("Réservation annulée avec succès !");
       setIsActionsDialogOpen(false);

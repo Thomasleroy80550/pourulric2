@@ -240,7 +240,7 @@ export async function fetchKrossbookingReservations(
         email: res.email || '',
         phone: res.phone || '',
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
-        property_id: res.property_id,
+        property_id: res.property_id || profile?.krossbooking_property_id, // Use profile's property_id as fallback
         id_room_type: res.id_room_type ? res.id_room_type.toString() : roomIdToRoomTypeMap.get(room.room_id),
       }));
     });

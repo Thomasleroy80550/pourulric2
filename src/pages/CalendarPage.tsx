@@ -41,6 +41,8 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
 
+  console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
+
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();

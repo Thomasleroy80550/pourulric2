@@ -63,15 +63,11 @@ export async function fetchPennylaneInvoices(): Promise<PennylaneInvoice[]> {
     if (sessionError || !session) {
       throw new Error("User not authenticated.");
     }
-    const userProfile = await getProfile();
     
     const { data, error } = await supabase.functions.invoke("pennylane-proxy", {
       body: { 
         action: "list_invoices",
-        field: "customer_id",
-        operator: "eq",
         limit: 100,
-        value: userProfile.pennylane_customer_id 
       }
     });
 

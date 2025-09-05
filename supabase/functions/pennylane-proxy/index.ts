@@ -90,8 +90,6 @@ serve(async (req) => {
       throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré ou est vide.");
     }
     
-    console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);
-
     const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
     if (!PENNYLANE_API_KEY) {
       console.error("PENNYLANE_API_KEY environment variable is not set.");
@@ -113,14 +111,19 @@ serve(async (req) => {
             'content-type': 'application/json',
             'X-Api-Key': PENNYLANE_API_KEY,
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload.payload), // The actual payload is nested
         };
         break;
       case 'list_invoices':
-        const params = new URLSearchParams();
-        if (payload.field && payload.operator && payload.value) {
-          params.append('q[s]', `${payload.field} ${payload.operator} ${payload.value}`);
+        // Validate that the ID is a number before making the call
+        if (isNaN(parseInt(pennylaneCustomerId))) {
+          throw new Error(`L'ID client Pennylane ('${pennylaneCustomerId}') n'est pas un identifiant valide.`);
         }
+        console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);
+        
+        const params = new URLSearchParams();
+        params.append('q[s]', `customer_id eq ${pennylaneCustomerId}`);
+        
         if (payload.limit) {
           params.append('limit', payload.limit.toString());
         }

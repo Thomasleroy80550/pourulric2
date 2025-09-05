@@ -307,6 +307,7 @@ const CalendarPage: React.FC = () => {
         userRooms={userRooms}
         allReservations={reservations}
         onReservationCreated={handleReservationChange}
+        profile={profile}
       />
       <PriceRestrictionDialog
         isOpen={isPriceRestrictionDialogOpen}

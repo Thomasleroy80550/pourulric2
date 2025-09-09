@@ -661,12 +661,12 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     const sources = invoice.totals?.transferDetails?.sources;
 
     if (sources) {
-      // Sum amounts from sources collected by Hello Keys
-      if (sources['Stripe']) {
-        amountToTransfer += sources['Stripe'].total || 0;
+      // Sum amounts from sources collected by Hello Keys (keys are lowercase)
+      if (sources['stripe']) {
+        amountToTransfer += sources['stripe'].total || 0;
       }
-      if (sources['Airbnb']) {
-        amountToTransfer += sources['Airbnb'].total || 0;
+      if (sources['airbnb']) {
+        amountToTransfer += sources['airbnb'].total || 0;
       }
     }
 

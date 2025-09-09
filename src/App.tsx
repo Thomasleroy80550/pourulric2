@@ -24,6 +24,7 @@ import PromotionPage from "./pages/PromotionPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
 import AdminCreatePennylaneInvoicePage from "./pages/AdminCreatePennylaneInvoicePage";
 import AdminStatementsPage from "./pages/AdminStatementsPage";
+import AdminTransferSummaryPage from "./pages/AdminTransferSummaryPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import FinancePage from "./pages/FinancePage";
 import AdminTechnicalReportsPage from "./pages/AdminTechnicalReportsPage";

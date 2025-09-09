@@ -22,7 +22,7 @@ import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
-import AdminCreatePennylaneInvoicePage from "./pages/AdminCreatePennylaneInvoicePage"; // Import new page
+import AdminCreatePennylaneInvoicePage from "./pages/AdminCreatePennylaneInvoicePage";
 import AdminStatementsPage from "./pages/AdminStatementsPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import FinancePage from "./pages/FinancePage";
@@ -41,14 +41,14 @@ import AdminStrategiesPage from "./pages/AdminStrategiesPage";
 import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminModuleRequestsPage from "./pages/AdminModuleRequestsPage";
-import OnboardingStatusPage from "./pages/OnboardingStatusPage"; // Import the new page
+import OnboardingStatusPage from "./pages/OnboardingStatusPage";
 import FaqPage from "./pages/FaqPage";
 import AdminFaqPage from "./pages/AdminFaqPage";
 import AdminChangelogPage from "./pages/AdminChangelogPage";
 import AdminIdeasPage from "./pages/AdminIdeasPage";
-import NewVersionPage from "./pages/NewVersionPage"; // Import the new page
+import NewVersionPage from "./pages/NewVersionPage";
 import AdminDocumentsPage from "./pages/AdminDocumentsPage";
-import CompSetPage from "./pages/CompSetPage"; // Import the new page
+import CompSetPage from "./pages/CompSetPage";
 
 const queryClient = new QueryClient();
 
@@ -69,8 +69,9 @@ function App() {
                   <Route path="/admin/pages" element={<PageCreator />} />
                   <Route path="/admin/blog" element={<BlogManager />} />
                   <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
-                  <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} /> {/* Add new route */}
+                  <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} />
                   <Route path="/admin/statements" element={<AdminStatementsPage />} />
+                  <Route path="/admin/transfer-summary" element={<AdminTransferSummaryPage />} />
                   <Route path="/admin/users" element={<AdminUsersPage />} />
                   <Route path="/admin/settings" element={<AdminSettingsPage />} />
                   <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
@@ -89,7 +90,7 @@ function App() {
                   <Route path="/blog/:slug" element={<BlogPostPage />} />
                   <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                   <Route path="/promotion" element={<PromotionPage />} />
-                  <Route path="/new-version" element={<NewVersionPage />} /> {/* Add new route here */}
+                  <Route path="/new-version" element={<NewVersionPage />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/bookings" element={<BookingsPage />} />
@@ -105,7 +106,6 @@ function App() {
                   <Route path="/my-rooms" element={<MyRoomsPage />} />
                   <Route path="/faq" element={<FaqPage />} />
                   <Route path="/comp-set" element={<CompSetPage />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </InvoiceGenerationProvider>

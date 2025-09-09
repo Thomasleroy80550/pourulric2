@@ -5,9 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { getTransferSummaries, UserTransferSummary } from '@/lib/admin-api';
-import { Terminal, Banknote } from 'lucide-react';
+import { getTransferSummaries, UserTransferSummary, updateTransferStatus } from '@/lib/admin-api';
+import { Terminal, Banknote, CheckCircle2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -31,6 +33,36 @@ const AdminTransferSummaryPage: React.FC = () => {
 
     fetchSummaries();
   }, []);
+
+  const handleStatusChange = async (invoiceId: string, newStatus: boolean) => {
+    const originalSummaries = JSON.parse(JSON.stringify(summaries));
+    
+    // Optimistic UI update
+    setSummaries(currentSummaries => 
+      currentSummaries.map(summary => ({
+        ...summary,
+        details: summary.details.map(detail => 
+          detail.invoice_id === invoiceId ? { ...detail, transfer_completed: newStatus } : detail
+        )
+      }))
+    );
+
+    try {
+      await updateTransferStatus(invoiceId, newStatus);
+      toast.success("Statut du virement mis à jour.");
+    } catch (err: any) {
+      toast.error("Erreur lors de la mise à jour du statut.");
+      // Revert UI on error
+      setSummaries(originalSummaries);
+    }
+  };
+
+  const totalPendingAmount = summaries.reduce((acc, summary) => {
+    const userPendingTotal = summary.details
+      .filter(detail => !detail.transfer_completed)
+      .reduce((userAcc, detail) => userAcc + detail.amount, 0);
+    return acc + userPendingTotal;
+  }, 0);
 
   return (
     <AdminLayout>
@@ -58,47 +90,79 @@ const AdminTransferSummaryPage: React.FC = () => {
             
             {loading ? (
               <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
+                {Array.from({ length: 5 }).map((_, i) => (
                   <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
-            ) : summaries.length > 0 ? (
-              <Accordion type="single" collapsible className="w-full">
-                {summaries.map((summary) => (
-                  <AccordionItem value={summary.user_id} key={summary.user_id}>
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex justify-between w-full pr-4 items-center">
-                        <span className="font-medium text-left">{summary.first_name} {summary.last_name}</span>
-                        <span className="font-bold text-lg text-green-600">
-                          {summary.total_amount_to_transfer.toFixed(2)}€
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Période du Relevé</TableHead>
-                            <TableHead className="text-right">Montant à Virer</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {summary.details.map((detail, index) => (
-                            <TableRow key={index}>
-                              <TableCell>{detail.period}</TableCell>
-                              <TableCell className="text-right font-mono">{detail.amount.toFixed(2)}€</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
             ) : (
-              <div className="text-center text-gray-500 py-8">
-                Aucun virement à effectuer pour le moment.
-              </div>
+              <>
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+                  <p className="text-lg font-semibold text-gray-800">
+                    Total restant à virer (tous clients) : 
+                    <span className="text-green-600 font-bold ml-2">{totalPendingAmount.toFixed(2)}€</span>
+                  </p>
+                </div>
+
+                {summaries.length > 0 ? (
+                  <Accordion type="single" collapsible className="w-full">
+                    {summaries.map((summary) => {
+                      const allTransfersDone = summary.details.every(d => d.transfer_completed);
+                      const userPendingAmount = summary.details
+                        .filter(d => !d.transfer_completed)
+                        .reduce((acc, d) => acc + d.amount, 0);
+
+                      return (
+                        <AccordionItem value={summary.user_id} key={summary.user_id}>
+                          <AccordionTrigger className="hover:no-underline">
+                            <div className="flex justify-between w-full pr-4 items-center">
+                              <div className="flex items-center gap-2">
+                                {allTransfersDone && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                                <span className={cn("font-medium text-left", allTransfersDone && "text-gray-400")}>
+                                  {summary.first_name} {summary.last_name}
+                                </span>
+                              </div>
+                              <span className={cn("font-bold text-lg", allTransfersDone ? "text-gray-400 line-through" : "text-green-600")}>
+                                {userPendingAmount.toFixed(2)}€
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Période</TableHead>
+                                  <TableHead className="text-right">Montant</TableHead>
+                                  <TableHead className="text-center w-[150px]">Virement Effectué</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {summary.details.map((detail) => (
+                                  <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
+                                    <TableCell>{detail.period}</TableCell>
+                                    <TableCell className="text-right font-mono">{detail.amount.toFixed(2)}€</TableCell>
+                                    <TableCell className="text-center">
+                                      <Checkbox
+                                        checked={detail.transfer_completed}
+                                        onCheckedChange={(checked) => {
+                                          handleStatusChange(detail.invoice_id, !!checked);
+                                        }}
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    Aucun virement à effectuer pour le moment.
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

@@ -130,7 +130,12 @@ export interface UserTransferSummary {
   first_name: string | null;
   last_name: string | null;
   total_amount_to_transfer: number;
-  details: { period: string; amount: number }[];
+  details: {
+    period: string;
+    amount: number;
+    invoice_id: string;
+    transfer_completed: boolean;
+  }[];
 }
 
 /**
@@ -634,9 +639,11 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
   const { data, error } = await supabase
     .from('invoices')
     .select(`
+      id,
       user_id,
       period,
       totals,
+      transfer_completed,
       profiles (
         first_name,
         last_name
@@ -648,13 +655,15 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     throw new Error(`Erreur lors de la récupération des relevés pour le résumé des virements : ${error.message}`);
   }
 
-  const transferMap = new Map<string, { first_name: string | null, last_name: string | null, total: number, details: { period: string; amount: number }[] }>();
+  const transferMap = new Map<string, { first_name: string | null, last_name: string | null, total: number, details: { period: string; amount: number; invoice_id: string; transfer_completed: boolean; }[] }>();
 
   data.forEach(invoice => {
     const userId = invoice.user_id;
     const period = invoice.period;
     const firstName = invoice.profiles?.first_name || null;
     const lastName = invoice.profiles?.last_name || null;
+    const invoiceId = invoice.id;
+    const transferCompleted = invoice.transfer_completed || false;
 
     // Recalculate amount to transfer based on relevant sources only
     let amountToTransfer = 0;
@@ -675,14 +684,14 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
       if (transferMap.has(userId)) {
         const current = transferMap.get(userId)!;
         current.total += amountToTransfer;
-        current.details.push({ period, amount: amountToTransfer });
+        current.details.push({ period, amount: amountToTransfer, invoice_id: invoiceId, transfer_completed: transferCompleted });
         transferMap.set(userId, current);
       } else {
         transferMap.set(userId, {
           first_name: firstName,
           last_name: lastName,
           total: amountToTransfer,
-          details: [{ period, amount: amountToTransfer }]
+          details: [{ period, amount: amountToTransfer, invoice_id: invoiceId, transfer_completed: transferCompleted }]
         });
       }
     }
@@ -695,4 +704,22 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     total_amount_to_transfer: summary.total,
     details: summary.details.sort((a, b) => (b.period || '').localeCompare(a.period || ''))
   }));
+}
+
+/**
+ * Updates the transfer status of a specific invoice.
+ * @param invoiceId The ID of the invoice to update.
+ * @param completed The new transfer status.
+ * @returns A promise that resolves when the status is updated.
+ */
+export async function updateTransferStatus(invoiceId: string, completed: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ transfer_completed: completed })
+    .eq('id', invoiceId);
+
+  if (error) {
+    console.error("Error updating transfer status:", error);
+    throw new Error(`Erreur lors de la mise à jour du statut du virement : ${error.message}`);
+  }
 }

@@ -635,6 +635,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     .from('invoices')
     .select(`
       user_id,
+      period,
       totals,
       profiles (
         first_name,

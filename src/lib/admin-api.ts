@@ -652,23 +652,39 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
 
   data.forEach(invoice => {
     const userId = invoice.user_id;
-    const amountToTransfer = invoice.totals?.totalMontantVerse || 0;
     const period = invoice.period;
     const firstName = invoice.profiles?.first_name || null;
     const lastName = invoice.profiles?.last_name || null;
 
-    if (transferMap.has(userId)) {
-      const current = transferMap.get(userId)!;
-      current.total += amountToTransfer;
-      current.details.push({ period, amount: amountToTransfer });
-      transferMap.set(userId, current);
-    } else {
-      transferMap.set(userId, {
-        first_name: firstName,
-        last_name: lastName,
-        total: amountToTransfer,
-        details: [{ period, amount: amountToTransfer }]
-      });
+    // Recalculate amount to transfer based on relevant sources only
+    let amountToTransfer = 0;
+    const sources = invoice.totals?.transferDetails?.sources;
+
+    if (sources) {
+      // Sum amounts from sources collected by Hello Keys
+      if (sources['Stripe']) {
+        amountToTransfer += sources['Stripe'].total || 0;
+      }
+      if (sources['Airbnb']) {
+        amountToTransfer += sources['Airbnb'].total || 0;
+      }
+    }
+
+    // Only process if there is an actual amount to transfer from our sources
+    if (amountToTransfer > 0) {
+      if (transferMap.has(userId)) {
+        const current = transferMap.get(userId)!;
+        current.total += amountToTransfer;
+        current.details.push({ period, amount: amountToTransfer });
+        transferMap.set(userId, current);
+      } else {
+        transferMap.set(userId, {
+          first_name: firstName,
+          last_name: lastName,
+          total: amountToTransfer,
+          details: [{ period, amount: amountToTransfer }]
+        });
+      }
     }
   });
 
@@ -677,6 +693,6 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     first_name: summary.first_name,
     last_name: summary.last_name,
     total_amount_to_transfer: summary.total,
-    details: summary.details.sort((a, b) => (b.period || '').localeCompare(a.period || '')) // Correction: Ajout d'une vérification de nullité
+    details: summary.details.sort((a, b) => (b.period || '').localeCompare(a.period || ''))
   }));
 }

@@ -123,6 +123,16 @@ export interface UserProfile {
 }
 
 /**
+ * Interface for the summary of transfers per user.
+ */
+export interface UserTransferSummary {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  total_amount_to_transfer: number;
+}
+
+/**
  * Fetches all user profiles. This is an admin-only function.
  * @returns A promise that resolves to an array of UserProfile objects.
  */
@@ -612,4 +622,55 @@ export async function sendStatementDataToMakeWebhook(
     console.error("Error in sendStatementDataToMakeWebhook:", error.message);
     // Do not re-throw, as this should not block invoice generation
   }
+}
+
+/**
+ * Calculates the total amount to transfer for each user based on their saved invoices.
+ * This is an admin-only function.
+ * @returns A promise that resolves to an array of UserTransferSummary objects.
+ */
+export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(`
+      user_id,
+      totals,
+      profiles (
+        first_name,
+        last_name
+      )
+    `);
+
+  if (error) {
+    console.error("Error fetching invoices for transfer summary:", error);
+    throw new Error(`Erreur lors de la récupération des relevés pour le résumé des virements : ${error.message}`);
+  }
+
+  const transferMap = new Map<string, { first_name: string | null, last_name: string | null, total: number }>();
+
+  data.forEach(invoice => {
+    const userId = invoice.user_id;
+    const amountToTransfer = invoice.totals?.totalMontantVerse || 0;
+    const firstName = invoice.profiles?.first_name || null;
+    const lastName = invoice.profiles?.last_name || null;
+
+    if (transferMap.has(userId)) {
+      const current = transferMap.get(userId)!;
+      current.total += amountToTransfer;
+      transferMap.set(userId, current);
+    } else {
+      transferMap.set(userId, {
+        first_name: firstName,
+        last_name: lastName,
+        total: amountToTransfer
+      });
+    }
+  });
+
+  return Array.from(transferMap.entries()).map(([userId, summary]) => ({
+    user_id: userId,
+    first_name: summary.first_name,
+    last_name: summary.last_name,
+    total_amount_to_transfer: summary.total
+  }));
 }

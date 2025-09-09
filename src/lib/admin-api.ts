@@ -130,6 +130,7 @@ export interface UserTransferSummary {
   first_name: string | null;
   last_name: string | null;
   total_amount_to_transfer: number;
+  details: { period: string; amount: number }[];
 }
 
 /**
@@ -646,23 +647,26 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     throw new Error(`Erreur lors de la récupération des relevés pour le résumé des virements : ${error.message}`);
   }
 
-  const transferMap = new Map<string, { first_name: string | null, last_name: string | null, total: number }>();
+  const transferMap = new Map<string, { first_name: string | null, last_name: string | null, total: number, details: { period: string; amount: number }[] }>();
 
   data.forEach(invoice => {
     const userId = invoice.user_id;
     const amountToTransfer = invoice.totals?.totalMontantVerse || 0;
+    const period = invoice.period;
     const firstName = invoice.profiles?.first_name || null;
     const lastName = invoice.profiles?.last_name || null;
 
     if (transferMap.has(userId)) {
       const current = transferMap.get(userId)!;
       current.total += amountToTransfer;
+      current.details.push({ period, amount: amountToTransfer });
       transferMap.set(userId, current);
     } else {
       transferMap.set(userId, {
         first_name: firstName,
         last_name: lastName,
-        total: amountToTransfer
+        total: amountToTransfer,
+        details: [{ period, amount: amountToTransfer }]
       });
     }
   });
@@ -671,6 +675,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     user_id: userId,
     first_name: summary.first_name,
     last_name: summary.last_name,
-    total_amount_to_transfer: summary.total
+    total_amount_to_transfer: summary.total,
+    details: summary.details.sort((a, b) => b.period.localeCompare(a.period)) // Sort details
   }));
 }

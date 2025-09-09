@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { getTransferSummaries, UserTransferSummary } from '@/lib/admin-api';
 import { Terminal, Banknote } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -41,7 +42,7 @@ const AdminTransferSummaryPage: React.FC = () => {
               <div>
                 <CardTitle>Synthèse des Virements</CardTitle>
                 <CardDescription>
-                  Cette page récapitule le montant total à virer à chaque client, calculé à partir de tous les relevés enregistrés.
+                  Cette page récapitule le montant total à virer à chaque client, avec le détail par période.
                 </CardDescription>
               </div>
             </div>
@@ -54,41 +55,51 @@ const AdminTransferSummaryPage: React.FC = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead className="text-right">Montant Total à Virer</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><Skeleton className="h-6 w-48" /></TableCell>
-                        <TableCell className="text-right"><Skeleton className="h-6 w-24 float-right" /></TableCell>
-                      </TableRow>
-                    ))
-                  ) : summaries.length > 0 ? (
-                    summaries.map((summary) => (
-                      <TableRow key={summary.user_id}>
-                        <TableCell className="font-medium">{summary.first_name} {summary.last_name}</TableCell>
-                        <TableCell className="text-right font-bold text-lg text-green-600">
+            
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : summaries.length > 0 ? (
+              <Accordion type="single" collapsible className="w-full">
+                {summaries.map((summary) => (
+                  <AccordionItem value={summary.user_id} key={summary.user_id}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex justify-between w-full pr-4 items-center">
+                        <span className="font-medium text-left">{summary.first_name} {summary.last_name}</span>
+                        <span className="font-bold text-lg text-green-600">
                           {summary.total_amount_to_transfer.toFixed(2)}€
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={2} className="text-center text-gray-500 py-8">
-                        Aucun virement à effectuer pour le moment.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Période du Relevé</TableHead>
+                            <TableHead className="text-right">Montant à Virer</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {summary.details.map((detail, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{detail.period}</TableCell>
+                              <TableCell className="text-right font-mono">{detail.amount.toFixed(2)}€</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                Aucun virement à effectuer pour le moment.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

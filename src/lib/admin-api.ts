@@ -676,6 +676,6 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     first_name: summary.first_name,
     last_name: summary.last_name,
     total_amount_to_transfer: summary.total,
-    details: summary.details.sort((a, b) => b.period.localeCompare(a.period)) // Sort details
+    details: summary.details.sort((a, b) => (b.period || '').localeCompare(a.period || '')) // Correction: Ajout d'une vérification de nullité
   }));
 }

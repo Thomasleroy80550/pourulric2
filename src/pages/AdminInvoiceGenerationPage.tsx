@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import AdminLayout from '@/components/AdminLayout';
+import RenamedAdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,7 +145,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const tva = totalFacture - factureHT;
 
   return (
-    <AdminLayout>
+    <RenamedAdminLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Génération de Facture Manuelle</h1>
         
@@ -386,7 +386,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
           }
         }}
       />
-    </AdminLayout>
+    </RenamedAdminLayout>
   );
 };
 

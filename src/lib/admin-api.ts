@@ -138,6 +138,11 @@ export interface UserTransferSummary {
   }[];
 }
 
+export interface LastInvoiceInfo {
+  user_id: string;
+  last_invoice_period: string;
+}
+
 /**
  * Fetches all user profiles. This is an admin-only function.
  * @returns A promise that resolves to an array of UserProfile objects.
@@ -150,6 +155,35 @@ export async function getAllProfiles(): Promise<UserProfile[]> {
     throw new Error(`Erreur lors de la récupération des profils : ${error.message}`);
   }
   return data || [];
+}
+
+/**
+ * Fetches the last invoice period for each user.
+ * @returns A promise that resolves to an array of LastInvoiceInfo objects.
+ */
+export async function getLastInvoicePeriods(): Promise<LastInvoiceInfo[]> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('user_id, period, created_at')
+    .order('created_at', { ascending: false }); // Order by creation date to get the latest
+
+  if (error) {
+    console.error("Error fetching last invoice periods:", error);
+    throw new Error(`Erreur lors de la récupération des dernières périodes de relevé : ${error.message}`);
+  }
+
+  const lastInvoicesMap = new Map<string, string>();
+  // Iterate through the sorted data. The first entry for each user_id will be the latest.
+  data.forEach(invoice => {
+    if (!lastInvoicesMap.has(invoice.user_id)) {
+      lastInvoicesMap.set(invoice.user_id, invoice.period);
+    }
+  });
+
+  return Array.from(lastInvoicesMap.entries()).map(([user_id, last_invoice_period]) => ({
+    user_id,
+    last_invoice_period
+  }));
 }
 
 /**

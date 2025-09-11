@@ -14,17 +14,13 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import EditReservationDialog from '@/components/EditReservationDialog';
-import { getAllProfiles, getLastInvoicePeriods } from '@/lib/admin-api'; // Import getLastInvoicePeriods
+import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { useInvoiceGeneration, ProcessedReservation } from '@/contexts/InvoiceGenerationContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface ExtendedUserProfile extends UserProfile {
-  lastInvoicePeriod?: string;
-}
 
 const AdminInvoiceGenerationPage: React.FC = () => {
   const {
@@ -49,40 +45,31 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     deductInvoice, setDeductInvoice,
     deductionSource, setDeductionSource,
     transfersBySource,
-    ownerCleaningFee, setOwnerCleaningFee,
+    ownerCleaningFee, setOwnerCleaningFee, // Get from context
     recalculateTotals,
     processFile,
     handleGenerateInvoice,
   } = useInvoiceGeneration();
 
-  const [profiles, setProfiles] = useState<ExtendedUserProfile[]>([]);
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingReservation, setEditingReservation] = useState<{ data: ProcessedReservation; index: number } | null>(null);
   const [open, setOpen] = useState(false); // State for combobox open/close
 
   useEffect(() => {
-    const fetchProfilesAndLastInvoices = async () => {
+    const fetchProfiles = async () => {
       setLoadingProfiles(true);
       try {
         const fetchedProfiles = await getAllProfiles();
-        const lastInvoices = await getLastInvoicePeriods();
-
-        const lastInvoiceMap = new Map<string, string>();
-        lastInvoices.forEach(info => lastInvoiceMap.set(info.user_id, info.last_invoice_period));
-
-        const profilesWithLastInvoice: ExtendedUserProfile[] = fetchedProfiles.map(profile => ({
-          ...profile,
-          lastInvoicePeriod: lastInvoiceMap.get(profile.id)
-        }));
-        setProfiles(profilesWithLastInvoice);
+        setProfiles(fetchedProfiles);
       } catch (err: any) {
         toast.error(err.message);
       } finally {
         setLoadingProfiles(false);
       }
     };
-    fetchProfilesAndLastInvoices();
+    fetchProfiles();
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,8 +156,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                             className="w-full justify-between"
                           >
                             {selectedClientId
-                              ? profiles.find((profile) => profile.id === selectedClientId)?.first_name + " " + profiles.find((profile) => profile.id === selectedClientId)?.last_name +
-                                (profiles.find((profile) => profile.id === selectedClientId)?.lastInvoicePeriod ? ` (Dernier relevé: ${profiles.find((profile) => profile.id === selectedClientId)?.lastInvoicePeriod})` : '')
+                              ? profiles.find((profile) => profile.id === selectedClientId)?.first_name + " " + profiles.find((profile) => profile.id === selectedClientId)?.last_name
                               : "Choisir un client..."}
                             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -191,11 +177,6 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                                     }}
                                   >
                                     {profile.first_name} {profile.last_name}
-                                    {profile.lastInvoicePeriod && (
-                                      <span className="ml-2 text-xs text-gray-500">
-                                        (Dernier relevé: {profile.lastInvoicePeriod})
-                                      </span>
-                                    )}
                                     <Check
                                       className={cn(
                                         "ml-auto h-4 w-4",
@@ -366,7 +347,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                       <Table>
                         <TableHeader><TableRow><TableHead>Voyageur</TableHead><TableHead className="text-right">Montant à virer</TableHead></TableRow></TableHeader>
                         <TableBody>{data.reservations.map((r, i) => <TableRow key={i}><TableCell>{r.voyageur}</TableCell><TableCell className="text-right">{r.montantVerse.toFixed(2)}€</TableCell></TableRow>)}</TableBody>
-                        <TableFooter><TableRow className="font-bold"><TableCell>Total à virer ({deductInvoice && deductionSource === source ? "facture déduite" : ""})</TableCell><TableCell className="text-right">{data.total.toFixed(2)}€</TableCell></TableFooter>
+                        <TableFooter><TableRow className="font-bold"><TableCell>Total à virer ({deductInvoice && deductionSource === source ? "facture déduite" : ""})</TableCell><TableCell className="text-right">{data.total.toFixed(2)}€</TableCell></TableRow></TableFooter>
                       </Table>
                     </div>
                   ))}

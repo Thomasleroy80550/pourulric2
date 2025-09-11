@@ -6,7 +6,8 @@ export interface StripePaymentIntent {
   currency: string;
   status: string;
   created: number;
-  customer: string | null;
+  // customer peut être un ID string ou un objet Customer étendu
+  customer: string | { id: string; email: string | null; name: string | null; } | null;
   description: string | null;
   receipt_email: string | null;
   latest_charge: {
@@ -14,6 +15,7 @@ export interface StripePaymentIntent {
       fee: number;
     } | null;
   } | null;
+  metadata: { [key: string]: string } | null;
 }
 
 export interface StripeListResponse {
@@ -23,10 +25,14 @@ export interface StripeListResponse {
   url: string;
 }
 
-export async function getStripePaymentIntents(id?: string): Promise<StripeListResponse> {
+export async function getStripePaymentIntents(searchTerm?: string, limit: number = 20): Promise<StripeListResponse> {
   let queryString = '';
-  if (id) {
-    queryString = `?id=${encodeURIComponent(id)}`;
+  // Si le terme de recherche ressemble à un ID de Payment Intent Stripe (commence par 'pi_')
+  if (searchTerm && searchTerm.startsWith('pi_')) {
+    queryString = `?id=${encodeURIComponent(searchTerm)}`;
+  } else {
+    // Sinon, on récupère une liste avec la limite donnée. Le filtrage textuel se fera côté client.
+    queryString = `?limit=${limit}`;
   }
 
   const { data, error } = await supabase.functions.invoke(`stripe-proxy${queryString}`);

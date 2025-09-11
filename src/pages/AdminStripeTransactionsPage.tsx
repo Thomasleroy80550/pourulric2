@@ -30,15 +30,37 @@ const AdminStripeTransactionsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      // Toujours récupérer une liste, puis filtrer côté client si ce n'est pas une recherche directe par ID
       const response = await getStripePaymentIntents(debouncedSearchTerm.trim());
-      setPaymentIntents(response.data);
+      
+      let filteredIntents = response.data;
+
+      // Si le terme de recherche n'est pas un ID 'pi_', effectuer le filtrage côté client
+      if (debouncedSearchTerm.trim() && !debouncedSearchTerm.trim().startsWith('pi_')) {
+        const lowerCaseSearchTerm = debouncedSearchTerm.trim().toLowerCase();
+        filteredIntents = response.data.filter(pi => {
+          const idMatch = pi.id.toLowerCase().includes(lowerCaseSearchTerm);
+          const descriptionMatch = pi.description?.toLowerCase().includes(lowerCaseSearchTerm);
+          const emailMatch = pi.receipt_email?.toLowerCase().includes(lowerCaseSearchTerm);
+          
+          const customerMatch = typeof pi.customer === 'string'
+            ? pi.customer.toLowerCase().includes(lowerCaseSearchTerm) // Recherche par ID client
+            : (pi.customer?.email?.toLowerCase().includes(lowerCaseSearchTerm) || pi.customer?.name?.toLowerCase().includes(lowerCaseSearchTerm)); // Recherche par email ou nom client si étendu
+          
+          const metadataMatch = pi.metadata ? Object.values(pi.metadata).some(val => val.toLowerCase().includes(lowerCaseSearchTerm)) : false;
+
+          return idMatch || descriptionMatch || emailMatch || customerMatch || metadataMatch;
+        });
+      }
+      
+      setPaymentIntents(filteredIntents);
     } catch (err: any) {
       setError(err.message);
       toast.error("Erreur lors de la récupération des transactions Stripe.");
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm]); // Dépendance à debouncedSearchTerm
 
   useEffect(() => {
     fetchPaymentIntents();

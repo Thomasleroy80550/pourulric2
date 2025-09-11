@@ -50,6 +50,7 @@ import AdminIdeasPage from "./pages/AdminIdeasPage";
 import NewVersionPage from "./pages/NewVersionPage";
 import AdminDocumentsPage from "./pages/AdminDocumentsPage";
 import CompSetPage from "./pages/CompSetPage";
+import AdminStripeTransactionsPage from "./pages/AdminStripeTransactionsPage";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ function App() {
                   <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                   <Route path="/admin/ideas" element={<AdminIdeasPage />} />
                   <Route path="/admin/documents" element={<AdminDocumentsPage />} />
+                  <Route path="/admin/stripe-transactions" element={<AdminStripeTransactionsPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />

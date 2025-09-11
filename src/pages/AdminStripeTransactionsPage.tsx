@@ -1,0 +1,136 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import AdminLayout from '@/components/AdminLayout';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { getStripePaymentIntents, StripePaymentIntent } from '@/lib/stripe-api';
+import { Terminal, CreditCard, Search } from 'lucide-react';
+import { useDebounce } from 'react-use';
+
+const AdminStripeTransactionsPage: React.FC = () => {
+  const [paymentIntents, setPaymentIntents] = useState<StripePaymentIntent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useDebounce(
+    () => {
+      setDebouncedSearchTerm(searchTerm);
+    },
+    500,
+    [searchTerm]
+  );
+
+  const fetchPaymentIntents = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getStripePaymentIntents(debouncedSearchTerm.trim());
+      setPaymentIntents(response.data);
+    } catch (err: any) {
+      setError(err.message);
+      toast.error("Erreur lors de la récupération des transactions Stripe.");
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedSearchTerm]);
+
+  useEffect(() => {
+    fetchPaymentIntents();
+  }, [fetchPaymentIntents]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchPaymentIntents();
+  };
+
+  return (
+    <AdminLayout>
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <CreditCard className="h-8 w-8" />
+              <div>
+                <CardTitle>Transactions Stripe</CardTitle>
+                <CardDescription>
+                  Consultez la liste des transactions et recherchez par ID de paiement.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSearch} className="flex items-center gap-2 mb-4">
+              <Input
+                type="text"
+                placeholder="Rechercher par ID (pi_...)"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+              <Button type="submit" variant="outline" size="icon">
+                <Search className="h-4 w-4" />
+              </Button>
+            </form>
+
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Erreur</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID Paiement</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Client</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={5}>
+                          <Skeleton className="h-8 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : paymentIntents.length > 0 ? (
+                    paymentIntents.map((pi) => (
+                      <TableRow key={pi.id}>
+                        <TableCell className="font-mono text-xs">{pi.id}</TableCell>
+                        <TableCell>{(pi.amount / 100).toFixed(2)} {pi.currency.toUpperCase()}</TableCell>
+                        <TableCell>{pi.status}</TableCell>
+                        <TableCell>{new Date(pi.created * 1000).toLocaleString()}</TableCell>
+                        <TableCell>{pi.receipt_email || pi.customer || 'N/A'}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        Aucune transaction trouvée.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
+  );
+};
+
+export default AdminStripeTransactionsPage;

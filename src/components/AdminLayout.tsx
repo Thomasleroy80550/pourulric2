@@ -25,7 +25,8 @@ import {
   FilePlus2,
   GitBranch,
   ShieldCheck,
-  Banknote, // Ajout de l'icône
+  Banknote,
+  CreditCard, // Ajout de l'icône
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -88,6 +89,7 @@ const adminNavigationCategories = [
       { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText, description: 'Consulter les relevés existants.' },
       { name: 'Créer Facture (Pennylane)', href: '/admin/create-pennylane-invoice', icon: FilePlus, description: 'Créer une facture client via Pennylane.' },
       { name: 'Synthèse des Virements', href: '/admin/transfer-summary', icon: Banknote, description: 'Voir le total des virements à effectuer par client.' },
+      { name: 'Transactions Stripe', href: '/admin/stripe-transactions', icon: CreditCard, description: 'Consulter les transactions Stripe.' },
     ]
   },
   {

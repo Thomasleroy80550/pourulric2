@@ -92,6 +92,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
                   <TableRow>
                     <TableHead>ID Paiement</TableHead>
                     <TableHead>Montant</TableHead>
+                    <TableHead>Commission</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Client</TableHead>
@@ -101,24 +102,32 @@ const AdminStripeTransactionsPage: React.FC = () => {
                   {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell colSpan={5}>
+                        <TableCell colSpan={6}>
                           <Skeleton className="h-8 w-full" />
                         </TableCell>
                       </TableRow>
                     ))
                   ) : paymentIntents.length > 0 ? (
-                    paymentIntents.map((pi) => (
-                      <TableRow key={pi.id}>
-                        <TableCell className="font-mono text-xs">{pi.id}</TableCell>
-                        <TableCell>{(pi.amount / 100).toFixed(2)} {pi.currency.toUpperCase()}</TableCell>
-                        <TableCell>{pi.status}</TableCell>
-                        <TableCell>{new Date(pi.created * 1000).toLocaleString()}</TableCell>
-                        <TableCell>{pi.receipt_email || pi.customer || 'N/A'}</TableCell>
-                      </TableRow>
-                    ))
+                    paymentIntents.map((pi) => {
+                      const fee = pi.latest_charge?.balance_transaction?.fee;
+                      return (
+                        <TableRow key={pi.id}>
+                          <TableCell className="font-mono text-xs">{pi.id}</TableCell>
+                          <TableCell>{(pi.amount / 100).toFixed(2)} {pi.currency.toUpperCase()}</TableCell>
+                          <TableCell>
+                            {typeof fee === 'number'
+                              ? `${(fee / 100).toFixed(2)} ${pi.currency.toUpperCase()}`
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>{pi.status}</TableCell>
+                          <TableCell>{new Date(pi.created * 1000).toLocaleString()}</TableCell>
+                          <TableCell>{pi.receipt_email || pi.customer || 'N/A'}</TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">
+                      <TableCell colSpan={6} className="text-center">
                         Aucune transaction trouvée.
                       </TableCell>
                     </TableRow>

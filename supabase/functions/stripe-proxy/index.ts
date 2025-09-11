@@ -51,9 +51,9 @@ serve(async (req) => {
 
     let stripeApiUrl;
     if (paymentIntentId) {
-      stripeApiUrl = `https://api.stripe.com/v1/payment_intents/${paymentIntentId}`
+      stripeApiUrl = `https://api.stripe.com/v1/payment_intents/${paymentIntentId}?expand[]=latest_charge.balance_transaction`
     } else {
-      stripeApiUrl = `https://api.stripe.com/v1/payment_intents?limit=${limit}`
+      stripeApiUrl = `https://api.stripe.com/v1/payment_intents?limit=${limit}&expand[]=data.latest_charge.balance_transaction`
     }
 
     const stripeResponse = await fetch(stripeApiUrl, {

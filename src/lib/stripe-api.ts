@@ -9,6 +9,11 @@ export interface StripePaymentIntent {
   customer: string | null;
   description: string | null;
   receipt_email: string | null;
+  latest_charge: {
+    balance_transaction: {
+      fee: number;
+    } | null;
+  } | null;
 }
 
 export interface StripeListResponse {

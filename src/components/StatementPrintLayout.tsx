@@ -60,22 +60,22 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <h2 className="text-lg font-semibold mb-4 text-gray-800">Résumé de votre relevé</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total perçu des plateformes <span className="legend-bubble">1</span></p>
+              <p className="text-gray-600">Total perçu des plateformes (Somme des montants versés par les plateformes)</p>
               <p className="font-semibold text-lg">{totalMontantVerse.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total de notre facture <span className="legend-bubble">2</span></p>
+              <p className="text-gray-600">Total de notre facture (Montant total facturé par Hello Keys pour ses services)</p>
               <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€ TTC</p>
             </div>
             {totalTaxeDeSejour > 0 && (
               <div className="flex justify-between items-center">
-                <p className="text-gray-600">Taxes de séjour collectées <span className="legend-bubble">3</span></p>
+                <p className="text-gray-600">Taxes de séjour collectées (Montant des taxes de séjour collectées et reversées aux autorités)</p>
                 <p className="font-semibold text-lg text-red-600">- {totalTaxeDeSejour.toFixed(2)}€</p>
               </div>
             )}
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center text-xl">
-              <p className="font-bold">Résultat <span className="legend-bubble">4</span></p>
+              <p className="font-bold">Résultat (Montant net qui vous sera versé après déductions)</p>
               <p className="font-extrabold text-2xl text-green-600">{netToPay.toFixed(2)}€</p>
             </div>
             {transferDetails?.deductionInfo?.deducted && Math.abs(netToPay) < 0.01 && (
@@ -91,16 +91,16 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <h2 className="text-lg font-semibold mb-4 text-gray-800">Détail de notre facture</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Commission Hello Keys <span className="legend-bubble">5</span></p>
+              <p className="text-gray-600">Commission Hello Keys (Nos frais de gestion pour les services fournis)</p>
               <p className="font-semibold">{totalCommission.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total frais de ménage <span className="legend-bubble">6</span></p>
+              <p className="text-gray-600">Total frais de ménage (Coût total du ménage effectué après chaque réservation)</p>
               <p className="font-semibold">{totalFraisMenage.toFixed(2)}€</p>
             </div>
             {ownerCleaningFee > 0 && ( // Display only if greater than 0
               <div className="flex justify-between items-center">
-                <p className="text-gray-600">Frais de ménage propriétaire <span className="legend-bubble">7</span></p>
+                <p className="text-gray-600">Frais de ménage propriétaire (Frais de ménage spécifiques facturés au propriétaire)</p>
                 <p className="font-semibold">{ownerCleaningFee.toFixed(2)}€</p>
               </div>
             )}
@@ -115,7 +115,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
 
       {/* Detailed Reservations Table */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Détail des réservations <span className="legend-bubble">8</span></h2>
+        <h2 className="text-xl font-semibold mb-4">Détail des réservations (Tableau récapitulatif de chaque réservation)</h2>
         <div className="border rounded-lg">
           <Table className="text-xs">
             <TableHeader>
@@ -170,7 +170,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       {/* Transfers Section */}
       {transferDetails && transferDetails.sources && (
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Virements à effectuer <span className="legend-bubble">9</span></h2>
+          <h2 className="text-xl font-semibold mb-4">Virements à effectuer (Section indiquant les montants à transférer ou reçus)</h2>
           <p className="text-sm italic text-gray-600 mb-4">
             Le relevé permet de réaliser vos virements, il est donc normal de recevoir votre relevé facture avant de percevoir vos fonds.
           </p>

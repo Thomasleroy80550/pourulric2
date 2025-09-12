@@ -33,6 +33,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   const sumMontantVerse = invoiceData.reduce((sum, row) => sum + row.montantVerse, 0);
   const sumRevenuGenere = invoiceData.reduce((sum, row) => sum + row.revenuGenere, 0);
   const sumCommissionHelloKeys = invoiceData.reduce((sum, row) => sum + row.commissionHelloKeys, 0);
+  const sumOriginalFraisPaiement = invoiceData.reduce((sum, row) => sum + row.originalFraisPaiement, 0);
 
   return (
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans">
@@ -124,6 +125,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                 <TableHead className="text-right">Prix Séjour</TableHead>
                 <TableHead className="text-right">Frais Ménage</TableHead>
                 <TableHead className="text-right">Taxe Séjour</TableHead>
+                <TableHead className="text-right">Frais Paiement</TableHead>
                 <TableHead className="text-right">Montant Versé</TableHead>
                 <TableHead className="text-right">Revenu Généré</TableHead>
                 <TableHead className="text-right">Commission</TableHead>
@@ -138,6 +140,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                   <TableCell className="text-right">{row.prixSejour.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.fraisMenage.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.taxeDeSejour.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
                   <TableCell className="text-right font-semibold">{row.montantVerse.toFixed(2)}€</TableCell>
                   <TableCell className="text-right font-semibold">{row.revenuGenere.toFixed(2)}€</TableCell>
                   <TableCell className="text-right text-red-600">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
@@ -150,6 +153,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                 <TableCell className="text-right">{sumPrixSejour.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumFraisMenage.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumTaxeDeSejour.toFixed(2)}€</TableCell>
+                <TableCell className="text-right">{sumOriginalFraisPaiement.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumMontantVerse.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumRevenuGenere.toFixed(2)}€</TableCell>
                 <TableCell className="text-right text-red-600">(-{sumCommissionHelloKeys.toFixed(2)}€)</TableCell>

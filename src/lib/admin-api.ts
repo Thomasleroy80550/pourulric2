@@ -786,8 +786,8 @@ export async function resendStatementToPennylane(invoiceId: string): Promise<voi
   }
 
   // 2. Prepare data for the webhook function
-  const { user_id, period, totals, created_at } = invoice;
-  const emissionDate = parseISO(created_at);
+  const { user_id, period, totals } = invoice;
+  const emissionDate = new Date(); // Utiliser la date du jour pour la relance
   const deadlineDate = addDays(emissionDate, 15);
   const formattedEmissionDate = format(emissionDate, 'yyyy-MM-dd');
   const formattedDeadlineDate = format(deadlineDate, 'yyyy-MM-dd');

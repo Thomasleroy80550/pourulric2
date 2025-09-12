@@ -138,6 +138,87 @@ export interface UserTransferSummary {
   }[];
 }
 
+export interface BillingStats {
+  totalRevenue: number;
+  totalCommission: number;
+  totalInvoices: number;
+  monthlyData: {
+    period: string; // e.g., "Jan 2023"
+    totalRevenue: number;
+    totalCommission: number;
+  }[];
+}
+
+/**
+ * Fetches and aggregates billing statistics for Hello Keys.
+ * @returns A promise that resolves to BillingStats object.
+ */
+export async function getBillingStats(): Promise<BillingStats> {
+  const { data: invoices, error } = await supabase
+    .from('invoices')
+    .select('period, totals');
+
+  if (error) {
+    console.error("Error fetching invoices for billing stats:", error);
+    throw new Error(`Erreur lors de la récupération des données de facturation : ${error.message}`);
+  }
+
+  let totalRevenue = 0;
+  let totalCommission = 0;
+  const monthlyMap = new Map<string, { totalRevenue: number; totalCommission: number }>();
+
+  const monthNames: { [key: string]: number } = {
+    "Janvier": 0, "Février": 1, "Mars": 2, "Avril": 3, "Mai": 4, "Juin": 5,
+    "Juillet": 6, "Août": 7, "Septembre": 8, "Octobre": 9, "Novembre": 10, "Décembre": 11
+  };
+
+  invoices.forEach(invoice => {
+    const period = invoice.period; // e.g., "Juin 2024"
+    const revenue = invoice.totals?.totalRevenuGenere || 0;
+    const commission = invoice.totals?.totalCommission || 0;
+
+    totalRevenue += revenue;
+    totalCommission += commission;
+
+    if (!monthlyMap.has(period)) {
+      monthlyMap.set(period, { totalRevenue: 0, totalCommission: 0 });
+    }
+    const currentMonthData = monthlyMap.get(period)!;
+    currentMonthData.totalRevenue += revenue;
+    currentMonthData.totalCommission += commission;
+  });
+
+  const monthlyData = Array.from(monthlyMap.entries())
+    .map(([period, data]) => {
+      const parts = period.split(' '); // e.g., ["Juin", "2024"]
+      const monthName = parts[0];
+      const year = parseInt(parts[1]);
+      const monthIndex = monthNames[monthName];
+
+      if (monthIndex === undefined) {
+        console.warn(`Unknown month name: ${monthName} in period ${period}`);
+        return null;
+      }
+
+      return {
+        sortKey: new Date(year, monthIndex),
+        period,
+        totalRevenue: data.totalRevenue,
+        totalCommission: data.totalCommission,
+      };
+    })
+    .filter(item => item !== null)
+    .sort((a, b) => a!.sortKey.getTime() - b!.sortKey.getTime())
+    .map(({ sortKey, ...rest }) => rest);
+
+  return {
+    totalRevenue,
+    totalCommission,
+    totalInvoices: invoices.length,
+    monthlyData: monthlyData as BillingStats['monthlyData'], // Cast to ensure correct type after filter
+  };
+}
+
 /**
  * Fetches all user profiles. This is an admin-only function.
  * @returns A promise that resolves to an array of UserProfile objects.

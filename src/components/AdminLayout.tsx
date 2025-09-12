@@ -26,7 +26,8 @@ import {
   GitBranch,
   ShieldCheck,
   Banknote,
-  CreditCard, // Ajout de l'icône
+  CreditCard,
+  BarChart3, // New icon for stats
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -60,6 +61,7 @@ const adminNavigationCategories = [
     categoryName: 'Général',
     items: [
       { name: 'Tableau de Bord', href: '/admin', icon: Home, description: "Vue d'ensemble de l'activité." },
+      { name: 'Stats Hello Keys', href: '/admin/hello-keys-stats', icon: BarChart3, description: 'Statistiques de facturation de Hello Keys.' }, // New item
     ]
   },
   {

@@ -142,21 +142,34 @@ export interface BillingStats {
   totalRevenue: number;
   totalCommission: number;
   totalInvoices: number;
+  totalCleaningFees: number; // Nouveau champ pour les frais de ménage
   monthlyData: {
     period: string; // e.g., "Jan 2023"
     totalRevenue: number;
     totalCommission: number;
+    totalCleaningFees: number; // Nouveau champ
   }[];
 }
 
 /**
  * Fetches and aggregates billing statistics for Hello Keys.
+ * @param startDate Optional start date for filtering.
+ * @param endDate Optional end date for filtering.
  * @returns A promise that resolves to BillingStats object.
  */
-export async function getBillingStats(): Promise<BillingStats> {
-  const { data: invoices, error } = await supabase
+export async function getBillingStats(startDate?: Date, endDate?: Date): Promise<BillingStats> {
+  let query = supabase
     .from('invoices')
-    .select('period, totals');
+    .select('period, totals, created_at'); // Sélectionner created_at pour le filtrage
+
+  if (startDate) {
+    query = query.gte('created_at', startDate.toISOString());
+  }
+  if (endDate) {
+    query = query.lte('created_at', endDate.toISOString());
+  }
+
+  const { data: invoices, error } = await query;
 
   if (error) {
     console.error("Error fetching invoices for billing stats:", error);
@@ -165,7 +178,8 @@ export async function getBillingStats(): Promise<BillingStats> {
 
   let totalRevenue = 0;
   let totalCommission = 0;
-  const monthlyMap = new Map<string, { totalRevenue: number; totalCommission: number }>();
+  let totalCleaningFees = 0; // Initialiser le nouveau total
+  const monthlyMap = new Map<string, { totalRevenue: number; totalCommission: number; totalCleaningFees: number }>(); // Mettre à jour le type de la carte
 
   const monthNames: { [key: string]: number } = {
     "Janvier": 0, "Février": 1, "Mars": 2, "Avril": 3, "Mai": 4, "Juin": 5,
@@ -176,16 +190,19 @@ export async function getBillingStats(): Promise<BillingStats> {
     const period = invoice.period; // e.g., "Juin 2024"
     const revenue = invoice.totals?.totalRevenuGenere || 0;
     const commission = invoice.totals?.totalCommission || 0;
+    const cleaningFees = invoice.totals?.totalFraisMenage || 0; // Extraire les frais de ménage
 
     totalRevenue += revenue;
     totalCommission += commission;
+    totalCleaningFees += cleaningFees; // Ajouter au total
 
     if (!monthlyMap.has(period)) {
-      monthlyMap.set(period, { totalRevenue: 0, totalCommission: 0 });
+      monthlyMap.set(period, { totalRevenue: 0, totalCommission: 0, totalCleaningFees: 0 }); // Initialiser avec les frais de ménage
     }
     const currentMonthData = monthlyMap.get(period)!;
     currentMonthData.totalRevenue += revenue;
     currentMonthData.totalCommission += commission;
+    currentMonthData.totalCleaningFees += cleaningFees; // Ajouter aux données mensuelles
   });
 
   const monthlyData = Array.from(monthlyMap.entries())
@@ -205,6 +222,7 @@ export async function getBillingStats(): Promise<BillingStats> {
         period,
         totalRevenue: data.totalRevenue,
         totalCommission: data.totalCommission,
+        totalCleaningFees: data.totalCleaningFees, // Inclure dans les données mensuelles
       };
     })
     .filter(item => item !== null)
@@ -215,6 +233,7 @@ export async function getBillingStats(): Promise<BillingStats> {
     totalRevenue,
     totalCommission,
     totalInvoices: invoices.length,
+    totalCleaningFees, // Retourner le total des frais de ménage
     monthlyData: monthlyData as BillingStats['monthlyData'], // Cast to ensure correct type after filter
   };
 }

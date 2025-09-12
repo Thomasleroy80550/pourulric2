@@ -308,6 +308,31 @@ export async function getSavedInvoices(): Promise<SavedInvoice[]> {
 }
 
 /**
+ * Fetches a single saved invoice/statement by its ID from the database.
+ * @param invoiceId The ID of the invoice to fetch.
+ * @returns A promise that resolves to a SavedInvoice object or null if not found.
+ */
+export async function getInvoiceById(invoiceId: string): Promise<SavedInvoice | null> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(`
+      *,
+      profiles (
+        first_name,
+        last_name
+      )
+    `)
+    .eq('id', invoiceId)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching invoice with ID ${invoiceId}:`, error);
+    throw new Error(`Erreur lors de la récupération du relevé : ${error.message}`);
+  }
+  return data || null;
+}
+
+/**
  * Fetches all accountant access requests.
  * @returns A promise that resolves to an array of AccountantRequest objects.
  */

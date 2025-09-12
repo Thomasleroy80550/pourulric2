@@ -10,11 +10,14 @@ import { Terminal, Banknote, CheckCircle2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import StatementDetailsDialog from '@/components/StatementDetailsDialog'; // Import the dialog
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false); // State for dialog visibility
+  const [selectedStatement, setSelectedStatement] = useState<SavedInvoice | null>(null); // State for selected statement
 
   useEffect(() => {
     const fetchSummaries = async () => {
@@ -54,6 +57,20 @@ const AdminTransferSummaryPage: React.FC = () => {
       toast.error("Erreur lors de la mise à jour du statut.");
       // Revert UI on error
       setSummaries(originalSummaries);
+    }
+  };
+
+  const handleViewDetails = async (invoiceId: string) => {
+    try {
+      const invoice = await getInvoiceById(invoiceId);
+      if (invoice) {
+        setSelectedStatement(invoice);
+        setIsDetailsDialogOpen(true);
+      } else {
+        toast.error("Relevé introuvable.");
+      }
+    } catch (err: any) {
+      toast.error(`Erreur lors de la récupération du détail du relevé : ${err.message}`);
     }
   };
 
@@ -135,6 +152,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   <TableHead className="text-right">Montant Stripe</TableHead>
                                   <TableHead className="text-right font-bold">Montant Total</TableHead>
                                   <TableHead className="text-center w-[150px]">Virement Effectué</TableHead>
+                                  <TableHead className="text-center w-[120px]">Actions</TableHead> {/* New column for actions */}
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -152,6 +170,15 @@ const AdminTransferSummaryPage: React.FC = () => {
                                         }}
                                       />
                                     </TableCell>
+                                    <TableCell className="text-center">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleViewDetails(detail.invoice_id)}
+                                      >
+                                        Voir détail
+                                      </Button>
+                                    </TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -168,6 +195,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                     {summary.details.reduce((acc, d) => acc + d.amount, 0).toFixed(2)}€
                                   </TableCell>
                                   <TableCell></TableCell>
+                                  <TableCell></TableCell> {/* Empty cell for the new Actions column */}
                                 </TableRow>
                               </TableFooter>
                             </Table>
@@ -186,6 +214,11 @@ const AdminTransferSummaryPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+      <StatementDetailsDialog
+        isOpen={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+        statement={selectedStatement}
+      />
     </AdminLayout>
   );
 };

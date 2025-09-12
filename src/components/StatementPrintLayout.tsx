@@ -60,22 +60,22 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <h2 className="text-lg font-semibold mb-4 text-gray-800">Résumé de votre relevé</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total perçu des plateformes</p>
+              <p className="text-gray-600">Total perçu des plateformes <span className="legend-bubble">1</span></p>
               <p className="font-semibold text-lg">{totalMontantVerse.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total de notre facture</p>
+              <p className="text-gray-600">Total de notre facture <span className="legend-bubble">2</span></p>
               <p className="font-semibold text-lg text-red-600">- {totalFacture.toFixed(2)}€ TTC</p>
             </div>
             {totalTaxeDeSejour > 0 && (
               <div className="flex justify-between items-center">
-                <p className="text-gray-600">Taxes de séjour collectées</p>
+                <p className="text-gray-600">Taxes de séjour collectées <span className="legend-bubble">3</span></p>
                 <p className="font-semibold text-lg text-red-600">- {totalTaxeDeSejour.toFixed(2)}€</p>
               </div>
             )}
             <hr className="my-2 border-dashed" />
             <div className="flex justify-between items-center text-xl">
-              <p className="font-bold">Résultat</p>
+              <p className="font-bold">Résultat <span className="legend-bubble">4</span></p>
               <p className="font-extrabold text-2xl text-green-600">{netToPay.toFixed(2)}€</p>
             </div>
             {transferDetails?.deductionInfo?.deducted && Math.abs(netToPay) < 0.01 && (
@@ -91,16 +91,16 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <h2 className="text-lg font-semibold mb-4 text-gray-800">Détail de notre facture</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Commission Hello Keys</p>
+              <p className="text-gray-600">Commission Hello Keys <span className="legend-bubble">5</span></p>
               <p className="font-semibold">{totalCommission.toFixed(2)}€</p>
             </div>
             <div className="flex justify-between items-center">
-              <p className="text-gray-600">Total frais de ménage</p>
+              <p className="text-gray-600">Total frais de ménage <span className="legend-bubble">6</span></p>
               <p className="font-semibold">{totalFraisMenage.toFixed(2)}€</p>
             </div>
             {ownerCleaningFee > 0 && ( // Display only if greater than 0
               <div className="flex justify-between items-center">
-                <p className="text-gray-600">Frais de ménage propriétaire</p>
+                <p className="text-gray-600">Frais de ménage propriétaire <span className="legend-bubble">7</span></p>
                 <p className="font-semibold">{ownerCleaningFee.toFixed(2)}€</p>
               </div>
             )}
@@ -115,7 +115,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
 
       {/* Detailed Reservations Table */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Détail des réservations</h2>
+        <h2 className="text-xl font-semibold mb-4">Détail des réservations <span className="legend-bubble">8</span></h2>
         <div className="border rounded-lg">
           <Table className="text-xs">
             <TableHeader>
@@ -170,7 +170,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       {/* Transfers Section */}
       {transferDetails && transferDetails.sources && (
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Virements à effectuer</h2>
+          <h2 className="text-xl font-semibold mb-4">Virements à effectuer <span className="legend-bubble">9</span></h2>
           <p className="text-sm italic text-gray-600 mb-4">
             Le relevé permet de réaliser vos virements, il est donc normal de recevoir votre relevé facture avant de percevoir vos fonds.
           </p>
@@ -221,6 +221,22 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           </div>
         </div>
       )}
+
+      {/* New Legend Section */}
+      <div className="mt-12 pt-4 border-t border-gray-200">
+        <h2 className="text-xl font-semibold mb-4">Légende</h2>
+        <div className="space-y-2 text-sm text-gray-700">
+          <p><span className="legend-bubble">1</span> **Total perçu des plateformes** : Somme totale des montants que les plateformes (Airbnb, Booking, etc.) ont versés pour vos réservations.</p>
+          <p><span className="legend-bubble">2</span> **Total de notre facture** : Montant total facturé par Hello Keys pour ses services (commissions, frais de ménage, etc.).</p>
+          <p><span className="legend-bubble">3</span> **Taxes de séjour collectées** : Montant des taxes de séjour que nous avons collectées pour vous et que nous reversons aux autorités compétentes.</p>
+          <p><span className="legend-bubble">4</span> **Résultat** : Le montant net qui vous sera versé après déduction de notre facture et des taxes de séjour.</p>
+          <p><span className="legend-bubble">5</span> **Commission Hello Keys** : Nos frais de gestion pour les services fournis.</p>
+          <p><span className="legend-bubble">6</span> **Total frais de ménage** : Coût total du ménage effectué après chaque réservation.</p>
+          <p><span className="legend-bubble">7</span> **Frais de ménage propriétaire** : Frais de ménage spécifiques qui vous sont facturés en tant que propriétaire (par exemple, ménage de fin de saison).</p>
+          <p><span className="legend-bubble">8</span> **Détail des réservations** : Tableau récapitulatif de chaque réservation avec les montants associés.</p>
+          <p><span className="legend-bubble">9</span> **Virements à effectuer** : Section indiquant les montants que vous devez transférer ou que Hello Keys vous transférera, selon le mode de perception des loyers.</p>
+        </div>
+      </div>
     </div>
   );
 };

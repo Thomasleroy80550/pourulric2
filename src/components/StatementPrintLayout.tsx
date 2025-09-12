@@ -120,17 +120,17 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <Table className="text-xs">
             <TableHeader>
               <TableRow className="bg-gray-100">
-                <TableHead className="min-w-[80px]">Portail</TableHead>
-                <TableHead className="min-w-[100px]">Voyageur</TableHead>
-                <TableHead className="min-w-[80px]">Arrivée</TableHead>
-                <TableHead className="text-right min-w-[90px]">Prix Séjour</TableHead>
-                <TableHead className="text-right min-w-[90px]">Frais Ménage</TableHead>
-                <TableHead className="text-right min-w-[90px]">Taxe Séjour</TableHead>
-                <TableHead className="text-right min-w-[90px]">Frais Paiement</TableHead>
-                <TableHead className="text-right min-w-[90px]">Comm. OTA</TableHead> {/* New column */}
-                <TableHead className="text-right min-w-[90px]">Montant Versé</TableHead>
-                <TableHead className="text-right min-w-[90px]">Revenu Généré</TableHead>
-                <TableHead className="text-right min-w-[90px]">Comm. HK</TableHead>
+                <TableHead className="min-w-[50px]">Portail</TableHead>
+                <TableHead className="min-w-[70px]">Voyageur</TableHead>
+                <TableHead className="min-w-[60px]">Arrivée</TableHead>
+                <TableHead className="text-right min-w-[60px]">Prix S.</TableHead>
+                <TableHead className="text-right min-w-[60px]">Frais M.</TableHead>
+                <TableHead className="text-right min-w-[60px]">Taxe S.</TableHead>
+                <TableHead className="text-right min-w-[60px]">Frais P.</TableHead>
+                <TableHead className="text-right min-w-[60px]">Comm. OTA</TableHead>
+                <TableHead className="text-right min-w-[60px]">Montant V.</TableHead>
+                <TableHead className="text-right min-w-[60px]">Revenu G.</TableHead>
+                <TableHead className="text-right min-w-[60px]">Comm. HK</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -143,7 +143,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                   <TableCell className="text-right">{row.fraisMenage.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.taxeDeSejour.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell> {/* Corrected cell content */}
+                  <TableCell className="text-right">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
                   <TableCell className="text-right font-semibold">{row.montantVerse.toFixed(2)}€</TableCell>
                   <TableCell className="text-right font-semibold">{row.revenuGenere.toFixed(2)}€</TableCell>
                   <TableCell className="text-right text-red-600">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>

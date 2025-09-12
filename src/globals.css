@@ -410,12 +410,10 @@
 
 /* Custom style for legend bubbles */
 .legend-bubble {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: grid; /* Changed from inline-flex to grid for more robust centering */
+  place-content: center; /* Centers content both horizontally and vertically */
   width: 18px; /* Small size */
   height: 18px; /* Small size */
-  line-height: 18px; /* Ensure vertical centering */
   border-radius: 50%;
   background-color: hsl(var(--primary)); /* Use primary color for visibility */
   color: hsl(var(--primary-foreground)); /* White text */

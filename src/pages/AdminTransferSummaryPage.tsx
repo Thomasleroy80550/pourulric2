@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { getTransferSummaries, UserTransferSummary, updateTransferStatus } from '@/lib/admin-api';
+import { getTransferSummaries, UserTransferSummary, updateTransferStatus, getInvoiceById, SavedInvoice } from '@/lib/admin-api';
 import { Terminal, Banknote, CheckCircle2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';

@@ -116,21 +116,21 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       {/* Detailed Reservations Table */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Détail des réservations</h2>
-        <div className="border rounded-lg overflow-x-auto">
+        <div className="border rounded-lg">
           <Table className="text-xs">
             <TableHeader>
               <TableRow className="bg-gray-100">
-                <TableHead className="min-w-[50px]">Portail</TableHead>
-                <TableHead className="min-w-[70px]">Voyageur</TableHead>
-                <TableHead className="min-w-[60px]">Arrivée</TableHead>
-                <TableHead className="text-right min-w-[60px]">Prix S.</TableHead>
-                <TableHead className="text-right min-w-[60px]">Frais M.</TableHead>
-                <TableHead className="text-right min-w-[60px]">Taxe S.</TableHead>
-                <TableHead className="text-right min-w-[60px]">Frais P.</TableHead>
-                <TableHead className="text-right min-w-[60px]">Comm. OTA</TableHead>
-                <TableHead className="text-right min-w-[60px]">Montant V.</TableHead>
-                <TableHead className="text-right min-w-[60px]">Revenu G.</TableHead>
-                <TableHead className="text-right min-w-[60px]">Comm. HK</TableHead>
+                <TableHead className="min-w-[45px]">Portail</TableHead>
+                <TableHead className="min-w-[60px]">Client</TableHead>
+                <TableHead className="min-w-[45px]">Arr.</TableHead>
+                <TableHead className="text-right min-w-[50px]">Prix S.</TableHead>
+                <TableHead className="text-right min-w-[50px]">Frais M.</TableHead>
+                <TableHead className="text-right min-w-[50px]">Taxe S.</TableHead>
+                <TableHead className="text-right min-w-[50px]">Frais P.</TableHead>
+                <TableHead className="text-right min-w-[45px]">OTA</TableHead>
+                <TableHead className="text-right min-w-[50px]">M. V.</TableHead>
+                <TableHead className="text-right min-w-[50px]">R. G.</TableHead>
+                <TableHead className="text-right min-w-[50px]">C. HK</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

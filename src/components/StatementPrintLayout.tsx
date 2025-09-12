@@ -122,15 +122,15 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
               <TableRow className="bg-gray-100">
                 <TableHead className="min-w-[30px] p-1">Portail</TableHead>
                 <TableHead className="min-w-[50px] p-1">Client</TableHead>
-                <TableHead className="min-w-[35px] p-1">Arr.</TableHead>
-                <TableHead className="text-right min-w-[45px] p-1">Prix S.</TableHead>
-                <TableHead className="text-right min-w-[45px] p-1">Frais M.</TableHead>
-                <TableHead className="text-right min-w-[45px] p-1">Taxe S.</TableHead>
-                <TableHead className="text-right min-w-[45px] p-1">Frais P.</TableHead>
-                <TableHead className="text-right min-w-[40px] p-1">OTA</TableHead>
-                <TableHead className="text-right min-w-[45px] p-1">M. V.</TableHead>
-                <TableHead className="text-right min-w-[45px] p-1">R. G.</TableHead>
-                <TableHead className="text-right min-w-[45px] p-1">C. HK</TableHead>
+                <TableHead className="min-w-[50px] p-1">Arrivée</TableHead>
+                <TableHead className="text-right min-w-[60px] p-1">Prix Séjour</TableHead>
+                <TableHead className="text-right min-w-[60px] p-1">Frais Ménage</TableHead>
+                <TableHead className="text-right min-w-[60px] p-1">Taxe Séjour</TableHead>
+                <TableHead className="text-right min-w-[60px] p-1">Frais Paiement</TableHead>
+                <TableHead className="text-right min-w-[70px] p-1">Commission OTA</TableHead>
+                <TableHead className="text-right min-w-[60px] p-1">Montant Versé</TableHead>
+                <TableHead className="text-right min-w-[60px] p-1">Revenu Généré</TableHead>
+                <TableHead className="text-right min-w-[70px] p-1">Commission HK</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

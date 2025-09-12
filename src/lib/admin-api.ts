@@ -449,6 +449,7 @@ export interface CreateUserPayload {
   role: string;
   estimation_details?: string;
   estimated_revenue?: number;
+  pennylane_customer_id?: number; // Nouveau champ
 }
 
 export interface CreatedUserResponse {
@@ -645,7 +646,6 @@ export async function updateIdeaStatus(ideaId: string, status: string): Promise<
     .from('ideas')
     .update({ status })
     .eq('id', ideaId)
-    .select()
     .single();
 
   if (error) {

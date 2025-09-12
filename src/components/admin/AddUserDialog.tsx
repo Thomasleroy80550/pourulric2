@@ -19,6 +19,7 @@ const newUserSchema = z.object({
   role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
   estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional(),
   estimation_details: z.string().optional(),
+  pennylane_customer_id: z.coerce.number().optional(), // Nouveau champ
 });
 
 interface AddUserDialogProps {
@@ -32,7 +33,7 @@ interface AddUserDialogProps {
 const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onUserAdded, pendingApproval, setPendingApproval }) => {
   const form = useForm<z.infer<typeof newUserSchema>>({
     resolver: zodResolver(newUserSchema),
-    defaultValues: { first_name: '', last_name: '', email: '', role: 'user', estimation_details: '', estimated_revenue: 0 },
+    defaultValues: { first_name: '', last_name: '', email: '', role: 'user', estimation_details: '', estimated_revenue: 0, pennylane_customer_id: undefined }, // Ajout de pennylane_customer_id
   });
 
   React.useEffect(() => {
@@ -45,9 +46,10 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onU
         last_name: lastName,
         email: pendingApproval.accountant_email,
         role: 'accountant',
+        pennylane_customer_id: undefined, // S'assurer qu'il est vide pour les demandes de comptable
       });
     } else if (!isOpen) {
-      form.reset({ first_name: '', last_name: '', email: '', role: 'user', estimation_details: '', estimated_revenue: 0 });
+      form.reset({ first_name: '', last_name: '', email: '', role: 'user', estimation_details: '', estimated_revenue: 0, pennylane_customer_id: undefined }); // Réinitialisation
       setPendingApproval(null);
     }
   }, [isOpen, pendingApproval, form, setPendingApproval]);
@@ -60,6 +62,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onU
       const payload: CreateUserPayload = {
         ...values,
         password: tempPassword,
+        pennylane_customer_id: values.pennylane_customer_id, // Inclure le nouveau champ
       };
 
       const result = await createUser(payload);
@@ -95,6 +98,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onU
             <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="estimated_revenue" render={({ field }) => (<FormItem><FormLabel>Revenu Annuel Estimé (€)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="estimation_details" render={({ field }) => (<FormItem><FormLabel>Détails de l'estimation</FormLabel><FormControl><Textarea {...field} /></FormControl><FormDescription>Ces détails seront visibles par le prospect.</FormDescription><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="pennylane_customer_id" render={({ field }) => (<FormItem><FormLabel>ID Client Pennylane</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormDescription>L'ID client de Pennylane, si applicable.</FormDescription><FormMessage /></FormItem>)} />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Inviter le prospect"}</Button>

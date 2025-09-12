@@ -34,7 +34,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   const sumRevenuGenere = invoiceData.reduce((sum, row) => sum + row.revenuGenere, 0);
   const sumCommissionHelloKeys = invoiceData.reduce((sum, row) => sum + row.commissionHelloKeys, 0);
   const sumOriginalFraisPaiement = invoiceData.reduce((sum, row) => sum + row.originalFraisPaiement, 0);
-  const sumOtaCommission = invoiceData.reduce((sum, row) => sum + (row.otaCommission || 0), 0); // Assuming otaCommission exists or defaults to 0
+  const sumOtaCommission = invoiceData.reduce((sum, row) => sum + row.originalCommissionPlateforme, 0); // Corrected to use originalCommissionPlateforme
 
   return (
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans">
@@ -143,7 +143,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                   <TableCell className="text-right">{row.fraisMenage.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.taxeDeSejour.toFixed(2)}€</TableCell>
                   <TableCell className="text-right">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right">{(row.otaCommission || 0).toFixed(2)}€</TableCell> {/* New cell */}
+                  <TableCell className="text-right">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell> {/* Corrected cell content */}
                   <TableCell className="text-right font-semibold">{row.montantVerse.toFixed(2)}€</TableCell>
                   <TableCell className="text-right font-semibold">{row.revenuGenere.toFixed(2)}€</TableCell>
                   <TableCell className="text-right text-red-600">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
@@ -157,7 +157,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                 <TableCell className="text-right">{sumFraisMenage.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumTaxeDeSejour.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumOriginalFraisPaiement.toFixed(2)}€</TableCell>
-                <TableCell className="text-right">{sumOtaCommission.toFixed(2)}€</TableCell> {/* New total */}
+                <TableCell className="text-right">{sumOtaCommission.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumMontantVerse.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">{sumRevenuGenere.toFixed(2)}€</TableCell>
                 <TableCell className="text-right text-red-600">(-{sumCommissionHelloKeys.toFixed(2)}€)</TableCell>

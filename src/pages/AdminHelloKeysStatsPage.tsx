@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { getBillingStats, BillingStats } from '@/lib/admin-api';
+import { getBillingStats, BillingStats, getAllInvoicePeriods } from '@/lib/admin-api';
 import { toast } from 'sonner';
 import { Loader2, DollarSign, ReceiptText, TrendingUp } from 'lucide-react';
 import {
@@ -22,17 +22,20 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const chartConfig = {
-  totalRevenue: {
-    label: "Revenu Total",
-    color: "hsl(var(--chart-1))",
-  },
   totalCommission: {
     label: "Commission Hello Keys",
     color: "hsl(var(--chart-2))",
   },
-  totalCleaningFees: { // Nouvelle configuration pour les frais de ménage
+  totalCleaningFees: {
     label: "Frais de Ménage",
     color: "hsl(var(--chart-3))",
   },
@@ -42,15 +45,30 @@ const AdminHelloKeysStatsPage: React.FC = () => {
   const [stats, setStats] = useState<BillingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>(undefined);
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchPeriods = async () => {
+      try {
+        const periods = await getAllInvoicePeriods();
+        setAvailablePeriods(periods);
+        if (periods.length > 0) {
+          setSelectedPeriod(periods[periods.length - 1]);
+        }
+      } catch (err: any) {
+        toast.error("Erreur lors de la récupération des périodes disponibles.");
+      }
+    };
+    fetchPeriods();
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getBillingStats(startDate, endDate); // Passer les dates à l'appel API
+        const data = await getBillingStats(selectedPeriod);
         setStats(data);
       } catch (err: any) {
         setError(err.message);
@@ -59,8 +77,10 @@ const AdminHelloKeysStatsPage: React.FC = () => {
         setLoading(false);
       }
     };
-    fetchStats();
-  }, [startDate, endDate]); // Re-fetch lorsque les dates changent
+    if (selectedPeriod !== undefined) {
+      fetchStats();
+    }
+  }, [selectedPeriod]);
 
   if (loading) {
     return (
@@ -99,54 +119,20 @@ const AdminHelloKeysStatsPage: React.FC = () => {
         <h1 className="text-3xl font-bold mb-6">Statistiques de Facturation Hello Keys</h1>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-[280px] justify-start text-left font-normal",
-                  !startDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "PPP", { locale: fr }) : <span>Date de début</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={setStartDate}
-                initialFocus
-                locale={fr}
-              />
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-[280px] justify-start text-left font-normal",
-                  !endDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "PPP", { locale: fr }) : <span>Date de fin</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={endDate}
-                onSelect={setEndDate}
-                initialFocus
-                locale={fr}
-              />
-            </PopoverContent>
-          </Popover>
-          <Button variant="outline" onClick={() => { setStartDate(undefined); setEndDate(undefined); }}>
-            Réinitialiser les filtres
+          <Select onValueChange={setSelectedPeriod} value={selectedPeriod}>
+            <SelectTrigger className="w-[280px]">
+              <SelectValue placeholder="Sélectionner une période" />
+            </SelectTrigger>
+            <SelectContent>
+              {availablePeriods.map((period) => (
+                <SelectItem key={period} value={period}>
+                  {period}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={() => setSelectedPeriod(undefined)}>
+            Afficher toutes les périodes
           </Button>
         </div>
 
@@ -172,7 +158,7 @@ const AdminHelloKeysStatsPage: React.FC = () => {
               <CardTitle className="text-sm font-medium">
                 Frais de Ménage
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" /> {/* Icône changée pour DollarSign */}
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -224,7 +210,7 @@ const AdminHelloKeysStatsPage: React.FC = () => {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value} // Afficher le nom complet du mois
+                  tickFormatter={(value) => value}
                 />
                 <YAxis
                   tickLine={false}
@@ -245,7 +231,7 @@ const AdminHelloKeysStatsPage: React.FC = () => {
                   dot={false}
                 />
                 <Line
-                  dataKey="totalCleaningFees" // Nouvelle ligne pour les frais de ménage
+                  dataKey="totalCleaningFees"
                   type="monotone"
                   stroke="var(--color-totalCleaningFees)"
                   strokeWidth={2}

@@ -117,7 +117,7 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Détail des réservations</h2>
         <div className="border rounded-lg overflow-x-auto">
-          <Table>
+          <Table className="text-xs">
             <TableHeader>
               <TableRow className="bg-gray-100">
                 <TableHead className="min-w-[80px]">Portail</TableHead>

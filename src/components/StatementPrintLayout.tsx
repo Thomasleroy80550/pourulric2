@@ -120,47 +120,47 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           <Table className="text-xs">
             <TableHeader>
               <TableRow className="bg-gray-100">
-                <TableHead className="min-w-[45px]">Portail</TableHead>
-                <TableHead className="min-w-[60px]">Client</TableHead>
-                <TableHead className="min-w-[45px]">Arr.</TableHead>
-                <TableHead className="text-right min-w-[50px]">Prix S.</TableHead>
-                <TableHead className="text-right min-w-[50px]">Frais M.</TableHead>
-                <TableHead className="text-right min-w-[50px]">Taxe S.</TableHead>
-                <TableHead className="text-right min-w-[50px]">Frais P.</TableHead>
-                <TableHead className="text-right min-w-[45px]">OTA</TableHead>
-                <TableHead className="text-right min-w-[50px]">M. V.</TableHead>
-                <TableHead className="text-right min-w-[50px]">R. G.</TableHead>
-                <TableHead className="text-right min-w-[50px]">C. HK</TableHead>
+                <TableHead className="min-w-[30px] p-1">Portail</TableHead>
+                <TableHead className="min-w-[50px] p-1">Client</TableHead>
+                <TableHead className="min-w-[35px] p-1">Arr.</TableHead>
+                <TableHead className="text-right min-w-[45px] p-1">Prix S.</TableHead>
+                <TableHead className="text-right min-w-[45px] p-1">Frais M.</TableHead>
+                <TableHead className="text-right min-w-[45px] p-1">Taxe S.</TableHead>
+                <TableHead className="text-right min-w-[45px] p-1">Frais P.</TableHead>
+                <TableHead className="text-right min-w-[40px] p-1">OTA</TableHead>
+                <TableHead className="text-right min-w-[45px] p-1">M. V.</TableHead>
+                <TableHead className="text-right min-w-[45px] p-1">R. G.</TableHead>
+                <TableHead className="text-right min-w-[45px] p-1">C. HK</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoiceData.map((row, index) => (
                 <TableRow key={index} className="even:bg-gray-50">
-                  <TableCell className="font-medium">{row.portail}</TableCell>
-                  <TableCell>{row.voyageur}</TableCell>
-                  <TableCell>{row.arrivee}</TableCell>
-                  <TableCell className="text-right">{row.prixSejour.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right">{row.fraisMenage.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right">{row.taxeDeSejour.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right font-semibold">{row.montantVerse.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right font-semibold">{row.revenuGenere.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right text-red-600">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
+                  <TableCell className="font-medium p-1">{row.portail}</TableCell>
+                  <TableCell className="p-1">{row.voyageur}</TableCell>
+                  <TableCell className="p-1">{row.arrivee}</TableCell>
+                  <TableCell className="text-right p-1">{row.prixSejour.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right p-1">{row.fraisMenage.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right p-1">{row.taxeDeSejour.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right p-1">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right p-1">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold p-1">{row.montantVerse.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold p-1">{row.revenuGenere.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right text-red-600 p-1">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
                 </TableRow>
               ))}
             </TableBody>
             <TableFooter>
               <TableRow className="bg-gray-100 font-bold">
-                <TableCell colSpan={3}>Totaux</TableCell>
-                <TableCell className="text-right">{sumPrixSejour.toFixed(2)}€</TableCell>
-                <TableCell className="text-right">{sumFraisMenage.toFixed(2)}€</TableCell>
-                <TableCell className="text-right">{sumTaxeDeSejour.toFixed(2)}€</TableCell>
-                <TableCell className="text-right">{sumOriginalFraisPaiement.toFixed(2)}€</TableCell>
-                <TableCell className="text-right">{sumOtaCommission.toFixed(2)}€</TableCell>
-                <TableCell className="text-right">{sumMontantVerse.toFixed(2)}€</TableCell>
-                <TableCell className="text-right">{sumRevenuGenere.toFixed(2)}€</TableCell>
-                <TableCell className="text-right text-red-600">(-{sumCommissionHelloKeys.toFixed(2)}€)</TableCell>
+                <TableCell colSpan={3} className="p-1">Totaux</TableCell>
+                <TableCell className="text-right p-1">{sumPrixSejour.toFixed(2)}€</TableCell>
+                <TableCell className="text-right p-1">{sumFraisMenage.toFixed(2)}€</TableCell>
+                <TableCell className="text-right p-1">{sumTaxeDeSejour.toFixed(2)}€</TableCell>
+                <TableCell className="text-right p-1">{sumOriginalFraisPaiement.toFixed(2)}€</TableCell>
+                <TableCell className="text-right p-1">{sumOtaCommission.toFixed(2)}€</TableCell>
+                <TableCell className="text-right p-1">{sumMontantVerse.toFixed(2)}€</TableCell>
+                <TableCell className="text-right p-1">{sumRevenuGenere.toFixed(2)}€</TableCell>
+                <TableCell className="text-right text-red-600 p-1">(-{sumCommissionHelloKeys.toFixed(2)}€)</TableCell>
               </TableRow>
             </TableFooter>
           </Table>

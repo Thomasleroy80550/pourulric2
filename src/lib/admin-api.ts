@@ -134,6 +134,7 @@ export interface UserTransferSummary {
   details: {
     period: string;
     amount: number;
+    amountsBySource: { [key: string]: number };
     invoice_id: string;
     transfer_completed: boolean;
   }[];
@@ -827,7 +828,18 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     throw new Error(`Erreur lors de la récupération des relevés pour le résumé des virements : ${error.message}`);
   }
 
-  const transferMap = new Map<string, { first_name: string | null, last_name: string | null, total: number, details: { period: string; amount: number; invoice_id: string; transfer_completed: boolean; }[] }>();
+  const transferMap = new Map<string, { 
+      first_name: string | null, 
+      last_name: string | null, 
+      total: number, 
+      details: { 
+          period: string; 
+          amount: number; 
+          amountsBySource: { [key: string]: number };
+          invoice_id: string; 
+          transfer_completed: boolean; 
+      }[] 
+  }>();
 
   data.forEach(invoice => {
     const userId = invoice.user_id;
@@ -839,31 +851,44 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
 
     // Recalculate amount to transfer based on relevant sources only
     let amountToTransfer = 0;
+    const amountsBySource: { [key: string]: number } = {};
     const sources = invoice.totals?.transferDetails?.sources;
 
     if (sources) {
       // Sum amounts from sources collected by Hello Keys (keys are lowercase)
       if (sources['stripe']) {
-        amountToTransfer += sources['stripe'].total || 0;
+        const stripeTotal = sources['stripe'].total || 0;
+        amountToTransfer += stripeTotal;
+        amountsBySource['stripe'] = stripeTotal;
       }
       if (sources['airbnb']) {
-        amountToTransfer += sources['airbnb'].total || 0;
+        const airbnbTotal = sources['airbnb'].total || 0;
+        amountToTransfer += airbnbTotal;
+        amountsBySource['airbnb'] = airbnbTotal;
       }
     }
 
     // Only process if there is an actual amount to transfer from our sources
     if (amountToTransfer > 0) {
+      const detailItem = { 
+          period, 
+          amount: amountToTransfer, 
+          amountsBySource,
+          invoice_id: invoiceId, 
+          transfer_completed: transferCompleted 
+      };
+
       if (transferMap.has(userId)) {
         const current = transferMap.get(userId)!;
         current.total += amountToTransfer;
-        current.details.push({ period, amount: amountToTransfer, invoice_id: invoiceId, transfer_completed: transferCompleted });
+        current.details.push(detailItem);
         transferMap.set(userId, current);
       } else {
         transferMap.set(userId, {
           first_name: firstName,
           last_name: lastName,
           total: amountToTransfer,
-          details: [{ period, amount: amountToTransfer, invoice_id: invoiceId, transfer_completed: transferCompleted }]
+          details: [detailItem]
         });
       }
     }

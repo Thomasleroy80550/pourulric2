@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -131,7 +131,9 @@ const AdminTransferSummaryPage: React.FC = () => {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Période</TableHead>
-                                  <TableHead className="text-right">Montant</TableHead>
+                                  <TableHead className="text-right">Montant Airbnb</TableHead>
+                                  <TableHead className="text-right">Montant Stripe</TableHead>
+                                  <TableHead className="text-right font-bold">Montant Total</TableHead>
                                   <TableHead className="text-center w-[150px]">Virement Effectué</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -139,7 +141,9 @@ const AdminTransferSummaryPage: React.FC = () => {
                                 {summary.details.map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
                                     <TableCell>{detail.period}</TableCell>
-                                    <TableCell className="text-right font-mono">{detail.amount.toFixed(2)}€</TableCell>
+                                    <TableCell className="text-right font-mono">{(detail.amountsBySource?.airbnb || 0).toFixed(2)}€</TableCell>
+                                    <TableCell className="text-right font-mono">{(detail.amountsBySource?.stripe || 0).toFixed(2)}€</TableCell>
+                                    <TableCell className="text-right font-mono font-bold">{detail.amount.toFixed(2)}€</TableCell>
                                     <TableCell className="text-center">
                                       <Checkbox
                                         checked={detail.transfer_completed}
@@ -151,6 +155,21 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   </TableRow>
                                 ))}
                               </TableBody>
+                              <TableFooter>
+                                <TableRow className="bg-gray-100 font-bold">
+                                  <TableCell>Total pour {summary.first_name}</TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {summary.details.reduce((acc, d) => acc + (d.amountsBySource?.airbnb || 0), 0).toFixed(2)}€
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {summary.details.reduce((acc, d) => acc + (d.amountsBySource?.stripe || 0), 0).toFixed(2)}€
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">
+                                    {summary.details.reduce((acc, d) => acc + d.amount, 0).toFixed(2)}€
+                                  </TableCell>
+                                  <TableCell></TableCell>
+                                </TableRow>
+                              </TableFooter>
                             </Table>
                           </AccordionContent>
                         </AccordionItem>

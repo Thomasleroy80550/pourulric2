@@ -136,31 +136,31 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
             <TableBody>
               {invoiceData.map((row, index) => (
                 <TableRow key={index} className="even:bg-gray-50">
-                  <TableCell className="font-medium p-1">{row.portail}</TableCell>
-                  <TableCell className="p-1">{row.voyageur}</TableCell>
-                  <TableCell className="p-1">{row.arrivee}</TableCell>
-                  <TableCell className="text-right p-1">{row.prixSejour.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right p-1">{row.fraisMenage.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right p-1">{row.taxeDeSejour.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right p-1">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right p-1">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right font-semibold p-1">{row.montantVerse.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right font-semibold p-1">{row.revenuGenere.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right text-red-600 p-1">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
+                  <TableCell className="font-medium py-2 px-1">{row.portail}</TableCell>
+                  <TableCell className="py-2 px-1">{row.voyageur}</TableCell>
+                  <TableCell className="py-2 px-1">{row.arrivee}</TableCell>
+                  <TableCell className="text-right py-2 px-1">{row.prixSejour.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{row.fraisMenage.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{row.taxeDeSejour.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold py-2 px-1">{row.montantVerse.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold py-2 px-1">{row.revenuGenere.toFixed(2)}€</TableCell>
+                  <TableCell className="text-right text-red-600 py-2 px-1">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
                 </TableRow>
               ))}
             </TableBody>
             <TableFooter>
               <TableRow className="bg-gray-100 font-bold">
-                <TableCell colSpan={3} className="p-1">Totaux</TableCell>
-                <TableCell className="text-right p-1">{sumPrixSejour.toFixed(2)}€</TableCell>
-                <TableCell className="text-right p-1">{sumFraisMenage.toFixed(2)}€</TableCell>
-                <TableCell className="text-right p-1">{sumTaxeDeSejour.toFixed(2)}€</TableCell>
-                <TableCell className="text-right p-1">{sumOriginalFraisPaiement.toFixed(2)}€</TableCell>
-                <TableCell className="text-right p-1">{sumOtaCommission.toFixed(2)}€</TableCell>
-                <TableCell className="text-right p-1">{sumMontantVerse.toFixed(2)}€</TableCell>
-                <TableCell className="text-right p-1">{sumRevenuGenere.toFixed(2)}€</TableCell>
-                <TableCell className="text-right text-red-600 p-1">(-{sumCommissionHelloKeys.toFixed(2)}€)</TableCell>
+                <TableCell colSpan={3} className="py-2 px-1">Totaux</TableCell>
+                <TableCell className="text-right py-2 px-1">{sumPrixSejour.toFixed(2)}€</TableCell>
+                <TableCell className="text-right py-2 px-1">{sumFraisMenage.toFixed(2)}€</TableCell>
+                <TableCell className="text-right py-2 px-1">{sumTaxeDeSejour.toFixed(2)}€</TableCell>
+                <TableCell className="text-right py-2 px-1">{sumOriginalFraisPaiement.toFixed(2)}€</TableCell>
+                <TableCell className="text-right py-2 px-1">{sumOtaCommission.toFixed(2)}€</TableCell>
+                <TableCell className="text-right py-2 px-1">{sumMontantVerse.toFixed(2)}€</TableCell>
+                <TableCell className="text-right py-2 px-1">{sumRevenuGenere.toFixed(2)}€</TableCell>
+                <TableCell className="text-right text-red-600 py-2 px-1">(-{sumCommissionHelloKeys.toFixed(2)}€)</TableCell>
               </TableRow>
             </TableFooter>
           </Table>

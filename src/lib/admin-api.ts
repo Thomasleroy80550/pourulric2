@@ -4,6 +4,7 @@ import { UserProfile } from "./profile-api";
 import { Strategy } from "./strategy-api";
 import { UserRoom } from "./user-room-api"; // Import UserRoom type
 import { Idea } from "./ideas-api";
+import { addDays, format, parseISO } from 'date-fns';
 
 const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/jnnkji5edohpm7i8mstnq1vwqka0iqj9";
 
@@ -56,7 +57,7 @@ export interface AccountantRequest {
   profiles?: {
     first_name: string;
     last_name: string;
-  }
+  } | null;
 }
 
 export interface AdminUserRoom extends UserRoom {
@@ -713,6 +714,9 @@ export async function sendStatementDataToMakeWebhook(
   deadlinePaiement: string
 ): Promise<void> {
   try {
+    // Set status to 'processing'
+    await supabase.from('invoices').update({ pennylane_status: 'processing' }).eq('id', userId);
+
     // Fetch the user's profile to get pennylane_customer_id
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
@@ -721,7 +725,7 @@ export async function sendStatementDataToMakeWebhook(
       .single();
 
     if (profileError) {
-      console.error("Error fetching profile for webhook:", profileError);
+      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', userId);
       throw new Error(`Failed to fetch profile for webhook: ${profileError.message}`);
     }
 
@@ -749,15 +753,53 @@ export async function sendStatementDataToMakeWebhook(
 
     if (!response.ok) {
       const errorText = await response.text();
+      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', userId);
       console.error("Failed to send data to Make.com webhook:", response.status, errorText);
-      throw new Error(`Failed to send data to Make.com webhook: ${response.status} - ${errorText}`);
+      // Do not throw, just log and update status
+      return;
     }
 
+    await supabase.from('invoices').update({ pennylane_status: 'success' }).eq('id', userId);
     console.log("Statement data successfully sent to Make.com webhook.");
   } catch (error: any) {
+    await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', userId);
     console.error("Error in sendStatementDataToMakeWebhook:", error.message);
     // Do not re-throw, as this should not block invoice generation
   }
+}
+
+/**
+ * Re-sends statement data to the Make.com webhook for Pennylane integration.
+ * @param invoiceId The ID of the invoice to resend.
+ */
+export async function resendStatementToPennylane(invoiceId: string): Promise<void> {
+  // 1. Fetch the invoice data
+  const { data: invoice, error } = await supabase
+    .from('invoices')
+    .select('id, user_id, period, totals, created_at')
+    .eq('id', invoiceId)
+    .single();
+
+  if (error || !invoice) {
+    console.error("Error fetching invoice to resend:", error);
+    throw new Error("Impossible de trouver le relevé à relancer.");
+  }
+
+  // 2. Prepare data for the webhook function
+  const { user_id, period, totals, created_at } = invoice;
+  const emissionDate = parseISO(created_at);
+  const deadlineDate = addDays(emissionDate, 15);
+  const formattedEmissionDate = format(emissionDate, 'yyyy-MM-dd');
+  const formattedDeadlineDate = format(deadlineDate, 'yyyy-MM-dd');
+
+  // 3. Call the webhook function
+  await sendStatementDataToMakeWebhook(
+    user_id,
+    period,
+    totals,
+    formattedEmissionDate,
+    formattedDeadlineDate
+  );
 }
 
 /**

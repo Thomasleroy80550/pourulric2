@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2 } from 'lucide-react';
-import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail } from '@/lib/admin-api';
+import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw } from 'lucide-react';
+import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import StatementDetailsDialog from '@/components/StatementDetailsDialog';
 import AddCommentDialog from '@/components/AddCommentDialog';
 import { generateStatementPdf } from '@/lib/pdf-utils';
 import { uploadStatementPdf } from '@/lib/storage-api';
+import StatusBadge from '@/components/StatusBadge';
 
 const AdminStatementsPage: React.FC = () => {
   const [statements, setStatements] = useState<SavedInvoice[]>([]);
@@ -24,6 +25,7 @@ const AdminStatementsPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
+  const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
 
   const loadStatements = async () => {
     setLoading(true);
@@ -93,6 +95,24 @@ const AdminStatementsPage: React.FC = () => {
     }
   };
 
+  const handleResendToPennylane = async (statementId: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir relancer la création de la facture sur Pennylane ?")) {
+      return;
+    }
+    setRetriggeringPennylaneId(statementId);
+    const toastId = toast.loading("Relance de la création Pennylane en cours...");
+    try {
+      await resendStatementToPennylane(statementId);
+      toast.success("La création de la facture Pennylane a été relancée.", { id: toastId });
+      loadStatements(); // Refresh to show new status
+    } catch (err: any) {
+      console.error("Erreur lors de la relance Pennylane:", err);
+      toast.error(`Erreur lors de la relance: ${err.message}`, { id: toastId });
+    } finally {
+      setRetriggeringPennylaneId(null);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -123,6 +143,7 @@ const AdminStatementsPage: React.FC = () => {
                     <TableHead>Client</TableHead>
                     <TableHead>Période</TableHead>
                     <TableHead>Date de Création</TableHead>
+                    <TableHead>Statut Pennylane</TableHead>
                     <TableHead>Commentaire</TableHead>
                     <TableHead className="text-right">Montant Facturé</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -136,15 +157,21 @@ const AdminStatementsPage: React.FC = () => {
                         <TableCell className="font-medium">{clientName}</TableCell>
                         <TableCell>{statement.period}</TableCell>
                         <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={statement.pennylane_status} />
+                        </TableCell>
                         <TableCell>{statement.admin_comment ? 'Oui' : 'Non'}</TableCell>
                         <TableCell className="text-right font-bold">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
                         <TableCell className="text-right space-x-2">
-                          <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)}><Eye className="h-4 w-4" /></Button>
-                          <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)}><MessageSquare className="h-4 w-4" /></Button>
-                          <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id}>
+                          <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)} title="Voir les détails"><Eye className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)} title="Ajouter/Voir commentaire"><MessageSquare className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
                             {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
-                          <Button variant="destructive" size="icon" onClick={() => handleDelete(statement.id)}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="outline" size="icon" onClick={() => handleResendToPennylane(statement.id)} disabled={retriggeringPennylaneId === statement.id} title="Relancer la création Pennylane">
+                            {retriggeringPennylaneId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                          <Button variant="destructive" size="icon" onClick={() => handleDelete(statement.id)} title="Supprimer le relevé"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
                     );

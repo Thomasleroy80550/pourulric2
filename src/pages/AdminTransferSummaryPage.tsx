@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import StatementDetailsDialog from '@/components/StatementDetailsDialog'; // Import the dialog
+import { Button } from '@/components/ui/button'; // Import the Button component
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);

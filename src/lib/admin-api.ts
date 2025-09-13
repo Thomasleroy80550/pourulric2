@@ -185,6 +185,25 @@ export interface StripeAccount {
   type: string;
 }
 
+export interface StripeTransfer {
+  id: string;
+  object: string;
+  amount: number;
+  amount_reversed: number;
+  balance_transaction: string | null;
+  created: number;
+  currency: string;
+  description: string | null;
+  destination: string | null;
+  destination_payment: string | null;
+  livemode: boolean;
+  metadata: Record<string, string>;
+  reversed: boolean;
+  source_transaction: string | null;
+  source_type: string;
+  transfer_group: string | null;
+}
+
 /**
  * Fetches and aggregates billing statistics for Hello Keys.
  * @param period Optional period string (e.g., "Juin 2024") for filtering.
@@ -787,6 +806,24 @@ export async function getStripeAccount(accountId: string): Promise<StripeAccount
   }
 
   return data;
+}
+
+/**
+ * Fetches a list of Stripe transfers for a given connected account. Admin only.
+ * @param accountId The ID of the Stripe account to fetch transfers for.
+ * @returns A promise that resolves to an array of StripeTransfer objects.
+ */
+export async function listStripeTransfers(accountId: string): Promise<StripeTransfer[]> {
+  const { data, error } = await supabase.functions.invoke('list-stripe-transfers', {
+    body: { account_id: accountId },
+  });
+
+  if (error) {
+    console.error(`Error fetching Stripe transfers for account ${accountId}:`, error);
+    throw new Error(`Erreur lors de la récupération des transferts Stripe : ${error.message}`);
+  }
+
+  return data || [];
 }
 
 /**

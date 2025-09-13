@@ -14,6 +14,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
+import { listStripeTransfers, StripeTransfer } from '@/lib/admin-api';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface StripeAccountDetailsDialogProps {
   isOpen: boolean;
@@ -27,16 +29,25 @@ const StripeAccountDetailsDialog: React.FC<StripeAccountDetailsDialogProps> = ({
   stripeAccountId,
 }) => {
   const [account, setAccount] = useState<StripeAccount | null>(null);
+  const [transfers, setTransfers] = useState<StripeTransfer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingTransfers, setLoadingTransfers] = useState(false);
 
   useEffect(() => {
     if (isOpen && stripeAccountId) {
       setLoading(true);
       setAccount(null);
+      setTransfers([]); // Clear previous transfers
       getStripeAccount(stripeAccountId)
         .then(setAccount)
         .catch((err) => toast.error(`Erreur: ${err.message}`))
         .finally(() => setLoading(false));
+
+      setLoadingTransfers(true);
+      listStripeTransfers(stripeAccountId)
+        .then(setTransfers)
+        .catch((err) => toast.error(`Erreur lors du chargement des transferts: ${err.message}`))
+        .finally(() => setLoadingTransfers(false));
     }
   }, [isOpen, stripeAccountId]);
 
@@ -102,6 +113,39 @@ const StripeAccountDetailsDialog: React.FC<StripeAccountDetailsDialogProps> = ({
                     Raison: {account.requirements.disabled_reason}
                   </AlertDescription>
                 </Alert>
+              )}
+
+              <h3 className="text-lg font-semibold mt-4">Transferts Récents</h3>
+              {loadingTransfers ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : transfers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Montant</TableHead>
+                      <TableHead>Devise</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transfers.map((transfer) => (
+                      <TableRow key={transfer.id}>
+                        <TableCell className="font-medium">{transfer.id}</TableCell>
+                        <TableCell>{(transfer.amount / 100).toFixed(2)}</TableCell>
+                        <TableCell className="uppercase">{transfer.currency}</TableCell>
+                        <TableCell>{transfer.description || 'N/A'}</TableCell>
+                        <TableCell>{format(new Date(transfer.created * 1000), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground">Aucun transfert récent trouvé pour ce compte.</p>
               )}
             </>
           )}

@@ -193,8 +193,8 @@ const AdminTransferSummaryPage: React.FC = () => {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Client</TableHead>
-                                  <TableHead>Montant Total à Virer</TableHead>
-                                  <TableHead>Statut</TableHead> {/* Nouvelle colonne pour le statut */}
+                                  <TableHead>Montant (Détail)</TableHead> {/* Mise à jour du titre de la colonne */}
+                                  <TableHead>Statut</TableHead>
                                   <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -202,7 +202,16 @@ const AdminTransferSummaryPage: React.FC = () => {
                                 {summary.details.map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
                                     <TableCell className="font-medium">{summary.first_name} {summary.last_name}</TableCell>
-                                    <TableCell>{detail.amount.toFixed(2)} €</TableCell> {/* Afficher le montant du détail */}
+                                    <TableCell>
+                                      <div className="flex flex-col items-start">
+                                        <span className="font-semibold">{detail.amount.toFixed(2)} €</span>
+                                        {Object.entries(detail.amountsBySource).map(([source, amount]) => (
+                                          <Badge key={source} variant="secondary" className="mt-1 mr-1">
+                                            {source.charAt(0).toUpperCase() + source.slice(1)}: {amount.toFixed(2)}€
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </TableCell>
                                     <TableCell>
                                       <div className="flex items-center space-x-2">
                                         <Checkbox

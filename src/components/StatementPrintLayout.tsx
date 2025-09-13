@@ -221,6 +221,21 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           </div>
         </div>
       )}
+
+      <div className="mt-8 text-xs text-gray-500 border-t pt-4">
+        <p className="font-semibold mb-2">Légende :</p>
+        <ul className="list-disc list-inside space-y-1">
+          <li><span className="font-bold">Total perçu des plateformes :</span> Somme des montants versés par les plateformes de réservation.</li>
+          <li><span className="font-bold">Total de notre facture :</span> Montant total facturé par Hello Keys pour ses services.</li>
+          <li><span className="font-bold">Taxes de séjour collectées :</span> Taxes collectées auprès des voyageurs et reversées aux autorités.</li>
+          <li><span className="font-bold">Résultat :</span> Montant net qui vous sera versé (Total perçu - Facture - Taxes).</li>
+          <li><span className="font-bold">Commission Hello Keys :</span> Nos frais de gestion pour l'ensemble des services.</li>
+          <li><span className="font-bold">Total frais de ménage :</span> Coût total des prestations de ménage après chaque départ.</li>
+          <li><span className="font-bold">Frais de ménage propriétaire :</span> Frais de ménage spécifiques facturés au propriétaire (ex: fin de saison).</li>
+          <li><span className="font-bold">Détail des réservations :</span> Tableau récapitulatif de chaque réservation et ses montants associés.</li>
+          <li><span className="font-bold">Virements à effectuer :</span> Section détaillant les flux financiers finaux.</li>
+        </ul>
+      </div>
     </div>
   );
 };

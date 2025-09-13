@@ -14,7 +14,6 @@ import { Download, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
-import StatementExplanationDialog from './StatementExplanationDialog'; // Import the new explanation dialog
 
 interface StatementDetailsDialogProps {
   isOpen: boolean;
@@ -24,7 +23,6 @@ interface StatementDetailsDialogProps {
 
 const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen, onOpenChange, statement }) => {
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isExplanationDialogOpen, setIsExplanationDialogOpen] = useState(false); // New state for explanation dialog
 
   if (!statement) return null;
 
@@ -97,7 +95,6 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
         </div>
         <DialogFooter className="no-print mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
-          <Button variant="secondary" onClick={() => setIsExplanationDialogOpen(true)}>Comprendre mon relevé</Button> {/* New button */}
           <Button onClick={handleDownloadPdf} disabled={isDownloading}>
             {isDownloading ? (
               <>
@@ -113,10 +110,6 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
           </Button>
         </DialogFooter>
       </DialogContent>
-      <StatementExplanationDialog
-        isOpen={isExplanationDialogOpen}
-        onOpenChange={setIsExplanationDialogOpen}
-      />
     </Dialog>
   );
 };

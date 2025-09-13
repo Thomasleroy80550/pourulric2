@@ -14,6 +14,7 @@ import StatementDetailsDialog from '@/components/StatementDetailsDialog'; // Imp
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import StripePayoutDialog from '@/components/admin/StripePayoutDialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // Import Tabs components
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -25,6 +26,7 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [payingUserId, setPayingUserId] = useState<string | null>(null);
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [summaryForPayout, setSummaryForPayout] = useState<UserTransferSummary | null>(null);
+  const [selectedPropertyFilter, setSelectedPropertyFilter] = useState<'all' | 'crotoy' | 'berck'>('all'); // New state for property filter
 
   const getPropertyName = (id: number | null | undefined) => {
     switch (id) {
@@ -127,9 +129,19 @@ const AdminTransferSummaryPage: React.FC = () => {
     }
   };
 
-  const totalPendingAmount = summaries.reduce((acc, summary) => {
+  const filteredSummaries = summaries.filter(summary => {
+    if (selectedPropertyFilter === 'all') return true;
+    const propertyId = selectedPropertyFilter === 'crotoy' ? 1 : 2;
+    // Check if any detail in the summary matches the property filter
+    return summary.details.some(detail => detail.krossbooking_property_id === propertyId);
+  });
+
+  const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
     const userPendingTotal = summary.details
-      .filter(detail => !detail.transfer_completed)
+      .filter(detail => !detail.transfer_completed && 
+        (selectedPropertyFilter === 'all' || 
+         (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
+         (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2)))
       .reduce((userAcc, detail) => userAcc + detail.amount, 0);
     return acc + userPendingTotal;
   }, 0);
@@ -148,6 +160,13 @@ const AdminTransferSummaryPage: React.FC = () => {
                 </CardDescription>
               </div>
             </div>
+            <Tabs value={selectedPropertyFilter} onValueChange={(value) => setSelectedPropertyFilter(value as 'all' | 'crotoy' | 'berck')} className="mt-4">
+              <TabsList>
+                <TabsTrigger value="all">Toutes les propriétés</TabsTrigger>
+                <TabsTrigger value="crotoy">Crotoy</TabsTrigger>
+                <TabsTrigger value="berck">Berck</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent>
             {error && (
@@ -168,18 +187,24 @@ const AdminTransferSummaryPage: React.FC = () => {
               <>
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
                   <p className="text-lg font-semibold text-gray-800">
-                    Total restant à virer (tous clients) : 
+                    Total restant à virer ({selectedPropertyFilter === 'all' ? 'toutes propriétés' : getPropertyName(selectedPropertyFilter === 'crotoy' ? 1 : 2)}) : 
                     <span className="text-green-600 font-bold ml-2">{totalPendingAmount.toFixed(2)}€</span>
                   </p>
                 </div>
 
-                {summaries.length > 0 ? (
+                {filteredSummaries.length > 0 ? (
                   <Accordion type="single" collapsible className="w-full">
-                    {summaries.map((summary) => {
+                    {filteredSummaries.map((summary) => {
                       const allTransfersDone = summary.details.every(d => d.transfer_completed);
                       const userPendingAmount = summary.details
-                        .filter(d => !d.transfer_completed)
+                        .filter(d => !d.transfer_completed && 
+                          (selectedPropertyFilter === 'all' || 
+                           (selectedPropertyFilter === 'crotoy' && d.krossbooking_property_id === 1) ||
+                           (selectedPropertyFilter === 'berck' && d.krossbooking_property_id === 2)))
                         .reduce((acc, d) => acc + d.amount, 0);
+
+                      // Only render if there's a pending amount for the selected filter
+                      if (userPendingAmount === 0 && selectedPropertyFilter !== 'all') return null;
 
                       return (
                         <AccordionItem value={summary.user_id} key={summary.user_id}>
@@ -208,7 +233,13 @@ const AdminTransferSummaryPage: React.FC = () => {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {summary.details.map((detail) => (
+                                {summary.details
+                                  .filter(detail => 
+                                    selectedPropertyFilter === 'all' || 
+                                    (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
+                                    (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2)
+                                  )
+                                  .map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
                                     <TableCell className="font-medium">{summary.first_name} {summary.last_name}</TableCell>
                                     <TableCell>

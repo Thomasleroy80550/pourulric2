@@ -195,7 +195,7 @@ export interface StripeExternalAccount {
   currency: string;
   last4: string;
   routing_number: string | null; // For US
-  iban?: string; // For SEPA
+  iban?: string; // For SEPA (Note: Stripe API does not return full IBAN for security)
   status: string;
 }
 

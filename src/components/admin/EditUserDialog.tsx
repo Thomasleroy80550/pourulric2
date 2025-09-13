@@ -145,7 +145,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
   const [cguvFile, setCguvFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSyncingBank, setIsSyncingBank] = useState(false);
-  const [bankSyncStatus, setBankSyncStatus] = useState<'idle' | 'success' | 'error' | 'not_found'>('idle');
+  const [syncedBankAccounts, setSyncedBankAccounts] = useState<StripeExternalAccount[]>([]);
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -225,7 +225,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         fetchUrls();
       }
     }
-    setBankSyncStatus('idle'); // Reset sync status on open
+    setSyncedBankAccounts([]); // Reset synced bank accounts on open
   }, [isOpen, user, form]);
 
   const handleSyncStripeBank = async () => {
@@ -234,42 +234,17 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
       return;
     }
     setIsSyncingBank(true);
-    setBankSyncStatus('idle');
+    setSyncedBankAccounts([]);
     try {
       const externalAccounts = await listStripeExternalAccounts(user.stripe_account_id);
-      console.log("Stripe external accounts fetched:", externalAccounts); // Log the raw data
-
-      let bankAccountToUse: StripeExternalAccount | undefined;
-
-      // 1. Try to find a French or Belgian bank account with an IBAN
-      bankAccountToUse = externalAccounts.find(
-        (account) => (account.country === 'FR' || account.country === 'BE') && account.iban
-      );
-      console.log("Bank account after FR/BE filter:", bankAccountToUse);
-
-      // 2. If not found, try to find any bank account with an IBAN
-      if (!bankAccountToUse) {
-        bankAccountToUse = externalAccounts.find((account) => account.iban);
-        console.log("Bank account after any IBAN filter:", bankAccountToUse);
-      }
-
-      if (bankAccountToUse && bankAccountToUse.iban) {
-        form.setValue('iban_abritel_hellokeys', bankAccountToUse.iban, { shouldValidate: true });
-        // Le BIC n'est pas toujours directement disponible, on utilise le nom de la banque comme fallback
-        form.setValue('bic_abritel_hellokeys', bankAccountToUse.bank_name || '', { shouldValidate: true });
-        form.setValue('sync_with_hellokeys', true);
-        setBankSyncStatus('success');
-        toast.success("Coordonnées bancaires synchronisées avec succès !");
-      } else if (externalAccounts.length > 0) {
-        setBankSyncStatus('not_found');
-        toast.warning("Aucun compte bancaire avec IBAN (FR/BE prioritaire) trouvé parmi les comptes Stripe listés.");
+      setSyncedBankAccounts(externalAccounts);
+      if (externalAccounts.length > 0) {
+        toast.success("Comptes bancaires Stripe récupérés avec succès !");
       } else {
-        setBankSyncStatus('not_found');
         toast.warning("Aucun compte bancaire externe n'a été trouvé pour ce compte Stripe.");
       }
     } catch (error: any) {
-      setBankSyncStatus('error');
-      toast.error(`Erreur de synchronisation : ${error.message}`);
+      toast.error(`Erreur de récupération des comptes bancaires : ${error.message}`);
     } finally {
       setIsSyncingBank(false);
     }
@@ -503,9 +478,29 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                     </CardContent>
                   </Card>
                   <Card className="mt-4">
-                    <CardHeader><CardTitle>Paiement Stripe</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>ID Compte Stripe</CardTitle></CardHeader>
                     <CardContent>
                       <FormField control={form.control} name="stripe_account_id" render={({ field }) => (<FormItem><FormLabel>ID Compte Stripe</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormDescription>L'ID du compte Stripe Connect associé à cet utilisateur.</FormDescription><FormMessage /></FormItem>)} />
+                      <Button
+                        type="button"
+                        onClick={handleSyncStripeBank}
+                        disabled={isSyncingBank || !user?.stripe_account_id}
+                        className="w-full"
+                      >
+                        {isSyncingBank ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Synchroniser les coordonnées bancaires Stripe"}
+                      </Button>
+                      {syncedBankAccounts.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <p className="text-sm font-medium">Comptes bancaires externes trouvés :</p>
+                          {syncedBankAccounts.map((account, index) => (
+                            <div key={index} className="p-2 border rounded-md bg-muted text-sm">
+                              <p><strong>Banque :</strong> {account.bank_name || 'N/A'}</p>
+                              <p><strong>IBAN :</strong> **** **** **** {account.last4}</p>
+                              <p><strong>Pays :</strong> {account.country}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                   <Card className="mt-4">
@@ -520,6 +515,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                             <div className="space-y-0.5">
                               <FormLabel>Synchroniser avec Hello Keys</FormLabel>
+                              <FormDescription>
+                                Activez cette option pour indiquer que les paiements Abritel/Hello Keys sont gérés via un compte bancaire synchronisé.
+                              </FormDescription>
                             </div>
                             <FormControl>
                               <Switch

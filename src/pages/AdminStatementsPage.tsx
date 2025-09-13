@@ -168,6 +168,17 @@ const AdminStatementsPage: React.FC = () => {
                           <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
                             {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
+                          {statement.pennylane_invoice_url ? (
+                            <Button variant="outline" size="icon" asChild title="Voir facture Pennylane">
+                              <a href={statement.pennylane_invoice_url} target="_blank" rel="noopener noreferrer">
+                                <Eye className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="icon" disabled title="Facture Pennylane non disponible">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button variant="outline" size="icon" onClick={() => handleResendToPennylane(statement.id)} disabled={retriggeringPennylaneId === statement.id} title="Relancer la création Pennylane">
                             {retriggeringPennylaneId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                           </Button>

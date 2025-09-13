@@ -24,7 +24,9 @@ export interface SavedInvoice {
   profiles: {
     first_name: string;
     last_name: string;
-  }
+  };
+  pennylane_status?: string; // Ajout du statut Pennylane
+  pennylane_invoice_url?: string | null; // Nouveau champ pour l'URL de la facture Pennylane
 }
 
 export interface InvoiceTotals {
@@ -726,14 +728,14 @@ export async function updateSetting(key: string, value: any): Promise<AppSetting
 
 /**
  * Sends statement data to a Make.com webhook.
- * @param userId The ID of the user the invoice belongs to.
+ * @param invoiceId The ID of the invoice to send.
  * @param period The period the invoice covers (e.g., "Juin 2024").
  * @param totals The calculated totals for the invoice.
  * @param dateEmission The date the invoice was issued (YYYY-MM-DD).
  * @param deadlinePaiement The payment deadline date (YYYY-MM-DD).
  */
 export async function sendStatementDataToMakeWebhook(
-  userId: string,
+  invoiceId: string,
   period: string,
   totals: InvoiceTotals,
   dateEmission: string,
@@ -741,9 +743,22 @@ export async function sendStatementDataToMakeWebhook(
 ): Promise<void> {
   try {
     // Set status to 'processing'
-    await supabase.from('invoices').update({ pennylane_status: 'processing' }).eq('id', userId);
+    await supabase.from('invoices').update({ pennylane_status: 'processing' }).eq('id', invoiceId);
 
     // Fetch the user's profile to get pennylane_customer_id
+    const { data: invoiceData, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('user_id')
+      .eq('id', invoiceId)
+      .single();
+
+    if (invoiceError || !invoiceData) {
+      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', invoiceId);
+      throw new Error(`Failed to fetch invoice for webhook: ${invoiceError?.message}`);
+    }
+
+    const userId = invoiceData.user_id;
+
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('pennylane_customer_id')
@@ -751,7 +766,7 @@ export async function sendStatementDataToMakeWebhook(
       .single();
 
     if (profileError) {
-      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', userId);
+      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', invoiceId);
       throw new Error(`Failed to fetch profile for webhook: ${profileError.message}`);
     }
 
@@ -765,6 +780,7 @@ export async function sendStatementDataToMakeWebhook(
       owner_cleaning_fee: totals.ownerCleaningFee,
       date_emission: dateEmission,
       deadline_paiement: deadlinePaiement,
+      invoice_id: invoiceId, // Passer l'ID du relevé pour que Make.com puisse le renvoyer
     };
 
     console.log("Sending statement data to Make.com webhook:", payload);
@@ -779,16 +795,23 @@ export async function sendStatementDataToMakeWebhook(
 
     if (!response.ok) {
       const errorText = await response.text();
-      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', userId);
+      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', invoiceId);
       console.error("Failed to send data to Make.com webhook:", response.status, errorText);
       // Do not throw, just log and update status
       return;
     }
 
-    await supabase.from('invoices').update({ pennylane_status: 'success' }).eq('id', userId);
+    const responseData = await response.json();
+    let updatePayload: { pennylane_status: string; pennylane_invoice_url?: string } = { pennylane_status: 'success' };
+
+    if (responseData && responseData.pennylane_invoice_url) {
+      updatePayload.pennylane_invoice_url = responseData.pennylane_invoice_url;
+    }
+
+    await supabase.from('invoices').update(updatePayload).eq('id', invoiceId);
     console.log("Statement data successfully sent to Make.com webhook.");
   } catch (error: any) {
-    await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', userId);
+    await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', invoiceId);
     console.error("Error in sendStatementDataToMakeWebhook:", error.message);
     // Do not re-throw, as this should not block invoice generation
   }

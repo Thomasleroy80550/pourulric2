@@ -6,7 +6,8 @@ import { UserRoom } from "./user-room-api"; // Import UserRoom type
 import { Idea } from "./ideas-api";
 import { addDays, format, parseISO } from 'date-fns';
 
-const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/jnnkji5edohpm7i8mstnq1vwqka0iqj9";
+const MAKE_WEBHOOK_URL_CROTOY = "https://hook.eu1.make.com/jnnkji5edohpm7i8mstnq1vwqka0iqj9";
+const MAKE_WEBHOOK_URL_BERCK = "https://hook.eu1.make.com/zuncswymvgd5ixlpio47ffn25de8v6lu";
 
 export interface AppSetting {
   key: string;
@@ -862,7 +863,7 @@ export async function sendStatementDataToMakeWebhook(
 
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('pennylane_customer_id')
+      .select('pennylane_customer_id, krossbooking_property_id') // Fetch krossbooking_property_id
       .eq('id', userId)
       .single();
 
@@ -872,6 +873,18 @@ export async function sendStatementDataToMakeWebhook(
     }
 
     const pennylaneCustomerId = profileData?.pennylane_customer_id || null;
+    const krossbookingPropertyId = profileData?.krossbooking_property_id;
+
+    let webhookUrl = '';
+    if (krossbookingPropertyId === 1) {
+      webhookUrl = MAKE_WEBHOOK_URL_CROTOY;
+    } else if (krossbookingPropertyId === 2) {
+      webhookUrl = MAKE_WEBHOOK_URL_BERCK;
+    } else {
+      // Default or error handling if krossbooking_property_id is not 1 or 2
+      await supabase.from('invoices').update({ pennylane_status: 'error' }).eq('id', invoiceId);
+      throw new Error(`Unknown krossbooking_property_id: ${krossbookingPropertyId} for user ${userId}. Cannot determine webhook URL.`);
+    }
 
     const payload = {
       pennylane_customer_id: pennylaneCustomerId,
@@ -886,7 +899,7 @@ export async function sendStatementDataToMakeWebhook(
 
     console.log("Sending statement data to Make.com webhook:", payload);
 
-    const response = await fetch(MAKE_WEBHOOK_URL, {
+    const response = await fetch(webhookUrl, { // Use the dynamically determined webhookUrl
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

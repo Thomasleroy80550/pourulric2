@@ -133,6 +133,7 @@ export interface UserTransferSummary {
   user_id: string;
   first_name: string | null;
   last_name: string | null;
+  stripe_account_id: string | null; // Ajout de l'ID de compte Stripe
   total_amount_to_transfer: number;
   details: {
     period: string;
@@ -967,7 +968,8 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
       transfer_completed,
       profiles (
         first_name,
-        last_name
+        last_name,
+        stripe_account_id
       )
     `);
 
@@ -994,6 +996,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     const period = invoice.period;
     const firstName = invoice.profiles?.first_name || null;
     const lastName = invoice.profiles?.last_name || null;
+    const stripeAccountId = invoice.profiles?.stripe_account_id || null; // Récupérer l'ID Stripe
     const invoiceId = invoice.id;
     const transferCompleted = invoice.transfer_completed || false;
 
@@ -1035,6 +1038,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
         transferMap.set(userId, {
           first_name: firstName,
           last_name: lastName,
+          stripe_account_id: stripeAccountId, // Stocker l'ID Stripe
           total: amountToTransfer,
           details: [detailItem]
         });
@@ -1046,9 +1050,38 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     user_id: userId,
     first_name: summary.first_name,
     last_name: summary.last_name,
+    stripe_account_id: summary.stripe_account_id,
     total_amount_to_transfer: summary.total,
     details: summary.details.sort((a, b) => (b.period || '').localeCompare(a.period || ''))
   }));
+}
+
+/**
+ * Initiates a Stripe payout process (Transfer + Payout).
+ * @param payoutDetails Details for the payout.
+ * @returns A promise that resolves when the payout is initiated.
+ */
+export async function initiateStripePayout(payoutDetails: {
+  destinationAccountId: string;
+  amount: number; // Amount in cents
+  currency: string;
+  invoiceIds: string[];
+}): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('initiate-stripe-payout', {
+    body: {
+      destination_account_id: payoutDetails.destinationAccountId,
+      amount: payoutDetails.amount,
+      currency: payoutDetails.currency,
+      invoice_ids: payoutDetails.invoiceIds,
+    },
+  });
+
+  if (error) {
+    console.error("Error initiating Stripe payout:", error);
+    throw new Error(`Erreur lors de l'initiation du virement Stripe : ${error.message}`);
+  }
+
+  return data;
 }
 
 /**

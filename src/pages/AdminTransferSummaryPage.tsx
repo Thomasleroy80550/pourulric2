@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { getTransferSummaries, UserTransferSummary, updateTransferStatus, getInvoiceById, SavedInvoice } from '@/lib/admin-api';
+import { getTransferSummaries, UserTransferSummary, updateTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout } from '@/lib/admin-api';
 import { Terminal, Banknote, CheckCircle2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import StatementDetailsDialog from '@/components/StatementDetailsDialog'; // Import the dialog
-import { Button } from '@/components/ui/button'; // Import the Button component
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -19,24 +20,26 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false); // State for dialog visibility
   const [selectedStatement, setSelectedStatement] = useState<SavedInvoice | null>(null); // State for selected statement
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [payingUserId, setPayingUserId] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fetchedSummaries = await getTransferSummaries();
+      setSummaries(fetchedSummaries);
+    } catch (err: any) {
+      setError(err.message);
+      toast.error("Erreur lors de la récupération de la synthèse des virements.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchSummaries = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const fetchedSummaries = await getTransferSummaries();
-        setSummaries(fetchedSummaries);
-      } catch (err: any) {
-        setError(err.message);
-        toast.error("Erreur lors de la récupération de la synthèse des virements.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSummaries();
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   const handleStatusChange = async (invoiceId: string, newStatus: boolean) => {
     const originalSummaries = JSON.parse(JSON.stringify(summaries));
@@ -72,6 +75,33 @@ const AdminTransferSummaryPage: React.FC = () => {
       }
     } catch (err: any) {
       toast.error(`Erreur lors de la récupération du détail du relevé : ${err.message}`);
+    }
+  };
+
+  const handlePayWithStripe = async (summary: UserTransferSummary) => {
+    if (!summary.stripe_account_id) {
+      toast.error("Ce client n'a pas de compte Stripe lié.");
+      return;
+    }
+
+    setPayingUserId(summary.user_id);
+    try {
+      const amountInCents = Math.round(summary.total_amount_to_transfer * 100);
+      const invoiceIds = summary.details.filter(d => !d.transfer_completed).map(d => d.invoice_id);
+
+      await initiateStripePayout({
+        destinationAccountId: summary.stripe_account_id,
+        amount: amountInCents,
+        currency: 'eur', // ou la devise appropriée
+        invoiceIds: invoiceIds,
+      });
+
+      toast.success(`Virement de ${summary.total_amount_to_transfer.toFixed(2)} € initié pour ${summary.first_name} ${summary.last_name}.`);
+      fetchData(); // Refresh data
+    } catch (error: any) {
+      toast.error(`Échec du virement : ${error.message}`);
+    } finally {
+      setPayingUserId(null);
     }
   };
 
@@ -148,37 +178,31 @@ const AdminTransferSummaryPage: React.FC = () => {
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Période</TableHead>
-                                  <TableHead className="text-right">Montant Airbnb</TableHead>
-                                  <TableHead className="text-right">Montant Stripe</TableHead>
-                                  <TableHead className="text-right font-bold">Montant Total</TableHead>
-                                  <TableHead className="text-center w-[150px]">Virement Effectué</TableHead>
-                                  <TableHead className="text-center w-[120px]">Actions</TableHead> {/* New column for actions */}
+                                  <TableHead>Client</TableHead>
+                                  <TableHead>Montant Total à Virer</TableHead>
+                                  <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {summary.details.map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
-                                    <TableCell>{detail.period}</TableCell>
-                                    <TableCell className="text-right font-mono">{(detail.amountsBySource?.airbnb || 0).toFixed(2)}€</TableCell>
-                                    <TableCell className="text-right font-mono">{(detail.amountsBySource?.stripe || 0).toFixed(2)}€</TableCell>
-                                    <TableCell className="text-right font-mono font-bold">{detail.amount.toFixed(2)}€</TableCell>
-                                    <TableCell className="text-center">
-                                      <Checkbox
-                                        checked={detail.transfer_completed}
-                                        onCheckedChange={(checked) => {
-                                          handleStatusChange(detail.invoice_id, !!checked);
-                                        }}
-                                      />
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleViewDetails(detail.invoice_id)}
-                                      >
-                                        Voir détail
-                                      </Button>
+                                    <TableCell className="font-medium">{summary.first_name} {summary.last_name}</TableCell>
+                                    <TableCell>{summary.total_amount_to_transfer.toFixed(2)} €</TableCell>
+                                    <TableCell className="text-right">
+                                      {summary.stripe_account_id && (
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handlePayWithStripe(summary)}
+                                          disabled={payingUserId === summary.user_id}
+                                        >
+                                          {payingUserId === summary.user_id ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                          ) : (
+                                            <Banknote className="mr-2 h-4 w-4" />
+                                          )}
+                                          Payer via Stripe
+                                        </Button>
+                                      )}
                                     </TableCell>
                                   </TableRow>
                                 ))}

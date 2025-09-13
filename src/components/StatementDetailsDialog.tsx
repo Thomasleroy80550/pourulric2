@@ -54,20 +54,19 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = imgWidth / imgHeight;
-      
-      let finalImgWidth = pdfWidth;
-      let finalImgHeight = pdfWidth / ratio;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width; // Calculer la hauteur de l'image dans les unités du PDF
+      let heightLeft = imgHeight;
+      let position = 0;
 
-      // If the height is still too large for one page, we might need to split it,
-      // but for a single statement, fitting to width is usually enough.
-      if (finalImgHeight > pdfHeight) {
-        finalImgHeight = pdfHeight;
-        finalImgWidth = pdfHeight * ratio;
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
-
-      pdf.addImage(imgData, 'PNG', 0, 0, finalImgWidth, finalImgHeight);
       
       const clientName = statement.profiles ? `${statement.profiles.first_name}_${statement.profiles.last_name}` : 'Client';
       pdf.save(`Releve_${clientName}_${statement.period.replace(/\s/g, '_')}.pdf`);

@@ -47,17 +47,20 @@ export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => 
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const ratio = canvas.width / canvas.height;
         
-        let finalImgWidth = pdfWidth;
-        let finalImgHeight = pdfWidth / ratio;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width; // Calculer la hauteur de l'image dans les unités du PDF
+        let heightLeft = imgHeight;
+        let position = 0;
 
-        if (finalImgHeight > pdfHeight) {
-          finalImgHeight = pdfHeight;
-          finalImgWidth = pdfHeight * ratio;
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+          heightLeft -= pdfHeight;
         }
-
-        pdf.addImage(imgData, 'PNG', 0, 0, finalImgWidth, finalImgHeight);
         
         const clientName = statement.profiles ? `${statement.profiles.first_name}_${statement.profiles.last_name}` : 'Client';
         const fileName = `Releve_${clientName}_${statement.period.replace(/\s/g, '_')}.pdf`;
@@ -121,18 +124,20 @@ export const generateCguvPdf = (): Promise<void> => {
         });
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width; // Calculer la hauteur de l'image dans les unités du PDF
         let heightLeft = imgHeight;
         let position = 0;
 
         pdf.addImage(canvas, 'PNG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdf.internal.pageSize.getHeight();
+        heightLeft -= pdfHeight;
 
         while (heightLeft >= 0) {
           position = heightLeft - imgHeight;
           pdf.addPage();
           pdf.addImage(canvas, 'PNG', 0, position, pdfWidth, imgHeight);
-          heightLeft -= pdf.internal.pageSize.getHeight();
+          heightLeft -= pdfHeight;
         }
 
         const versionMatch = CGUV_HTML_CONTENT.match(/Version ([\d\.]+)/i);

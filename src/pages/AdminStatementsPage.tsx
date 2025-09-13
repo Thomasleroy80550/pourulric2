@@ -16,6 +16,15 @@ import { generateStatementPdf } from '@/lib/pdf-utils';
 import { uploadStatementPdf } from '@/lib/storage-api';
 import StatusBadge from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"; // Import Pagination components
 
 const AdminStatementsPage: React.FC = () => {
   const [statements, setStatements] = useState<SavedInvoice[]>([]);
@@ -28,6 +37,8 @@ const AdminStatementsPage: React.FC = () => {
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
   const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1); // New state for current page
+  const itemsPerPage = 10; // Number of items per page
 
   const loadStatements = async () => {
     setLoading(true);
@@ -124,19 +135,52 @@ const AdminStatementsPage: React.FC = () => {
     return clientName.includes(term) || period.includes(term) || pennylaneStatus.includes(term);
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredStatements.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentStatements = filteredStatements.slice(startIndex, endIndex);
+
+  const getPaginationItems = () => {
+    const pages = [];
+    const maxPagesToShow = 5; // Number of page links to show directly
+
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      if (currentPage > 2) {
+        pages.push('...');
+      }
+      if (currentPage > 1 && currentPage < totalPages) {
+        pages.push(currentPage);
+      }
+      if (currentPage < totalPages - 1) {
+        pages.push('...');
+      }
+      pages.push(totalPages);
+    }
+    return [...new Set(pages)]; // Remove duplicates
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Gestion des Relevés</h1>
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle>Historique de tous les relevés générés</CardTitle>
+            <CardTitle>Historique de tous les relevés générés ({filteredStatements.length} relevé(s))</CardTitle>
             <div className="relative mt-2">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher par client, période ou statut..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1); // Reset to first page on search
+                }}
                 className="pl-8 w-full md:w-1/3"
               />
             </div>
@@ -157,58 +201,84 @@ const AdminStatementsPage: React.FC = () => {
             ) : filteredStatements.length === 0 ? (
               <p className="text-center text-gray-500 py-8">Aucun relevé trouvé pour votre recherche.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Période</TableHead>
-                    <TableHead>Date de Création</TableHead>
-                    <TableHead>Statut Pennylane</TableHead>
-                    <TableHead>Commentaire</TableHead>
-                    <TableHead className="text-right">Montant Facturé</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStatements.map((statement) => {
-                    const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client Supprimé';
-                    return (
-                      <TableRow key={statement.id}>
-                        <TableCell className="font-medium">{clientName}</TableCell>
-                        <TableCell>{statement.period}</TableCell>
-                        <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={statement.pennylane_status} />
-                        </TableCell>
-                        <TableCell>{statement.admin_comment ? 'Oui' : 'Non'}</TableCell>
-                        <TableCell className="text-right font-bold">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
-                        <TableCell className="text-right space-x-2">
-                          <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)} title="Voir les détails"><Eye className="h-4 w-4" /></Button>
-                          <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)} title="Ajouter/Voir commentaire"><MessageSquare className="h-4 w-4" /></Button>
-                          <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
-                            {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                          </Button>
-                          {statement.pennylane_invoice_url ? (
-                            <Button variant="outline" size="icon" asChild title="Voir facture Pennylane">
-                              <a href={statement.pennylane_invoice_url} target="_blank" rel="noopener noreferrer">
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Période</TableHead>
+                      <TableHead>Date de Création</TableHead>
+                      <TableHead>Statut Pennylane</TableHead>
+                      <TableHead>Commentaire</TableHead>
+                      <TableHead className="text-right">Montant Facturé</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentStatements.map((statement) => {
+                      const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client Supprimé';
+                      return (
+                        <TableRow key={statement.id}>
+                          <TableCell className="font-medium">{clientName}</TableCell>
+                          <TableCell>{statement.period}</TableCell>
+                          <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={statement.pennylane_status} />
+                          </TableCell>
+                          <TableCell>{statement.admin_comment ? 'Oui' : 'Non'}</TableCell>
+                          <TableCell className="text-right font-bold">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)} title="Voir les détails"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)} title="Ajouter/Voir commentaire"><MessageSquare className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
+                              {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
+                            {statement.pennylane_invoice_url ? (
+                              <Button variant="outline" size="icon" asChild title="Voir facture Pennylane">
+                                <a href={statement.pennylane_invoice_url} target="_blank" rel="noopener noreferrer">
+                                  <Eye className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="icon" disabled title="Facture Pennylane non disponible">
                                 <Eye className="h-4 w-4" />
-                              </a>
+                              </Button>
+                            )}
+                            <Button variant="outline" size="icon" onClick={() => handleResendToPennylane(statement.id)} disabled={retriggeringPennylaneId === statement.id} title="Relancer la création Pennylane">
+                              {retriggeringPennylaneId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
-                          ) : (
-                            <Button variant="outline" size="icon" disabled title="Facture Pennylane non disponible">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button variant="outline" size="icon" onClick={() => handleResendToPennylane(statement.id)} disabled={retriggeringPennylaneId === statement.id} title="Relancer la création Pennylane">
-                            {retriggeringPennylaneId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                          </Button>
-                          <Button variant="destructive" size="icon" onClick={() => handleDelete(statement.id)} title="Supprimer le relevé"><Trash2 className="h-4 w-4" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                            <Button variant="destructive" size="icon" onClick={() => handleDelete(statement.id)} title="Supprimer le relevé"><Trash2 className="h-4 w-4" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} />
+                    </PaginationItem>
+                    {getPaginationItems().map((page, index) => (
+                      <PaginationItem key={index}>
+                        {page === '...' ? (
+                          <PaginationEllipsis />
+                        ) : (
+                          <PaginationLink
+                            isActive={page === currentPage}
+                            onClick={() => setCurrentPage(page as number)}
+                          >
+                            {page}
+                          </PaginationLink>
+                        )}
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </>
             )}
           </CardContent>
         </Card>

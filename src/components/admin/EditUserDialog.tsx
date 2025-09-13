@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateUser, UpdateUserPayload } from '@/lib/admin-api';
+import { updateUser, UpdateUserPayload, getStripeExternalAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,7 @@ import { generateCguvPdf } from '@/lib/pdf-utils';
 import { uploadFile } from '@/lib/storage-api';
 import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -88,6 +89,8 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
   const [roomToEdit, setRoomToEdit] = useState<UserRoom | null>(null);
   const [cguvFile, setCguvFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSyncingBank, setIsSyncingBank] = useState(false);
+  const [bankSyncStatus, setBankSyncStatus] = useState<'idle' | 'success' | 'error' | 'not_found'>('idle');
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -167,7 +170,36 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         fetchUrls();
       }
     }
+    setBankSyncStatus('idle'); // Reset sync status on open
   }, [isOpen, user, form]);
+
+  const handleSyncStripeBank = async () => {
+    if (!user?.stripe_account_id) {
+      toast.error("Cet utilisateur n'a pas d'ID de compte Stripe associé.");
+      return;
+    }
+    setIsSyncingBank(true);
+    setBankSyncStatus('idle');
+    try {
+      const bankAccount = await getStripeExternalAccount(user.stripe_account_id);
+      if (bankAccount && bankAccount.iban) {
+        form.setValue('iban_abritel_hellokeys', bankAccount.iban, { shouldValidate: true });
+        // Le BIC n'est pas toujours directement disponible, on utilise le nom de la banque comme fallback
+        form.setValue('bic_abritel_hellokeys', bankAccount.bank_name || '', { shouldValidate: true });
+        form.setValue('sync_with_hellokeys', true);
+        setBankSyncStatus('success');
+        toast.success("Coordonnées bancaires synchronisées avec succès !");
+      } else {
+        setBankSyncStatus('not_found');
+        toast.warning("Aucun IBAN trouvé pour ce compte Stripe. Le compte est peut-être dans un autre format (ex: US).");
+      }
+    } catch (error: any) {
+      setBankSyncStatus('error');
+      toast.error(`Erreur de synchronisation : ${error.message}`);
+    } finally {
+      setIsSyncingBank(false);
+    }
+  };
 
   const handleDownloadCguv = async () => {
     try {
@@ -406,6 +438,24 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                     <CardHeader><CardTitle>Paiement Abritel & Hello Keys</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
                       <FormField control={form.control} name="sync_with_hellokeys" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Synchroniser avec Hello Keys</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                      {user.stripe_account_id && (
+                        <div className="p-3 border rounded-md bg-slate-50 dark:bg-slate-800/50 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">Synchro Banque Stripe</p>
+                              {bankSyncStatus === 'success' && <Badge variant="success">OK</Badge>}
+                              {bankSyncStatus === 'error' && <Badge variant="destructive">Erreur</Badge>}
+                              {bankSyncStatus === 'not_found' && <Badge variant="secondary">Non trouvé</Badge>}
+                            </div>
+                            <Button type="button" size="sm" onClick={handleSyncStripeBank} disabled={isSyncingBank}>
+                              {isSyncingBank ? <Loader2 className="h-4 w-4 animate-spin" /> : "Synchroniser"}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Récupère l'IBAN et le BIC depuis le compte bancaire par défaut sur Stripe.
+                          </p>
+                        </div>
+                      )}
                       <FormField control={form.control} name="iban_abritel_hellokeys" render={({ field }) => (<FormItem><FormLabel>IBAN</FormLabel><FormControl><Input {...field} disabled={!form.watch('sync_with_hellokeys')} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="bic_abritel_hellokeys" render={({ field }) => (<FormItem><FormLabel>BIC</FormLabel><FormControl><Input {...field} disabled={!form.watch('sync_with_hellokeys')} /></FormControl><FormMessage /></FormItem>)} />
                     </CardContent>

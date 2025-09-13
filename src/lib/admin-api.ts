@@ -186,6 +186,19 @@ export interface StripeAccount {
   type: string;
 }
 
+export interface StripeExternalAccount {
+  id: string;
+  object: 'bank_account';
+  account_holder_name: string | null;
+  bank_name: string | null;
+  country: string;
+  currency: string;
+  last4: string;
+  routing_number: string | null; // For US
+  iban?: string; // For SEPA
+  status: string;
+}
+
 export interface StripeTransfer {
   id: string;
   object: string;
@@ -804,6 +817,31 @@ export async function getStripeAccount(accountId: string): Promise<StripeAccount
   if (error) {
     console.error(`Error fetching Stripe account ${accountId}:`, error);
     throw new Error(`Erreur lors de la récupération du compte Stripe : ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Fetches the primary external bank account for a given Stripe connected account. Admin only.
+ * @param accountId The ID of the Stripe account.
+ * @returns A promise that resolves to a StripeExternalAccount object.
+ */
+export async function getStripeExternalAccount(accountId: string): Promise<StripeExternalAccount> {
+  const { data, error } = await supabase.functions.invoke('get-stripe-external-account', {
+    body: { account_id: accountId },
+  });
+
+  if (error) {
+    console.error(`Error fetching Stripe external account for ${accountId}:`, error);
+    const context = (error as any).context;
+    // Try to parse the context error if it's a JSON string
+    try {
+      const parsedError = JSON.parse(context?.error);
+      throw new Error(parsedError.error || `Erreur lors de la récupération du compte bancaire Stripe : ${error.message}`);
+    } catch (e) {
+      throw new Error(context?.error || `Erreur lors de la récupération du compte bancaire Stripe : ${error.message}`);
+    }
   }
 
   return data;

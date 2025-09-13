@@ -221,22 +221,6 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
           </div>
         </div>
       )}
-
-      {/* New Legend Section */}
-      <div className="mt-12 pt-4 border-t border-gray-200">
-        <h2 className="text-xl font-semibold mb-4">Légende</h2>
-        <div className="space-y-2 text-sm text-gray-700">
-          <p><span className="legend-bubble">1</span> **Total perçu des plateformes** : Somme totale des montants que les plateformes (Airbnb, Booking, etc.) ont versés pour vos réservations.</p>
-          <p><span className="legend-bubble">2</span> **Total de notre facture** : Montant total facturé par Hello Keys pour ses services (commissions, frais de ménage, etc.).</p>
-          <p><span className="legend-bubble">3</span> **Taxes de séjour collectées** : Montant des taxes de séjour que nous avons collectées pour vous et que nous reversons aux autorités compétentes.</p>
-          <p><span className="legend-bubble">4</span> **Résultat** : Le montant net qui vous sera versé après déduction de notre facture et des taxes de séjour.</p>
-          <p><span className="legend-bubble">5</span> **Commission Hello Keys** : Nos frais de gestion pour les services fournis.</p>
-          <p><span className="legend-bubble">6</span> **Total frais de ménage** : Coût total du ménage effectué après chaque réservation.</p>
-          <p><span className="legend-bubble">7</span> **Frais de ménage propriétaire** : Frais de ménage spécifiques qui vous sont facturés en tant que propriétaire (par exemple, ménage de fin de saison).</p>
-          <p><span className="legend-bubble">8</span> **Détail des réservations** : Tableau récapitulatif de chaque réservation avec les montants associés.</p>
-          <p><span className="legend-bubble">9</span> **Virements à effectuer** : Section indiquant les montants que vous devez transférer ou que Hello Keys vous transférera, selon le mode de perception des loyers.</p>
-        </div>
-      </div>
     </div>
   );
 };

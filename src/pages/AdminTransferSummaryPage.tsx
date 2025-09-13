@@ -87,13 +87,15 @@ const AdminTransferSummaryPage: React.FC = () => {
     setPayingUserId(summary.user_id);
     try {
       const amountInCents = Math.round(summary.total_amount_to_transfer * 100);
-      const invoiceIds = summary.details.filter(d => !d.transfer_completed).map(d => d.invoice_id);
+      const invoiceDetails = summary.details
+        .filter(d => !d.transfer_completed)
+        .map(d => ({ id: d.invoice_id, period: d.period })); // Récupérer l'ID et la période
 
       await initiateStripePayout({
         destinationAccountId: summary.stripe_account_id,
         amount: amountInCents,
         currency: 'eur', // ou la devise appropriée
-        invoiceIds: invoiceIds,
+        invoiceDetails: invoiceDetails, // Passer les détails des factures
       });
 
       toast.success(`Virement de ${summary.total_amount_to_transfer.toFixed(2)} € initié pour ${summary.first_name} ${summary.last_name}.`);

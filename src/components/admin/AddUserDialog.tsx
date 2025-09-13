@@ -66,7 +66,7 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onU
       };
 
       const result = await createUser(payload);
-      toast.success("Prospect créé avec succès ! Un email avec un mot de passe temporaire a été envoyé.");
+      toast.success("Client créé avec succès ! Un email avec un mot de passe temporaire a été envoyé.");
 
       if (pendingApproval && result?.data?.user?.id) {
         await createAccountantClientRelation(result.data.user.id, pendingApproval.user_id);
@@ -87,8 +87,8 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onU
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ajouter un nouveau prospect</DialogTitle>
-          <DialogDescription>Le prospect recevra une invitation par e-mail pour créer son mot de passe et accéder à son espace.</DialogDescription>
+          <DialogTitle>Ajouter un nouveau client</DialogTitle>
+          <DialogDescription>Le client recevra une invitation par e-mail pour créer son mot de passe et accéder à son espace.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleAddUser)} className="space-y-4 py-4">
@@ -97,11 +97,11 @@ const AddUserDialog: React.FC<AddUserDialogProps> = ({ isOpen, onOpenChange, onU
             <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="estimated_revenue" render={({ field }) => (<FormItem><FormLabel>Revenu Annuel Estimé (€)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-            <FormField control={form.control} name="estimation_details" render={({ field }) => (<FormItem><FormLabel>Détails de l'estimation</FormLabel><FormControl><Textarea {...field} /></FormControl><FormDescription>Ces détails seront visibles par le prospect.</FormDescription><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="estimation_details" render={({ field }) => (<FormItem><FormLabel>Détails de l'estimation</FormLabel><FormControl><Textarea {...field} /></FormControl><FormDescription>Ces détails seront visibles par le client.</FormDescription><FormMessage /></FormItem>)} />
             <FormField control={form.control} name="pennylane_customer_id" render={({ field }) => (<FormItem><FormLabel>ID Client Pennylane</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormDescription>L'ID client de Pennylane, si applicable.</FormDescription><FormMessage /></FormItem>)} />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Inviter le prospect"}</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Inviter le client"}</Button>
             </DialogFooter>
           </form>
         </Form>

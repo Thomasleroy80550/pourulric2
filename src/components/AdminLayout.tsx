@@ -68,7 +68,7 @@ const adminNavigationCategories = [
   {
     categoryName: 'Gestion',
     items: [
-      { name: 'Utilisateurs', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils utilisateurs.' },
+      { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },
       { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
@@ -163,8 +163,8 @@ const DesktopNav = () => {
               <ListItem href="/admin" title="Tableau de Bord">
                 Vue d'ensemble de l'activité.
               </ListItem>
-              <ListItem href="/admin/users" title="Utilisateurs">
-                Gérer les comptes et profils utilisateurs.
+              <ListItem href="/admin/users" title="Clients">
+                Gérer les comptes et profils clients.
               </ListItem>
               <ListItem href="/admin/user-rooms" title="Logements">
                 Consulter les logements des utilisateurs.

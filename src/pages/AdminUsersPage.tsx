@@ -173,7 +173,7 @@ const AdminUsersPage: React.FC = () => {
       });
       if (sessionError) throw sessionError;
 
-      toast.success(`Vous êtes maintenant connecté en tant que l'utilisateur.`);
+      toast.success(`Vous êtes maintenant connecté en tant que le client.`);
       navigate('/');
       window.location.reload();
 
@@ -192,26 +192,107 @@ const AdminUsersPage: React.FC = () => {
     return fullName.includes(term) || email.includes(term);
   });
 
+  const crotoyClients = filteredUsers.filter(user => user.krossbooking_property_id === 1);
+  const berckClients = filteredUsers.filter(user => user.krossbooking_property_id === 2);
+  const allClients = filteredUsers;
+
+  const renderUserTable = (clientList: UserProfile[]) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Nom</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Rôle</TableHead>
+          <TableHead>Statut Intégration</TableHead>
+          <TableHead>Statut KYC</TableHead>
+          <TableHead>Compte Stripe</TableHead>
+          <TableHead>Dernière Connexion</TableHead>
+          <TableHead>Acceptation CGUV</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {clientList.map((user) => {
+          const isOnline = user.last_seen_at && (new Date().getTime() - new Date(user.last_seen_at).getTime()) < 2 * 60 * 1000;
+          return (
+            <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  {isOnline && <span className="h-2 w-2 rounded-full bg-green-500" title="En ligne"></span>}
+                  {user.first_name} {user.last_name}
+                </div>
+              </TableCell>
+              <TableCell>{user.email || 'N/A'}</TableCell>
+              <TableCell>{user.role}</TableCell>
+              <TableCell>
+                <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
+                  {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge variant={getKycStatusVariant(user.kyc_status)}>
+                  {getKycStatusText(user.kyc_status)}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {user.stripe_account_id ? (
+                  <Button variant="outline" size="sm" onClick={() => handleShowStripeDetails(user.stripe_account_id!)}>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Voir
+                  </Button>
+                ) : (
+                  <Badge variant="outline">Non lié</Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                {user.last_sign_in_at ? formatDistanceToNow(new Date(user.last_sign_in_at), { addSuffix: true, locale: fr }) : 'Jamais'}
+              </TableCell>
+              <TableCell>
+                {user.cguv_accepted_at ? format(new Date(user.cguv_accepted_at), 'dd/MM/yy HH:mm', { locale: fr }) : 'Non accepté'}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier le client">
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleSwitchUser(user.id)}
+                  disabled={isSwitchingUser === user.id}
+                  title="Se connecter en tant que ce client"
+                >
+                  {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                </Button>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Gestion des Utilisateurs</h1>
+          <h1 className="text-3xl font-bold">Gestion des Clients</h1>
           <div className="flex items-center space-x-2">
             <Button onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />
-              Importer des utilisateurs
+              Importer des clients
             </Button>
             <Button onClick={() => setIsAddUserDialogOpen(true)}>
               <PlusCircle className="h-4 w-4 mr-2" />
-              Ajouter un prospect
+              Ajouter un client
             </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue="all" className="w-full">
           <TabsList>
-            <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+            <TabsTrigger value="all">Tous les clients</TabsTrigger>
+            <TabsTrigger value="crotoy">Clients Crotoy</TabsTrigger>
+            <TabsTrigger value="berck">Clients Berck</TabsTrigger>
             <TabsTrigger value="requests">
               Demandes Comptable
               {requests.filter(r => r.status === 'pending').length > 0 && (
@@ -219,10 +300,10 @@ const AdminUsersPage: React.FC = () => {
               )}
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="users" className="mt-4">
+          <TabsContent value="all" className="mt-4">
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle>Liste des utilisateurs</CardTitle>
+                <CardTitle>Liste de tous les clients</CardTitle>
                 <div className="relative mt-2">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -239,77 +320,57 @@ const AdminUsersPage: React.FC = () => {
                     <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Rôle</TableHead>
-                        <TableHead>Statut Intégration</TableHead>
-                        <TableHead>Statut KYC</TableHead>
-                        <TableHead>Compte Stripe</TableHead>
-                        <TableHead>Dernière Connexion</TableHead>
-                        <TableHead>Acceptation CGUV</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredUsers.map((user) => {
-                        const isOnline = user.last_seen_at && (new Date().getTime() - new Date(user.last_seen_at).getTime()) < 2 * 60 * 1000;
-                        return (
-                        <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {isOnline && <span className="h-2 w-2 rounded-full bg-green-500" title="En ligne"></span>}
-                              {user.first_name} {user.last_name}
-                            </div>
-                          </TableCell>
-                          <TableCell>{user.email || 'N/A'}</TableCell>
-                          <TableCell>{user.role}</TableCell>
-                          <TableCell>
-                            <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
-                              {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getKycStatusVariant(user.kyc_status)}>
-                              {getKycStatusText(user.kyc_status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {user.stripe_account_id ? (
-                              <Button variant="outline" size="sm" onClick={() => handleShowStripeDetails(user.stripe_account_id!)}>
-                                <CreditCard className="h-4 w-4 mr-2" />
-                                Voir
-                              </Button>
-                            ) : (
-                              <Badge variant="outline">Non lié</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {user.last_sign_in_at ? formatDistanceToNow(new Date(user.last_sign_in_at), { addSuffix: true, locale: fr }) : 'Jamais'}
-                          </TableCell>
-                          <TableCell>
-                            {user.cguv_accepted_at ? format(new Date(user.cguv_accepted_at), 'dd/MM/yy HH:mm', { locale: fr }) : 'Non accepté'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier l'utilisateur">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleSwitchUser(user.id)}
-                              disabled={isSwitchingUser === user.id}
-                              title="Se connecter en tant que cet utilisateur"
-                            >
-                              {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )})}
-                    </TableBody>
-                  </Table>
+                  renderUserTable(allClients)
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="crotoy" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Clients Crotoy</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full md:w-1/3"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  renderUserTable(crotoyClients)
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="berck" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Clients Berck</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full md:w-1/3"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  renderUserTable(berckClients)
                 )}
               </CardContent>
             </Card>
@@ -339,7 +400,7 @@ const AdminUsersPage: React.FC = () => {
                         const requestingUser = users.find(u => u.id === request.user_id);
                         return (
                           <TableRow key={request.id}>
-                            <TableCell>{requestingUser ? `${requestingUser.first_name} ${requestingUser.last_name}` : 'Utilisateur inconnu'}</TableCell>
+                            <TableCell>{requestingUser ? `${requestingUser.first_name} ${requestingUser.last_name}` : 'Client inconnu'}</TableCell>
                             <TableCell>{request.accountant_name}</TableCell>
                             <TableCell>{request.accountant_email}</TableCell>
                             <TableCell>{format(new Date(request.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>

@@ -73,7 +73,7 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
     const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(headers);
     const link = document.createElement("a");
     link.setAttribute("href", csvContent);
-    link.setAttribute("download", "modele_import_utilisateurs.csv");
+    link.setAttribute("download", "modele_import_clients.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -124,11 +124,11 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
               .single();
 
             if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
-              throw new Error(`Vérification utilisateur échouée: ${checkError.message}`);
+              throw new Error(`Vérification client échouée: ${checkError.message}`);
             }
 
             if (existingUser) {
-              currentResult.skipped.push({ email, reason: 'Utilisateur déjà existant.' });
+              currentResult.skipped.push({ email, reason: 'Client déjà existant.' });
               setResult({ ...currentResult });
               setProgress(((i + 1) / totalUsers) * 100);
               continue;
@@ -167,7 +167,7 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
         }
 
         toast.success('Importation terminée', {
-          description: `${currentResult.successful} utilisateurs importés avec succès.`,
+          description: `${currentResult.successful} clients importés avec succès.`,
         });
         onImportComplete();
       } catch (error: any) {
@@ -185,9 +185,9 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Importer des utilisateurs en masse</DialogTitle>
+          <DialogTitle>Importer des clients en masse</DialogTitle>
           <DialogDescription>
-            Sélectionnez un fichier Excel (.xlsx, .xls) pour importer des utilisateurs.
+            Sélectionnez un fichier Excel (.xlsx, .xls) pour importer des clients.
             Le fichier doit contenir les colonnes : `first_name`, `last_name`, `email`, `room_name`, `room_id`, `room_id_2` (optionnel), et `revyoos_holding_ids` (optionnel).
           </DialogDescription>
         </DialogHeader>
@@ -223,7 +223,7 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
               <ScrollArea className="h-40 w-full rounded-md border p-4">
                 {result.skipped.length > 0 && (
                   <div>
-                    <h4 className="font-semibold mb-2">Utilisateurs ignorés :</h4>
+                    <h4 className="font-semibold mb-2">Clients ignorés :</h4>
                     <ul className="list-disc list-inside text-sm">
                       {result.skipped.map((s, i) => (
                         <li key={i}><strong>{s.email}</strong>: {s.reason}</li>
@@ -250,7 +250,7 @@ const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({ isOpen, onOpenCha
           {!result ? (
             <>
               <Button variant="outline" onClick={handleDownloadTemplate} disabled={isImporting}>
-                Télécharger le modèle
+                Télécharger le modèle (Clients)
               </Button>
               <Button onClick={handleImport} disabled={!file || isImporting}>
                 {isImporting ? 'Importation en cours...' : 'Importer'}

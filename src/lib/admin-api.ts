@@ -181,22 +181,9 @@ export interface StripeAccount {
   settings: {
     dashboard: {
       display_name: string | null;
-    };
+    }
   };
   type: string;
-}
-
-export interface StripeExternalAccount {
-  id: string;
-  object: 'bank_account';
-  account_holder_name: string | null;
-  bank_name: string | null;
-  country: string;
-  currency: string;
-  last4: string;
-  routing_number: string | null; // For US
-  iban?: string; // For SEPA (Note: Stripe API does not return full IBAN for security)
-  status: string;
 }
 
 export interface StripeTransfer {
@@ -823,53 +810,18 @@ export async function getStripeAccount(accountId: string): Promise<StripeAccount
 }
 
 /**
- * Fetches all external bank accounts for a given Stripe connected account. Admin only.
- * @param accountId The ID of the Stripe account.
- * @returns A promise that resolves to an array of StripeExternalAccount objects.
- */
-export async function listStripeExternalAccounts(accountId: string): Promise<StripeExternalAccount[]> {
-  const { data, error } = await supabase.functions.invoke('list-stripe-external-accounts', {
-    body: { account_id: accountId },
-  });
-
-  if (error) {
-    console.error(`Error fetching Stripe external accounts for ${accountId}:`, error);
-    const context = (error as any).context;
-    // Try to parse the context error if it's a JSON string
-    try {
-      const parsedError = JSON.parse(context?.error);
-      throw new Error(parsedError.error || `Erreur lors de la récupération des comptes bancaires Stripe : ${error.message}`);
-    } catch (e) {
-      throw new Error(context?.error || `Erreur lors de la récupération des comptes bancaires Stripe : ${error.message}`);
-    }
-  }
-
-  return data;
-}
-
-/**
  * Fetches a list of Stripe transfers for a given connected account. Admin only.
  * @param accountId The ID of the Stripe account to fetch transfers for.
  * @returns A promise that resolves to an array of StripeTransfer objects.
  */
-export async function listStripeTransfers(
-  accountId: string,
-): Promise<StripeTransfer[]> {
-  const { data, error } = await supabase.functions.invoke(
-    "list-stripe-transfers",
-    {
-      body: { account_id: accountId },
-    },
-  );
+export async function listStripeTransfers(accountId: string): Promise<StripeTransfer[]> {
+  const { data, error } = await supabase.functions.invoke('list-stripe-transfers', {
+    body: { account_id: accountId },
+  });
 
   if (error) {
-    console.error(
-      `Error fetching Stripe transfers for account ${accountId}:`,
-      error,
-    );
-    throw new Error(
-      `Erreur lors de la récupération des transferts Stripe : ${error.message}`,
-    );
+    console.error(`Error fetching Stripe transfers for account ${accountId}:`, error);
+    throw new Error(`Erreur lors de la récupération des transferts Stripe : ${error.message}`);
   }
 
   return data || [];

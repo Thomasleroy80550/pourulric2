@@ -2,76 +2,66 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Loader2,
-  Edit,
-  AlertTriangle,
-  Trash2,
-  Download,
-  Upload,
-} from "lucide-react";
-import { toast } from "sonner";
-import { updateUser, UpdateUserPayload } from "@/lib/admin-api";
-import { UserProfile, OnboardingStatus } from "@/lib/profile-api";
-import {
-  UserRoom,
-  getUserRoomsByUserId,
-  adminAddUserRoom,
-  deleteUserRoom,
-} from "@/lib/user-room-api";
-import { supabase } from "@/integrations/supabase/client";
-import EditUserRoomDialog from "@/components/EditUserRoomDialog";
-import { generateCguvPdf } from "@/lib/pdf-utils";
-import { uploadFile } from "@/lib/storage-api";
-import CGUV_HTML_CONTENT from "@/assets/cguv.html?raw";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { listStripeExternalAccounts, StripeExternalAccount } from "@/lib/admin-api"; // Import added here
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload } from 'lucide-react';
+import { toast } from 'sonner';
+import { updateUser, UpdateUserPayload } from '@/lib/admin-api';
+import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
+import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
+import { supabase } from '@/integrations/supabase/client';
+import EditUserRoomDialog from '@/components/EditUserRoomDialog';
+import { generateCguvPdf } from '@/lib/pdf-utils';
+import { uploadFile } from '@/lib/storage-api';
+import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
+import { Label } from '@/components/ui/label';
+
+const editUserSchema = z.object({
+  first_name: z.string().min(1, "Le prénom est requis."),
+  last_name: z.string().min(1, "Le nom est requis."),
+  role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
+  onboarding_status: z.enum(['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'keys_retrieved', 'photoshoot_done', 'live']).optional(),
+  property_address: z.string().optional().nullable(),
+  property_city: z.string().optional().nullable(),
+  property_zip_code: z.string().optional().nullable(),
+  iban_airbnb_booking: z.string().optional().nullable(),
+  bic_airbnb_booking: z.string().optional().nullable(),
+  sync_with_hellokeys: z.boolean().optional(),
+  iban_abritel_hellokeys: z.string().optional().nullable(),
+  bic_abritel_hellokeys: z.string().optional().nullable(),
+  commission_rate: z.coerce.number().min(0).optional().nullable(),
+  linen_type: z.string().optional().nullable(),
+  agency: z.string().optional().nullable(),
+  contract_start_date: z.string().optional().nullable(),
+  notify_new_booking_email: z.boolean().optional(),
+  notify_cancellation_email: z.boolean().optional(),
+  notify_new_booking_sms: z.boolean().optional(),
+  notify_cancellation_sms: z.boolean().optional(),
+  is_banned: z.boolean().optional(),
+  can_manage_prices: z.boolean().optional(),
+  kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional().nullable(),
+  estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional().nullable(),
+  estimation_details: z.string().optional().nullable(),
+  revyoos_holding_ids: z.string().optional().nullable(),
+  referral_credits: z.coerce.number().min(0, "Les crédits de parrainage doivent être positifs.").optional().nullable(),
+  krossbooking_property_id: z.coerce.number().optional().nullable(),
+  stripe_account_id: z.string().optional().nullable(),
+});
+
+const addRoomFormSchema = z.object({
+  room_id: z.string().min(1, "L'ID de la chambre est requis."),
+  room_name: z.string().min(1, "Le nom de la chambre est requis."),
+  room_id_2: z.string().optional().nullable(),
+});
 
 const onboardingStatusText: Record<OnboardingStatus, string> = {
   estimation_sent: "Estimation envoyée",
@@ -83,44 +73,6 @@ const onboardingStatusText: Record<OnboardingStatus, string> = {
   live: "En ligne",
 };
 
-const editUserSchema = z.object({
-  first_name: z.string().min(1, "Le prénom est requis"),
-  last_name: z.string().min(1, "Le nom est requis"),
-  role: z.enum(['user', 'admin', 'accountant']),
-  onboarding_status: z.nativeEnum(OnboardingStatus),
-  property_address: z.string().optional().nullable(),
-  property_city: z.string().optional().nullable(),
-  property_zip_code: z.string().optional().nullable(),
-  iban_airbnb_booking: z.string().optional().nullable(),
-  bic_airbnb_booking: z.string().optional().nullable(),
-  sync_with_hellokeys: z.boolean(),
-  iban_abritel_hellokeys: z.string().optional().nullable(),
-  bic_abritel_hellokeys: z.string().optional().nullable(),
-  commission_rate: z.number().min(0, "Le taux de commission doit être positif"),
-  linen_type: z.string().optional().nullable(),
-  agency: z.string().optional().nullable(),
-  contract_start_date: z.string().optional().nullable(),
-  notify_new_booking_email: z.boolean(),
-  notify_cancellation_email: z.boolean(),
-  notify_new_booking_sms: z.boolean(),
-  notify_cancellation_sms: z.boolean(),
-  is_banned: z.boolean(),
-  can_manage_prices: z.boolean(),
-  kyc_status: z.string().optional().nullable(),
-  estimated_revenue: z.number().optional().nullable(),
-  estimation_details: z.string().optional().nullable(),
-  revyoos_holding_ids: z.string().optional().nullable(),
-  referral_credits: z.number().optional().nullable(),
-  krossbooking_property_id: z.number().optional().nullable(),
-  stripe_account_id: z.string().optional().nullable(),
-});
-
-const addRoomFormSchema = z.object({
-  room_id: z.string().min(1, "L'ID de la chambre est requis"),
-  room_name: z.string().min(1, "Le nom de la chambre est requis"),
-  room_id_2: z.string().optional().nullable(),
-});
-
 interface EditUserDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -128,25 +80,14 @@ interface EditUserDialogProps {
   onUserUpdated: () => void;
 }
 
-const EditUserDialog: React.FC<EditUserDialogProps> = ({
-  isOpen,
-  onOpenChange,
-  user,
-  onUserUpdated,
-}) => {
+const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, user, onUserUpdated }) => {
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
-  const [documentUrls, setDocumentUrls] = useState<{
-    identity?: string;
-    address?: string;
-    cguv?: string;
-  }>({});
+  const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string; cguv?: string }>({});
   const [isEditRoomDialogOpen, setIsEditRoomDialogOpen] = useState(false);
   const [roomToEdit, setRoomToEdit] = useState<UserRoom | null>(null);
   const [cguvFile, setCguvFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isSyncingBank, setIsSyncingBank] = useState(false);
-  const [syncedBankAccounts, setSyncedBankAccounts] = useState<StripeExternalAccount[]>([]);
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -226,30 +167,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
         fetchUrls();
       }
     }
-    setSyncedBankAccounts([]); // Reset synced bank accounts on open
   }, [isOpen, user, form]);
-
-  const handleSyncStripeBank = async () => {
-    if (!user?.stripe_account_id) {
-      toast.error("Cet utilisateur n'a pas d'ID de compte Stripe associé.");
-      return;
-    }
-    setIsSyncingBank(true);
-    setSyncedBankAccounts([]);
-    try {
-      const externalAccounts = await listStripeExternalAccounts(user.stripe_account_id);
-      setSyncedBankAccounts(externalAccounts);
-      if (externalAccounts.length > 0) {
-        toast.success("Comptes bancaires Stripe récupérés avec succès !");
-      } else {
-        toast.warning("Aucun compte bancaire externe n'a été trouvé pour ce compte Stripe.");
-      }
-    } catch (error: any) {
-      toast.error(`Erreur de récupération des comptes bancaires : ${error.message}`);
-    } finally {
-      setIsSyncingBank(false);
-    }
-  };
 
   const handleDownloadCguv = async () => {
     try {
@@ -479,88 +397,17 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({
                     </CardContent>
                   </Card>
                   <Card className="mt-4">
-                    <CardHeader><CardTitle>ID Compte Stripe</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>Paiement Stripe</CardTitle></CardHeader>
                     <CardContent>
                       <FormField control={form.control} name="stripe_account_id" render={({ field }) => (<FormItem><FormLabel>ID Compte Stripe</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormDescription>L'ID du compte Stripe Connect associé à cet utilisateur.</FormDescription><FormMessage /></FormItem>)} />
-                      <Button
-                        type="button"
-                        onClick={handleSyncStripeBank}
-                        disabled={isSyncingBank || !user?.stripe_account_id}
-                        className="w-full"
-                      >
-                        {isSyncingBank ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Synchroniser les coordonnées bancaires Stripe"}
-                      </Button>
-                      {syncedBankAccounts.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          <p className="text-sm font-medium">Comptes bancaires externes trouvés :</p>
-                          {syncedBankAccounts.map((account, index) => (
-                            <div key={index} className="p-2 border rounded-md bg-muted text-sm">
-                              <p><strong>Banque :</strong> {account.bank_name || 'N/A'}</p>
-                              <p><strong>IBAN :</strong> **** **** **** {account.last4}</p>
-                              <p><strong>Pays :</strong> {account.country}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                   <Card className="mt-4">
-                    <CardHeader>
-                      <CardTitle>Paiement Abritel & Hello Keys</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle>Paiement Abritel & Hello Keys</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="sync_with_hellokeys"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel>Synchroniser avec Hello Keys</FormLabel>
-                              <FormDescription>
-                                Activez cette option pour indiquer que les paiements Abritel/Hello Keys sont gérés via un compte bancaire synchronisé.
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="iban_abritel_hellokeys"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>IBAN</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                disabled={!form.watch("sync_with_hellokeys")}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="bic_abritel_hellokeys"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>BIC</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                disabled={!form.watch("sync_with_hellokeys")}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <FormField control={form.control} name="sync_with_hellokeys" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Synchroniser avec Hello Keys</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                      <FormField control={form.control} name="iban_abritel_hellokeys" render={({ field }) => (<FormItem><FormLabel>IBAN</FormLabel><FormControl><Input {...field} disabled={!form.watch('sync_with_hellokeys')} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="bic_abritel_hellokeys" render={({ field }) => (<FormItem><FormLabel>BIC</FormLabel><FormControl><Input {...field} disabled={!form.watch('sync_with_hellokeys')} /></FormControl><FormMessage /></FormItem>)} />
                     </CardContent>
                   </Card>
                 </TabsContent>

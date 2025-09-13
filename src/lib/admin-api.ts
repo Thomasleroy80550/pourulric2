@@ -1066,6 +1066,7 @@ export async function initiateStripePayout(payoutDetails: {
   amount: number; // Amount in cents
   currency: string;
   invoiceIds: string[];
+  description?: string;
 }): Promise<any> {
   const { data, error } = await supabase.functions.invoke('initiate-stripe-payout', {
     body: {
@@ -1073,6 +1074,7 @@ export async function initiateStripePayout(payoutDetails: {
       amount: payoutDetails.amount,
       currency: payoutDetails.currency,
       invoice_ids: payoutDetails.invoiceIds,
+      description: payoutDetails.description,
     },
   });
 

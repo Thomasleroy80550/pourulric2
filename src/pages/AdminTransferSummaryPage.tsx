@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import StatementDetailsDialog from '@/components/StatementDetailsDialog'; // Import the dialog
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import StripePayoutDialog from '@/components/admin/StripePayoutDialog';
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -22,6 +23,8 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [selectedStatement, setSelectedStatement] = useState<SavedInvoice | null>(null); // State for selected statement
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [payingUserId, setPayingUserId] = useState<string | null>(null);
+  const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
+  const [summaryForPayout, setSummaryForPayout] = useState<UserTransferSummary | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -78,30 +81,41 @@ const AdminTransferSummaryPage: React.FC = () => {
     }
   };
 
-  const handlePayWithStripe = async (summary: UserTransferSummary) => {
+  const handlePayWithStripeClick = (summary: UserTransferSummary) => {
     if (!summary.stripe_account_id) {
       toast.error("Ce client n'a pas de compte Stripe lié.");
       return;
     }
+    setSummaryForPayout(summary);
+    setIsPayoutDialogOpen(true);
+  };
 
-    setPayingUserId(summary.user_id);
+  const handleConfirmPayout = async (description: string) => {
+    if (!summaryForPayout || !summaryForPayout.stripe_account_id) {
+      toast.error("Erreur : Données de virement manquantes.");
+      return;
+    }
+
+    setPayingUserId(summaryForPayout.user_id);
     try {
-      const amountInCents = Math.round(summary.total_amount_to_transfer * 100);
-      const invoiceIds = summary.details.filter(d => !d.transfer_completed).map(d => d.invoice_id);
+      const amountInCents = Math.round(summaryForPayout.total_amount_to_transfer * 100);
+      const invoiceIds = summaryForPayout.details.filter(d => !d.transfer_completed).map(d => d.invoice_id);
 
       await initiateStripePayout({
-        destinationAccountId: summary.stripe_account_id,
+        destinationAccountId: summaryForPayout.stripe_account_id,
         amount: amountInCents,
-        currency: 'eur', // ou la devise appropriée
+        currency: 'eur',
         invoiceIds: invoiceIds,
+        description: description,
       });
 
-      toast.success(`Virement de ${summary.total_amount_to_transfer.toFixed(2)} € initié pour ${summary.first_name} ${summary.last_name}.`);
+      toast.success(`Virement de ${summaryForPayout.total_amount_to_transfer.toFixed(2)} € initié pour ${summaryForPayout.first_name} ${summaryForPayout.last_name}.`);
       fetchData(); // Refresh data
     } catch (error: any) {
       toast.error(`Échec du virement : ${error.message}`);
     } finally {
       setPayingUserId(null);
+      setSummaryForPayout(null);
     }
   };
 
@@ -192,7 +206,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                       {summary.stripe_account_id && (
                                         <Button
                                           size="sm"
-                                          onClick={() => handlePayWithStripe(summary)}
+                                          onClick={() => handlePayWithStripeClick(summary)}
                                           disabled={payingUserId === summary.user_id}
                                         >
                                           {payingUserId === summary.user_id ? (
@@ -243,6 +257,12 @@ const AdminTransferSummaryPage: React.FC = () => {
         isOpen={isDetailsDialogOpen}
         onOpenChange={setIsDetailsDialogOpen}
         statement={selectedStatement}
+      />
+      <StripePayoutDialog
+        isOpen={isPayoutDialogOpen}
+        onOpenChange={setIsPayoutDialogOpen}
+        summary={summaryForPayout}
+        onConfirm={handleConfirmPayout}
       />
     </AdminLayout>
   );

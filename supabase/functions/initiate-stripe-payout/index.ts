@@ -32,24 +32,29 @@ serve(async (req) => {
       throw new Error("Server configuration error: Missing required environment variables.");
     }
 
-    const { destination_account_id, amount, currency, invoice_ids } = await req.json();
+    const { destination_account_id, amount, currency, invoice_ids, description } = await req.json();
     if (!destination_account_id || !amount || !currency || !invoice_ids) {
       throw new Error("Missing required parameters: destination_account_id, amount, currency, invoice_ids.");
     }
 
     // 2. Step 1: Create a Transfer to the connected account's Stripe balance
+    const transferParams = new URLSearchParams({
+      amount: amount.toString(),
+      currency: currency,
+      destination: destination_account_id,
+      transfer_group: `INVOICES-${invoice_ids[0]}`,
+    });
+    if (description) {
+      transferParams.append('description', description);
+    }
+
     const transferResponse = await fetch('https://api.stripe.com/v1/transfers', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
         'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: new URLSearchParams({
-        amount: amount.toString(),
-        currency: currency,
-        destination: destination_account_id,
-        transfer_group: `INVOICES-${invoice_ids[0]}`,
-      })
+      body: transferParams
     });
 
     if (!transferResponse.ok) {
@@ -59,6 +64,14 @@ serve(async (req) => {
     const transfer = await transferResponse.json();
 
     // 3. Step 2: Create a Payout from the connected account's balance to their bank
+    const payoutParams = new URLSearchParams({
+        amount: amount.toString(),
+        currency: currency,
+    });
+    if (description) {
+        payoutParams.append('description', description);
+    }
+
     const payoutResponse = await fetch('https://api.stripe.com/v1/payouts', {
         method: 'POST',
         headers: {
@@ -66,10 +79,7 @@ serve(async (req) => {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Stripe-Account': destination_account_id, // IMPORTANT: Execute on behalf of the connected account
         },
-        body: new URLSearchParams({
-            amount: amount.toString(),
-            currency: currency,
-        })
+        body: payoutParams
     });
 
     if (!payoutResponse.ok) {

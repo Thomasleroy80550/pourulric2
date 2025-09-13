@@ -15,6 +15,7 @@ const AdminStripeMatchPage: React.FC = () => {
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [linkingAccountId, setLinkingAccountId] = useState<string | null>(null);
+  const [isLinkingAll, setIsLinkingAll] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -62,6 +63,37 @@ const AdminStripeMatchPage: React.FC = () => {
     return userProfiles.find(p => p.stripe_account_id === stripeId);
   };
 
+  const linkableAccounts = stripeAccounts.filter(account => {
+    const matchedUserByEmail = findUserByEmail(account.email);
+    const linkedUser = findUserByStripeId(account.id);
+    return matchedUserByEmail && !linkedUser;
+  });
+
+  const handleLinkAll = async () => {
+    if (linkableAccounts.length === 0) {
+      toast.info("Aucun nouveau compte à lier.");
+      return;
+    }
+    setIsLinkingAll(true);
+    try {
+      const linkPromises = linkableAccounts.map(account => {
+        const user = findUserByEmail(account.email)!;
+        return updateUser({
+          user_id: user.id,
+          stripe_account_id: account.id,
+        });
+      });
+
+      await Promise.all(linkPromises);
+      toast.success(`${linkableAccounts.length} compte(s) ont été liés avec succès !`);
+      fetchData();
+    } catch (error: any) {
+      toast.error(`Une erreur est survenue lors de la liaison en masse : ${error.message}`);
+    } finally {
+      setIsLinkingAll(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -71,6 +103,16 @@ const AdminStripeMatchPage: React.FC = () => {
             <CardDescription>
               Liez les comptes Stripe Connect aux utilisateurs de l'application via leur adresse e-mail.
             </CardDescription>
+            <div className="pt-4">
+              <Button onClick={handleLinkAll} disabled={loading || isLinkingAll || linkableAccounts.length === 0}>
+                {isLinkingAll ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Link2 className="mr-2 h-4 w-4" />
+                )}
+                Lier les {linkableAccounts.length} comptes correspondants
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (

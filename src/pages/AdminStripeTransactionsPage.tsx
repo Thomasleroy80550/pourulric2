@@ -118,6 +118,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
                     <TableHead>Statut</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Client</TableHead>
+                    <TableHead>Description</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -144,6 +145,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
                           <TableCell>{pi.status}</TableCell>
                           <TableCell>{new Date(pi.created * 1000).toLocaleString()}</TableCell>
                           <TableCell>{pi.receipt_email || pi.customer || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[200px] truncate">{pi.description || 'N/A'}</TableCell>
                         </TableRow>
                       );
                     })

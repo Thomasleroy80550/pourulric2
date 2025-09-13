@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw } from 'lucide-react';
+import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search } from 'lucide-react';
 import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -15,6 +15,7 @@ import AddCommentDialog from '@/components/AddCommentDialog';
 import { generateStatementPdf } from '@/lib/pdf-utils';
 import { uploadStatementPdf } from '@/lib/storage-api';
 import StatusBadge from '@/components/StatusBadge';
+import { Input } from '@/components/ui/input';
 
 const AdminStatementsPage: React.FC = () => {
   const [statements, setStatements] = useState<SavedInvoice[]>([]);
@@ -26,6 +27,7 @@ const AdminStatementsPage: React.FC = () => {
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
   const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const loadStatements = async () => {
     setLoading(true);
@@ -113,6 +115,15 @@ const AdminStatementsPage: React.FC = () => {
     }
   };
 
+  const filteredStatements = statements.filter(statement => {
+    const term = searchTerm.toLowerCase();
+    const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}`.toLowerCase() : 'client supprimé';
+    const period = statement.period.toLowerCase();
+    const pennylaneStatus = statement.pennylane_status.toLowerCase();
+    
+    return clientName.includes(term) || period.includes(term) || pennylaneStatus.includes(term);
+  });
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -120,6 +131,15 @@ const AdminStatementsPage: React.FC = () => {
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle>Historique de tous les relevés générés</CardTitle>
+            <div className="relative mt-2">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher par client, période ou statut..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 w-full md:w-1/3"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -134,8 +154,8 @@ const AdminStatementsPage: React.FC = () => {
                 <AlertTitle>Erreur</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
-            ) : statements.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Aucun relevé sauvegardé pour le moment.</p>
+            ) : filteredStatements.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">Aucun relevé trouvé pour votre recherche.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -150,7 +170,7 @@ const AdminStatementsPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {statements.map((statement) => {
+                  {filteredStatements.map((statement) => {
                     const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client Supprimé';
                     return (
                       <TableRow key={statement.id}>

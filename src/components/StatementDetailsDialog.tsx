@@ -10,10 +10,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { SavedInvoice } from '@/lib/admin-api';
 import StatementPrintLayout from './StatementPrintLayout';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Search } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
+import { findMatchingPennylaneInvoice } from '@/lib/pennylane-api';
 
 interface StatementDetailsDialogProps {
   isOpen: boolean;
@@ -23,8 +24,36 @@ interface StatementDetailsDialogProps {
 
 const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen, onOpenChange, statement }) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isFindingInvoice, setIsFindingInvoice] = useState(false);
 
   if (!statement) return null;
+
+  const handleFindInvoice = async () => {
+    if (!statement) return;
+
+    setIsFindingInvoice(true);
+    const toastId = toast.loading("Recherche de la facture Pennylane correspondante...");
+
+    try {
+      const invoiceUrl = await findMatchingPennylaneInvoice(
+        statement.user_id,
+        statement.totals.totalFacture,
+        statement.period
+      );
+
+      if (invoiceUrl) {
+        toast.success("Facture Pennylane trouvée !", { id: toastId });
+        window.open(invoiceUrl, '_blank');
+      } else {
+        toast.info("Aucune facture Pennylane correspondante n'a été trouvée.", { id: toastId });
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la recherche de la facture Pennylane:", error);
+      toast.error(`Erreur: ${error.message}`, { id: toastId });
+    } finally {
+      setIsFindingInvoice(false);
+    }
+  };
 
   const handleDownloadPdf = async () => {
     const statementElement = document.getElementById('statement-to-print');
@@ -95,6 +124,19 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
         </div>
         <DialogFooter className="no-print mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
+          <Button onClick={handleFindInvoice} disabled={isFindingInvoice}>
+            {isFindingInvoice ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Recherche...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                Trouver la facture Pennylane
+              </>
+            )}
+          </Button>
           <Button onClick={handleDownloadPdf} disabled={isDownloading}>
             {isDownloading ? (
               <>

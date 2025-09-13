@@ -182,19 +182,29 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
     setBankSyncStatus('idle');
     try {
       const externalAccounts = await listStripeExternalAccounts(user.stripe_account_id);
-      if (externalAccounts.length > 0) {
-        const bankAccount = externalAccounts[0]; // Take the first bank account
-        if (bankAccount.iban) {
-          form.setValue('iban_abritel_hellokeys', bankAccount.iban, { shouldValidate: true });
-          // Le BIC n'est pas toujours directement disponible, on utilise le nom de la banque comme fallback
-          form.setValue('bic_abritel_hellokeys', bankAccount.bank_name || '', { shouldValidate: true });
-          form.setValue('sync_with_hellokeys', true);
-          setBankSyncStatus('success');
-          toast.success("Coordonnées bancaires synchronisées avec succès !");
-        } else {
-          setBankSyncStatus('not_found');
-          toast.warning("Le premier compte bancaire trouvé n'a pas d'IBAN. Il est peut-être dans un autre format (ex: US).");
-        }
+      
+      let bankAccountToUse: StripeExternalAccount | undefined;
+
+      // 1. Try to find a French or Belgian bank account with an IBAN
+      bankAccountToUse = externalAccounts.find(
+        (account) => (account.country === 'FR' || account.country === 'BE') && account.iban
+      );
+
+      // 2. If not found, try to find any bank account with an IBAN
+      if (!bankAccountToUse) {
+        bankAccountToUse = externalAccounts.find((account) => account.iban);
+      }
+
+      if (bankAccountToUse && bankAccountToUse.iban) {
+        form.setValue('iban_abritel_hellokeys', bankAccountToUse.iban, { shouldValidate: true });
+        // Le BIC n'est pas toujours directement disponible, on utilise le nom de la banque comme fallback
+        form.setValue('bic_abritel_hellokeys', bankAccountToUse.bank_name || '', { shouldValidate: true });
+        form.setValue('sync_with_hellokeys', true);
+        setBankSyncStatus('success');
+        toast.success("Coordonnées bancaires synchronisées avec succès !");
+      } else if (externalAccounts.length > 0) {
+        setBankSyncStatus('not_found');
+        toast.warning("Aucun compte bancaire avec IBAN (FR/BE prioritaire) trouvé pour ce compte Stripe.");
       } else {
         setBankSyncStatus('not_found');
         toast.warning("Aucun compte bancaire externe trouvé pour ce compte Stripe.");

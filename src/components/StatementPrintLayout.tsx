@@ -196,17 +196,26 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold bg-gray-100">
-                        <TableCell>Total des résas</TableCell>
+                        <TableCell>Sous-total (montant à virer)</TableCell>
                         <TableCell className="text-right">{data.total.toFixed(2)}€</TableCell>
                       </TableRow>
-                      <TableRow className="font-bold bg-gray-100">
-                        <TableCell>
-                          {transferDetails.deductionInfo?.deducted && transferDetails.deductionInfo?.source === source
-                            ? "Virement en transit vers votre compte (nous avons déduit le montant de votre facture, vous n'avez rien a payé)"
-                            : "Total à virer"}
-                        </TableCell>
-                        <TableCell className="text-right">{data.total.toFixed(2)}€</TableCell>
-                      </TableRow>
+                      {transferDetails.deductionInfo?.deducted && transferDetails.deductionInfo?.source === source ? (
+                        <>
+                          <TableRow className="font-bold bg-gray-100">
+                            <TableCell>Déduction facture Hello Keys</TableCell>
+                            <TableCell className="text-right text-red-600">- {totalFacture.toFixed(2)}€</TableCell>
+                          </TableRow>
+                          <TableRow className="font-bold bg-gray-100">
+                            <TableCell>Virement en transit vers votre compte</TableCell>
+                            <TableCell className="text-right text-green-600">{(data.total - totalFacture).toFixed(2)}€</TableCell>
+                          </TableRow>
+                        </>
+                      ) : (
+                        <TableRow className="font-bold bg-gray-100">
+                          <TableCell>Total à virer</TableCell>
+                          <TableCell className="text-right">{data.total.toFixed(2)}€</TableCell>
+                        </TableRow>
+                      )}
                     </TableFooter>
                   </Table>
                 </div>

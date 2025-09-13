@@ -777,6 +777,82 @@ export async function updateSetting(key: string, value: any): Promise<AppSetting
 }
 
 /**
+ * Fetches a summary of pending transfers for all users. Admin only.
+ * @returns A promise that resolves to an array of UserTransferSummary objects.
+ */
+export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
+  const { data: invoices, error } = await supabase
+    .from('invoices')
+    .select(`
+      id,
+      user_id,
+      period,
+      totals,
+      transfer_completed,
+      profiles (
+        first_name,
+        last_name,
+        stripe_account_id
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching invoices for transfer summary:", error);
+    throw new Error(`Erreur lors de la récupération des relevés pour le résumé des virements : ${error.message}`);
+  }
+
+  const userSummariesMap = new Map<string, UserTransferSummary>();
+
+  invoices.forEach(invoice => {
+    const userId = invoice.user_id;
+    const profile = invoice.profiles;
+
+    if (!profile) {
+      console.warn(`Profile not found for user_id: ${userId}`);
+      return;
+    }
+
+    if (!userSummariesMap.has(userId)) {
+      userSummariesMap.set(userId, {
+        user_id: userId,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        stripe_account_id: profile.stripe_account_id,
+        total_amount_to_transfer: 0,
+        details: [],
+      });
+    }
+
+    const summary = userSummariesMap.get(userId)!;
+
+    // Only include invoices that are not yet transferred in the total and details
+    if (!invoice.transfer_completed) {
+      const amount = invoice.totals?.totalRevenuGenere || 0;
+      summary.total_amount_to_transfer += amount;
+      summary.details.push({
+        period: invoice.period,
+        amount: amount,
+        amountsBySource: invoice.totals?.transferDetails?.sources || {},
+        invoice_id: invoice.id,
+        transfer_completed: invoice.transfer_completed,
+      });
+    }
+  });
+
+  // Filter out users with no pending transfers and sort
+  const sortedSummaries = Array.from(userSummariesMap.values())
+    .filter(summary => summary.total_amount_to_transfer > 0)
+    .sort((a, b) => {
+      const nameA = `${a.first_name || ''} ${a.last_name || ''}`;
+      const nameB = `${b.first_name || ''} ${b.last_name || ''}`;
+      return nameA.localeCompare(nameB);
+    });
+
+  return sortedSummaries;
+}
+
+/**
  * Fetches all Stripe connected accounts. Admin only.
  * @returns A promise that resolves to an array of StripeAccount objects.
  */

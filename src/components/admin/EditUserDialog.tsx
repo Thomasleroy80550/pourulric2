@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateUser, UpdateUserPayload, getStripeExternalAccount } from '@/lib/admin-api';
+import { updateUser, UpdateUserPayload, listStripeExternalAccounts } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { supabase } from '@/integrations/supabase/client';
@@ -181,17 +181,23 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
     setIsSyncingBank(true);
     setBankSyncStatus('idle');
     try {
-      const bankAccount = await getStripeExternalAccount(user.stripe_account_id);
-      if (bankAccount && bankAccount.iban) {
-        form.setValue('iban_abritel_hellokeys', bankAccount.iban, { shouldValidate: true });
-        // Le BIC n'est pas toujours directement disponible, on utilise le nom de la banque comme fallback
-        form.setValue('bic_abritel_hellokeys', bankAccount.bank_name || '', { shouldValidate: true });
-        form.setValue('sync_with_hellokeys', true);
-        setBankSyncStatus('success');
-        toast.success("Coordonnées bancaires synchronisées avec succès !");
+      const externalAccounts = await listStripeExternalAccounts(user.stripe_account_id);
+      if (externalAccounts.length > 0) {
+        const bankAccount = externalAccounts[0]; // Take the first bank account
+        if (bankAccount.iban) {
+          form.setValue('iban_abritel_hellokeys', bankAccount.iban, { shouldValidate: true });
+          // Le BIC n'est pas toujours directement disponible, on utilise le nom de la banque comme fallback
+          form.setValue('bic_abritel_hellokeys', bankAccount.bank_name || '', { shouldValidate: true });
+          form.setValue('sync_with_hellokeys', true);
+          setBankSyncStatus('success');
+          toast.success("Coordonnées bancaires synchronisées avec succès !");
+        } else {
+          setBankSyncStatus('not_found');
+          toast.warning("Le premier compte bancaire trouvé n'a pas d'IBAN. Il est peut-être dans un autre format (ex: US).");
+        }
       } else {
         setBankSyncStatus('not_found');
-        toast.warning("Aucun IBAN trouvé pour ce compte Stripe. Le compte est peut-être dans un autre format (ex: US).");
+        toast.warning("Aucun compte bancaire externe trouvé pour ce compte Stripe.");
       }
     } catch (error: any) {
       setBankSyncStatus('error');

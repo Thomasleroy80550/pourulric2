@@ -23,9 +23,10 @@ serve(async (req) => {
       throw new Error("L'ID du compte Stripe est manquant.");
     }
 
+    // Fetch all external bank accounts for the given Stripe account
     const externalAccounts = await stripe.accounts.listExternalAccounts(account_id, {
       object: 'bank_account',
-      limit: 1,
+      // No limit here, so it will fetch all by default (Stripe API has its own default limit, usually 10)
     });
 
     if (externalAccounts.data.length === 0) {
@@ -35,14 +36,13 @@ serve(async (req) => {
       });
     }
 
-    const bankAccount = externalAccounts.data[0];
-
-    return new Response(JSON.stringify(bankAccount), {
+    // Return the array of bank accounts
+    return new Response(JSON.stringify(externalAccounts.data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error("Erreur dans la fonction Edge get-stripe-external-account:", error);
+    console.error("Erreur dans la fonction Edge list-stripe-external-accounts:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

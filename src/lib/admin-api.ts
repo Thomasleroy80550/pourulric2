@@ -156,6 +156,35 @@ export interface BillingStats {
   }[];
 }
 
+export interface StripeAccount {
+  id: string;
+  object: string;
+  business_profile: {
+    name: string | null;
+    url: string | null;
+  };
+  business_type: string | null;
+  charges_enabled: boolean;
+  country: string;
+  created: number;
+  default_currency: string;
+  details_submitted: boolean;
+  email: string | null;
+  payouts_enabled: boolean;
+  requirements: {
+    currently_due: string[];
+    eventually_due: string[];
+    past_due: string[];
+    disabled_reason: string | null;
+  };
+  settings: {
+    dashboard: {
+      display_name: string | null;
+    }
+  };
+  type: string;
+}
+
 /**
  * Fetches and aggregates billing statistics for Hello Keys.
  * @param period Optional period string (e.g., "Juin 2024") for filtering.
@@ -740,6 +769,24 @@ export async function listStripeAccounts(): Promise<StripeAccount[]> {
   }
 
   return data || [];
+}
+
+/**
+ * Fetches a single Stripe connected account by its ID. Admin only.
+ * @param accountId The ID of the Stripe account to fetch.
+ * @returns A promise that resolves to a StripeAccount object.
+ */
+export async function getStripeAccount(accountId: string): Promise<StripeAccount> {
+  const { data, error } = await supabase.functions.invoke('get-stripe-account', {
+    body: { account_id: accountId },
+  });
+
+  if (error) {
+    console.error(`Error fetching Stripe account ${accountId}:`, error);
+    throw new Error(`Erreur lors de la récupération du compte Stripe : ${error.message}`);
+  }
+
+  return data;
 }
 
 /**

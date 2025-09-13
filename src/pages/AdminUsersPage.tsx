@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -18,6 +18,7 @@ import AddUserDialog from '@/components/admin/AddUserDialog';
 import EditUserDialog from '@/components/admin/EditUserDialog';
 import ImportUsersDialog from '@/components/admin/ImportUsersDialog';
 import { Input } from '@/components/ui/input';
+import StripeAccountDetailsDialog from '@/components/admin/StripeAccountDetailsDialog';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -81,6 +82,8 @@ const AdminUsersPage: React.FC = () => {
   const [pendingApproval, setPendingApproval] = useState<AccountantRequest | null>(null);
   const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isStripeDetailsOpen, setIsStripeDetailsOpen] = useState(false);
+  const [selectedStripeAccountId, setSelectedStripeAccountId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchUsers = useCallback(async () => {
@@ -128,6 +131,11 @@ const AdminUsersPage: React.FC = () => {
   const handleEditClick = (user: UserProfile) => {
     setEditingUser(user);
     setIsEditDialogOpen(true);
+  };
+
+  const handleShowStripeDetails = (stripeAccountId: string) => {
+    setSelectedStripeAccountId(stripeAccountId);
+    setIsStripeDetailsOpen(true);
   };
 
   const handleApproveClick = (request: AccountantRequest) => {
@@ -239,6 +247,7 @@ const AdminUsersPage: React.FC = () => {
                         <TableHead>Rôle</TableHead>
                         <TableHead>Statut Intégration</TableHead>
                         <TableHead>Statut KYC</TableHead>
+                        <TableHead>Compte Stripe</TableHead>
                         <TableHead>Dernière Connexion</TableHead>
                         <TableHead>Acceptation CGUV</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -266,6 +275,16 @@ const AdminUsersPage: React.FC = () => {
                             <Badge variant={getKycStatusVariant(user.kyc_status)}>
                               {getKycStatusText(user.kyc_status)}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {user.stripe_account_id ? (
+                              <Button variant="outline" size="sm" onClick={() => handleShowStripeDetails(user.stripe_account_id!)}>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Voir
+                              </Button>
+                            ) : (
+                              <Badge variant="outline">Non lié</Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             {user.last_sign_in_at ? formatDistanceToNow(new Date(user.last_sign_in_at), { addSuffix: true, locale: fr }) : 'Jamais'}
@@ -368,6 +387,12 @@ const AdminUsersPage: React.FC = () => {
         onOpenChange={setIsEditDialogOpen}
         user={editingUser}
         onUserUpdated={handleUserUpdated}
+      />
+
+      <StripeAccountDetailsDialog
+        isOpen={isStripeDetailsOpen}
+        onOpenChange={setIsStripeDetailsOpen}
+        stripeAccountId={selectedStripeAccountId}
       />
     </AdminLayout>
   );

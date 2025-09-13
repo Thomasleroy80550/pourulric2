@@ -894,7 +894,6 @@ export async function sendStatementDataToMakeWebhook(
       owner_cleaning_fee: totals.ownerCleaningFee,
       date_emission: dateEmission,
       deadline_paiement: deadlinePaiement,
-      invoice_id: invoiceId, // Passer l'ID du relevé pour que Make.com puisse le renvoyer
     };
 
     console.log("Sending statement data to Make.com webhook:", payload);

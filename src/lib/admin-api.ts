@@ -957,7 +957,7 @@ export async function resendStatementToPennylane(invoiceId: string): Promise<voi
 
   // 3. Call the webhook function
   await sendStatementDataToMakeWebhook(
-    user_id,
+    invoiceId,
     period,
     totals,
     formattedEmissionDate,

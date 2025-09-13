@@ -52,7 +52,7 @@ const StripePayoutDialog: React.FC<StripePayoutDialogProps> = ({
 
   const amountToPay = summary.details
     .filter(d => !d.transfer_completed)
-    .reduce((acc, d) => acc + d.amount, 0);
+    .reduce((acc, d) => acc + (d.amountsBySource['stripe'] || 0), 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -70,7 +70,7 @@ const StripePayoutDialog: React.FC<StripePayoutDialogProps> = ({
               <span className="font-medium">{summary.first_name} {summary.last_name}</span>
             </div>
             <div className="flex justify-between items-center mt-2">
-              <span className="text-muted-foreground">Montant à virer</span>
+              <span className="text-muted-foreground">Montant Stripe à virer</span>
               <span className="font-bold text-lg text-primary">{amountToPay.toFixed(2)} €</span>
             </div>
           </div>

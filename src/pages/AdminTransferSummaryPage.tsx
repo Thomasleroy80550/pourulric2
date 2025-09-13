@@ -108,7 +108,17 @@ const AdminTransferSummaryPage: React.FC = () => {
 
     setPayingUserId(summaryForPayout.user_id);
     try {
-      const amountInCents = Math.round(summaryForPayout.total_amount_to_transfer * 100);
+      const stripeAmountToPay = summaryForPayout.details
+        .filter(d => !d.transfer_completed)
+        .reduce((acc, d) => acc + (d.amountsBySource['stripe'] || 0), 0);
+
+      if (stripeAmountToPay <= 0) {
+        toast.error("Aucun montant Stripe à virer pour ce client.");
+        setPayingUserId(null);
+        return;
+      }
+
+      const amountInCents = Math.round(stripeAmountToPay * 100);
       const invoiceIds = summaryForPayout.details.filter(d => !d.transfer_completed).map(d => d.invoice_id);
 
       await initiateStripePayout({
@@ -119,7 +129,7 @@ const AdminTransferSummaryPage: React.FC = () => {
         description: description,
       });
 
-      toast.success(`Virement de ${summaryForPayout.total_amount_to_transfer.toFixed(2)} € initié pour ${summaryForPayout.first_name} ${summaryForPayout.last_name}.`);
+      toast.success(`Virement Stripe de ${stripeAmountToPay.toFixed(2)} € initié pour ${summaryForPayout.first_name} ${summaryForPayout.last_name}.`);
       fetchData(); // Refresh data
     } catch (error: any) {
       toast.error(`Échec du virement : ${error.message}`);

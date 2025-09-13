@@ -13,6 +13,16 @@ import { cn } from '@/lib/utils';
 import StatementDetailsDialog from '@/components/StatementDetailsDialog'; // Import the dialog
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -22,6 +32,8 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [selectedStatement, setSelectedStatement] = useState<SavedInvoice | null>(null); // State for selected statement
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [payingUserId, setPayingUserId] = useState<string | null>(null);
+  const [payoutDialogState, setPayoutDialogState] = useState<{ open: boolean; summary: UserTransferSummary | null }>({ open: false, summary: null });
+  const [payoutDescription, setPayoutDescription] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -78,9 +90,20 @@ const AdminTransferSummaryPage: React.FC = () => {
     }
   };
 
-  const handlePayWithStripe = async (summary: UserTransferSummary) => {
+  const handleOpenPayoutDialog = (summary: UserTransferSummary) => {
     if (!summary.stripe_account_id) {
       toast.error("Ce client n'a pas de compte Stripe lié.");
+      return;
+    }
+    const defaultDescription = `Virement pour les périodes: ${summary.details.filter(d => !d.transfer_completed).map(d => d.period).join(', ')}`;
+    setPayoutDescription(defaultDescription);
+    setPayoutDialogState({ open: true, summary });
+  };
+
+  const handleConfirmPayout = async () => {
+    const summary = payoutDialogState.summary;
+    if (!summary || !summary.stripe_account_id) {
+      toast.error("Informations de virement invalides.");
       return;
     }
 
@@ -89,16 +112,18 @@ const AdminTransferSummaryPage: React.FC = () => {
       const amountInCents = Math.round(summary.total_amount_to_transfer * 100);
       const invoiceDetails = summary.details
         .filter(d => !d.transfer_completed)
-        .map(d => ({ id: d.invoice_id, period: d.period })); // Récupérer l'ID et la période
+        .map(d => ({ id: d.invoice_id, period: d.period }));
 
       await initiateStripePayout({
         destinationAccountId: summary.stripe_account_id,
         amount: amountInCents,
-        currency: 'eur', // ou la devise appropriée
-        invoiceDetails: invoiceDetails, // Passer les détails des factures
+        currency: 'eur',
+        invoiceDetails: invoiceDetails,
+        description: payoutDescription,
       });
 
       toast.success(`Virement de ${summary.total_amount_to_transfer.toFixed(2)} € initié pour ${summary.first_name} ${summary.last_name}.`);
+      setPayoutDialogState({ open: false, summary: null });
       fetchData(); // Refresh data
     } catch (error: any) {
       toast.error(`Échec du virement : ${error.message}`);
@@ -194,8 +219,8 @@ const AdminTransferSummaryPage: React.FC = () => {
                                       {summary.stripe_account_id && (
                                         <Button
                                           size="sm"
-                                          onClick={() => handlePayWithStripe(summary)}
-                                          disabled={payingUserId === summary.user_id}
+                                          onClick={() => handleOpenPayoutDialog(summary)}
+                                          disabled={payingUserId === summary.user_id || userPendingAmount <= 0}
                                         >
                                           {payingUserId === summary.user_id ? (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -246,6 +271,37 @@ const AdminTransferSummaryPage: React.FC = () => {
         onOpenChange={setIsDetailsDialogOpen}
         statement={selectedStatement}
       />
+      <Dialog open={payoutDialogState.open} onOpenChange={(open) => setPayoutDialogState({ ...payoutDialogState, open: !open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer le virement Stripe</DialogTitle>
+            <DialogDescription>
+              Vous êtes sur le point d'initier un virement pour {payoutDialogState.summary?.first_name} {payoutDialogState.summary?.last_name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p><strong>Montant :</strong> <span className="font-mono text-lg">{payoutDialogState.summary?.total_amount_to_transfer.toFixed(2)} €</span></p>
+            <div className="grid w-full gap-1.5">
+              <Label htmlFor="description">Description du virement</Label>
+              <Textarea 
+                placeholder="Ex: Virement pour les factures de Juin et Juillet" 
+                id="description"
+                value={payoutDescription}
+                onChange={(e) => setPayoutDescription(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Cette description apparaîtra sur le virement Stripe.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPayoutDialogState({ open: false, summary: null })}>Annuler</Button>
+            <Button onClick={handleConfirmPayout} disabled={payingUserId !== null}>
+              {payingUserId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Confirmer et Payer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

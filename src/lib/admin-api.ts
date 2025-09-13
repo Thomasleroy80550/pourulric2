@@ -953,110 +953,6 @@ export async function resendStatementToPennylane(invoiceId: string): Promise<voi
 }
 
 /**
- * Calculates the total amount to transfer for each user based on their saved invoices.
- * This is an admin-only function.
- * @returns A promise that resolves to an array of UserTransferSummary objects.
- */
-export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
-  const { data, error } = await supabase
-    .from('invoices')
-    .select(`
-      id,
-      user_id,
-      period,
-      totals,
-      transfer_completed,
-      profiles (
-        first_name,
-        last_name,
-        stripe_account_id
-      )
-    `);
-
-  if (error) {
-    console.error("Error fetching invoices for transfer summary:", error);
-    throw new Error(`Erreur lors de la récupération des relevés pour le résumé des virements : ${error.message}`);
-  }
-
-  const transferMap = new Map<string, { 
-      first_name: string | null, 
-      last_name: string | null, 
-      total: number, 
-      details: { 
-          period: string; 
-          amount: number; 
-          amountsBySource: { [key: string]: number };
-          invoice_id: string; 
-          transfer_completed: boolean; 
-      }[] 
-  }>();
-
-  data.forEach(invoice => {
-    const userId = invoice.user_id;
-    const period = invoice.period;
-    const firstName = invoice.profiles?.first_name || null;
-    const lastName = invoice.profiles?.last_name || null;
-    const stripeAccountId = invoice.profiles?.stripe_account_id || null; // Récupérer l'ID Stripe
-    const invoiceId = invoice.id;
-    const transferCompleted = invoice.transfer_completed || false;
-
-    // Recalculate amount to transfer based on relevant sources only
-    let amountToTransfer = 0;
-    const amountsBySource: { [key: string]: number } = {};
-    const sources = invoice.totals?.transferDetails?.sources;
-
-    if (sources) {
-      // Sum amounts from sources collected by Hello Keys (keys are lowercase)
-      if (sources['stripe']) {
-        const stripeTotal = sources['stripe'].total || 0;
-        amountToTransfer += stripeTotal;
-        amountsBySource['stripe'] = stripeTotal;
-      }
-      if (sources['airbnb']) {
-        const airbnbTotal = sources['airbnb'].total || 0;
-        amountToTransfer += airbnbTotal;
-        amountsBySource['airbnb'] = airbnbTotal;
-      }
-    }
-
-    // Only process if there is an actual amount to transfer from our sources
-    if (amountToTransfer > 0) {
-      const detailItem = { 
-          period, 
-          amount: amountToTransfer, 
-          amountsBySource,
-          invoice_id: invoiceId, 
-          transfer_completed: transferCompleted 
-      };
-
-      if (transferMap.has(userId)) {
-        const current = transferMap.get(userId)!;
-        current.total += amountToTransfer;
-        current.details.push(detailItem);
-        transferMap.set(userId, current);
-      } else {
-        transferMap.set(userId, {
-          first_name: firstName,
-          last_name: lastName,
-          stripe_account_id: stripeAccountId, // Stocker l'ID Stripe
-          total: amountToTransfer,
-          details: [detailItem]
-        });
-      }
-    }
-  });
-
-  return Array.from(transferMap.entries()).map(([userId, summary]) => ({
-    user_id: userId,
-    first_name: summary.first_name,
-    last_name: summary.last_name,
-    stripe_account_id: summary.stripe_account_id,
-    total_amount_to_transfer: summary.total,
-    details: summary.details.sort((a, b) => (b.period || '').localeCompare(a.period || ''))
-  }));
-}
-
-/**
  * Initiates a Stripe payout process (Transfer + Payout).
  * @param payoutDetails Details for the payout.
  * @returns A promise that resolves when the payout is initiated.
@@ -1066,6 +962,7 @@ export async function initiateStripePayout(payoutDetails: {
   amount: number; // Amount in cents
   currency: string;
   invoiceDetails: { id: string; period: string }[];
+  description?: string;
 }): Promise<any> {
   const { data, error } = await supabase.functions.invoke('initiate-stripe-payout', {
     body: {
@@ -1073,6 +970,7 @@ export async function initiateStripePayout(payoutDetails: {
       amount: payoutDetails.amount,
       currency: payoutDetails.currency,
       invoice_details: payoutDetails.invoiceDetails,
+      description: payoutDetails.description,
     },
   });
 

@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useCallback, ReactNode, use
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
-import { saveInvoice, sendStatementByEmail, sendStatementDataToMakeWebhook } from '@/lib/admin-api';
+import { saveInvoice, sendStatementByEmail, sendStatementDataToMakeWebhook, updateInvoice, SavedInvoice } from '@/lib/admin-api';
 import { addDays, format, parseISO } from 'date-fns';
 
 // Interface for a processed reservation row
@@ -61,11 +61,13 @@ interface InvoiceGenerationContextType {
   transfersBySource: { [key: string]: { reservations: ProcessedReservation[], total: number } };
   ownerCleaningFee: number;
   setOwnerCleaningFee: React.Dispatch<React.SetStateAction<number>>;
+  editingInvoiceId: string | null;
   
   recalculateTotals: (data: ProcessedReservation[]) => void;
   processFile: (fileToProcess: File, commissionRate: number) => Promise<void>;
   resetState: () => void;
   handleGenerateInvoice: (sendEmail?: boolean) => Promise<void>;
+  loadInvoiceForEditing: (invoice: SavedInvoice) => void;
 }
 
 const InvoiceGenerationContext = createContext<InvoiceGenerationContextType | undefined>(undefined);
@@ -93,6 +95,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
   const [deductInvoice, setDeductInvoice] = useState(false);
   const [deductionSource, setDeductionSource] = useState('');
   const [ownerCleaningFee, setOwnerCleaningFee] = useState(0);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
 
   const totalFacture = totalCommission + totalFraisMenage + ownerCleaningFee;
 
@@ -111,6 +114,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     setTotalVoyageurs(0);
     setSelectedReservations(new Set());
     setOwnerCleaningFee(0);
+    setEditingInvoiceId(null);
     // Do not reset client and period
   }, []);
 
@@ -241,17 +245,12 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       }
     });
 
-    // La déduction de la facture sera appliquée dans StatementPrintLayout.tsx
-    // if (deductInvoice && deductionSource && result[deductionSource]) {
-    //   result[deductionSource].total -= totalFacture;
-    // }
-
     return result;
-  }, [selectedReservations, processedData, paymentSources, deductInvoice, deductionSource, totalFacture]);
+  }, [selectedReservations, processedData, paymentSources]);
 
   const handleGenerateInvoice = useCallback(async (sendEmail: boolean = false) => {
     if (!selectedClientId || !invoicePeriod || processedData.length === 0) {
-      toast.error("Veuillez sélectionner un client, une période et importer un fichier.");
+      toast.error("Veuillez sélectionner un client, une période et des données de réservation.");
       return;
     }
 
@@ -276,44 +275,53 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     };
 
     try {
-      const savedInvoice = await saveInvoice(selectedClientId, invoicePeriod, processedData, totals);
+      const isUpdate = !!editingInvoiceId;
+      const savedInvoice = isUpdate
+        ? await updateInvoice(editingInvoiceId, selectedClientId, invoicePeriod, processedData, totals)
+        : await saveInvoice(selectedClientId, invoicePeriod, processedData, totals);
       
-      // Calculate dates for webhook
       const emissionDate = parseISO(savedInvoice.created_at);
       const deadlineDate = addDays(emissionDate, 15);
       const formattedEmissionDate = format(emissionDate, 'yyyy-MM-dd');
       const formattedDeadlineDate = format(deadlineDate, 'yyyy-MM-dd');
 
-      // Send data to Make.com webhook
       await sendStatementDataToMakeWebhook(
         savedInvoice.id,
-        invoicePeriod, // Correctly passing the invoicePeriod
+        invoicePeriod,
         totals,
         formattedEmissionDate,
         formattedDeadlineDate
       );
 
       if (sendEmail) {
-        await sendStatementByEmail(savedInvoice.id);
-        toast.success("Relevé sauvegardé et e-mail mis en file d'attente pour envoi.");
-      } else {
-        toast.success("Relevé sauvegardé avec succès !");
+        // This part needs to be implemented: generate PDF, upload, then send email
+        toast.info("La génération PDF et l'envoi d'e-mail ne sont pas encore implémentés ici.");
       }
+      
+      toast.success(isUpdate ? "Relevé mis à jour avec succès !" : "Relevé sauvegardé avec succès !");
 
-      // Reset state after generation
-      setFile(null);
-      setFileName('');
-      setProcessedData([]);
-      setOwnerCleaningFee(0);
-      // Keep client and period for potentially generating another one
-      // setSelectedClientId('');
-      // setInvoicePeriod('');
+      resetState();
 
     } catch (error: any) {
-      console.error("Failed to generate invoice:", error);
-      toast.error(`Erreur lors de la génération : ${error.message}`);
+      console.error("Failed to generate/update invoice:", error);
+      toast.error(`Erreur lors de la ${editingInvoiceId ? 'mise à jour' : 'génération'} : ${error.message}`);
     }
-  }, [selectedClientId, invoicePeriod, processedData, totalCA, totalCommission, totalFraisMenage, totalPrixSejour, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalNuits, totalVoyageurs, totalFacture, helloKeysCollectsRent, transfersBySource, deductInvoice, deductionSource, resetState, ownerCleaningFee]);
+  }, [selectedClientId, invoicePeriod, processedData, totalCommission, totalPrixSejour, totalFraisMenage, totalTaxeDeSejour, totalRevenuGenere, totalMontantVerse, totalNuits, totalVoyageurs, ownerCleaningFee, transfersBySource, deductInvoice, deductionSource, editingInvoiceId, resetState]);
+
+  const loadInvoiceForEditing = useCallback((invoice: SavedInvoice) => {
+    resetState();
+    setEditingInvoiceId(invoice.id);
+    setSelectedClientId(invoice.user_id);
+    setInvoicePeriod(invoice.period);
+    setProcessedData(invoice.invoice_data || []);
+    setOwnerCleaningFee(invoice.totals.ownerCleaningFee || 0);
+    setDeductInvoice(invoice.totals.transferDetails?.deductionInfo?.deducted || false);
+    setDeductionSource(invoice.totals.transferDetails?.deductionInfo?.source || '');
+    // Assume all reservations from the saved invoice are selected
+    setSelectedReservations(new Set(invoice.invoice_data.map((_: any, index: number) => index)));
+    recalculateTotals(invoice.invoice_data || []);
+    setFileName(`Relevé existant pour ${invoice.period}`);
+  }, [resetState, recalculateTotals]);
 
   const value = {
     file, setFile,
@@ -339,10 +347,12 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     deductionSource, setDeductionSource,
     transfersBySource,
     ownerCleaningFee, setOwnerCleaningFee,
+    editingInvoiceId,
     recalculateTotals,
     processFile,
     resetState,
     handleGenerateInvoice,
+    loadInvoiceForEditing,
   };
 
   return (

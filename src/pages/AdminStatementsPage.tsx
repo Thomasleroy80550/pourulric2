@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search } from 'lucide-react';
+import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil } from 'lucide-react';
 import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -24,7 +25,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"; // Import Pagination components
+} from "@/components/ui/pagination";
 
 const AdminStatementsPage: React.FC = () => {
   const [statements, setStatements] = useState<SavedInvoice[]>([]);
@@ -37,8 +38,9 @@ const AdminStatementsPage: React.FC = () => {
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
   const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1); // New state for current page
-  const itemsPerPage = 10; // Number of items per page
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const navigate = useNavigate();
 
   const loadStatements = async () => {
     setLoading(true);
@@ -65,6 +67,10 @@ const AdminStatementsPage: React.FC = () => {
   const handleOpenCommentDialog = (statement: SavedInvoice) => {
     setSelectedStatement(statement);
     setIsCommentDialogOpen(true);
+  };
+
+  const handleEdit = (statementId: string) => {
+    navigate(`/admin/generate-invoice/${statementId}`);
   };
 
   const handleDelete = async (statementId: string) => {
@@ -227,8 +233,9 @@ const AdminStatementsPage: React.FC = () => {
                           </TableCell>
                           <TableCell>{statement.admin_comment ? 'Oui' : 'Non'}</TableCell>
                           <TableCell className="text-right font-bold">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
-                          <TableCell className="text-right space-x-2">
+                          <TableCell className="text-right space-x-1">
                             <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)} title="Voir les détails"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="icon" onClick={() => handleEdit(statement.id)} title="Modifier le relevé"><Pencil className="h-4 w-4" /></Button>
                             <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)} title="Ajouter/Voir commentaire"><MessageSquare className="h-4 w-4" /></Button>
                             <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
                               {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

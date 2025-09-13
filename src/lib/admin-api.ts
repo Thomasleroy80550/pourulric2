@@ -468,6 +468,46 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
 }
 
 /**
+ * Updates an existing invoice/statement in the database.
+ * @param invoiceId The ID of the invoice to update.
+ * @param userId The ID of the user the invoice belongs to.
+ * @param period The period the invoice covers.
+ * @param invoiceData The detailed data of the invoice.
+ * @param totals The calculated totals for the invoice.
+ * @returns A promise that resolves with the updated invoice data.
+ */
+export async function updateInvoice(invoiceId: string, userId: string, period: string, invoiceData: any, totals: any): Promise<SavedInvoice> {
+  const payload = {
+    user_id: userId,
+    period: period,
+    invoice_data: invoiceData,
+    totals: totals,
+  };
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .update(payload)
+    .eq('id', invoiceId)
+    .select(`*, profiles(first_name, last_name)`)
+    .single();
+
+  if (error) {
+    console.error("Error updating invoice:", error);
+    throw new Error(`Erreur lors de la mise à jour du relevé : ${error.message}`);
+  }
+
+  if (data) {
+    await createNotification(
+      payload.user_id,
+      `Votre relevé pour la période "${payload.period}" a été mis à jour.`,
+      '/finances'
+    );
+  }
+
+  return data;
+}
+
+/**
  * Triggers an edge function to send the statement via email.
  * @param invoiceId The ID of the invoice to send.
  * @param pdfPath The path of the generated PDF in Supabase Storage.
@@ -772,7 +812,7 @@ export async function updateSetting(key: string, value: any): Promise<AppSetting
 
   if (error) {
     console.error(`Error updating setting ${key}:`, error);
-    throw new Error(`Erreur lors de la mise à jour du paramètre : ${error.message}`);
+throw new Error(`Erreur lors de la mise à jour du paramètre : ${error.message}`);
   }
   return data;
 }

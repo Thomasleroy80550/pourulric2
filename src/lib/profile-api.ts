@@ -53,6 +53,7 @@ export interface UserProfile {
   referral_code?: string; // Ajout du champ
   referral_credits?: number; // Ajout du champ
   krossbooking_property_id?: number;
+  stripe_account_id?: string;
 }
 
 /**

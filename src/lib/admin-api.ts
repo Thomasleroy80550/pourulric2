@@ -123,6 +123,7 @@ export interface UserProfile {
   referral_credits: number;
   digital_booklet_enabled?: boolean | null;
   krossbooking_property_id?: number | null;
+  stripe_account_id?: string | null;
 }
 
 /**
@@ -724,6 +725,21 @@ export async function updateSetting(key: string, value: any): Promise<AppSetting
     throw new Error(`Erreur lors de la mise à jour du paramètre : ${error.message}`);
   }
   return data;
+}
+
+/**
+ * Fetches all Stripe connected accounts. Admin only.
+ * @returns A promise that resolves to an array of StripeAccount objects.
+ */
+export async function listStripeAccounts(): Promise<StripeAccount[]> {
+  const { data, error } = await supabase.functions.invoke('list-stripe-accounts');
+
+  if (error) {
+    console.error('Error fetching Stripe accounts:', error);
+    throw new Error(`Erreur lors de la récupération des comptes Stripe : ${error.message}`);
+  }
+
+  return data || [];
 }
 
 /**

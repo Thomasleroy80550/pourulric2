@@ -54,6 +54,7 @@ const editUserSchema = z.object({
   revyoos_holding_ids: z.string().optional().nullable(),
   referral_credits: z.coerce.number().min(0, "Les crédits de parrainage doivent être positifs.").optional().nullable(),
   krossbooking_property_id: z.coerce.number().optional().nullable(),
+  stripe_account_id: z.string().optional().nullable(),
 });
 
 const addRoomFormSchema = z.object({
@@ -128,6 +129,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         revyoos_holding_ids: user.revyoos_holding_ids?.join(', ') || '',
         referral_credits: user.referral_credits || 0,
         krossbooking_property_id: user.krossbooking_property_id || undefined,
+        stripe_account_id: user.stripe_account_id || '',
       });
 
       setLoadingRooms(true);
@@ -392,6 +394,12 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                     <CardContent className="space-y-4">
                       <FormField control={form.control} name="iban_airbnb_booking" render={({ field }) => (<FormItem><FormLabel>IBAN</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="bic_airbnb_booking" render={({ field }) => (<FormItem><FormLabel>BIC</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    </CardContent>
+                  </Card>
+                  <Card className="mt-4">
+                    <CardHeader><CardTitle>Paiement Stripe</CardTitle></CardHeader>
+                    <CardContent>
+                      <FormField control={form.control} name="stripe_account_id" render={({ field }) => (<FormItem><FormLabel>ID Compte Stripe</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormDescription>L'ID du compte Stripe Connect associé à cet utilisateur.</FormDescription><FormMessage /></FormItem>)} />
                     </CardContent>
                   </Card>
                   <Card className="mt-4">

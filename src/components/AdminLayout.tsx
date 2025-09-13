@@ -28,6 +28,7 @@ import {
   Banknote,
   CreditCard,
   BarChart3, // New icon for stats
+  Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -92,6 +93,7 @@ const adminNavigationCategories = [
       { name: 'Créer Facture (Pennylane)', href: '/admin/create-pennylane-invoice', icon: FilePlus, description: 'Créer une facture client via Pennylane.' },
       { name: 'Synthèse des Virements', href: '/admin/transfer-summary', icon: Banknote, description: 'Voir le total des virements à effectuer par client.' },
       { name: 'Transactions Stripe', href: '/admin/stripe-transactions', icon: CreditCard, description: 'Consulter les transactions Stripe.' },
+      { name: 'Rapprochement Stripe', href: '/admin/stripe-match', icon: Link2, description: 'Lier les comptes Stripe aux utilisateurs.' },
     ]
   },
   {

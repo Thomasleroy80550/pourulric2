@@ -52,6 +52,7 @@ import AdminDocumentsPage from "./pages/AdminDocumentsPage";
 import CompSetPage from "./pages/CompSetPage";
 import AdminStripeTransactionsPage from "./pages/AdminStripeTransactionsPage";
 import AdminHelloKeysStatsPage from "./pages/AdminHelloKeysStatsPage"; // New import
+import AdminStripeMatchPage from "./pages/AdminStripeMatchPage"; // New import
 
 const queryClient = new QueryClient();
 
@@ -88,6 +89,7 @@ function App() {
                   <Route path="/admin/ideas" element={<AdminIdeasPage />} />
                   <Route path="/admin/documents" element={<AdminDocumentsPage />} />
                   <Route path="/admin/stripe-transactions" element={<AdminStripeTransactionsPage />} />
+                  <Route path="/admin/stripe-match" element={<AdminStripeMatchPage />} /> {/* New route */}
                   <Route path="/admin/hello-keys-stats" element={<AdminHelloKeysStatsPage />} /> {/* New route */}
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />

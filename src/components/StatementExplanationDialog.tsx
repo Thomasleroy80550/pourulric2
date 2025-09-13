@@ -115,6 +115,9 @@ const StatementExplanationDialog: React.FC<StatementExplanationDialogProps> = ({
           </Accordion>
         </div>
         <DialogFooter className="mt-4">
+          <p className="text-xs text-gray-500 text-center w-full">
+            Les schémas/tutoriels sont des représentations simplifiées pour faciliter la compréhension. Pour des détails précis, veuillez vous référer aux chiffres de votre relevé.
+          </p>
           <Button onClick={() => onOpenChange(false)}>Fermer</Button>
         </DialogFooter>
       </DialogContent>

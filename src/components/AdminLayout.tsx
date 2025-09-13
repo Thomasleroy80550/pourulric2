@@ -131,63 +131,27 @@ const ListItem = React.forwardRef<
 ListItem.displayName = "ListItem";
 
 const DesktopNav = () => {
-  const components: { title: string; href: string; description: string }[] = adminNavigationCategories
-    .flatMap(category => category.items.map(item => ({
-      title: item.name,
-      href: item.href,
-      description: item.description,
-    })));
-
   return (
     <NavigationMenu>
       <NavigationMenuList>
-        <NavigationMenuItem>
-          <NavigationMenuTrigger>Getting Started</NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
-              <li className="row-span-3">
-                <NavigationMenuLink asChild>
-                  <a
-                    className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
-                    href="/"
+        {adminNavigationCategories.map((category) => (
+          <NavigationMenuItem key={category.categoryName}>
+            <NavigationMenuTrigger>{category.categoryName}</NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] lg:grid-cols-2">
+                {category.items.map((item) => (
+                  <ListItem
+                    key={item.name}
+                    title={item.name}
+                    href={item.href}
                   >
-                    <div className="mb-2 mt-4 text-lg font-medium">
-                      Hello Keys
-                    </div>
-                    <p className="text-sm leading-tight text-muted-foreground">
-                      Votre partenaire de confiance pour la gestion locative.
-                    </p>
-                  </a>
-                </NavigationMenuLink>
-              </li>
-              <ListItem href="/admin" title="Tableau de Bord">
-                Vue d'ensemble de l'activité.
-              </ListItem>
-              <ListItem href="/admin/users" title="Clients">
-                Gérer les comptes et profils clients.
-              </ListItem>
-              <ListItem href="/admin/user-rooms" title="Logements">
-                Consulter les logements des utilisateurs.
-              </ListItem>
-            </ul>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-        <NavigationMenuItem>
-          <NavigationMenuTrigger>Catégories</NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] ">
-              {components.map((component) => (
-                <ListItem
-                  key={component.title}
-                  title={component.title}
-                  href={component.href}
-                >
-                  {component.description}
-                </ListItem>
-              ))}
-            </ul>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
+                    {item.description}
+                  </ListItem>
+                ))}
+              </ul>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        ))}
         <NavigationMenuItem>
           <Link to="/admin/settings" legacyBehavior passHref>
             <NavigationMenuLink className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50">

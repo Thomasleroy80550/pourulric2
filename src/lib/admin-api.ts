@@ -828,12 +828,18 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
 
     // Only include invoices that are not yet transferred in the total and details
     if (!invoice.transfer_completed) {
-      const amount = invoice.totals?.totalRevenuGenere || 0;
+      const amount = Number(invoice.totals?.totalRevenuGenere) || 0; // Explicitly convert to number
       summary.total_amount_to_transfer += amount;
+
+      const sources = invoice.totals?.transferDetails?.sources || {};
+      const amountsBySource = Object.fromEntries(
+        Object.entries(sources).map(([key, value]) => [key, Number(value) || 0])
+      );
+
       summary.details.push({
         period: invoice.period,
         amount: amount,
-        amountsBySource: invoice.totals?.transferDetails?.sources || {},
+        amountsBySource: amountsBySource,
         invoice_id: invoice.id,
         transfer_completed: invoice.transfer_completed,
       });

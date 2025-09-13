@@ -32,16 +32,10 @@ serve(async (req) => {
       throw new Error("Server configuration error: Missing required environment variables.");
     }
 
-    const { destination_account_id, amount, currency, invoice_details, description: customDescription } = await req.json();
-    if (!destination_account_id || !amount || !currency || !invoice_details || !Array.isArray(invoice_details)) {
-      throw new Error("Missing required parameters: destination_account_id, amount, currency, invoice_details (array of {id, period}).");
+    const { destination_account_id, amount, currency, invoice_ids } = await req.json();
+    if (!destination_account_id || !amount || !currency || !invoice_ids) {
+      throw new Error("Missing required parameters: destination_account_id, amount, currency, invoice_ids.");
     }
-
-    const invoice_ids = invoice_details.map((detail: { id: string; period: string }) => detail.id);
-    const periods = invoice_details.map((detail: { id: string; period: string }) => detail.period);
-    const transferDescription = customDescription && customDescription.trim() !== '' 
-      ? customDescription 
-      : `Virement pour les périodes: ${periods.join(', ')}`;
 
     // 2. Step 1: Create a Transfer to the connected account's Stripe balance
     const transferResponse = await fetch('https://api.stripe.com/v1/transfers', {
@@ -55,7 +49,6 @@ serve(async (req) => {
         currency: currency,
         destination: destination_account_id,
         transfer_group: `INVOICES-${invoice_ids[0]}`,
-        description: transferDescription,
       })
     });
 
@@ -76,7 +69,6 @@ serve(async (req) => {
         body: new URLSearchParams({
             amount: amount.toString(),
             currency: currency,
-            description: transferDescription,
         })
     });
 

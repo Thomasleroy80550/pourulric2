@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { getTransferSummaries, UserTransferSummary, updateTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout } from '@/lib/admin-api';
-import { Terminal, Banknote, CheckCircle2 } from 'lucide-react';
+import { Terminal, Banknote, CheckCircle2, Loader2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';

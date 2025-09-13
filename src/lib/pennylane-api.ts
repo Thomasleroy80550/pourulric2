@@ -1,8 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getProfile } from "./profile-api";
-import { getAllProfiles } from "./admin-api";
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 const PENNYLANE_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/pennylane-proxy";
 
@@ -60,58 +57,6 @@ export async function createPennylaneInvoice(payload: PennylaneInvoicePayload): 
   return data;
 }
 
-async function fetchInvoicesForCustomer(customerId: number): Promise<PennylaneInvoice[]> {
-  const { data, error } = await supabase.functions.invoke("pennylane-proxy", {
-    body: {
-      action: "list_invoices",
-      customer_id: customerId, // L'admin peut spécifier un customer_id
-      limit: 100,
-    }
-  });
-
-  if (error) {
-    throw new Error(error.message || "Failed to fetch invoices for customer from Pennylane proxy.");
-  }
-
-  return data?.invoices || [];
-}
-
-export async function findMatchingPennylaneInvoice(userId: string, targetAmount: number, targetPeriod: string): Promise<string | null> {
-  // 1. Obtenir le pennylane_customer_id de l'utilisateur
-  const profiles = await getAllProfiles();
-  const userProfile = profiles.find(p => p.id === userId);
-  
-  if (!userProfile || !userProfile.pennylane_customer_id) {
-    throw new Error("Impossible de trouver le profil ou l'ID client Pennylane pour cet utilisateur.");
-  }
-  const pennylaneCustomerId = userProfile.pennylane_customer_id;
-
-  // 2. Récupérer toutes les factures pour ce client
-  const invoices = await fetchInvoicesForCustomer(pennylaneCustomerId);
-
-  if (invoices.length === 0) {
-    return null; // Aucune facture à comparer
-  }
-
-  // 3. Chercher la correspondance
-  const matchedInvoice = invoices.find(invoice => {
-    const invoiceAmount = parseFloat(invoice.amount);
-    // Comparaison avec une tolérance pour les erreurs de virgule flottante
-    const amountMatches = Math.abs(invoiceAmount - targetAmount) < 0.01;
-
-    // Formater la date de la facture Pennylane pour correspondre au format de la période (ex: "Juin 2024")
-    // On met en minuscule pour éviter les problèmes de casse
-    const invoiceDate = parseISO(invoice.date);
-    const invoicePeriod = format(invoiceDate, 'MMMM yyyy', { locale: fr }).toLowerCase();
-    const periodMatches = invoicePeriod === targetPeriod.toLowerCase();
-
-    return amountMatches && periodMatches;
-  });
-
-  return matchedInvoice?.file_url || null;
-}
-
-
 export async function fetchPennylaneInvoices(): Promise<PennylaneInvoice[]> {
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -120,12 +65,24 @@ export async function fetchPennylaneInvoices(): Promise<PennylaneInvoice[]> {
     }
     const userProfile = await getProfile();
     
-    if (!userProfile?.pennylane_customer_id) {
-        return []; // Pas d'ID client, pas de factures
+    const { data, error } = await supabase.functions.invoke("pennylane-proxy", {
+      body: { 
+        action: "list_invoices",
+        payload:{
+          field: "customer_id",
+          operator: "eq",
+          limit: 100,
+          value: userProfile.pennylane_customer_id 
+        }
+        
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message || "Failed to fetch invoices from Pennylane proxy.");
     }
 
-    return await fetchInvoicesForCustomer(userProfile.pennylane_customer_id);
-
+    return data?.invoices || [];
   } catch (error: any) {
     console.error("Error fetching Pennylane invoices:", error);
     throw error;

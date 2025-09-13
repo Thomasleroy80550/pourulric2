@@ -241,9 +241,10 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       }
     });
 
-    if (deductInvoice && deductionSource && result[deductionSource]) {
-      result[deductionSource].total -= totalFacture;
-    }
+    // La déduction de la facture sera appliquée dans StatementPrintLayout.tsx
+    // if (deductInvoice && deductionSource && result[deductionSource]) {
+    //   result[deductionSource].total -= totalFacture;
+    // }
 
     return result;
   }, [selectedReservations, processedData, paymentSources, deductInvoice, deductionSource, totalFacture]);

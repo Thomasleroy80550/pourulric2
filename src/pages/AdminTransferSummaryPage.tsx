@@ -26,6 +26,14 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [summaryForPayout, setSummaryForPayout] = useState<UserTransferSummary | null>(null);
 
+  const getPropertyName = (id: number | null | undefined) => {
+    switch (id) {
+      case 1: return 'Crotoy';
+      case 2: return 'Berck';
+      default: return 'Inconnu';
+    }
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -194,6 +202,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                 <TableRow>
                                   <TableHead>Client</TableHead>
                                   <TableHead>Montant (Détail)</TableHead> {/* Mise à jour du titre de la colonne */}
+                                  <TableHead>Propriété</TableHead>
                                   <TableHead>Statut</TableHead>
                                   <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -212,6 +221,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                         ))}
                                       </div>
                                     </TableCell>
+                                    <TableCell>{getPropertyName(detail.krossbooking_property_id)}</TableCell>
                                     <TableCell>
                                       <div className="flex items-center space-x-2">
                                         <Checkbox
@@ -256,7 +266,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                               </TableBody>
                               <TableFooter>
                                 <TableRow className="bg-gray-100 font-bold">
-                                  <TableCell colSpan={2}>Total pour {summary.first_name}</TableCell>
+                                  <TableCell colSpan={3}>Total pour {summary.first_name}</TableCell>
                                   <TableCell></TableCell> {/* Cellule vide pour la colonne Statut */}
                                   <TableCell className="text-right">
                                     {userPendingAmount.toFixed(2)}€

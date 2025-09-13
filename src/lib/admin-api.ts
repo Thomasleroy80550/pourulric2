@@ -142,6 +142,7 @@ export interface UserTransferSummary {
     amountsBySource: { [key: string]: number };
     invoice_id: string;
     transfer_completed: boolean;
+    krossbooking_property_id?: number | null; // Ajout de l'ID de la propriété
   }[];
 }
 
@@ -812,7 +813,7 @@ export async function updateSetting(key: string, value: any): Promise<AppSetting
 
   if (error) {
     console.error(`Error updating setting ${key}:`, error);
-throw new Error(`Erreur lors de la mise à jour du paramètre : ${error.message}`);
+    throw new Error(`Erreur lors de la mise à jour du paramètre : ${error.message}`);
   }
   return data;
 }
@@ -1021,7 +1022,8 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
       profiles (
         first_name,
         last_name,
-        stripe_account_id
+        stripe_account_id,
+        krossbooking_property_id
       )
     `);
 
@@ -1033,6 +1035,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
   const transferMap = new Map<string, { 
       first_name: string | null, 
       last_name: string | null, 
+      stripe_account_id: string | null,
       total: number, 
       details: { 
           period: string; 
@@ -1040,6 +1043,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
           amountsBySource: { [key: string]: number };
           invoice_id: string; 
           transfer_completed: boolean; 
+          krossbooking_property_id?: number | null;
       }[] 
   }>();
 
@@ -1048,7 +1052,8 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     const period = invoice.period;
     const firstName = invoice.profiles?.first_name || null;
     const lastName = invoice.profiles?.last_name || null;
-    const stripeAccountId = invoice.profiles?.stripe_account_id || null; // Récupérer l'ID Stripe
+    const stripeAccountId = invoice.profiles?.stripe_account_id || null;
+    const krossbookingPropertyId = invoice.profiles?.krossbooking_property_id || null; // Récupérer l'ID de la propriété
     const invoiceId = invoice.id;
     const transferCompleted = invoice.transfer_completed || false;
 
@@ -1078,7 +1083,8 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
           amount: amountToTransfer, 
           amountsBySource,
           invoice_id: invoiceId, 
-          transfer_completed: transferCompleted 
+          transfer_completed: transferCompleted,
+          krossbooking_property_id: krossbookingPropertyId, // Assigner l'ID de la propriété
       };
 
       if (transferMap.has(userId)) {

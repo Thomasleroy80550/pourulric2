@@ -182,7 +182,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
     setBankSyncStatus('idle');
     try {
       const externalAccounts = await listStripeExternalAccounts(user.stripe_account_id);
-      // console.log("Stripe external accounts fetched:", externalAccounts); // Log the raw data
+      console.log("Stripe external accounts fetched:", externalAccounts); // Log the raw data
 
       let bankAccountToUse: StripeExternalAccount | undefined;
 
@@ -190,12 +190,12 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
       bankAccountToUse = externalAccounts.find(
         (account) => (account.country === 'FR' || account.country === 'BE') && account.iban
       );
-      // console.log("Bank account after FR/BE filter:", bankAccountToUse);
+      console.log("Bank account after FR/BE filter:", bankAccountToUse);
 
       // 2. If not found, try to find any bank account with an IBAN
       if (!bankAccountToUse) {
         bankAccountToUse = externalAccounts.find((account) => account.iban);
-        // console.log("Bank account after any IBAN filter:", bankAccountToUse);
+        console.log("Bank account after any IBAN filter:", bankAccountToUse);
       }
 
       if (bankAccountToUse && bankAccountToUse.iban) {

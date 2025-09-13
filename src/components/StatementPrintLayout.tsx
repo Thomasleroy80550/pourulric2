@@ -175,52 +175,58 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
             Le relevé permet de réaliser vos virements, il est donc normal de recevoir votre relevé facture avant de percevoir vos fonds.
           </p>
           <div className="space-y-6">
-            {Object.entries(transferDetails.sources).map(([source, data]: [string, any]) => data.reservations.length > 0 && (
-              <div key={source}>
-                <h3 className="font-semibold mb-2 text-gray-800">Loyers encaissés via {source.charAt(0).toUpperCase() + source.slice(1)}</h3>
-                <div className="border rounded-lg overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-100">
-                        <TableHead>Voyageur</TableHead>
-                        <TableHead className="text-right">Montant à virer</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {data.reservations.map((r: any, i: number) => (
-                        <TableRow key={i} className="even:bg-gray-50">
-                          <TableCell>{r.voyageur}</TableCell>
-                          <TableCell className="text-right">{r.montantVerse.toFixed(2)}€</TableCell>
+            {Object.entries(transferDetails.sources).map(([source, data]: [string, any]) => {
+              if (data.reservations.length === 0) return null;
+
+              const rawSubtotal = data.reservations.reduce((sum: number, r: any) => sum + r.montantVerse, 0);
+
+              return (
+                <div key={source}>
+                  <h3 className="font-semibold mb-2 text-gray-800">Loyers encaissés via {source.charAt(0).toUpperCase() + source.slice(1)}</h3>
+                  <div className="border rounded-lg overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-100">
+                          <TableHead>Voyageur</TableHead>
+                          <TableHead className="text-right">Montant à virer</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow className="font-bold bg-gray-100">
-                        <TableCell>Sous-total (montant à virer)</TableCell>
-                        <TableCell className="text-right">{data.total.toFixed(2)}€</TableCell>
-                      </TableRow>
-                      {transferDetails.deductionInfo?.deducted && transferDetails.deductionInfo?.source === source ? (
-                        <>
-                          <TableRow className="font-bold bg-gray-100">
-                            <TableCell>Déduction facture Hello Keys</TableCell>
-                            <TableCell className="text-right text-red-600">- {totalFacture.toFixed(2)}€</TableCell>
+                      </TableHeader>
+                      <TableBody>
+                        {data.reservations.map((r: any, i: number) => (
+                          <TableRow key={i} className="even:bg-gray-50">
+                            <TableCell>{r.voyageur}</TableCell>
+                            <TableCell className="text-right">{r.montantVerse.toFixed(2)}€</TableCell>
                           </TableRow>
-                          <TableRow className="font-bold bg-gray-100">
-                            <TableCell>Virement en transit vers votre compte</TableCell>
-                            <TableCell className="text-right text-green-600">{(data.total - totalFacture).toFixed(2)}€</TableCell>
-                          </TableRow>
-                        </>
-                      ) : (
+                        ))}
+                      </TableBody>
+                      <TableFooter>
                         <TableRow className="font-bold bg-gray-100">
-                          <TableCell>Total à virer</TableCell>
-                          <TableCell className="text-right">{data.total.toFixed(2)}€</TableCell>
+                          <TableCell>Sous-total (montant à virer)</TableCell>
+                          <TableCell className="text-right">{rawSubtotal.toFixed(2)}€</TableCell>
                         </TableRow>
-                      )}
-                    </TableFooter>
-                  </Table>
+                        {transferDetails.deductionInfo?.deducted && transferDetails.deductionInfo?.source === source ? (
+                          <>
+                            <TableRow className="font-bold bg-gray-100">
+                              <TableCell>Déduction facture Hello Keys</TableCell>
+                              <TableCell className="text-right text-red-600">- {totalFacture.toFixed(2)}€</TableCell>
+                            </TableRow>
+                            <TableRow className="font-bold bg-gray-100">
+                              <TableCell>Virement en transit vers votre compte</TableCell>
+                              <TableCell className="text-right text-green-600">{(rawSubtotal - totalFacture).toFixed(2)}€</TableCell>
+                            </TableRow>
+                          </>
+                        ) : (
+                          <TableRow className="font-bold bg-gray-100">
+                            <TableCell>Total à virer</TableCell>
+                            <TableCell className="text-right">{rawSubtotal.toFixed(2)}€</TableCell>
+                          </TableRow>
+                        )}
+                      </TableFooter>
+                    </Table>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

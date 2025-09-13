@@ -194,6 +194,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                 <TableRow>
                                   <TableHead>Client</TableHead>
                                   <TableHead>Montant Total à Virer</TableHead>
+                                  <TableHead>Statut</TableHead> {/* Nouvelle colonne pour le statut */}
                                   <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -201,13 +202,28 @@ const AdminTransferSummaryPage: React.FC = () => {
                                 {summary.details.map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
                                     <TableCell className="font-medium">{summary.first_name} {summary.last_name}</TableCell>
-                                    <TableCell>{summary.total_amount_to_transfer.toFixed(2)} €</TableCell>
+                                    <TableCell>{detail.amount.toFixed(2)} €</TableCell> {/* Afficher le montant du détail */}
+                                    <TableCell>
+                                      <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`transfer-completed-${detail.invoice_id}`}
+                                          checked={detail.transfer_completed}
+                                          onCheckedChange={(checked) => handleStatusChange(detail.invoice_id, checked as boolean)}
+                                        />
+                                        <label
+                                          htmlFor={`transfer-completed-${detail.invoice_id}`}
+                                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                          {detail.transfer_completed ? 'Effectué' : 'En attente'}
+                                        </label>
+                                      </div>
+                                    </TableCell>
                                     <TableCell className="text-right">
                                       {summary.stripe_account_id && (
                                         <Button
                                           size="sm"
                                           onClick={() => handlePayWithStripeClick(summary)}
-                                          disabled={payingUserId === summary.user_id}
+                                          disabled={payingUserId === summary.user_id || detail.transfer_completed}
                                         >
                                           {payingUserId === summary.user_id ? (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -217,24 +233,25 @@ const AdminTransferSummaryPage: React.FC = () => {
                                           Payer via Stripe
                                         </Button>
                                       )}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="ml-2"
+                                        onClick={() => handleViewDetails(detail.invoice_id)}
+                                      >
+                                        Voir le relevé
+                                      </Button>
                                     </TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
                               <TableFooter>
                                 <TableRow className="bg-gray-100 font-bold">
-                                  <TableCell>Total pour {summary.first_name}</TableCell>
-                                  <TableCell className="text-right font-mono">
-                                    {summary.details.reduce((acc, d) => acc + (d.amountsBySource?.airbnb || 0), 0).toFixed(2)}€
+                                  <TableCell colSpan={2}>Total pour {summary.first_name}</TableCell>
+                                  <TableCell></TableCell> {/* Cellule vide pour la colonne Statut */}
+                                  <TableCell className="text-right">
+                                    {userPendingAmount.toFixed(2)}€
                                   </TableCell>
-                                  <TableCell className="text-right font-mono">
-                                    {summary.details.reduce((acc, d) => acc + (d.amountsBySource?.stripe || 0), 0).toFixed(2)}€
-                                  </TableCell>
-                                  <TableCell className="text-right font-mono">
-                                    {summary.details.reduce((acc, d) => acc + d.amount, 0).toFixed(2)}€
-                                  </TableCell>
-                                  <TableCell></TableCell>
-                                  <TableCell></TableCell> {/* Empty cell for the new Actions column */}
                                 </TableRow>
                               </TableFooter>
                             </Table>

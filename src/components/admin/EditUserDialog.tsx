@@ -83,6 +83,44 @@ const onboardingStatusText: Record<OnboardingStatus, string> = {
   live: "En ligne",
 };
 
+const editUserSchema = z.object({
+  first_name: z.string().min(1, "Le prénom est requis"),
+  last_name: z.string().min(1, "Le nom est requis"),
+  role: z.enum(['user', 'admin', 'accountant']),
+  onboarding_status: z.nativeEnum(OnboardingStatus),
+  property_address: z.string().optional().nullable(),
+  property_city: z.string().optional().nullable(),
+  property_zip_code: z.string().optional().nullable(),
+  iban_airbnb_booking: z.string().optional().nullable(),
+  bic_airbnb_booking: z.string().optional().nullable(),
+  sync_with_hellokeys: z.boolean(),
+  iban_abritel_hellokeys: z.string().optional().nullable(),
+  bic_abritel_hellokeys: z.string().optional().nullable(),
+  commission_rate: z.number().min(0, "Le taux de commission doit être positif"),
+  linen_type: z.string().optional().nullable(),
+  agency: z.string().optional().nullable(),
+  contract_start_date: z.string().optional().nullable(),
+  notify_new_booking_email: z.boolean(),
+  notify_cancellation_email: z.boolean(),
+  notify_new_booking_sms: z.boolean(),
+  notify_cancellation_sms: z.boolean(),
+  is_banned: z.boolean(),
+  can_manage_prices: z.boolean(),
+  kyc_status: z.string().optional().nullable(),
+  estimated_revenue: z.number().optional().nullable(),
+  estimation_details: z.string().optional().nullable(),
+  revyoos_holding_ids: z.string().optional().nullable(),
+  referral_credits: z.number().optional().nullable(),
+  krossbooking_property_id: z.number().optional().nullable(),
+  stripe_account_id: z.string().optional().nullable(),
+});
+
+const addRoomFormSchema = z.object({
+  room_id: z.string().min(1, "L'ID de la chambre est requis"),
+  room_name: z.string().min(1, "Le nom de la chambre est requis"),
+  room_id_2: z.string().optional().nullable(),
+});
+
 interface EditUserDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;

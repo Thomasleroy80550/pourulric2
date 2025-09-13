@@ -2,29 +2,75 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload } from 'lucide-react';
-import { toast } from 'sonner';
-import { updateUser, UpdateUserPayload, listStripeExternalAccounts } from '@/lib/admin-api';
-import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
-import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
-import { supabase } from '@/integrations/supabase/client';
-import EditUserRoomDialog from '@/components/EditUserRoomDialog';
-import { generateCguvPdf } from '@/lib/pdf-utils';
-import { uploadFile } from '@/lib/storage-api';
-import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Loader2,
+  Edit,
+  AlertTriangle,
+  Trash2,
+  Download,
+  Upload,
+} from "lucide-react";
+import { toast } from "sonner";
+import { updateUser, UpdateUserPayload } from "@/lib/admin-api";
+import { UserProfile, OnboardingStatus } from "@/lib/profile-api";
+import {
+  UserRoom,
+  getUserRoomsByUserId,
+  adminAddUserRoom,
+  deleteUserRoom,
+} from "@/lib/user-room-api";
+import { supabase } from "@/integrations/supabase/client";
+import EditUserRoomDialog from "@/components/EditUserRoomDialog";
+import { generateCguvPdf } from "@/lib/pdf-utils";
+import { uploadFile } from "@/lib/storage-api";
+import CGUV_HTML_CONTENT from "@/assets/cguv.html?raw";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -81,10 +127,19 @@ interface EditUserDialogProps {
   onUserUpdated: () => void;
 }
 
-const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, user, onUserUpdated }) => {
+const EditUserDialog: React.FC<EditUserDialogProps> = ({
+  isOpen,
+  onOpenChange,
+  user,
+  onUserUpdated,
+}) => {
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
-  const [documentUrls, setDocumentUrls] = useState<{ identity?: string; address?: string; cguv?: string }>({});
+  const [documentUrls, setDocumentUrls] = useState<{
+    identity?: string;
+    address?: string;
+    cguv?: string;
+  }>({});
   const [isEditRoomDialogOpen, setIsEditRoomDialogOpen] = useState(false);
   const [roomToEdit, setRoomToEdit] = useState<UserRoom | null>(null);
   const [cguvFile, setCguvFile] = useState<File | null>(null);
@@ -454,29 +509,59 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                     </CardContent>
                   </Card>
                   <Card className="mt-4">
-                    <CardHeader><CardTitle>Paiement Abritel & Hello Keys</CardTitle></CardHeader>
+                    <CardHeader>
+                      <CardTitle>Paiement Abritel & Hello Keys</CardTitle>
+                    </CardHeader>
                     <CardContent className="space-y-4">
-                      <FormField control={form.control} name="sync_with_hellokeys" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Synchroniser avec Hello Keys</FormLabel></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
-                      {user.stripe_account_id && (
-                        <div className="p-3 border rounded-md bg-slate-50 dark:bg-slate-800/50 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium">Synchro Banque Stripe</p>
-                              {bankSyncStatus === 'success' && <Badge variant="success">OK</Badge>}
-                              {bankSyncStatus === 'error' && <Badge variant="destructive">Erreur</Badge>}
-                              {bankSyncStatus === 'not_found' && <Badge variant="secondary">Non trouvé</Badge>}
+                      <FormField
+                        control={form.control}
+                        name="sync_with_hellokeys"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                              <FormLabel>Synchroniser avec Hello Keys</FormLabel>
                             </div>
-                            <Button type="button" size="sm" onClick={handleSyncStripeBank} disabled={isSyncingBank}>
-                              {isSyncingBank ? <Loader2 className="h-4 w-4 animate-spin" /> : "Synchroniser"}
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Récupère l'IBAN et le BIC depuis le compte bancaire par défaut sur Stripe.
-                          </p>
-                        </div>
-                      )}
-                      <FormField control={form.control} name="iban_abritel_hellokeys" render={({ field }) => (<FormItem><FormLabel>IBAN</FormLabel><FormControl><Input {...field} disabled={!form.watch('sync_with_hellokeys')} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={form.control} name="bic_abritel_hellokeys" render={({ field }) => (<FormItem><FormLabel>BIC</FormLabel><FormControl><Input {...field} disabled={!form.watch('sync_with_hellokeys')} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="iban_abritel_hellokeys"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IBAN</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                disabled={!form.watch("sync_with_hellokeys")}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="bic_abritel_hellokeys"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>BIC</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                disabled={!form.watch("sync_with_hellokeys")}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>

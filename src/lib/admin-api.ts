@@ -181,7 +181,7 @@ export interface StripeAccount {
   settings: {
     dashboard: {
       display_name: string | null;
-    }
+    };
   };
   type: string;
 }
@@ -852,14 +852,24 @@ export async function listStripeExternalAccounts(accountId: string): Promise<Str
  * @param accountId The ID of the Stripe account to fetch transfers for.
  * @returns A promise that resolves to an array of StripeTransfer objects.
  */
-export async function listStripeTransfers(accountId: string): Promise<StripeTransfer[]> {
-  const { data, error } = await supabase.functions.invoke('list-stripe-transfers', {
-    body: { account_id: accountId },
-  });
+export async function listStripeTransfers(
+  accountId: string,
+): Promise<StripeTransfer[]> {
+  const { data, error } = await supabase.functions.invoke(
+    "list-stripe-transfers",
+    {
+      body: { account_id: accountId },
+    },
+  );
 
   if (error) {
-    console.error(`Error fetching Stripe transfers for account ${accountId}:`, error);
-    throw new Error(`Erreur lors de la récupération des transferts Stripe : ${error.message}`);
+    console.error(
+      `Error fetching Stripe transfers for account ${accountId}:`,
+      error,
+    );
+    throw new Error(
+      `Erreur lors de la récupération des transferts Stripe : ${error.message}`,
+    );
   }
 
   return data || [];

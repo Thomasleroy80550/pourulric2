@@ -286,8 +286,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       // Send data to Make.com webhook
       await sendStatementDataToMakeWebhook(
         savedInvoice.id,
-        selectedClientId,
-        invoicePeriod,
+        invoicePeriod, // Correctly passing the invoicePeriod
         totals,
         formattedEmissionDate,
         formattedDeadlineDate

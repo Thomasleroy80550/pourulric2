@@ -831,14 +831,14 @@ export async function listStripeTransfers(accountId: string): Promise<StripeTran
 /**
  * Sends statement data to a Make.com webhook.
  * @param invoiceId The ID of the invoice to send.
- * @param period The period the invoice covers (e.g., "Juin 2024").
+ * @param invoicePeriod The period the invoice covers (e.g., "Juin 2024").
  * @param totals The calculated totals for the invoice.
  * @param dateEmission The date the invoice was issued (YYYY-MM-DD).
  * @param deadlinePaiement The payment deadline date (YYYY-MM-DD).
  */
 export async function sendStatementDataToMakeWebhook(
   invoiceId: string,
-  period: string,
+  invoicePeriod: string,
   totals: InvoiceTotals,
   dateEmission: string,
   deadlinePaiement: string
@@ -888,7 +888,7 @@ export async function sendStatementDataToMakeWebhook(
 
     const payload = {
       pennylane_customer_id: pennylaneCustomerId,
-      invoice_period: period,
+      invoice_period: invoicePeriod,
       commission_hello_keys: totals.totalCommission,
       total_frais_menage: totals.totalFraisMenage,
       owner_cleaning_fee: totals.ownerCleaningFee,

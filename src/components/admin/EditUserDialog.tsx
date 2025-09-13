@@ -182,17 +182,20 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
     setBankSyncStatus('idle');
     try {
       const externalAccounts = await listStripeExternalAccounts(user.stripe_account_id);
-      
+      console.log("Stripe external accounts fetched:", externalAccounts); // Log the raw data
+
       let bankAccountToUse: StripeExternalAccount | undefined;
 
       // 1. Try to find a French or Belgian bank account with an IBAN
       bankAccountToUse = externalAccounts.find(
         (account) => (account.country === 'FR' || account.country === 'BE') && account.iban
       );
+      console.log("Bank account after FR/BE filter:", bankAccountToUse);
 
       // 2. If not found, try to find any bank account with an IBAN
       if (!bankAccountToUse) {
         bankAccountToUse = externalAccounts.find((account) => account.iban);
+        console.log("Bank account after any IBAN filter:", bankAccountToUse);
       }
 
       if (bankAccountToUse && bankAccountToUse.iban) {
@@ -204,10 +207,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         toast.success("Coordonnées bancaires synchronisées avec succès !");
       } else if (externalAccounts.length > 0) {
         setBankSyncStatus('not_found');
-        toast.warning("Aucun compte bancaire avec IBAN (FR/BE prioritaire) trouvé pour ce compte Stripe.");
+        toast.warning("Aucun compte bancaire avec IBAN (FR/BE prioritaire) trouvé parmi les comptes Stripe listés.");
       } else {
         setBankSyncStatus('not_found');
-        toast.warning("Aucun compte bancaire externe trouvé pour ce compte Stripe.");
+        toast.warning("Aucun compte bancaire externe n'a été trouvé pour ce compte Stripe.");
       }
     } catch (error: any) {
       setBankSyncStatus('error');

@@ -1,0 +1,75 @@
+#root {
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* Custom styles for the new Booking Planning Grid */
+.grid-container {
+  display: grid;
+  /* grid-template-columns will be set dynamically by JS */
+  grid-auto-rows: 40px; /* Height of each row (property row, day header row) */
+  position: relative; /* For absolute positioning of reservation bars */
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  overflow: hidden; /* Ensures rounded corners and hides overflow */
+}
+
+.grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  box-sizing: border-box; /* Include padding in cell's total width/height */
+}
+
+.header-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for header cells */
+}
+
+.property-name-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for property name cells */
+  justify-content: flex-start; /* Align text to start */
+}

@@ -1,0 +1,448 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    --primary: 200 70% 30%; /* Darker blue for primary buttons/elements */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 200 70% 50%; /* Lighter blue for accents/charts */
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    /* Custom Sidebar Colors */
+    --sidebar-background: 205 100% 94%; /* #e1f2ff */
+    --sidebar-foreground: 205 55% 33%; /* #255F85 */
+    --sidebar-primary: 205 55% 33%; /* Logo text color, same as foreground */
+    --sidebar-primary-foreground: 0 0% 100%; /* Keep as white for potential future use with dark primary bg */
+    --sidebar-accent: 205 100% 90%; /* Lighter shade of background for hover/active */
+    --sidebar-accent-foreground: 205 55% 33%; /* Text color on hover/active background, same as foreground */
+    --sidebar-border: 205 100% 85%; /* Slightly darker than background for border */
+    --sidebar-ring: 222.2 84% 4.9%; /* Consistent with main ring */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    /* Custom Sidebar Colors for dark mode */
+    --sidebar-background: 220 10% 15%; /* Dark blue */
+    --sidebar-foreground: 205 55% 70%; /* Lighter version of #255F85 for contrast */
+    --sidebar-primary: 205 55% 70%; /* Logo text color */
+    --sidebar-primary-foreground: 220 10% 15%; /* Dark text */
+    --sidebar-accent: 205 55% 25%; /* Slightly darker blue for hover */
+    --sidebar-accent-foreground: 205 55% 70%; /* Light blue text */
+    --sidebar-border: 220 10% 25%; /* Dark grey/blue border */
+    --sidebar-ring: 217.2 91.2% 59.8%; /* Consistent with main ring */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom styles for the new Booking Planning Grid */
+.grid-container {
+  display: grid;
+  /* grid-template-columns will be set dynamically by JS */
+  grid-auto-rows: 40px; /* Height of each row (property row, day header row) */
+  position: relative; /* For absolute positioning of reservation bars */
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  overflow: hidden; /* Ensures rounded corners and hides overflow */
+}
+
+.grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  box-sizing: border-box; /* Include padding in cell's total width/height */
+}
+
+.header-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for header cells */
+}
+
+.property-name-cell {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem; /* text-sm */
+  height: 40px; /* Fixed height for property name cells */
+  justify-content: flex-start; /* Align text to start */
+}
+
+/* Override shadcn/ui DialogOverlay default opacity */
+.fixed.inset-0.z-50.bg-black\/80 {
+  background-color: rgba(0, 0, 0, 0.4) !important; /* Lighter overlay for light mode */
+}
+
+.dark .fixed.inset-0.z-50.bg-black\/80 {
+  background-color: rgba(0, 0, 0, 0.6) !important; /* Slightly darker for dark mode, but still lighter than default */
+}
+
+/* New keyframes for a fire-like glow effect on the progress bar */
+@keyframes progress-fire-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 165, 0, 0.7), /* Orange */
+                0 0 10px rgba(255, 69, 0, 0.5); /* Red-orange */
+  }
+  25% {
+    box-shadow: 0 0 8px rgba(255, 140, 0, 0.9), /* Dark orange */
+                0 0 15px rgba(255, 99, 71, 0.7); /* Tomato */
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(255, 69, 0, 1), /* Red-orange */
+                0 0 20px rgba(255, 0, 0, 0.8); /* Red */
+  }
+  75% {
+    box-shadow: 0 0 8px rgba(255, 140, 0, 0.9), /* Dark orange */
+                0 0 15px rgba(255, 99, 71, 0.7); /* Tomato */
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 165, 0, 0.7), /* Orange */
+                0 0 10px rgba(255, 69, 0, 0.5); /* Red-orange */
+  }
+}
+
+.progress-flame {
+  animation: progress-fire-glow 2s infinite alternate ease-in-out;
+  background-color: #FF4500 !important; /* Ensure it's a fiery red-orange */
+}
+
+/* CSS for SpatialTunnelLoader */
+.spatial-tunnel-container {
+  perspective: 1000px;
+  background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+}
+
+.tunnel-stars {
+  position: absolute;
+  width: 4px; /* Larger stars */
+  height: 4px; /* Larger stars */
+  background: hsl(var(--primary)); /* Hello Keys blue */
+  border-radius: 50%;
+  animation: move-stars 2s linear infinite; /* Faster animation */
+  opacity: 0;
+  box-shadow: 0 0 8px hsl(var(--primary)); /* Glow effect */
+}
+
+@keyframes move-stars {
+  0% {
+    transform: translateZ(-2000px) scale(0); /* Start further back */
+    opacity: 0;
+    filter: blur(5px); /* Blur at start */
+  }
+  10% {
+    opacity: 0.8;
+    filter: blur(2px);
+  }
+  100% {
+    transform: translateZ(0) scale(1.5); /* End closer and slightly larger */
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+/* Random positioning for stars */
+/* Increased number of stars by duplicating and adjusting delays */
+.tunnel-stars:nth-child(odd) {
+  left: calc(var(--random-x, 0) * 100vw);
+  top: calc(var(--random-y, 0) * 100vh);
+}
+
+.tunnel-stars:nth-child(even) {
+  right: calc(var(--random-x, 0) * 100vw);
+  bottom: calc(var(--random-y, 0) * 100vh);
+}
+
+/* Generate random positions for stars using CSS variables */
+/* This is a trick to simulate random positions with static CSS.
+   In a real app, you might generate these with JS for more variety. */
+.tunnel-stars:nth-child(1) { --random-x: 0.1; --random-y: 0.2; }
+.tunnel-stars:nth-child(2) { --random-x: 0.9; --random-y: 0.8; }
+.tunnel-stars:nth-child(3) { --random-x: 0.3; --random-y: 0.7; }
+.tunnel-stars:nth-child(4) { --random-x: 0.7; --random-y: 0.1; }
+.tunnel-stars:nth-child(5) { --random-x: 0.5; --random-y: 0.5; }
+.tunnel-stars:nth-child(6) { --random-x: 0.2; --random-y: 0.9; }
+.tunnel-stars:nth-child(7) { --random-x: 0.8; --random-y: 0.3; }
+.tunnel-stars:nth-child(8) { --random-x: 0.4; --random-y: 0.6; }
+.tunnel-stars:nth-child(9) { --random-x: 0.6; --random-y: 0.4; }
+.tunnel-stars:nth-child(10) { --random-x: 0.05; --random-y: 0.15; }
+/* Add more stars for a denser effect */
+.tunnel-stars:nth-child(11) { --random-x: 0.13; --random-y: 0.23; animation-delay: 0.05s; }
+.tunnel-stars:nth-child(12) { --random-x: 0.87; --random-y: 0.77; animation-delay: 0.15s; }
+.tunnel-stars:nth-child(13) { --random-x: 0.33; --random-y: 0.67; animation-delay: 0.25s; }
+.tunnel-stars:nth-child(14) { --random-x: 0.67; --random-y: 0.13; animation-delay: 0.35s; }
+.tunnel-stars:nth-child(15) { --random-x: 0.47; --random-y: 0.53; animation-delay: 0.45s; }
+.tunnel-stars:nth-child(16) { --random-x: 0.23; --random-y: 0.87; animation-delay: 0.55s; }
+.tunnel-stars:nth-child(17) { --random-x: 0.77; --random-y: 0.33; animation-delay: 0.65s; }
+.tunnel-stars:nth-child(18) { --random-x: 0.37; --random-y: 0.63; animation-delay: 0.75s; }
+.tunnel-stars:nth-child(19) { --random-x: 0.63; --random-y: 0.47; animation-delay: 0.85s; }
+.tunnel-stars:nth-child(20) { --random-x: 0.07; --random-y: 0.17; animation-delay: 0.95s; }
+.tunnel-stars:nth-child(21) { --random-x: 0.93; --random-y: 0.83; animation-delay: 1.05s; }
+.tunnel-stars:nth-child(22) { --random-x: 0.29; --random-y: 0.71; animation-delay: 1.15s; }
+.tunnel-stars:nth-child(23) { --random-x: 0.71; --random-y: 0.09; animation-delay: 1.25s; }
+.tunnel-stars:nth-child(24) { --random-x: 0.41; --random-y: 0.59; animation-delay: 1.35s; }
+.tunnel-stars:nth-child(25) { --random-x: 0.19; --random-y: 0.91; animation-delay: 1.45s; }
+.tunnel-stars:nth-child(26) { --random-x: 0.81; --random-y: 0.29; animation-delay: 1.55s; }
+.tunnel-stars:nth-child(27) { --random-x: 0.37; --random-y: 0.63; animation-delay: 1.65s; }
+.tunnel-stars:nth-child(28) { --random-x: 0.63; --random-y: 0.47; animation-delay: 1.75s; }
+.tunnel-stars:nth-child(29) { --random-x: 0.57; --random-y: 0.07; animation-delay: 1.85s; }
+.tunnel-stars:nth-child(30) { --random-x: 0.07; --random-y: 0.57; animation-delay: 1.95s; }
+.tunnel-stars:nth-child(31) { --random-x: 0.15; --random-y: 0.25; animation-delay: 0.02s; }
+.tunnel-stars:nth-child(32) { --random-x: 0.85; --random-y: 0.75; animation-delay: 0.12s; }
+.tunnel-stars:nth-child(33) { --random-x: 0.35; --random-y: 0.65; animation-delay: 0.22s; }
+.tunnel-stars:nth-child(34) { --random-x: 0.65; --random-y: 0.15; animation-delay: 0.32s; }
+.tunnel-stars:nth-child(35) { --random-x: 0.45; --random-y: 0.55; animation-delay: 0.42s; }
+.tunnel-stars:nth-child(36) { --random-x: 0.25; --random-y: 0.85; animation-delay: 0.52s; }
+.tunnel-stars:nth-child(37) { --random-x: 0.75; --random-y: 0.35; animation-delay: 0.62s; }
+.tunnel-stars:nth-child(38) { --random-x: 0.40; --random-y: 0.60; animation-delay: 0.72s; }
+.tunnel-stars:nth-child(39) { --random-x: 0.60; --random-y: 0.50; animation-delay: 0.82s; }
+.tunnel-stars:nth-child(40) { --random-x: 0.10; --random-y: 0.20; animation-delay: 0.92s; }
+.tunnel-stars:nth-child(41) { --random-x: 0.11; --random-y: 0.21; animation-delay: 0.02s; }
+.tunnel-stars:nth-child(42) { --random-x: 0.89; --random-y: 0.79; animation-delay: 0.12s; }
+.tunnel-stars:nth-child(43) { --random-x: 0.31; --random-y: 0.69; animation-delay: 0.22s; }
+.tunnel-stars:nth-child(44) { --random-x: 0.69; --random-y: 0.11; animation-delay: 0.32s; }
+.tunnel-stars:nth-child(45) { --random-x: 0.39; --random-y: 0.61; animation-delay: 0.72s; }
+.tunnel-stars:nth-child(46) { --random-x: 0.61; --random-y: 0.49; animation-delay: 0.82s; }
+.tunnel-stars:nth-child(47) { --random-x: 0.09; --random-y: 0.19; animation-delay: 0.92s; }
+.tunnel-stars:nth-child(48) { --random-x: 0.91; --random-y: 0.81; animation-delay: 1.02s; }
+.tunnel-stars:nth-child(49) { --random-x: 0.29; --random-y: 0.71; animation-delay: 1.12s; }
+.tunnel-stars:nth-child(50) { --random-x: 0.71; --random-y: 0.09; animation-delay: 1.22s; }
+.tunnel-stars:nth-child(51) { --random-x: 0.41; --random-y: 0.59; animation-delay: 1.32s; }
+.tunnel-stars:nth-child(52) { --random-x: 0.19; --random-y: 0.91; animation-delay: 1.42s; }
+.tunnel-stars:nth-child(53) { --random-x: 0.81; --random-y: 0.29; animation-delay: 1.52s; }
+.tunnel-stars:nth-child(54) { --random-x: 0.37; --random-y: 0.63; animation-delay: 1.62s; }
+.tunnel-stars:nth-child(55) { --random-x: 0.63; --random-y: 0.47; animation-delay: 1.72s; }
+.tunnel-stars:nth-child(56) { --random-x: 0.57; --random-y: 0.07; animation-delay: 1.82s; }
+.tunnel-stars:nth-child(57) { --random-x: 0.07; --random-y: 0.57; animation-delay: 1.92s; }
+.tunnel-stars:nth-child(58) { --random-x: 0.15; --random-y: 0.25; animation-delay: 0.03s; }
+.tunnel-stars:nth-child(59) { --random-x: 0.85; --random-y: 0.75; animation-delay: 0.13s; }
+.tunnel-stars:nth-child(60) { --random-x: 0.35; --random-y: 0.65; animation-delay: 0.23s; }
+
+/* Keyframes for fade-in-up animation (for landing page content) */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+.animate-fade-in-up.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animate-fade-in-up.delay-400 {
+  animation-delay: 0.4s;
+}
+
+/* New keyframes for a dynamic aurora background */
+@keyframes aurora {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.aurora-background {
+  background: linear-gradient(-45deg, #0f172a, #1e293b, #3b82f6, #8b5cf6);
+  background-size: 400% 400%;
+  animation: aurora 15s ease infinite;
+}
+
+/* New keyframes for subtle background effect on estimation page */
+@keyframes subtle-gradient-move {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.estimation-background-effect {
+  background: linear-gradient(270deg, hsl(var(--background)), hsl(var(--primary) / 0.05), hsl(var(--background)));
+  background-size: 200% 200%;
+  animation: subtle-gradient-move 10s ease infinite;
+}
+
+/* New keyframes for a subtle floating animation */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* driver.js custom styling */
+.driver-popover {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.driver-popover-title {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 600; /* font-semibold */
+  color: hsl(var(--foreground));
+}
+
+.driver-popover-description {
+  color: hsl(var(--muted-foreground));
+}
+
+.driver-popover-arrow-side-left .driver-popover-arrow {
+  border-left-color: hsl(var(--popover));
+}
+
+.driver-popover-arrow-side-right .driver-popover-arrow {
+  border-right-color: hsl(var(--popover));
+}
+
+.driver-popover-arrow-side-top .driver-popover-arrow {
+  border-top-color: hsl(var(--popover));
+}
+
+.driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-bottom-color: hsl(var(--popover));
+}
+
+.driver-popover-close-btn {
+  color: hsl(var(--muted-foreground));
+}
+.driver-popover-close-btn:hover {
+  color: hsl(var(--foreground));
+}
+
+.driver-popover-footer button {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.driver-popover-footer button:hover {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+.driver-popover-footer .driver-popover-prev-btn {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+.driver-popover-footer .driver-popover-prev-btn:hover {
+  background-color: hsl(var(--secondary) / 0.9);
+}
+
+/* Custom style for legend bubbles */
+.legend-bubble {
+  display: grid; /* Changed from inline-flex to grid for more robust centering */
+  place-content: center; /* Centers content both horizontally and vertically */
+  width: 18px; /* Small size */
+  height: 18px; /* Small size */
+  border-radius: 50%;
+  background-color: hsl(var(--primary)); /* Use primary color for visibility */
+  color: hsl(var(--primary-foreground)); /* White text */
+  font-size: 0.75rem; /* text-xs */
+  font-weight: bold;
+  margin-left: 0.5rem; /* Space from the text */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Print-specific styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #statement-to-print, #statement-to-print *, #room-summary-to-print, #room-summary-to-print * {
+    visibility: visible;
+  }
+  #statement-to-print, #room-summary-to-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 1cm; /* Add some padding for printing */
+    border: none;
+    box-shadow: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

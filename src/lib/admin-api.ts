@@ -1159,6 +1159,25 @@ export async function initiateStripePayout(payoutDetails: {
 }
 
 /**
+ * Triggers the reconciliation process between Stripe transfers and local invoices.
+ * @returns A promise that resolves with the number of updated invoices.
+ */
+export async function reconcileStripeTransfers(): Promise<{ updatedCount: number }> {
+  const { data, error } = await supabase.functions.invoke('reconcile-stripe-transfers');
+
+  if (error) {
+    console.error("Error reconciling Stripe transfers:", error);
+    throw new Error(`Erreur lors du rapprochement Stripe : ${error.message}`);
+  }
+
+  if (data.error) {
+    throw new Error(`Erreur lors du rapprochement Stripe : ${data.error}`);
+  }
+
+  return data;
+}
+
+/**
  * Updates the transfer status of a specific invoice.
  * @param invoiceId The ID of the invoice to update.
  * @param completed The new transfer status.

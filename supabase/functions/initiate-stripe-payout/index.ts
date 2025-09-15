@@ -44,6 +44,10 @@ serve(async (req) => {
       destination: destination_account_id,
       transfer_group: `INVOICES-${invoice_ids[0]}`,
     });
+    // Add all invoice IDs to metadata for easier reconciliation
+    if (invoice_ids && invoice_ids.length > 0) {
+      transferParams.append('metadata[invoice_ids]', invoice_ids.join(','));
+    }
     if (description) {
       transferParams.append('description', description);
     }

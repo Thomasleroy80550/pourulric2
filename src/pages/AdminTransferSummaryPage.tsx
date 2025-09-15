@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { getTransferSummaries, UserTransferSummary, updateTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout } from '@/lib/admin-api';
-import { Terminal, Banknote, CheckCircle2, Loader2 } from 'lucide-react';
+import { getTransferSummaries, UserTransferSummary, updateTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout, reconcileStripeTransfers } from '@/lib/admin-api';
+import { Terminal, Banknote, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,7 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [summaryForPayout, setSummaryForPayout] = useState<UserTransferSummary | null>(null);
   const [selectedPropertyFilter, setSelectedPropertyFilter] = useState<'all' | 'crotoy' | 'berck'>('all'); // New state for property filter
+  const [isReconciling, setIsReconciling] = useState(false);
 
   const getPropertyName = (id: number | null | undefined) => {
     switch (id) {
@@ -139,6 +140,24 @@ const AdminTransferSummaryPage: React.FC = () => {
     }
   };
 
+  const handleReconcile = async () => {
+    setIsReconciling(true);
+    const toastId = toast.loading("Rapprochement avec Stripe en cours...");
+    try {
+      const result = await reconcileStripeTransfers();
+      if (result.updatedCount > 0) {
+        toast.success(`${result.updatedCount} relevé(s) ont été rapprochés avec succès.`, { id: toastId });
+        fetchData(); // Refresh data to show changes
+      } else {
+        toast.info("Aucun nouveau virement à rapprocher. Tout est à jour.", { id: toastId });
+      }
+    } catch (error: any) {
+      toast.error(`Erreur lors du rapprochement : ${error.message}`, { id: toastId });
+    } finally {
+      setIsReconciling(false);
+    }
+  };
+
   const filteredSummaries = summaries.filter(summary => {
     if (selectedPropertyFilter === 'all') return true;
     const propertyId = selectedPropertyFilter === 'crotoy' ? 1 : 2;
@@ -168,14 +187,24 @@ const AdminTransferSummaryPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-4">
-              <Banknote className="h-8 w-8" />
-              <div>
-                <CardTitle>Synthèse des Virements</CardTitle>
-                <CardDescription>
-                  Cette page récapitule le montant total à virer à chaque client, avec le détail par période.
-                </CardDescription>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <Banknote className="h-8 w-8" />
+                <div>
+                  <CardTitle>Synthèse des Virements</CardTitle>
+                  <CardDescription>
+                    Cette page récapitule le montant total à virer à chaque client, avec le détail par période.
+                  </CardDescription>
+                </div>
               </div>
+              <Button onClick={handleReconcile} disabled={isReconciling}>
+                {isReconciling ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Rapprochement Stripe
+              </Button>
             </div>
             <Tabs value={selectedPropertyFilter} onValueChange={(value) => setSelectedPropertyFilter(value as 'all' | 'crotoy' | 'berck')} className="mt-4">
               <TabsList>

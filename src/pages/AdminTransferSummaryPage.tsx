@@ -171,35 +171,39 @@ const AdminTransferSummaryPage: React.FC = () => {
         return false;
       }
 
-      // 2. Filter by property and pending status
-      // A user summary is relevant if at least one of its details matches the property and pending status criteria
-      const hasRelevantDetails = summary.details.some(detail => {
-        const isPropertyMatch = selectedPropertyFilter === 'all' ||
-          (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-          (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2); // Modifié ici pour ne plus inclure null/undefined
+      // 2. Filter by user's primary property (from their profile)
+      const userPropertyId = summary.krossbooking_property_id;
+      const isUserPropertyMatch = selectedPropertyFilter === 'all' ||
+        (selectedPropertyFilter === 'crotoy' && userPropertyId === 1) ||
+        (selectedPropertyFilter === 'berck' && userPropertyId === 2);
 
-        if (!isPropertyMatch) {
-          return false; // This detail doesn't match the property filter
-        }
+      if (!isUserPropertyMatch) {
+        return false;
+      }
 
-        // If showOnlyPending is true, this detail must also be pending
-        if (showOnlyPending) {
-          return !detail.transfer_completed;
-        }
+      // 3. If showing only pending, check if there's any pending detail for this user
+      // that also matches the property filter (if not 'all')
+      if (showOnlyPending) {
+        const hasPendingAndMatchingDetail = summary.details.some(detail => {
+          const isDetailPropertyMatch = selectedPropertyFilter === 'all' ||
+            (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
+            (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2);
+          return !detail.transfer_completed && isDetailPropertyMatch;
+        });
+        return hasPendingAndMatchingDetail;
+      }
 
-        // If showOnlyPending is false, any property match is sufficient (pending or completed)
-        return true;
-      });
-
-      return hasRelevantDetails;
+      return true; // If not showing only pending, and user property matches, include
     });
 
   const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
     const userPendingTotal = summary.details
-      .filter(detail => !detail.transfer_completed && 
-        (selectedPropertyFilter === 'all' || 
-         (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-         (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2))) // Modifié ici pour ne plus inclure null/undefined
+      .filter(detail => {
+        const isDetailPropertyMatch = selectedPropertyFilter === 'all' ||
+          (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
+          (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2);
+        return !detail.transfer_completed && isDetailPropertyMatch;
+      })
       .reduce((userAcc, detail) => userAcc + detail.amount, 0);
     return acc + userPendingTotal;
   }, 0);
@@ -281,13 +285,16 @@ const AdminTransferSummaryPage: React.FC = () => {
                 {filteredSummaries.length > 0 ? (
                   <Accordion type="single" collapsible className="w-full">
                     {filteredSummaries.map((summary) => {
+                      // Calculate allTransfersDone based on all details, not just filtered ones
                       const allTransfersDone = summary.details.every(d => d.transfer_completed);
+                      
+                      // Calculate userPendingAmount based on details matching the current property filter
                       const userPendingAmount = summary.details
                         .filter(d => !d.transfer_completed && 
                           (selectedPropertyFilter === 'all' || 
                            (selectedPropertyFilter === 'crotoy' && d.krossbooking_property_id === 1) ||
-                           (selectedPropertyFilter === 'berck' && d.krossbooking_property_id === 2))) // Modifié ici pour ne plus inclure null/undefined
-                        .reduce((acc, d) => acc + d.amount, 0);
+                           (selectedPropertyFilter === 'berck' && d.krossbooking_property_id === 2)))
+                        .reduce((userAcc, d) => userAcc + d.amount, 0);
 
                       return (
                         <AccordionItem value={summary.user_id} key={summary.user_id}>
@@ -320,7 +327,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   .filter(detail => 
                                     selectedPropertyFilter === 'all' || 
                                     (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-                                    (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2) // Modifié ici pour ne plus inclure null/undefined
+                                    (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2)
                                   )
                                   .map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>

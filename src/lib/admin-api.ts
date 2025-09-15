@@ -5,6 +5,7 @@ import { Strategy } from "./strategy-api";
 import { UserRoom } from "./user-room-api"; // Import UserRoom type
 import { Idea } from "./ideas-api";
 import { addDays, format, parseISO } from 'date-fns';
+import { getProfileById } from "./profile-api"; // Import getProfileById
 
 const MAKE_WEBHOOK_URL_CROTOY = "https://hook.eu1.make.com/jnnkji5edohpm7i8mstnq1vwqka0iqj9";
 const MAKE_WEBHOOK_URL_BERCK = "https://hook.eu1.make.com/zuncswymvgd5ixlpio47ffn25de8v6lu";
@@ -28,6 +29,7 @@ export interface SavedInvoice {
   };
   pennylane_status?: string; // Ajout du statut Pennylane
   pennylane_invoice_url?: string | null; // Nouveau champ pour l'URL de la facture Pennylane
+  krossbooking_property_id?: number | null; // Assurez-vous que ce champ est présent
 }
 
 export interface InvoiceTotals {
@@ -135,6 +137,7 @@ export interface UserTransferSummary {
   first_name: string | null;
   last_name: string | null;
   stripe_account_id: string | null; // Ajout de l'ID de compte Stripe
+  krossbooking_property_id?: number | null; // Ajout de l'ID de la propriété au niveau du résumé de l'utilisateur
   total_amount_to_transfer: number;
   details: {
     period: string;
@@ -142,7 +145,7 @@ export interface UserTransferSummary {
     amountsBySource: { [key: string]: number };
     invoice_id: string;
     transfer_completed: boolean;
-    krossbooking_property_id?: number | null; // Ajout de l'ID de la propriété
+    krossbooking_property_id?: number | null; // Garder ici pour la granularité si une facture peut avoir une propriété différente du profil
   }[];
 }
 
@@ -429,22 +432,28 @@ export async function updateAccountantRequestStatus(requestId: string, status: '
  * @returns A promise that resolves when the invoice is saved.
  */
 export async function saveInvoice(userId: any, period: string, invoiceData: any, totals: any): Promise<SavedInvoice> {
-  const payload = {
-    user_id: userId,
-    period: period,
-    invoice_data: invoiceData,
-    totals: totals,
-  };
-
+  let actualUserId = userId;
   // The error indicates that an object might be passed as the first argument.
   // Let's check for that and adjust the payload accordingly.
   if (typeof userId === 'object' && userId !== null) {
     const passedObject = userId;
-    payload.user_id = passedObject.user_id;
-    payload.period = passedObject.period;
-    payload.invoice_data = passedObject.invoice_data;
-    payload.totals = passedObject.totals;
+    actualUserId = passedObject.user_id;
+    period = passedObject.period;
+    invoiceData = passedObject.invoice_data;
+    totals = passedObject.totals;
   }
+
+  // Fetch krossbooking_property_id from the user's profile
+  const userProfile = await getProfileById(actualUserId);
+  const krossbookingPropertyId = userProfile?.krossbooking_property_id || null;
+
+  const payload = {
+    user_id: actualUserId,
+    period: period,
+    invoice_data: invoiceData,
+    totals: totals,
+    krossbooking_property_id: krossbookingPropertyId, // Add krossbooking_property_id to the payload
+  };
 
   const { data, error } = await supabase
     .from('invoices')
@@ -478,11 +487,16 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
  * @returns A promise that resolves with the updated invoice data.
  */
 export async function updateInvoice(invoiceId: string, userId: string, period: string, invoiceData: any, totals: any): Promise<SavedInvoice> {
+  // Fetch krossbooking_property_id from the user's profile
+  const userProfile = await getProfileById(userId);
+  const krossbookingPropertyId = userProfile?.krossbooking_property_id || null;
+
   const payload = {
     user_id: userId,
     period: period,
     invoice_data: invoiceData,
     totals: totals,
+    krossbooking_property_id: krossbookingPropertyId, // Add krossbooking_property_id to the payload
   };
 
   const { data, error } = await supabase
@@ -886,7 +900,8 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
       profiles!user_id (
         first_name,
         last_name,
-        stripe_account_id
+        stripe_account_id,
+        krossbooking_property_id // Fetch krossbooking_property_id from profile
       )
     `)
     .order('created_at', { ascending: false });
@@ -903,6 +918,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     const firstName = invoice.profiles?.first_name || 'N/A';
     const lastName = invoice.profiles?.last_name || 'N/A';
     const stripeAccountId = invoice.profiles?.stripe_account_id || null;
+    const userKrossbookingPropertyId = invoice.profiles?.krossbooking_property_id || null; // Get from profile
 
     if (!userSummariesMap.has(userId)) {
       userSummariesMap.set(userId, {
@@ -910,6 +926,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
         first_name: firstName,
         last_name: lastName,
         stripe_account_id: stripeAccountId,
+        krossbooking_property_id: userKrossbookingPropertyId, // Assign to user summary
         total_amount_to_transfer: 0,
         details: [],
       });
@@ -926,7 +943,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
                        { 'total': amount }, // Fallback if sources are not detailed
       invoice_id: invoice.id,
       transfer_completed: invoice.transfer_completed || false,
-      krossbooking_property_id: invoice.krossbooking_property_id,
+      krossbooking_property_id: invoice.krossbooking_property_id, // Keep invoice's property ID for detail if it exists
     });
 
     if (!invoice.transfer_completed) {

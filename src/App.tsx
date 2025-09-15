@@ -67,6 +67,7 @@ function App() {
           <BrowserRouter>
             <InvoiceGenerationProvider>
               <SessionContextProvider>
+                {/* The SessionContextProvider handles its own loading state and redirects */}
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/onboarding-status" element={<OnboardingStatusPage />} />

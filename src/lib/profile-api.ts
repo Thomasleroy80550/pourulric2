@@ -90,6 +90,36 @@ export async function getProfile(): Promise<UserProfile | null> {
 }
 
 /**
+ * Fetches a user's profile by their ID from the 'profiles' table.
+ * @param userId The ID of the user whose profile to fetch.
+ * @returns The user's profile data or null if not found.
+ */
+export async function getProfileById(userId: string): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(`
+      *,
+      onboarding_status,
+      estimation_details,
+      estimated_revenue,
+      key_delivery_method,
+      revyoos_holding_ids,
+      kyc_documents,
+      krossbooking_property_id
+    `)
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching user profile by ID ${userId}:`, error.message);
+    // Depending on the context, you might want to throw an error or return null
+    // For now, let's return null as it's a common pattern for "not found"
+    return null;
+  }
+  return data;
+}
+
+/**
  * Updates the last_seen_at timestamp for the current user.
  */
 export async function updateUserLastSeen(): Promise<void> {

@@ -165,35 +165,33 @@ const AdminTransferSummaryPage: React.FC = () => {
 
   const filteredSummaries = summaries
     .filter(summary => {
-      // Filter by search query
+      // 1. Filter by search query
       const fullName = `${summary.first_name} ${summary.last_name}`.toLowerCase();
       if (searchQuery && !fullName.includes(searchQuery.toLowerCase())) {
         return false;
       }
 
-      // First, filter by property
-      const matchesProperty = selectedPropertyFilter === 'all' || summary.details.some(detail => {
-        const propertyId = selectedPropertyFilter === 'crotoy' ? 1 : 2;
-        if (propertyId === 2 && (detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined)) {
-          return true;
+      // 2. Filter by property and pending status
+      const hasRelevantDetails = summary.details.some(detail => {
+        // Check if the detail matches the selected property filter
+        const isPropertyMatch = selectedPropertyFilter === 'all' ||
+          (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
+          (selectedPropertyFilter === 'berck' && (detail.krossbooking_property_id === 2 || detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined));
+
+        if (!isPropertyMatch) {
+          return false; // This detail doesn't match the property filter
         }
-        return detail.krossbooking_property_id === propertyId;
+
+        // If showOnlyPending is true, this detail must also be pending
+        if (showOnlyPending) {
+          return !detail.transfer_completed;
+        }
+
+        // If showOnlyPending is false, any property match is sufficient
+        return true;
       });
 
-      if (!matchesProperty) return false;
-
-      // Then, if showOnlyPending is true, check for pending transfers within the filtered property scope
-      if (showOnlyPending) {
-        return summary.details.some(detail => {
-          const matchesPropertyForDetail = selectedPropertyFilter === 'all' ||
-            (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-            (selectedPropertyFilter === 'berck' && (detail.krossbooking_property_id === 2 || detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined));
-          
-          return !detail.transfer_completed && matchesPropertyForDetail;
-        });
-      }
-
-      return true; // If not showOnlyPending, just return true if property matches
+      return hasRelevantDetails;
     });
 
   const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
@@ -290,9 +288,6 @@ const AdminTransferSummaryPage: React.FC = () => {
                            (selectedPropertyFilter === 'crotoy' && d.krossbooking_property_id === 1) ||
                            (selectedPropertyFilter === 'berck' && (d.krossbooking_property_id === 2 || d.krossbooking_property_id === null || d.krossbooking_property_id === undefined))))
                         .reduce((acc, d) => acc + d.amount, 0);
-
-                      // Only render if there's a pending amount for the selected filter and we are showing only pending
-                      if (showOnlyPending && userPendingAmount === 0 && selectedPropertyFilter !== 'all') return null;
 
                       return (
                         <AccordionItem value={summary.user_id} key={summary.user_id}>

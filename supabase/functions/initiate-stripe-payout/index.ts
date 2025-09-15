@@ -98,6 +98,7 @@ serve(async (req) => {
     const payout = await payoutResponse.json();
 
     // 4. Update invoice status in DB
+    // Ensure all necessary environment variables are set in Supabase Edge Function secrets.
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { error: dbError } = await supabaseAdmin
       .from('invoices')

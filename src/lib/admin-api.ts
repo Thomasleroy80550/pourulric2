@@ -449,7 +449,7 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
   const { data, error } = await supabase
     .from('invoices')
     .insert(payload)
-    .select(`*, profiles(first_name, last_name)`)
+    .select(`*, profiles!user_id (first_name, last_name)`)
     .single();
 
   if (error) {
@@ -489,7 +489,7 @@ export async function updateInvoice(invoiceId: string, userId: string, period: s
     .from('invoices')
     .update(payload)
     .eq('id', invoiceId)
-    .select(`*, profiles(first_name, last_name)`)
+    .select(`*, profiles!user_id (first_name, last_name)`)
     .single();
 
   if (error) {

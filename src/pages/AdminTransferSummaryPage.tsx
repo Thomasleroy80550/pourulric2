@@ -185,22 +185,29 @@ const AdminTransferSummaryPage: React.FC = () => {
         return false;
       }
 
-      // 3. If showing only pending, check if there's any pending Stripe amount for this user
+      // 3. If showing only pending, check if there's any pending amount for this user from any source
       if (showOnlyPending) {
-        const hasPendingStripeAmount = summary.details.some(detail => {
-          return !detail.transfer_statuses?.stripe && (detail.amountsBySource['stripe'] || 0) > 0;
+        const hasAnyPendingAmount = summary.details.some(detail => {
+          return Object.entries(detail.amountsBySource).some(([source, amount]) => {
+            return !detail.transfer_statuses?.[source] && amount > 0;
+          });
         });
-        return hasPendingStripeAmount;
+        return hasAnyPendingAmount;
       }
 
       return true;
     });
 
   const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
-    const userPendingStripeTotal = summary.details
-      .filter(detail => !detail.transfer_statuses?.stripe)
-      .reduce((userAcc, detail) => userAcc + (detail.amountsBySource['stripe'] || 0), 0);
-    return acc + userPendingStripeTotal;
+    let userTotalPendingAmount = 0;
+    for (const detail of summary.details) {
+      for (const [source, amount] of Object.entries(detail.amountsBySource)) {
+        if (!detail.transfer_statuses?.[source]) {
+          userTotalPendingAmount += amount;
+        }
+      }
+    }
+    return acc + userTotalPendingAmount;
   }, 0);
 
   return (
@@ -286,9 +293,15 @@ const AdminTransferSummaryPage: React.FC = () => {
                       );
                       
                       // Calculate userPendingAmount based on details matching the current property filter
-                      const userPendingStripeAmount = summary.details
-                        .filter(d => !d.transfer_statuses?.stripe)
-                        .reduce((userAcc, d) => userAcc + (d.amountsBySource['stripe'] || 0), 0);
+                      const userPendingTotalAmount = summary.details.reduce((userAcc, detail) => {
+                        let detailPendingAmount = 0;
+                        for (const [source, amount] of Object.entries(detail.amountsBySource)) {
+                          if (!detail.transfer_statuses?.[source]) {
+                            detailPendingAmount += amount;
+                          }
+                        }
+                        return userAcc + detailPendingAmount;
+                      }, 0);
 
                       return (
                         <AccordionItem value={summary.user_id} key={summary.user_id}>
@@ -300,8 +313,8 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   {summary.first_name} {summary.last_name}
                                 </span>
                               </div>
-                              <span className={cn("font-bold text-lg", userPendingStripeAmount === 0 ? "text-gray-400 line-through" : "text-green-600")}>
-                                {userPendingStripeAmount.toFixed(2)}€
+                              <span className={cn("font-bold text-lg", userPendingTotalAmount === 0 ? "text-gray-400 line-through" : "text-green-600")}>
+                                {userPendingTotalAmount.toFixed(2)}€
                               </span>
                             </div>
                           </AccordionTrigger>
@@ -384,9 +397,9 @@ const AdminTransferSummaryPage: React.FC = () => {
                               </TableBody>
                               <TableFooter>
                                 <TableRow className="bg-gray-100 font-bold">
-                                  <TableCell colSpan={4}>Total Stripe restant pour {summary.first_name}</TableCell>
+                                  <TableCell colSpan={4}>Total restant pour {summary.first_name}</TableCell>
                                   <TableCell className="text-right">
-                                    {userPendingStripeAmount.toFixed(2)}€
+                                    {userPendingTotalAmount.toFixed(2)}€
                                   </TableCell>
                                 </TableRow>
                               </TableFooter>

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { createNotification } from "./notifications-api";
+import { createNotification, sendEmail } from "./notifications-api";
 import { UserProfile } from "./profile-api";
 import { Strategy } from "./strategy-api";
 import { UserRoom } from "./user-room-api"; // Import UserRoom type
@@ -1006,115 +1006,6 @@ export async function resendStatementToPennylane(invoiceId: string): Promise<voi
 }
 
 /**
- * Calculates the total amount to transfer for each user based on their saved invoices.
- * This is an admin-only function.
- * @returns A promise that resolves to an array of UserTransferSummary objects.
- */
-export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
-  const { data, error } = await supabase
-    .from('invoices')
-    .select(`
-      id,
-      user_id,
-      period,
-      totals,
-      transfer_completed,
-      profiles!user_id (
-        first_name,
-        last_name,
-        stripe_account_id,
-        krossbooking_property_id
-      )
-    `);
-
-  if (error) {
-    console.error("Error fetching invoices for transfer summary:", error);
-    throw new Error(`Erreur lors de la récupération des relevés pour le résumé des virements : ${error.message}`);
-  }
-
-  const transferMap = new Map<string, { 
-      first_name: string | null, 
-      last_name: string | null, 
-      stripe_account_id: string | null,
-      total: number, 
-      details: { 
-          period: string; 
-          amount: number; 
-          amountsBySource: { [key: string]: number };
-          invoice_id: string; 
-          transfer_completed: boolean; 
-          krossbooking_property_id?: number | null;
-      }[] 
-  }>();
-
-  data.forEach(invoice => {
-    const userId = invoice.user_id;
-    const period = invoice.period;
-    const firstName = invoice.profiles?.first_name || null;
-    const lastName = invoice.profiles?.last_name || null;
-    const stripeAccountId = invoice.profiles?.stripe_account_id || null;
-    const krossbookingPropertyId = invoice.profiles?.krossbooking_property_id || null; // Récupérer l'ID de la propriété
-    const invoiceId = invoice.id;
-    const transferCompleted = invoice.transfer_completed || false;
-
-    // Recalculate amount to transfer based on relevant sources only
-    let amountToTransfer = 0;
-    const amountsBySource: { [key: string]: number } = {};
-    const sources = invoice.totals?.transferDetails?.sources;
-
-    if (sources) {
-      // Sum amounts from sources collected by Hello Keys (keys are lowercase)
-      if (sources['stripe']) {
-        const stripeTotal = sources['stripe'].total || 0;
-        amountToTransfer += stripeTotal;
-        amountsBySource['stripe'] = stripeTotal;
-      }
-      if (sources['airbnb']) {
-        const airbnbTotal = sources['airbnb'].total || 0;
-        amountToTransfer += airbnbTotal;
-        amountsBySource['airbnb'] = airbnbTotal;
-      }
-    }
-
-    // Only process if there is an actual amount to transfer from our sources
-    if (amountToTransfer > 0) {
-      const detailItem = { 
-          period, 
-          amount: amountToTransfer, 
-          amountsBySource,
-          invoice_id: invoiceId, 
-          transfer_completed: transferCompleted,
-          krossbooking_property_id: krossbookingPropertyId, // Assigner l'ID de la propriété
-      };
-
-      if (transferMap.has(userId)) {
-        const current = transferMap.get(userId)!;
-        current.total += amountToTransfer;
-        current.details.push(detailItem);
-        transferMap.set(userId, current);
-      } else {
-        transferMap.set(userId, {
-          first_name: firstName,
-          last_name: lastName,
-          stripe_account_id: stripeAccountId, // Stocker l'ID Stripe
-          total: amountToTransfer,
-          details: [detailItem]
-        });
-      }
-    }
-  });
-
-  return Array.from(transferMap.entries()).map(([userId, summary]) => ({
-    user_id: userId,
-    first_name: summary.first_name,
-    last_name: summary.last_name,
-    stripe_account_id: summary.stripe_account_id,
-    total_amount_to_transfer: summary.total,
-    details: summary.details.sort((a, b) => (b.period || '').localeCompare(a.period || ''))
-  }));
-}
-
-/**
  * Initiates a Stripe payout process (Transfer + Payout).
  * @param payoutDetails Details for the payout.
  * @returns A promise that resolves when the payout is initiated.
@@ -1140,6 +1031,55 @@ export async function initiateStripePayout(payoutDetails: {
     console.error("Error initiating Stripe payout:", error);
     throw new Error(`Erreur lors de l'initiation du virement Stripe : ${error.message}`);
   }
+
+  // --- Start: Add email notification ---
+  try {
+    if (payoutDetails.invoiceIds && payoutDetails.invoiceIds.length > 0) {
+      // Get user_id from the first invoice
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('user_id')
+        .eq('id', payoutDetails.invoiceIds[0])
+        .single();
+
+      if (invoiceError || !invoiceData) {
+        console.error("Error fetching user_id for email notification:", invoiceError);
+        // Don't throw, just log and continue
+      } else {
+        const userId = invoiceData.user_id;
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('email, first_name, last_name')
+          .eq('id', userId)
+          .single();
+
+        if (profileError || !profileData || !profileData.email) {
+          console.error("Error fetching profile for email notification:", profileError);
+          // Don't throw, just log and continue
+        } else {
+          const { email, first_name, last_name } = profileData;
+          const formattedAmount = (payoutDetails.amount / 100).toFixed(2); // Convert cents to currency
+          const subject = `Votre virement de ${formattedAmount} ${payoutDetails.currency.toUpperCase()} a été initié !`;
+          const htmlBody = `
+            <p>Bonjour ${first_name || ''} ${last_name || ''},</p>
+            <p>Nous avons le plaisir de vous informer qu'un virement de <strong>${formattedAmount} ${payoutDetails.currency.toUpperCase()}</strong> a été initié vers votre compte Stripe connecté.</p>
+            <p>Ce virement correspond aux montants dus pour les relevés suivants : ${payoutDetails.invoiceIds.join(', ')}.</p>
+            <p>Vous devriez recevoir les fonds sur votre compte bancaire lié à Stripe dans les prochains jours ouvrables.</p>
+            <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
+            <p>Cordialement,</p>
+            <p>L'équipe Hello Keys</p>
+          `;
+
+          await sendEmail(email, subject, htmlBody);
+          console.log(`Email notification sent to ${email} for payout.`);
+        }
+      }
+    }
+  } catch (emailError) {
+    console.error("Failed to send payout email notification:", emailError);
+    // Continue execution, email notification failure should not stop the payout
+  }
+  // --- End: Add email notification ---
 
   return data;
 }

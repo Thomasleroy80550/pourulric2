@@ -33,6 +33,7 @@ serve(async (req) => {
     }
 
     // 1. Fetch recent transfers from Stripe
+    console.log("Fetching recent transfers from Stripe...");
     const stripeResponse = await fetch('https://api.stripe.com/v1/transfers?limit=100', {
         method: 'GET',
         headers: {
@@ -46,6 +47,7 @@ serve(async (req) => {
     }
 
     const { data: transfers } = await stripeResponse.json();
+    console.log(`Found ${transfers.length} Stripe transfers.`);
 
     // 2. Filter transfers and collect invoice IDs
     const invoiceIdsToUpdate = new Set<string>();
@@ -55,6 +57,7 @@ serve(async (req) => {
         ids.forEach((id: string) => invoiceIdsToUpdate.add(id.trim()));
       }
     }
+    console.log(`Collected ${invoiceIdsToUpdate.size} unique invoice IDs from Stripe transfers metadata.`);
 
     if (invoiceIdsToUpdate.size === 0) {
       return new Response(JSON.stringify({ updatedCount: 0, message: "No transfers found with reconciliation metadata." }), {
@@ -66,6 +69,7 @@ serve(async (req) => {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 3. Find which of these invoices are not yet marked as completed
+    console.log("Querying Supabase for invoices to update...");
     const { data: invoicesToUpdate, error: fetchError } = await supabaseAdmin
       .from('invoices')
       .select('id')
@@ -75,6 +79,7 @@ serve(async (req) => {
     if (fetchError) {
       throw new Error(`DB fetch error: ${fetchError.message}`);
     }
+    console.log(`Found ${invoicesToUpdate?.length || 0} invoices in DB matching Stripe transfers and not yet completed.`);
 
     if (!invoicesToUpdate || invoicesToUpdate.length === 0) {
       return new Response(JSON.stringify({ updatedCount: 0, message: "All relevant invoices are already marked as completed." }), {
@@ -84,6 +89,7 @@ serve(async (req) => {
     }
 
     const finalInvoiceIds = invoicesToUpdate.map(inv => inv.id);
+    console.log("Final invoice IDs to update:", finalInvoiceIds);
 
     // 4. Update their status
     const { error: updateError } = await supabaseAdmin
@@ -94,6 +100,7 @@ serve(async (req) => {
     if (updateError) {
       throw new Error(`DB update error: ${updateError.message}`);
     }
+    console.log(`Successfully updated ${finalInvoiceIds.length} invoices.`);
 
     return new Response(JSON.stringify({ updatedCount: finalInvoiceIds.length }), {
       status: 200,

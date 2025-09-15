@@ -30,6 +30,7 @@ export interface SavedInvoice {
   pennylane_status?: string; // Ajout du statut Pennylane
   pennylane_invoice_url?: string | null; // Nouveau champ pour l'URL de la facture Pennylane
   krossbooking_property_id?: number | null; // Assurez-vous que ce champ est présent
+  transfer_statuses?: { [key: string]: boolean } | null; // Remplacement de transfer_completed
 }
 
 export interface InvoiceTotals {
@@ -144,7 +145,7 @@ export interface UserTransferSummary {
     amount: number;
     amountsBySource: { [key: string]: number };
     invoice_id: string;
-    transfer_completed: boolean;
+    transfer_statuses?: { [key: string]: boolean } | null; // Remplacement de transfer_completed
     krossbooking_property_id?: number | null; // Garder ici pour la granularité si une facture peut avoir une propriété différente du profil
   }[];
 }
@@ -895,7 +896,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
       user_id,
       period,
       totals,
-      transfer_completed,
+      transfer_statuses,
       krossbooking_property_id,
       profiles!user_id (
         first_name,
@@ -942,13 +943,19 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
                        Object.fromEntries(Object.entries(invoice.totals.transferDetails.sources).map(([key, value]: [string, any]) => [key, value.total])) : 
                        { 'total': amount }, // Fallback if sources are not detailed
       invoice_id: invoice.id,
-      transfer_completed: invoice.transfer_completed || false,
+      transfer_statuses: invoice.transfer_statuses,
       krossbooking_property_id: invoice.krossbooking_property_id, // Keep invoice's property ID for detail if it exists
     });
 
-    if (!invoice.transfer_completed) {
-      summary.total_amount_to_transfer += amount;
-    }
+    const pendingAmount = Object.entries(summary.details[summary.details.length - 1].amountsBySource)
+      .reduce((acc, [source, sourceAmount]) => {
+        if (!invoice.transfer_statuses?.[source]) {
+          return acc + sourceAmount;
+        }
+        return acc;
+      }, 0);
+    
+    summary.total_amount_to_transfer += pendingAmount;
   });
 
   // The client will handle filtering for pending/all transfers.
@@ -1204,5 +1211,25 @@ export async function updateTransferStatus(invoiceId: string, completed: boolean
   if (error) {
     console.error("Error updating transfer status:", error);
     throw new Error(`Erreur lors de la mise à jour du statut du virement : ${error.message}`);
+  }
+}
+
+/**
+ * Updates the transfer status for a specific source of an invoice.
+ * @param invoiceId The ID of the invoice to update.
+ * @param source The payment source (e.g., 'stripe', 'airbnb').
+ * @param completed The new transfer status for the source.
+ * @returns A promise that resolves when the status is updated.
+ */
+export async function updateInvoiceSourceTransferStatus(invoiceId: string, source: string, completed: boolean): Promise<void> {
+  const { error } = await supabase.rpc('update_invoice_source_status', {
+    p_invoice_id: invoiceId,
+    p_source: source,
+    p_status: completed,
+  });
+
+  if (error) {
+    console.error("Error updating source transfer status:", error);
+    throw new Error(`Erreur lors de la mise à jour du statut du virement pour la source ${source} : ${error.message}`);
   }
 }

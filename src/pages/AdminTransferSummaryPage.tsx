@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { getTransferSummaries, UserTransferSummary, updateTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout, reconcileStripeTransfers } from '@/lib/admin-api';
+import { getTransferSummaries, UserTransferSummary, updateInvoiceSourceTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout, reconcileStripeTransfers } from '@/lib/admin-api';
 import { Terminal, Banknote, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
@@ -60,24 +60,28 @@ const AdminTransferSummaryPage: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleStatusChange = async (invoiceId: string, newStatus: boolean) => {
+  const handleSourceStatusChange = async (invoiceId: string, source: string, newStatus: boolean) => {
     const originalSummaries = JSON.parse(JSON.stringify(summaries));
     
     // Optimistic UI update
     setSummaries(currentSummaries => 
       currentSummaries.map(summary => ({
         ...summary,
-        details: summary.details.map(detail => 
-          detail.invoice_id === invoiceId ? { ...detail, transfer_completed: newStatus } : detail
-        )
+        details: summary.details.map(detail => {
+          if (detail.invoice_id === invoiceId) {
+            const newStatuses = { ...(detail.transfer_statuses || {}), [source]: newStatus };
+            return { ...detail, transfer_statuses: newStatuses };
+          }
+          return detail;
+        })
       }))
     );
 
     try {
-      await updateTransferStatus(invoiceId, newStatus);
-      toast.success("Statut du virement mis à jour.");
+      await updateInvoiceSourceTransferStatus(invoiceId, source, newStatus);
+      toast.success(`Statut du virement pour "${source}" mis à jour.`);
     } catch (err: any) {
-      toast.error("Erreur lors de la mise à jour du statut.");
+      toast.error(`Erreur lors de la mise à jour du statut pour "${source}".`);
       // Revert UI on error
       setSummaries(originalSummaries);
     }
@@ -115,7 +119,7 @@ const AdminTransferSummaryPage: React.FC = () => {
     setPayingUserId(summaryForPayout.user_id);
     try {
       const stripeAmountToPay = summaryForPayout.details
-        .filter(d => !d.transfer_completed)
+        .filter(d => !d.transfer_statuses?.stripe)
         .reduce((acc, d) => acc + (d.amountsBySource['stripe'] || 0), 0);
 
       if (stripeAmountToPay <= 0) {
@@ -125,7 +129,7 @@ const AdminTransferSummaryPage: React.FC = () => {
       }
 
       const amountInCents = Math.round(stripeAmountToPay * 100);
-      const invoiceIds = summaryForPayout.details.filter(d => !d.transfer_completed).map(d => d.invoice_id);
+      const invoiceIds = summaryForPayout.details.filter(d => !d.transfer_statuses?.stripe).map(d => d.invoice_id);
 
       await initiateStripePayout({
         destinationAccountId: summaryForPayout.stripe_account_id,
@@ -184,7 +188,7 @@ const AdminTransferSummaryPage: React.FC = () => {
       // 3. If showing only pending, check if there's any pending Stripe amount for this user
       if (showOnlyPending) {
         const hasPendingStripeAmount = summary.details.some(detail => {
-          return !detail.transfer_completed && (detail.amountsBySource['stripe'] || 0) > 0;
+          return !detail.transfer_statuses?.stripe && (detail.amountsBySource['stripe'] || 0) > 0;
         });
         return hasPendingStripeAmount;
       }
@@ -194,7 +198,7 @@ const AdminTransferSummaryPage: React.FC = () => {
 
   const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
     const userPendingStripeTotal = summary.details
-      .filter(detail => !detail.transfer_completed)
+      .filter(detail => !detail.transfer_statuses?.stripe)
       .reduce((userAcc, detail) => userAcc + (detail.amountsBySource['stripe'] || 0), 0);
     return acc + userPendingStripeTotal;
   }, 0);
@@ -277,11 +281,13 @@ const AdminTransferSummaryPage: React.FC = () => {
                   <Accordion type="single" collapsible className="w-full">
                     {filteredSummaries.map((summary) => {
                       // Calculate allTransfersDone based on all details, not just filtered ones
-                      const allTransfersDone = summary.details.every(d => d.transfer_completed);
+                      const allTransfersDone = summary.details.every(d => 
+                        Object.keys(d.amountsBySource).every(source => d.transfer_statuses?.[source])
+                      );
                       
                       // Calculate userPendingAmount based on details matching the current property filter
                       const userPendingStripeAmount = summary.details
-                        .filter(d => !d.transfer_completed)
+                        .filter(d => !d.transfer_statuses?.stripe)
                         .reduce((userAcc, d) => userAcc + (d.amountsBySource['stripe'] || 0), 0);
 
                       return (
@@ -304,9 +310,9 @@ const AdminTransferSummaryPage: React.FC = () => {
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Période</TableHead>
-                                  <TableHead>Montant Stripe</TableHead>
-                                  <TableHead>Propriété</TableHead>
-                                  <TableHead>Statut</TableHead>
+                                  <TableHead>Source</TableHead>
+                                  <TableHead>Montant</TableHead>
+                                  <TableHead>Statut Virement</TableHead>
                                   <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                               </TableHeader>
@@ -317,66 +323,68 @@ const AdminTransferSummaryPage: React.FC = () => {
                                      (selectedPropertyFilter === 'crotoy' && summary.krossbooking_property_id === 1) ||
                                      (selectedPropertyFilter === 'berck' && summary.krossbooking_property_id === 2))
                                   )
-                                  .map((detail) => (
-                                  <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
-                                    <TableCell className="font-medium">{detail.period}</TableCell>
-                                    <TableCell>
-                                      <div className="flex flex-col items-start">
-                                        <span className="font-semibold">{(detail.amountsBySource['stripe'] || 0).toFixed(2)} €</span>
-                                        {Object.entries(detail.amountsBySource).map(([source, amount]) => (
-                                          <Badge key={source} variant="secondary" className="mt-1 mr-1">
-                                            {source.charAt(0).toUpperCase() + source.slice(1)}: {amount.toFixed(2)}€
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>{getPropertyName(summary.krossbooking_property_id)}</TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id={`transfer-completed-${detail.invoice_id}`}
-                                          checked={detail.transfer_completed}
-                                          onCheckedChange={(checked) => handleStatusChange(detail.invoice_id, checked as boolean)}
-                                        />
-                                        <label
-                                          htmlFor={`transfer-completed-${detail.invoice_id}`}
-                                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        >
-                                          {detail.transfer_completed ? 'Effectué' : 'En attente'}
-                                        </label>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      {summary.stripe_account_id && (detail.amountsBySource['stripe'] || 0) > 0 && (
-                                        <Button
-                                          size="sm"
-                                          onClick={() => handlePayWithStripeClick(summary)}
-                                          disabled={payingUserId === summary.user_id || detail.transfer_completed}
-                                        >
-                                          {payingUserId === summary.user_id ? (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                          ) : (
-                                            <Banknote className="mr-2 h-4 w-4" />
+                                  .flatMap((detail) => 
+                                    Object.entries(detail.amountsBySource).map(([source, amount], index) => {
+                                      const isCompleted = detail.transfer_statuses?.[source] ?? false;
+                                      const sourceCapitalized = source.charAt(0).toUpperCase() + source.slice(1);
+                                      return (
+                                        <TableRow key={`${detail.invoice_id}-${source}`} className={cn(isCompleted && "bg-green-50/50 text-gray-500")}>
+                                          {index === 0 && (
+                                            <TableCell rowSpan={Object.keys(detail.amountsBySource).length} className="font-medium align-top border-b">
+                                              {detail.period}
+                                            </TableCell>
                                           )}
-                                          Payer via Stripe
-                                        </Button>
-                                      )}
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="ml-2"
-                                        onClick={() => handleViewDetails(detail.invoice_id)}
-                                      >
-                                        Voir le relevé
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
+                                          <TableCell>{sourceCapitalized}</TableCell>
+                                          <TableCell>{amount.toFixed(2)} €</TableCell>
+                                          <TableCell>
+                                            <div className="flex items-center space-x-2">
+                                              <Checkbox
+                                                id={`transfer-completed-${detail.invoice_id}-${source}`}
+                                                checked={isCompleted}
+                                                onCheckedChange={(checked) => handleSourceStatusChange(detail.invoice_id, source, checked as boolean)}
+                                              />
+                                              <label
+                                                htmlFor={`transfer-completed-${detail.invoice_id}-${source}`}
+                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                              >
+                                                {isCompleted ? 'Effectué' : 'En attente'}
+                                              </label>
+                                            </div>
+                                          </TableCell>
+                                          {index === 0 && (
+                                            <TableCell rowSpan={Object.keys(detail.amountsBySource).length} className="text-right align-top border-b">
+                                              {summary.stripe_account_id && (detail.amountsBySource['stripe'] || 0) > 0 && (
+                                                <Button
+                                                  size="sm"
+                                                  onClick={() => handlePayWithStripeClick(summary)}
+                                                  disabled={payingUserId === summary.user_id || detail.transfer_statuses?.stripe}
+                                                >
+                                                  {payingUserId === summary.user_id ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                  ) : (
+                                                    <Banknote className="mr-2 h-4 w-4" />
+                                                  )}
+                                                  Payer via Stripe
+                                                </Button>
+                                              )}
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="ml-2"
+                                                onClick={() => handleViewDetails(detail.invoice_id)}
+                                              >
+                                                Voir le relevé
+                                              </Button>
+                                            </TableCell>
+                                          )}
+                                        </TableRow>
+                                      );
+                                    })
+                                  )}
                               </TableBody>
                               <TableFooter>
                                 <TableRow className="bg-gray-100 font-bold">
-                                  <TableCell colSpan={3}>Total pour {summary.first_name}</TableCell>
-                                  <TableCell></TableCell> {/* Cellule vide pour la colonne Statut */}
+                                  <TableCell colSpan={4}>Total Stripe restant pour {summary.first_name}</TableCell>
                                   <TableCell className="text-right">
                                     {userPendingStripeAmount.toFixed(2)}€
                                   </TableCell>

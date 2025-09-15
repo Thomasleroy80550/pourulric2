@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { listStripeTransfers, StripeTransfer } from '@/lib/admin-api';
 import { ArrowRightLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminStripeTransfersPage: React.FC = () => {
   const [transfers, setTransfers] = useState<StripeTransfer[]>([]);

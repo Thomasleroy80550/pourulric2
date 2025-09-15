@@ -99,6 +99,7 @@ serve(async (req) => {
 
     // 4. Update invoice status in DB
     // Ensure all necessary environment variables are set in Supabase Edge Function secrets.
+    // Attempting to force redeployment.
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { error: dbError } = await supabaseAdmin
       .from('invoices')

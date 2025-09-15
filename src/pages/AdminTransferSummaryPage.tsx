@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import StripePayoutDialog from '@/components/admin/StripePayoutDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // Import Tabs components
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -28,6 +30,7 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [summaryForPayout, setSummaryForPayout] = useState<UserTransferSummary | null>(null);
   const [selectedPropertyFilter, setSelectedPropertyFilter] = useState<'all' | 'crotoy' | 'berck'>('all'); // New state for property filter
   const [isReconciling, setIsReconciling] = useState(false);
+  const [showOnlyPending, setShowOnlyPending] = useState(true);
 
   const getPropertyName = (id: number | null | undefined) => {
     switch (id) {
@@ -158,19 +161,32 @@ const AdminTransferSummaryPage: React.FC = () => {
     }
   };
 
-  const filteredSummaries = summaries.filter(summary => {
-    if (selectedPropertyFilter === 'all') return true;
-    const propertyId = selectedPropertyFilter === 'crotoy' ? 1 : 2;
-    // Check if any detail in the summary matches the property filter
-    return summary.details.some(detail => {
-      // If propertyId is 2 (Berck) and krossbooking_property_id is null or undefined, include it.
-      // This is a temporary measure if data is inconsistent.
-      if (propertyId === 2 && (detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined)) {
-        return true;
+  const filteredSummaries = summaries
+    .filter(summary => {
+      // First, filter by property
+      const matchesProperty = selectedPropertyFilter === 'all' || summary.details.some(detail => {
+        const propertyId = selectedPropertyFilter === 'crotoy' ? 1 : 2;
+        if (propertyId === 2 && (detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined)) {
+          return true;
+        }
+        return detail.krossbooking_property_id === propertyId;
+      });
+
+      if (!matchesProperty) return false;
+
+      // Then, if showOnlyPending is true, check for pending transfers within the filtered property scope
+      if (showOnlyPending) {
+        return summary.details.some(detail => {
+          const matchesPropertyForDetail = selectedPropertyFilter === 'all' ||
+            (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
+            (selectedPropertyFilter === 'berck' && (detail.krossbooking_property_id === 2 || detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined));
+          
+          return !detail.transfer_completed && matchesPropertyForDetail;
+        });
       }
-      return detail.krossbooking_property_id === propertyId;
+
+      return true; // If not showOnlyPending, just return true if property matches
     });
-  });
 
   const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
     const userPendingTotal = summary.details
@@ -206,13 +222,23 @@ const AdminTransferSummaryPage: React.FC = () => {
                 Rapprochement Stripe
               </Button>
             </div>
-            <Tabs value={selectedPropertyFilter} onValueChange={(value) => setSelectedPropertyFilter(value as 'all' | 'crotoy' | 'berck')} className="mt-4">
-              <TabsList>
-                <TabsTrigger value="all">Toutes les propriétés</TabsTrigger>
-                <TabsTrigger value="crotoy">Crotoy</TabsTrigger>
-                <TabsTrigger value="berck">Berck</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center justify-between mt-4">
+              <Tabs value={selectedPropertyFilter} onValueChange={(value) => setSelectedPropertyFilter(value as 'all' | 'crotoy' | 'berck')}>
+                <TabsList>
+                  <TabsTrigger value="all">Toutes les propriétés</TabsTrigger>
+                  <TabsTrigger value="crotoy">Crotoy</TabsTrigger>
+                  <TabsTrigger value="berck">Berck</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="show-only-pending"
+                  checked={showOnlyPending}
+                  onCheckedChange={setShowOnlyPending}
+                />
+                <Label htmlFor="show-only-pending">Afficher uniquement les virements en attente</Label>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {error && (
@@ -249,8 +275,8 @@ const AdminTransferSummaryPage: React.FC = () => {
                            (selectedPropertyFilter === 'berck' && (d.krossbooking_property_id === 2 || d.krossbooking_property_id === null || d.krossbooking_property_id === undefined))))
                         .reduce((acc, d) => acc + d.amount, 0);
 
-                      // Only render if there's a pending amount for the selected filter
-                      if (userPendingAmount === 0 && selectedPropertyFilter !== 'all') return null;
+                      // Only render if there's a pending amount for the selected filter and we are showing only pending
+                      if (showOnlyPending && userPendingAmount === 0 && selectedPropertyFilter !== 'all') return null;
 
                       return (
                         <AccordionItem value={summary.user_id} key={summary.user_id}>
@@ -262,7 +288,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   {summary.first_name} {summary.last_name}
                                 </span>
                               </div>
-                              <span className={cn("font-bold text-lg", allTransfersDone ? "text-gray-400 line-through" : "text-green-600")}>
+                              <span className={cn("font-bold text-lg", userPendingAmount === 0 ? "text-gray-400 line-through" : "text-green-600")}>
                                 {userPendingAmount.toFixed(2)}€
                               </span>
                             </div>
@@ -358,7 +384,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                   </Accordion>
                 ) : (
                   <div className="text-center text-gray-500 py-8">
-                    Aucun virement à effectuer pour le moment.
+                    Aucun virement à afficher pour les filtres sélectionnés.
                   </div>
                 )}
               </>

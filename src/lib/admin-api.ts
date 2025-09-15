@@ -934,13 +934,8 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     }
   });
 
-  // Filter out users with 0 total_amount_to_transfer if all their transfers are completed
-  const filteredSummaries = Array.from(userSummariesMap.values()).filter(summary => {
-    const hasPendingTransfers = summary.details.some(detail => !detail.transfer_completed);
-    return hasPendingTransfers;
-  });
-
-  return filteredSummaries;
+  // The client will handle filtering for pending/all transfers.
+  return Array.from(userSummariesMap.values());
 }
 
 /**

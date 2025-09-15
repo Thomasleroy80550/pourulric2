@@ -181,31 +181,22 @@ const AdminTransferSummaryPage: React.FC = () => {
         return false;
       }
 
-      // 3. If showing only pending, check if there's any pending detail for this user
-      // that also matches the property filter (if not 'all')
+      // 3. If showing only pending, check if there's any pending Stripe amount for this user
       if (showOnlyPending) {
-        const hasPendingAndMatchingDetail = summary.details.some(detail => {
-          const isDetailPropertyMatch = selectedPropertyFilter === 'all' ||
-            (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-            (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2);
-          return !detail.transfer_completed && isDetailPropertyMatch;
+        const hasPendingStripeAmount = summary.details.some(detail => {
+          return !detail.transfer_completed && (detail.amountsBySource['stripe'] || 0) > 0;
         });
-        return hasPendingAndMatchingDetail;
+        return hasPendingStripeAmount;
       }
 
-      return true; // If not showing only pending, and user property matches, include
+      return true;
     });
 
   const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
-    const userPendingTotal = summary.details
-      .filter(detail => {
-        const isDetailPropertyMatch = selectedPropertyFilter === 'all' ||
-          (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-          (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2);
-        return !detail.transfer_completed && isDetailPropertyMatch;
-      })
-      .reduce((userAcc, detail) => userAcc + detail.amount, 0);
-    return acc + userPendingTotal;
+    const userPendingStripeTotal = summary.details
+      .filter(detail => !detail.transfer_completed)
+      .reduce((userAcc, detail) => userAcc + (detail.amountsBySource['stripe'] || 0), 0);
+    return acc + userPendingStripeTotal;
   }, 0);
 
   return (
@@ -289,12 +280,9 @@ const AdminTransferSummaryPage: React.FC = () => {
                       const allTransfersDone = summary.details.every(d => d.transfer_completed);
                       
                       // Calculate userPendingAmount based on details matching the current property filter
-                      const userPendingAmount = summary.details
-                        .filter(d => !d.transfer_completed && 
-                          (selectedPropertyFilter === 'all' || 
-                           (selectedPropertyFilter === 'crotoy' && d.krossbooking_property_id === 1) ||
-                           (selectedPropertyFilter === 'berck' && d.krossbooking_property_id === 2)))
-                        .reduce((userAcc, d) => userAcc + d.amount, 0);
+                      const userPendingStripeAmount = summary.details
+                        .filter(d => !d.transfer_completed)
+                        .reduce((userAcc, d) => userAcc + (d.amountsBySource['stripe'] || 0), 0);
 
                       return (
                         <AccordionItem value={summary.user_id} key={summary.user_id}>
@@ -306,8 +294,8 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   {summary.first_name} {summary.last_name}
                                 </span>
                               </div>
-                              <span className={cn("font-bold text-lg", userPendingAmount === 0 ? "text-gray-400 line-through" : "text-green-600")}>
-                                {userPendingAmount.toFixed(2)}€
+                              <span className={cn("font-bold text-lg", userPendingStripeAmount === 0 ? "text-gray-400 line-through" : "text-green-600")}>
+                                {userPendingStripeAmount.toFixed(2)}€
                               </span>
                             </div>
                           </AccordionTrigger>
@@ -315,8 +303,8 @@ const AdminTransferSummaryPage: React.FC = () => {
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Client</TableHead>
-                                  <TableHead>Montant (Détail)</TableHead>
+                                  <TableHead>Période</TableHead>
+                                  <TableHead>Montant Stripe</TableHead>
                                   <TableHead>Propriété</TableHead>
                                   <TableHead>Statut</TableHead>
                                   <TableHead className="text-right">Actions</TableHead>
@@ -325,16 +313,16 @@ const AdminTransferSummaryPage: React.FC = () => {
                               <TableBody>
                                 {summary.details
                                   .filter(detail => 
-                                    selectedPropertyFilter === 'all' || 
-                                    (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-                                    (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2)
+                                    (selectedPropertyFilter === 'all' || 
+                                     (selectedPropertyFilter === 'crotoy' && summary.krossbooking_property_id === 1) ||
+                                     (selectedPropertyFilter === 'berck' && summary.krossbooking_property_id === 2))
                                   )
                                   .map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>
-                                    <TableCell className="font-medium">{summary.first_name} {summary.last_name}</TableCell>
+                                    <TableCell className="font-medium">{detail.period}</TableCell>
                                     <TableCell>
                                       <div className="flex flex-col items-start">
-                                        <span className="font-semibold">{detail.amount.toFixed(2)} €</span>
+                                        <span className="font-semibold">{(detail.amountsBySource['stripe'] || 0).toFixed(2)} €</span>
                                         {Object.entries(detail.amountsBySource).map(([source, amount]) => (
                                           <Badge key={source} variant="secondary" className="mt-1 mr-1">
                                             {source.charAt(0).toUpperCase() + source.slice(1)}: {amount.toFixed(2)}€
@@ -342,7 +330,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                         ))}
                                       </div>
                                     </TableCell>
-                                    <TableCell>{getPropertyName(detail.krossbooking_property_id)}</TableCell>
+                                    <TableCell>{getPropertyName(summary.krossbooking_property_id)}</TableCell>
                                     <TableCell>
                                       <div className="flex items-center space-x-2">
                                         <Checkbox
@@ -359,7 +347,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                       </div>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                      {summary.stripe_account_id && (
+                                      {summary.stripe_account_id && (detail.amountsBySource['stripe'] || 0) > 0 && (
                                         <Button
                                           size="sm"
                                           onClick={() => handlePayWithStripeClick(summary)}
@@ -390,7 +378,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   <TableCell colSpan={3}>Total pour {summary.first_name}</TableCell>
                                   <TableCell></TableCell> {/* Cellule vide pour la colonne Statut */}
                                   <TableCell className="text-right">
-                                    {userPendingAmount.toFixed(2)}€
+                                    {userPendingStripeAmount.toFixed(2)}€
                                   </TableCell>
                                 </TableRow>
                               </TableFooter>

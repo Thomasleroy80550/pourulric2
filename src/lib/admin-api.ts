@@ -901,7 +901,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
         first_name,
         last_name,
         stripe_account_id,
-        krossbooking_property_id // Fetch krossbooking_property_id from profile
+        krossbooking_property_id
       )
     `)
     .order('created_at', { ascending: false });

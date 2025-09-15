@@ -172,8 +172,8 @@ const AdminTransferSummaryPage: React.FC = () => {
       }
 
       // 2. Filter by property and pending status
+      // A user summary is relevant if at least one of its details matches the property and pending status criteria
       const hasRelevantDetails = summary.details.some(detail => {
-        // Check if the detail matches the selected property filter
         const isPropertyMatch = selectedPropertyFilter === 'all' ||
           (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
           (selectedPropertyFilter === 'berck' && (detail.krossbooking_property_id === 2 || detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined));
@@ -187,7 +187,7 @@ const AdminTransferSummaryPage: React.FC = () => {
           return !detail.transfer_completed;
         }
 
-        // If showOnlyPending is false, any property match is sufficient
+        // If showOnlyPending is false, any property match is sufficient (pending or completed)
         return true;
       });
 

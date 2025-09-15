@@ -176,7 +176,7 @@ const AdminTransferSummaryPage: React.FC = () => {
       const hasRelevantDetails = summary.details.some(detail => {
         const isPropertyMatch = selectedPropertyFilter === 'all' ||
           (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-          (selectedPropertyFilter === 'berck' && (detail.krossbooking_property_id === 2 || detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined));
+          (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2); // Modifié ici pour ne plus inclure null/undefined
 
         if (!isPropertyMatch) {
           return false; // This detail doesn't match the property filter
@@ -199,7 +199,7 @@ const AdminTransferSummaryPage: React.FC = () => {
       .filter(detail => !detail.transfer_completed && 
         (selectedPropertyFilter === 'all' || 
          (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-         (selectedPropertyFilter === 'berck' && (detail.krossbooking_property_id === 2 || detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined))))
+         (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2))) // Modifié ici pour ne plus inclure null/undefined
       .reduce((userAcc, detail) => userAcc + detail.amount, 0);
     return acc + userPendingTotal;
   }, 0);
@@ -286,7 +286,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                         .filter(d => !d.transfer_completed && 
                           (selectedPropertyFilter === 'all' || 
                            (selectedPropertyFilter === 'crotoy' && d.krossbooking_property_id === 1) ||
-                           (selectedPropertyFilter === 'berck' && (d.krossbooking_property_id === 2 || d.krossbooking_property_id === null || d.krossbooking_property_id === undefined))))
+                           (selectedPropertyFilter === 'berck' && d.krossbooking_property_id === 2))) // Modifié ici pour ne plus inclure null/undefined
                         .reduce((acc, d) => acc + d.amount, 0);
 
                       return (
@@ -320,7 +320,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                   .filter(detail => 
                                     selectedPropertyFilter === 'all' || 
                                     (selectedPropertyFilter === 'crotoy' && detail.krossbooking_property_id === 1) ||
-                                    (selectedPropertyFilter === 'berck' && (detail.krossbooking_property_id === 2 || detail.krossbooking_property_id === null || detail.krossbooking_property_id === undefined))
+                                    (selectedPropertyFilter === 'berck' && detail.krossbooking_property_id === 2) // Modifié ici pour ne plus inclure null/undefined
                                   )
                                   .map((detail) => (
                                   <TableRow key={detail.invoice_id} className={cn(detail.transfer_completed && "bg-green-50/50 text-gray-500")}>

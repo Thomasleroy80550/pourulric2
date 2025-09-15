@@ -870,6 +870,80 @@ export async function listStripeTransfers(accountId: string): Promise<StripeTran
 }
 
 /**
+ * Fetches a summary of transfers for all users, aggregating invoice details.
+ * @returns A promise that resolves to an array of UserTransferSummary objects.
+ */
+export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
+  const { data: invoices, error } = await supabase
+    .from('invoices')
+    .select(`
+      id,
+      user_id,
+      period,
+      totals,
+      transfer_completed,
+      krossbooking_property_id,
+      profiles!user_id (
+        first_name,
+        last_name,
+        stripe_account_id
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching invoices for transfer summary:", error);
+    throw new Error(`Erreur lors de la récupération des relevés pour la synthèse des virements : ${error.message}`);
+  }
+
+  const userSummariesMap = new Map<string, UserTransferSummary>();
+
+  invoices.forEach(invoice => {
+    const userId = invoice.user_id;
+    const firstName = invoice.profiles?.first_name || 'N/A';
+    const lastName = invoice.profiles?.last_name || 'N/A';
+    const stripeAccountId = invoice.profiles?.stripe_account_id || null;
+
+    if (!userSummariesMap.has(userId)) {
+      userSummariesMap.set(userId, {
+        user_id: userId,
+        first_name: firstName,
+        last_name: lastName,
+        stripe_account_id: stripeAccountId,
+        total_amount_to_transfer: 0,
+        details: [],
+      });
+    }
+
+    const summary = userSummariesMap.get(userId)!;
+    const amount = invoice.totals?.transferDetails?.sources?.stripe?.total || invoice.totals?.totalMontantVerse || 0; // Prioritize stripe total if available, otherwise totalMontantVerse
+
+    summary.details.push({
+      period: invoice.period,
+      amount: amount,
+      amountsBySource: invoice.totals?.transferDetails?.sources ? 
+                       Object.fromEntries(Object.entries(invoice.totals.transferDetails.sources).map(([key, value]: [string, any]) => [key, value.total])) : 
+                       { 'total': amount }, // Fallback if sources are not detailed
+      invoice_id: invoice.id,
+      transfer_completed: invoice.transfer_completed || false,
+      krossbooking_property_id: invoice.krossbooking_property_id,
+    });
+
+    if (!invoice.transfer_completed) {
+      summary.total_amount_to_transfer += amount;
+    }
+  });
+
+  // Filter out users with 0 total_amount_to_transfer if all their transfers are completed
+  const filteredSummaries = Array.from(userSummariesMap.values()).filter(summary => {
+    const hasPendingTransfers = summary.details.some(detail => !detail.transfer_completed);
+    return hasPendingTransfers;
+  });
+
+  return filteredSummaries;
+}
+
+/**
  * Sends statement data to a Make.com webhook.
  * @param invoiceId The ID of the invoice to send.
  * @param invoicePeriod The period the invoice covers (e.g., "Juin 2024").

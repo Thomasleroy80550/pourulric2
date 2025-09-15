@@ -17,6 +17,7 @@ import StripePayoutDialog from '@/components/admin/StripePayoutDialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // Import Tabs components
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input'; // Import Input component
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -31,6 +32,7 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [selectedPropertyFilter, setSelectedPropertyFilter] = useState<'all' | 'crotoy' | 'berck'>('all'); // New state for property filter
   const [isReconciling, setIsReconciling] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(''); // New state for search query
 
   const getPropertyName = (id: number | null | undefined) => {
     switch (id) {
@@ -163,6 +165,12 @@ const AdminTransferSummaryPage: React.FC = () => {
 
   const filteredSummaries = summaries
     .filter(summary => {
+      // Filter by search query
+      const fullName = `${summary.first_name} ${summary.last_name}`.toLowerCase();
+      if (searchQuery && !fullName.includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
       // First, filter by property
       const matchesProperty = selectedPropertyFilter === 'all' || summary.details.some(detail => {
         const propertyId = selectedPropertyFilter === 'crotoy' ? 1 : 2;
@@ -238,6 +246,14 @@ const AdminTransferSummaryPage: React.FC = () => {
                 />
                 <Label htmlFor="show-only-pending">Afficher uniquement les virements en attente</Label>
               </div>
+            </div>
+            <div className="mt-4">
+              <Input
+                placeholder="Rechercher par nom de client..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-sm"
+              />
             </div>
           </CardHeader>
           <CardContent>

@@ -64,8 +64,8 @@ function App() {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <SessionContextProvider>
-              <InvoiceGenerationProvider>
+            <InvoiceGenerationProvider>
+              <SessionContextProvider>
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
@@ -115,8 +115,8 @@ function App() {
                   <Route path="/comp-set" element={<CompSetPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </InvoiceGenerationProvider>
-            </SessionContextProvider>
+              </SessionContextProvider>
+            </InvoiceGenerationProvider>
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>

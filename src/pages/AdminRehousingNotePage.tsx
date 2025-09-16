@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription here
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-// Removed unused Select imports
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { createDocument } from '@/lib/documents-api';
 import { uploadFile } from '@/lib/storage-api';
@@ -100,15 +100,14 @@ const AdminRehousingNotePage: React.FC = () => {
 
         // 2. Upload PDF to Storage
         const filePath = `private/${selectedUser.id}/rehousing_notes/${pdfFile.name}`;
-        // Corrected uploadFile call:
-        const publicUrl = await uploadFile('private', filePath, pdfFile);
+        const { path: uploadedPath } = await uploadFile(pdfFile, filePath);
 
         // 3. Create document record in database
         await createDocument({
           user_id: selectedUser.id,
           name: `Note de ${values.noteType}`,
           description: `Montant perçu: ${values.amountReceived}€, Montant relogement: ${values.rehousingAmount}€, Delta: ${calculatedDelta}€, Destinataire: ${values.recipientName}`,
-          file_path: publicUrl, // Use the publicUrl returned by uploadFile
+          file_path: uploadedPath,
           file_size: pdfFile.size,
           file_type: pdfFile.type,
           category: 'Relogements et Compensations',

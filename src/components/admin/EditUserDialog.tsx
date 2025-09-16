@@ -24,6 +24,7 @@ import { generateCguvPdf } from '@/lib/pdf-utils';
 import { uploadFile } from '@/lib/storage-api';
 import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
 import { Label } from '@/components/ui/label';
+import ChangePasswordDialog from '@/components/admin/ChangePasswordDialog';
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -88,6 +89,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
   const [roomToEdit, setRoomToEdit] = useState<UserRoom | null>(null);
   const [cguvFile, setCguvFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -314,6 +316,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       <FormField control={form.control} name="property_city" render={({ field }) => (<FormItem><FormLabel>Ville</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="property_zip_code" render={({ field }) => (<FormItem><FormLabel>Code Postal</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      <Button type="button" variant="secondary" className="w-full" onClick={() => setIsChangePasswordDialogOpen(true)}>
+                        Changer le mot de passe
+                      </Button>
                     </CardContent>
                   </Card>
                   <Card className="border-red-500 border-2">
@@ -651,6 +656,13 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         userId={user.id}
         initialRoom={roomToEdit}
         onRoomSaved={handleRoomSaved}
+      />
+
+      <ChangePasswordDialog
+        isOpen={isChangePasswordDialogOpen}
+        onOpenChange={setIsChangePasswordDialogOpen}
+        userId={user.id}
+        userName={`${user.first_name} ${user.last_name}`}
       />
     </>
   );

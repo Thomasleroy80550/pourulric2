@@ -641,6 +641,22 @@ export async function updateUser(userData: UpdateUserPayload) {
 }
 
 /**
+ * Changes a user's password. This is an admin-only function.
+ * @param userId The ID of the user whose password to change.
+ * @param newPassword The new password.
+ */
+export async function changeUserPassword(userId: string, newPassword: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('update-user-password', {
+    body: { user_id: userId, new_password: newPassword },
+  });
+
+  if (error) {
+    console.error('Error changing user password:', error);
+    throw new Error(`Erreur lors du changement de mot de passe : ${error.message}`);
+  }
+}
+
+/**
  * Creates a link between an accountant and a client user.
  * @param accountantId The ID of the accountant profile.
  * @param clientId The ID of the client profile.

@@ -6,7 +6,10 @@ import { fr } from 'date-fns/locale';
 interface RehousingNoteContentProps {
   ownerName: string;
   noteType: string;
-  amount: number;
+  amountReceived: number;
+  amountToTransfer: number;
+  delta: number;
+  comment?: string;
   recipientName: string;
   recipientIban: string;
   recipientBic?: string;
@@ -14,7 +17,7 @@ interface RehousingNoteContentProps {
 }
 
 const RehousingNoteContent = React.forwardRef<HTMLDivElement, RehousingNoteContentProps>(
-  ({ ownerName, noteType, amount, recipientName, recipientIban, recipientBic, generationDate }, ref) => {
+  ({ ownerName, noteType, amountReceived, amountToTransfer, delta, comment, recipientName, recipientIban, recipientBic, generationDate }, ref) => {
     return (
       <div ref={ref} className="p-10 bg-white w-[210mm] h-[297mm]">
         <Card className="shadow-none border-none">
@@ -37,9 +40,33 @@ const RehousingNoteContent = React.forwardRef<HTMLDivElement, RehousingNoteConte
               Bonjour,
             </p>
             <p className="mb-6">
-              Suite à un(e) <strong>{noteType.toLowerCase()}</strong>, nous vous demandons de bien vouloir procéder à un virement d'un montant de <strong>{amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</strong> aux coordonnées bancaires ci-dessous.
+              Suite à un(e) <strong>{noteType.toLowerCase()}</strong>, veuillez trouver ci-dessous le détail de l'opération.
             </p>
+
+            <Card className="mb-6 bg-gray-50">
+              <CardHeader>
+                <CardTitle className="text-lg">Détail financier</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between"><span>Montant perçu :</span> <span className="font-semibold">{amountReceived.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</span></div>
+                  <div className="flex justify-between"><span>Montant à transférer :</span> <span className="font-semibold">{amountToTransfer.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</span></div>
+                  <div className="flex justify-between border-t pt-2 mt-2 font-bold"><span>Solde (Delta) :</span> <span className={delta >= 0 ? 'text-green-700' : 'text-red-700'}>{delta.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</span></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {comment && (
+              <div className="mb-6">
+                <h3 className="font-semibold mb-2 text-lg">Commentaire :</h3>
+                <p className="text-sm italic bg-gray-50 p-4 rounded-md border">{comment}</p>
+              </div>
+            )}
             
+            <p className="mb-6">
+              Nous vous demandons de bien vouloir procéder à un virement du <strong>montant à transférer</strong> indiqué ci-dessus aux coordonnées bancaires suivantes.
+            </p>
+
             <Card className="bg-gray-50">
               <CardHeader>
                 <CardTitle className="text-lg">Informations pour le virement</CardTitle>

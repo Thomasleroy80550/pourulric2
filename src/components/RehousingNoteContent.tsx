@@ -10,14 +10,13 @@ interface RehousingNoteContentProps {
   amountToTransfer: number;
   delta: number;
   comment?: string;
-  recipientName: string;
   recipientIban: string;
   recipientBic?: string;
   generationDate: Date;
 }
 
 const RehousingNoteContent = React.forwardRef<HTMLDivElement, RehousingNoteContentProps>(
-  ({ ownerName, noteType, amountReceived, amountToTransfer, delta, comment, recipientName, recipientIban, recipientBic, generationDate }, ref) => {
+  ({ ownerName, noteType, amountReceived, amountToTransfer, delta, comment, recipientIban, recipientBic, generationDate }, ref) => {
     return (
       <div ref={ref} className="p-10 bg-white w-[210mm] h-[297mm]">
         <Card className="shadow-none border-none">
@@ -73,10 +72,6 @@ const RehousingNoteContent = React.forwardRef<HTMLDivElement, RehousingNoteConte
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 gap-2">
-                  <div>
-                    <p className="font-semibold">Bénéficiaire :</p>
-                    <p>{recipientName}</p>
-                  </div>
                   <div>
                     <p className="font-semibold">IBAN :</p>
                     <p className="font-mono">{recipientIban}</p>

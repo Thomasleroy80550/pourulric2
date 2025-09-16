@@ -52,3 +52,20 @@ export const getRehousingNotesForUser = async (userId: string): Promise<Rehousin
 
   return data || [];
 };
+
+/**
+ * Fetches all rehousing notes (admin access).
+ */
+export const getAllRehousingNotes = async (): Promise<RehousingNote[]> => {
+  const { data, error } = await supabase
+    .from('rehousing_notes')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching all rehousing notes:', error);
+    throw new Error('Impossible de récupérer toutes les notes de relogement.');
+  }
+
+  return data || [];
+};

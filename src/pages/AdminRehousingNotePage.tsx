@@ -12,7 +12,7 @@ import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { createDocument } from '@/lib/documents-api';
 import { uploadFile } from '@/lib/storage-api';
 import { createNotification } from '@/lib/notifications-api';
-import { createRehousingNote } from '@/lib/rehousing-notes-api';
+import { createRehousingNote, getAllRehousingNotes, RehousingNote } from '@/lib/rehousing-notes-api';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import RehousingNoteContent from '@/components/RehousingNoteContent';
@@ -23,6 +23,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Eye } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const rehousingNoteSchema = z.object({
   userId: z.string().min(1, "Veuillez sélectionner un propriétaire."),
@@ -39,6 +44,9 @@ const AdminRehousingNotePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showManualIbanInput, setShowManualIbanInput] = useState(false);
+  const [rehousingNotes, setRehousingNotes] = useState<RehousingNote[]>([]);
+  const [selectedNote, setSelectedNote] = useState<RehousingNote | null>(null);
+  const [notesLoading, setNotesLoading] = useState(true);
 
   const form = useForm<z.infer<typeof rehousingNoteSchema>>({
     resolver: zodResolver(rehousingNoteSchema),
@@ -59,6 +67,18 @@ const AdminRehousingNotePage: React.FC = () => {
   const recipientId = form.watch('recipientId');
   const recipientIban = form.watch('recipientIban');
 
+  const fetchAllNotes = async () => {
+    setNotesLoading(true);
+    try {
+      const notes = await getAllRehousingNotes();
+      setRehousingNotes(notes);
+    } catch (error) {
+      toast.error("Erreur lors du chargement des notes de relogement.");
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -71,6 +91,7 @@ const AdminRehousingNotePage: React.FC = () => {
       }
     };
     fetchUsers();
+    fetchAllNotes();
   }, []);
 
   const onSubmit = async (values: z.infer<typeof rehousingNoteSchema>) => {
@@ -103,6 +124,7 @@ const AdminRehousingNotePage: React.FC = () => {
 
       toast.success("Note de relogement ajoutée avec succès dans les finances du propriétaire !");
       form.reset();
+      fetchAllNotes();
       
     } catch (error: any) {
       toast.error(`Erreur lors de la création de la note : ${error.message}`);
@@ -111,10 +133,14 @@ const AdminRehousingNotePage: React.FC = () => {
     }
   };
 
+  const formatCurrency = (amount: number) => {
+    return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Générer une note de relogement / compensation</CardTitle>
             <CardDescription>
@@ -261,6 +287,106 @@ const AdminRehousingNotePage: React.FC = () => {
                 </Button>
               </form>
             </Form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes de Relogement & Compensation existantes</CardTitle>
+            <CardDescription>Liste de toutes les notes de relogement et compensation créées.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {notesLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Propriétaire</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Montant à transférer</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rehousingNotes.length > 0 ? (
+                    rehousingNotes.map(note => {
+                      const owner = users.find(u => u.id === note.user_id);
+                      return (
+                        <TableRow key={note.id}>
+                          <TableCell>{format(new Date(note.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                          <TableCell>{owner ? `${owner.first_name} ${owner.last_name}` : 'Inconnu'}</TableCell>
+                          <TableCell className="font-medium">{note.note_type}</TableCell>
+                          <TableCell className="font-semibold">{formatCurrency(note.amount_to_transfer)}</TableCell>
+                          <TableCell className="text-right">
+                            <Dialog onOpenChange={(open) => !open && setSelectedNote(null)}>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" onClick={() => setSelectedNote(note)}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Détails
+                                </Button>
+                              </DialogTrigger>
+                              {selectedNote && selectedNote.id === note.id && (
+                                <DialogContent className="sm:max-w-2xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Détail de la note de {selectedNote.note_type}</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="py-4 space-y-6">
+                                    <p>Propriétaire : <strong>{owner ? `${owner.first_name} ${owner.last_name} (${owner.email})` : 'Inconnu'}</strong></p>
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="text-lg">Détail financier</CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="space-y-2 text-sm">
+                                          <div className="flex justify-between"><span>Montant perçu :</span> <span className="font-semibold">{formatCurrency(selectedNote.amount_received)}</span></div>
+                                          <div className="flex justify-between"><span>Montant à transférer :</span> <span className="font-semibold">{formatCurrency(selectedNote.amount_to_transfer)}</span></div>
+                                          <div className="flex justify-between border-t pt-2 mt-2 font-bold"><span>Solde (Delta) :</span> <span className={(selectedNote.amount_received - selectedNote.amount_to_transfer) >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(selectedNote.amount_received - selectedNote.amount_to_transfer)}</span></div>
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+
+                                    {selectedNote.comment && (
+                                      <div>
+                                        <h3 className="font-semibold mb-2">Commentaire :</h3>
+                                        <p className="text-sm italic bg-muted p-3 rounded-md border">{selectedNote.comment}</p>
+                                      </div>
+                                    )}
+
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="text-lg">Informations pour le virement</CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="text-sm">
+                                        <p>Virement à effectuer vers :</p>
+                                        <div className="mt-2 p-3 bg-muted rounded-md font-mono">
+                                          <p><strong>Destinataire:</strong> {selectedNote.recipient_name}</p>
+                                          <p><strong>IBAN:</strong> {selectedNote.recipient_iban}</p>
+                                          {selectedNote.recipient_bic && <p><strong>BIC:</strong> {selectedNote.recipient_bic}</p>}
+                                        </div>
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+                                </DialogContent>
+                              )}
+                            </Dialog>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        Aucune note de relogement ou compensation n'a été créée.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -6,6 +6,7 @@ import StatementsTab from '@/components/finance/StatementsTab';
 import BalancesTab from '@/components/finance/BalancesTab';
 import ReportsTab from '@/components/finance/ReportsTab';
 import ExpensesTab from '@/components/finance/ExpensesTab';
+import RehousingNotesTab from '@/components/finance/RehousingNotesTab';
 import { useSession } from '@/components/SessionContextProvider';
 import BannedUserMessage from "@/components/BannedUserMessage";
 
@@ -40,9 +41,10 @@ const FinancePage: React.FC = () => {
 </TabsList>
 
           ) : (
-            <TabsList className={`grid w-full grid-cols-2 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-5' : 'md:grid-cols-4'} max-w-full mx-auto text-center`}>
+            <TabsList className={`grid w-full grid-cols-3 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center`}>
               <TabsTrigger value="statements" className="text-center">Relevés</TabsTrigger>
               <TabsTrigger value="invoices" className="text-center">Factures</TabsTrigger>
+              <TabsTrigger value="rehousing" className="text-center">Relogements</TabsTrigger>
               <TabsTrigger value="balances" disabled className="text-center">Bilans (En développement)</TabsTrigger>
               <TabsTrigger value="reports" disabled className="w-full justify-center">Rapports (En développement)</TabsTrigger>
               {showExpensesTab && <TabsTrigger value="expenses" className="text-center">Dépenses</TabsTrigger>}
@@ -53,6 +55,9 @@ const FinancePage: React.FC = () => {
           </TabsContent>
           <TabsContent value="invoices">
             <InvoicesTab />
+          </TabsContent>
+          <TabsContent value="rehousing">
+            <RehousingNotesTab />
           </TabsContent>
           <TabsContent value="balances">
             <BalancesTab />

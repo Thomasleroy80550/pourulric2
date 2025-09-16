@@ -12,6 +12,7 @@ import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { createDocument } from '@/lib/documents-api';
 import { uploadFile } from '@/lib/storage-api';
 import { createNotification } from '@/lib/notifications-api';
+import { createRehousingNote } from '@/lib/rehousing-notes-api';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import RehousingNoteContent from '@/components/RehousingNoteContent';
@@ -40,8 +41,6 @@ const AdminRehousingNotePage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
-  const pdfContentRef = useRef<HTMLDivElement>(null);
-  const [formDataForPdf, setFormDataForPdf] = useState<z.infer<typeof rehousingNoteSchema> | null>(null);
   const [showManualIbanInput, setShowManualIbanInput] = useState(false);
 
   const form = useForm<z.infer<typeof rehousingNoteSchema>>({
@@ -111,67 +110,40 @@ const AdminRehousingNotePage: React.FC = () => {
 
   const onSubmit = async (values: z.infer<typeof rehousingNoteSchema>) => {
     setIsGenerating(true);
-    setFormDataForPdf(values);
-
-    // Allow time for the off-screen component to render with new data
-    setTimeout(async () => {
-      if (!pdfContentRef.current) {
-        toast.error("Erreur : Impossible de trouver le contenu à transformer en PDF.");
-        setIsGenerating(false);
+    try {
+      const selectedUser = users.find(u => u.id === values.userId);
+      if (!selectedUser) {
+        toast.error("Propriétaire sélectionné invalide.");
         return;
       }
 
-      try {
-        const selectedUser = users.find(u => u.id === values.userId);
-        if (!selectedUser) {
-          toast.error("Propriétaire sélectionné invalide.");
-          setIsGenerating(false);
-          return;
-        }
+      // 1. Create rehousing note record in database
+      await createRehousingNote({
+        user_id: values.userId,
+        note_type: values.noteType,
+        amount_received: values.amountReceived,
+        amount_to_transfer: values.amountToTransfer,
+        comment: values.comment,
+        recipient_name: values.recipientName,
+        recipient_iban: values.recipientIban,
+        recipient_bic: values.recipientBic,
+      });
 
-        // 1. Generate PDF
-        const canvas = await html2canvas(pdfContentRef.current, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        const pdfBlob = pdf.output('blob');
-        const fileName = `note_${values.noteType.toLowerCase().replace(/\s/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      // 2. Notify user
+      await createNotification(
+        selectedUser.id,
+        `Une nouvelle note de ${values.noteType} est disponible dans vos finances.`,
+        '/finance?tab=rehousing'
+      );
 
-        // 2. Upload PDF to Storage
-        const filePath = `private/${selectedUser.id}/rehousing_notes/${pdfFile.name}`;
-        const { path: uploadedPath } = await uploadFile(pdfFile, filePath);
-
-        // 3. Create document record in database
-        const deltaValue = values.amountReceived - values.amountToTransfer;
-        await createDocument({
-          user_id: selectedUser.id,
-          name: `Note de ${values.noteType}`,
-          description: `Montant perçu: ${values.amountReceived}€, Montant transféré: ${values.amountToTransfer}€, Delta: ${deltaValue}€`,
-          file_path: uploadedPath,
-          file_size: pdfFile.size,
-          file_type: pdfFile.type,
-          category: 'Relogements et Compensations',
-        });
-
-        // 4. Notify user
-        await createNotification(
-          selectedUser.id,
-          `Une nouvelle note de ${values.noteType} a été ajoutée à votre coffre-fort.`,
-          '/profile?tab=documents'
-        );
-
-        toast.success("Note de relogement générée et ajoutée au coffre-fort du propriétaire !");
-        form.reset();
-      } catch (error: any) {
-        toast.error(`Erreur lors de la génération de la note : ${error.message}`);
-      } finally {
-        setIsGenerating(false);
-        setFormDataForPdf(null);
-      }
-    }, 500);
+      toast.success("Note de relogement ajoutée avec succès dans les finances du propriétaire !");
+      form.reset();
+      
+    } catch (error: any) {
+      toast.error(`Erreur lors de la création de la note : ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const selectedUserForPdf = users.find(u => u.id === formDataForPdf?.userId);
@@ -184,7 +156,7 @@ const AdminRehousingNotePage: React.FC = () => {
           <CardHeader>
             <CardTitle>Générer une note de relogement / compensation</CardTitle>
             <CardDescription>
-              Créez un document pour un propriétaire qui doit transférer des fonds suite à un relogement ou une compensation. Le document sera ajouté à son coffre-fort.
+              Créez une note pour un propriétaire qui doit transférer des fonds. La note sera ajoutée à son espace finances.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -401,7 +373,7 @@ const AdminRehousingNotePage: React.FC = () => {
 
                 <Button type="submit" disabled={isGenerating}>
                   {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Générer et Sauvegarder la Note
+                  Enregistrer la Note
                 </Button>
               </form>
             </Form>

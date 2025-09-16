@@ -14,7 +14,6 @@ import { uploadFile } from '@/lib/storage-api';
 import { createNotification } from '@/lib/notifications-api';
 import { createRehousingNote, getAllRehousingNotes, RehousingNote } from '@/lib/rehousing-notes-api';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
 import RehousingNoteContent from '@/components/RehousingNoteContent';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';

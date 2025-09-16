@@ -17,6 +17,10 @@ import { Loader2 } from 'lucide-react';
 import RehousingNoteContent from '@/components/RehousingNoteContent';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const rehousingNoteSchema = z.object({
   userId: z.string().min(1, "Veuillez sélectionner un propriétaire."),
@@ -143,22 +147,61 @@ const AdminRehousingNotePage: React.FC = () => {
                   control={form.control}
                   name="userId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Propriétaire qui doit payer</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loading}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez un propriétaire..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {users.map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.first_name} {user.last_name} ({user.email})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              disabled={loading}
+                            >
+                              {field.value
+                                ? users.find(
+                                    (user) => user.id === field.value
+                                  )?.first_name + " " + users.find(
+                                    (user) => user.id === field.value
+                                  )?.last_name + " (" + users.find(
+                                    (user) => user.id === field.value
+                                  )?.email + ")"
+                                : "Sélectionnez un propriétaire..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Rechercher un propriétaire..." />
+                            <CommandEmpty>Aucun propriétaire trouvé.</CommandEmpty>
+                            <CommandGroup>
+                              {users.map((user) => (
+                                <CommandItem
+                                  value={`${user.first_name} ${user.last_name} ${user.email}`}
+                                  key={user.id}
+                                  onSelect={() => {
+                                    form.setValue("userId", user.id);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      user.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {user.first_name} {user.last_name} ({user.email})
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}

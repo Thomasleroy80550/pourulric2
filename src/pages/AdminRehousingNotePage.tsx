@@ -25,9 +25,10 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Eye } from 'lucide-react';
+import { Eye, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 const rehousingNoteSchema = z.object({
   userId: z.string().min(1, "Veuillez sélectionner un propriétaire."),
@@ -308,6 +309,7 @@ const AdminRehousingNotePage: React.FC = () => {
                     <TableHead>Propriétaire</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Montant à transférer</TableHead>
+                    <TableHead>Statut Virement</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -321,6 +323,13 @@ const AdminRehousingNotePage: React.FC = () => {
                           <TableCell>{owner ? `${owner.first_name} ${owner.last_name}` : 'Inconnu'}</TableCell>
                           <TableCell className="font-medium">{note.note_type}</TableCell>
                           <TableCell className="font-semibold">{formatCurrency(note.amount_to_transfer)}</TableCell>
+                          <TableCell>
+                            {note.transfer_completed ? (
+                              <Badge variant="success">Effectué</Badge>
+                            ) : (
+                              <Badge variant="warning">En attente</Badge>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Dialog onOpenChange={(open) => !open && setSelectedNote(null)}>
                               <DialogTrigger asChild>
@@ -335,7 +344,14 @@ const AdminRehousingNotePage: React.FC = () => {
                                     <DialogTitle>Détail de la note de {selectedNote.note_type}</DialogTitle>
                                   </DialogHeader>
                                   <div className="py-4 space-y-6">
-                                    <p>Propriétaire : <strong>{owner ? `${owner.first_name} ${owner.last_name} (${owner.email})` : 'Inconnu'}</strong></p>
+                                    <div className="flex justify-between items-center">
+                                      <p>Propriétaire : <strong>{owner ? `${owner.first_name} ${owner.last_name} (${owner.email})` : 'Inconnu'}</strong></p>
+                                      {selectedNote.transfer_completed ? (
+                                        <Badge variant="success">Virement Effectué</Badge>
+                                      ) : (
+                                        <Badge variant="warning">Virement en attente</Badge>
+                                      )}
+                                    </div>
                                     <Card>
                                       <CardHeader>
                                         <CardTitle className="text-lg">Détail financier</CardTitle>
@@ -379,7 +395,7 @@ const AdminRehousingNotePage: React.FC = () => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         Aucune note de relogement ou compensation n'a été créée.
                       </TableCell>
                     </TableRow>

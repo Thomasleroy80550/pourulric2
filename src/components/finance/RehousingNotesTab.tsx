@@ -5,16 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useSession } from '@/components/SessionContextProvider';
 import { toast } from 'sonner';
-import { Loader2, Eye } from 'lucide-react';
+import { Loader2, Eye, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getRehousingNotesForUser, RehousingNote } from '@/lib/rehousing-notes-api';
+import { getRehousingNotesForUser, markRehousingNoteAsCompleted, RehousingNote } from '@/lib/rehousing-notes-api';
+import { Badge } from '@/components/ui/badge';
 
 const RehousingNotesTab: React.FC = () => {
   const { session } = useSession();
   const [notes, setNotes] = useState<RehousingNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedNote, setSelectedNote] = useState<RehousingNote | null>(null);
+  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user) {
@@ -32,6 +34,19 @@ const RehousingNotesTab: React.FC = () => {
       fetchNotes();
     }
   }, [session]);
+
+  const handleMarkAsCompleted = async (noteId: string) => {
+    setUpdatingNoteId(noteId);
+    try {
+      await markRehousingNoteAsCompleted(noteId);
+      setNotes(notes.map(n => n.id === noteId ? { ...n, transfer_completed: true } : n));
+      toast.success("Le virement a bien été marqué comme effectué.");
+    } catch (error) {
+      toast.error("Une erreur est survenue lors de la mise à jour.");
+    } finally {
+      setUpdatingNoteId(null);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -55,7 +70,7 @@ const RehousingNotesTab: React.FC = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Montant à transférer</TableHead>
-                <TableHead>Destinataire</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -66,8 +81,14 @@ const RehousingNotesTab: React.FC = () => {
                     <TableCell>{format(new Date(note.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                     <TableCell className="font-medium">{note.note_type}</TableCell>
                     <TableCell className="font-semibold">{formatCurrency(note.amount_to_transfer)}</TableCell>
-                    <TableCell>{note.recipient_name}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>
+                      {note.transfer_completed ? (
+                        <Badge variant="success">Effectué</Badge>
+                      ) : (
+                        <Badge variant="warning">En attente</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
                       <Dialog onOpenChange={(open) => !open && setSelectedNote(null)}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm" onClick={() => setSelectedNote(note)}>
@@ -118,6 +139,20 @@ const RehousingNotesTab: React.FC = () => {
                            </DialogContent>
                         )}
                       </Dialog>
+                      {!note.transfer_completed && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleMarkAsCompleted(note.id)}
+                          disabled={updatingNoteId === note.id}
+                        >
+                          {updatingNoteId === note.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          )}
+                          Marquer comme effectué
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

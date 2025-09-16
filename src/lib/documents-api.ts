@@ -27,7 +27,7 @@ export const getDocuments = async (): Promise<Document[]> => {
     throw new Error('Impossible de récupérer les documents.');
   }
 
-  return data;
+  return data || [];
 };
 
 export const downloadDocument = async (filePath: string) => {
@@ -111,3 +111,31 @@ export const deleteDocument = async (docId: string, filePath: string) => {
         console.error(`Failed to delete file from storage, but DB record was deleted: ${storageError.message}`);
     }
 };
+
+/**
+ * Creates a new document record in the database.
+ * @param doc The document data to insert.
+ * @returns The created document data.
+ */
+export async function createDocument(doc: {
+  user_id: string;
+  name: string;
+  description?: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  category: string;
+}): Promise<any> {
+  const { data, error } = await supabase
+    .from('documents')
+    .insert(doc)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating document:', error);
+    throw new Error(`Erreur lors de la création du document : ${error.message}`);
+  }
+
+  return data;
+}

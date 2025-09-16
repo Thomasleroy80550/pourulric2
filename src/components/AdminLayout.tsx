@@ -30,6 +30,7 @@ import {
   BarChart3, // New icon for stats
   Link2,
   ArrowRightLeft, // New icon for transfers
+  FileSymlink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -96,6 +97,7 @@ const adminNavigationCategories = [
       { name: 'Transactions Stripe', href: '/admin/stripe-transactions', icon: CreditCard, description: 'Consulter les transactions Stripe.' },
       { name: 'Transferts Stripe', href: '/admin/stripe-transfers', icon: ArrowRightLeft, description: 'Consulter les transferts Stripe.' }, // New item
       { name: 'Rapprochement Stripe', href: '/admin/stripe-match', icon: Link2, description: 'Lier les comptes Stripe aux utilisateurs.' },
+      { name: 'Note de Relogement', href: '/admin/rehousing-note', icon: FileSymlink, description: 'Créer une note de relogement ou compensation.' },
     ]
   },
   {

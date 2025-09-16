@@ -25,7 +25,8 @@ import { cn } from '@/lib/utils';
 const rehousingNoteSchema = z.object({
   userId: z.string().min(1, "Veuillez sélectionner un propriétaire."),
   noteType: z.string().min(3, "Le type de note est requis (ex: Relogement, Compensation)."),
-  amount: z.coerce.number().positive("Le montant doit être un nombre positif."),
+  amountReceived: z.coerce.number().min(0, "Le montant perçu doit être un nombre positif ou nul."),
+  rehousingAmount: z.coerce.number().min(0, "Le montant du relogement doit être un nombre positif ou nul."),
   recipientName: z.string().min(1, "Le nom du destinataire est requis."),
   recipientIban: z.string().min(1, "L'IBAN du destinataire est requis."),
   recipientBic: z.string().optional(),
@@ -43,7 +44,8 @@ const AdminRehousingNotePage: React.FC = () => {
     defaultValues: {
       userId: '',
       noteType: 'Relogement',
-      amount: 0,
+      amountReceived: 0,
+      rehousingAmount: 0,
       recipientName: '',
       recipientIban: '',
       recipientBic: '',
@@ -66,7 +68,8 @@ const AdminRehousingNotePage: React.FC = () => {
 
   const onSubmit = async (values: z.infer<typeof rehousingNoteSchema>) => {
     setIsGenerating(true);
-    setFormDataForPdf(values);
+    const calculatedDelta = values.rehousingAmount - values.amountReceived;
+    setFormDataForPdf({ ...values, amount: calculatedDelta }); // Pass calculated delta as 'amount'
 
     // Allow time for the off-screen component to render with new data
     setTimeout(async () => {
@@ -103,7 +106,7 @@ const AdminRehousingNotePage: React.FC = () => {
         await createDocument({
           user_id: selectedUser.id,
           name: `Note de ${values.noteType}`,
-          description: `Montant: ${values.amount}€, Destinataire: ${values.recipientName}`,
+          description: `Montant perçu: ${values.amountReceived}€, Montant relogement: ${values.rehousingAmount}€, Delta: ${calculatedDelta}€, Destinataire: ${values.recipientName}`,
           file_path: uploadedPath,
           file_size: pdfFile.size,
           file_type: pdfFile.type,
@@ -129,6 +132,9 @@ const AdminRehousingNotePage: React.FC = () => {
   };
 
   const selectedUserForPdf = users.find(u => u.id === formDataForPdf?.userId);
+  const amountReceived = form.watch('amountReceived');
+  const rehousingAmount = form.watch('rehousingAmount');
+  const deltaAmount = rehousingAmount - amountReceived;
 
   return (
     <AdminLayout>
@@ -219,19 +225,43 @@ const AdminRehousingNotePage: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Montant à virer (€)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="amountReceived"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Montant perçu (€)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="rehousingAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Montant du relogement (€)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormItem>
+                  <FormLabel>Delta à virer (€)</FormLabel>
+                  <FormControl>
+                    <Input type="number" value={deltaAmount.toFixed(2)} readOnly className="font-bold" />
+                  </FormControl>
+                  <FormDescription>
+                    Ce montant ({deltaAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}) sera le montant indiqué sur la note.
+                  </FormDescription>
+                </FormItem>
                 <h3 className="text-lg font-medium pt-4 border-t">Informations du destinataire</h3>
                 <FormField
                   control={form.control}
@@ -288,7 +318,9 @@ const AdminRehousingNotePage: React.FC = () => {
             ref={pdfContentRef}
             ownerName={`${selectedUserForPdf.first_name} ${selectedUserForPdf.last_name}`}
             noteType={formDataForPdf.noteType}
-            amount={formDataForPdf.amount}
+            amount={formDataForPdf.amount} {/* This is the calculated delta */}
+            amountReceived={formDataForPdf.amountReceived}
+            rehousingAmount={formDataForPdf.rehousingAmount}
             recipientName={formDataForPdf.recipientName}
             recipientIban={formDataForPdf.recipientIban}
             recipientBic={formDataForPdf.recipientBic}

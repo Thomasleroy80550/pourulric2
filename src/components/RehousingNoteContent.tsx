@@ -6,7 +6,9 @@ import { fr } from 'date-fns/locale';
 interface RehousingNoteContentProps {
   ownerName: string;
   noteType: string;
-  amount: number;
+  amount: number; // This will now be the delta
+  amountReceived: number; // New
+  rehousingAmount: number; // New
   recipientName: string;
   recipientIban: string;
   recipientBic?: string;
@@ -14,7 +16,7 @@ interface RehousingNoteContentProps {
 }
 
 const RehousingNoteContent = React.forwardRef<HTMLDivElement, RehousingNoteContentProps>(
-  ({ ownerName, noteType, amount, recipientName, recipientIban, recipientBic, generationDate }, ref) => {
+  ({ ownerName, noteType, amount, amountReceived, rehousingAmount, recipientName, recipientIban, recipientBic, generationDate }, ref) => {
     return (
       <div ref={ref} className="p-10 bg-white w-[210mm] h-[297mm]">
         <Card className="shadow-none border-none">
@@ -37,7 +39,15 @@ const RehousingNoteContent = React.forwardRef<HTMLDivElement, RehousingNoteConte
               Bonjour,
             </p>
             <p className="mb-6">
-              Suite à un(e) <strong>{noteType.toLowerCase()}</strong>, nous vous demandons de bien vouloir procéder à un virement d'un montant de <strong>{amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</strong> aux coordonnées bancaires ci-dessous.
+              Suite à un(e) <strong>{noteType.toLowerCase()}</strong>, nous avons enregistré les montants suivants :
+            </p>
+            <ul className="list-disc list-inside mb-6">
+              <li>Montant perçu : <strong>{amountReceived.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</strong></li>
+              <li>Montant du relogement : <strong>{rehousingAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</strong></li>
+              <li>Montant à virer (Delta) : <strong>{amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</strong></li>
+            </ul>
+            <p className="mb-6">
+              Nous vous demandons de bien vouloir procéder à un virement d'un montant de <strong>{amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}</strong> aux coordonnées bancaires ci-dessous.
             </p>
             
             <Card className="bg-gray-50">

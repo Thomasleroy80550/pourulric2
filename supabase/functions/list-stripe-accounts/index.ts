@@ -40,23 +40,42 @@ serve(async (req) => {
         throw new Error("Stripe secret key is not configured.");
     }
 
-    // Fetch accounts from Stripe
-    const stripeResponse = await fetch('https://api.stripe.com/v1/accounts?limit=100', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-    });
+    // Fetch all accounts from Stripe with pagination
+    let allAccounts = [];
+    let hasMore = true;
+    let startingAfter: string | null = null;
 
-    if (!stripeResponse.ok) {
-        const errorBody = await stripeResponse.json();
-        throw new Error(`Stripe API error: ${errorBody.error.message}`);
+    while (hasMore) {
+      const params = new URLSearchParams({
+        limit: '100',
+      });
+      if (startingAfter) {
+        params.append('starting_after', startingAfter);
+      }
+
+      const stripeResponse = await fetch(`https://api.stripe.com/v1/accounts?${params.toString()}`, {
+          method: 'GET',
+          headers: {
+              'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+          }
+      });
+
+      if (!stripeResponse.ok) {
+          const errorBody = await stripeResponse.json();
+          throw new Error(`Stripe API error: ${errorBody.error.message}`);
+      }
+
+      const responseJson = await stripeResponse.json();
+      allAccounts.push(...responseJson.data);
+      hasMore = responseJson.has_more;
+
+      if (hasMore && responseJson.data.length > 0) {
+        startingAfter = responseJson.data[responseJson.data.length - 1].id;
+      }
     }
 
-    const stripeAccounts = await stripeResponse.json();
-
-    return new Response(JSON.stringify(stripeAccounts.data), {
+    return new Response(JSON.stringify(allAccounts), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

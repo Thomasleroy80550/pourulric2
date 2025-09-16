@@ -264,23 +264,6 @@ const AdminRehousingNotePage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      {/* Off-screen component for PDF generation */}
-      <div className="absolute -left-[9999px] top-0" aria-hidden="true">
-        {formDataForPdf && selectedUserForPdf && (
-          <RehousingNoteContent
-            ref={pdfContentRef}
-            ownerName={`${selectedUserForPdf.first_name} ${selectedUserForPdf.last_name}`}
-            noteType={formDataForPdf.noteType}
-            amountReceived={formDataForPdf.amountReceived}
-            amountToTransfer={formDataForPdf.amountToTransfer}
-            delta={deltaForPdf}
-            comment={formDataForPdf.comment}
-            recipientIban={formDataForPdf.recipientIban}
-            recipientBic={formDataForPdf.recipientBic}
-            generationDate={new Date()}
-          />
-        )}
-      </div>
     </AdminLayout>
   );
 };

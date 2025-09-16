@@ -32,7 +32,7 @@ const rehousingNoteSchema = z.object({
   comment: z.string().optional(),
   // Auto-populated fields, validated on submit
   recipientName: z.string(),
-  recipientIban: z.string().min(1, "L'IBAN du destinataire n'a pas pu être trouvé. Veuillez le configurer dans son profil."),
+  recipientIban: z.string().min(1, "L'IBAN du destinataire n'a pas pu être trouvé. Veuillez le configurer dans son profil ou le saisir manuellement."),
   recipientBic: z.string().optional(),
 });
 
@@ -42,6 +42,7 @@ const AdminRehousingNotePage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const pdfContentRef = useRef<HTMLDivElement>(null);
   const [formDataForPdf, setFormDataForPdf] = useState<z.infer<typeof rehousingNoteSchema> | null>(null);
+  const [showManualIbanInput, setShowManualIbanInput] = useState(false);
 
   const form = useForm<z.infer<typeof rehousingNoteSchema>>({
     resolver: zodResolver(rehousingNoteSchema),
@@ -82,19 +83,29 @@ const AdminRehousingNotePage: React.FC = () => {
     if (recipientId) {
       const recipientUser = users.find(u => u.id === recipientId);
       if (recipientUser) {
-        const iban = recipientUser.iban_airbnb_booking || recipientUser.iban_abritel_hellokeys || '';
+        const autoDetectedIban = recipientUser.iban_airbnb_booking || recipientUser.iban_abritel_hellokeys || '';
         const bic = recipientUser.bic_airbnb_booking || recipientUser.bic_abritel_hellokeys || '';
         
         form.setValue('recipientName', `${recipientUser.first_name || ''} ${recipientUser.last_name || ''}`.trim());
-        form.setValue('recipientIban', iban);
         form.setValue('recipientBic', bic || '');
 
-        if (!iban) {
+        if (!autoDetectedIban) {
+          form.setValue('recipientIban', ''); // Clear IBAN if not found, to allow manual input
+          setShowManualIbanInput(true);
           toast.warning("Ce destinataire n'a pas d'IBAN configuré dans son profil.", {
-            description: "La génération de la note échouera. Veuillez mettre à jour son profil.",
+            description: "Veuillez le saisir manuellement ou mettre à jour son profil.",
           });
+        } else {
+          form.setValue('recipientIban', autoDetectedIban);
+          setShowManualIbanInput(false);
         }
       }
+    } else {
+      // Reset when no recipient is selected
+      setShowManualIbanInput(false);
+      form.setValue('recipientIban', '');
+      form.setValue('recipientBic', '');
+      form.setValue('recipientName', '');
     }
   }, [recipientId, users, form]);
 
@@ -361,11 +372,29 @@ const AdminRehousingNotePage: React.FC = () => {
 
                 {recipientId && (
                   <div className="p-3 bg-muted rounded-md text-sm space-y-1">
-                    <p className="font-medium">IBAN détecté :</p>
-                    {recipientIban ? (
-                      <p className="font-mono">{recipientIban}</p>
+                    {showManualIbanInput ? (
+                      <FormField
+                        control={form.control}
+                        name="recipientIban"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>IBAN du destinataire (saisie manuelle)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="FRXX XXXX XXXX XXXX XXXX XXXX XXX" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     ) : (
-                      <p className="text-destructive-foreground">Aucun IBAN trouvé pour ce destinataire.</p>
+                      <>
+                        <p className="font-medium">IBAN détecté :</p>
+                        {recipientIban ? (
+                          <p className="font-mono">{recipientIban}</p>
+                        ) : (
+                          <p className="text-destructive-foreground">IBAN non disponible.</p>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

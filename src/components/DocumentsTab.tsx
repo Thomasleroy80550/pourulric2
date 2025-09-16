@@ -47,7 +47,13 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({ className }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName;
+    
+    // Extract the file extension from the file_path
+    const fileExtension = filePath.split('.').pop();
+    // Construct the download name with the original file name and its extension
+    const downloadName = fileExtension ? `${fileName}.${fileExtension}` : fileName;
+
+    a.download = downloadName;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);

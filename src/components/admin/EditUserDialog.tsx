@@ -56,6 +56,7 @@ const editUserSchema = z.object({
   referral_credits: z.coerce.number().min(0, "Les crédits de parrainage doivent être positifs.").optional().nullable(),
   krossbooking_property_id: z.coerce.number().optional().nullable(),
   stripe_account_id: z.string().optional().nullable(),
+  pennylane_customer_id: z.coerce.number().optional().nullable(), // Nouveau champ
 });
 
 const addRoomFormSchema = z.object({
@@ -132,6 +133,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         referral_credits: user.referral_credits || 0,
         krossbooking_property_id: user.krossbooking_property_id || undefined,
         stripe_account_id: user.stripe_account_id || '',
+        pennylane_customer_id: user.pennylane_customer_id || undefined, // Initialisation du nouveau champ
       });
 
       setLoadingRooms(true);
@@ -422,6 +424,14 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                     <CardContent className="space-y-4">
                       <FormField control={form.control} name="commission_rate" render={({ field }) => (<FormItem><FormLabel>Forfait (%)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="krossbooking_property_id" render={({ field }) => (<FormItem><FormLabel>ID Propriété Krossbooking</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormDescription>ID de la propriété (agence) principale de l'utilisateur sur Krossbooking.</FormDescription><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="pennylane_customer_id" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ID Client Pennylane</FormLabel>
+                          <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                          <FormDescription>L'ID client Pennylane associé à cet utilisateur.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
                       <FormField control={form.control} name="linen_type" render={({ field }) => (<FormItem><FormLabel>Type de linge</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="agency" render={({ field }) => (<FormItem><FormLabel>Agence</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Sélectionner une agence" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Côte d'opal">Côte d'opal</SelectItem><SelectItem value="Baie de somme">Baie de somme</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="contract_start_date" render={({ field }) => (<FormItem><FormLabel>Date de début de contrat</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />

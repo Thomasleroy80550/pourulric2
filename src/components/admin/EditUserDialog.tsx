@@ -56,7 +56,7 @@ const editUserSchema = z.object({
   referral_credits: z.coerce.number().min(0, "Les crédits de parrainage doivent être positifs.").optional().nullable(),
   krossbooking_property_id: z.coerce.number().optional().nullable(),
   stripe_account_id: z.string().optional().nullable(),
-  pennylane_customer_id: z.coerce.number().optional().nullable(), // Nouveau champ
+  pennylane_customer_id: z.string().optional().nullable(), // Correction: de number à string
 });
 
 const addRoomFormSchema = z.object({
@@ -133,7 +133,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         referral_credits: user.referral_credits || 0,
         krossbooking_property_id: user.krossbooking_property_id || undefined,
         stripe_account_id: user.stripe_account_id || '',
-        pennylane_customer_id: user.pennylane_customer_id || undefined, // Initialisation du nouveau champ
+        pennylane_customer_id: user.pennylane_customer_id || undefined, // L'initialisation reste la même, car undefined est géré par z.string().optional().nullable()
       });
 
       setLoadingRooms(true);
@@ -427,7 +427,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       <FormField control={form.control} name="pennylane_customer_id" render={({ field }) => (
                         <FormItem>
                           <FormLabel>ID Client Pennylane</FormLabel>
-                          <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                          <FormControl><Input {...field} /></FormControl>
                           <FormDescription>L'ID client Pennylane associé à cet utilisateur.</FormDescription>
                           <FormMessage />
                         </FormItem>

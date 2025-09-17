@@ -34,6 +34,7 @@ import {
   Copy, // Add new icon
   LayoutDashboard,
   CalendarDays,
+  Ban, // Ajout de l'icône Ban
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -60,7 +61,7 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-const defaultSidebarSections = [
+const defaultSidebarSections = (isPaymentSuspended: boolean) => [
   {
     title: 'Pilotage',
     items: [
@@ -68,14 +69,14 @@ const defaultSidebarSections = [
       { name: 'Calendrier', href: '/calendar', icon: Calendar },
       { name: 'Réservations', href: '/bookings', icon: Book },
       { name: 'Incidents', href: '/reports', icon: Wrench },
-      { name: 'Mes logements', href: '/my-rooms', icon: Building },
+      { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
     ],
   },
   {
     title: 'Analyse & Suivi',
     items: [
       { name: 'Performances', href: '/performance', icon: BarChart2 },
-      { name: 'Finances', href: '/finances', icon: Banknote },
+      { name: 'Finances', href: '/finances', icon: Banknote, disabled: isPaymentSuspended },
       { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
       { name: 'Mes Avis', href: '/reviews', icon: Star },
       { name: 'Analyse Concurrentielle', href: '/comp-set', icon: Copy },
@@ -92,12 +93,12 @@ const defaultSidebarSections = [
   },
 ];
 
-const accountantSidebarSections = [
+const accountantSidebarSections = (isPaymentSuspended: boolean) => [
   {
     title: 'Analyse & Suivi',
     items: [
       { name: 'Performances', href: '/performance', icon: TrendingUp },
-      { name: 'Finances', href: '/finances', icon: Banknote },
+      { name: 'Finances', href: '/finances', icon: Banknote, disabled: isPaymentSuspended },
       { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
     ],
   },
@@ -107,12 +108,12 @@ const accountNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
 ];
 
-const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick }) => {
+const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: boolean }> = ({ onLinkClick, isPaymentSuspended }) => {
   const location = useLocation();
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
 
-  const sidebarSections = profile?.role === 'accountant' ? accountantSidebarSections : defaultSidebarSections;
+  const sidebarSections = profile?.role === 'accountant' ? accountantSidebarSections(isPaymentSuspended) : defaultSidebarSections(isPaymentSuspended);
 
   return (
     <div className="flex flex-col h-full">
@@ -167,8 +168,9 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
                       "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", // Default styles
                       (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) && 'bg-sidebar-accent text-sidebar-accent-foreground', // Active state styles
                       item.name === 'Nouveautés' && 'bg-primary text-primary-foreground hover:bg-primary/90', // Highlight for "Nouveautés"
+                      item.disabled && "opacity-50 cursor-not-allowed pointer-events-none" // Disabled styles
                     )}
-                    onClick={onLinkClick}
+                    onClick={item.disabled ? (e) => e.preventDefault() : onLinkClick}
                   >
                     <item.icon className={cn("h-5 w-5 mr-3", item.name === 'Nouveautés' && 'text-primary-foreground')} />
                     {item.name}
@@ -328,7 +330,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {!isMobile && (
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
-          <SidebarContent />
+          <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} />
         </aside>
       )}
 
@@ -344,7 +346,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
-                    <SidebarContent onLinkClick={handleLinkClick} />
+                    <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} />
                   </SheetContent>
                 </Sheet>
               )}
@@ -390,7 +392,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className={cn("cursor-pointer", !notif.is_read && "bg-blue-50 dark:bg-blue-900/20")}>
                         <div className="flex items-start space-x-3">
                           {!notif.is_read && <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5"></div>}
-                          <div className={cn("flex-1", notif.is_read && "pl-5")}>
+                          <div className="flex-1">
                             <p className="text-sm">{notif.message}</p>
                             <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: fr })}</p>
                           </div>
@@ -460,7 +462,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </div>
 
-      {isMobile && <BottomNavBar />}
+      {isMobile && <BottomNavBar isPaymentSuspended={profile?.is_payment_suspended || false} />}
       
       <AICopilotDialog
         isOpen={isAICopilotDialogOpen}

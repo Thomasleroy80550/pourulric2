@@ -48,6 +48,7 @@ const editUserSchema = z.object({
   notify_new_booking_sms: z.boolean().optional(),
   notify_cancellation_sms: z.boolean().optional(),
   is_banned: z.boolean().optional(),
+  is_payment_suspended: z.boolean().optional(), // Nouveau champ
   can_manage_prices: z.boolean().optional(),
   kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional().nullable(),
   estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional().nullable(),
@@ -125,6 +126,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         notify_new_booking_sms: user.notify_new_booking_sms ?? false,
         notify_cancellation_sms: user.notify_cancellation_sms ?? false,
         is_banned: user.is_banned || false,
+        is_payment_suspended: user.is_payment_suspended || false, // Nouveau champ
         can_manage_prices: user.can_manage_prices || false,
         kyc_status: user.kyc_status || 'not_verified',
         estimated_revenue: user.estimated_revenue || 0,
@@ -325,8 +327,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                   </Card>
                   <Card className="border-red-500 border-2">
                     <CardHeader><CardTitle className="text-red-500 flex items-center gap-2"><AlertTriangle /> Zone de danger</CardTitle></CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                       <FormField control={form.control} name="is_banned" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-red-50 dark:bg-red-900/20"><div className="space-y-0.5"><FormLabel className="text-red-600 dark:text-red-400">Bannir l'utilisateur</FormLabel><p className="text-xs text-red-500 dark:text-red-400/80">L'utilisateur sera déconnecté et ne pourra plus accéder à son compte.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                      <FormField control={form.control} name="is_payment_suspended" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-red-50 dark:bg-red-900/20"><div className="space-y-0.5"><FormLabel className="text-red-600 dark:text-red-400">Suspendre pour non-paiement</FormLabel><p className="text-xs text-red-500 dark:text-red-400/80">Bloque l'accès aux fonctionnalités principales et affiche une bannière de suspension.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                     </CardContent>
                   </Card>
                 </TabsContent>

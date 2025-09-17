@@ -32,6 +32,8 @@ import {
   Gift,
   Lock,
   Copy, // Add new icon
+  LayoutDashboard,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -46,12 +48,13 @@ import { useSession } from './SessionContextProvider';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import BottomNavBar from './BottomNavBar';
 import WhatsNewSheet from './WhatsNewSheet';
 import MigrationNotice from './MigrationNotice'; // Import the new component
 import { getSetting } from '@/lib/admin-api'; // Import getSetting
 import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new constant
+import { useMobile } from '@/hooks/use-mobile';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -213,15 +216,15 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
   );
 };
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const isMobile = useIsMobile();
+const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { profile } = useSession();
+  const isMobile = useMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { profile, session } = useSession();
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null); // New state for migration notice
 
@@ -330,138 +333,131 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       )}
 
       <div className="flex-1 flex flex-col">
-        <header className="bg-background p-4 border-b flex items-center justify-between shadow-sm md:px-6 z-40">
-          <div className="w-1/3 md:w-auto">
-            {isMobile && (
-              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
-                  <SidebarContent onLinkClick={handleLinkClick} />
-                </SheetContent>
-              </Sheet>
-            )}
-          </div>
-
-          <div className="w-1/3 flex justify-center md:hidden">
-            <Link to="/">
-              <img src="/logo.png" alt="Hello Keys Logo" className="h-8 w-auto" />
-            </Link>
-          </div>
-
-          <div className="w-1/3 md:w-auto flex items-center justify-end space-x-2 sm:space-x-4">
-            <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4">
-              <Plus className="h-4 w-4" />
-              <span className="ml-2 hidden xl:inline-block">Actions rapides</span>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
-              <Sparkles className="h-5 w-5 text-blue-500" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsWhatsNewOpen(true)}>
-              <Gift className="h-5 w-5" />
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5" />
-                  {unreadCount > 0 && <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500"></span>}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-80" align="end">
-                <DropdownMenuLabel className="flex justify-between items-center">
-                  <span>Notifications</span>
-                  {unreadCount > 0 && (
-                    <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} className="h-auto p-1">
-                      <CheckCheck className="h-4 w-4 mr-1" /> Tout marquer comme lu
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <header className="bg-background border-b h-16 flex items-center px-6 justify-between">
+            <div className="w-1/3 md:w-auto">
+              {isMobile && (
+                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-6 w-6" />
                     </Button>
-                  )}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications.length > 0 ? (
-                  notifications.map(notif => (
-                    <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className={cn("cursor-pointer", !notif.is_read && "bg-blue-50 dark:bg-blue-900/20")}>
-                      <div className="flex items-start space-x-3">
-                        {!notif.is_read && <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5"></div>}
-                        <div className={cn("flex-1", notif.is_read && "pl-5")}>
-                          <p className="text-sm">{notif.message}</p>
-                          <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: fr })}</p>
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <p className="text-center text-sm text-gray-500 p-4">Vous n'avez aucune notification.</p>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
+                    <SidebarContent onLinkClick={handleLinkClick} />
+                  </SheetContent>
+                </Sheet>
+              )}
+            </div>
 
-            <div className="hidden md:block">
+            <div className="w-1/3 flex justify-center md:hidden">
+              <Link to="/">
+                <img src="/logo.png" alt="Hello Keys Logo" className="h-8 w-auto" />
+              </Link>
+            </div>
+
+            <div className="w-1/3 md:w-auto flex items-center justify-end space-x-2 sm:space-x-4">
+              <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4">
+                <Plus className="h-4 w-4" />
+                <span className="ml-2 hidden xl:inline-block">Actions rapides</span>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
+                <Sparkles className="h-5 w-5 text-blue-500" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsWhatsNewOpen(true)}>
+                <Gift className="h-5 w-5" />
+              </Button>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
-                      <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="hidden xl:flex flex-col items-start ml-2">
-                      <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
-                      <span className="text-xs leading-none text-gray-500 dark:text-gray-400">
-                        {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : (profile?.role === 'accountant' ? 'Compte comptable' : 'Compte utilisateur'))}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 ml-2 hidden md:inline-block" />
+                  <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500"></span>}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
-                    </div>
+                <DropdownMenuContent className="w-80" align="end">
+                  <DropdownMenuLabel className="flex justify-between items-center">
+                    <span>Notifications</span>
+                    {unreadCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} className="h-auto p-1">
+                        <CheckCheck className="h-4 w-4 mr-1" /> Tout marquer comme lu
+                      </Button>
+                    )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {profile?.role !== 'accountant' && accountNavigationItems.map((item) => (
-                    <DropdownMenuItem key={item.name} onClick={() => navigate(item.href)}>
-                      <item.icon className="h-4 w-4 mr-2" />
-                      {item.name}
-                    </DropdownMenuItem>
-                  ))}
-                  {profile?.role !== 'accountant' && <DropdownMenuSeparator />}
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Déconnexion
-                  </DropdownMenuItem>
+                  {notifications.length > 0 ? (
+                    notifications.map(notif => (
+                      <DropdownMenuItem key={notif.id} onSelect={() => handleNotificationClick(notif)} className={cn("cursor-pointer", !notif.is_read && "bg-blue-50 dark:bg-blue-900/20")}>
+                        <div className="flex items-start space-x-3">
+                          {!notif.is_read && <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5"></div>}
+                          <div className={cn("flex-1", notif.is_read && "pl-5")}>
+                            <p className="text-sm">{notif.message}</p>
+                            <p className="text-xs text-gray-500">{formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: fr })}</p>
+                          </div>
+                        </div>
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <p className="text-center text-sm text-gray-500 p-4">Vous n'avez aucune notification.</p>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <div className="hidden md:block">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full flex items-center justify-center md:w-auto md:px-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src="/avatars/01.png" alt={profile?.first_name} />
+                        <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="hidden xl:flex flex-col items-start ml-2">
+                        <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
+                        <span className="text-xs leading-none text-gray-500 dark:text-gray-400">
+                          {isImpersonating ? 'Mode Impersonnalisation' : (profile?.role === 'admin' ? 'Compte admin' : (profile?.role === 'accountant' ? 'Compte comptable' : 'Compte utilisateur'))}
+                        </span>
+                      </div>
+                      <ChevronDown className="h-4 w-4 ml-2 hidden md:inline-block" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{profile?.first_name} {profile?.last_name}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {profile?.role !== 'accountant' && accountNavigationItems.map((item) => (
+                      <DropdownMenuItem key={item.name} onClick={() => navigate(item.href)}>
+                        <item.icon className="h-4 w-4 mr-2" />
+                        {item.name}
+                      </DropdownMenuItem>
+                    ))}
+                    {profile?.role !== 'accountant' && <DropdownMenuSeparator />}
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Déconnexion
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        {isImpersonating && (
-          <Alert variant="default" className="m-4 bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300">
-            <AlertTriangle className="h-4 w-4 !text-yellow-800 dark:!text-yellow-300" />
-            <AlertTitle>Mode Impersonnalisation</AlertTitle>
-            <AlertDescription className="flex items-center justify-between">
-              Vous naviguez en tant que {profile?.first_name} {profile?.last_name}.
-              <Button variant="outline" size="sm" onClick={handleReturnToAdmin} className="bg-yellow-200 hover:bg-yellow-300 text-yellow-900">
-                <LogOut className="h-4 w-4 mr-2" />
-                Retourner à mon compte Admin
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {migrationNotice?.isVisible && migrationNotice.message && (
-          <MigrationNotice message={migrationNotice.message} />
-        )}
-
-        <main className="flex-1 p-4 md:p-6 overflow-auto pb-20 md:pb-6">
-          {children}
-        </main>
+          <main className="flex-1 overflow-y-auto p-6 bg-muted/40">
+            {profile?.is_payment_suspended && (
+              <Alert variant="destructive" className="mb-6 sticky top-0 z-10">
+                <Ban className="h-4 w-4" />
+                <AlertTitle>Compte suspendu pour non-paiement</AlertTitle>
+                <AlertDescription>
+                  Votre accès aux fonctionnalités principales est restreint. Veuillez contacter le support pour régulariser votre situation.
+                </AlertDescription>
+              </Alert>
+            )}
+            {children}
+          </main>
+        </div>
       </div>
 
       {isMobile && <BottomNavBar />}

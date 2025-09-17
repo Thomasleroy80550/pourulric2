@@ -5,12 +5,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
 import { Building } from 'lucide-react';
+import { useSession } from '@/components/SessionContextProvider';
+import SuspendedAccountMessage from '@/components/SuspendedAccountMessage';
 
 const MyRoomsPage = () => {
   const { data: rooms, isLoading, error } = useQuery({
     queryKey: ['userRooms'],
     queryFn: getUserRooms,
   });
+  const { profile } = useSession();
+
+  if (profile?.is_payment_suspended) {
+    return (
+      <MainLayout>
+        <SuspendedAccountMessage />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

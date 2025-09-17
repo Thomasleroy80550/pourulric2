@@ -110,6 +110,7 @@ export interface UserProfile {
   notify_new_booking_sms: boolean;
   notify_cancellation_sms: boolean;
   is_banned: boolean;
+  is_payment_suspended: boolean; // Nouveau champ
   kyc_status?: string | null;
   kyc_documents?: any | null;
   can_manage_prices: boolean;

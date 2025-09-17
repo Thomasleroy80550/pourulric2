@@ -39,6 +39,7 @@ export interface UserProfile {
   notify_new_booking_sms?: boolean;
   notify_cancellation_sms?: boolean;
   is_banned?: boolean;
+  is_payment_suspended?: boolean; // Nouveau champ
   can_manage_prices?: boolean;
   kyc_status?: 'not_verified' | 'pending_review' | 'verified' | 'rejected';
   kyc_documents?: KycDocument[]; // Changed to array of KycDocument

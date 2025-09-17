@@ -9,6 +9,7 @@ import ExpensesTab from '@/components/finance/ExpensesTab';
 import RehousingNotesTab from '@/components/finance/RehousingNotesTab';
 import { useSession } from '@/components/SessionContextProvider';
 import BannedUserMessage from "@/components/BannedUserMessage";
+import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 
 const FinancePage: React.FC = () => {
   const { profile } = useSession();
@@ -25,6 +26,14 @@ const FinancePage: React.FC = () => {
     return (
       <MainLayout>
         <BannedUserMessage />
+      </MainLayout>
+    );
+  }
+
+  if (profile?.is_payment_suspended) {
+    return (
+      <MainLayout>
+        <SuspendedAccountMessage />
       </MainLayout>
     );
   }

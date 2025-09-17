@@ -54,7 +54,7 @@ import WhatsNewSheet from './WhatsNewSheet';
 import MigrationNotice from './MigrationNotice'; // Import the new component
 import { getSetting } from '@/lib/admin-api'; // Import getSetting
 import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new constant
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile'; // Correction: Changed from useMobile to useIsMobile
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -218,7 +218,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void }> = ({ onLinkClick })
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useSession();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile(); // Correction: Changed from useMobile() to useIsMobile()
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);

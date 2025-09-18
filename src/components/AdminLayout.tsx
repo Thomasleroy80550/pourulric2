@@ -229,6 +229,16 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </AccordionItem>
             ))}
           </Accordion>
+          {/* Ajout du bouton Retour au site dans le menu mobile */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <Link
+              to="/"
+              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Retour au site
+            </Link>
+          </div>
         </nav>
       </SheetContent>
     </Sheet>

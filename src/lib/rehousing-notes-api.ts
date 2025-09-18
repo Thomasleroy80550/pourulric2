@@ -133,7 +133,7 @@ export async function resendRehousingNoteNotification(noteId: string): Promise<v
   
   <strong>Connectez-vous à votre espace Hello Keys</strong><br>
   Pour voir tous les détails et suivre votre remboursement, connectez-vous à votre espace personnel :<br>
-  <a href="https://hellokeys.fr" style="background-color: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Accéder à mon espace Hello Keys</a><br><br>
+  <a href="https://beta.proprietaire.hellokeys.fr" style="background-color: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Accéder à mon espace Hello Keys</a><br><br>
   
   <strong>Montant à vous reverser :</strong> ${note.amount_to_transfer}€<br>
   <strong>Bénéficiaire :</strong> ${note.recipient_name}<br><br>

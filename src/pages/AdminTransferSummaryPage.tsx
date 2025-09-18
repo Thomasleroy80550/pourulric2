@@ -198,17 +198,22 @@ const AdminTransferSummaryPage: React.FC = () => {
       return true;
     });
 
-  const totalPendingAmount = filteredSummaries.reduce((acc, summary) => {
-    let userTotalPendingAmount = 0;
-    for (const detail of summary.details) {
-      for (const [source, amount] of Object.entries(detail.amountsBySource)) {
-        if (!detail.transfer_statuses?.[source]) {
-          userTotalPendingAmount += amount;
+  // Calculer les totaux par source
+  const totalsBySource = filteredSummaries.reduce((acc, summary) => {
+    summary.details.forEach(detail => {
+      Object.entries(detail.amountsBySource).forEach(([source, amount]) => {
+        if (!detail.transfer_statuses?.[source] && amount > 0) {
+          if (!acc[source]) {
+            acc[source] = 0;
+          }
+          acc[source] += amount;
         }
-      }
-    }
-    return acc + userTotalPendingAmount;
-  }, 0);
+      });
+    });
+    return acc;
+  }, {} as { [key: string]: number });
+
+  const totalPendingAmount = Object.values(totalsBySource).reduce((sum, amount) => sum + amount, 0);
 
   return (
     <AdminLayout>
@@ -278,10 +283,34 @@ const AdminTransferSummaryPage: React.FC = () => {
             ) : (
               <>
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-                  <p className="text-lg font-semibold text-gray-800">
-                    Total restant à virer ({selectedPropertyFilter === 'all' ? 'toutes propriétés' : getPropertyName(selectedPropertyFilter === 'crotoy' ? 1 : 2)}) : 
-                    <span className="text-green-600 font-bold ml-2">{totalPendingAmount.toFixed(2)}€</span>
-                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Total général restant</p>
+                      <p className="text-2xl font-bold text-green-600">{totalPendingAmount.toFixed(2)}€</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Total Stripe restant</p>
+                      <p className="text-2xl font-bold text-blue-600">{totalsBySource.stripe?.toFixed(2) || '0.00'}€</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Total Airbnb restant</p>
+                      <p className="text-2xl font-bold text-red-600">{totalsBySource.airbnb?.toFixed(2) || '0.00'}€</p>
+                    </div>
+                  </div>
+                  {Object.keys(totalsBySource).length > 2 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-sm text-gray-600 mb-2">Autres sources :</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(totalsBySource)
+                          .filter(([source]) => source !== 'stripe' && source !== 'airbnb')
+                          .map(([source, amount]) => (
+                            <span key={source} className="px-2 py-1 bg-gray-200 rounded text-sm">
+                              {source.charAt(0).toUpperCase() + source.slice(1)}: {amount.toFixed(2)}€
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {filteredSummaries.length > 0 ? (

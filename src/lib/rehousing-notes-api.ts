@@ -37,6 +37,23 @@ export async function getRehousingNotes(): Promise<RehousingNote[]> {
 }
 
 /**
+ * Fetches all rehousing notes for administrators.
+ */
+export async function getAllRehousingNotes(): Promise<RehousingNote[]> {
+  const { data, error } = await supabase
+    .from('rehousing_notes')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching all rehousing notes:", error);
+    throw new Error("Impossible de récupérer toutes les notes de relogement.");
+  }
+
+  return data || [];
+}
+
+/**
  * Creates a new rehousing note for the currently logged-in user.
  * @param noteData The data for the new note.
  */

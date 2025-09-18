@@ -129,7 +129,7 @@ export async function resendRehousingNoteNotification(noteId: string): Promise<v
   Ceci est un rappel concernant votre <strong>note de relogement</strong> de type "${note.note_type}" d'un montant de ${note.amount_to_transfer}€.<br><br>
   
   <strong>Qu'est-ce qu'une note de relogement ?</strong><br>
-  C'est un document qui confirme que nous devons vous reverser de l'argent. Cela arrive quand un locataire a payé trop cher ou quand il y a un changement dans votre réservation. C'est comme un petit papier qui dit "on vous doit de l'argent".<br><br>
+  C'est un document qui indique que nous avons relogé un de vos clients dans un autre logement. Vous êtes donc redevable de celle-ci.<br><br>
   
   <strong>Connectez-vous à votre espace Hello Keys</strong><br>
   Pour voir tous les détails et suivre votre remboursement, connectez-vous à votre espace personnel :<br>

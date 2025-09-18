@@ -325,19 +325,13 @@ const AdminRehousingNotePage: React.FC = () => {
             <CardDescription>Liste de toutes les notes de relogement créées par les propriétaires.</CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {notesLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
               </div>
-            ) : error ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Erreur</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : notes.length === 0 ? (
+            ) : rehousingNotes.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune note de relogement trouvée.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -356,7 +350,7 @@ const AdminRehousingNotePage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {notes.map((note) => {
+                    {rehousingNotes.map((note) => {
                       const owner = users.find(u => u.id === note.user_id);
                       return (
                         <TableRow key={note.id}>

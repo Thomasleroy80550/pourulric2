@@ -12,14 +12,14 @@ import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { createDocument } from '@/lib/documents-api';
 import { uploadFile } from '@/lib/storage-api';
 import { createNotification } from '@/lib/notifications-api';
-import { createRehousingNote, getAllRehousingNotes, RehousingNote } from '@/lib/rehousing-notes-api';
+import { createRehousingNote, getAllRehousingNotes, updateRehousingNoteTransferStatus, resendRehousingNoteNotification, RehousingNote } from '@/lib/rehousing-notes-api';
 import { toast } from 'sonner';
 import RehousingNoteContent from '@/components/RehousingNoteContent';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown, Eye, Loader2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Eye, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -46,6 +46,8 @@ const AdminRehousingNotePage: React.FC = () => {
   const [rehousingNotes, setRehousingNotes] = useState<RehousingNote[]>([]);
   const [selectedNote, setSelectedNote] = useState<RehousingNote | null>(null);
   const [notesLoading, setNotesLoading] = useState(true);
+  const [resendingNoteId, setResendingNoteId] = useState<string | null>(null);
+  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof rehousingNoteSchema>>({
     resolver: zodResolver(rehousingNoteSchema),
@@ -75,6 +77,31 @@ const AdminRehousingNotePage: React.FC = () => {
       toast.error("Erreur lors du chargement des notes de relogement.");
     } finally {
       setNotesLoading(false);
+    }
+  };
+
+  const handleResendNotification = async (noteId: string, userId: string) => {
+    setResendingNoteId(noteId);
+    try {
+      await resendRehousingNoteNotification(noteId);
+      toast.success('La notification par email a été renvoyée avec succès.');
+    } catch (error: any) {
+      toast.error(`Erreur lors du renvoi de la notification : ${error.message}`);
+    } finally {
+      setResendingNoteId(null);
+    }
+  };
+
+  const handleToggleTransferStatus = async (noteId: string, status: boolean) => {
+    setUpdatingNoteId(noteId);
+    try {
+      await updateRehousingNoteTransferStatus(noteId, !status);
+      toast.success('Statut du virement mis à jour avec succès.');
+      fetchAllNotes();
+    } catch (error: any) {
+      toast.error(`Erreur lors de la mise à jour du statut : ${error.message}`);
+    } finally {
+      setUpdatingNoteId(null);
     }
   };
 
@@ -139,6 +166,8 @@ const AdminRehousingNotePage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
+        <h1 className="text-3xl font-bold mb-6">Gestion des Notes de Relogement</h1>
+        
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Générer une note de relogement / compensation</CardTitle>
@@ -291,115 +320,95 @@ const AdminRehousingNotePage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Notes de Relogement & Compensation existantes</CardTitle>
-            <CardDescription>Liste de toutes les notes de relogement et compensation créées.</CardDescription>
+            <CardTitle>Notes de Relogement</CardTitle>
+            <CardDescription>Liste de toutes les notes de relogement créées par les propriétaires.</CardDescription>
           </CardHeader>
           <CardContent>
-            {notesLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
               </div>
+            ) : error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Erreur</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : notes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune note de relogement trouvée.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Propriétaire</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Montant à transférer</TableHead>
-                    <TableHead>Statut Virement</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rehousingNotes.length > 0 ? (
-                    rehousingNotes.map(note => {
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Propriétaire</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Montant Reçu</TableHead>
+                      <TableHead className="text-right">Montant à Virer</TableHead>
+                      <TableHead>Bénéficiaire</TableHead>
+                      <TableHead>Statut Virement</TableHead>
+                      <TableHead>Commentaire</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {notes.map((note) => {
                       const owner = users.find(u => u.id === note.user_id);
                       return (
                         <TableRow key={note.id}>
                           <TableCell>{format(new Date(note.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                           <TableCell>{owner ? `${owner.first_name} ${owner.last_name}` : 'Inconnu'}</TableCell>
-                          <TableCell className="font-medium">{note.note_type}</TableCell>
-                          <TableCell className="font-semibold">{formatCurrency(note.amount_to_transfer)}</TableCell>
+                          <TableCell>{note.note_type}</TableCell>
+                          <TableCell className="text-right">{note.amount_received.toFixed(2)} €</TableCell>
+                          <TableCell className="text-right font-medium">{note.amount_to_transfer.toFixed(2)} €</TableCell>
+                          <TableCell>{note.recipient_name}</TableCell>
                           <TableCell>
-                            {note.transfer_completed ? (
-                              <Badge variant="success">Effectué</Badge>
-                            ) : (
-                              <Badge variant="warning">En attente</Badge>
-                            )}
+                            <Badge variant={note.transfer_completed ? 'default' : 'secondary'} className="flex items-center w-fit">
+                              {note.transfer_completed ? <CheckCircle className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+                              {note.transfer_completed ? 'Effectué' : 'En attente'}
+                            </Badge>
                           </TableCell>
+                          <TableCell className="max-w-xs truncate">{note.comment || '-'}</TableCell>
                           <TableCell className="text-right">
-                            <Dialog onOpenChange={(open) => !open && setSelectedNote(null)}>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => setSelectedNote(note)}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Détails
-                                </Button>
-                              </DialogTrigger>
-                              {selectedNote && selectedNote.id === note.id && (
-                                <DialogContent className="sm:max-w-2xl">
-                                  <DialogHeader>
-                                    <DialogTitle>Détail de la note de {selectedNote.note_type}</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="py-4 space-y-6">
-                                    <div className="flex justify-between items-center">
-                                      <p>Propriétaire : <strong>{owner ? `${owner.first_name} ${owner.last_name} (${owner.email})` : 'Inconnu'}</strong></p>
-                                      {selectedNote.transfer_completed ? (
-                                        <Badge variant="success">Virement Effectué</Badge>
-                                      ) : (
-                                        <Badge variant="warning">Virement en attente</Badge>
-                                      )}
-                                    </div>
-                                    <Card>
-                                      <CardHeader>
-                                        <CardTitle className="text-lg">Détail financier</CardTitle>
-                                      </CardHeader>
-                                      <CardContent>
-                                        <div className="space-y-2 text-sm">
-                                          <div className="flex justify-between"><span>Montant perçu :</span> <span className="font-semibold">{formatCurrency(selectedNote.amount_received)}</span></div>
-                                          <div className="flex justify-between"><span>Montant à transférer :</span> <span className="font-semibold">{formatCurrency(selectedNote.amount_to_transfer)}</span></div>
-                                          <div className="flex justify-between border-t pt-2 mt-2 font-bold"><span>Solde (Delta) :</span> <span className={(selectedNote.amount_received - selectedNote.amount_to_transfer) >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(selectedNote.amount_received - selectedNote.amount_to_transfer)}</span></div>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-
-                                    {selectedNote.comment && (
-                                      <div>
-                                        <h3 className="font-semibold mb-2">Commentaire :</h3>
-                                        <p className="text-sm italic bg-muted p-3 rounded-md border">{selectedNote.comment}</p>
-                                      </div>
-                                    )}
-
-                                    <Card>
-                                      <CardHeader>
-                                        <CardTitle className="text-lg">Informations pour le virement</CardTitle>
-                                      </CardHeader>
-                                      <CardContent className="text-sm">
-                                        <p>Virement à effectuer vers :</p>
-                                        <div className="mt-2 p-3 bg-muted rounded-md font-mono">
-                                          <p><strong>Destinataire:</strong> {selectedNote.recipient_name}</p>
-                                          <p><strong>IBAN:</strong> {selectedNote.recipient_iban}</p>
-                                          {selectedNote.recipient_bic && <p><strong>BIC:</strong> {selectedNote.recipient_bic}</p>}
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  </div>
-                                </DialogContent>
-                              )}
-                            </Dialog>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleResendNotification(note.id, note.user_id)}
+                                disabled={resendingNoteId === note.id}
+                                aria-label="Renvoyer la notification"
+                              >
+                                {resendingNoteId === note.id ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Mail className="h-4 w-4" />
+                                )}
+                                <span className="ml-2 hidden md:inline">Renvoyer Email</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleTransferStatus(note.id, note.transfer_completed)}
+                                disabled={updatingNoteId === note.id}
+                              >
+                                {updatingNoteId === note.id ? (
+                                  <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4" />
+                                )}
+                                <span className="ml-2 hidden md:inline">{note.transfer_completed ? 'Marquer non effectué' : 'Marquer effectué'}</span>
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Aucune note de relogement ou compensation n'a été créée.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>

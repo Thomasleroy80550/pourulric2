@@ -218,8 +218,8 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
 };
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { profile } = useSession();
-  const isMobile = useIsMobile(); // Correction: Changed from useMobile() to useIsMobile()
+  const { profile, session } = useSession();
+  const isMobile = useIsMobile();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
@@ -227,7 +227,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isImpersonating, setIsImpersonating] = useState(false);
-  const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null); // New state for migration notice
+  const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null);
 
   useEffect(() => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');
@@ -246,7 +246,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       }
     };
     fetchMigrationNotice();
-  }, []); // Fetch once on mount
+  }, []);
 
   const fetchNotifications = async () => {
     try {

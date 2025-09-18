@@ -256,11 +256,11 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <DesktopNav />
           </div>
         </nav>
-        <div className="md:hidden">
-          <MobileNav />
-        </div>
-        <div className="flex items-center gap-4 md:ml-auto">
-          <Button variant="outline" size="sm" asChild>
+        <div className="flex items-center gap-2 md:gap-4 md:ml-auto">
+          <div className="md:hidden">
+            <MobileNav />
+          </div>
+          <Button variant="outline" size="sm" asChild className="hidden md:flex">
             <Link to="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour au site

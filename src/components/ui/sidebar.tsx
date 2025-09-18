@@ -380,8 +380,8 @@ const SidebarFooter = React.forwardRef<
       ref={ref}
       data-sidebar="footer"
       className={cn("flex flex-col gap-2 p-2", className)}
-      {...props>
-    </div>
+      {...props}
+    />
   );
 });
 SidebarFooter.displayName = "SidebarFooter";
@@ -395,8 +395,8 @@ const SidebarSeparator = React.forwardRef<
       ref={ref}
       data-sidebar="separator"
       className={cn("mx-2 w-auto bg-sidebar-border", className)}
-      {...props>
-    </Separator>
+      {...props}
+    />
   );
 });
 SidebarSeparator.displayName = "SidebarSeparator";
@@ -413,8 +413,8 @@ const SidebarContent = React.forwardRef<
         "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
-      {...props>
-    </div>
+      {...props}
+    />
   );
 });
 SidebarContent.displayName = "SidebarContent";
@@ -428,8 +428,8 @@ const SidebarGroup = React.forwardRef<
       ref={ref}
       data-sidebar="group"
       className={cn("relative flex w-full min-w-0 flex-col p-2", className)}
-      {...props>
-    </div>
+      {...props}
+    />
   );
 });
 SidebarGroup.displayName = "SidebarGroup";
@@ -449,8 +449,8 @@ const SidebarGroupLabel = React.forwardRef<
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}
-      {...props>
-    </Comp>
+      {...props}
+    />
   );
 });
 SidebarGroupLabel.displayName = "SidebarGroupLabel";
@@ -472,8 +472,8 @@ const SidebarGroupAction = React.forwardRef<
         "group-data-[collapsible=icon]:hidden",
         className,
       )}
-      {...props>
-    </Comp>
+      {...props}
+    />
   );
 });
 SidebarGroupAction.displayName = "SidebarGroupAction";
@@ -486,8 +486,8 @@ const SidebarGroupContent = React.forwardRef<
     ref={ref}
     data-sidebar="group-content"
     className={cn("w-full text-sm", className)}
-    {...props>
-  </div>
+    {...props}
+  />
 ));
 SidebarGroupContent.displayName = "SidebarGroupContent";
 
@@ -499,8 +499,8 @@ const SidebarMenu = React.forwardRef<
     ref={ref}
     data-sidebar="menu"
     className={cn("flex w-full min-w-0 flex-col gap-1", className)}
-    {...props>
-  </ul>
+    {...props}
+  />
 ));
 SidebarMenu.displayName = "SidebarMenu";
 
@@ -512,8 +512,8 @@ const SidebarMenuItem = React.forwardRef<
     ref={ref}
     data-sidebar="menu-item"
     className={cn("group/menu-item relative", className)}
-    {...props>
-  </li>
+    {...props}
+  />
 ));
 SidebarMenuItem.displayName = "SidebarMenuItem";
 
@@ -569,8 +569,8 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props>
-      </Comp>
+        {...props}
+      />
     );
 
     if (!tooltip) {
@@ -623,8 +623,8 @@ const SidebarMenuAction = React.forwardRef<
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className,
       )}
-      {...props>
-    </Comp>
+      {...props}
+    />
   );
 });
 SidebarMenuAction.displayName = "SidebarMenuAction";
@@ -645,8 +645,8 @@ const SidebarMenuBadge = React.forwardRef<
       "group-data-[collapsible=icon]:hidden",
       className,
     )}
-    {...props>
-  </div>
+    {...props}
+  />
 ));
 SidebarMenuBadge.displayName = "SidebarMenuBadge";
 
@@ -666,7 +666,8 @@ const SidebarMenuSkeleton = React.forwardRef<
       ref={ref}
       data-sidebar="menu-skeleton"
       className={cn("rounded-md h-8 flex gap-2 px-2 items-center", className)}
-      {...props>
+      {...props}
+    >
       {showIcon && (
         <Skeleton
           className="size-4 rounded-md"
@@ -699,8 +700,8 @@ const SidebarMenuSub = React.forwardRef<
       "group-data-[collapsible=icon]:hidden",
       className,
     )}
-    {...props>
-  </ul>
+    {...props}
+  />
 ));
 SidebarMenuSub.displayName = "SidebarMenuSub";
 
@@ -734,8 +735,8 @@ const SidebarMenuSubButton = React.forwardRef<
         "group-data-[collapsible=icon]:hidden",
         className,
       )}
-      {...props>
-    </Comp>
+      {...props}
+    />
   );
 });
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton";

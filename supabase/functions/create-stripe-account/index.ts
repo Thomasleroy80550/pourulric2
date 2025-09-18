@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,11 +14,15 @@ serve(async (req) => {
     console.log('Début de la création du compte Stripe');
     
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    console.log('Clé Stripe récupérée:', stripeSecretKey ? 'Présente' : 'Manquante');
+    
     if (!stripeSecretKey) {
       throw new Error('La clé secrète Stripe (STRIPE_SECRET_KEY) n\'est pas configurée.');
     }
 
     const { email, country } = await req.json();
+    console.log('Données reçues:', { email, country });
+
     if (!email || !country) {
       return new Response(JSON.stringify({ error: 'L\'email et le pays sont requis.' }), {
         status: 400,
@@ -27,10 +30,23 @@ serve(async (req) => {
       });
     }
 
+    // Validation de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(JSON.stringify({ error: 'Format d\'email invalide.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const params = new URLSearchParams();
-    params.append('type', 'express');
     params.append('email', email);
     params.append('country', country);
+    params.append('controller[fees][payer]', 'application');
+    params.append('controller[losses][payments]', 'application');
+    params.append('controller[stripe_dashboard][type]', 'express');
+
+    console.log('Paramètres envoyés à Stripe:', params.toString());
 
     const response = await fetch('https://api.stripe.com/v1/accounts', {
       method: 'POST',
@@ -41,60 +57,35 @@ serve(async (req) => {
       body: params.toString(),
     });
 
-    const accountData = await response.json();
+    const data = await response.json();
+    console.log('Réponse Stripe:', { status: response.status, data });
 
     if (!response.ok) {
-      console.error('Erreur API Stripe (Création de compte):', data.error);
+      console.error('Erreur API Stripe détaillée:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: data.error,
+        error_type: data.error?.type,
+        error_code: data.error?.code,
+        error_message: data.error?.message
+      });
+      
       return new Response(JSON.stringify({ 
-        error: accountData.error?.message || 'Erreur lors de la création du compte Stripe',
-        details: accountData.error 
+        error: data.error?.message || 'Erreur lors de la création du compte Stripe',
+        details: data.error 
       }), {
         status: response.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('Compte Stripe créé avec succès:', accountData.id);
-
-    // Étape 2: Créer un lien d'onboarding pour le compte
-    const appBaseUrl = Deno.env.get('APP_BASE_URL') || 'http://localhost:5173';
-    
-    const accountLinkParams = new URLSearchParams();
-    accountLinkParams.append('account', accountData.id);
-    accountLinkParams.append('refresh_url', `${appBaseUrl}/admin/users`);
-    accountLinkParams.append('return_url', `${appBaseUrl}/profile`);
-    accountLinkParams.append('type', 'account_onboarding');
-
-    const accountLinkResponse = await fetch('https://api.stripe.com/v1/account_links', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${stripeSecretKey}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: accountLinkParams.toString(),
-    });
-
-    const accountLinkData = await accountLinkResponse.json();
-
-    if (!accountLinkResponse.ok) {
-        console.error('Erreur API Stripe (Account Link):', accountLinkData.error);
-        return new Response(JSON.stringify({ 
-            error: accountLinkData.error?.message || 'Erreur lors de la création du lien d\'onboarding Stripe',
-            details: accountLinkData.error 
-        }), {
-            status: accountLinkResponse.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-    }
-    
-    console.log('Lien d\'onboarding créé avec succès.');
-
-    return new Response(JSON.stringify({ account: accountData, accountLink: accountLinkData }), {
+    console.log('Compte Stripe créé avec succès:', data.id);
+    return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error: any) {
-    console.error('Erreur complète dans la fonction Edge:', error);
+    console.error('Erreur complète lors de la création du compte Stripe:', error);
     return new Response(JSON.stringify({ 
       error: error.message || 'Erreur interne du serveur',
       stack: error.stack 

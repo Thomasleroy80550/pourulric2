@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, Copy } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -19,15 +19,6 @@ import EditUserDialog from '@/components/admin/EditUserDialog';
 import ImportUsersDialog from '@/components/admin/ImportUsersDialog';
 import { Input } from '@/components/ui/input';
 import StripeAccountDetailsDialog from '@/components/admin/StripeAccountDetailsDialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -94,7 +85,6 @@ const AdminUsersPage: React.FC = () => {
   const [isStripeDetailsOpen, setIsStripeDetailsOpen] = useState(false);
   const [selectedStripeAccountId, setSelectedStripeAccountId] = useState<string | null>(null);
   const [creatingStripeAccountFor, setCreatingStripeAccountFor] = useState<string | null>(null);
-  const [onboardingLink, setOnboardingLink] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchUsers = useCallback(async () => {
@@ -157,15 +147,14 @@ const AdminUsersPage: React.FC = () => {
     setCreatingStripeAccountFor(user.id);
     try {
       // On suppose que le pays est la France pour le moment.
-      const { account, accountLink } = await createStripeAccount(user.email, 'FR');
-      if (!account || !account.id || !accountLink || !accountLink.url) {
-        throw new Error("La création du compte Stripe n'a pas retourné un ID ou un lien valide.");
+      const newAccount = await createStripeAccount(user.email, 'FR');
+      if (!newAccount || !newAccount.id) {
+        throw new Error("La création du compte Stripe n'a pas retourné un ID valide.");
       }
 
-      await updateUser({ user_id: user.id, stripe_account_id: account.id });
+      await updateUser({ user_id: user.id, stripe_account_id: newAccount.id });
 
       toast.success(`Compte Stripe créé avec succès pour ${user.first_name} ${user.last_name}.`);
-      setOnboardingLink(accountLink.url);
       fetchUsers(); // Rafraîchir la liste des utilisateurs
     } catch (error: any) {
       console.error('Erreur complète lors de la création du compte Stripe:', error);
@@ -511,31 +500,6 @@ const AdminUsersPage: React.FC = () => {
         onOpenChange={setIsStripeDetailsOpen}
         stripeAccountId={selectedStripeAccountId}
       />
-
-      <AlertDialog open={!!onboardingLink} onOpenChange={(open) => !open && setOnboardingLink(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Compte Stripe créé !</AlertDialogTitle>
-            <AlertDialogDescription>
-              Le compte a été créé avec succès. Partagez le lien suivant avec l'utilisateur pour qu'il puisse finaliser la configuration de son compte (vérification, ajout IBAN, etc.).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex items-center space-x-2">
-            <Input value={onboardingLink || ''} readOnly className="flex-grow" />
-            <Button variant="outline" size="icon" onClick={() => {
-              if (onboardingLink) {
-                navigator.clipboard.writeText(onboardingLink);
-                toast.success('Lien copié !');
-              }
-            }}>
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setOnboardingLink(null)}>Fermer</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AdminLayout>
   );
 };

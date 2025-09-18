@@ -30,6 +30,39 @@ import BottomNavBar from './BottomNavBar';
 import MigrationNotice from './MigrationNotice';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+const getPageTitle = () => {
+  const location = useLocation();
+  const path = location.pathname;
+  
+  // Map des chemins vers les titres
+  const titles: { [key: string]: string } = {
+    '/': 'Tableau de bord',
+    '/calendar': 'Calendrier',
+    '/bookings': 'Réservations',
+    '/reports': 'Incidents',
+    '/my-rooms': 'Mes logements',
+    '/performance': 'Performances',
+    '/finances': 'Finances',
+    '/tourist-tax': 'Taxe de Séjour',
+    '/reviews': 'Avis',
+    '/comp-set': 'Analyse Concurrentielle',
+    '/blog': 'Blog',
+    '/help': 'Aide',
+    '/modules': 'Modules',
+    '/new-version': 'Nouveautés',
+    '/profile': 'Profil',
+    '/settings': 'Paramètres',
+    '/admin': 'Administration',
+  };
+  
+  // Vérifier les chemins dynamiques
+  if (path.startsWith('/admin/')) {
+    return 'Administration';
+  }
+  
+  return titles[path] || 'Page';
+};
+
 interface MainLayoutProps {
   children: React.ReactNode;
 }

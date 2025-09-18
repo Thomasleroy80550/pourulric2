@@ -1,4 +1,5 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "./notifications-api";
 
 export interface RehousingNote {
   id: string;
@@ -14,79 +15,99 @@ export interface RehousingNote {
   transfer_completed: boolean;
 }
 
-export type NewRehousingNote = Omit<RehousingNote, 'id' | 'created_at' | 'transfer_completed'>;
+/**
+ * Fetches rehousing notes for the currently logged-in user.
+ */
+export async function getRehousingNotes(): Promise<RehousingNote[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('rehousing_notes')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching rehousing notes:", error);
+    throw new Error("Impossible de récupérer les notes de relogement.");
+  }
+
+  return data || [];
+}
 
 /**
- * Creates a new rehousing note in the database.
+ * Creates a new rehousing note for the currently logged-in user.
  * @param noteData The data for the new note.
  */
-export const createRehousingNote = async (noteData: NewRehousingNote) => {
+export async function createRehousingNote(noteData: Omit<RehousingNote, 'id' | 'user_id' | 'created_at' | 'transfer_completed'>): Promise<RehousingNote> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Utilisateur non authentifié.");
+
   const { data, error } = await supabase
     .from('rehousing_notes')
-    .insert(noteData)
+    .insert({ ...noteData, user_id: user.id })
     .select()
     .single();
 
   if (error) {
-    console.error('Error creating rehousing note:', error);
-    throw new Error(`Erreur lors de la création de la note de relogement : ${error.message}`);
+    console.error("Error creating rehousing note:", error);
+    throw new Error("Impossible de créer la note de relogement.");
   }
 
   return data;
-};
+}
 
 /**
- * Marks a rehousing note's transfer as completed.
+ * Updates the transfer status of a rehousing note.
+ * This is an admin-only function.
  * @param noteId The ID of the note to update.
+ * @param completed The new transfer status.
  */
-export const markRehousingNoteAsCompleted = async (noteId: string) => {
-  const { data, error } = await supabase
+export async function updateRehousingNoteTransferStatus(noteId: string, completed: boolean): Promise<void> {
+  const { error } = await supabase
     .from('rehousing_notes')
-    .update({ transfer_completed: true })
+    .update({ transfer_completed: completed })
+    .eq('id', noteId);
+
+  if (error) {
+    console.error("Error updating transfer status:", error);
+    throw new Error("Impossible de mettre à jour le statut du virement.");
+  }
+}
+
+/**
+ * Resends the notification email for a rehousing note to the owner.
+ * @param noteId The ID of the rehousing note.
+ */
+export async function resendRehousingNoteNotification(noteId: string): Promise<void> {
+  // 1. Fetch the rehousing note
+  const { data: note, error: noteError } = await supabase
+    .from('rehousing_notes')
+    .select('*')
     .eq('id', noteId)
-    .select()
     .single();
 
-  if (error) {
-    console.error('Error marking rehousing note as completed:', error);
-    throw new Error('Erreur lors de la mise à jour de la note de relogement.');
+  if (noteError || !note) {
+    console.error('Error fetching rehousing note:', noteError);
+    throw new Error('Impossible de trouver la note de relogement.');
   }
 
-  return data;
-};
+  // 2. Fetch the user profile
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('email, first_name')
+    .eq('id', note.user_id)
+    .single();
 
-/**
- * Fetches all rehousing notes for a specific user.
- * @param userId The ID of the user.
- */
-export const getRehousingNotesForUser = async (userId: string): Promise<RehousingNote[]> => {
-  const { data, error } = await supabase
-    .from('rehousing_notes')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching rehousing notes:', error);
-    throw new Error('Impossible de récupérer les notes de relogement.');
+  if (profileError || !profile || !profile.email) {
+    console.error('Error fetching user profile or email missing:', profileError);
+    throw new Error("Impossible de trouver l'email de l'utilisateur pour envoyer la notification.");
   }
 
-  return data || [];
-};
+  // 3. Construct and send the email
+  const subject = 'Rappel : Confirmation de votre note de relogement';
+  const html = `Bonjour ${profile.first_name || 'Client'},<br><br>Ceci est un rappel concernant votre note de relogement de type "${note.note_type}" d'un montant de ${note.amount_to_transfer}€.<br><br>Cordialement,<br>L'équipe`;
 
-/**
- * Fetches all rehousing notes (admin access).
- */
-export const getAllRehousingNotes = async (): Promise<RehousingNote[]> => {
-  const { data, error } = await supabase
-    .from('rehousing_notes')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching all rehousing notes:', error);
-    throw new Error('Impossible de récupérer toutes les notes de relogement.');
-  }
-
-  return data || [];
-};
+  await sendEmail(profile.email, subject, html);
+}

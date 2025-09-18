@@ -1,173 +1,296 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useSession } from '@/components/SessionContextProvider';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { getRehousingNotes, createRehousingNote, RehousingNote, resendRehousingNoteNotification } from '@/lib/rehousing-notes-api';
 import { toast } from 'sonner';
-import { Loader2, Eye, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getRehousingNotesForUser, markRehousingNoteAsCompleted, RehousingNote } from '@/lib/rehousing-notes-api';
-import { Badge } from '@/components/ui/badge';
+import { AlertCircle, CheckCircle, Mail, RefreshCw } from 'lucide-react';
+
+const noteSchema = z.object({
+  note_type: z.string().min(1, "Le type de note est requis."),
+  amount_received: z.coerce.number().min(0, "Le montant doit être positif."),
+  amount_to_transfer: z.coerce.number().min(0, "Le montant doit être positif."),
+  recipient_name: z.string().min(1, "Le nom du bénéficiaire est requis."),
+  recipient_iban: z.string().min(1, "L'IBAN est requis."),
+  recipient_bic: z.string().optional(),
+  comment: z.string().optional(),
+});
 
 const RehousingNotesTab: React.FC = () => {
-  const { session } = useSession();
   const [notes, setNotes] = useState<RehousingNote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedNote, setSelectedNote] = useState<RehousingNote | null>(null);
-  const [updatingNoteId, setUpdatingNoteId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendingNoteId, setResendingNoteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (session?.user) {
-      const fetchNotes = async () => {
-        setLoading(true);
-        try {
-          const userNotes = await getRehousingNotesForUser(session.user.id);
-          setNotes(userNotes);
-        } catch (error) {
-          toast.error("Erreur lors de la récupération de vos notes de relogement.");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchNotes();
-    }
-  }, [session]);
+  const form = useForm<z.infer<typeof noteSchema>>({
+    resolver: zodResolver(noteSchema),
+    defaultValues: {
+      note_type: '',
+      amount_received: 0,
+      amount_to_transfer: 0,
+      recipient_name: '',
+      recipient_iban: '',
+      recipient_bic: '',
+      comment: '',
+    },
+  });
 
-  const handleMarkAsCompleted = async (noteId: string) => {
-    setUpdatingNoteId(noteId);
+  const fetchNotes = async () => {
+    setLoading(true);
     try {
-      await markRehousingNoteAsCompleted(noteId);
-      setNotes(notes.map(n => n.id === noteId ? { ...n, transfer_completed: true } : n));
-      toast.success("Le virement a bien été marqué comme effectué.");
-    } catch (error) {
-      toast.error("Une erreur est survenue lors de la mise à jour.");
+      const fetchedNotes = await getRehousingNotes();
+      setNotes(fetchedNotes);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
-      setUpdatingNoteId(null);
+      setLoading(false);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+  useEffect(() => {
+    fetchNotes();
+  }, []);
+
+  const onSubmit = async (values: z.infer<typeof noteSchema>) => {
+    setIsSubmitting(true);
+    try {
+      await createRehousingNote(values);
+      toast.success('Note de relogement créée avec succès. Vous et les administrateurs recevrez une notification par e-mail.');
+      form.reset();
+      fetchNotes(); // Refresh the list
+    } catch (error: any) {
+      toast.error(`Erreur lors de la création de la note : ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendNotification = async (noteId: string) => {
+    setResendingNoteId(noteId);
+    try {
+      await resendRehousingNoteNotification(noteId);
+      toast.success('La notification par email a été renvoyée avec succès.');
+    } catch (error: any) {
+      toast.error(`Erreur lors du renvoi de la notification : ${error.message}`);
+    } finally {
+      setResendingNoteId(null);
+    }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Notes de Relogement & Compensation</CardTitle>
-        <CardDescription>Retrouvez ici l'historique des notes concernant les relogements ou compensations.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Montant à transférer</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {notes.length > 0 ? (
-                notes.map(note => (
-                  <TableRow key={note.id}>
-                    <TableCell>{format(new Date(note.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                    <TableCell className="font-medium">{note.note_type}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(note.amount_to_transfer)}</TableCell>
-                    <TableCell>
-                      {note.transfer_completed ? (
-                        <Badge variant="success">Effectué</Badge>
-                      ) : (
-                        <Badge variant="warning">En attente</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Dialog onOpenChange={(open) => !open && setSelectedNote(null)}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedNote(note)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Détails
-                          </Button>
-                        </DialogTrigger>
-                        {selectedNote && selectedNote.id === note.id && (
-                           <DialogContent className="sm:max-w-2xl">
-                            <DialogHeader>
-                              <DialogTitle>Détail de la note de {selectedNote.note_type}</DialogTitle>
-                            </DialogHeader>
-                            <div className="py-4 space-y-6">
-                               <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Détail financier</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between"><span>Montant perçu :</span> <span className="font-semibold">{formatCurrency(selectedNote.amount_received)}</span></div>
-                                    <div className="flex justify-between"><span>Montant à transférer :</span> <span className="font-semibold">{formatCurrency(selectedNote.amount_to_transfer)}</span></div>
-                                    <div className="flex justify-between border-t pt-2 mt-2 font-bold"><span>Solde (Delta) :</span> <span className={(selectedNote.amount_received - selectedNote.amount_to_transfer) >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(selectedNote.amount_received - selectedNote.amount_to_transfer)}</span></div>
-                                    </div>
-                                </CardContent>
-                               </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Créer une nouvelle note de relogement</CardTitle>
+          <CardDescription>
+            Remplissez ce formulaire pour les cas où vous avez perçu des fonds (ex: caution) que Hello Keys doit vous rembourser ou transférer à un tiers.
+          </CardDescription>
+        </CardHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="note_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type de note</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionnez un type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Caution voyageur">Caution voyageur</SelectItem>
+                          <SelectItem value="Remboursement plateforme">Remboursement plateforme</SelectItem>
+                          <SelectItem value="Autre">Autre</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="amount_received"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Montant perçu par le propriétaire (€)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="150.00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="amount_to_transfer"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Montant à virer par Hello Keys (€)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="150.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <CardTitle className="text-lg pt-4">Informations du bénéficiaire</CardTitle>
+              <FormField
+                control={form.control}
+                name="recipient_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom complet du bénéficiaire</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="recipient_iban"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>IBAN</FormLabel>
+                      <FormControl>
+                        <Input placeholder="FR76..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="recipient_bic"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>BIC (Optionnel)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="PSSTFRPPPAR" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="comment"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Commentaire (Optionnel)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Ajoutez des détails pertinents ici..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Création en cours...' : 'Créer la note'}
+              </Button>
+            </CardFooter>
+          </form>
+        </Form>
+      </Card>
 
-                                {selectedNote.comment && (
-                                    <div>
-                                        <h3 className="font-semibold mb-2">Commentaire :</h3>
-                                        <p className="text-sm italic bg-muted p-3 rounded-md border">{selectedNote.comment}</p>
-                                    </div>
-                                )}
-
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Informations pour le virement</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="text-sm">
-                                        <p>Veuillez procéder à un virement du montant à transférer aux coordonnées bancaires suivantes :</p>
-                                        <div className="mt-2 p-3 bg-muted rounded-md font-mono">
-                                            <p><strong>Destinataire:</strong> {selectedNote.recipient_name}</p>
-                                            <p><strong>IBAN:</strong> {selectedNote.recipient_iban}</p>
-                                            {selectedNote.recipient_bic && <p><strong>BIC:</strong> {selectedNote.recipient_bic}</p>}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                           </DialogContent>
-                        )}
-                      </Dialog>
-                      {!note.transfer_completed && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleMarkAsCompleted(note.id)}
-                          disabled={updatingNoteId === note.id}
-                        >
-                          {updatingNoteId === note.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Marquer comme effectué
-                        </Button>
-                      )}
-                    </TableCell>
+      <Card>
+        <CardHeader>
+          <CardTitle>Historique de vos notes de relogement</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Erreur</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : notes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Vous n'avez aucune note de relogement pour le moment.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Montant Reçu</TableHead>
+                    <TableHead className="text-right">Montant à Virer</TableHead>
+                    <TableHead>Bénéficiaire</TableHead>
+                    <TableHead>Statut Virement</TableHead>
+                    <TableHead>Commentaire</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    Vous n'avez aucune note de relogement ou compensation pour le moment.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+                </TableHeader>
+                <TableBody>
+                  {notes.map((note) => (
+                    <TableRow key={note.id}>
+                      <TableCell>{format(new Date(note.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                      <TableCell>{note.note_type}</TableCell>
+                      <TableCell className="text-right">{note.amount_received.toFixed(2)} €</TableCell>
+                      <TableCell className="text-right font-medium">{note.amount_to_transfer.toFixed(2)} €</TableCell>
+                      <TableCell>{note.recipient_name}</TableCell>
+                      <TableCell>
+                        <Badge variant={note.transfer_completed ? 'default' : 'secondary'} className="flex items-center w-fit">
+                          {note.transfer_completed ? <CheckCircle className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
+                          {note.transfer_completed ? 'Effectué' : 'En attente'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">{note.comment || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResendNotification(note.id)}
+                          disabled={resendingNoteId === note.id}
+                          aria-label="Renvoyer la notification"
+                        >
+                          {resendingNoteId === note.id ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Mail className="h-4 w-4" />
+                          )}
+                          <span className="ml-2 hidden md:inline">Renvoyer</span>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

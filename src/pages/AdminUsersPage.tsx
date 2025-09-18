@@ -157,7 +157,15 @@ const AdminUsersPage: React.FC = () => {
       toast.success(`Compte Stripe créé avec succès pour ${user.first_name} ${user.last_name}.`);
       fetchUsers(); // Rafraîchir la liste des utilisateurs
     } catch (error: any) {
-      toast.error(`Erreur lors de la création du compte Stripe : ${error.message}`);
+      console.error('Erreur complète lors de la création du compte Stripe:', error);
+      const errorMessage = error.message || 'Erreur inconnue';
+      const errorDetails = error.details || '';
+      
+      if (errorDetails) {
+        toast.error(`Erreur lors de la création du compte Stripe : ${errorMessage} - ${JSON.stringify(errorDetails)}`);
+      } else {
+        toast.error(`Erreur lors de la création du compte Stripe : ${errorMessage}`);
+      }
     } finally {
       setCreatingStripeAccountFor(null);
     }

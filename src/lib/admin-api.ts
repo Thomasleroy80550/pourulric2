@@ -884,6 +884,25 @@ export async function getStripeAccount(accountId: string): Promise<StripeAccount
 }
 
 /**
+ * Creates a new Stripe connected account for a user. Admin only.
+ * @param email The user's email.
+ * @param country The user's country code (e.g., 'FR', 'US').
+ * @returns A promise that resolves to the created StripeAccount object.
+ */
+export async function createStripeAccount(email: string, country: string): Promise<StripeAccount> {
+  const { data, error } = await supabase.functions.invoke('create-stripe-account', {
+    body: { email, country },
+  });
+
+  if (error) {
+    console.error('Error creating Stripe account:', error);
+    throw new Error(`Erreur lors de la création du compte Stripe : ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
  * Fetches a list of Stripe transfers for a given connected account. Admin only.
  * @param accountId The ID of the Stripe account to fetch transfers for.
  * @returns A promise that resolves to an array of StripeTransfer objects.

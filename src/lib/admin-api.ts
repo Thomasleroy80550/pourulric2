@@ -1135,6 +1135,26 @@ export async function resendStatementToPennylane(invoiceId: string): Promise<voi
 }
 
 /**
+ * Creates an onboarding link for a Stripe connected account. Admin only.
+ * @param accountId The ID of the Stripe account.
+ * @param refreshUrl The URL to redirect to if the user needs to refresh the onboarding.
+ * @param returnUrl The URL to redirect to after the user completes the onboarding.
+ * @returns A promise that resolves to the account link data.
+ */
+export async function createStripeAccountLink(accountId: string, refreshUrl?: string, returnUrl?: string): Promise<any> {
+  const { data, error } = await supabase.functions.invoke('create-stripe-account-link', {
+    body: { account_id: accountId, refresh_url: refreshUrl, return_url: returnUrl },
+  });
+
+  if (error) {
+    console.error('Error creating Stripe account link:', error);
+    throw new Error(`Erreur lors de la création du lien d'onboarding Stripe : ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
  * Initiates a Stripe payout process (Transfer + Payout).
  * @param payoutDetails Details for the payout.
  * @returns A promise that resolves when the payout is initiated.

@@ -19,6 +19,7 @@ import EditUserDialog from '@/components/admin/EditUserDialog';
 import ImportUsersDialog from '@/components/admin/ImportUsersDialog';
 import { Input } from '@/components/ui/input';
 import StripeAccountDetailsDialog from '@/components/admin/StripeAccountDetailsDialog';
+import { createStripeAccountLink } from '@/lib/admin-api';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {

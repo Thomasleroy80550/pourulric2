@@ -380,8 +380,8 @@ const SidebarFooter = React.forwardRef<
       ref={ref}
       data-sidebar="footer"
       className={cn("flex flex-col gap-2 p-2", className)}
-      {...props}
-    />
+      {...props>
+    </div>
   );
 });
 SidebarFooter.displayName = "SidebarFooter";
@@ -395,8 +395,8 @@ const SidebarSeparator = React.forwardRef<
       ref={ref}
       data-sidebar="separator"
       className={cn("mx-2 w-auto bg-sidebar-border", className)}
-      {...props}
-    />
+      {...props>
+    </Separator>
   );
 });
 SidebarSeparator.displayName = "SidebarSeparator";
@@ -413,8 +413,8 @@ const SidebarContent = React.forwardRef<
         "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
-      {...props}
-    />
+      {...props>
+    </div>
   );
 });
 SidebarContent.displayName = "SidebarContent";
@@ -428,8 +428,8 @@ const SidebarGroup = React.forwardRef<
       ref={ref}
       data-sidebar="group"
       className={cn("relative flex w-full min-w-0 flex-col p-2", className)}
-      {...props}
-    />
+      {...props>
+    </div>
   );
 });
 SidebarGroup.displayName = "SidebarGroup";
@@ -449,8 +449,8 @@ const SidebarGroupLabel = React.forwardRef<
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}
-      {...props}
-    />
+      {...props>
+    </Comp>
   );
 });
 SidebarGroupLabel.displayName = "SidebarGroupLabel";
@@ -472,8 +472,8 @@ const SidebarGroupAction = React.forwardRef<
         "group-data-[collapsible=icon]:hidden",
         className,
       )}
-      {...props}
-    />
+      {...props>
+    </Comp>
   );
 });
 SidebarGroupAction.displayName = "SidebarGroupAction";
@@ -486,8 +486,8 @@ const SidebarGroupContent = React.forwardRef<
     ref={ref}
     data-sidebar="group-content"
     className={cn("w-full text-sm", className)}
-    {...props}
-  />
+    {...props>
+  </div>
 ));
 SidebarGroupContent.displayName = "SidebarGroupContent";
 
@@ -499,8 +499,8 @@ const SidebarMenu = React.forwardRef<
     ref={ref}
     data-sidebar="menu"
     className={cn("flex w-full min-w-0 flex-col gap-1", className)}
-    {...props}
-  />
+    {...props>
+  </ul>
 ));
 SidebarMenu.displayName = "SidebarMenu";
 
@@ -512,8 +512,8 @@ const SidebarMenuItem = React.forwardRef<
     ref={ref}
     data-sidebar="menu-item"
     className={cn("group/menu-item relative", className)}
-    {...props}
-  />
+    {...props>
+  </li>
 ));
 SidebarMenuItem.displayName = "SidebarMenuItem";
 
@@ -569,8 +569,8 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props}
-      />
+        {...props>
+      </Comp>
     );
 
     if (!tooltip) {
@@ -623,8 +623,8 @@ const SidebarMenuAction = React.forwardRef<
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className,
       )}
-      {...props}
-    />
+      {...props>
+    </Comp>
   );
 });
 SidebarMenuAction.displayName = "SidebarMenuAction";
@@ -645,8 +645,8 @@ const SidebarMenuBadge = React.forwardRef<
       "group-data-[collapsible=icon]:hidden",
       className,
     )}
-    {...props}
-  />
+    {...props>
+  </div>
 ));
 SidebarMenuBadge.displayName = "SidebarMenuBadge";
 
@@ -666,8 +666,7 @@ const SidebarMenuSkeleton = React.forwardRef<
       ref={ref}
       data-sidebar="menu-skeleton"
       className={cn("rounded-md h-8 flex gap-2 px-2 items-center", className)}
-      {...props}
-    >
+      {...props>
       {showIcon && (
         <Skeleton
           className="size-4 rounded-md"
@@ -700,8 +699,8 @@ const SidebarMenuSub = React.forwardRef<
       "group-data-[collapsible=icon]:hidden",
       className,
     )}
-    {...props}
-  />
+    {...props>
+  </ul>
 ));
 SidebarMenuSub.displayName = "SidebarMenuSub";
 
@@ -735,11 +734,160 @@ const SidebarMenuSubButton = React.forwardRef<
         "group-data-[collapsible=icon]:hidden",
         className,
       )}
+      {...props>
+    </Comp>
+  );
+});
+SidebarMenuSubButton.displayName = "SidebarMenuSubButton";
+
+// Ajout du composant AppSidebar
+const AppSidebar = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div">
+>(({ className, ...props }, ref) => {
+  return (
+    <Sidebar ref={ref} className={className} {...props} />
+  );
+});
+AppSidebar.displayName = "AppSidebar";
+
+// Ajout des composants manquants pour le breadcrumb et la recherche
+const Breadcrumb = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div">
+>(({ className, ...props }, ref) => {
+  return (
+    <nav
+      ref={ref}
+      className={cn("flex items-center space-x-1 text-sm text-muted-foreground", className)}
       {...props}
     />
   );
 });
-SidebarMenuSubButton.displayName = "SidebarMenuSubButton";
+Breadcrumb.displayName = "Breadcrumb";
+
+const BreadcrumbList = React.forwardRef<
+  HTMLOListElement,
+  React.ComponentProps<"ol">
+>(({ className, ...props }, ref) => {
+  return (
+    <ol
+      ref={ref}
+      className={cn("flex items-center space-x-1", className)}
+      {...props}
+    />
+  );
+});
+BreadcrumbList.displayName = "BreadcrumbList";
+
+const BreadcrumbItem = React.forwardRef<
+  HTMLLIElement,
+  React.ComponentProps<"li">
+>(({ className, ...props }, ref) => {
+  return (
+    <li
+      ref={ref}
+      className={cn("inline-flex items-center gap-1.5", className)}
+      {...props}
+    />
+  );
+});
+BreadcrumbItem.displayName = "BreadcrumbItem";
+
+const BreadcrumbLink = React.forwardRef<
+  HTMLAnchorElement,
+  React.ComponentProps<"a"> & { asChild?: boolean }
+>(({ asChild = false, className, ...props }, ref) => {
+  const Comp = asChild ? Slot : "a";
+
+  return (
+    <Comp
+      ref={ref}
+      className={cn("transition-colors hover:text-foreground", className)}
+      {...props}
+    />
+  );
+});
+BreadcrumbLink.displayName = "BreadcrumbLink";
+
+const BreadcrumbPage = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<"span">
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      ref={ref}
+      className={cn("font-normal text-foreground", className)}
+      {...props}
+    />
+  );
+});
+BreadcrumbPage.displayName = "BreadcrumbPage";
+
+const BreadcrumbSeparator = React.forwardRef<
+  HTMLSpanElement,
+  React.ComponentProps<"span">
+>(({ className, ...props }, ref) => {
+  return (
+    <span
+      ref={ref}
+      className={cn("text-muted-foreground", className)}
+      {...props}
+    />
+  );
+});
+BreadcrumbSeparator.displayName = "BreadcrumbSeparator";
+
+const Search = React.forwardRef<
+  SVGSVGElement,
+  React.ComponentProps<"svg">
+>(({ className, ...props }, ref) => {
+  return (
+    <svg
+      ref={ref}
+      className={cn("h-4 w-4", className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.35-4.35" />
+    </svg>
+  );
+});
+Search.displayName = "Search";
+
+const NotificationBell = React.forwardRef<
+  React.ElementRef<typeof Button>,
+  React.ComponentProps<typeof Button> & {
+    notifications: any[];
+    unreadCount: number;
+    onMarkAsRead: (id: string) => void;
+    onMarkAllAsRead: () => void;
+  }
+>(({ notifications, unreadCount, onMarkAsRead, onMarkAllAsRead, className, ...props }, ref) => {
+  return (
+    <Button
+      ref={ref}
+      variant="ghost"
+      size="icon"
+      className={cn("relative", className)}
+      {...props}
+    >
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM10.5 3.75a6 6 0 00-6 6v2.25l-2.25 2.25v1.5h16.5v-1.5L16.5 12V9.75a6 6 0 00-6-6z" />
+      </svg>
+      {unreadCount > 0 && (
+        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-xs text-white flex items-center justify-center">
+          {unreadCount}
+        </span>
+      )}
+    </Button>
+  );
+});
+NotificationBell.displayName = "NotificationBell";
 
 export {
   Sidebar,
@@ -766,4 +914,13 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  AppSidebar,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  Search,
+  NotificationBell,
 };

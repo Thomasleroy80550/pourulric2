@@ -16,7 +16,6 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ isPaymentSuspended }) => {
     { name: 'Aperçu', href: '/', icon: Home },
     { name: 'Calendrier', href: '/calendar', icon: CalendarDays, disabled: isPaymentSuspended },
     { name: 'Réservations', href: '/bookings', icon: Bookmark, disabled: isPaymentSuspended },
-    { name: 'Mes Logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
     { name: 'Finances', href: '/finances', icon: Banknote, disabled: isPaymentSuspended },
     { name: 'Performances', href: '/performance', icon: TrendingUp },
     { name: 'Mes Avis', href: '/reviews', icon: Star },

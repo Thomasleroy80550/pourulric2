@@ -193,6 +193,16 @@ export interface StripeAccount {
   type: string;
 }
 
+export interface CreateStripeAccountResponse {
+  account: StripeAccount;
+  accountLink: {
+    object: string;
+    created: number;
+    expires_at: number;
+    url: string;
+  };
+}
+
 export interface StripeTransfer {
   id: string;
   object: string;
@@ -889,14 +899,24 @@ export async function getStripeAccount(accountId: string): Promise<StripeAccount
  * @param country The user's country code (e.g., 'FR', 'US').
  * @returns A promise that resolves to the created StripeAccount object.
  */
-export async function createStripeAccount(email: string, country: string): Promise<StripeAccount> {
+export async function createStripeAccount(email: string, country: string): Promise<CreateStripeAccountResponse> {
   const { data, error } = await supabase.functions.invoke('create-stripe-account', {
     body: { email, country },
   });
 
   if (error) {
-    console.error('Error creating Stripe account:', error);
+    console.error('Error invoking create-stripe-account function:', error);
     throw new Error(`Erreur lors de la création du compte Stripe : ${error.message}`);
+  }
+
+  if (data && data.error) {
+    console.error('Error from create-stripe-account function:', data);
+    throw { message: data.error, details: data.details };
+  }
+
+  if (!data || !data.account || !data.accountLink) {
+    console.error('Invalid response from create-stripe-account function:', data);
+    throw new Error('La réponse de la fonction de création de compte Stripe est invalide.');
   }
 
   return data;

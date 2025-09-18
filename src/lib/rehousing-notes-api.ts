@@ -124,7 +124,24 @@ export async function resendRehousingNoteNotification(noteId: string): Promise<v
 
   // 3. Construct and send the email
   const subject = 'Rappel : Confirmation de votre note de relogement';
-  const html = `Bonjour ${profile.first_name || 'Client'},<br><br>Ceci est un rappel concernant votre note de relogement de type "${note.note_type}" d'un montant de ${note.amount_to_transfer}€.<br><br>Cordialement,<br>L'équipe`;
+  const html = `Bonjour ${profile.first_name || 'Client'},<br><br>
+  
+  Ceci est un rappel concernant votre <strong>note de relogement</strong> de type "${note.note_type}" d'un montant de ${note.amount_to_transfer}€.<br><br>
+  
+  <strong>Qu'est-ce qu'une note de relogement ?</strong><br>
+  C'est un document qui confirme que nous devons vous reverser de l'argent. Cela arrive quand un locataire a payé trop cher ou quand il y a un changement dans votre réservation. C'est comme un petit papier qui dit "on vous doit de l'argent".<br><br>
+  
+  <strong>Connectez-vous à votre espace Hello Keys</strong><br>
+  Pour voir tous les détails et suivre votre remboursement, connectez-vous à votre espace personnel :<br>
+  <a href="https://hellokeys.fr" style="background-color: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Accéder à mon espace Hello Keys</a><br><br>
+  
+  <strong>Montant à vous reverser :</strong> ${note.amount_to_transfer}€<br>
+  <strong>Bénéficiaire :</strong> ${note.recipient_name}<br><br>
+  
+  Si vous avez des questions, n'hésitez pas à nous contacter.<br><br>
+  
+  Cordialement,<br>
+  L'équipe Hello Keys`;
 
   await sendEmail(profile.email, subject, html);
 }

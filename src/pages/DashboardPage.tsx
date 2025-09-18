@@ -623,7 +623,7 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col p-4 h-[320px] md:h-[350px]">
+            <CardContent className="flex flex-col p-4 h-[320px]">
               {loadingFinancialData ? (
                 <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
                   <Skeleton className="w-full md:w-3/5 h-[280px]" />
@@ -642,15 +642,15 @@ const DashboardPage = () => {
               ) : (
                 <>
                   <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full h-full">
-                    <div className="w-full md:w-3/5 h-full min-h-[200px] md:min-h-[300px]">
+                    <div className="w-full md:w-3/5 h-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={activityData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={isMobile ? 40 : 50}
-                            outerRadius={isMobile ? 80 : 100}
+                            innerRadius={50}
+                            outerRadius={100}
                             fill="#8884d8"
                             paddingAngle={5}
                             dataKey="value"

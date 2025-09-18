@@ -90,20 +90,3 @@ export const getAllRehousingNotes = async (): Promise<RehousingNote[]> => {
 
   return data || [];
 };
-
-/**
- * Resends the notification email for a rehousing note.
- * @param noteId The ID of the note.
- */
-export const resendRehousingNoteNotification = async (noteId: string) => {
-  const { data, error } = await supabase.functions.invoke('resend-rehousing-note-email', {
-    body: { note_id: noteId },
-  });
-
-  if (error) {
-    console.error('Error resending rehousing note notification:', error);
-    throw new Error(`Erreur lors de la relance de la notification : ${error.message}`);
-  }
-
-  return data;
-};

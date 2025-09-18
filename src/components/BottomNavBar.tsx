@@ -33,14 +33,14 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ isPaymentSuspended }) => {
   });
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border h-16 md:hidden z-50 pb-2">
+    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border h-16 md:hidden z-50">
       <nav className="grid h-full grid-cols-5">
         {filteredNavLinks.slice(0, 5).map((item) => (
           <Link
             key={item.name}
             to={item.href}
             className={cn(
-              'flex flex-col items-center justify-center text-xs font-medium transition-colors pt-2',
+              'flex flex-col items-center justify-center text-xs font-medium transition-colors',
               location.pathname === item.href
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-primary',
@@ -49,7 +49,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ isPaymentSuspended }) => {
             onClick={item.disabled ? (e) => e.preventDefault() : undefined}
           >
             <item.icon className="h-5 w-5 mb-1" />
-            <span className="text-center leading-tight">{item.name}</span>
+            <span className="text-center">{item.name}</span>
           </Link>
         ))}
       </nav>

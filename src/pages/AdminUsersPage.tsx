@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from 'sonner';
-import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest } from '@/lib/admin-api';
+import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard } from 'lucide-react';
@@ -84,6 +84,7 @@ const AdminUsersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isStripeDetailsOpen, setIsStripeDetailsOpen] = useState(false);
   const [selectedStripeAccountId, setSelectedStripeAccountId] = useState<string | null>(null);
+  const [creatingStripeAccountFor, setCreatingStripeAccountFor] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchUsers = useCallback(async () => {
@@ -136,6 +137,30 @@ const AdminUsersPage: React.FC = () => {
   const handleShowStripeDetails = (stripeAccountId: string) => {
     setSelectedStripeAccountId(stripeAccountId);
     setIsStripeDetailsOpen(true);
+  };
+
+  const handleCreateStripeAccount = async (user: UserProfile) => {
+    if (!user.email) {
+      toast.error("L'email de l'utilisateur est manquant, impossible de créer un compte Stripe.");
+      return;
+    }
+    setCreatingStripeAccountFor(user.id);
+    try {
+      // On suppose que le pays est la France pour le moment.
+      const newAccount = await createStripeAccount(user.email, 'FR');
+      if (!newAccount || !newAccount.id) {
+        throw new Error("La création du compte Stripe n'a pas retourné un ID valide.");
+      }
+
+      await updateUser({ user_id: user.id, stripe_account_id: newAccount.id });
+
+      toast.success(`Compte Stripe créé avec succès pour ${user.first_name} ${user.last_name}.`);
+      fetchUsers(); // Rafraîchir la liste des utilisateurs
+    } catch (error: any) {
+      toast.error(`Erreur lors de la création du compte Stripe : ${error.message}`);
+    } finally {
+      setCreatingStripeAccountFor(null);
+    }
   };
 
   const handleApproveClick = (request: AccountantRequest) => {
@@ -241,7 +266,19 @@ const AdminUsersPage: React.FC = () => {
                     Voir
                   </Button>
                 ) : (
-                  <Badge variant="outline">Non lié</Badge>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleCreateStripeAccount(user)}
+                    disabled={creatingStripeAccountFor === user.id}
+                  >
+                    {creatingStripeAccountFor === user.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Créer compte
+                  </Button>
                 )}
               </TableCell>
               <TableCell>

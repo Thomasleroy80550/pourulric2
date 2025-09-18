@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications-api';
 import BottomNavBar from './BottomNavBar';
 import MigrationNotice from './MigrationNotice';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MainLayoutProps {
   children: React.ReactNode;

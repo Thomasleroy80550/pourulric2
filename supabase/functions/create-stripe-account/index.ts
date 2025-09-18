@@ -40,7 +40,6 @@ serve(async (req) => {
     }
 
     const params = new URLSearchParams();
-    params.append('type', 'express');
     params.append('email', email);
     params.append('country', country);
     params.append('controller[fees][payer]', 'application');

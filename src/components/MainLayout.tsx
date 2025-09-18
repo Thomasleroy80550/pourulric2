@@ -55,7 +55,6 @@ import WhatsNewSheet from './WhatsNewSheet';
 import MigrationNotice from './MigrationNotice'; // Import the new component
 import { getSetting } from '@/lib/admin-api'; // Import getSetting
 import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new constant
-import { useIsMobile } from '@/hooks/use-mobile'; // Correction: Changed from useMobile to useIsMobile
 
 interface MainLayoutProps {
   children: React.ReactNode;

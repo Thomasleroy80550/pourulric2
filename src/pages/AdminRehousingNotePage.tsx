@@ -12,14 +12,14 @@ import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { createDocument } from '@/lib/documents-api';
 import { uploadFile } from '@/lib/storage-api';
 import { createNotification } from '@/lib/notifications-api';
-import { createRehousingNote, getAllRehousingNotes, RehousingNote } from '@/lib/rehousing-notes-api';
+import { createRehousingNote, getAllRehousingNotes, RehousingNote, resendRehousingNoteNotification } from '@/lib/rehousing-notes-api';
 import { toast } from 'sonner';
 import RehousingNoteContent from '@/components/RehousingNoteContent';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Check, ChevronsUpDown, Eye, Loader2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Eye, Loader2, BellRing } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -46,6 +46,7 @@ const AdminRehousingNotePage: React.FC = () => {
   const [rehousingNotes, setRehousingNotes] = useState<RehousingNote[]>([]);
   const [selectedNote, setSelectedNote] = useState<RehousingNote | null>(null);
   const [notesLoading, setNotesLoading] = useState(true);
+  const [isResending, setIsResending] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof rehousingNoteSchema>>({
     resolver: zodResolver(rehousingNoteSchema),
@@ -129,6 +130,18 @@ const AdminRehousingNotePage: React.FC = () => {
       toast.error(`Erreur lors de la création de la note : ${error.message}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleResendNotification = async (noteId: string) => {
+    setIsResending(noteId);
+    try {
+      await resendRehousingNoteNotification(noteId);
+      toast.success("La notification a été renvoyée avec succès !");
+    } catch (error: any) {
+      toast.error(`Erreur lors de la relance : ${error.message}`);
+    } finally {
+      setIsResending(null);
     }
   };
 
@@ -383,6 +396,20 @@ const AdminRehousingNotePage: React.FC = () => {
                                         </div>
                                       </CardContent>
                                     </Card>
+                                    <div className="flex justify-end pt-4 border-t">
+                                      <Button
+                                        variant="secondary"
+                                        onClick={() => handleResendNotification(selectedNote.id)}
+                                        disabled={isResending === selectedNote.id}
+                                      >
+                                        {isResending === selectedNote.id ? (
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <BellRing className="mr-2 h-4 w-4" />
+                                        )}
+                                        Relancer la notification
+                                      </Button>
+                                    </div>
                                   </div>
                                 </DialogContent>
                               )}

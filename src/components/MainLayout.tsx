@@ -1,61 +1,33 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import {
-  Home,
-  Calendar,
-  Book,
-  BarChart2,
-  Star,
-  HelpCircle,
-  Settings,
-  Grid,
-  FileText,
-  Building,
-  BookOpen,
-  Wrench,
-  Banknote,
-  Newspaper,
-  Plug,
-  Sparkles,
-  User,
-  TrendingUp,
-  LogOut,
-  Shield,
-  Bell,
-  CheckCheck,
-  AlertTriangle,
-  ChevronDown,
-  Menu,
-  Plus,
-  Gift,
-  Lock,
-  Copy, // Add new icon
-  LayoutDashboard,
-  CalendarDays,
-  Ban, // Ajout de l'icône Ban
-} from "lucide-react";
-import { Button } from '@/components/ui/button';
+import { Link, useLocation } from 'react-router-dom';
+import { User, LogOut, Settings, Shield, Terminal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { Alert } from '@/components/ui/alert';
+import {
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+  AppSidebar,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  Search,
+  NotificationBell
+} from '@/components/ui/sidebar';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import AICopilotDialog from './AICopilotDialog';
 import { useSession } from './SessionContextProvider';
-import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from '@/hooks/use-toast';
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications-api';
 import BottomNavBar from './BottomNavBar';
-import WhatsNewSheet from './WhatsNewSheet';
-import MigrationNotice from './MigrationNotice'; // Import the new component
-import { getSetting } from '@/lib/admin-api'; // Import getSetting
-import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new constant
-import { SidebarProvider, AppSidebar, SidebarTrigger, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Search, Input, NotificationBell } from "@/components/ui/sidebar";
+import MigrationNotice from './MigrationNotice';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -229,6 +201,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');

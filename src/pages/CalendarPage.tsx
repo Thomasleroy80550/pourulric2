@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
+import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import { addDays, format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
@@ -163,7 +164,7 @@ const CalendarPage: React.FC = () => {
         setLoadingData(false);
       }
     };
-    if (!profile?.is_banned) {
+    if (!profile?.is_banned && !profile?.is_payment_suspended) {
       fetchData();
     } else {
       setLoadingData(false);
@@ -209,6 +210,14 @@ const CalendarPage: React.FC = () => {
     return (
       <MainLayout>
         <BannedUserMessage />
+      </MainLayout>
+    );
+  }
+
+  if (profile?.is_payment_suspended) {
+    return (
+      <MainLayout>
+        <SuspendedAccountMessage />
       </MainLayout>
     );
   }

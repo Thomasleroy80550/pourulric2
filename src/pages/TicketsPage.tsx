@@ -42,6 +42,8 @@ const TicketsPage = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
+  console.log('Tickets page state:', { isLoading, isError, error, tickets });
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -69,6 +71,7 @@ const TicketsPage = () => {
     }
 
     if (isError) {
+      console.error('Error loading tickets:', error);
       return (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -94,6 +97,7 @@ const TicketsPage = () => {
       );
     }
 
+    console.log(`Rendering ${tickets.length} tickets`);
     return (
       <Table>
         <TableHeader>

@@ -35,12 +35,15 @@ export interface FreshdeskTicketWithDetails extends FreshdeskTicket {
 
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
   try {
+    console.log('Calling getTickets...');
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
 
     if (error) {
       console.error('Erreur lors de la récupération des tickets:', error);
       throw new Error(error.message || 'Erreur inconnue lors de la récupération des tickets');
     }
+
+    console.log('Raw data from function:', data);
 
     // Vérifier si data est défini et est un tableau
     if (!data) {
@@ -56,6 +59,7 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
       throw new Error('Format de données invalide reçu pour les tickets.');
     }
 
+    console.log(`Retrieved ${data.length} tickets`);
     return data;
   } catch (error) {
     console.error('Erreur dans getTickets:', error);
@@ -65,12 +69,15 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
 
 export const getTicketById = async (ticketId: string): Promise<FreshdeskTicketWithDetails> => {
   try {
+    console.log(`Calling getTicketById for ticket ${ticketId}...`);
     const { data, error } = await supabase.functions.invoke(`freshdesk-proxy?ticketId=${ticketId}`);
     
     if (error) {
       console.error('Erreur lors de la récupération du ticket:', error);
       throw new Error(error.message || 'Erreur inconnue lors de la récupération du ticket');
     }
+
+    console.log('Raw data from function for single ticket:', data);
 
     if (!data) {
       throw new Error('Aucune donnée reçue pour le ticket');
@@ -89,6 +96,7 @@ export const getTicketById = async (ticketId: string): Promise<FreshdeskTicketWi
 
 export const createTicket = async (payload: { subject: string; description: string }): Promise<any> => {
   try {
+    console.log('Calling createTicket...', payload);
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
       method: 'POST',
       body: { action: 'create', ...payload },
@@ -98,6 +106,8 @@ export const createTicket = async (payload: { subject: string; description: stri
       console.error('Erreur lors de la création du ticket:', error);
       throw new Error(error.message || 'Erreur inconnue lors de la création du ticket');
     }
+
+    console.log('Raw data from function for create:', data);
 
     if (!data) {
       throw new Error('Aucune donnée reçue lors de la création du ticket');
@@ -116,6 +126,7 @@ export const createTicket = async (payload: { subject: string; description: stri
 
 export const replyToTicket = async (payload: { ticketId: string; body: string }): Promise<any> => {
   try {
+    console.log(`Calling replyToTicket for ticket ${payload.ticketId}...`);
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
       method: 'POST',
       body: { action: 'reply', ...payload },
@@ -125,6 +136,8 @@ export const replyToTicket = async (payload: { ticketId: string; body: string })
       console.error('Erreur lors de la réponse au ticket:', error);
       throw new Error(error.message || 'Erreur inconnue lors de la réponse au ticket');
     }
+
+    console.log('Raw data from function for reply:', data);
 
     if (!data) {
       throw new Error('Aucune donnée reçue lors de la réponse au ticket');

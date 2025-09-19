@@ -42,31 +42,31 @@ serve(async (req) => {
     const ticketId = url.searchParams.get('ticketId');
 
     if (req.method === 'GET') {
-      let freshdeskUrl;
+      const userEmail = user.email;
+      if (!userEmail) {
+        return new Response(JSON.stringify({ error: 'Email utilisateur non trouvé.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
+      let freshdeskUrl;
       if (ticketId) {
         // Fetch a single ticket with conversations
         freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=conversations,requester`;
       } else {
         // List all tickets for the user
-        const userEmail = user.email;
-        if (!userEmail) {
-          return new Response(JSON.stringify({ error: 'Email utilisateur non trouvé.' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
         const encodedEmail = encodeURIComponent(userEmail);
         freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&include=description&order_by=updated_at&order_type=desc`;
       }
       
+      console.log(`Fetching Freshdesk URL: ${freshdeskUrl}`);
       const freshdeskResponse = await fetch(freshdeskUrl, { headers: { 'Authorization': authHeader } });
       
       if (!freshdeskResponse.ok) {
         const errorText = await freshdeskResponse.text();
         console.error(`Freshdesk API error: ${freshdeskResponse.status} - ${errorText}`);
         
-        // Return a proper error response instead of throwing
         return new Response(JSON.stringify({ 
           error: `Freshdesk API error: ${freshdeskResponse.status}`,
           details: errorText 
@@ -78,7 +78,9 @@ serve(async (req) => {
       
       // Handle empty response body
       const responseText = await freshdeskResponse.text();
-      if (!responseText) {
+      console.log(`Freshdesk response text: ${responseText.substring(0, 200)}...`);
+      
+      if (!responseText || responseText.trim() === '') {
         console.warn('Freshdesk API returned empty response');
         return new Response(JSON.stringify([]), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
@@ -105,7 +107,18 @@ serve(async (req) => {
       }
 
     } else if (req.method === 'POST') {
-      const { action, ...payload } = await req.json();
+      let requestBody;
+      try {
+        requestBody = await req.json();
+      } catch (jsonError) {
+        console.error('Error parsing request body:', jsonError);
+        return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const { action, ...payload } = requestBody;
       let freshdeskUrl;
       let options;
 
@@ -144,6 +157,7 @@ serve(async (req) => {
         });
       }
 
+      console.log(`Posting to Freshdesk URL: ${freshdeskUrl}`);
       const freshdeskResponse = await fetch(freshdeskUrl, options);
       
       if (!freshdeskResponse.ok) {
@@ -161,7 +175,9 @@ serve(async (req) => {
       
       // Handle empty response body for POST requests too
       const responseText = await freshdeskResponse.text();
-      if (!responseText) {
+      console.log(`Freshdesk POST response text: ${responseText.substring(0, 200)}...`);
+      
+      if (!responseText || responseText.trim() === '') {
         console.warn('Freshdesk API returned empty response for POST request');
         return new Response(JSON.stringify({ success: true }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
@@ -176,7 +192,7 @@ serve(async (req) => {
           status: freshdeskResponse.status 
         });
       } catch (parseError) {
-        console.error('Error parsing Freshdesk response:', parseError);
+        console.error('Error parsing Freshdesk POST response:', parseError);
         console.error('Response text:', responseText);
         return new Response(JSON.stringify({ 
           error: 'Invalid JSON response from Freshdesk',

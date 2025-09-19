@@ -39,9 +39,9 @@ serve(async (req) => {
     
     const authHeader = `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`;
     const url = new URL(req.url);
+    const ticketId = url.searchParams.get('ticketId');
 
     if (req.method === 'GET') {
-      const ticketId = url.searchParams.get('ticketId');
       let freshdeskUrl;
 
       if (ticketId) {
@@ -76,11 +76,33 @@ serve(async (req) => {
         });
       }
       
-      const data = await freshdeskResponse.json();
-      return new Response(JSON.stringify(data), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-        status: 200 
-      });
+      // Handle empty response body
+      const responseText = await freshdeskResponse.text();
+      if (!responseText) {
+        console.warn('Freshdesk API returned empty response');
+        return new Response(JSON.stringify([]), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: 200 
+        });
+      }
+      
+      try {
+        const data = JSON.parse(responseText);
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: 200 
+        });
+      } catch (parseError) {
+        console.error('Error parsing Freshdesk response:', parseError);
+        console.error('Response text:', responseText);
+        return new Response(JSON.stringify({ 
+          error: 'Invalid JSON response from Freshdesk',
+          details: responseText 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
     } else if (req.method === 'POST') {
       const { action, ...payload } = await req.json();
@@ -137,11 +159,33 @@ serve(async (req) => {
         });
       }
       
-      const data = await freshdeskResponse.json();
-      return new Response(JSON.stringify(data), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-        status: freshdeskResponse.status 
-      });
+      // Handle empty response body for POST requests too
+      const responseText = await freshdeskResponse.text();
+      if (!responseText) {
+        console.warn('Freshdesk API returned empty response for POST request');
+        return new Response(JSON.stringify({ success: true }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: freshdeskResponse.status 
+        });
+      }
+      
+      try {
+        const data = JSON.parse(responseText);
+        return new Response(JSON.stringify(data), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: freshdeskResponse.status 
+        });
+      } catch (parseError) {
+        console.error('Error parsing Freshdesk response:', parseError);
+        console.error('Response text:', responseText);
+        return new Response(JSON.stringify({ 
+          error: 'Invalid JSON response from Freshdesk',
+          details: responseText 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), { 

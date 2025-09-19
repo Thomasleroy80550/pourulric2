@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertTriangle, User, MessageSquare } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { safeFormat } from '@/lib/date-utils';
 
 const getStatusVariant = (status: number): 'success' | 'warning' | 'default' | 'secondary' => {
   switch (status) {
@@ -81,7 +82,7 @@ const TicketDetailPage = () => {
             <CardTitle className="text-2xl">{ticket.subject}</CardTitle>
             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
               <Badge variant={getStatusVariant(ticket.status)}>{getStatusText(ticket.status)}</Badge>
-              <span>Créé le: {format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</span>
+              <span>Créé le: {safeFormat(ticket.created_at, 'dd/MM/yyyy HH:mm')}</span>
             </div>
           </div>
         </div>
@@ -100,7 +101,7 @@ const TicketDetailPage = () => {
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {format(new Date(ticket.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                {safeFormat(ticket.created_at, 'dd MMMM yyyy à HH:mm')}
               </p>
             </div>
           </div>
@@ -123,7 +124,7 @@ const TicketDetailPage = () => {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {format(new Date(convo.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                  {safeFormat(convo.created_at, 'dd MMMM yyyy à HH:mm')}
                 </p>
               </div>
             </div>

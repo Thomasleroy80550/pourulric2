@@ -13,6 +13,7 @@ import { AlertTriangle, Ticket, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTicketDialog } from '@/components/CreateTicketDialog';
 import { useNavigate } from 'react-router-dom';
+import { safeFormat } from '@/lib/date-utils';
 
 const getStatusVariant = (status: number): 'success' | 'warning' | 'default' | 'secondary' => {
   switch (status) {
@@ -154,8 +155,8 @@ const TicketsPage = () => {
                   {getPriorityText(ticket.priority)}
                 </Badge>
               </TableCell>
-              <TableCell>{format(new Date(ticket.updated_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
-              <TableCell>{format(new Date(ticket.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
+              <TableCell>{safeFormat(ticket.updated_at, 'dd/MM/yyyy HH:mm')}</TableCell>
+              <TableCell>{safeFormat(ticket.created_at, 'dd/MM/yyyy HH:mm')}</TableCell>
             </TableRow>
           ))}
         </TableBody>

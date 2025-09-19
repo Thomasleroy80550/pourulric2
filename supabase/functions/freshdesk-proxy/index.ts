@@ -107,6 +107,7 @@ serve(async (req) => {
       }
 
     } else if (req.method === 'POST') {
+      // Only try to parse JSON body for POST requests
       let requestBody;
       try {
         requestBody = await req.json();

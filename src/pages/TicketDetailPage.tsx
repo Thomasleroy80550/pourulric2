@@ -73,10 +73,16 @@ const TicketDetailPage = () => {
       return <div>Ticket non trouvé.</div>;
     }
 
-    const cleanHtml = (html: string) => DOMPurify.sanitize(html);
+    const cleanHtml = (html: string) => {
+      if (!html) return '';
+      return DOMPurify.sanitize(html);
+    };
 
     // S'assurer que conversations est un tableau
     const conversations = ticket.conversations || [];
+
+    // Utiliser la description texte si disponible, sinon la description HTML
+    const ticketDescription = ticket.description_text || ticket.description || 'Aucune description';
 
     return (
       <div>
@@ -100,7 +106,7 @@ const TicketDetailPage = () => {
                 <p className="font-semibold">Vous</p>
                 <div
                   className="prose dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: cleanHtml(ticket.description) }}
+                  dangerouslySetInnerHTML={{ __html: cleanHtml(ticketDescription) }}
                 />
               </div>
               <p className="text-xs text-muted-foreground mt-1">

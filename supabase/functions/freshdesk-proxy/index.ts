@@ -178,19 +178,25 @@ serve(async (req) => {
         if (!conversationsResponse.ok) {
           const errorBody = await conversationsResponse.text();
           console.error(`Freshdesk proxy: Error fetching conversations: ${conversationsResponse.status}`, errorBody);
-          return new Response(JSON.stringify({ error: 'Impossible de récupérer les conversations du ticket.', details: errorBody }), {
-            status: conversationsResponse.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
+          // Ne pas échouer si les conversations ne peuvent pas être récupérées
+          console.log('Freshdesk proxy: Les conversations ne peuvent pas être récupérées, retour du ticket seul');
         }
 
         const ticketData = await ticketResponse.json();
-        const conversationsData = await conversationsResponse.json();
+        let conversationsData = [];
+        
+        if (conversationsResponse.ok) {
+          conversationsData = await conversationsResponse.json();
+        } else {
+          console.log('Freshdesk proxy: Utilisation d\'un tableau vide pour les conversations');
+        }
 
         const responseData = {
           ...ticketData,
           conversations: conversationsData,
         };
+
+        console.log('Freshdesk proxy: Ticket récupéré avec', conversationsData.length, 'conversations');
 
         return new Response(JSON.stringify(responseData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -75,6 +75,9 @@ const TicketDetailPage = () => {
 
     const cleanHtml = (html: string) => DOMPurify.sanitize(html);
 
+    // S'assurer que conversations est un tableau
+    const conversations = ticket.conversations || [];
+
     return (
       <div>
         <div className="flex justify-between items-start mb-4">
@@ -106,7 +109,7 @@ const TicketDetailPage = () => {
             </div>
           </div>
 
-          {ticket.conversations.map((convo) => (
+          {conversations.length > 0 && conversations.map((convo) => (
             <div key={convo.id} className={`flex gap-4 ${convo.from_agent ? '' : 'flex-row-reverse'}`}>
               <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                 {convo.from_agent ? (

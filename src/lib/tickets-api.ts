@@ -34,46 +34,109 @@ export interface FreshdeskTicketWithDetails extends FreshdeskTicket {
 }
 
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
+  try {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
 
-  if (error) {
-    console.error('Erreur lors de la récupération des tickets:', error);
-    throw new Error(error.message);
-  }
-
-  if (!Array.isArray(data)) {
-    if (data && (data as any).error) {
-      throw new Error((data as any).error);
+    if (error) {
+      console.error('Erreur lors de la récupération des tickets:', error);
+      throw new Error(error.message || 'Erreur inconnue lors de la récupération des tickets');
     }
-    throw new Error('Format de données invalide reçu pour les tickets.');
-  }
 
-  return data;
+    // Vérifier si data est défini et est un tableau
+    if (!data) {
+      console.warn('Aucune donnée reçue de la fonction freshdesk-proxy');
+      return [];
+    }
+
+    if (!Array.isArray(data)) {
+      console.error('Format de données invalide reçu pour les tickets:', data);
+      if (data && (data as any).error) {
+        throw new Error((data as any).error);
+      }
+      throw new Error('Format de données invalide reçu pour les tickets.');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur dans getTickets:', error);
+    throw error;
+  }
 };
 
 export const getTicketById = async (ticketId: string): Promise<FreshdeskTicketWithDetails> => {
-  const { data, error } = await supabase.functions.invoke(`freshdesk-proxy?ticketId=${ticketId}`);
-  if (error) throw new Error(error.message);
-  if (data.error) throw new Error(data.error);
-  return data;
+  try {
+    const { data, error } = await supabase.functions.invoke(`freshdesk-proxy?ticketId=${ticketId}`);
+    
+    if (error) {
+      console.error('Erreur lors de la récupération du ticket:', error);
+      throw new Error(error.message || 'Erreur inconnue lors de la récupération du ticket');
+    }
+
+    if (!data) {
+      throw new Error('Aucune donnée reçue pour le ticket');
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur dans getTicketById:', error);
+    throw error;
+  }
 };
 
 export const createTicket = async (payload: { subject: string; description: string }): Promise<any> => {
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'POST',
-    body: { action: 'create', ...payload },
-  });
-  if (error) throw new Error(error.message);
-  if (data.error) throw new Error(data.error);
-  return data;
+  try {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+      method: 'POST',
+      body: { action: 'create', ...payload },
+    });
+    
+    if (error) {
+      console.error('Erreur lors de la création du ticket:', error);
+      throw new Error(error.message || 'Erreur inconnue lors de la création du ticket');
+    }
+
+    if (!data) {
+      throw new Error('Aucune donnée reçue lors de la création du ticket');
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur dans createTicket:', error);
+    throw error;
+  }
 };
 
 export const replyToTicket = async (payload: { ticketId: string; body: string }): Promise<any> => {
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'POST',
-    body: { action: 'reply', ...payload },
-  });
-  if (error) throw new Error(error.message);
-  if (data.error) throw new Error(data.error);
-  return data;
+  try {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+      method: 'POST',
+      body: { action: 'reply', ...payload },
+    });
+    
+    if (error) {
+      console.error('Erreur lors de la réponse au ticket:', error);
+      throw new Error(error.message || 'Erreur inconnue lors de la réponse au ticket');
+    }
+
+    if (!data) {
+      throw new Error('Aucune donnée reçue lors de la réponse au ticket');
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur dans replyToTicket:', error);
+    throw error;
+  }
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTickets, FreshdeskTicket } from '@/lib/tickets-api';
 import MainLayout from '@/components/MainLayout';
@@ -9,10 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, Ticket, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import CreateTicketDialog from '@/components/CreateTicketDialog';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, Ticket } from 'lucide-react';
 
 const getStatusVariant = (status: number): 'success' | 'warning' | 'default' | 'secondary' => {
   switch (status) {
@@ -39,10 +36,6 @@ const TicketsPage = () => {
     queryKey: ['tickets'],
     queryFn: getTickets,
   });
-  const navigate = useNavigate();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-
-  console.log('Tickets page state:', { isLoading, isError, error, tickets });
 
   const renderContent = () => {
     if (isLoading) {
@@ -71,7 +64,6 @@ const TicketsPage = () => {
     }
 
     if (isError) {
-      console.error('Error loading tickets:', error);
       return (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -89,15 +81,10 @@ const TicketsPage = () => {
           <Ticket className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun ticket trouvé</h3>
           <p className="mt-1 text-sm text-gray-500">Vous n'avez aucun ticket de support pour le moment.</p>
-          <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Créer un ticket
-          </Button>
         </div>
       );
     }
 
-    console.log(`Rendering ${tickets.length} tickets`);
     return (
       <Table>
         <TableHeader>
@@ -110,7 +97,7 @@ const TicketsPage = () => {
         </TableHeader>
         <TableBody>
           {tickets.map((ticket) => (
-            <TableRow key={ticket.id} onClick={() => navigate(`/tickets/${ticket.id}`)} className="cursor-pointer">
+            <TableRow key={ticket.id}>
               <TableCell className="font-medium">{ticket.subject}</TableCell>
               <TableCell>
                 <Badge variant={getStatusVariant(ticket.status)}>
@@ -128,19 +115,12 @@ const TicketsPage = () => {
 
   return (
     <MainLayout>
-      <CreateTicketDialog isOpen={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Mes tickets de support</CardTitle>
-            <CardDescription>
-              Voici la liste de vos demandes de support auprès de notre équipe.
-            </CardDescription>
-          </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nouveau ticket
-          </Button>
+        <CardHeader>
+          <CardTitle>Mes tickets de support</CardTitle>
+          <CardDescription>
+            Voici la liste de vos demandes de support auprès de notre équipe.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {renderContent()}

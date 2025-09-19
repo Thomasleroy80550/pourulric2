@@ -76,8 +76,69 @@ serve(async (req) => {
         });
     }
 
-    // Handle Get Tickets
+    // Handle Ticket Creation (POST)
+    if (req.method === 'POST') {
+      console.log('Freshdesk proxy: Traitement d\'une requête POST (création ticket)');
+      
+      let body;
+      try {
+        body = await req.json();
+      } catch (e) {
+        console.error('Freshdesk proxy: Erreur lors du parsing du JSON:', e);
+        return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { subject, description, priority } = body;
+
+      if (!subject || !description) {
+        return new Response(JSON.stringify({ error: 'Le sujet et la description sont requis.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets`;
+      const requestBody = JSON.stringify({
+        email: userEmail,
+        subject,
+        description,
+        priority: priority || 1,
+        status: 2, // Open
+        source: 2, // Portal
+      });
+
+      const freshdeskResponse = await fetch(freshdeskUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+      });
+
+      const responseData = await freshdeskResponse.json();
+
+      if (!freshdeskResponse.ok) {
+        console.error(`Erreur API Freshdesk (création): ${freshdeskResponse.status}`, responseData);
+        return new Response(JSON.stringify({ error: 'Impossible de créer le ticket.', details: responseData }), {
+          status: freshdeskResponse.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify(responseData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 201,
+      });
+    }
+
+    // Handle Get Tickets (GET)
     if (req.method === 'GET') {
+      console.log('Freshdesk proxy: Traitement d\'une requête GET (liste tickets)');
+      
       const ticketId = req.headers.get('X-Ticket-Id');
 
       if (ticketId) {

@@ -55,7 +55,11 @@ export interface FreshdeskTicketDetails extends FreshdeskTicket {
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
   try {
     console.log('Appel de getTickets via supabase.functions.invoke...');
-    const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
+    
+    // IMPORTANT: Utiliser method: 'GET' pour lister les tickets
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+      method: 'GET'
+    });
 
     console.log('Réponse reçue:', { data, error });
 
@@ -95,7 +99,10 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
 export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicketDetails> => {
   try {
     console.log(`Appel de getTicketDetails pour le ticket ${ticketId}...`);
+    
+    // IMPORTANT: Utiliser method: 'GET' avec headers pour les détails
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+      method: 'GET',
       headers: { 'X-Ticket-Id': String(ticketId) },
     });
 
@@ -123,6 +130,8 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
 export const createTicket = async (payload: CreateTicketPayload): Promise<FreshdeskTicket> => {
   try {
     console.log('Création d\'un nouveau ticket avec payload:', payload);
+    
+    // Ici on utilise bien POST pour créer un ticket
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
       method: 'POST',
       body: payload,

@@ -17,14 +17,29 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     console.log('Freshdesk proxy: Auth header présent:', !!authHeader);
     
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization header manquant' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader! } } }
+      { global: { headers: { Authorization: authHeader } } }
     )
 
-    const { data: { user } } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     console.log('Freshdesk proxy: Utilisateur authentifié:', !!user);
+    
+    if (authError) {
+      console.error('Freshdesk proxy: Erreur auth:', authError);
+      return new Response(JSON.stringify({ error: 'Erreur d\'authentification', details: authError.message }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     if (!user) {
       console.log('Freshdesk proxy: Utilisateur non authentifié');

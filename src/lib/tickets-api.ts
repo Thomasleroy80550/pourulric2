@@ -62,6 +62,12 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
     if (error) {
       console.error('Erreur lors de la récupération des tickets:', error);
       console.error('Détails de l\'erreur:', JSON.stringify(error, null, 2));
+      
+      // Amélioration du message d'erreur
+      if (error.message?.includes('Edge Function returned a non-2xx status code')) {
+        throw new Error('Erreur de connexion au service de tickets. Veuillez réessayer plus tard.');
+      }
+      
       throw new Error(error.message || 'Erreur inconnue lors de la récupération des tickets');
     }
 

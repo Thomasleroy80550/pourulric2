@@ -54,24 +54,31 @@ export interface FreshdeskTicketDetails extends FreshdeskTicket {
 
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
   try {
+    console.log('Appel de getTickets via supabase.functions.invoke...');
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
+
+    console.log('Réponse reçue:', { data, error });
 
     if (error) {
       console.error('Erreur lors de la récupération des tickets:', error);
+      console.error('Détails de l\'erreur:', JSON.stringify(error, null, 2));
       throw new Error(error.message || 'Erreur inconnue lors de la récupération des tickets');
     }
 
     if (!data) {
+      console.error('Aucune donnée reçue du serveur');
       throw new Error('Aucune donnée reçue du serveur');
     }
 
     if (!Array.isArray(data)) {
+      console.error('Format de données invalide reçu:', data);
       if (data && (data as any).error) {
         throw new Error((data as any).error);
       }
       throw new Error('Format de données invalide reçu pour les tickets.');
     }
 
+    console.log('Tickets récupérés avec succès:', data.length, 'tickets');
     return data;
   } catch (error) {
     console.error('Erreur dans getTickets:', error);
@@ -81,9 +88,12 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
 
 export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicketDetails> => {
   try {
+    console.log(`Appel de getTicketDetails pour le ticket ${ticketId}...`);
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
       headers: { 'X-Ticket-Id': String(ticketId) },
     });
+
+    console.log('Réponse détails ticket:', { data, error });
 
     if (error) {
       throw new Error(error.message || 'Erreur inconnue lors de la récupération des détails du ticket');
@@ -106,10 +116,13 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
 
 export const createTicket = async (payload: CreateTicketPayload): Promise<FreshdeskTicket> => {
   try {
+    console.log('Création d\'un nouveau ticket avec payload:', payload);
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
       method: 'POST',
       body: payload,
     });
+
+    console.log('Réponse création ticket:', { data, error });
 
     if (error) {
       console.error('Erreur lors de la création du ticket:', error);
@@ -125,6 +138,7 @@ export const createTicket = async (payload: CreateTicketPayload): Promise<Freshd
       throw new Error(data.details?.errors?.[0]?.message || data.error);
     }
 
+    console.log('Ticket créé avec succès:', data);
     return data;
   } catch (error) {
     console.error('Erreur dans createTicket:', error);

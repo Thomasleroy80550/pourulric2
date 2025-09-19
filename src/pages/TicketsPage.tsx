@@ -62,6 +62,13 @@ const TicketsPage = () => {
     queryFn: getTickets,
   });
 
+  React.useEffect(() => {
+    if (error) {
+      console.error('Erreur dans TicketsPage:', error);
+      console.error('Stack trace:', error.stack);
+    }
+  }, [error]);
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -97,6 +104,12 @@ const TicketsPage = () => {
           <AlertTitle>Erreur</AlertTitle>
           <AlertDescription>
             Impossible de charger vos tickets. L'erreur suivante s'est produite : {error.message}
+            <br />
+            <br />
+            <details>
+              <summary>Détails techniques</summary>
+              <pre className="mt-2 text-xs overflow-auto">{JSON.stringify(error, null, 2)}</pre>
+            </details>
           </AlertDescription>
         </Alert>
       );

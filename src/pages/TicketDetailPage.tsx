@@ -81,8 +81,21 @@ const TicketDetailPage = () => {
     // S'assurer que conversations est un tableau
     const conversations = ticket.conversations || [];
 
-    // Utiliser la description texte si disponible, sinon la description HTML
-    const ticketDescription = ticket.description_text || ticket.description || 'Aucune description';
+    // Get the description - try multiple possible fields
+    let ticketDescription = 'Aucune description';
+    
+    // Try description_text first (plain text version)
+    if (ticket.description_text && ticket.description_text.trim() && ticket.description_text !== 'null') {
+      ticketDescription = ticket.description_text;
+    } 
+    // Try description field (HTML version)
+    else if (ticket.description && ticket.description.trim() && ticket.description !== 'null') {
+      ticketDescription = ticket.description;
+    }
+    // If both are empty or null, show a message
+    else {
+      ticketDescription = ticket.subject || 'Aucune description disponible';
+    }
 
     return (
       <div>

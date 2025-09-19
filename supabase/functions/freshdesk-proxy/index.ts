@@ -191,6 +191,18 @@ serve(async (req) => {
           console.log('Freshdesk proxy: Utilisation d\'un tableau vide pour les conversations');
         }
 
+        // Log the ticket data to debug description field
+        console.log('Freshdesk proxy: Ticket data received:', {
+          id: ticketData.id,
+          subject: ticketData.subject,
+          description: ticketData.description,
+          description_text: ticketData.description_text,
+          has_description: !!ticketData.description,
+          has_description_text: !!ticketData.description_text,
+          description_length: ticketData.description?.length,
+          description_text_length: ticketData.description_text?.length
+        });
+
         const responseData = {
           ...ticketData,
           conversations: conversationsData,

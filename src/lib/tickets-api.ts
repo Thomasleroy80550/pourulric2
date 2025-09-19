@@ -3,168 +3,114 @@ import { supabase } from '@/integrations/supabase/client';
 export interface FreshdeskTicket {
   id: number;
   subject: string;
+  description: string;
+  description_text?: string;
+  description_html?: string;
+  description_content?: string;
   status: number;
   priority: number;
-  source: number;
   created_at: string;
   updated_at: string;
   requester_id: number;
-  description_text: string;
-  description: string; // HTML description
-  // Additional fields from Freshdesk API
-  cc_emails?: string[];
-  fwd_emails?: string[];
-  reply_cc_emails?: string[];
-  fr_escalated?: boolean;
-  spam?: boolean;
-  email_config_id?: number | null;
-  group_id?: number | null;
-  responder_id?: number | null;
-  to_emails?: string | null;
-  product_id?: number | null;
-  type?: string | null;
-  due_by?: string;
-  fr_due_by?: string;
-  is_escalated?: boolean;
-  custom_fields?: Record<string, any>;
-}
-
-export interface CreateTicketPayload {
-  subject: string;
-  description: string;
-  priority: number;
+  responder_id?: number;
+  group_id?: number;
+  ticket_type?: string;
+  source: number;
+  spam: boolean;
+  deleted: boolean;
 }
 
 export interface FreshdeskConversation {
   id: number;
   body: string;
-  body_text: string;
-  user_id: number;
-  created_at: string;
-  private: boolean;
-  source: number;
-  support_email: string | null;
-  attachments: any[];
+  body_text?: string;
   from_agent: boolean;
+  created_at: string;
+  updated_at: string;
+  user_id: number;
+  ticket_id: number;
+  incoming: boolean;
+  private: boolean;
+  support_email?: string;
 }
 
 export interface FreshdeskTicketDetails extends FreshdeskTicket {
-  conversations: FreshdeskConversation[];
+  conversations?: FreshdeskConversation[];
 }
 
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
-  try {
-    console.log('Appel de getTickets via supabase.functions.invoke...');
-    
-    // IMPORTANT: Utiliser method: 'GET' pour lister les tickets
-    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-      method: 'GET'
-    });
-
-    console.log('Réponse reçue:', { data, error });
-
-    if (error) {
-      console.error('Erreur lors de la récupération des tickets:', error);
-      console.error('Détails de l\'erreur:', JSON.stringify(error, null, 2));
-      
-      // Amélioration du message d'erreur
-      if (error.message?.includes('Edge Function returned a non-2xx status code')) {
-        throw new Error('Erreur de connexion au service de tickets. Veuillez réessayer plus tard.');
-      }
-      
-      throw new Error(error.message || 'Erreur inconnue lors de la récupération des tickets');
-    }
-
-    if (!data) {
-      console.error('Aucune donnée reçue du serveur');
-      throw new Error('Aucune donnée reçue du serveur');
-    }
-
-    if (!Array.isArray(data)) {
-      console.error('Format de données invalide reçu:', data);
-      if (data && (data as any).error) {
-        throw new Error((data as any).error);
-      }
-      throw new Error('Format de données invalide reçu pour les tickets.');
-    }
-
-    console.log('Tickets récupérés avec succès:', data.length, 'tickets');
-    return data;
-  } catch (error) {
-    console.error('Erreur dans getTickets:', error);
-    throw error;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('Utilisateur non authentifié');
   }
+
+  const response = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message || 'Erreur lors de la récupération des tickets');
+  }
+
+  return response.data || [];
 };
 
 export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicketDetails> => {
-  try {
-    console.log(`Appel de getTicketDetails pour le ticket ${ticketId}...`);
-    
-    // Correction: utiliser les query params au lieu des headers pour GET
-    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-      method: 'GET',
-      query: { ticketId: String(ticketId) } // Passer le ticketId en query parameter
-    });
-
-    console.log('Réponse détails ticket:', { data, error });
-
-    if (error) {
-      console.error('Erreur lors de la récupération des détails:', error);
-      
-      // Amélioration du message d'erreur
-      if (error.message?.includes('Failed to send a request to the Edge Function')) {
-        throw new Error('Impossible de contacter le service de tickets. Veuillez réessayer.');
-      }
-      
-      throw new Error(error.message || 'Erreur inconnue lors de la récupération des détails du ticket');
-    }
-
-    if (!data) {
-      throw new Error('Aucune donnée reçue du serveur pour les détails du ticket');
-    }
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-
-    console.log('Détails du ticket récupérés avec succès');
-    return data;
-  } catch (error) {
-    console.error('Erreur dans getTicketDetails:', error);
-    throw error;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('Utilisateur non authentifié');
   }
+
+  console.log('Récupération des détails du ticket:', ticketId);
+  
+  const response = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'X-Ticket-Id': ticketId.toString(),
+    },
+  });
+
+  if (response.error) {
+    console.error('Erreur lors de la récupération du ticket:', response.error);
+    throw new Error(response.error.message || 'Erreur lors de la récupération du ticket');
+  }
+
+  console.log('Réponse API reçue:', response.data);
+  
+  // Vérifier que nous avons bien les données attendues
+  if (!response.data) {
+    throw new Error('Aucune donnée reçue du serveur');
+  }
+
+  return response.data as FreshdeskTicketDetails;
 };
 
-export const createTicket = async (payload: CreateTicketPayload): Promise<FreshdeskTicket> => {
-  try {
-    console.log('Création d\'un nouveau ticket avec payload:', payload);
-    
-    // Ici on utilise bien POST pour créer un ticket
-    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-      method: 'POST',
-      body: payload,
-    });
-
-    console.log('Réponse création ticket:', { data, error });
-
-    if (error) {
-      console.error('Erreur lors de la création du ticket:', error);
-      throw new Error(error.message || 'Erreur inconnue lors de la création du ticket');
-    }
-
-    if (!data) {
-      throw new Error('Aucune donnée reçue du serveur après la création');
-    }
-    
-    // Check for application-level error from the edge function
-    if (data.error) {
-      throw new Error(data.details?.errors?.[0]?.message || data.error);
-    }
-
-    console.log('Ticket créé avec succès:', data);
-    return data;
-  } catch (error) {
-    console.error('Erreur dans createTicket:', error);
-    throw error;
+export const createTicket = async (subject: string, description: string, priority: number = 1) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('Utilisateur non authentifié');
   }
+
+  const response = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: {
+      subject,
+      description,
+      priority,
+    },
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message || 'Erreur lors de la création du ticket');
+  }
+
+  return response.data;
 };

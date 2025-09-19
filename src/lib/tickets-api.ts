@@ -12,6 +12,12 @@ export interface FreshdeskTicket {
   description_text: string;
 }
 
+export interface CreateTicketPayload {
+  subject: string;
+  description: string;
+  priority: number;
+}
+
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
   try {
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
@@ -35,6 +41,34 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
     return data;
   } catch (error) {
     console.error('Erreur dans getTickets:', error);
+    throw error;
+  }
+};
+
+export const createTicket = async (payload: CreateTicketPayload): Promise<FreshdeskTicket> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+      method: 'POST',
+      body: payload,
+    });
+
+    if (error) {
+      console.error('Erreur lors de la création du ticket:', error);
+      throw new Error(error.message || 'Erreur inconnue lors de la création du ticket');
+    }
+
+    if (!data) {
+      throw new Error('Aucune donnée reçue du serveur après la création');
+    }
+    
+    // Check for application-level error from the edge function
+    if (data.error) {
+      throw new Error(data.details?.errors?.[0]?.message || data.error);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur dans createTicket:', error);
     throw error;
   }
 };

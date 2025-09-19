@@ -9,7 +9,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, Ticket } from 'lucide-react';
+import { AlertTriangle, Ticket, PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CreateTicketDialog } from '@/components/CreateTicketDialog';
 
 const getStatusVariant = (status: number): 'success' | 'warning' | 'default' | 'secondary' => {
   switch (status) {
@@ -32,6 +34,7 @@ const getStatusText = (status: number): string => {
 };
 
 const TicketsPage = () => {
+  const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
   const { data: tickets, isLoading, error, isError } = useQuery<FreshdeskTicket[], Error>({
     queryKey: ['tickets'],
     queryFn: getTickets,
@@ -115,12 +118,19 @@ const TicketsPage = () => {
 
   return (
     <MainLayout>
+      <CreateTicketDialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen} />
       <Card>
-        <CardHeader>
-          <CardTitle>Mes tickets de support</CardTitle>
-          <CardDescription>
-            Voici la liste de vos demandes de support auprès de notre équipe.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle>Mes tickets de support</CardTitle>
+            <CardDescription>
+              Voici la liste de vos demandes de support auprès de notre équipe.
+            </CardDescription>
+          </div>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Nouveau ticket
+          </Button>
         </CardHeader>
         <CardContent>
           {renderContent()}

@@ -61,7 +61,6 @@ import TicketDetailPage from "./pages/TicketDetailPage";
 const queryClient = new QueryClient();
 
 function App() {
-  const { session } = useSession();
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

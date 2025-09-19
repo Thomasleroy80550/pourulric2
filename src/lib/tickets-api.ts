@@ -13,19 +13,28 @@ export interface FreshdeskTicket {
 }
 
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
+  try {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
 
-  if (error) {
-    console.error('Erreur lors de la récupération des tickets:', error);
-    throw new Error(error.message);
-  }
-
-  if (!Array.isArray(data)) {
-    if (data && (data as any).error) {
-      throw new Error((data as any).error);
+    if (error) {
+      console.error('Erreur lors de la récupération des tickets:', error);
+      throw new Error(error.message || 'Erreur inconnue lors de la récupération des tickets');
     }
-    throw new Error('Format de données invalide reçu pour les tickets.');
-  }
 
-  return data;
+    if (!data) {
+      throw new Error('Aucune donnée reçue du serveur');
+    }
+
+    if (!Array.isArray(data)) {
+      if (data && (data as any).error) {
+        throw new Error((data as any).error);
+      }
+      throw new Error('Format de données invalide reçu pour les tickets.');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur dans getTickets:', error);
+    throw error;
+  }
 };

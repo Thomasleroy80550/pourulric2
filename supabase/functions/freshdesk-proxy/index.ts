@@ -143,6 +143,7 @@ serve(async (req) => {
         });
       }
 
+      // List all tickets for the user with proper filters and includes
       const encodedEmail = encodeURIComponent(userEmail);
       const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&include=description&order_by=updated_at&order_type=desc`;
 

@@ -10,7 +10,23 @@ export interface FreshdeskTicket {
   updated_at: string;
   requester_id: number;
   description_text: string;
-  description: string; // Ajout de la description HTML
+  description: string; // HTML description
+  // Additional fields from Freshdesk API
+  cc_emails?: string[];
+  fwd_emails?: string[];
+  reply_cc_emails?: string[];
+  fr_escalated?: boolean;
+  spam?: boolean;
+  email_config_id?: number | null;
+  group_id?: number | null;
+  responder_id?: number | null;
+  to_emails?: string | null;
+  product_id?: number | null;
+  type?: string | null;
+  due_by?: string;
+  fr_due_by?: string;
+  is_escalated?: boolean;
+  custom_fields?: Record<string, any>;
 }
 
 export interface CreateTicketPayload {

@@ -34,6 +34,26 @@ const getStatusText = (status: number): string => {
   }
 };
 
+const getPriorityVariant = (priority: number): 'default' | 'destructive' | 'secondary' => {
+  switch (priority) {
+    case 1: return 'default'; // Low
+    case 2: return 'secondary'; // Medium
+    case 3: return 'destructive'; // High
+    case 4: return 'destructive'; // Urgent
+    default: return 'default';
+  }
+};
+
+const getPriorityText = (priority: number): string => {
+  switch (priority) {
+    case 1: return 'Faible';
+    case 2: return 'Moyenne';
+    case 3: return 'Haute';
+    case 4: return 'Urgente';
+    default: return 'Normale';
+  }
+};
+
 const TicketsPage = () => {
   const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
   const navigate = useNavigate();
@@ -50,6 +70,7 @@ const TicketsPage = () => {
             <TableRow>
               <TableHead>Sujet</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead>Priorité</TableHead>
               <TableHead>Dernière mise à jour</TableHead>
               <TableHead>Créé le</TableHead>
             </TableRow>
@@ -59,6 +80,7 @@ const TicketsPage = () => {
               <TableRow key={i}>
                 <TableCell><Skeleton className="h-4 w-3/4" /></TableCell>
                 <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-16" /></TableCell>
                 <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                 <TableCell><Skeleton className="h-4 w-24" /></TableCell>
               </TableRow>
@@ -96,6 +118,7 @@ const TicketsPage = () => {
           <TableRow>
             <TableHead>Sujet</TableHead>
             <TableHead>Statut</TableHead>
+            <TableHead>Priorité</TableHead>
             <TableHead>Dernière mise à jour</TableHead>
             <TableHead>Créé le</TableHead>
           </TableRow>
@@ -111,6 +134,11 @@ const TicketsPage = () => {
               <TableCell>
                 <Badge variant={getStatusVariant(ticket.status)}>
                   {getStatusText(ticket.status)}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge variant={getPriorityVariant(ticket.priority)}>
+                  {getPriorityText(ticket.priority)}
                 </Badge>
               </TableCell>
               <TableCell>{format(new Date(ticket.updated_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>

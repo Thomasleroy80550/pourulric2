@@ -100,15 +100,22 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
   try {
     console.log(`Appel de getTicketDetails pour le ticket ${ticketId}...`);
     
-    // IMPORTANT: Utiliser method: 'GET' avec headers pour les détails
+    // Correction: utiliser les query params au lieu des headers pour GET
     const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
       method: 'GET',
-      headers: { 'X-Ticket-Id': String(ticketId) },
+      query: { ticketId: String(ticketId) } // Passer le ticketId en query parameter
     });
 
     console.log('Réponse détails ticket:', { data, error });
 
     if (error) {
+      console.error('Erreur lors de la récupération des détails:', error);
+      
+      // Amélioration du message d'erreur
+      if (error.message?.includes('Failed to send a request to the Edge Function')) {
+        throw new Error('Impossible de contacter le service de tickets. Veuillez réessayer.');
+      }
+      
       throw new Error(error.message || 'Erreur inconnue lors de la récupération des détails du ticket');
     }
 
@@ -120,6 +127,7 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
       throw new Error(data.error);
     }
 
+    console.log('Détails du ticket récupérés avec succès');
     return data;
   } catch (error) {
     console.error('Erreur dans getTicketDetails:', error);

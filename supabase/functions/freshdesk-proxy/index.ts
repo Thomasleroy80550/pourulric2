@@ -139,7 +139,9 @@ serve(async (req) => {
     if (req.method === 'GET') {
       console.log('Freshdesk proxy: Traitement d\'une requête GET (liste tickets)');
       
-      const ticketId = req.headers.get('X-Ticket-Id');
+      // Récupération du ticketId depuis les query params
+      const url = new URL(req.url);
+      const ticketId = url.searchParams.get('ticketId') || req.headers.get('X-Ticket-Id');
 
       if (ticketId) {
         // Fetch a single ticket and its conversations

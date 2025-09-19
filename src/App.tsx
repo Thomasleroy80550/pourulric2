@@ -55,6 +55,7 @@ import AdminHelloKeysStatsPage from "./pages/AdminHelloKeysStatsPage"; // New im
 import AdminStripeMatchPage from "./pages/AdminStripeMatchPage"; // New import
 import AdminStripeTransfersPage from "./pages/AdminStripeTransfersPage"; // New import
 import AdminRehousingNotePage from "./pages/AdminRehousingNotePage"; // New import
+import TicketsPage from "./pages/TicketsPage"; // New import
 
 const queryClient = new QueryClient();
 
@@ -118,6 +119,7 @@ function App() {
                   <Route path="/my-rooms" element={<MyRoomsPage />} />
                   <Route path="/faq" element={<FaqPage />} />
                   <Route path="/comp-set" element={<CompSetPage />} />
+                  <Route path="/tickets" element={<TicketsPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </SessionContextProvider>

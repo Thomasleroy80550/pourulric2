@@ -35,6 +35,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   Ban, // Ajout de l'icône Ban
+  MessageSquare, // Ajout de l'icône pour les tickets
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -86,6 +87,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
     items: [
       { name: 'Blog', href: '/blog', icon: Newspaper },
       { name: 'Aides', href: '/help', icon: HelpCircle },
+      { name: 'Mes Tickets', href: '/tickets', icon: MessageSquare },
       { name: 'Modules', href: '/modules', icon: Plug },
       { name: 'Nouveautés', href: '/new-version', icon: Sparkles },
     ],

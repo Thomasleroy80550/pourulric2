@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTickets, FreshdeskTicket } from '@/lib/tickets-api';
 import MainLayout from '@/components/MainLayout';
@@ -9,7 +9,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, Ticket } from 'lucide-react';
+import { AlertTriangle, Ticket, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import CreateTicketDialog from '@/components/CreateTicketDialog';
+import { Button } from '@/components/ui/button';
 
 const getStatusVariant = (status: number): 'success' | 'warning' | 'default' | 'secondary' => {
   switch (status) {
@@ -36,6 +39,8 @@ const TicketsPage = () => {
     queryKey: ['tickets'],
     queryFn: getTickets,
   });
+  const navigate = useNavigate();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const renderContent = () => {
     if (isLoading) {
@@ -81,6 +86,10 @@ const TicketsPage = () => {
           <Ticket className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun ticket trouvé</h3>
           <p className="mt-1 text-sm text-gray-500">Vous n'avez aucun ticket de support pour le moment.</p>
+          <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Créer un ticket
+          </Button>
         </div>
       );
     }
@@ -97,7 +106,7 @@ const TicketsPage = () => {
         </TableHeader>
         <TableBody>
           {tickets.map((ticket) => (
-            <TableRow key={ticket.id}>
+            <TableRow key={ticket.id} onClick={() => navigate(`/tickets/${ticket.id}`)} className="cursor-pointer">
               <TableCell className="font-medium">{ticket.subject}</TableCell>
               <TableCell>
                 <Badge variant={getStatusVariant(ticket.status)}>
@@ -115,12 +124,19 @@ const TicketsPage = () => {
 
   return (
     <MainLayout>
+      <CreateTicketDialog isOpen={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
       <Card>
-        <CardHeader>
-          <CardTitle>Mes tickets de support</CardTitle>
-          <CardDescription>
-            Voici la liste de vos demandes de support auprès de notre équipe.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Mes tickets de support</CardTitle>
+            <CardDescription>
+              Voici la liste de vos demandes de support auprès de notre équipe.
+            </CardDescription>
+          </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nouveau ticket
+          </Button>
         </CardHeader>
         <CardContent>
           {renderContent()}

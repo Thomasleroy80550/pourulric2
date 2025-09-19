@@ -36,40 +36,65 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    
+    const authHeader = `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`;
+    const url = new URL(req.url);
 
-    const userEmail = user.email;
-    if (!userEmail) {
-        return new Response(JSON.stringify({ error: 'Email utilisateur non trouvé.' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+    if (req.method === 'GET') {
+      const ticketId = url.searchParams.get('ticketId');
+      let freshdeskUrl;
+
+      if (ticketId) {
+        // Fetch a single ticket with conversations
+        freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=conversations,requester`;
+      } else {
+        // List all tickets for the user
+        const userEmail = user.email;
+        if (!userEmail) throw new Error('Email utilisateur non trouvé.');
+        const encodedEmail = encodeURIComponent(userEmail);
+        freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&include=description&order_by=updated_at&order_type=desc`;
+      }
+      
+      const freshdeskResponse = await fetch(freshdeskUrl, { headers: { 'Authorization': authHeader } });
+      if (!freshdeskResponse.ok) throw new Error(await freshdeskResponse.text());
+      const data = await freshdeskResponse.json();
+      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+
+    } else if (req.method === 'POST') {
+      const { action, ...payload } = await req.json();
+      let freshdeskUrl;
+      let options;
+
+      if (action === 'create') {
+        const { subject, description } = payload;
+        if (!subject || !description) throw new Error('Sujet et description requis.');
+        freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets`;
+        options = {
+          method: 'POST',
+          headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject, description, email: user.email, priority: 1, status: 2 }),
+        };
+      } else if (action === 'reply') {
+        const { ticketId, body } = payload;
+        if (!ticketId || !body) throw new Error('ID de ticket et corps de réponse requis.');
+        freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
+        options = {
+          method: 'POST',
+          headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body }),
+        };
+      } else {
+        throw new Error('Action non valide.');
+      }
+
+      const freshdeskResponse = await fetch(freshdeskUrl, options);
+      if (!freshdeskResponse.ok) throw new Error(await freshdeskResponse.text());
+      const data = await freshdeskResponse.json();
+      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: freshdeskResponse.status });
     }
 
-    const encodedEmail = encodeURIComponent(userEmail);
-    const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&include=description&order_by=updated_at&order_type=desc`;
+    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), { status: 405, headers: corsHeaders });
 
-    const freshdeskResponse = await fetch(freshdeskUrl, {
-      headers: {
-        'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!freshdeskResponse.ok) {
-      const errorBody = await freshdeskResponse.text();
-      console.error(`Erreur API Freshdesk: ${freshdeskResponse.status} ${errorBody}`);
-      return new Response(JSON.stringify({ error: 'Impossible de récupérer les tickets depuis Freshdesk.', details: errorBody }), {
-        status: freshdeskResponse.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const tickets = await freshdeskResponse.json();
-
-    return new Response(JSON.stringify(tickets), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
   } catch (error) {
     console.error(error);
     return new Response(JSON.stringify({ error: error.message }), {

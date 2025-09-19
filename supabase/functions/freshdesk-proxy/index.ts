@@ -94,6 +94,55 @@ serve(async (req) => {
 
     // Handle Get Tickets
     if (req.method === 'GET') {
+      const ticketId = req.headers.get('X-Ticket-Id');
+
+      if (ticketId) {
+        // Fetch a single ticket and its conversations
+        const ticketUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=description`;
+        const conversationsUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/conversations`;
+
+        const authHeaders = {
+          'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
+          'Content-Type': 'application/json',
+        };
+
+        const [ticketResponse, conversationsResponse] = await Promise.all([
+          fetch(ticketUrl, { headers: authHeaders }),
+          fetch(conversationsUrl, { headers: authHeaders }),
+        ]);
+
+        if (!ticketResponse.ok) {
+          const errorBody = await ticketResponse.text();
+          console.error(`Freshdesk proxy: Error fetching ticket: ${ticketResponse.status}`, errorBody);
+          return new Response(JSON.stringify({ error: 'Impossible de récupérer les détails du ticket.', details: errorBody }), {
+            status: ticketResponse.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (!conversationsResponse.ok) {
+          const errorBody = await conversationsResponse.text();
+          console.error(`Freshdesk proxy: Error fetching conversations: ${conversationsResponse.status}`, errorBody);
+          return new Response(JSON.stringify({ error: 'Impossible de récupérer les conversations du ticket.', details: errorBody }), {
+            status: conversationsResponse.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const ticketData = await ticketResponse.json();
+        const conversationsData = await conversationsResponse.json();
+
+        const responseData = {
+          ...ticketData,
+          conversations: conversationsData,
+        };
+
+        return new Response(JSON.stringify(responseData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+
       const encodedEmail = encodeURIComponent(userEmail);
       const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&include=description&order_by=updated_at&order_type=desc`;
 

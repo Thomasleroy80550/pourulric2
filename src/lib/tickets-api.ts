@@ -10,12 +10,30 @@ export interface FreshdeskTicket {
   updated_at: string;
   requester_id: number;
   description_text: string;
+  description: string; // Ajout de la description HTML
 }
 
 export interface CreateTicketPayload {
   subject: string;
   description: string;
   priority: number;
+}
+
+export interface FreshdeskConversation {
+  id: number;
+  body: string;
+  body_text: string;
+  user_id: number;
+  created_at: string;
+  private: boolean;
+  source: number;
+  support_email: string | null;
+  attachments: any[];
+  from_agent: boolean;
+}
+
+export interface FreshdeskTicketDetails extends FreshdeskTicket {
+  conversations: FreshdeskConversation[];
 }
 
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
@@ -41,6 +59,31 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
     return data;
   } catch (error) {
     console.error('Erreur dans getTickets:', error);
+    throw error;
+  }
+};
+
+export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicketDetails> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+      headers: { 'X-Ticket-Id': String(ticketId) },
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Erreur inconnue lors de la récupération des détails du ticket');
+    }
+
+    if (!data) {
+      throw new Error('Aucune donnée reçue du serveur pour les détails du ticket');
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Erreur dans getTicketDetails:', error);
     throw error;
   }
 };

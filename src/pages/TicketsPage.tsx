@@ -12,6 +12,7 @@ import { fr } from 'date-fns/locale';
 import { AlertTriangle, Ticket, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateTicketDialog } from '@/components/CreateTicketDialog';
+import { useNavigate } from 'react-router-dom';
 
 const getStatusVariant = (status: number): 'success' | 'warning' | 'default' | 'secondary' => {
   switch (status) {
@@ -35,6 +36,7 @@ const getStatusText = (status: number): string => {
 
 const TicketsPage = () => {
   const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
+  const navigate = useNavigate();
   const { data: tickets, isLoading, error, isError } = useQuery<FreshdeskTicket[], Error>({
     queryKey: ['tickets'],
     queryFn: getTickets,
@@ -100,7 +102,11 @@ const TicketsPage = () => {
         </TableHeader>
         <TableBody>
           {tickets.map((ticket) => (
-            <TableRow key={ticket.id}>
+            <TableRow 
+              key={ticket.id} 
+              onClick={() => navigate(`/tickets/${ticket.id}`)}
+              className="cursor-pointer hover:bg-muted/50"
+            >
               <TableCell className="font-medium">{ticket.subject}</TableCell>
               <TableCell>
                 <Badge variant={getStatusVariant(ticket.status)}>

@@ -124,32 +124,42 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
     throw new Error('Utilisateur non authentifié');
   }
 
-  console.log('API: Envoi de la réponse au ticket:', { ticketId, body });
-  console.log('API: Type de body:', typeof body);
-  console.log('API: Longueur du body:', body?.length);
+  console.log('=== API CLIENT ===');
+  console.log('Ticket ID:', ticketId);
+  console.log('Body:', body);
+  console.log('Body type:', typeof body);
+  console.log('Body length:', body?.length);
 
-  // Essayons différentes façons d'envoyer les données
   const requestBody = {
     ticketId: ticketId,
     body: body,
   };
   
-  console.log('API: Corps de la requête à envoyer:', JSON.stringify(requestBody));
+  console.log('Request body object:', requestBody);
+  console.log('JSON.stringify(requestBody):', JSON.stringify(requestBody));
 
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: requestBody,
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: requestBody,
+    });
 
-  if (error) {
-    console.error('API: Erreur lors de la réponse au ticket:', error);
-    throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
+    console.log('API Response data:', data);
+    console.log('API Response error:', error);
+
+    if (error) {
+      console.error('API Error:', error);
+      throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
+    }
+
+    console.log('API Success:', data);
+    return data;
+  } catch (invokeError) {
+    console.error('Invoke error:', invokeError);
+    throw invokeError;
   }
-
-  console.log('API: Réponse du serveur:', data);
-  return data;
 };

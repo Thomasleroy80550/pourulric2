@@ -50,9 +50,11 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId }) =>
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log('Form submitted with values:', values);
+    console.log('=== FORM SUBMISSION ===');
+    console.log('Form values:', values);
     const payload = { ticketId, body: values.body };
-    console.log('Payload to be sent:', payload);
+    console.log('Payload to send:', payload);
+    
     replyMutation.mutate(payload);
   };
 

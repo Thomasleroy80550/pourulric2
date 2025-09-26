@@ -163,7 +163,7 @@ const AdminManualStatsPage: React.FC = () => {
                 <Label htmlFor="client-select">Client</Label>
                 <Controller
                   name="userId"
-                  control={control}
+                  control={form.control}
                   render={({ field }) => (
                     <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
                       <PopoverTrigger asChild>
@@ -237,7 +237,7 @@ const AdminManualStatsPage: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                         <Controller
                           name={`statements.${index}.year`}
-                          control={control}
+                          control={form.control}
                           render={({ field }) => (
                             <div className="space-y-2">
                               <Label>Année</Label>
@@ -252,7 +252,7 @@ const AdminManualStatsPage: React.FC = () => {
                         />
                         <Controller
                           name={`statements.${index}.month`}
-                          control={control}
+                          control={form.control}
                           render={({ field }) => (
                             <div className="space-y-2">
                               <Label>Mois</Label>

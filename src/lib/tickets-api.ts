@@ -124,7 +124,9 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
     throw new Error('Utilisateur non authentifié');
   }
 
-  console.log('Envoi de la réponse au ticket:', { ticketId, body });
+  console.log('API: Envoi de la réponse au ticket:', { ticketId, body });
+  console.log('API: Type de body:', typeof body);
+  console.log('API: Longueur du body:', body?.length);
 
   const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
     method: 'POST',
@@ -139,10 +141,10 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
   });
 
   if (error) {
-    console.error('Erreur lors de la réponse au ticket:', error);
+    console.error('API: Erreur lors de la réponse au ticket:', error);
     throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
   }
 
-  console.log('Réponse du serveur:', data);
+  console.log('API: Réponse du serveur:', data);
   return data;
 };

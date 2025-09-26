@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { getTicketDetails, FreshdeskTicketDetails } from '@/lib/tickets-api';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -41,6 +41,14 @@ const TicketDetailPage = () => {
     queryKey: ['ticket', ticketId],
     queryFn: () => getTicketDetails(ticketId),
     enabled: !!ticketId,
+  });
+
+  const replyToTicketMutation = useMutation({
+    mutationFn: replyToTicket,
+    onSuccess: () => {
+      // Rafraîchir les données du ticket après une réponse réussie
+      queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
+    },
   });
 
   const renderContent = () => {

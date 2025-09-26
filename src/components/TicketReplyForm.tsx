@@ -51,7 +51,9 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId }) =>
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log('Form submitted with values:', values);
-    replyMutation.mutate({ ticketId, body: values.body });
+    const payload = { ticketId, body: values.body };
+    console.log('Payload to be sent:', payload);
+    replyMutation.mutate(payload);
   };
 
   return (

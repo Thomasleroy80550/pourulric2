@@ -128,16 +128,21 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
   console.log('API: Type de body:', typeof body);
   console.log('API: Longueur du body:', body?.length);
 
+  // Essayons différentes façons d'envoyer les données
+  const requestBody = {
+    ticketId: ticketId,
+    body: body,
+  };
+  
+  console.log('API: Corps de la requête à envoyer:', JSON.stringify(requestBody));
+
   const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
-    body: {
-      ticketId: ticketId,
-      body: body,
-    },
+    body: requestBody,
   });
 
   if (error) {

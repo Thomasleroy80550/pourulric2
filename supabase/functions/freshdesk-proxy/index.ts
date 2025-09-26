@@ -52,15 +52,33 @@ serve(async (req) => {
 
     // Handle POST requests (Create ticket or reply)
     if (req.method === 'POST') {
-      console.log('Freshdesk proxy: Traitement d\'une requête POST');
+      console.log('Freshdesk proxy: Headers reçus:', Object.fromEntries(req.headers.entries()));
+      console.log('Freshdesk proxy: Content-Type:', req.headers.get('content-type'));
+      console.log('Freshdesk proxy: Content-Length:', req.headers.get('content-length'));
       
       let body;
       try {
-        body = await req.json();
+        // Lire le corps brut avant le parsing
+        const textBody = await req.text();
+        console.log('Freshdesk proxy: Corps brut reçu:', textBody);
+        console.log('Freshdesk proxy: Longueur du corps brut:', textBody.length);
+        
+        if (!textBody.trim()) {
+          console.error('Freshdesk proxy: Corps de requête vide !');
+          return new Response(JSON.stringify({ error: 'Corps de requête vide' }), { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
+        }
+        
+        body = JSON.parse(textBody);
         console.log('Freshdesk proxy: Corps de la requête reçu:', JSON.stringify(body, null, 2));
       } catch (e) {
         console.error('Freshdesk proxy: Erreur lors du parsing du JSON:', e);
-        return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête', details: e.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête', details: e.message }), { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
       }
 
       // Reply to a ticket

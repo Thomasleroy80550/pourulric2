@@ -82,8 +82,8 @@ serve(async (req) => {
           return new Response(JSON.stringify({ error: 'Impossible de répondre à ce ticket car il est fermé ou résolu.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // 2. Use the /conversations endpoint to add a reply from the user
-        const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/conversations`;
+        // 2. Use the /reply endpoint to add a reply from the user
+        const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
         const requestBody = JSON.stringify({
           body: replyBody,
           user_id: requesterId, // Specify the user sending the message
@@ -98,7 +98,7 @@ serve(async (req) => {
 
         if (!freshdeskResponse.ok) {
           const errorData = await freshdeskResponse.json().catch(() => freshdeskResponse.text());
-          console.error('Freshdesk proxy: Erreur API Freshdesk (conversations):', freshdeskResponse.status, errorData);
+          console.error('Freshdesk proxy: Erreur API Freshdesk (reply):', freshdeskResponse.status, errorData);
           return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: errorData }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         

@@ -70,6 +70,10 @@ const TicketsPage = () => {
     }
   }, [error]);
 
+  console.log('TicketsPage - Données:', tickets);
+  console.log('TicketsPage - Chargement:', isLoading);
+  console.log('TicketsPage - Erreur:', error);
+
   const renderContent = () => {
     if (isLoading) {
       return (

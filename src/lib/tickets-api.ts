@@ -55,16 +55,19 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
     throw new Error('Utilisateur non authentifié');
   }
 
-  const response = await supabase.functions.invoke('freshdesk-proxy', {
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-  });
+  console.log('Récupération des tickets - Session:', !!session);
+  
+  // The correct way to call supabase.functions.invoke - no headers needed
+  const response = await supabase.functions.invoke('freshdesk-proxy');
+
+  console.log('Réponse de getTickets:', response);
 
   if (response.error) {
+    console.error('Erreur lors de la récupération des tickets:', response.error);
     throw new Error(response.error.message || 'Erreur lors de la récupération des tickets');
   }
 
+  console.log('Données reçues:', response.data);
   return response.data || [];
 };
 
@@ -76,11 +79,9 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
 
   console.log('Récupération des détails du ticket:', ticketId);
   
+  // Pass ticketId as a parameter in the body, not as header
   const response = await supabase.functions.invoke('freshdesk-proxy', {
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'X-Ticket-Id': ticketId.toString(),
-    },
+    body: { ticketId }
   });
 
   if (response.error) {
@@ -109,9 +110,6 @@ export const createTicket = async ({ subject, description, priority }: CreateTic
       description,
       priority,
     },
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-    },
   });
 
   if (response.error) {
@@ -129,14 +127,10 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
 
   console.log('Envoi de la réponse au ticket:', { ticketId, body });
 
-  // Le format correct pour supabase.functions.invoke - pas de method ou Content-Type
   const response = await supabase.functions.invoke('freshdesk-proxy', {
     body: {
       ticketId: ticketId,
       body: body,
-    },
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
     },
   });
 

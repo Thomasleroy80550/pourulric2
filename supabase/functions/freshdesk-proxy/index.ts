@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, X-Ticket-Id',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
@@ -14,6 +14,7 @@ serve(async (req) => {
   }
 
   try {
+    // Get the authorization header from the request
     const authHeader = req.headers.get('Authorization');
     console.log('Freshdesk proxy: Auth header présent:', !!authHeader);
     
@@ -137,6 +138,36 @@ serve(async (req) => {
         });
       }
 
+      // Check if it's a ticket details request (has ticketId but no body)
+      if (body.ticketId && !body.body) {
+        console.log(`Freshdesk proxy: Traitement d'une requête POST (détails du ticket ${body.ticketId})`);
+        const { ticketId } = body;
+
+        const ticketUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=conversations`;
+        
+        const authHeaders = {
+          'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
+          'Content-Type': 'application/json',
+        };
+
+        const ticketResponse = await fetch(ticketUrl, { headers: authHeaders });
+
+        if (!ticketResponse.ok) {
+          const errorBody = await ticketResponse.text();
+          return new Response(JSON.stringify({ error: 'Impossible de récupérer les détails du ticket.', details: errorBody }), {
+            status: ticketResponse.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        const ticketData = await ticketResponse.json();
+
+        return new Response(JSON.stringify(ticketData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        });
+      }
+
       // This is a new ticket creation
       console.log('Freshdesk proxy: Traitement d\'une requête POST (création ticket)');
       const { subject, description, priority } = body;
@@ -183,67 +214,32 @@ serve(async (req) => {
       });
     }
 
-    // Handle Get Tickets (GET)
-    if (req.method === 'GET') {
-      const url = new URL(req.url);
-      const ticketId = url.searchParams.get('ticketId') || req.headers.get('X-Ticket-Id');
+    // Handle Get Tickets (GET) - default behavior when no body is provided
+    console.log('Freshdesk proxy: Traitement d\'une requête GET (liste des tickets)');
+    
+    // List all tickets for the user
+    const encodedEmail = encodeURIComponent(userEmail);
+    const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&order_by=updated_at&order_type=desc`;
 
-      if (ticketId) {
-        // Fetch a single ticket and its conversations
-        const ticketUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=conversations`;
-        
-        const authHeaders = {
-          'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
-          'Content-Type': 'application/json',
-        };
+    const freshdeskResponse = await fetch(freshdeskUrl, {
+      headers: {
+        'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-        const ticketResponse = await fetch(ticketUrl, { headers: authHeaders });
-
-        if (!ticketResponse.ok) {
-          const errorBody = await ticketResponse.text();
-          return new Response(JSON.stringify({ error: 'Impossible de récupérer les détails du ticket.', details: errorBody }), {
-            status: ticketResponse.status,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        const ticketData = await ticketResponse.json();
-
-        return new Response(JSON.stringify(ticketData), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        });
-      }
-
-      // List all tickets for the user
-      const encodedEmail = encodeURIComponent(userEmail);
-      const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&order_by=updated_at&order_type=desc`;
-
-      const freshdeskResponse = await fetch(freshdeskUrl, {
-        headers: {
-          'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!freshdeskResponse.ok) {
-        const errorBody = await freshdeskResponse.text();
-        return new Response(JSON.stringify({ error: 'Impossible de récupérer les tickets depuis Freshdesk.', details: errorBody }), {
-          status: freshdeskResponse.status,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      const tickets = await freshdeskResponse.json();
-      return new Response(JSON.stringify(tickets), {
+    if (!freshdeskResponse.ok) {
+      const errorBody = await freshdeskResponse.text();
+      return new Response(JSON.stringify({ error: 'Impossible de récupérer les tickets depuis Freshdesk.', details: errorBody }), {
+        status: freshdeskResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
       });
     }
 
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
+    const tickets = await freshdeskResponse.json();
+    return new Response(JSON.stringify(tickets), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     });
 
   } catch (error) {

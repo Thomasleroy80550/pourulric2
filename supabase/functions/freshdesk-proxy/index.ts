@@ -80,7 +80,7 @@ serve(async (req) => {
         const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
         const requestBody = JSON.stringify({
           body: replyBody,
-          private: false, // Make it a public reply
+          // Le champ 'private' n'est pas accepté ici. Une réponse est publique par défaut.
         });
 
         const freshdeskResponse = await fetch(freshdeskUrl, {

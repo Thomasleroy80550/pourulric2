@@ -118,11 +118,13 @@ export const createTicket = async (payload: CreateTicketPayload) => {
   return data;
 };
 
-export const replyToTicket = async (payload: ReplyToTicketPayload) => {
+export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     throw new Error('Utilisateur non authentifié');
   }
+
+  console.log('Envoi de la réponse au ticket:', { ticketId, body });
 
   const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
     method: 'POST',
@@ -130,7 +132,10 @@ export const replyToTicket = async (payload: ReplyToTicketPayload) => {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
-    body: payload,
+    body: {
+      ticketId: ticketId,
+      body: body,
+    },
   });
 
   if (error) {
@@ -138,5 +143,6 @@ export const replyToTicket = async (payload: ReplyToTicketPayload) => {
     throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
   }
 
+  console.log('Réponse du serveur:', data);
   return data;
 };

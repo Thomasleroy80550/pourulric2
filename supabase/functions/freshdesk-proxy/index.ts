@@ -47,32 +47,20 @@ serve(async (req) => {
     if (req.method === 'POST') {
       console.log('Freshdesk proxy: Traitement d\'une requête POST');
       
-      // Log all headers to debug
-      console.log('Freshdesk proxy: Headers:', Object.fromEntries(req.headers.entries()));
-      
       let body;
       try {
-        // Read the body properly
         const rawBody = await req.text();
-        console.log(`Freshdesk proxy: Corps brut reçu (longueur: ${rawBody.length}): "${rawBody}"`);
-        
-        if (!rawBody || rawBody.trim().length === 0) {
-          console.error('Freshdesk proxy: Corps de la requête vide ou invalide');
-          return new Response(JSON.stringify({ error: 'Corps de la requête vide.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-        
         body = JSON.parse(rawBody);
-        console.log('Freshdesk proxy: Corps JSON parsé:', body);
       } catch (e) {
-        console.error('Freshdesk proxy: Erreur de parsing JSON:', e);
         return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête.', details: e.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Reply to a ticket
+      // Reply to a ticket (as the user)
       if (body.ticketId && body.body) {
-        console.log(`Freshdesk proxy: Traitement d'une réponse au ticket ${body.ticketId}`);
+        console.log(`Freshdesk proxy: Traitement d'une réponse au ticket ${body.ticketId} de la part de l'utilisateur.`);
         const { ticketId, body: replyBody } = body;
 
+        // 1. Get ticket details to find the requester_id
         const checkUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}`;
         const checkResponse = await fetch(checkUrl, {
           headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
@@ -84,12 +72,23 @@ serve(async (req) => {
         }
 
         const ticketData = await checkResponse.json();
-        if (ticketData.status !== 2 && ticketData.status !== 3) {
+        const requesterId = ticketData.requester_id;
+
+        if (!requesterId) {
+          return new Response(JSON.stringify({ error: 'Impossible de trouver l\'ID du demandeur pour ce ticket.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        if (ticketData.status !== 2 && ticketData.status !== 3) { // Status 2: Open, Status 3: Pending
           return new Response(JSON.stringify({ error: 'Impossible de répondre à ce ticket car il est fermé ou résolu.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
-        const requestBody = JSON.stringify({ body: replyBody });
+        // 2. Use the /conversations endpoint to add a reply from the user
+        const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/conversations`;
+        const requestBody = JSON.stringify({
+          body: replyBody,
+          user_id: requesterId, // Specify the user sending the message
+          private: false,       // Make it a public reply
+        });
 
         const freshdeskResponse = await fetch(freshdeskUrl, {
           method: 'POST',
@@ -99,7 +98,7 @@ serve(async (req) => {
 
         if (!freshdeskResponse.ok) {
           const errorData = await freshdeskResponse.json().catch(() => freshdeskResponse.text());
-          console.error('Freshdesk proxy: Erreur API Freshdesk:', freshdeskResponse.status, errorData);
+          console.error('Freshdesk proxy: Erreur API Freshdesk (conversations):', freshdeskResponse.status, errorData);
           return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: errorData }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         

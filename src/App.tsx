@@ -55,6 +55,7 @@ import AdminHelloKeysStatsPage from "./pages/AdminHelloKeysStatsPage"; // New im
 import AdminStripeMatchPage from "./pages/AdminStripeMatchPage"; // New import
 import AdminStripeTransfersPage from "./pages/AdminStripeTransfersPage"; // New import
 import AdminRehousingNotePage from "./pages/AdminRehousingNotePage"; // New import
+import AdminManualStatsPage from "./pages/AdminManualStatsPage"; // New import
 import TicketsPage from "./pages/TicketsPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 
@@ -98,6 +99,7 @@ function App() {
                   <Route path="/admin/hello-keys-stats" element={<AdminHelloKeysStatsPage />} /> {/* New route */}
                   <Route path="/admin/stripe-transfers" element={<AdminStripeTransfersPage />} /> {/* New route */}
                   <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}
+                  <Route path="/admin/manual-stats" element={<AdminManualStatsPage />} /> {/* New route */}
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />

@@ -31,6 +31,7 @@ export interface SavedInvoice {
   pennylane_invoice_url?: string | null; // Nouveau champ pour l'URL de la facture Pennylane
   krossbooking_property_id?: number | null; // Assurez-vous que ce champ est présent
   transfer_statuses?: { [key: string]: boolean } | null; // Remplacement de transfer_completed
+  source_type?: 'generated' | 'manual'; // Ajout du type de source
 }
 
 export interface InvoiceTotals {
@@ -573,6 +574,61 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
     console.error("Error deleting invoice:", error);
     throw new Error(`Erreur lors de la suppression du relevé : ${error.message}`);
   }
+}
+
+export interface ManualStatementPayload {
+  userId: string;
+  period: string;
+  totalCA: number;
+  totalMontantVerse: number;
+  totalFacture: number;
+  totalNuits: number;
+  totalVoyageurs: number;
+  totalReservations: number;
+}
+
+export async function addManualStatement(payload: ManualStatementPayload): Promise<SavedInvoice> {
+  const { userId, period, totalCA, totalMontantVerse, totalFacture, totalNuits, totalVoyageurs, totalReservations } = payload;
+
+  const totals = {
+    totalCA,
+    totalMontantVerse,
+    totalFacture,
+    totalNuits,
+    totalVoyageurs,
+    totalReservations,
+    // Default other values to 0 to prevent errors on frontend
+    totalCommission: 0,
+    totalPrixSejour: 0,
+    totalFraisMenage: 0,
+    totalTaxeDeSejour: 0,
+    totalRevenuGenere: 0,
+    ownerCleaningFee: 0,
+    transferDetails: {},
+  };
+
+  const insertPayload = {
+    user_id: userId,
+    period,
+    invoice_data: [], // Empty for manual stats
+    totals,
+    source_type: 'manual' as const, // The new type
+    pennylane_status: 'not_applicable', // To avoid confusion
+  };
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .insert(insertPayload)
+    .select(`*, profiles!user_id (first_name, last_name)`)
+    .single();
+
+  if (error) {
+    console.error("Error saving manual statement:", error);
+    throw new Error(`Erreur lors de la sauvegarde des statistiques manuelles : ${error.message}`);
+  }
+
+  // No notification or webhook call for manual entries.
+  return data;
 }
 
 // Define the type for the user data expected by the create-user-proxy Edge Function

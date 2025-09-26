@@ -159,7 +159,7 @@ const DashboardPage = () => {
       totalResultat += netFromStatement;
       totalNights += s.totals.totalNuits || 0;
       totalGuests += s.totals.totalVoyageurs || 0;
-      totalReservations += s.invoice_data.length;
+      totalReservations += s.totals.totalReservations ?? s.invoice_data.length;
 
       const periodParts = s.period.toLowerCase().split(' ');
       const monthName = periodParts[0];

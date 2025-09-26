@@ -91,6 +91,7 @@ const adminNavigationCategories = [
     categoryName: 'Finances',
     items: [
       { name: 'Générer Relevé', href: '/admin/invoice-generation', icon: FilePlus2, description: 'Créer de nouveaux relevés mensuels.' },
+      { name: 'Ajouter Stats Manuelles', href: '/admin/manual-stats', icon: FilePlus, description: 'Ajouter manuellement les statistiques mensuelles passées.' },
       { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText, description: 'Consulter les relevés existants.' },
       { name: 'Créer Facture (Pennylane)', href: '/admin/create-pennylane-invoice', icon: FilePlus, description: 'Créer une facture client via Pennylane.' },
       { name: 'Synthèse des Virements', href: '/admin/transfer-summary', icon: Banknote, description: 'Voir le total des virements à effectuer par client.' },

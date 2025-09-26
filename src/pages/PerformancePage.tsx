@@ -106,7 +106,7 @@ const PerformanceDashboard = () => {
         const statementNights = s.totals.totalNuits || 0;
         totalNightsSold += statementNights;
 
-        const statementReservations = s.invoice_data.length;
+        const statementReservations = s.totals.totalReservations ?? s.invoice_data.length;
         totalReservations += statementReservations;
 
         const statementGuests = s.invoice_data.reduce((acc, item) => acc + (item.voyageurs || 0), 0);

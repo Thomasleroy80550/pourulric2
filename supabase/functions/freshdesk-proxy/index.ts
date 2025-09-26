@@ -15,6 +15,8 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
+    console.log('Freshdesk proxy: Auth header présent:', !!authHeader);
+    
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Authorization header manquant' }), {
         status: 401,
@@ -28,8 +30,19 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const { data: { user } } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+    console.log('Freshdesk proxy: Utilisateur authentifié:', !!user);
+    
+    if (authError) {
+      console.error('Freshdesk proxy: Erreur auth:', authError);
+      return new Response(JSON.stringify({ error: 'Erreur d\'authentification', details: authError.message }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     if (!user) {
+      console.log('Freshdesk proxy: Utilisateur non authentifié');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -39,7 +52,13 @@ serve(async (req) => {
     const FRESHDESK_DOMAIN = Deno.env.get('FRESHDESK_DOMAIN')
     const FRESHDESK_API_KEY = Deno.env.get('FRESHDESK_API_KEY')
 
+    console.log('Freshdesk proxy: Configuration Freshdesk:', {
+      domainConfigured: !!FRESHDESK_DOMAIN,
+      apiKeyConfigured: !!FRESHDESK_API_KEY
+    });
+
     if (!FRESHDESK_DOMAIN || !FRESHDESK_API_KEY) {
+      console.log('Freshdesk proxy: Configuration Freshdesk manquante');
       return new Response(JSON.stringify({ error: 'Les identifiants Freshdesk ne sont pas configurés.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -47,7 +66,10 @@ serve(async (req) => {
     }
     
     const userEmail = user.email;
+    console.log('Freshdesk proxy: Email utilisateur:', userEmail);
+    
     if (!userEmail) {
+        console.log('Freshdesk proxy: Email utilisateur manquant');
         return new Response(JSON.stringify({ error: 'Email utilisateur non trouvé.' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -56,10 +78,14 @@ serve(async (req) => {
 
     // Handle POST requests (Ticket Creation or Reply)
     if (req.method === 'POST') {
+      console.log('Freshdesk proxy: Traitement d\'une requête POST');
+      
       let body;
       try {
         body = await req.json();
+        console.log('Freshdesk proxy: Corps de la requête reçu:', JSON.stringify(body, null, 2));
       } catch (e) {
+        console.error('Freshdesk proxy: Erreur lors du parsing du JSON:', e);
         return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -75,6 +101,12 @@ serve(async (req) => {
         const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
         const requestBody = JSON.stringify({ body: replyBody });
 
+        console.log('Freshdesk proxy: Envoi de la réponse à Freshdesk:', {
+          url: freshdeskUrl,
+          ticketId: ticketId,
+          replyBodyLength: replyBody.length
+        });
+
         const freshdeskResponse = await fetch(freshdeskUrl, {
           method: 'POST',
           headers: {
@@ -85,6 +117,11 @@ serve(async (req) => {
         });
 
         const responseData = await freshdeskResponse.json();
+
+        console.log('Freshdesk proxy: Réponse de Freshdesk:', {
+          status: freshdeskResponse.status,
+          data: responseData
+        });
 
         if (!freshdeskResponse.ok) {
           console.error(`Erreur API Freshdesk (réponse): ${freshdeskResponse.status}`, responseData);

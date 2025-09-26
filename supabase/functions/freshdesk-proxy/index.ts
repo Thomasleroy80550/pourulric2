@@ -55,12 +55,12 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête.', details: e.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      // Reply to a ticket (as the user)
+      // Reply to a ticket (as the support agent)
       if (body.ticketId && body.body) {
-        console.log(`Freshdesk proxy: Traitement d'une réponse au ticket ${body.ticketId} de la part de l'utilisateur.`);
+        console.log(`Freshdesk proxy: Traitement d'une réponse au ticket ${body.ticketId} (en tant qu'agent).`);
         const { ticketId, body: replyBody } = body;
 
-        // 1. Get ticket details to find the requester_id
+        // 1. Get ticket details to check status
         const checkUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}`;
         const checkResponse = await fetch(checkUrl, {
           headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
@@ -72,22 +72,15 @@ serve(async (req) => {
         }
 
         const ticketData = await checkResponse.json();
-        const requesterId = ticketData.requester_id;
-
-        if (!requesterId) {
-          return new Response(JSON.stringify({ error: 'Impossible de trouver l\'ID du demandeur pour ce ticket.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-        }
-
         if (ticketData.status !== 2 && ticketData.status !== 3) { // Status 2: Open, Status 3: Pending
           return new Response(JSON.stringify({ error: 'Impossible de répondre à ce ticket car il est fermé ou résolu.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // 2. Use the /reply endpoint to add a reply from the user
+        // 2. Use the /reply endpoint to add a reply from the support agent
         const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
         const requestBody = JSON.stringify({
           body: replyBody,
-          user_id: requesterId, // Specify the user sending the message
-          private: false,       // Make it a public reply
+          private: false, // Make it a public reply
         });
 
         const freshdeskResponse = await fetch(freshdeskUrl, {

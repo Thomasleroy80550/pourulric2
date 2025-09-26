@@ -368,6 +368,25 @@ export async function getSavedInvoices(): Promise<SavedInvoice[]> {
 }
 
 /**
+ * Fetches all saved invoices/statements for a specific user.
+ * @param userId The ID of the user.
+ * @returns A promise that resolves to an array of SavedInvoice objects.
+ */
+export async function getInvoicesByUserId(userId: string): Promise<SavedInvoice[]> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error(`Error fetching invoices for user ${userId}:`, error);
+    throw new Error(`Erreur lors de la récupération des relevés pour l'utilisateur : ${error.message}`);
+  }
+  return data || [];
+}
+
+/**
  * Fetches a single saved invoice/statement by its ID from the database.
  * @param invoiceId The ID of the invoice to fetch.
  * @returns A promise that resolves to a SavedInvoice object or null if not found.

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format } from 'date-fns';
+import { format, eachMonthOfInterval, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,13 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllProfiles, addManualStatements } from '@/lib/admin-api';
+import { getAllProfiles, addManualStatements, getInvoicesByUserId } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Check, ChevronDown, Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const statementSchema = z.object({
   year: z.string().min(1, "Année requise."),
@@ -51,6 +52,9 @@ const AdminManualStatsPage: React.FC = () => {
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isComboboxOpen, setIsComboboxOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [missingMonths, setMissingMonths] = useState<string[]>([]);
+  const [isLoadingMissingMonths, setIsLoadingMissingMonths] = useState(false);
 
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
@@ -59,17 +63,12 @@ const AdminManualStatsPage: React.FC = () => {
       statements: [{
         year: currentYear.toString(),
         month: (new Date().getMonth()).toString(),
-        totalCA: 0,
-        totalMontantVerse: 0,
-        totalFacture: 0,
-        totalNuits: 0,
-        totalVoyageurs: 0,
-        totalReservations: 0,
+        totalCA: 0, totalMontantVerse: 0, totalFacture: 0, totalNuits: 0, totalVoyageurs: 0, totalReservations: 0,
       }],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, control } = useFieldArray({
     control: form.control,
     name: "statements",
   });
@@ -87,6 +86,39 @@ const AdminManualStatsPage: React.FC = () => {
     };
     fetchProfiles();
   }, []);
+
+  useEffect(() => {
+    const calculateMissingMonths = async () => {
+      if (!selectedUser || !selectedUser.contract_start_date) {
+        setMissingMonths([]);
+        return;
+      }
+
+      setIsLoadingMissingMonths(true);
+      try {
+        const existingStatements = await getInvoicesByUserId(selectedUser.id);
+        const existingPeriods = new Set(existingStatements.map(s => s.period.toLowerCase()));
+
+        const startDate = startOfMonth(parseISO(selectedUser.contract_start_date));
+        const endDate = endOfMonth(new Date());
+        
+        const allMonthsInterval = eachMonthOfInterval({ start: startDate, end: endDate });
+
+        const missing = allMonthsInterval
+          .map(monthDate => format(monthDate, 'MMMM yyyy', { locale: fr }))
+          .filter(periodStr => !existingPeriods.has(periodStr.toLowerCase()));
+
+        setMissingMonths(missing);
+      } catch (error: any) {
+        toast.error(`Erreur lors du calcul des mois manquants: ${error.message}`);
+        setMissingMonths([]);
+      } finally {
+        setIsLoadingMissingMonths(false);
+      }
+    };
+
+    calculateMissingMonths();
+  }, [selectedUser]);
 
   const onSubmit = async (data: FormSchema) => {
     setIsSubmitting(true);
@@ -106,6 +138,8 @@ const AdminManualStatsPage: React.FC = () => {
       await addManualStatements(userId, formattedStatements);
       toast.success("Statistiques manuelles ajoutées avec succès !", { id: toastId });
       form.reset();
+      setSelectedUser(null); // Reset user selection
+      form.setValue('userId', '');
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`, { id: toastId });
     } finally {
@@ -125,11 +159,11 @@ const AdminManualStatsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Label htmlFor="client-select">Client</Label>
                 <Controller
                   name="userId"
-                  control={form.control}
+                  control={control}
                   render={({ field }) => (
                     <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
                       <PopoverTrigger asChild>
@@ -158,6 +192,7 @@ const AdminManualStatsPage: React.FC = () => {
                                   value={`${profile.first_name} ${profile.last_name}`}
                                   onSelect={() => {
                                     field.onChange(profile.id);
+                                    setSelectedUser(profile);
                                     setIsComboboxOpen(false);
                                   }}
                                 >
@@ -173,6 +208,26 @@ const AdminManualStatsPage: React.FC = () => {
                   )}
                 />
                 {form.formState.errors.userId && <p className="text-sm text-red-500">{form.formState.errors.userId.message}</p>}
+
+                {selectedUser && (
+                  <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                    <h4 className="font-semibold mb-2 text-sm">Mois manquants depuis le début du contrat ({selectedUser.contract_start_date ? format(parseISO(selectedUser.contract_start_date), 'dd/MM/yyyy') : 'N/A'})</h4>
+                    {isLoadingMissingMonths ? (
+                      <div className="flex items-center">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <span>Calcul en cours...</span>
+                      </div>
+                    ) : !selectedUser.contract_start_date ? (
+                      <p className="text-sm text-orange-600">La date de début de contrat n'est pas définie pour ce client. Impossible de calculer les mois manquants.</p>
+                    ) : missingMonths.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {missingMonths.map(month => <Badge key={month} variant="secondary">{month}</Badge>)}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-green-600">Aucun mois manquant détecté pour ce client.</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -182,7 +237,7 @@ const AdminManualStatsPage: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                         <Controller
                           name={`statements.${index}.year`}
-                          control={form.control}
+                          control={control}
                           render={({ field }) => (
                             <div className="space-y-2">
                               <Label>Année</Label>
@@ -197,7 +252,7 @@ const AdminManualStatsPage: React.FC = () => {
                         />
                         <Controller
                           name={`statements.${index}.month`}
-                          control={form.control}
+                          control={control}
                           render={({ field }) => (
                             <div className="space-y-2">
                               <Label>Mois</Label>
@@ -238,7 +293,7 @@ const AdminManualStatsPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex justify-end mt-4">
-                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>

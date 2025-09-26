@@ -56,42 +56,46 @@ serve(async (req) => {
       console.log('Freshdesk proxy: Content-Type:', req.headers.get('content-type'));
       
       let body;
-      try {
-        // Essayons différentes méthodes pour lire le corps
-        const textBody = await req.text();
-        console.log('Freshdesk proxy: Corps brut reçu:', textBody);
-        console.log('Freshdesk proxy: Longueur du corps brut:', textBody.length);
-        
-        if (!textBody.trim()) {
-          // Si le corps est vide, essayons de lire les données d'une autre façon
-          console.log('Freshdesk proxy: Corps vide, tentative de récupération des données depuis l\'URL');
+      
+      // Essayons d'abord de récupérer les données depuis l'URL
+      const url = new URL(req.url);
+      const urlTicketId = url.searchParams.get('ticketId');
+      const urlBody = url.searchParams.get('body');
+      
+      console.log('Freshdesk proxy: Paramètres URL - ticketId:', urlTicketId, 'body:', urlBody);
+      
+      if (urlTicketId && urlBody) {
+        // Si on a les paramètres dans l'URL, on les utilise
+        body = { 
+          ticketId: parseInt(urlTicketId), 
+          body: decodeURIComponent(urlBody) 
+        };
+        console.log('Freshdesk proxy: Données récupérées depuis l\'URL:', body);
+      } else {
+        // Sinon, on essaie de lire le corps
+        try {
+          const textBody = await req.text();
+          console.log('Freshdesk proxy: Corps brut reçu:', textBody);
+          console.log('Freshdesk proxy: Longueur du corps brut:', textBody.length);
           
-          // Essayons de récupérer les données depuis l'URL ou d'autres headers
-          const url = new URL(req.url);
-          const ticketId = url.searchParams.get('ticketId');
-          const bodyText = url.searchParams.get('body');
-          
-          if (ticketId && bodyText) {
-            body = { ticketId: parseInt(ticketId), body: bodyText };
-            console.log('Freshdesk proxy: Données récupérées depuis l\'URL:', body);
+          if (textBody.trim() && textBody !== '{}') {
+            // Si le corps contient des données valides
+            body = JSON.parse(textBody);
+            console.log('Freshdesk proxy: Corps de la requête reçu:', JSON.stringify(body, null, 2));
           } else {
-            console.error('Freshdesk proxy: Aucune donnée trouvée !');
-            return new Response(JSON.stringify({ error: 'Corps de requête vide et aucune donnée dans l\'URL' }), { 
+            console.error('Freshdesk proxy: Aucune donnée trouvée ni dans l\'URL ni dans le corps !');
+            return new Response(JSON.stringify({ error: 'Aucune donnée reçue (ni dans l\'URL ni dans le corps)' }), { 
               status: 400, 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
             });
           }
-        } else {
-          // Parser le JSON normalement
-          body = JSON.parse(textBody);
-          console.log('Freshdesk proxy: Corps de la requête reçu:', JSON.stringify(body, null, 2));
+        } catch (e) {
+          console.error('Freshdesk proxy: Erreur lors du parsing:', e);
+          return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête', details: e.message }), { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          });
         }
-      } catch (e) {
-        console.error('Freshdesk proxy: Erreur lors du parsing:', e);
-        return new Response(JSON.stringify({ error: 'JSON invalide', details: e.message }), { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
       }
 
       // Reply to a ticket

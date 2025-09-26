@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { getTicketDetails, FreshdeskTicketDetails } from '@/lib/tickets-api';
+import { getTicketDetails, FreshdeskTicketDetails, replyToTicket } from '@/lib/tickets-api';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -576,8 +576,7 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
   }
 }
 
-export interface ManualStatementPayload {
-  userId: string;
+export interface ManualStatementEntry {
   period: string;
   totalCA: number;
   totalMontantVerse: number;
@@ -587,48 +586,53 @@ export interface ManualStatementPayload {
   totalReservations: number;
 }
 
-export async function addManualStatement(payload: ManualStatementPayload): Promise<SavedInvoice> {
-  const { userId, period, totalCA, totalMontantVerse, totalFacture, totalNuits, totalVoyageurs, totalReservations } = payload;
+export async function addManualStatements(userId: string, statements: ManualStatementEntry[]): Promise<SavedInvoice[]> {
+  const insertPayloads = statements.map(statement => {
+    const { period, totalCA, totalMontantVerse, totalFacture, totalNuits, totalVoyageurs, totalReservations } = statement;
 
-  const totals = {
-    totalCA,
-    totalMontantVerse,
-    totalFacture,
-    totalNuits,
-    totalVoyageurs,
-    totalReservations,
-    // Default other values to 0 to prevent errors on frontend
-    totalCommission: 0,
-    totalPrixSejour: 0,
-    totalFraisMenage: 0,
-    totalTaxeDeSejour: 0,
-    totalRevenuGenere: 0,
-    ownerCleaningFee: 0,
-    transferDetails: {},
-  };
+    const totals = {
+      totalCA,
+      totalMontantVerse,
+      totalFacture,
+      totalNuits,
+      totalVoyageurs,
+      totalReservations,
+      // Default other values to 0 to prevent errors on frontend
+      totalCommission: 0,
+      totalPrixSejour: 0,
+      totalFraisMenage: 0,
+      totalTaxeDeSejour: 0,
+      totalRevenuGenere: 0,
+      ownerCleaningFee: 0,
+      transferDetails: {},
+    };
 
-  const insertPayload = {
-    user_id: userId,
-    period,
-    invoice_data: [], // Empty for manual stats
-    totals,
-    source_type: 'manual' as const, // The new type
-    pennylane_status: 'not_applicable', // To avoid confusion
-  };
+    return {
+      user_id: userId,
+      period,
+      invoice_data: [], // Empty for manual stats
+      totals,
+      source_type: 'manual' as const,
+      pennylane_status: 'not_applicable',
+    };
+  });
+
+  if (insertPayloads.length === 0) {
+    return [];
+  }
 
   const { data, error } = await supabase
     .from('invoices')
-    .insert(insertPayload)
-    .select(`*, profiles!user_id (first_name, last_name)`)
-    .single();
+    .insert(insertPayloads)
+    .select(`*, profiles!user_id (first_name, last_name)`);
 
   if (error) {
-    console.error("Error saving manual statement:", error);
+    console.error("Error saving manual statements:", error);
     throw new Error(`Erreur lors de la sauvegarde des statistiques manuelles : ${error.message}`);
   }
 
   // No notification or webhook call for manual entries.
-  return data;
+  return data || [];
 }
 
 // Define the type for the user data expected by the create-user-proxy Edge Function

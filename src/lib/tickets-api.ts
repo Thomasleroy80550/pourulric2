@@ -55,20 +55,19 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
     throw new Error('Utilisateur non authentifié');
   }
 
-  console.log('Récupération des tickets - Session:', !!session);
-  
-  // The correct way to call supabase.functions.invoke - no headers needed
-  const response = await supabase.functions.invoke('freshdesk-proxy');
+  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+  });
 
-  console.log('Réponse de getTickets:', response);
-
-  if (response.error) {
-    console.error('Erreur lors de la récupération des tickets:', response.error);
-    throw new Error(response.error.message || 'Erreur lors de la récupération des tickets');
+  if (error) {
+    console.error('Erreur lors de la récupération des tickets:', error);
+    throw new Error(error.message || 'Erreur lors de la récupération des tickets');
   }
 
-  console.log('Données reçues:', response.data);
-  return response.data || [];
+  return data || [];
 };
 
 export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicketDetails> => {
@@ -77,68 +76,67 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
     throw new Error('Utilisateur non authentifié');
   }
 
-  console.log('Récupération des détails du ticket:', ticketId);
-  
-  // Pass ticketId as a parameter in the body, not as header
-  const response = await supabase.functions.invoke('freshdesk-proxy', {
-    body: { ticketId }
+  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'X-Ticket-Id': ticketId.toString(),
+    },
   });
 
-  if (response.error) {
-    console.error('Erreur lors de la récupération du ticket:', response.error);
-    throw new Error(response.error.message || 'Erreur lors de la récupération du ticket');
+  if (error) {
+    console.error('Erreur lors de la récupération du ticket:', error);
+    throw new Error(error.message || 'Erreur lors de la récupération du ticket');
   }
-
-  console.log('Réponse API reçue:', response.data);
   
-  if (!response.data) {
+  if (!data) {
     throw new Error('Aucune donnée reçue du serveur');
   }
 
-  return response.data as FreshdeskTicketDetails;
+  return data as FreshdeskTicketDetails;
 };
 
-export const createTicket = async ({ subject, description, priority }: CreateTicketPayload) => {
+export const createTicket = async (payload: CreateTicketPayload) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     throw new Error('Utilisateur non authentifié');
   }
 
-  const response = await supabase.functions.invoke('freshdesk-proxy', {
-    body: {
-      subject,
-      description,
-      priority,
+  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
     },
+    body: payload,
   });
 
-  if (response.error) {
-    throw new Error(response.error.message || 'Erreur lors de la création du ticket');
+  if (error) {
+    throw new Error(error.message || 'Erreur lors de la création du ticket');
   }
 
-  return response.data;
+  return data;
 };
 
-export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) => {
+export const replyToTicket = async (payload: ReplyToTicketPayload) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     throw new Error('Utilisateur non authentifié');
   }
 
-  console.log('Envoi de la réponse au ticket:', { ticketId, body });
-
-  const response = await supabase.functions.invoke('freshdesk-proxy', {
-    body: {
-      ticketId: ticketId,
-      body: body,
+  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
     },
+    body: payload,
   });
 
-  if (response.error) {
-    console.error('Erreur lors de la réponse au ticket:', response.error);
-    throw new Error(response.error.message || 'Erreur lors de l\'envoi de la réponse');
+  if (error) {
+    console.error('Erreur lors de la réponse au ticket:', error);
+    throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
   }
 
-  console.log('Réponse du serveur:', response.data);
-  return response.data;
+  return data;
 };

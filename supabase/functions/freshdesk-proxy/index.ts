@@ -146,7 +146,7 @@ serve(async (req) => {
       if (ticketId) {
         // Fetch a single ticket and its conversations
         console.log(`Freshdesk proxy: Récupération du ticket ${ticketId}`);
-        const ticketUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=description`;
+        const ticketUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=conversations`;
         const conversationsUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/conversations`;
 
         const authHeaders = {
@@ -219,7 +219,7 @@ serve(async (req) => {
       // List all tickets for the user with proper filters and includes
       console.log('Freshdesk proxy: Récupération de la liste des tickets');
       const encodedEmail = encodeURIComponent(userEmail);
-      const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&include=description&order_by=updated_at&order_type=desc`;
+      const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&order_by=updated_at&order_type=desc`;
 
       console.log('Freshdesk proxy: URL liste tickets:', freshdeskUrl);
 

@@ -124,39 +124,29 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
     throw new Error('Utilisateur non authentifié');
   }
 
-  console.log('=== API CLIENT (URL approach) ===');
-  console.log('Ticket ID:', ticketId);
-  console.log('Body:', body);
+  const payload = { ticketId, body };
+  console.log('=== API CLIENT (invoke approach) ===');
+  console.log('Sending payload:', payload);
 
   try {
-    // Essayons une approche différente : passer les données dans l'URL
-    const url = `https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/freshdesk-proxy?ticketId=${ticketId}&body=${encodeURIComponent(body)}`;
-    
-    console.log('API URL:', url);
-
-    const response = await fetch(url, {
+    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      // Corps vide mais données dans l'URL
-      body: JSON.stringify({}),
+      body: payload, // On passe l'objet directement, le SDK s'occupe du reste
     });
 
-    console.log('Response status:', response.status);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('API Error response:', errorData);
-      throw new Error(errorData.error || 'Erreur lors de l\'envoi de la réponse');
+    if (error) {
+      console.error('Erreur lors de l\'envoi de la réponse (invoke):', error);
+      throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
     }
 
-    const data = await response.json();
-    console.log('API Success:', data);
+    console.log('Réponse envoyée avec succès:', data);
     return data;
-  } catch (error) {
-    console.error('Fetch error:', error);
-    throw error;
+  } catch (e) {
+    console.error('Erreur inattendue dans replyToTicket:', e);
+    throw e;
   }
 };

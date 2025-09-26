@@ -127,14 +127,15 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
   const payload = { ticketId, body };
   console.log('=== API CLIENT ===');
   console.log('Sending payload:', payload);
+  console.log('Using supabase.functions.invoke with body parameter');
 
+  // Use the proper supabase.functions.invoke method with body parameter
   const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
     },
-    body: payload,
+    body: payload, // This ensures the data is sent in the request body
   });
 
   if (error) {

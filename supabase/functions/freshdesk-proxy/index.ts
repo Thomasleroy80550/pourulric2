@@ -47,13 +47,20 @@ serve(async (req) => {
     if (req.method === 'POST') {
       console.log('Freshdesk proxy: Traitement d\'une requête POST');
       
+      // Log all headers to debug
+      console.log('Freshdesk proxy: Headers:', Object.fromEntries(req.headers.entries()));
+      
       let body;
       try {
+        // Read the body properly
         const rawBody = await req.text();
-        console.log(`Freshdesk proxy: Corps brut reçu (longueur: ${rawBody.length}):`, rawBody);
-        if (!rawBody) {
+        console.log(`Freshdesk proxy: Corps brut reçu (longueur: ${rawBody.length}): "${rawBody}"`);
+        
+        if (!rawBody || rawBody.trim().length === 0) {
+          console.error('Freshdesk proxy: Corps de la requête vide ou invalide');
           return new Response(JSON.stringify({ error: 'Corps de la requête vide.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
+        
         body = JSON.parse(rawBody);
         console.log('Freshdesk proxy: Corps JSON parsé:', body);
       } catch (e) {

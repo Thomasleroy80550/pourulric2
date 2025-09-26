@@ -131,6 +131,10 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
     throw new Error('Utilisateur non authentifié');
   }
 
+  console.log('Envoi de la réponse au ticket:', { ticketId, body });
+
+  // The issue is that supabase.functions.invoke expects the body to be passed directly
+  // and it will handle JSON serialization. We don't need to stringify it.
   const response = await supabase.functions.invoke('freshdesk-proxy', {
     method: 'POST',
     headers: {
@@ -138,14 +142,16 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
       'Content-Type': 'application/json',
     },
     body: {
-      ticketId,
-      body,
+      ticketId: ticketId,
+      body: body,
     },
   });
 
   if (response.error) {
+    console.error('Erreur lors de la réponse au ticket:', response.error);
     throw new Error(response.error.message || 'Erreur lors de l\'envoi de la réponse');
   }
 
+  console.log('Réponse du serveur:', response.data);
   return response.data;
 };

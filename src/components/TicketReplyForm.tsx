@@ -33,18 +33,24 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId }) =>
   });
 
   const replyMutation = useMutation({
-    mutationFn: (reply: ReplyToTicketPayload) => replyToTicket(reply),
-    onSuccess: () => {
+    mutationFn: async (reply: ReplyToTicketPayload) => {
+      console.log('Starting reply mutation with:', reply);
+      return replyToTicket(reply);
+    },
+    onSuccess: (data) => {
+      console.log('Reply sent successfully:', data);
       showSuccess('Votre réponse a été envoyée.');
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
       form.reset();
     },
     onError: (error) => {
+      console.error('Error sending reply:', error);
       showError(`Erreur lors de l'envoi de la réponse: ${error.message}`);
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    console.log('Form submitted with values:', values);
     replyMutation.mutate({ ticketId, body: values.body });
   };
 

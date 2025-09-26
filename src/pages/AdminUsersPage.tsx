@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -297,6 +297,9 @@ const AdminUsersPage: React.FC = () => {
                 {user.cguv_accepted_at ? format(new Date(user.cguv_accepted_at), 'dd/MM/yy HH:mm', { locale: fr }) : 'Non accepté'}
               </TableCell>
               <TableCell className="text-right">
+                <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/statements?userId=${user.id}`)} title="Voir les relevés">
+                  <FileText className="h-4 w-4" />
+                </Button>
                 <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier le client">
                   <Edit className="h-4 w-4" />
                 </Button>

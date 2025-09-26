@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,6 +41,7 @@ const AdminStatementsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const navigate = useNavigate();
+  const location = useLocation();
 
   const loadStatements = async () => {
     setLoading(true);
@@ -58,6 +59,17 @@ const AdminStatementsPage: React.FC = () => {
   useEffect(() => {
     loadStatements();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userId = params.get('userId');
+    if (userId) {
+      const user = statements.find(s => s.user_id === userId);
+      if (user && user.profiles) {
+        setSearchTerm(`${user.profiles.first_name} ${user.profiles.last_name}`);
+      }
+    }
+  }, [location.search, statements]);
 
   const handleViewDetails = (statement: SavedInvoice) => {
     setSelectedStatement(statement);

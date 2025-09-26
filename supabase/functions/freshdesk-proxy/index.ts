@@ -15,8 +15,6 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
-    console.log('Freshdesk proxy: Auth header présent:', !!authHeader);
-    
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Authorization header manquant' }), {
         status: 401,
@@ -30,19 +28,8 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-    console.log('Freshdesk proxy: Utilisateur authentifié:', !!user);
-    
-    if (authError) {
-      console.error('Freshdesk proxy: Erreur auth:', authError);
-      return new Response(JSON.stringify({ error: 'Erreur d\'authentification', details: authError.message }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
+    const { data: { user } } = await supabaseClient.auth.getUser()
     if (!user) {
-      console.log('Freshdesk proxy: Utilisateur non authentifié');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -52,13 +39,7 @@ serve(async (req) => {
     const FRESHDESK_DOMAIN = Deno.env.get('FRESHDESK_DOMAIN')
     const FRESHDESK_API_KEY = Deno.env.get('FRESHDESK_API_KEY')
 
-    console.log('Freshdesk proxy: Configuration Freshdesk:', {
-      domainConfigured: !!FRESHDESK_DOMAIN,
-      apiKeyConfigured: !!FRESHDESK_API_KEY
-    });
-
     if (!FRESHDESK_DOMAIN || !FRESHDESK_API_KEY) {
-      console.log('Freshdesk proxy: Configuration Freshdesk manquante');
       return new Response(JSON.stringify({ error: 'Les identifiants Freshdesk ne sont pas configurés.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -66,31 +47,61 @@ serve(async (req) => {
     }
     
     const userEmail = user.email;
-    console.log('Freshdesk proxy: Email utilisateur:', userEmail);
-    
     if (!userEmail) {
-        console.log('Freshdesk proxy: Email utilisateur manquant');
         return new Response(JSON.stringify({ error: 'Email utilisateur non trouvé.' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
     }
 
-    // Handle Ticket Creation (POST)
+    // Handle POST requests (Ticket Creation or Reply)
     if (req.method === 'POST') {
-      console.log('Freshdesk proxy: Traitement d\'une requête POST (création ticket)');
-      
       let body;
       try {
         body = await req.json();
       } catch (e) {
-        console.error('Freshdesk proxy: Erreur lors du parsing du JSON:', e);
         return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
+      // Check if it's a reply or a new ticket
+      if (body.ticketId && body.body) {
+        // This is a reply
+        console.log(`Freshdesk proxy: Traitement d'une requête POST (réponse au ticket ${body.ticketId})`);
+        const { ticketId, body: replyBody } = body;
+
+        const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
+        const requestBody = JSON.stringify({ body: replyBody });
+
+        const freshdeskResponse = await fetch(freshdeskUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
+            'Content-Type': 'application/json',
+          },
+          body: requestBody,
+        });
+
+        const responseData = await freshdeskResponse.json();
+
+        if (!freshdeskResponse.ok) {
+          console.error(`Erreur API Freshdesk (réponse): ${freshdeskResponse.status}`, responseData);
+          return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: responseData }), {
+            status: freshdeskResponse.status,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        return new Response(JSON.stringify(responseData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 201,
+        });
+      }
+
+      // This is a new ticket creation
+      console.log('Freshdesk proxy: Traitement d\'une requête POST (création ticket)');
       const { subject, description, priority } = body;
 
       if (!subject || !description) {
@@ -137,91 +148,39 @@ serve(async (req) => {
 
     // Handle Get Tickets (GET)
     if (req.method === 'GET') {
-      console.log('Freshdesk proxy: Traitement d\'une requête GET (liste tickets)');
-      
-      // Récupération du ticketId depuis les query params
       const url = new URL(req.url);
       const ticketId = url.searchParams.get('ticketId') || req.headers.get('X-Ticket-Id');
 
       if (ticketId) {
         // Fetch a single ticket and its conversations
-        console.log(`Freshdesk proxy: Récupération du ticket ${ticketId}`);
         const ticketUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=conversations`;
-        const conversationsUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/conversations`;
-
+        
         const authHeaders = {
           'Authorization': `Basic ${btoa(FRESHDESK_API_KEY + ':X')}`,
           'Content-Type': 'application/json',
         };
 
-        console.log('Freshdesk proxy: URLs appelées:', { ticketUrl, conversationsUrl });
-
-        const [ticketResponse, conversationsResponse] = await Promise.all([
-          fetch(ticketUrl, { headers: authHeaders }),
-          fetch(conversationsUrl, { headers: authHeaders }),
-        ]);
-
-        console.log('Freshdesk proxy: Réponses reçues:', {
-          ticketStatus: ticketResponse.status,
-          conversationsStatus: conversationsResponse.status
-        });
+        const ticketResponse = await fetch(ticketUrl, { headers: authHeaders });
 
         if (!ticketResponse.ok) {
           const errorBody = await ticketResponse.text();
-          console.error(`Freshdesk proxy: Error fetching ticket: ${ticketResponse.status}`, errorBody);
           return new Response(JSON.stringify({ error: 'Impossible de récupérer les détails du ticket.', details: errorBody }), {
             status: ticketResponse.status,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-
-        if (!conversationsResponse.ok) {
-          const errorBody = await conversationsResponse.text();
-          console.error(`Freshdesk proxy: Error fetching conversations: ${conversationsResponse.status}`, errorBody);
-          // Ne pas échouer si les conversations ne peuvent pas être récupérées
-          console.log('Freshdesk proxy: Les conversations ne peuvent pas être récupérées, retour du ticket seul');
-        }
-
-        const ticketData = await ticketResponse.json();
-        let conversationsData = [];
         
-        if (conversationsResponse.ok) {
-          conversationsData = await conversationsResponse.json();
-        } else {
-          console.log('Freshdesk proxy: Utilisation d\'un tableau vide pour les conversations');
-        }
+        const ticketData = await ticketResponse.json();
 
-        // Log the ticket data to debug description field
-        console.log('Freshdesk proxy: Ticket data received:', {
-          id: ticketData.id,
-          subject: ticketData.subject,
-          description: ticketData.description,
-          description_text: ticketData.description_text,
-          has_description: !!ticketData.description,
-          has_description_text: !!ticketData.description_text,
-          description_length: ticketData.description?.length,
-          description_text_length: ticketData.description_text?.length
-        });
-
-        const responseData = {
-          ...ticketData,
-          conversations: conversationsData,
-        };
-
-        console.log('Freshdesk proxy: Ticket récupéré avec', conversationsData.length, 'conversations');
-
-        return new Response(JSON.stringify(responseData), {
+        return new Response(JSON.stringify(ticketData), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         });
       }
 
-      // List all tickets for the user with proper filters and includes
-      console.log('Freshdesk proxy: Récupération de la liste des tickets');
+      // List all tickets for the user
       const encodedEmail = encodeURIComponent(userEmail);
       const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&order_by=updated_at&order_type=desc`;
-
-      console.log('Freshdesk proxy: URL liste tickets:', freshdeskUrl);
 
       const freshdeskResponse = await fetch(freshdeskUrl, {
         headers: {
@@ -230,11 +189,8 @@ serve(async (req) => {
         },
       });
 
-      console.log('Freshdesk proxy: Status réponse liste tickets:', freshdeskResponse.status);
-
       if (!freshdeskResponse.ok) {
         const errorBody = await freshdeskResponse.text();
-        console.error(`Freshdesk proxy: Erreur API Freshdesk: ${freshdeskResponse.status} ${errorBody}`);
         return new Response(JSON.stringify({ error: 'Impossible de récupérer les tickets depuis Freshdesk.', details: errorBody }), {
           status: freshdeskResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -242,7 +198,6 @@ serve(async (req) => {
       }
 
       const tickets = await freshdeskResponse.json();
-      console.log('Freshdesk proxy: Tickets récupérés:', tickets.length);
       return new Response(JSON.stringify(tickets), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,

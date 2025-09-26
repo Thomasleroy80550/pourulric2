@@ -38,6 +38,17 @@ export interface FreshdeskTicketDetails extends FreshdeskTicket {
   conversations?: FreshdeskConversation[];
 }
 
+export interface CreateTicketPayload {
+  subject: string;
+  description: string;
+  priority: number;
+}
+
+export interface ReplyToTicketPayload {
+  ticketId: number;
+  body: string;
+}
+
 export const getTickets = async (): Promise<FreshdeskTicket[]> => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
@@ -81,7 +92,6 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
 
   console.log('Réponse API reçue:', response.data);
   
-  // Vérifier que nous avons bien les données attendues
   if (!response.data) {
     throw new Error('Aucune donnée reçue du serveur');
   }
@@ -89,7 +99,7 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
   return response.data as FreshdeskTicketDetails;
 };
 
-export const createTicket = async (subject: string, description: string, priority: number = 1) => {
+export const createTicket = async ({ subject, description, priority }: CreateTicketPayload) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     throw new Error('Utilisateur non authentifié');
@@ -110,6 +120,31 @@ export const createTicket = async (subject: string, description: string, priorit
 
   if (response.error) {
     throw new Error(response.error.message || 'Erreur lors de la création du ticket');
+  }
+
+  return response.data;
+};
+
+export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('Utilisateur non authentifié');
+  }
+
+  const response = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: {
+      ticketId,
+      body,
+    },
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message || 'Erreur lors de l\'envoi de la réponse');
   }
 
   return response.data;

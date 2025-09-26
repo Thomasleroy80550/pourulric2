@@ -3,15 +3,15 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getTicketDetails, FreshdeskTicketDetails } from '@/lib/tickets-api';
 import MainLayout from '@/components/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { AlertTriangle, User, MessageSquare } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { safeFormat } from '@/lib/date-utils';
+import { TicketReplyForm } from '@/components/TicketReplyForm';
+import { CardTitle } from '@/components/ui/card';
 
 const getStatusVariant = (status: number): 'success' | 'warning' | 'default' | 'secondary' => {
   switch (status) {
@@ -78,24 +78,9 @@ const TicketDetailPage = () => {
       return DOMPurify.sanitize(html);
     };
 
-    // S'assurer que conversations est un tableau
     const conversations = ticket.conversations || [];
-
-    // Get the description - try multiple possible fields
-    let ticketDescription = 'Aucune description';
     
-    // Try description_text first (plain text version)
-    if (ticket.description_text && ticket.description_text.trim() && ticket.description_text !== 'null') {
-      ticketDescription = ticket.description_text;
-    } 
-    // Try description field (HTML version)
-    else if (ticket.description && ticket.description.trim() && ticket.description !== 'null') {
-      ticketDescription = ticket.description;
-    }
-    // If both are empty or null, show a message
-    else {
-      ticketDescription = ticket.subject || 'Aucune description disponible';
-    }
+    let ticketDescription = ticket.description_text || ticket.description || 'Aucune description disponible';
 
     return (
       <div>
@@ -128,7 +113,7 @@ const TicketDetailPage = () => {
             </div>
           </div>
 
-          {conversations.length > 0 && conversations.map((convo) => (
+          {conversations.map((convo) => (
             <div key={convo.id} className={`flex gap-4 ${convo.from_agent ? '' : 'flex-row-reverse'}`}>
               <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                 {convo.from_agent ? (
@@ -152,6 +137,13 @@ const TicketDetailPage = () => {
             </div>
           ))}
         </div>
+
+        {(ticket.status === 2 || ticket.status === 3) && (
+          <div className="mt-6 border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Répondre</h3>
+            <TicketReplyForm ticketId={ticket.id} />
+          </div>
+        )}
       </div>
     );
   };

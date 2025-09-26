@@ -149,7 +149,7 @@ const TicketDetailPage = () => {
         {(ticket.status === 2 || ticket.status === 3) && (
           <div className="mt-6 border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">Répondre</h3>
-            <TicketReplyForm ticketId={ticket.id} />
+            <TicketReplyForm ticketId={ticket.id} ticketSubject={ticket.subject} />
           </div>
         )}
       </div>

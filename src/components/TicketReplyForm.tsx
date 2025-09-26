@@ -21,9 +21,10 @@ const formSchema = z.object({
 
 interface TicketReplyFormProps {
   ticketId: number;
+  ticketSubject: string;
 }
 
-export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId }) => {
+export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId, ticketSubject }) => {
   const queryClient = useQueryClient();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,7 +53,7 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId }) =>
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log('=== FORM SUBMISSION ===');
     console.log('Form values:', values);
-    const payload = { ticketId, body: values.body };
+    const payload = { ticketId, subject: ticketSubject, body: values.body };
     console.log('Payload to send:', payload);
     
     replyMutation.mutate(payload);

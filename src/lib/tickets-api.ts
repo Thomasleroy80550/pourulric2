@@ -56,7 +56,6 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
   }
 
   const response = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'GET',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
     },
@@ -78,7 +77,6 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
   console.log('Récupération des détails du ticket:', ticketId);
   
   const response = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'GET',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
       'X-Ticket-Id': ticketId.toString(),
@@ -106,15 +104,13 @@ export const createTicket = async ({ subject, description, priority }: CreateTic
   }
 
   const response = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
     body: {
       subject,
       description,
       priority,
+    },
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
     },
   });
 
@@ -133,17 +129,14 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
 
   console.log('Envoi de la réponse au ticket:', { ticketId, body });
 
-  // The issue is that supabase.functions.invoke expects the body to be passed directly
-  // and it will handle JSON serialization. We don't need to stringify it.
+  // Le format correct pour supabase.functions.invoke - pas de method ou Content-Type
   const response = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
     body: {
       ticketId: ticketId,
       body: body,
+    },
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
     },
   });
 

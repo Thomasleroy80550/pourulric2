@@ -54,28 +54,41 @@ serve(async (req) => {
     if (req.method === 'POST') {
       console.log('Freshdesk proxy: Headers reçus:', Object.fromEntries(req.headers.entries()));
       console.log('Freshdesk proxy: Content-Type:', req.headers.get('content-type'));
-      console.log('Freshdesk proxy: Content-Length:', req.headers.get('content-length'));
       
       let body;
       try {
-        // Lire le corps brut avant le parsing
+        // Essayons différentes méthodes pour lire le corps
         const textBody = await req.text();
         console.log('Freshdesk proxy: Corps brut reçu:', textBody);
         console.log('Freshdesk proxy: Longueur du corps brut:', textBody.length);
         
         if (!textBody.trim()) {
-          console.error('Freshdesk proxy: Corps de requête vide !');
-          return new Response(JSON.stringify({ error: 'Corps de requête vide' }), { 
-            status: 400, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          });
+          // Si le corps est vide, essayons de lire les données d'une autre façon
+          console.log('Freshdesk proxy: Corps vide, tentative de récupération des données depuis l\'URL');
+          
+          // Essayons de récupérer les données depuis l'URL ou d'autres headers
+          const url = new URL(req.url);
+          const ticketId = url.searchParams.get('ticketId');
+          const bodyText = url.searchParams.get('body');
+          
+          if (ticketId && bodyText) {
+            body = { ticketId: parseInt(ticketId), body: bodyText };
+            console.log('Freshdesk proxy: Données récupérées depuis l\'URL:', body);
+          } else {
+            console.error('Freshdesk proxy: Aucune donnée trouvée !');
+            return new Response(JSON.stringify({ error: 'Corps de requête vide et aucune donnée dans l\'URL' }), { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
+          }
+        } else {
+          // Parser le JSON normalement
+          body = JSON.parse(textBody);
+          console.log('Freshdesk proxy: Corps de la requête reçu:', JSON.stringify(body, null, 2));
         }
-        
-        body = JSON.parse(textBody);
-        console.log('Freshdesk proxy: Corps de la requête reçu:', JSON.stringify(body, null, 2));
       } catch (e) {
-        console.error('Freshdesk proxy: Erreur lors du parsing du JSON:', e);
-        return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête', details: e.message }), { 
+        console.error('Freshdesk proxy: Erreur lors du parsing:', e);
+        return new Response(JSON.stringify({ error: 'JSON invalide', details: e.message }), { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });

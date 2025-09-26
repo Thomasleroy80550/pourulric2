@@ -124,42 +124,39 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
     throw new Error('Utilisateur non authentifié');
   }
 
-  console.log('=== API CLIENT ===');
+  console.log('=== API CLIENT (URL approach) ===');
   console.log('Ticket ID:', ticketId);
   console.log('Body:', body);
-  console.log('Body type:', typeof body);
-  console.log('Body length:', body?.length);
-
-  const requestBody = {
-    ticketId: ticketId,
-    body: body,
-  };
-  
-  console.log('Request body object:', requestBody);
-  console.log('JSON.stringify(requestBody):', JSON.stringify(requestBody));
 
   try {
-    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+    // Essayons une approche différente : passer les données dans l'URL
+    const url = `https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/freshdesk-proxy?ticketId=${ticketId}&body=${encodeURIComponent(body)}`;
+    
+    console.log('API URL:', url);
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: requestBody,
+      // Corps vide mais données dans l'URL
+      body: JSON.stringify({}),
     });
 
-    console.log('API Response data:', data);
-    console.log('API Response error:', error);
+    console.log('Response status:', response.status);
 
-    if (error) {
-      console.error('API Error:', error);
-      throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('API Error response:', errorData);
+      throw new Error(errorData.error || 'Erreur lors de l\'envoi de la réponse');
     }
 
+    const data = await response.json();
     console.log('API Success:', data);
     return data;
-  } catch (invokeError) {
-    console.error('Invoke error:', invokeError);
-    throw invokeError;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
   }
 };

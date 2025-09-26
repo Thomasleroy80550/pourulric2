@@ -89,7 +89,7 @@ const AdminManualStatsPage: React.FC = () => {
 
   useEffect(() => {
     const calculateMissingMonths = async () => {
-      if (!selectedUser || !selectedUser.contract_start_date) {
+      if (!selectedUser) {
         setMissingMonths([]);
         return;
       }
@@ -97,11 +97,22 @@ const AdminManualStatsPage: React.FC = () => {
       setIsLoadingMissingMonths(true);
       try {
         const existingStatements = await getInvoicesByUserId(selectedUser.id);
-        const existingPeriods = new Set(existingStatements.map(s => s.period.toLowerCase()));
-
-        const startDate = startOfMonth(parseISO(selectedUser.contract_start_date));
-        const endDate = endOfMonth(new Date());
         
+        if (existingStatements.length === 0) {
+          setMissingMonths(["Aucun relevé trouvé. Commencez par le premier mois de contrat."]);
+          return;
+        }
+
+        // Trier les relevés par date de création pour trouver le plus récent
+        const sortedStatements = existingStatements.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        
+        const lastStatementDate = new Date(sortedStatements[0].created_at);
+        const startDate = startOfMonth(lastStatementDate);
+        const endDate = endOfMonth(new Date(2025, 0, 31)); // Janvier 2025
+        
+        const existingPeriods = new Set(existingStatements.map(s => s.period.toLowerCase()));
         const allMonthsInterval = eachMonthOfInterval({ start: startDate, end: endDate });
 
         const missing = allMonthsInterval
@@ -211,20 +222,18 @@ const AdminManualStatsPage: React.FC = () => {
 
                 {selectedUser && (
                   <div className="p-4 border rounded-lg bg-slate-50 dark:bg-slate-800/50">
-                    <h4 className="font-semibold mb-2 text-sm">Mois manquants depuis le début du contrat ({selectedUser.contract_start_date ? format(parseISO(selectedUser.contract_start_date), 'dd/MM/yyyy') : 'N/A'})</h4>
+                    <h4 className="font-semibold mb-2 text-sm">Mois manquants depuis le dernier relevé jusqu'à Janvier 2025</h4>
                     {isLoadingMissingMonths ? (
                       <div className="flex items-center">
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         <span>Calcul en cours...</span>
                       </div>
-                    ) : !selectedUser.contract_start_date ? (
-                      <p className="text-sm text-orange-600">La date de début de contrat n'est pas définie pour ce client. Impossible de calculer les mois manquants.</p>
                     ) : missingMonths.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {missingMonths.map(month => <Badge key={month} variant="secondary">{month}</Badge>)}
                       </div>
                     ) : (
-                      <p className="text-sm text-green-600">Aucun mois manquant détecté pour ce client.</p>
+                      <p className="text-sm text-green-600">Aucun mois manquant détecté entre le dernier relevé et Janvier 2025.</p>
                     )}
                   </div>
                 )}

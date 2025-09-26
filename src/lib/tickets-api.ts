@@ -125,28 +125,23 @@ export const replyToTicket = async ({ ticketId, body }: ReplyToTicketPayload) =>
   }
 
   const payload = { ticketId, body };
-  console.log('=== API CLIENT (invoke approach) ===');
+  console.log('=== API CLIENT ===');
   console.log('Sending payload:', payload);
 
-  try {
-    const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: payload, // On passe l'objet directement, le SDK s'occupe du reste
-    });
+  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: payload,
+  });
 
-    if (error) {
-      console.error('Erreur lors de l\'envoi de la réponse (invoke):', error);
-      throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
-    }
-
-    console.log('Réponse envoyée avec succès:', data);
-    return data;
-  } catch (e) {
-    console.error('Erreur inattendue dans replyToTicket:', e);
-    throw e;
+  if (error) {
+    console.error('Erreur lors de l\'envoi de la réponse:', error);
+    throw new Error(error.message || 'Erreur lors de l\'envoi de la réponse');
   }
+
+  console.log('Réponse envoyée avec succès:', data);
+  return data;
 };

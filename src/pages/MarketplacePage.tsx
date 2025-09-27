@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Filter, Award, Shield, Crown, Building, Info, Star } from 'lucide-react';
+import { Search, Filter, Award, Shield, Crown, Building, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,6 @@ const MarketplacePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCertification, setSelectedCertification] = useState('all');
-  const [selectedExclusivity, setSelectedExclusivity] = useState('all');
 
   const { data: providers = [], isLoading } = useQuery({
     queryKey: ['serviceProviders'],
@@ -42,9 +41,8 @@ const MarketplacePage = () => {
                          provider.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || provider.category === selectedCategory;
     const matchesCertification = selectedCertification === 'all' || provider.certification_level === selectedCertification;
-    const matchesExclusivity = selectedExclusivity === 'all' || provider.exclusivity_type === selectedExclusivity;
     
-    return matchesSearch && matchesCategory && matchesCertification && matchesExclusivity;
+    return matchesSearch && matchesCategory && matchesCertification;
   });
 
   const groupedProviders = categories.reduce((acc, category) => {
@@ -82,8 +80,8 @@ const MarketplacePage = () => {
                           <Award className="h-3 w-3" />
                         </Badge>
                         <div>
-                          <p className="font-medium text-sm">Standard</p>
-                          <p className="text-xs text-muted-foreground">Prestataire certifié avec vérification de base</p>
+                          <p className="font-medium text-sm">Partenaire</p>
+                          <p className="text-xs text-muted-foreground">Prestataire vérifié et partenaire de confiance</p>
                         </div>
                       </div>
                       
@@ -92,8 +90,8 @@ const MarketplacePage = () => {
                           <Star className="h-3 w-3" />
                         </Badge>
                         <div>
-                          <p className="font-medium text-sm">Premium</p>
-                          <p className="text-xs text-muted-foreground">Prestataire certifié Premium avec services avancés</p>
+                          <p className="font-medium text-sm">Expert</p>
+                          <p className="text-xs text-muted-foreground">Prestataire expert avec services premium</p>
                         </div>
                       </div>
                       
@@ -102,32 +100,8 @@ const MarketplacePage = () => {
                           <Crown className="h-3 w-3" />
                         </Badge>
                         <div>
-                          <p className="font-medium text-sm">Exclusive</p>
-                          <p className="text-xs text-muted-foreground">Partenaire exclusif avec services premium</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border-t pt-3">
-                      <h5 className="font-medium text-sm mb-2">Badges d'exclusivité</h5>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
-                            <Shield className="h-3 w-3" />
-                          </Badge>
-                          <span className="text-xs">Exclusivité régionale</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20">
-                            <Shield className="h-3 w-3" />
-                          </Badge>
-                          <span className="text-xs">Exclusivité départementale</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-red-500/10 text-red-600 border-red-500/20">
-                            <Shield className="h-3 w-3" />
-                          </Badge>
-                          <span className="text-xs">Exclusivité nationale</span>
+                          <p className="font-medium text-sm">Premium</p>
+                          <p className="text-xs text-muted-foreground">Partenaire premium avec services exclusifs</p>
                         </div>
                       </div>
                     </div>
@@ -146,7 +120,7 @@ const MarketplacePage = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Recherche</label>
                 <div className="relative">
@@ -184,25 +158,9 @@ const MarketplacePage = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous niveaux</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
-                    <SelectItem value="premium">Premium</SelectItem>
-                    <SelectItem value="exclusive">Exclusive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Exclusivité</label>
-                <Select value={selectedExclusivity} onValueChange={setSelectedExclusivity}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tous types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous types</SelectItem>
-                    <SelectItem value="none">Aucune</SelectItem>
-                    <SelectItem value="regional">Régionale</SelectItem>
-                    <SelectItem value="departmental">Départementale</SelectItem>
-                    <SelectItem value="national">Nationale</SelectItem>
+                    <SelectItem value="standard">Partenaire</SelectItem>
+                    <SelectItem value="premium">Expert</SelectItem>
+                    <SelectItem value="exclusive">Premium</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

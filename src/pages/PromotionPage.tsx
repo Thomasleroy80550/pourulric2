@@ -53,19 +53,18 @@ const PromotionPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-800 to-purple-900 text-white">
+    <div className="min-h-screen flex flex-col bg-white text-gray-800">
       {/* Hero Section */}
-      <section className="relative flex-grow flex items-center justify-center text-center p-8 md:p-16 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: 'url(/hero-background.jpg)' }}></div>
-        <div className="relative z-10 max-w-5xl mx-auto py-16">
-          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6 animate-fade-in-up">
+      <section className="bg-gradient-to-br from-blue-800 to-purple-900 text-white py-16 px-8 md:px-16">
+        <div className="max-w-5xl mx-auto text-center">
+          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
             Simplifiez, Optimisez, Prospérez avec Hello Keys
           </h1>
-          <p className="text-lg md:text-xl mb-8 animate-fade-in-up delay-200">
+          <p className="text-lg md:text-xl mb-8">
             La solution tout-en-un pour les propriétaires exigeants : gérez vos biens locatifs
             avec intelligence, maximisez vos revenus et offrez une expérience inoubliable à vos locataires.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 animate-fade-in-up delay-400">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link to="/login">
               <Button size="lg" className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
                 Commencer Gratuitement

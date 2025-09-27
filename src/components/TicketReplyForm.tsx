@@ -14,6 +14,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
+import { useSession } from '@/components/SessionContextProvider';
 
 const formSchema = z.object({
   body: z.string().min(1, { message: 'La réponse ne peut pas être vide.' }),
@@ -21,11 +22,12 @@ const formSchema = z.object({
 
 interface TicketReplyFormProps {
   ticketId: number;
-  ticketSubject: string;
 }
 
-export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId, ticketSubject }) => {
+export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId }) => {
   const queryClient = useQueryClient();
+  const { session } = useSession();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -34,10 +36,7 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId, tick
   });
 
   const replyMutation = useMutation({
-    mutationFn: async (reply: ReplyToTicketPayload) => {
-      console.log('Starting reply mutation with:', reply);
-      return replyToTicket(reply);
-    },
+    mutationFn: (reply: ReplyToTicketPayload) => replyToTicket(reply),
     onSuccess: (data) => {
       console.log('Reply sent successfully:', data);
       showSuccess('Votre réponse a été envoyée.');
@@ -51,10 +50,15 @@ export const TicketReplyForm: React.FC<TicketReplyFormProps> = ({ ticketId, tick
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log('=== FORM SUBMISSION ===');
-    console.log('Form values:', values);
-    const payload = { ticketId, subject: ticketSubject, body: values.body };
-    console.log('Payload to send:', payload);
+    if (!session?.user?.email) {
+      showError("Impossible d'envoyer la réponse : l'email de l'utilisateur n'est pas disponible.");
+      return;
+    }
+    
+    const payload: ReplyToTicketPayload = { 
+      ticketId, 
+      body: values.body,
+    };
     
     replyMutation.mutate(payload);
   };

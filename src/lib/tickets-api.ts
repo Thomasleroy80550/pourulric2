@@ -46,7 +46,6 @@ export interface CreateTicketPayload {
 
 export interface ReplyToTicketPayload {
   ticketId: number;
-  subject: string;
   body: string;
 }
 
@@ -119,29 +118,26 @@ export const createTicket = async (payload: CreateTicketPayload) => {
   return data;
 };
 
-export const replyToTicket = async ({ ticketId, subject, body }: ReplyToTicketPayload) => {
+export const replyToTicket = async (payload: ReplyToTicketPayload) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     throw new Error('Utilisateur non authentifié');
   }
 
-  const payload = { ticketId, subject, body };
-  console.log('=== API CLIENT (EMAIL) ===');
-  console.log('Sending payload to freshdesk-reply-by-email:', payload);
-
-  const { data, error } = await supabase.functions.invoke('freshdesk-reply-by-email', {
+  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
     },
     body: payload,
   });
 
   if (error) {
-    console.error("Erreur lors de l'envoi de l'e-mail de réponse:", error);
+    console.error("Erreur lors de l'envoi de la réponse:", error);
     throw new Error(error.message || "Erreur lors de l'envoi de la réponse");
   }
 
-  console.log('Réponse envoyée avec succès par e-mail:', data);
+  console.log('Réponse envoyée avec succès:', data);
   return data;
 };

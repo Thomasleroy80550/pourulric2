@@ -33,21 +33,21 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
       case 'premium':
         return {
           icon: <Star className="h-4 w-4" />,
-          color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+          color: 'bg-yellow-500 text-white border-yellow-500 shadow-md',
           label: 'Expert',
           description: 'Prestataire expert avec services premium'
         };
       case 'exclusive':
         return {
           icon: <Crown className="h-4 w-4" />,
-          color: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+          color: 'bg-purple-600 text-white border-purple-600 shadow-md',
           label: 'Premium',
           description: 'Partenaire premium avec services exclusifs'
         };
       default:
         return {
           icon: <Award className="h-4 w-4" />,
-          color: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+          color: 'bg-blue-600 text-white border-blue-600 shadow-md',
           label: 'Partenaire',
           description: 'Prestataire vérifié et partenaire de confiance'
         };
@@ -76,14 +76,14 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
             </AspectRatio>
             {/* Badges en overlay avec meilleur contraste */}
             <div className="absolute top-3 right-3 flex flex-col gap-2">
-              <Badge variant="secondary" className="capitalize text-xs bg-black/70 text-white backdrop-blur-sm border-white/20 shadow-lg">
+              <Badge variant="secondary" className="capitalize text-xs bg-gray-900/90 text-white backdrop-blur-sm border-gray-700 shadow-lg">
                 {provider.category}
               </Badge>
               {certificationBadge && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Badge className={`text-xs ${certificationBadge.color} backdrop-blur-sm border shadow-lg bg-black/70`}>
+                      <Badge className={`text-xs ${certificationBadge.color} backdrop-blur-sm border`}>
                         {certificationBadge.icon}
                         <span className="ml-1">{certificationBadge.label}</span>
                       </Badge>
@@ -150,7 +150,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
                 />
               </AspectRatio>
               <div className="absolute top-4 right-4">
-                <Badge variant="secondary" className="capitalize bg-black/70 text-white backdrop-blur-sm border-white/20">
+                <Badge variant="secondary" className="capitalize bg-gray-900/90 text-white backdrop-blur-sm border-gray-700">
                   {provider.category}
                 </Badge>
               </div>

@@ -67,16 +67,42 @@ serve(async (req) => {
         console.log(`Freshdesk proxy: Traitement d'une réponse au ticket ${body.ticketId}`);
         const { ticketId, body: replyBody } = body;
 
-        // Pour les réponses, nous n'utilisons pas user_id pour éviter les problèmes de permissions
-        // Freshdesk attribuera automatiquement la réponse à l'utilisateur approprié basé sur l'email
+        // 1. Search for contact ID using email
+        const searchUrl = `https://${FRESHDESK_DOMAIN}/api/v2/contacts?email=${encodeURIComponent(userEmail)}`;
+        console.log('Freshdesk proxy: URL de recherche:', searchUrl);
+        const searchResponse = await fetch(searchUrl, {
+          headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
+        });
+
+        if (!searchResponse.ok) {
+          const errorBody = await searchResponse.text();
+          console.error('Freshdesk proxy: Erreur recherche contact:', searchResponse.status, errorBody);
+          return new Response(JSON.stringify({ error: 'Erreur lors de la recherche du contact Freshdesk.', details: errorBody }), { status: searchResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const searchResults = await searchResponse.json();
+        console.log('Freshdesk proxy: Résultats recherche:', searchResults);
+        let freshdeskUserId = null;
+        if (searchResults.length > 0) {
+          freshdeskUserId = searchResults[0].id;
+          console.log(`Freshdesk proxy: Contact trouvé avec ID: ${freshdeskUserId}`);
+        } else {
+          console.warn(`Freshdesk proxy: Aucun contact trouvé pour l'email: ${userEmail}. La réponse sera anonyme.`);
+        }
+
+        // 2. Post the reply using the user_id if found
         const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}/reply`;
-        const requestPayload = {
+        let requestPayload: { body: string; user_id?: number; from_email?: string } = {
           body: replyBody,
-          from_email: userEmail, // Utiliser from_email au lieu de user_id
         };
 
+        // Essayer d'abord avec user_id si disponible
+        if (freshdeskUserId) {
+          requestPayload.user_id = freshdeskUserId;
+        }
+
         console.log('Freshdesk proxy: Envoi réponse avec payload:', requestPayload);
-        const freshdeskResponse = await fetch(freshdeskUrl, {
+        let freshdeskResponse = await fetch(freshdeskUrl, {
           method: 'POST',
           headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
           body: JSON.stringify(requestPayload),
@@ -86,28 +112,46 @@ serve(async (req) => {
           const errorData = await freshdeskResponse.json().catch(() => freshdeskResponse.text());
           console.error('Freshdesk proxy: Erreur API Freshdesk (reply):', freshdeskResponse.status, errorData);
           
-          // Si l'erreur est liée aux permissions, essayer sans from_email
-          if (freshdeskResponse.status === 403 && errorData.message && errorData.message.includes('authorized')) {
-            console.log('Freshdesk proxy: Tentative de réponse anonyme due à une erreur de permission');
-            const anonymousPayload = { body: replyBody };
-            const anonymousResponse = await fetch(freshdeskUrl, {
+          // Si l'erreur est liée aux permissions ou à l'email, essayer différentes approches
+          if (freshdeskResponse.status === 403) {
+            console.log('Freshdesk proxy: Tentative de réponse avec from_email due à une erreur de permission');
+            // Essayer avec from_email
+            delete requestPayload.user_id;
+            requestPayload.from_email = userEmail;
+            
+            freshdeskResponse = await fetch(freshdeskUrl, {
               method: 'POST',
               headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
-              body: JSON.stringify(anonymousPayload),
+              body: JSON.stringify(requestPayload),
             });
 
-            if (!anonymousResponse.ok) {
-              const anonymousErrorData = await anonymousResponse.json().catch(() => anonymousResponse.text());
-              console.error('Freshdesk proxy: Erreur API Freshdesk (reply anonyme):', anonymousResponse.status, anonymousErrorData);
-              return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: anonymousErrorData }), { status: anonymousResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            if (!freshdeskResponse.ok) {
+              const errorData2 = await freshdeskResponse.json().catch(() => freshdeskResponse.text());
+              console.error('Freshdesk proxy: Erreur API Freshdesk (reply avec from_email):', freshdeskResponse.status, errorData2);
+              
+              // Si l'erreur est liée à l'email config, essayer une réponse anonyme
+              if (freshdeskResponse.status === 400 && errorData2.errors && errorData2.errors.some((e: any) => e.field === 'from_email')) {
+                console.log('Freshdesk proxy: Tentative de réponse anonyme due à une erreur de configuration email');
+                const anonymousPayload = { body: replyBody };
+                
+                freshdeskResponse = await fetch(freshdeskUrl, {
+                  method: 'POST',
+                  headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
+                  body: JSON.stringify(anonymousPayload),
+                });
+
+                if (!freshdeskResponse.ok) {
+                  const anonymousErrorData = await freshdeskResponse.json().catch(() => freshdeskResponse.text());
+                  console.error('Freshdesk proxy: Erreur API Freshdesk (reply anonyme):', freshdeskResponse.status, anonymousErrorData);
+                  return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: anonymousErrorData }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                }
+              } else {
+                return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: errorData2 }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+              }
             }
-            
-            const responseData = await anonymousResponse.json();
-            console.log('Freshdesk proxy: Réponse anonyme envoyée avec succès:', responseData);
-            return new Response(JSON.stringify(responseData), { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          } else {
+            return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: errorData }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
-          
-          return new Response(JSON.stringify({ error: 'Impossible d\'envoyer la réponse.', details: errorData }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         
         const responseData = await freshdeskResponse.json();

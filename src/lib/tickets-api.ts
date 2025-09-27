@@ -55,12 +55,7 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
     throw new Error('Utilisateur non authentifié');
   }
 
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-    },
-  });
+  const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
 
   if (error) {
     console.error('Erreur lors de la récupération des tickets:', error);
@@ -77,9 +72,7 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
   }
 
   const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'GET',
     headers: {
-      'Authorization': `Bearer ${session.access_token}`,
       'X-Ticket-Id': ticketId.toString(),
     },
   });
@@ -103,11 +96,6 @@ export const createTicket = async (payload: CreateTicketPayload) => {
   }
 
   const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
     body: payload,
   });
 
@@ -124,12 +112,9 @@ export const replyToTicket = async (payload: ReplyToTicketPayload) => {
     throw new Error('Utilisateur non authentifié');
   }
 
+  console.log('Envoi de la réponse au ticket:', payload);
+
   const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
     body: payload,
   });
 

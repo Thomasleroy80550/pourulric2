@@ -51,8 +51,11 @@ serve(async (req) => {
       let body;
       try {
         const rawBody = await req.text();
+        console.log('Freshdesk proxy: Corps brut reçu:', rawBody);
         body = JSON.parse(rawBody);
+        console.log('Freshdesk proxy: Corps parsé:', body);
       } catch (e) {
+        console.error('Freshdesk proxy: Erreur de parsing JSON:', e);
         return new Response(JSON.stringify({ error: 'JSON invalide dans le corps de la requête.', details: e.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
@@ -63,16 +66,19 @@ serve(async (req) => {
 
         // 1. Search for contact ID using email
         const searchUrl = `https://${FRESHDESK_DOMAIN}/api/v2/contacts?email=${encodeURIComponent(userEmail)}`;
+        console.log('Freshdesk proxy: URL de recherche:', searchUrl);
         const searchResponse = await fetch(searchUrl, {
           headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
         });
 
         if (!searchResponse.ok) {
           const errorBody = await searchResponse.text();
+          console.error('Freshdesk proxy: Erreur recherche contact:', searchResponse.status, errorBody);
           return new Response(JSON.stringify({ error: 'Erreur lors de la recherche du contact Freshdesk.', details: errorBody }), { status: searchResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const searchResults = await searchResponse.json();
+        console.log('Freshdesk proxy: Résultats recherche:', searchResults);
         let freshdeskUserId = null;
         if (searchResults.length > 0) {
           freshdeskUserId = searchResults[0].id;
@@ -91,6 +97,7 @@ serve(async (req) => {
           requestPayload.user_id = freshdeskUserId;
         }
 
+        console.log('Freshdesk proxy: Envoi réponse avec payload:', requestPayload);
         const freshdeskResponse = await fetch(freshdeskUrl, {
           method: 'POST',
           headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
@@ -104,6 +111,7 @@ serve(async (req) => {
         }
         
         const responseData = await freshdeskResponse.json();
+        console.log('Freshdesk proxy: Réponse envoyée avec succès:', responseData);
         return new Response(JSON.stringify(responseData), { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 

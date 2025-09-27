@@ -87,17 +87,7 @@ const TicketDetailPage = () => {
       return DOMPurify.sanitize(html);
     };
 
-    // Combiner les conversations et les notes pour l'affichage
-    const allConversations = [
-      ...(ticket.conversations || []),
-      ...(ticket.notes || []).map((note: any) => ({
-        ...note,
-        from_agent: false, // Les notes de l'utilisateur ne sont pas des réponses d'agent
-        is_note: true, // Marquer comme note pour l'affichage
-      }))
-    ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    
-    let ticketDescription = ticket.description_text || ticket.description || 'Aucune description disponible';
+    const ticketDescription = ticket.description_text || ticket.description || 'Aucune description disponible';
 
     return (
       <div>
@@ -112,14 +102,14 @@ const TicketDetailPage = () => {
         </div>
 
         <div className="space-y-6 mt-6">
-          {/* Message initial - toujours de l'utilisateur */}
+          {/* Message initial - description du ticket (toujours de l'utilisateur) */}
           <div className="flex gap-4 flex-row-reverse">
-            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-              <User className="h-6 w-6 text-gray-500" />
+            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-200 flex items-center justify-center">
+              <User className="h-6 w-6 text-blue-600" />
             </div>
             <div className="flex-grow text-right">
               <div className="bg-blue-100 dark:bg-blue-900 rounded-lg px-4 py-3">
-                <p className="font-semibold">Vous</p>
+                <p className="font-semibold text-blue-800 dark:text-blue-200">Vous</p>
                 <div
                   className="prose dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: cleanHtml(ticketDescription) }}
@@ -131,38 +121,47 @@ const TicketDetailPage = () => {
             </div>
           </div>
 
-          {allConversations.map((convo) => {
-            // Déterminer si c'est une réponse de l'utilisateur ou du support
-            const isUserResponse = convo.is_note || !convo.from_agent;
-            const authorName = isUserResponse ? 'Vous' : 'Support';
-            const bgColor = isUserResponse ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800';
-            const flexDirection = isUserResponse ? 'flex-row-reverse' : '';
-            const textAlign = isUserResponse ? 'text-right' : '';
-
-            return (
-              <div key={convo.id} className={`flex gap-4 ${flexDirection}`}>
-                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                  {isUserResponse ? (
-                    <User className="h-6 w-6 text-gray-500" />
-                  ) : (
-                    <MessageSquare className="h-6 w-6 text-gray-500" />
-                  )}
-                </div>
-                <div className={`flex-grow ${textAlign}`}>
-                  <div className={`${bgColor} rounded-lg px-4 py-3`}>
-                    <p className="font-semibold">{authorName}</p>
-                    <div
-                      className="prose dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: cleanHtml(convo.body) }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {safeFormat(convo.created_at, 'dd MMMM yyyy à HH:mm')}
-                  </p>
-                </div>
+          {/* Réponses du support (conversations) */}
+          {ticket.conversations?.map((convo) => (
+            <div key={convo.id} className="flex gap-4">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                <MessageSquare className="h-6 w-6 text-gray-500" />
               </div>
-            );
-          })}
+              <div className="flex-grow">
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200">Support</p>
+                  <div
+                    className="prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: cleanHtml(convo.body) }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {safeFormat(convo.created_at, 'dd MMMM yyyy à HH:mm')}
+                </p>
+              </div>
+            </div>
+          ))}
+
+          {/* Notes de l'utilisateur (réponses utilisateur) */}
+          {ticket.notes?.map((note) => (
+            <div key={note.id} className="flex gap-4 flex-row-reverse">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-green-200 flex items-center justify-center">
+                <User className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="flex-grow text-right">
+                <div className="bg-green-100 dark:bg-green-900 rounded-lg px-4 py-3">
+                  <p className="font-semibold text-green-800 dark:text-green-200">Vous</p>
+                  <div
+                    className="prose dark:prose-invert max-w-none"
+                    dangerouslySetInnerHTML={{ __html: cleanHtml(note.body) }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {safeFormat(note.created_at, 'dd MMMM yyyy à HH:mm')}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {(ticket.status === 2 || ticket.status === 3) && (

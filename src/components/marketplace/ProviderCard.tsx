@@ -74,16 +74,16 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
                 className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
               />
             </AspectRatio>
-            {/* Badges en overlay */}
-            <div className="absolute top-2 right-2 flex flex-col gap-2">
-              <Badge variant="secondary" className="capitalize text-xs bg-background/80 backdrop-blur-sm">
+            {/* Badges en overlay avec meilleur contraste */}
+            <div className="absolute top-3 right-3 flex flex-col gap-2">
+              <Badge variant="secondary" className="capitalize text-xs bg-black/70 text-white backdrop-blur-sm border-white/20 shadow-lg">
                 {provider.category}
               </Badge>
               {certificationBadge && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Badge className={`text-xs ${certificationBadge.color} backdrop-blur-sm border`}>
+                      <Badge className={`text-xs ${certificationBadge.color} backdrop-blur-sm border shadow-lg bg-black/70`}>
                         {certificationBadge.icon}
                         <span className="ml-1">{certificationBadge.label}</span>
                       </Badge>
@@ -150,7 +150,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
                 />
               </AspectRatio>
               <div className="absolute top-4 right-4">
-                <Badge variant="secondary" className="capitalize bg-background/90 backdrop-blur-sm">
+                <Badge variant="secondary" className="capitalize bg-black/70 text-white backdrop-blur-sm border-white/20">
                   {provider.category}
                 </Badge>
               </div>

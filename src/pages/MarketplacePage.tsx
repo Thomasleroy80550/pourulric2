@@ -1,133 +1,259 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import MainLayout from '@/components/MainLayout';
-import { getServiceProviders } from '@/lib/marketplace-api';
-import ProviderCard from '@/components/marketplace/ProviderCard';
+import { Search, Filter, Award, Shield, Crown, Building, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Search, Building } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import MainLayout from '@/components/MainLayout';
+import ProviderCard from '@/components/marketplace/ProviderCard';
+import { getServiceProviders, ServiceProvider } from '@/lib/marketplace-api';
 
 const MarketplacePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCertification, setSelectedCertification] = useState('all');
+  const [selectedExclusivity, setSelectedExclusivity] = useState('all');
 
-  const { data: providers, isLoading, isError, error } = useQuery({
+  const { data: providers = [], isLoading } = useQuery({
     queryKey: ['serviceProviders'],
     queryFn: getServiceProviders,
   });
 
-  const categories = useMemo(() => {
-    if (!providers) return [];
-    const allCategories = providers.map(p => p.category);
-    return ['all', ...Array.from(new Set(allCategories))];
-  }, [providers]);
+  const approvedProviders = providers.filter(p => p.is_approved);
 
-  const filteredProviders = useMemo(() => {
-    if (!providers) return [];
-    return providers.filter(provider => {
-      const matchesCategory = selectedCategory === 'all' || provider.category === selectedCategory;
-      const matchesSearch = searchTerm === '' ||
-        provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        provider.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        provider.category.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [providers, searchTerm, selectedCategory]);
+  const categories = Array.from(new Set(approvedProviders.map(p => p.category))).filter(Boolean);
+  
+  const filteredProviders = approvedProviders.filter(provider => {
+    const matchesSearch = provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         provider.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || provider.category === selectedCategory;
+    const matchesCertification = selectedCertification === 'all' || provider.certification_level === selectedCertification;
+    const matchesExclusivity = selectedExclusivity === 'all' || provider.exclusivity_type === selectedExclusivity;
+    
+    return matchesSearch && matchesCategory && matchesCertification && matchesExclusivity;
+  });
+
+  const groupedProviders = categories.reduce((acc, category) => {
+    acc[category] = filteredProviders.filter(p => p.category === category);
+    return acc;
+  }, {} as Record<string, ServiceProvider[]>);
 
   return (
     <MainLayout>
-      <div className="space-y-8">
-        {/* Hero Section */}
-        <div className="relative rounded-lg bg-secondary p-8 md:p-16 text-center overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5"></div>
-          <div className="relative z-10">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-primary">Marketplace des Partenaires</h1>
-            <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-              Trouvez des prestataires de confiance, recommandés par nos équipes, pour l'entretien de vos biens.
-            </p>
-            
-            <div className="mt-8 max-w-2xl mx-auto flex flex-col md:flex-row items-center gap-2 bg-background p-2 rounded-full shadow-lg border">
-              <div className="relative flex-grow w-full">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher un service, un métier..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 h-12 text-base border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent rounded-full"
-                />
-              </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full md:w-[240px] h-12 text-base border-0 md:border-l rounded-full md:rounded-l-none focus:ring-0 focus:ring-offset-0">
-                  <SelectValue placeholder="Filtrer par catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category} className="capitalize">
-                      {category === 'all' ? 'Toutes les catégories' : category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Phrase d'accroche Hello Keys */}
-            <div className="mt-6 max-w-2xl mx-auto">
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Building className="h-4 w-4" />
-                <p>
-                  <span className="font-medium text-foreground">Conseil pro :</span> Présentez-vous comme venant de la part de Hello Keys pour bénéficier de tarifs préférentiels et d'un service prioritaire.
-                </p>
-              </div>
-            </div>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Marketplace</h1>
+          <p className="text-muted-foreground">Trouvez les meilleurs prestataires pour votre location saisonnière</p>
         </div>
 
-        {/* Content Section */}
-        <div className="px-4 md:px-0">
-          {isLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="space-y-4 p-4 border rounded-lg">
-                  <Skeleton className="h-48 w-full" />
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ))}
+        {/* Filtres */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Filtres</CardTitle>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Info className="h-4 w-4 mr-2" />
+                    Légende des badges
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Système de certification</h4>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
+                          <Award className="h-3 w-3" />
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">Standard</p>
+                          <p className="text-xs text-muted-foreground">Prestataire certifié avec vérification de base</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-3">
+                        <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                          <Star className="h-3 w-3" />
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">Premium</p>
+                          <p className="text-xs text-muted-foreground">Prestataire certifié Premium avec services avancés</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-3">
+                        <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20">
+                          <Crown className="h-3 w-3" />
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">Exclusive</p>
+                          <p className="text-xs text-muted-foreground">Partenaire exclusif avec services premium</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-3">
+                      <h5 className="font-medium text-sm mb-2">Badges d'exclusivité</h5>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                            <Shield className="h-3 w-3" />
+                          </Badge>
+                          <span className="text-xs">Exclusivité régionale</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20">
+                            <Shield className="h-3 w-3" />
+                          </Badge>
+                          <span className="text-xs">Exclusivité départementale</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-red-500/10 text-red-600 border-red-500/20">
+                            <Shield className="h-3 w-3" />
+                          </Badge>
+                          <span className="text-xs">Exclusivité nationale</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Building className="h-3 w-3" />
+                        </Badge>
+                        <span className="text-xs">Gérance complète du parc (100%)</span>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
-          )}
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Recherche</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    type="text"
+                    placeholder="Rechercher un prestataire..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block">Catégorie</label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Toutes les catégories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les catégories</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {isError && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Erreur</AlertTitle>
-              <AlertDescription>
-                Impossible de charger les prestataires. Veuillez réessayer plus tard.
-                <br />
-                <span className="text-xs">{(error as Error).message}</span>
-              </AlertDescription>
-            </Alert>
-          )}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Certification</label>
+                <Select value={selectedCertification} onValueChange={setSelectedCertification}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous niveaux" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous niveaux</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="exclusive">Exclusive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {!isLoading && !isError && (
-            <>
-              {filteredProviders.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProviders.map(provider => (
+              <div>
+                <label className="text-sm font-medium mb-2 block">Exclusivité</label>
+                <Select value={selectedExclusivity} onValueChange={setSelectedExclusivity}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous types</SelectItem>
+                    <SelectItem value="none">Aucune</SelectItem>
+                    <SelectItem value="regional">Régionale</SelectItem>
+                    <SelectItem value="departmental">Départementale</SelectItem>
+                    <SelectItem value="national">Nationale</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Résultats */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
+                  <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
+              <TabsTrigger value="all">Tous ({filteredProviders.length})</TabsTrigger>
+              {categories.map(category => (
+                <TabsTrigger key={category} value={category}>
+                  {category} ({groupedProviders[category]?.length || 0})
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <TabsContent value="all">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProviders.map(provider => (
+                  <ProviderCard key={provider.id} provider={provider} />
+                ))}
+              </div>
+            </TabsContent>
+            
+            {categories.map(category => (
+              <TabsContent key={category} value={category}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {groupedProviders[category]?.map(provider => (
                     <ProviderCard key={provider.id} provider={provider} />
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-16 bg-secondary rounded-lg">
-                  <h3 className="text-2xl font-semibold">Aucun prestataire trouvé</h3>
-                  <p className="text-muted-foreground mt-2">Essayez d'ajuster vos filtres ou votre recherche.</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
       </div>
     </MainLayout>
   );

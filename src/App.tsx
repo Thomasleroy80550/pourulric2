@@ -58,7 +58,8 @@ import AdminRehousingNotePage from "./pages/AdminRehousingNotePage"; // New impo
 import AdminManualStatsPage from "./pages/AdminManualStatsPage"; // New import
 import TicketsPage from "./pages/TicketsPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
-import MarketplacePage from "./pages/MarketplacePage"; // New import
+import MarketplacePage from "./pages/MarketplacePage";
+import AdminMarketplacePage from "./pages/AdminMarketplacePage"; // New import
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,7 @@ function App() {
                   <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                   <Route path="/admin/ideas" element={<AdminIdeasPage />} />
                   <Route path="/admin/documents" element={<AdminDocumentsPage />} />
+                  <Route path="/admin/marketplace" element={<AdminMarketplacePage />} /> {/* New route */}
                   <Route path="/admin/stripe-transactions" element={<AdminStripeTransactionsPage />} />
                   <Route path="/admin/stripe-match" element={<AdminStripeMatchPage />} /> {/* New route */}
                   <Route path="/admin/hello-keys-stats" element={<AdminHelloKeysStatsPage />} /> {/* New route */}

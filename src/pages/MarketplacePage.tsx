@@ -54,7 +54,7 @@ const MarketplacePage = () => {
     <MainLayout>
       <div className="min-h-screen">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-blue-800 to-purple-900 text-white py-16 px-4">
+        <section className="relative bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] text-white py-16 px-4">
           <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: 'url(/hero-background.jpg)' }}></div>
           <div className="relative z-10 max-w-6xl mx-auto text-center">
             <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6 animate-fade-in-up">
@@ -64,7 +64,7 @@ const MarketplacePage = () => {
               Trouvez les meilleurs prestataires pour votre location saisonnière. Des professionnels vérifiés et partenaires de confiance.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button size="lg" className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+              <Button size="lg" className="bg-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/90 text-white px-8 py-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
                 Explorer les prestataires
               </Button>
             </div>

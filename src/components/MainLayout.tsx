@@ -87,7 +87,6 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
     items: [
       { name: 'Blog', href: '/blog', icon: Newspaper },
       { name: 'Aides', href: '/help', icon: HelpCircle },
-      { name: 'Mes Tickets', href: '/tickets', icon: MessageSquare },
       { name: 'Modules', href: '/modules', icon: Plug },
       { name: 'Nouveautés', href: '/new-version', icon: Sparkles },
     ],

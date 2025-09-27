@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ServiceProvider } from '@/lib/marketplace-api';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Globe, MapPin, Building, ExternalLink, Star } from 'lucide-react';
+import { Phone, Mail, Globe, MapPin, Building, ExternalLink, Star, Award, Shield, Crown } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import {
   Dialog,
@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ProviderCardProps {
   provider: ServiceProvider;
@@ -25,6 +26,65 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
   const truncatedDescription = provider.description && provider.description.length > 80
     ? provider.description.substring(0, 80) + '...'
     : provider.description;
+
+  // Fonction pour obtenir l'icône et la couleur du badge de certification
+  const getCertificationBadge = (level: string) => {
+    switch (level) {
+      case 'premium':
+        return {
+          icon: <Star className="h-4 w-4" />,
+          color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
+          label: 'Premium',
+          description: 'Prestataire certifié Premium'
+        };
+      case 'exclusive':
+        return {
+          icon: <Crown className="h-4 w-4" />,
+          color: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+          label: 'Exclusive',
+          description: 'Partenaire exclusif'
+        };
+      default:
+        return {
+          icon: <Award className="h-4 w-4" />,
+          color: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+          label: 'Standard',
+          description: 'Prestataire certifié'
+        };
+    }
+  };
+
+  // Fonction pour obtenir le badge d'exclusivité
+  const getExclusivityBadge = (type: string) => {
+    switch (type) {
+      case 'regional':
+        return {
+          icon: <Shield className="h-3 w-3" />,
+          color: 'bg-green-500/10 text-green-600 border-green-500/20',
+          label: 'Exclusif Régional',
+          description: 'Gérance exclusive sur la région'
+        };
+      case 'departmental':
+        return {
+          icon: <Shield className="h-3 w-3" />,
+          color: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+          label: 'Exclusif Département',
+          description: 'Gérance exclusive sur le département'
+        };
+      case 'national':
+        return {
+          icon: <Shield className="h-3 w-3" />,
+          color: 'bg-red-500/10 text-red-600 border-red-500/20',
+          label: 'Exclusif National',
+          description: 'Gérance exclusive au niveau national'
+        };
+      default:
+        return null;
+    }
+  };
+
+  const certificationBadge = provider.certification_level ? getCertificationBadge(provider.certification_level) : null;
+  const exclusivityBadge = provider.exclusivity_type ? getExclusivityBadge(provider.exclusivity_type) : null;
 
   return (
     <>
@@ -44,16 +104,58 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
                 className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
               />
             </AspectRatio>
-            {/* Badge catégorie en overlay */}
-            <div className="absolute top-2 right-2">
+            {/* Badges en overlay */}
+            <div className="absolute top-2 right-2 flex flex-col gap-2">
               <Badge variant="secondary" className="capitalize text-xs bg-background/80 backdrop-blur-sm">
                 {provider.category}
               </Badge>
+              {certificationBadge && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge className={`text-xs ${certificationBadge.color} backdrop-blur-sm border`}>
+                        {certificationBadge.icon}
+                        <span className="ml-1">{certificationBadge.label}</span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{certificationBadge.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
+            {/* Badge d'exclusivité en bas */}
+            {exclusivityBadge && (
+              <div className="absolute bottom-2 left-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge className={`text-xs ${exclusivityBadge.color} backdrop-blur-sm border`}>
+                        {exclusivityBadge.icon}
+                        <span className="ml-1">{exclusivityBadge.label}</span>
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{exclusivityBadge.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
           </div>
           <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors duration-200">
             {provider.name}
           </CardTitle>
+          {/* Badge de gestion complète */}
+          {provider.has_full_management && (
+            <div className="mt-2">
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                <Building className="h-3 w-3 mr-1" />
+                Gérance complète {provider.management_area && `• ${provider.management_area}`}
+              </Badge>
+            </div>
+          )}
         </CardHeader>
         
         <CardContent className="flex-grow relative z-10">
@@ -101,8 +203,31 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
                 </Badge>
               </div>
             </div>
-            <DialogTitle className="text-2xl font-bold">{provider.name}</DialogTitle>
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-2xl font-bold">{provider.name}</DialogTitle>
+              {certificationBadge && (
+                <Badge className={`${certificationBadge.color} border`}>
+                  {certificationBadge.icon}
+                  <span className="ml-1">{certificationBadge.label}</span>
+                </Badge>
+              )}
+            </div>
             <DialogDescription className="text-base">{provider.description}</DialogDescription>
+            {/* Badges de certification et exclusivité */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {exclusivityBadge && (
+                <Badge className={`${exclusivityBadge.color} border`}>
+                  {exclusivityBadge.icon}
+                  <span className="ml-1">{exclusivityBadge.label}</span>
+                </Badge>
+              )}
+              {provider.has_full_management && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Building className="h-3 w-3 mr-1" />
+                  Gérance complète {provider.management_area && `• ${provider.management_area}`}
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
           
           <div className="space-y-4 py-4">

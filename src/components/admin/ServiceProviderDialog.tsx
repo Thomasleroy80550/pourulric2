@@ -22,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ServiceProvider, ServiceProviderInsert } from '@/lib/marketplace-api';
 
 const formSchema = z.object({
@@ -34,6 +35,10 @@ const formSchema = z.object({
   location: z.string().optional(),
   image_url: z.string().url({ message: 'URL d\'image invalide.' }).optional().or(z.literal('')),
   is_approved: z.boolean().default(false),
+  certification_level: z.enum(['standard', 'premium', 'exclusive']).optional(),
+  exclusivity_type: z.enum(['none', 'regional', 'departmental', 'national']).optional(),
+  has_full_management: z.boolean().default(false),
+  management_area: z.string().optional(),
 });
 
 interface ServiceProviderDialogProps {
@@ -63,6 +68,10 @@ const ServiceProviderDialog: React.FC<ServiceProviderDialogProps> = ({
       location: '',
       image_url: '',
       is_approved: false,
+      certification_level: 'standard',
+      exclusivity_type: 'none',
+      has_full_management: false,
+      management_area: '',
     },
   });
 
@@ -80,6 +89,10 @@ const ServiceProviderDialog: React.FC<ServiceProviderDialogProps> = ({
         location: '',
         image_url: '',
         is_approved: false,
+        certification_level: 'standard',
+        exclusivity_type: 'none',
+        has_full_management: false,
+        management_area: '',
       });
     }
   }, [provider, form]);
@@ -209,6 +222,95 @@ const ServiceProviderDialog: React.FC<ServiceProviderDialogProps> = ({
                 </FormItem>
               )}
             />
+            
+            {/* Section Certification */}
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-semibold mb-4">Certification & Exclusivité</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="certification_level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Niveau de certification</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un niveau" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard</SelectItem>
+                          <SelectItem value="premium">Premium</SelectItem>
+                          <SelectItem value="exclusive">Exclusive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="exclusivity_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type d'exclusivité</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Aucune</SelectItem>
+                          <SelectItem value="regional">Régionale</SelectItem>
+                          <SelectItem value="departmental">Départementale</SelectItem>
+                          <SelectItem value="national">Nationale</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="has_full_management"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm mt-4">
+                    <div className="space-y-0.5">
+                      <FormLabel>Gérance complète</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Ce prestataire gère 100% du parc sur son secteur.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              
+              {form.watch('has_full_management') && (
+                <FormField
+                  control={form.control}
+                  name="management_area"
+                  render={({ field }) => (
+                    <FormItem className="mt-4">
+                      <FormLabel>Secteur de gestion</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Paris Centre, Côte d'Azur" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+            
             <FormField
               control={form.control}
               name="is_approved"

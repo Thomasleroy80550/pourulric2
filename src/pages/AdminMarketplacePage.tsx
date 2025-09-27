@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { PlusCircle, MoreHorizontal, Trash2, Edit, AlertTriangle } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Trash2, Edit, AlertTriangle, Award, Shield, Crown, Building } from 'lucide-react';
 
 import AdminLayout from '@/components/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -93,6 +93,18 @@ const AdminMarketplacePage = () => {
 
   const isSubmitting = addMutation.isPending || updateMutation.isPending;
 
+  // Fonction pour obtenir l'icône de certification
+  const getCertificationIcon = (level: string) => {
+    switch (level) {
+      case 'premium':
+        return <Star className="h-4 w-4" />;
+      case 'exclusive':
+        return <Crown className="h-4 w-4" />;
+      default:
+        return <Award className="h-4 w-4" />;
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6">
@@ -119,6 +131,9 @@ const AdminMarketplacePage = () => {
               <TableRow>
                 <TableHead>Nom</TableHead>
                 <TableHead>Catégorie</TableHead>
+                <TableHead>Certification</TableHead>
+                <TableHead>Exclusivité</TableHead>
+                <TableHead>Gérance</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -130,6 +145,9 @@ const AdminMarketplacePage = () => {
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -138,6 +156,30 @@ const AdminMarketplacePage = () => {
                   <TableRow key={provider.id}>
                     <TableCell className="font-medium">{provider.name}</TableCell>
                     <TableCell>{provider.category}</TableCell>
+                    <TableCell>
+                      {provider.certification_level && (
+                        <Badge variant="secondary" className="capitalize">
+                          {getCertificationIcon(provider.certification_level)}
+                          <span className="ml-1">{provider.certification_level}</span>
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {provider.exclusivity_type && provider.exclusivity_type !== 'none' && (
+                        <Badge variant="outline" className="capitalize">
+                          <Shield className="h-3 w-3 mr-1" />
+                          {provider.exclusivity_type}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {provider.has_full_management && (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Building className="h-3 w-3 mr-1" />
+                          100%
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={provider.is_approved ? 'default' : 'secondary'}>
                         {provider.is_approved ? 'Approuvé' : 'En attente'}
@@ -167,7 +209,7 @@ const AdminMarketplacePage = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Aucun prestataire trouvé.
                   </TableCell>
                 </TableRow>

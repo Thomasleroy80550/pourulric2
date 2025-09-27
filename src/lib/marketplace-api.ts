@@ -12,6 +12,11 @@ export interface ServiceProvider {
   image_url?: string;
   is_approved: boolean;
   created_at: string;
+  certification_level?: 'standard' | 'premium' | 'exclusive';
+  exclusivity_type?: 'none' | 'regional' | 'departmental' | 'national';
+  certification_badge?: string;
+  has_full_management?: boolean;
+  management_area?: string;
 }
 
 export type ServiceProviderInsert = Omit<ServiceProvider, 'id' | 'created_at'>;

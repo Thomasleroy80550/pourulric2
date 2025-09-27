@@ -1,17 +1,15 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
+import path from "path"
+import react from "@vitejs/plugin-react-swc"
+import { defineConfig } from "vite"
 
-export default defineConfig(() => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [react(), dyadComponentTagger()], // Ordre des plugins inversé
+export default defineConfig({
+  plugins: [react],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+  define: {
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL || 'https://dkjaejzwmmwwzhokpbgs.supabase.co'),
+  },
+})

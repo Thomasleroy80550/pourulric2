@@ -52,6 +52,9 @@ serve(async (req) => {
       try {
         const rawBody = await req.text();
         console.log('Freshdesk proxy: Corps brut reçu:', rawBody);
+        if (!rawBody.trim()) {
+          return new Response(JSON.stringify({ error: 'Corps de requête vide' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
         body = JSON.parse(rawBody);
         console.log('Freshdesk proxy: Corps parsé:', body);
       } catch (e) {
@@ -140,10 +143,12 @@ serve(async (req) => {
 
     // Handle GET requests (List tickets or get details)
     if (req.method === 'GET') {
+      console.log('Freshdesk proxy: Traitement d\'une requête GET');
       const ticketId = req.headers.get('x-ticket-id');
 
       if (ticketId) {
         // Get ticket details
+        console.log(`Freshdesk proxy: Récupération des détails du ticket ${ticketId}`);
         const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets/${ticketId}?include=conversations`;
         const freshdeskResponse = await fetch(freshdeskUrl, {
           headers: { 'Authorization': freshdeskAuthHeader, 'Content-Type': 'application/json' },
@@ -151,14 +156,17 @@ serve(async (req) => {
         
         if (!freshdeskResponse.ok) {
           const errorBody = await freshdeskResponse.text();
+          console.error('Freshdesk proxy: Erreur récupération ticket:', freshdeskResponse.status, errorBody);
           return new Response(JSON.stringify({ error: 'Impossible de récupérer les détails du ticket.', details: errorBody }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         
         const ticketData = await freshdeskResponse.json();
+        console.log('Freshdesk proxy: Ticket récupéré avec succès');
         return new Response(JSON.stringify(ticketData), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
       } else {
         // List all tickets
+        console.log('Freshdesk proxy: Récupération de la liste des tickets');
         const encodedEmail = encodeURIComponent(userEmail);
         const freshdeskUrl = `https://${FRESHDESK_DOMAIN}/api/v2/tickets?email=${encodedEmail}&order_by=updated_at&order_type=desc`;
         const freshdeskResponse = await fetch(freshdeskUrl, {
@@ -167,10 +175,12 @@ serve(async (req) => {
 
         if (!freshdeskResponse.ok) {
           const errorBody = await freshdeskResponse.text();
+          console.error('Freshdesk proxy: Erreur récupération tickets:', freshdeskResponse.status, errorBody);
           return new Response(JSON.stringify({ error: 'Impossible de récupérer les tickets.', details: errorBody }), { status: freshdeskResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         const tickets = await freshdeskResponse.json();
+        console.log(`Freshdesk proxy: ${tickets.length} tickets récupérés`);
         return new Response(JSON.stringify(tickets), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }

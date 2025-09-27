@@ -55,13 +55,21 @@ export const getTickets = async (): Promise<FreshdeskTicket[]> => {
     throw new Error('Utilisateur non authentifié');
   }
 
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy');
+  // Pour les opérations GET, on utilise fetch directement
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/freshdesk-proxy`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-  if (error) {
-    console.error('Erreur lors de la récupération des tickets:', error);
-    throw new Error(error.message || 'Erreur lors de la récupération des tickets');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+    throw new Error(errorData.error || 'Erreur lors de la récupération des tickets');
   }
 
+  const data = await response.json();
   return data || [];
 };
 
@@ -71,17 +79,21 @@ export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicke
     throw new Error('Utilisateur non authentifié');
   }
 
-  const { data, error } = await supabase.functions.invoke('freshdesk-proxy', {
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/freshdesk-proxy`, {
+    method: 'GET',
     headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
       'X-Ticket-Id': ticketId.toString(),
     },
   });
 
-  if (error) {
-    console.error('Erreur lors de la récupération du ticket:', error);
-    throw new Error(error.message || 'Erreur lors de la récupération du ticket');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+    throw new Error(errorData.error || 'Erreur lors de la récupération du ticket');
   }
-  
+
+  const data = await response.json();
   if (!data) {
     throw new Error('Aucune donnée reçue du serveur');
   }

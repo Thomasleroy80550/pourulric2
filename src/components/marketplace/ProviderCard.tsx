@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ServiceProvider } from '@/lib/marketplace-api';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Globe, MapPin } from 'lucide-react';
+import { Phone, Mail, Globe, MapPin, Building } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import {
   Dialog,
@@ -25,6 +25,19 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
   const truncatedDescription = provider.description && provider.description.length > 80
     ? provider.description.substring(0, 80) + '...'
     : provider.description;
+
+  const handleHelloKeysCall = () => {
+    if (provider.phone) {
+      // Ouvrir le dialer avec un message préparé
+      const message = `Bonjour, je vous appelle de la part de Hello Keys concernant un service pour un de nos clients.`;
+      window.open(`tel:${provider.phone}`);
+      
+      // Optionnel : copier le message dans le presse-papiers
+      navigator.clipboard.writeText(message).catch(err => {
+        console.error('Erreur lors de la copie du message:', err);
+      });
+    }
+  };
 
   return (
     <>
@@ -112,17 +125,23 @@ const ProviderCard: React.FC<ProviderCardProps> = ({ provider }) => {
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">
               Fermer
             </Button>
             {provider.phone && (
-              <Button asChild>
-                <a href={`tel:${provider.phone}`}>
-                  <Phone className="mr-2 h-4 w-4" />
-                  Appeler
-                </a>
-              </Button>
+              <>
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <a href={`tel:${provider.phone}`}>
+                    <Phone className="mr-2 h-4 w-4" />
+                    Appeler
+                  </a>
+                </Button>
+                <Button onClick={handleHelloKeysCall} className="w-full sm:w-auto">
+                  <Building className="mr-2 h-4 w-4" />
+                  Appeler de la part de Hello Keys
+                </Button>
+              </>
             )}
           </DialogFooter>
         </DialogContent>

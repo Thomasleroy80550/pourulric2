@@ -112,12 +112,13 @@ const TicketDetailPage = () => {
         </div>
 
         <div className="space-y-6 mt-6">
-          <div className="flex gap-4">
+          {/* Message initial - toujours de l'utilisateur */}
+          <div className="flex gap-4 flex-row-reverse">
             <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
               <User className="h-6 w-6 text-gray-500" />
             </div>
-            <div className="flex-grow">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-4 py-3">
+            <div className="flex-grow text-right">
+              <div className="bg-blue-100 dark:bg-blue-900 rounded-lg px-4 py-3">
                 <p className="font-semibold">Vous</p>
                 <div
                   className="prose dark:prose-invert max-w-none"
@@ -130,29 +131,38 @@ const TicketDetailPage = () => {
             </div>
           </div>
 
-          {allConversations.map((convo) => (
-            <div key={convo.id} className={`flex gap-4 ${convo.from_agent ? '' : 'flex-row-reverse'}`}>
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                {convo.from_agent ? (
-                  <MessageSquare className="h-6 w-6 text-gray-500" />
-                ) : (
-                  <User className="h-6 w-6 text-gray-500" />
-                )}
-              </div>
-              <div className={`flex-grow ${convo.from_agent ? '' : 'text-right'}`}>
-                <div className={`${convo.from_agent ? 'bg-gray-100 dark:bg-gray-800' : 'bg-blue-100 dark:bg-blue-900'} rounded-lg px-4 py-3`}>
-                  <p className="font-semibold">{convo.from_agent ? 'Support' : 'Vous'}</p>
-                  <div
-                    className="prose dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: cleanHtml(convo.body) }}
-                  />
+          {allConversations.map((convo) => {
+            // Déterminer si c'est une réponse de l'utilisateur ou du support
+            const isUserResponse = convo.is_note || !convo.from_agent;
+            const authorName = isUserResponse ? 'Vous' : 'Support';
+            const bgColor = isUserResponse ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-800';
+            const flexDirection = isUserResponse ? 'flex-row-reverse' : '';
+            const textAlign = isUserResponse ? 'text-right' : '';
+
+            return (
+              <div key={convo.id} className={`flex gap-4 ${flexDirection}`}>
+                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                  {isUserResponse ? (
+                    <User className="h-6 w-6 text-gray-500" />
+                  ) : (
+                    <MessageSquare className="h-6 w-6 text-gray-500" />
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {safeFormat(convo.created_at, 'dd MMMM yyyy à HH:mm')}
-                </p>
+                <div className={`flex-grow ${textAlign}`}>
+                  <div className={`${bgColor} rounded-lg px-4 py-3`}>
+                    <p className="font-semibold">{authorName}</p>
+                    <div
+                      className="prose dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: cleanHtml(convo.body) }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {safeFormat(convo.created_at, 'dd MMMM yyyy à HH:mm')}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {(ticket.status === 2 || ticket.status === 3) && (

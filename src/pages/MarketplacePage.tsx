@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, Search } from 'lucide-react';
+import { AlertTriangle, Search, Phone, Building } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const MarketplacePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +36,19 @@ const MarketplacePage = () => {
       return matchesCategory && matchesSearch;
     });
   }, [providers, searchTerm, selectedCategory]);
+
+  const handleHelloKeysCall = () => {
+    // Message préparé pour l'appel
+    const message = `Bonjour, je vous appelle de la part de Hello Keys concernant un service pour un de nos clients.`;
+    
+    // Copier le message dans le presse-papiers
+    navigator.clipboard.writeText(message).catch(err => {
+      console.error('Erreur lors de la copie du message:', err);
+    });
+    
+    // Afficher une notification pour guider l'utilisateur
+    alert(`Message copié dans le presse-papiers :\n\n"${message}"\n\nVous pouvez maintenant appeler un prestataire et utiliser ce message pour vous présenter.`);
+  };
 
   return (
     <MainLayout>
@@ -70,6 +84,18 @@ const MarketplacePage = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Bouton d'appel rapide Hello Keys */}
+            <div className="mt-6">
+              <Button 
+                onClick={handleHelloKeysCall}
+                size="lg"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+              >
+                <Building className="mr-2 h-5 w-5" />
+                Appeler un prestataire de la part de Hello Keys
+              </Button>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getTicketDetails, FreshdeskTicketDetails, replyToTicket } from '@/lib/tickets-api';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,6 +36,7 @@ const getStatusText = (status: number): string => {
 const TicketDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const ticketId = Number(id);
+  const queryClient = useQueryClient();
 
   const { data: ticket, isLoading, error, isError } = useQuery<FreshdeskTicketDetails, Error>({
     queryKey: ['ticket', ticketId],
@@ -86,7 +87,15 @@ const TicketDetailPage = () => {
       return DOMPurify.sanitize(html);
     };
 
-    const conversations = ticket.conversations || [];
+    // Combiner les conversations et les notes pour l'affichage
+    const allConversations = [
+      ...(ticket.conversations || []),
+      ...(ticket.notes || []).map((note: any) => ({
+        ...note,
+        from_agent: false, // Les notes de l'utilisateur ne sont pas des réponses d'agent
+        is_note: true, // Marquer comme note pour l'affichage
+      }))
+    ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
     let ticketDescription = ticket.description_text || ticket.description || 'Aucune description disponible';
 
@@ -121,7 +130,7 @@ const TicketDetailPage = () => {
             </div>
           </div>
 
-          {conversations.map((convo) => (
+          {allConversations.map((convo) => (
             <div key={convo.id} className={`flex gap-4 ${convo.from_agent ? '' : 'flex-row-reverse'}`}>
               <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                 {convo.from_agent ? (

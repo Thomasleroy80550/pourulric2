@@ -34,8 +34,21 @@ export interface FreshdeskConversation {
   support_email?: string;
 }
 
+export interface FreshdeskNote {
+  id: number;
+  body: string;
+  body_text?: string;
+  from_email?: string;
+  user_id?: number;
+  created_at: string;
+  updated_at: string;
+  ticket_id: number;
+  private: boolean;
+}
+
 export interface FreshdeskTicketDetails extends FreshdeskTicket {
   conversations?: FreshdeskConversation[];
+  notes?: FreshdeskNote[];
 }
 
 export interface CreateTicketPayload {

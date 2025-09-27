@@ -1,5 +1,4 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -7,8 +6,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
-const TicketDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
+const TicketsPage = () => {
   const navigate = useNavigate();
 
   return (
@@ -34,4 +32,4 @@ const TicketDetailPage = () => {
   );
 };
 
-export default TicketDetailPage;
+export default TicketsPage;

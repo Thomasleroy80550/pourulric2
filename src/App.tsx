@@ -58,6 +58,7 @@ import AdminRehousingNotePage from "./pages/AdminRehousingNotePage"; // New impo
 import AdminManualStatsPage from "./pages/AdminManualStatsPage"; // New import
 import TicketsPage from "./pages/TicketsPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
+import MarketplacePage from "./pages/MarketplacePage"; // New import
 
 const queryClient = new QueryClient();
 
@@ -124,6 +125,7 @@ function App() {
                   <Route path="/comp-set" element={<CompSetPage />} />
                   <Route path="/tickets" element={<TicketsPage />} />
                   <Route path="/tickets/:id" element={<TicketDetailPage />} />
+                  <Route path="/marketplace" element={<MarketplacePage />} /> {/* New route */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </SessionContextProvider>

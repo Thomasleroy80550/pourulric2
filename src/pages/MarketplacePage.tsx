@@ -54,7 +54,7 @@ const MarketplacePage = () => {
     <MainLayout>
       <div className="min-h-screen">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] text-white py-16 px-4">
+        <section className="relative bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] py-16 px-4">
           <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: 'url(/hero-background.jpg)' }}></div>
           <div className="relative z-10 max-w-6xl mx-auto text-center">
             <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6 animate-fade-in-up">

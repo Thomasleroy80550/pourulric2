@@ -460,13 +460,30 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </Alert>
             )}
             {profile?.is_contract_terminated && (
-              <Alert variant="destructive" className="mb-6 sticky top-0 z-10">
-                <Ban className="h-4 w-4" />
-                <AlertTitle>Contrat résilié</AlertTitle>
-                <AlertDescription>
-                  Votre contrat a été résilié. Veuillez sauvegarder vos données importantes car votre compte sera supprimé prochainement.
-                </AlertDescription>
-              </Alert>
+              <div className="mb-6 sticky top-0 z-10 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg shadow-lg border-0">
+                <div className="flex items-start p-4">
+                  <div className="flex-shrink-0">
+                    <Ban className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <h3 className="text-lg font-bold text-white mb-1">Contrat résilié</h3>
+                    <p className="text-sm text-white/90">
+                      Votre contrat a été résilié. Veuillez sauvegarder vos données importantes car votre compte sera supprimé prochainement.
+                    </p>
+                    <div className="mt-3 flex items-center space-x-4">
+                      <button className="text-white underline hover:text-white/80 text-sm font-medium">
+                        Télécharger mes données
+                      </button>
+                      <button className="text-white underline hover:text-white/80 text-sm font-medium">
+                        Contacter le support
+                      </button>
+                    </div>
+                  </div>
+                  <div className="ml-4 flex-shrink-0">
+                    <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
             )}
             {children}
           </main>

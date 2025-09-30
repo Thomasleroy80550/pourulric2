@@ -39,20 +39,21 @@ export interface UserProfile {
   notify_new_booking_sms?: boolean;
   notify_cancellation_sms?: boolean;
   is_banned?: boolean;
-  is_payment_suspended?: boolean; // Nouveau champ
+  is_payment_suspended?: boolean;
+  is_contract_terminated?: boolean; // Nouveau champ pour la résiliation
   can_manage_prices?: boolean;
   kyc_status?: 'not_verified' | 'pending_review' | 'verified' | 'rejected';
-  kyc_documents?: KycDocument[]; // Changed to array of KycDocument
+  kyc_documents?: KycDocument[];
   onboarding_status?: OnboardingStatus;
   estimation_details?: string;
   estimated_revenue?: number;
   key_delivery_method?: 'deposit' | 'mail';
   revyoos_holding_ids?: string[];
   cguv_signed_document_url?: string;
-  last_seen_at?: string; // Ajout du champ
-  last_sign_in_at?: string; // Ajout du champ
-  referral_code?: string; // Ajout du champ
-  referral_credits?: number; // Ajout du champ
+  last_seen_at?: string;
+  last_sign_in_at?: string;
+  referral_code?: string;
+  referral_credits?: number;
   krossbooking_property_id?: number;
   stripe_account_id?: string;
 }

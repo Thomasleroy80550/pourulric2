@@ -91,7 +91,7 @@ export interface UserProfile {
   objective_amount?: number | null;
   cguv_accepted_at?: string | null;
   cguv_version?: string | null;
-  pennylane_customer_id?: number | null; // Ceci est la bonne définition
+  pennylane_customer_id?: number | null;
   commission_rate?: number | null;
   phone_number?: string | null;
   expenses_module_enabled?: boolean | null;
@@ -111,7 +111,8 @@ export interface UserProfile {
   notify_new_booking_sms: boolean;
   notify_cancellation_sms: boolean;
   is_banned: boolean;
-  is_payment_suspended: boolean; // Nouveau champ
+  is_payment_suspended: boolean;
+  is_contract_terminated: boolean; // Nouveau champ pour la résiliation
   kyc_status?: string | null;
   kyc_documents?: any | null;
   can_manage_prices: boolean;

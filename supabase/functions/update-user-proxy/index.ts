@@ -39,7 +39,7 @@ serve(async (req) => {
 
     // 2. Get user data from request body
     const body = await req.json();
-    console.log("Incoming request body:", JSON.stringify(body)); // Log incoming body
+    console.log("Incoming request body:", JSON.stringify(body));
     const { user_id, ...updateData } = body;
 
     if (!user_id) {
@@ -118,6 +118,7 @@ serve(async (req) => {
       .eq('id', user_id)
       .select()
       .single();
+
     if (updateProfileError) {
       console.error("Error updating public.profiles table:", updateProfileError);
       throw new Error(`Failed to update public.profiles: ${updateProfileError.message}`);

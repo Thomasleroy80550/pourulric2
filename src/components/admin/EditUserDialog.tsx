@@ -48,7 +48,8 @@ const editUserSchema = z.object({
   notify_new_booking_sms: z.boolean().optional(),
   notify_cancellation_sms: z.boolean().optional(),
   is_banned: z.boolean().optional(),
-  is_payment_suspended: z.boolean().optional(), // Nouveau champ
+  is_payment_suspended: z.boolean().optional(),
+  is_contract_terminated: z.boolean().optional(),
   can_manage_prices: z.boolean().optional(),
   kyc_status: z.enum(['not_verified', 'pending_review', 'verified', 'rejected']).optional().nullable(),
   estimated_revenue: z.coerce.number().min(0, "Le revenu estimé doit être positif.").optional().nullable(),
@@ -92,6 +93,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
   const [cguvFile, setCguvFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
+  const [showTerminationNotice, setShowTerminationNotice] = useState(false);
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -126,7 +128,8 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         notify_new_booking_sms: user.notify_new_booking_sms ?? false,
         notify_cancellation_sms: user.notify_cancellation_sms ?? false,
         is_banned: user.is_banned || false,
-        is_payment_suspended: user.is_payment_suspended || false, // Nouveau champ
+        is_payment_suspended: user.is_payment_suspended || false,
+        is_contract_terminated: user.is_contract_terminated || false,
         can_manage_prices: user.can_manage_prices || false,
         kyc_status: user.kyc_status || 'not_verified',
         estimated_revenue: user.estimated_revenue || 0,
@@ -137,7 +140,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         stripe_account_id: user.stripe_account_id || '',
         pennylane_customer_id: user.pennylane_customer_id || undefined, // L'initialisation reste la même, car undefined est géré par z.string().optional().nullable()
       });
-
+      setShowTerminationNotice(false);
       setLoadingRooms(true);
       getUserRoomsByUserId(user.id)
         .then(rooms => setUserRooms(rooms))
@@ -228,6 +231,15 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
 
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
     if (!user) return;
+
+    // Vérifier si la résiliation a été activée
+    const isTerminating = values.is_contract_terminated && !user.is_contract_terminated;
+    
+    if (isTerminating) {
+      setShowTerminationNotice(true);
+      return;
+    }
+
     try {
       const { revyoos_holding_ids, referral_credits, ...restOfValues } = values;
       const payload: UpdateUserPayload = {
@@ -243,6 +255,24 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
       onUserUpdated();
     } catch (error: any) {
       toast.error(`Erreur lors de la mise à jour : ${error.message}`);
+    }
+  };
+
+  const confirmTermination = async () => {
+    if (!user) return;
+    
+    try {
+      const payload: UpdateUserPayload = {
+        user_id: user.id,
+        is_contract_terminated: true,
+      };
+      await updateUser(payload);
+      toast.success("Contrat résilié avec succès. L'utilisateur sera notifié.");
+      setShowTerminationNotice(false);
+      onOpenChange(false);
+      onUserUpdated();
+    } catch (error: any) {
+      toast.error(`Erreur lors de la résiliation : ${error.message}`);
     }
   };
 
@@ -330,6 +360,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                     <CardContent className="space-y-4">
                       <FormField control={form.control} name="is_banned" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-red-50 dark:bg-red-900/20"><div className="space-y-0.5"><FormLabel className="text-red-600 dark:text-red-400">Bannir l'utilisateur</FormLabel><p className="text-xs text-red-500 dark:text-red-400/80">L'utilisateur sera déconnecté et ne pourra plus accéder à son compte.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                       <FormField control={form.control} name="is_payment_suspended" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-red-50 dark:bg-red-900/20"><div className="space-y-0.5"><FormLabel className="text-red-600 dark:text-red-400">Suspendre pour non-paiement</FormLabel><p className="text-xs text-red-500 dark:text-red-400/80">Bloque l'accès aux fonctionnalités principales et affiche une bannière de suspension.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                      <FormField control={form.control} name="is_contract_terminated" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-red-50 dark:bg-red-900/20"><div className="space-y-0.5"><FormLabel className="text-red-600 dark:text-red-400">Résiliation de contrat en cours</FormLabel><p className="text-xs text-red-500 dark:text-red-400/80">Marque le contrat comme résilié. L'utilisateur devra sauvegarder ses données avant suppression.</p></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -660,6 +691,59 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmation de résiliation */}
+      <Dialog open={showTerminationNotice} onOpenChange={setShowTerminationNotice}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Avertissement de résiliation
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              Vous êtes sur le point de marquer le contrat de {user?.first_name} {user?.last_name} comme résilié.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="my-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+              ⚠️ Important : Sauvegarde des données
+            </h4>
+            <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+              <li>• L'utilisateur doit sauvegarder toutes ses données importantes</li>
+              <li>• Les documents, factures et relevés seront supprimés définitivement</li>
+              <li>• Les données de réservation seront archivées puis supprimées</li>
+              <li>• Le compte sera désactivé après la période de sauvegarde</li>
+            </ul>
+          </div>
+
+          <div className="text-sm text-muted-foreground mb-4">
+            <p>Cette action entraînera :</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>La désactivation progressive du compte</li>
+              <li>L'envoi d'une notification à l'utilisateur pour sauvegarder ses données</li>
+              <li>La suppression définitive après la période de sauvegarde</li>
+            </ul>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowTerminationNotice(false)}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmTermination}
+              className="flex-1"
+            >
+              Confirmer la résiliation
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

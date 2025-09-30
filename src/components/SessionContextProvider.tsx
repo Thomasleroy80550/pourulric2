@@ -34,6 +34,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     try {
       const userProfile = await getProfile();
       console.log("User profile fetched:", userProfile);
+      
+      // Vérifier si le contrat est résilié
+      if (userProfile?.is_contract_terminated) {
+        toast.error("⚠️ Votre contrat a été résilié. Veuillez sauvegarder vos données avant la suppression définitive de votre compte.");
+      }
+      
       setProfile(userProfile);
       return userProfile;
     } catch (error) {

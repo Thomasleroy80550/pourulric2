@@ -460,19 +460,21 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </Alert>
             )}
             {profile?.is_contract_terminated && (
-              <div className="mb-6 sticky top-0 z-10 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg shadow-lg border-0">
-                <div className="flex items-start p-4">
+              <div className="mb-6 sticky top-0 z-10 bg-white/80 backdrop-blur-sm border border-red-200 rounded-xl shadow-sm">
+                <div className="flex items-center p-4">
                   <div className="flex-shrink-0">
-                    <Ban className="h-6 w-6 text-white" />
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <Ban className="h-5 w-5 text-red-600" />
+                    </div>
                   </div>
-                  <div className="ml-3 flex-1">
-                    <h3 className="text-lg font-bold text-white mb-1">Contrat résilié</h3>
-                    <p className="text-sm text-white/90">
+                  <div className="ml-4 flex-1">
+                    <h3 className="text-base font-semibold text-gray-900">Contrat résilié</h3>
+                    <p className="text-sm text-gray-600 mt-1">
                       Votre contrat a été résilié. Veuillez sauvegarder vos données importantes car votre compte sera supprimé prochainement.
                     </p>
                   </div>
                   <div className="ml-4 flex-shrink-0">
-                    <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                   </div>
                 </div>
               </div>

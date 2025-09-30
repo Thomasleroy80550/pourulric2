@@ -459,6 +459,15 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </AlertDescription>
               </Alert>
             )}
+            {profile?.is_contract_terminated && (
+              <Alert variant="destructive" className="mb-6 sticky top-0 z-10">
+                <Ban className="h-4 w-4" />
+                <AlertTitle>Contrat résilié</AlertTitle>
+                <AlertDescription>
+                  Votre contrat a été résilié. Veuillez sauvegarder vos données importantes car votre compte sera supprimé prochainement.
+                </AlertDescription>
+              </Alert>
+            )}
             {children}
           </main>
         </div>

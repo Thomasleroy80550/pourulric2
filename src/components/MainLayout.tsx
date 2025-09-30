@@ -470,14 +470,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     <p className="text-sm text-white/90">
                       Votre contrat a été résilié. Veuillez sauvegarder vos données importantes car votre compte sera supprimé prochainement.
                     </p>
-                    <div className="mt-3 flex items-center space-x-4">
-                      <button className="text-white underline hover:text-white/80 text-sm font-medium">
-                        Télécharger mes données
-                      </button>
-                      <button className="text-white underline hover:text-white/80 text-sm font-medium">
-                        Contacter le support
-                      </button>
-                    </div>
                   </div>
                   <div className="ml-4 flex-shrink-0">
                     <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>

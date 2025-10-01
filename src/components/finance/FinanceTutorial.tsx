@@ -57,7 +57,7 @@ const tutorialSlides: TutorialSlide[] = [
         <div className="text-sm font-medium text-purple-700 mb-2">Services facturés :</div>
         <ul className="text-sm space-y-1">
           <li>• Commission sur réservations</li>
-          <li>• Frais de gestion</li>
+          <li>• Frais de ménage incluant le linge</li>
           <li>• Services additionnels</li>
           <li>• TVA applicable</li>
         </ul>

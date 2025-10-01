@@ -49,6 +49,35 @@ const tutorialSlides: TutorialSlide[] = [
   },
   {
     id: 3,
+    title: "Calcul de la Commission",
+    content: "Notre commission de 26% est calculée uniquement sur le montant de la location, hors frais de ménage et autres services. Cela signifie que nous ne prenons pas de commission sur les frais annexes.",
+    icon: <TrendingUp className="h-12 w-12 text-orange-600" />,
+    example: (
+      <div className="mt-4 p-4 bg-orange-50 rounded-lg">
+        <div className="text-sm font-medium text-orange-700 mb-2">Exemple de calcul :</div>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span>Prix de la location</span>
+            <span className="font-medium">750€</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Frais de ménage</span>
+            <span>100€</span>
+          </div>
+          <div className="flex justify-between font-semibold border-t pt-1">
+            <span>Total perçu du client</span>
+            <span>850€</span>
+          </div>
+          <div className="mt-3 p-2 bg-white rounded border-l-4 border-orange-400">
+            <div className="text-xs text-gray-600">Commission calculée sur :</div>
+            <div className="font-semibold">750€ × 26% = 195€</div>
+          </div>
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 4,
     title: "Les Factures",
     content: "Les factures sont générées automatiquement chaque mois basées sur vos relevés. Elles incluent tous les services facturés (commission, services annexes) et sont disponibles en format PDF pour votre comptabilité.",
     icon: <CreditCard className="h-12 w-12 text-purple-600" />,
@@ -65,13 +94,13 @@ const tutorialSlides: TutorialSlide[] = [
     )
   },
   {
-    id: 4,
+    id: 5,
     title: "Suivi de vos performances",
     content: "Utilisez ces données pour suivre l'évolution de votre activité, comparer vos mois et optimiser votre stratégie tarifaire. Les tendances vous aident à identifier les périodes de forte et faible activité.",
     icon: <TrendingUp className="h-12 w-12 text-orange-600" />
   },
   {
-    id: 5,
+    id: 6,
     title: "Prêt à commencer ?",
     content: "Vous pouvez maintenant naviguer entre les différentes sections. N'hésitez pas à revenir consulter ce tutoriel quand vous en avez besoin !",
     icon: <FileText className="h-12 w-12 text-blue-600" />

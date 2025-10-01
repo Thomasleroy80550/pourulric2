@@ -10,10 +10,14 @@ import RehousingNotesTab from '@/components/finance/RehousingNotesTab';
 import { useSession } from '@/components/SessionContextProvider';
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
+import FinanceTutorial from '@/components/finance/FinanceTutorial';
+import { HelpCircle } from 'lucide-react';
+import Button from '@/components/ui/button';
 
 const FinancePage: React.FC = () => {
   const { profile } = useSession();
   const [showExpensesTab, setShowExpensesTab] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -41,7 +45,21 @@ const FinancePage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Finances</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Finances</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTutorial(true)}
+            className="flex items-center space-x-2"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span>Aide</span>
+          </Button>
+        </div>
+        
+        {showTutorial && <FinanceTutorial onClose={() => setShowTutorial(false)} />}
+        
         <Tabs defaultValue="statements" className="w-full">
           {profile?.role === 'accountant' ? (
 <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto text-center justify-items-center">

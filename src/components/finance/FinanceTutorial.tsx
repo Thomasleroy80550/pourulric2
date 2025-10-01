@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X, FileText, Calculator, TrendingUp, CreditCard } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
 
 interface TutorialSlide {
   id: number;

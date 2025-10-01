@@ -12,7 +12,7 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import FinanceTutorial from '@/components/finance/FinanceTutorial';
 import { HelpCircle } from 'lucide-react';
-import Button from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 
 const FinancePage: React.FC = () => {
   const { profile } = useSession();

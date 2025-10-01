@@ -50,27 +50,39 @@ const tutorialSlides: TutorialSlide[] = [
   {
     id: 3,
     title: "Calcul de la Commission",
-    content: "Notre commission de 26% est calculée uniquement sur le montant de la location, hors frais de ménage et autres services. Cela signifie que nous ne prenons pas de commission sur les frais annexes.",
+    content: "Notre commission de 26% est calculée sur le revenu généré après déduction des frais de plateforme et des frais annexes. Voici comment ça marche :",
     icon: <TrendingUp className="h-12 w-12 text-orange-600" />,
     example: (
       <div className="mt-4 p-4 bg-orange-50 rounded-lg">
-        <div className="text-sm font-medium text-orange-700 mb-2">Exemple de calcul :</div>
-        <div className="space-y-1 text-sm">
+        <div className="text-sm font-medium text-orange-700 mb-2">Étape par étape :</div>
+        <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span>Prix de la location</span>
-            <span className="font-medium">750€</span>
+            <span>1. Total perçu du client</span>
+            <span className="font-medium">850€</span>
           </div>
-          <div className="flex justify-between">
-            <span>Frais de ménage</span>
-            <span>100€</span>
+          <div className="flex justify-between text-gray-500">
+            <span>2. Commission plateforme (Airbnb, Booking)</span>
+            <span>-150€</span>
+          </div>
+          <div className="flex justify-between text-gray-500">
+            <span>3. Frais de paiement</span>
+            <span>-25€</span>
           </div>
           <div className="flex justify-between font-semibold border-t pt-1">
-            <span>Total perçu du client</span>
-            <span>850€</span>
+            <span>4. Montant versé</span>
+            <span>675€</span>
+          </div>
+          <div className="flex justify-between text-gray-500">
+            <span>5. Frais de ménage</span>
+            <span>-100€</span>
+          </div>
+          <div className="flex justify-between text-gray-500">
+            <span>6. Taxe de séjour</span>
+            <span>-50€</span>
           </div>
           <div className="mt-3 p-2 bg-white rounded border-l-4 border-orange-400">
             <div className="text-xs text-gray-600">Commission calculée sur :</div>
-            <div className="font-semibold">750€ × 26% = 195€</div>
+            <div className="font-semibold">525€ × 26% = 136.50€</div>
           </div>
         </div>
       </div>

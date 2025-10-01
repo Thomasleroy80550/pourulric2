@@ -21,7 +21,7 @@ const tutorialSlides: TutorialSlide[] = [
   {
     id: 2,
     title: "Les Relevés",
-    content: "Les relevés mensuels récapitulent l'ensemble de vos réservations, revenus et commissions pour chaque mois. Vous y trouverez le détail de chaque réservation avec les montants bruts, commissions et net à payer.",
+    content: "Les relevés mensuels récapitulent l'ensemble de vos réservations, revenus et commissions pour chaque mois. Vous y trouverez le détail de chaque réservation avec les montants bruts, commissions, frais de ménage et résultat final.",
     icon: <Calculator className="h-12 w-12 text-green-600" />,
     example: (
       <div className="mt-4 p-4 bg-gray-50 rounded-lg">
@@ -35,9 +35,13 @@ const tutorialSlides: TutorialSlide[] = [
             <span>Commission (26%)</span>
             <span>-221€</span>
           </div>
+          <div className="flex justify-between text-gray-500">
+            <span>Frais de ménage</span>
+            <span>-80€</span>
+          </div>
           <div className="flex justify-between font-semibold border-t pt-1">
-            <span>Net à payer</span>
-            <span className="text-green-600">629€</span>
+            <span>Résultat</span>
+            <span className="text-green-600">549€</span>
           </div>
         </div>
       </div>

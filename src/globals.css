@@ -134,6 +134,61 @@
   }
 }
 
+/* Halloween Decorations & Effects */
+@keyframes float-up {
+  from {
+    transform: translateY(0) translateX(0) rotate(var(--start-rot));
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-120vh) translateX(calc(var(--x-dir) * 30vw)) rotate(var(--end-rot));
+    opacity: 0;
+  }
+}
+
+.halloween-decoration {
+  position: absolute;
+  animation-name: float-up;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+  text-shadow: 0 0 8px rgba(0,0,0,0.7);
+}
+
+@keyframes fog-animation {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-5%, 2%);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.3;
+  }
+}
+
+.fog-layer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80%;
+  background: radial-gradient(ellipse at bottom, rgba(128, 128, 128, 0.2) 0%, transparent 60%);
+  animation: fog-animation 20s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.fog-layer-2 {
+  animation-duration: 25s;
+  animation-direction: alternate-reverse;
+  opacity: 0.2;
+  height: 100%;
+  background: radial-gradient(circle at bottom, rgba(80, 80, 80, 0.15) 0%, transparent 50%);
+}
+
 /* Custom styles for the new Booking Planning Grid */
 .grid-container {
   display: grid;

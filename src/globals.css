@@ -155,6 +155,22 @@
   text-shadow: 0 0 8px rgba(0,0,0,0.7);
 }
 
+/* Animation supplémentaire pour certains éléments */
+.halloween-decoration:nth-child(3n) {
+  animation-name: float-up, pulse-glow;
+  animation-duration: 12s, 2s;
+  animation-iteration-count: infinite, infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.3) drop-shadow(0 0 5px currentColor);
+  }
+}
+
 @keyframes fog-animation {
   0% {
     transform: translate(0, 0);

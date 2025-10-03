@@ -94,16 +94,16 @@
     --popover-foreground: 24 95% 90%;
 
     --primary: 24 95% 50%; /* Pumpkin orange */
-    --primary-foreground: 0 0% 0%; /* Black */
+    --primary-foreground: 0 0% 100%; /* White for better contrast */
 
     --secondary: 270 50% 15%; /* Dark purple */
-    --secondary-foreground: 270 50% 80%; /* Light purple */
+    --secondary-foreground: 270 50% 90%; /* Lighter purple for better contrast */
 
     --muted: 24 10% 12%;
-    --muted-foreground: 24 20% 60%;
+    --muted-foreground: 24 30% 80%; /* Lighter grey-orange for better contrast */
 
     --accent: 80 80% 45%; /* Spooky green */
-    --accent-foreground: 0 0% 0%;
+    --accent-foreground: 0 0% 100%; /* White for better contrast */
 
     --destructive: 0 100% 45%; /* Blood red */
     --destructive-foreground: 0 0% 100%;
@@ -116,9 +116,9 @@
     --sidebar-background: 24 15% 6%;
     --sidebar-foreground: 24 95% 70%;
     --sidebar-primary: 24 95% 50%;
-    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%; /* White for better contrast */
     --sidebar-accent: 270 50% 15%;
-    --sidebar-accent-foreground: 24 95% 80%;
+    --sidebar-accent-foreground: 24 95% 95%; /* Very light pale orange for better contrast */
     --sidebar-border: 24 10% 15%;
     --sidebar-ring: 24 95% 50%;
   }

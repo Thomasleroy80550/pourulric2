@@ -60,6 +60,7 @@ import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new consta
 import { useTheme } from 'next-themes';
 import HalloweenDecorations from './HalloweenDecorations';
 import HalloweenMusicPlayer from './HalloweenMusicPlayer'; // Ajout de l'import
+import HalloweenEasterEgg from './HalloweenEasterEgg'; // Ajout de l'import
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -336,6 +337,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {theme === 'halloween' && <HalloweenDecorations />}
       {theme === 'halloween' && <HalloweenMusicPlayer />}
+      <HalloweenEasterEgg />
       {!isMobile && (
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
           <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} />

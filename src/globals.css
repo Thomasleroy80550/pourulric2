@@ -172,6 +172,41 @@
   animation-iteration-count: infinite, infinite;
 }
 
+/* Animation pour l'easter egg - effet enfer */
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-2px, -2px) rotate(-0.5deg); }
+  20% { transform: translate(2px, -2px) rotate(0.5deg); }
+  30% { transform: translate(-2px, 2px) rotate(-0.5deg); }
+  40% { transform: translate(2px, 2px) rotate(0.5deg); }
+  50% { transform: translate(-2px, -2px) rotate(-0.5deg); }
+  60% { transform: translate(2px, -2px) rotate(0.5deg); }
+  70% { transform: translate(-2px, 2px) rotate(-0.5deg); }
+  80% { transform: translate(2px, 2px) rotate(0.5deg); }
+  90% { transform: translate(-2px, -2px) rotate(-0.5deg); }
+}
+
+body.hell-effect {
+  animation: screen-shake 0.5s ease-in-out;
+  filter: hue-rotate(180deg) saturate(2) contrast(1.5) brightness(0.8);
+}
+
+@keyframes hell-fire {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+.hell-background {
+  background: linear-gradient(45deg, 
+    #ff0000 0%, 
+    #ff4500 25%, 
+    #ff8800 50%, 
+    #ff0000 75%, 
+    #8b0000 100%);
+  background-size: 400% 400%;
+  animation: hell-fire 2s ease infinite;
+}
+
 @keyframes pulse-glow {
   0%, 100% {
     filter: brightness(1) opacity(0.8);

@@ -70,8 +70,9 @@ const HalloweenMusicPlayer: React.FC = () => {
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       >
-        <source src="https://www.soundjay.com/misc/sounds/spooky-ambient-1.mp3" type="audio/mpeg" />
-        <source src="https://cdn.freesound.org/previews/250/250551_4284968-lq.mp3" type="audio/mpeg" />
+        <source src="https://ton-site.com/musique/halloween.mp3" type="audio/mpeg" />
+        <source src="https://firebasestorage.googleapis.com/v0/b/ton-app.appspot.com/o/halloween.mp3" type="audio/mpeg" />
+        Votre navigateur ne supporte pas l'audio HTML5.
       </audio>
 
       {/* Indicateur visuel de musique en cours */}

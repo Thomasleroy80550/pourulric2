@@ -4,6 +4,7 @@ import React from 'react';
 
 const EMOJIS = ['🎃', '🦇', '💀', '👻', '🕷️'];
 const NUM_DECORATIONS = 25;
+const NUM_SPIDERS = 8; // Nombre d'araignées
 
 const HalloweenDecorations = () => {
   const decorations = Array.from({ length: NUM_DECORATIONS }).map((_, i) => {
@@ -28,9 +29,33 @@ const HalloweenDecorations = () => {
     );
   });
 
+  // Araignées supplémentaires qui rampent
+  const spiders = Array.from({ length: NUM_SPIDERS }).map((_, i) => {
+    const spiderStyle: React.CSSProperties = {
+      left: `${Math.random() * 90}vw`,
+      top: `${Math.random() * 80}vh`,
+      animationDuration: `${Math.random() * 15 + 10}s`,
+      animationDelay: `${Math.random() * 5}s`,
+      fontSize: '1.2rem',
+      zIndex: 9998,
+      opacity: 0.8,
+    } as React.CSSProperties;
+
+    return (
+      <div 
+        key={`spider-${i}`} 
+        className="spider-crawl" 
+        style={spiderStyle}
+      >
+        🕷️
+      </div>
+    );
+  });
+
   return (
     <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
       {decorations}
+      {spiders}
       <div className="fog-layer fog-layer-1"></div>
       <div className="fog-layer fog-layer-2"></div>
     </div>

@@ -172,6 +172,33 @@
   animation-iteration-count: infinite, infinite;
 }
 
+/* Animation pour les araignées qui rampent */
+@keyframes spider-crawl {
+  0% {
+    transform: translateX(0) translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(20px) translateY(-10px) rotate(90deg);
+  }
+  50% {
+    transform: translateX(-15px) translateY(15px) rotate(180deg);
+  }
+  75% {
+    transform: translateX(25px) translateY(5px) rotate(270deg);
+  }
+  100% {
+    transform: translateX(0) translateY(0) rotate(360deg);
+  }
+}
+
+.spider-crawl {
+  position: absolute;
+  animation-name: spider-crawl;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
 /* Animation pour l'easter egg - effet enfer */
 @keyframes screen-shake {
   0%, 100% { transform: translate(0, 0) rotate(0deg); }

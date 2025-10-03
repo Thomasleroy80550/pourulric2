@@ -10,6 +10,7 @@ const HalloweenEasterEgg: React.FC = () => {
   const [showPumpkin, setShowPumpkin] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [clickCount, setClickCount] = useState(0);
+  const [showSpiderWebs, setShowSpiderWebs] = useState(false);
 
   // Affiche la citrouille après 3 secondes sur la version standard
   useEffect(() => {
@@ -18,6 +19,15 @@ const HalloweenEasterEgg: React.FC = () => {
         setShowPumpkin(true);
       }, 3000);
       return () => clearTimeout(timer);
+    }
+  }, [theme]);
+
+  // Affiche les toiles d'araignée en thème Halloween
+  useEffect(() => {
+    if (theme === 'halloween') {
+      setShowSpiderWebs(true);
+    } else {
+      setShowSpiderWebs(false);
     }
   }, [theme]);
 
@@ -90,6 +100,34 @@ const HalloweenEasterEgg: React.FC = () => {
         }, 3000);
       }, i * 200);
     }
+
+    // Crée des toiles d'araignée qui apparaissent
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        const web = document.createElement('div');
+        web.innerHTML = '🕸️';
+        web.style.position = 'fixed';
+        web.style.left = `${Math.random() * 90}vw`;
+        web.style.top = `${Math.random() * 80}vh`;
+        web.style.fontSize = '3rem';
+        web.style.zIndex = '9998';
+        web.style.animation = 'web-appear 2s ease-out forwards';
+        web.style.pointerEvents = 'none';
+        web.style.opacity = '0';
+        web.style.transform = 'scale(0) rotate(0deg)';
+        
+        document.body.appendChild(web);
+        
+        setTimeout(() => {
+          web.style.opacity = '0.7';
+          web.style.transform = 'scale(1) rotate(45deg)';
+        }, 100);
+        
+        setTimeout(() => {
+          web.remove();
+        }, 5000);
+      }, i * 300);
+    }
   };
 
   if (theme === 'halloween' || !showPumpkin) {
@@ -127,6 +165,21 @@ const HalloweenEasterEgg: React.FC = () => {
           }
         }
 
+        @keyframes web-appear {
+          0% {
+            opacity: 0;
+            transform: scale(0) rotate(0deg);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.2) rotate(30deg);
+          }
+          100% {
+            opacity: 0.7;
+            transform: scale(1) rotate(45deg);
+          }
+        }
+
         @keyframes pumpkin-glow {
           0%, 100% {
             filter: drop-shadow(0 0 5px rgba(255, 140, 0, 0.5));
@@ -155,6 +208,62 @@ const HalloweenEasterEgg: React.FC = () => {
 
         .pumpkin-easter-egg.clicked {
           animation: pumpkin-glow 0.3s ease-in-out infinite, pumpkin-shake 0.2s ease-in-out infinite;
+        }
+
+        /* Toiles d'araignée en thème Halloween */
+        .spider-web {
+          position: fixed;
+          font-size: 2.5rem;
+          opacity: 0.6;
+          z-index: 100;
+          pointer-events: none;
+          animation: web-float 8s ease-in-out infinite;
+          filter: drop-shadow(0 0 3px rgba(255, 140, 0, 0.5));
+        }
+
+        @keyframes web-float {
+          0%, 100% {
+            transform: translateY(0) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-10px) rotate(5deg);
+          }
+        }
+
+        .web-1 {
+          top: 10%;
+          left: 5%;
+          animation-delay: 0s;
+        }
+
+        .web-2 {
+          top: 20%;
+          right: 8%;
+          animation-delay: 2s;
+        }
+
+        .web-3 {
+          top: 60%;
+          left: 3%;
+          animation-delay: 4s;
+        }
+
+        .web-4 {
+          top: 70%;
+          right: 5%;
+          animation-delay: 6s;
+        }
+
+        .web-5 {
+          top: 40%;
+          left: 15%;
+          animation-delay: 1s;
+        }
+
+        .web-6 {
+          top: 80%;
+          right: 12%;
+          animation-delay: 3s;
         }
       `}</style>
 
@@ -190,6 +299,18 @@ const HalloweenEasterEgg: React.FC = () => {
             🔥
           </div>
         </div>
+      )}
+
+      {/* Toiles d'araignée en thème Halloween */}
+      {showSpiderWebs && (
+        <>
+          <div className="spider-web web-1">🕸️</div>
+          <div className="spider-web web-2">🕸️</div>
+          <div className="spider-web web-3">🕸️</div>
+          <div className="spider-web web-4">🕸️</div>
+          <div className="spider-web web-5">🕸️</div>
+          <div className="spider-web web-6">🕸️</div>
+        </>
       )}
     </>
   );

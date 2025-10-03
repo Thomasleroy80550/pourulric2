@@ -16,6 +16,7 @@ const HalloweenDecorations = () => {
       '--start-rot': `${Math.random() * 360}deg`,
       '--end-rot': `${Math.random() * 720 - 360}deg`,
       '--x-dir': `${Math.random() * 2 - 1}`,
+      textShadow: '0 0 8px rgba(255, 165, 0, 0.7), 0 0 12px rgba(255, 69, 0, 0.5)', // Orange glow
     } as React.CSSProperties;
     
     return (

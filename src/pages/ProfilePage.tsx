@@ -472,6 +472,17 @@ const ProfilePage: React.FC = () => {
                     onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                   />
                 </div>
+                <div className="flex items-center justify-between p-3 border rounded-md bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+                  <div>
+                    <Label htmlFor="halloweenMode" className="text-orange-800 dark:text-orange-300">🎃 Mode Halloween</Label>
+                    <p className="text-sm text-orange-600 dark:text-orange-400">Joyeux Halloween ! Activez un thème spécial.</p>
+                  </div>
+                  <Switch
+                    id="halloweenMode"
+                    checked={theme === 'halloween'}
+                    onCheckedChange={(checked) => setTheme(checked ? 'halloween' : 'light')}
+                  />
+                </div>
                 <div className="flex items-center justify-between p-3 border rounded-md">
                   <Label htmlFor="notif-new-booking-email">Recevoir les nouvelles réservations par email</Label>
                   <Switch id="notif-new-booking-email" checked={notifyNewBookingEmail} onCheckedChange={setNotifyNewBookingEmail} disabled={userProfile?.is_banned} />

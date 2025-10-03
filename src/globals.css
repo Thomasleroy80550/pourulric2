@@ -82,6 +82,46 @@
     --sidebar-border: 220 10% 25%; /* Dark grey/blue border */
     --sidebar-ring: 217.2 91.2% 59.8%; /* Consistent with main ring */
   }
+
+  .halloween {
+    --background: 24 10% 4%; /* Near black */
+    --foreground: 24 95% 90%; /* Pale orange */
+
+    --card: 24 10% 8%; /* Darker grey */
+    --card-foreground: 24 95% 90%;
+
+    --popover: 24 10% 4%;
+    --popover-foreground: 24 95% 90%;
+
+    --primary: 24 95% 50%; /* Pumpkin orange */
+    --primary-foreground: 0 0% 0%; /* Black */
+
+    --secondary: 270 50% 15%; /* Dark purple */
+    --secondary-foreground: 270 50% 80%; /* Light purple */
+
+    --muted: 24 10% 12%;
+    --muted-foreground: 24 20% 60%;
+
+    --accent: 80 80% 45%; /* Spooky green */
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 100% 45%; /* Blood red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 24 10% 15%;
+    --input: 24 10% 15%;
+    --ring: 24 95% 50%;
+
+    /* Custom Sidebar Colors for halloween mode */
+    --sidebar-background: 24 15% 6%;
+    --sidebar-foreground: 24 95% 70%;
+    --sidebar-primary: 24 95% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 270 50% 15%;
+    --sidebar-accent-foreground: 24 95% 80%;
+    --sidebar-border: 24 10% 15%;
+    --sidebar-ring: 24 95% 50%;
+  }
 }
 
 @layer base {

@@ -59,6 +59,7 @@ import { getSetting } from '@/lib/admin-api'; // Import getSetting
 import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new constant
 import { useTheme } from 'next-themes';
 import HalloweenDecorations from './HalloweenDecorations';
+import HalloweenMusicPlayer from './HalloweenMusicPlayer'; // Ajout de l'import
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -334,6 +335,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {theme === 'halloween' && <HalloweenDecorations />}
+      {theme === 'halloween' && <HalloweenMusicPlayer />}
       {!isMobile && (
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
           <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} />

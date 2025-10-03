@@ -130,6 +130,16 @@
   }
 
   body {
+    font-family: 'Inter', sans-serif;
+    --music-glow: none; /* Variable pour l'effet de musique */
+  }
+
+  /* Effet visuel quand la musique joue */
+  body:has(.halloween-music-playing) {
+    filter: drop-shadow(var(--music-glow, none));
+  }
+
+  body {
     @apply bg-background text-foreground;
   }
 }

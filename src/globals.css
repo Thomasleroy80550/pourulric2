@@ -84,43 +84,43 @@
   }
 
   .halloween {
-    --background: 24 10% 4%; /* Near black */
-    --foreground: 24 95% 90%; /* Pale orange */
+    --background: 24 70% 90%; /* Orange très clair - presque pêche */
+    --foreground: 24 95% 25%; /* Texte foncé pour contraste */
 
-    --card: 24 10% 8%; /* Darker grey */
-    --card-foreground: 24 95% 90%;
+    --card: 24 65% 85%; /* Orange clair pour les cartes */
+    --card-foreground: 24 95% 20%;
 
-    --popover: 24 10% 4%;
-    --popover-foreground: 24 95% 90%;
+    --popover: 24 70% 90%;
+    --popover-foreground: 24 95% 25%;
 
-    --primary: 24 95% 50%; /* Pumpkin orange */
-    --primary-foreground: 0 0% 100%; /* White for better contrast */
+    --primary: 24 95% 45%; /* Orange vif mais pas trop foncé */
+    --primary-foreground: 0 0% 100%; /* Blanc */
 
-    --secondary: 270 50% 15%; /* Dark purple */
-    --secondary-foreground: 270 50% 90%; /* Lighter purple for better contrast */
+    --secondary: 205 40% 80%; /* Bleu très clair */
+    --secondary-foreground: 205 95% 20%;
 
-    --muted: 24 10% 12%;
-    --muted-foreground: 24 30% 80%; /* Lighter grey-orange for better contrast */
+    --muted: 24 40% 80%; /* Orange très pâle */
+    --muted-foreground: 24 50% 35%; /* Orange moyen pour le texte */
 
-    --accent: 80 80% 45%; /* Spooky green */
-    --accent-foreground: 0 0% 100%; /* White for better contrast */
+    --accent: 80 70% 60%; /* Vert lime plus clair */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 100% 45%; /* Blood red */
+    --destructive: 0 85% 55%; /* Rouge légèrement plus clair */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 24 10% 15%;
-    --input: 24 10% 15%;
-    --ring: 24 95% 50%;
+    --border: 24 50% 75%; /* Orange moyen clair pour les bordures */
+    --input: 24 60% 88%; /* Orange très clair pour les inputs */
+    --ring: 24 95% 45%; /* Orange vif */
 
-    /* Custom Sidebar Colors for halloween mode */
-    --sidebar-background: 24 15% 6%;
-    --sidebar-foreground: 24 95% 70%;
-    --sidebar-primary: 24 95% 50%;
-    --sidebar-primary-foreground: 0 0% 100%; /* White for better contrast */
-    --sidebar-accent: 270 50% 15%;
-    --sidebar-accent-foreground: 24 95% 95%; /* Very light pale orange for better contrast */
-    --sidebar-border: 24 10% 15%;
-    --sidebar-ring: 24 95% 50%;
+    /* Custom Sidebar Colors for halloween mode - ORANGE CLAIR ! */
+    --sidebar-background: 24 80% 92%; /* Orange très clair avec haute luminosité */
+    --sidebar-foreground: 24 95% 20%; /* Texte orange foncé */
+    --sidebar-primary: 24 95% 45%; /* Orange vif pour le logo */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 24 70% 88%; /* Orange clair pour hover */
+    --sidebar-accent-foreground: 24 95% 15%;
+    --sidebar-border: 24 60% 80%; /* Orange clair pour bordures */
+    --sidebar-ring: 24 95% 45%;
   }
 }
 

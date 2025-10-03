@@ -12,41 +12,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getRehousingNotes, createRehousingNote, RehousingNote, resendRehousingNoteNotification } from '@/lib/rehousing-notes-api';
+import { getRehousingNotes, RehousingNote, resendRehousingNoteNotification } from '@/lib/rehousing-notes-api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertCircle, CheckCircle, Mail, RefreshCw } from 'lucide-react';
 
-const noteSchema = z.object({
-  note_type: z.string().min(1, "Le type de note est requis."),
-  amount_received: z.coerce.number().min(0, "Le montant doit être positif."),
-  amount_to_transfer: z.coerce.number().min(0, "Le montant doit être positif."),
-  recipient_name: z.string().min(1, "Le nom du bénéficiaire est requis."),
-  recipient_iban: z.string().min(1, "L'IBAN est requis."),
-  recipient_bic: z.string().optional(),
-  comment: z.string().optional(),
-});
-
 const RehousingNotesTab: React.FC = () => {
   const [notes, setNotes] = useState<RehousingNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendingNoteId, setResendingNoteId] = useState<string | null>(null);
-
-  const form = useForm<z.infer<typeof noteSchema>>({
-    resolver: zodResolver(noteSchema),
-    defaultValues: {
-      note_type: '',
-      amount_received: 0,
-      amount_to_transfer: 0,
-      recipient_name: '',
-      recipient_iban: '',
-      recipient_bic: '',
-      comment: '',
-    },
-  });
 
   const fetchNotes = async () => {
     setLoading(true);
@@ -64,20 +40,6 @@ const RehousingNotesTab: React.FC = () => {
     fetchNotes();
   }, []);
 
-  const onSubmit = async (values: z.infer<typeof noteSchema>) => {
-    setIsSubmitting(true);
-    try {
-      await createRehousingNote(values);
-      toast.success('Note de relogement créée avec succès. Vous et les administrateurs recevrez une notification par e-mail.');
-      form.reset();
-      fetchNotes(); // Refresh the list
-    } catch (error: any) {
-      toast.error(`Erreur lors de la création de la note : ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleResendNotification = async (noteId: string) => {
     setResendingNoteId(noteId);
     try {
@@ -94,132 +56,10 @@ const RehousingNotesTab: React.FC = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Créer une nouvelle note de relogement</CardTitle>
+          <CardTitle>Vos notes de relogement</CardTitle>
           <CardDescription>
-            Remplissez ce formulaire pour les cas où vous avez perçu des fonds (ex: caution) que Hello Keys doit vous rembourser ou transférer à un tiers.
+            Visualisez l'historique de vos notes de relogement créées par l'équipe Hello Keys.
           </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="note_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Type de note</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez un type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Caution voyageur">Caution voyageur</SelectItem>
-                          <SelectItem value="Remboursement plateforme">Remboursement plateforme</SelectItem>
-                          <SelectItem value="Autre">Autre</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="amount_received"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Montant perçu par le propriétaire (€)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="150.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="amount_to_transfer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Montant à virer par Hello Keys (€)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="150.00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <CardTitle className="text-lg pt-4">Informations du bénéficiaire</CardTitle>
-              <FormField
-                control={form.control}
-                name="recipient_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom complet du bénéficiaire</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="recipient_iban"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>IBAN</FormLabel>
-                      <FormControl>
-                        <Input placeholder="FR76..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="recipient_bic"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>BIC (Optionnel)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="PSSTFRPPPAR" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="comment"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Commentaire (Optionnel)</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Ajoutez des détails pertinents ici..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Création en cours...' : 'Créer la note'}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Historique de vos notes de relogement</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

@@ -60,6 +60,7 @@ import TicketsPage from "./pages/TicketsPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import AdminMarketplacePage from "./pages/AdminMarketplacePage"; // New import
+import CalendarPageMobile from "./pages/CalendarPageMobile";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +113,7 @@ function App() {
                   <Route path="/new-version" element={<NewVersionPage />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                   <Route path="/bookings" element={<BookingsPage />} />
                   <Route path="/performance" element={<PerformancePage />} />
                   <Route path="/reviews" element={<ReviewsPage />} />

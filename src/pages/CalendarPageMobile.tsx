@@ -1,15 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, List, Grid } from 'lucide-react';
+import { Calendar, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { getOverrides } from '@/lib/price-override-api';
+import { addDays, format } from 'date-fns';
+import { useSession } from "@/components/SessionContextProvider";
 
 interface Reservation {
   id: string;
@@ -25,40 +29,120 @@ interface Reservation {
 
 const CalendarPageMobile: React.FC = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('planning');
+  const { profile } = useSession();
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Fetch des réservations
-  const { data: reservations = [], isLoading, error } = useQuery({
-    queryKey: ['reservations'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('processed_reservations')
-        .select('*')
-        .order('start_date', { ascending: true });
-
-      if (error) throw error;
-      return data as Reservation[];
-    },
-  });
-
+  // Fetch des données
   useEffect(() => {
-    if (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les réservations",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
+    const fetchData = async () => {
+      if (!profile || profile.is_banned || profile.is_payment_suspended) {
+        setLoadingData(false);
+        return;
+      }
 
-  if (isLoading) {
+      setLoadingData(true);
+      try {
+        // 1. Récupérer les chambres configurées
+        const configuredUserRooms = await getUserRooms();
+        
+        if (configuredUserRooms.length === 0) {
+          setReservations([]);
+          setLoadingData(false);
+          return;
+        }
+
+        // 2. Récupérer les types de chambres Krossbooking
+        const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(refreshTrigger > 0);
+        
+        if (krossbookingRoomTypes.length === 0) {
+          setReservations([]);
+          setLoadingData(false);
+          return;
+        }
+
+        // 3. Mapper les chambres configurées avec Krossbooking
+        const flattenedKrossbookingRooms: { id_room: number; label: string; }[] = [];
+        krossbookingRoomTypes.forEach(type => {
+          flattenedKrossbookingRooms.push(...type.rooms);
+        });
+
+        const validUserRooms = configuredUserRooms.filter(configuredRoom => 
+          flattenedKrossbookingRooms.some(actualRoom => 
+            actualRoom.id_room.toString() === configuredRoom.room_id
+          )
+        );
+
+        // 4. Récupérer les réservations
+        let fetchedReservations: KrossbookingReservation[] = [];
+        if (validUserRooms.length > 0) {
+          fetchedReservations = await fetchKrossbookingReservations(validUserRooms, refreshTrigger > 0);
+        }
+
+        // 5. Convertir les périodes bloquées en réservations
+        const priceOverrides = await getOverrides();
+        const closedBlocks = priceOverrides
+          .filter(override => override.closed)
+          .map((override): Reservation => ({
+            id: `override-${override.id}`,
+            room_id: override.room_id,
+            room_name: override.room_name,
+            start_date: override.start_date,
+            end_date: format(addDays(new Date(override.end_date), 1), 'yyyy-MM-dd'),
+            guest_name: 'Période bloquée',
+            status: 'BLOCKED',
+            platform: 'OWNER_BLOCK',
+            total_amount: 0
+          }));
+
+        // 6. Convertir les réservations Krossbooking au format local
+        const convertedReservations: Reservation[] = fetchedReservations.map(r => ({
+          id: r.id,
+          room_id: r.krossbooking_room_id || r.property_name,
+          room_name: r.property_name,
+          start_date: r.check_in_date,
+          end_date: r.check_out_date,
+          guest_name: r.guest_name,
+          status: r.status,
+          platform: r.channel_identifier || 'Unknown',
+          total_amount: parseFloat(r.amount) || 0
+        }));
+
+        setReservations([...convertedReservations, ...closedBlocks]);
+
+      } catch (error) {
+        console.error("Error fetching data for CalendarPageMobile:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les réservations",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, [refreshTrigger, profile, toast]);
+
+  const handleRefresh = () => {
+    clearReservationsCache();
+    setRefreshTrigger(prev => prev + 1);
+    toast({
+      title: "Actualisation",
+      description: "Le calendrier est en cours de rafraîchissement",
+    });
+  };
+
+  if (loadingData) {
     return (
       <div className="container mx-auto p-2 space-y-4">
         <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-48" />
+          <CardHeader className="p-3">
+            <Skeleton className="h-6 w-32" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-2">
             <Skeleton className="h-64 w-full" />
           </CardContent>
         </Card>
@@ -70,79 +154,27 @@ const CalendarPageMobile: React.FC = () => {
     <div className="container mx-auto p-2 space-y-4 max-w-full overflow-hidden">
       <Card>
         <CardHeader className="p-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Calendrier Mobile
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Planning
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              className="h-8 px-2"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Actualiser
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="p-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="planning" className="text-sm">
-                <Grid className="h-4 w-4 mr-1" />
-                Planning
-              </TabsTrigger>
-              <TabsTrigger value="liste" className="text-sm">
-                <List className="h-4 w-4 mr-1" />
-                Liste
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="planning" className="mt-4 p-0">
-              <BookingPlanningGridMobile 
-                reservations={reservations} 
-                isLoading={isLoading}
-              />
-            </TabsContent>
-
-            <TabsContent value="liste" className="mt-4 p-0">
-              <Card>
-                <CardHeader className="p-3">
-                  <CardTitle className="text-base">Liste des réservations</CardTitle>
-                </CardHeader>
-                <CardContent className="p-2">
-                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                    {reservations.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8">
-                        Aucune réservation trouvée
-                      </p>
-                    ) : (
-                      reservations.map((reservation) => (
-                        <div
-                          key={reservation.id}
-                          className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-sm truncate">{reservation.guest_name}</h4>
-                              <p className="text-xs text-muted-foreground">{reservation.room_name}</p>
-                              <p className="text-xs text-muted-foreground">{reservation.platform}</p>
-                            </div>
-                            <div className="text-right ml-2">
-                              <p className="text-sm font-semibold">{reservation.total_amount}€</p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(reservation.start_date).toLocaleDateString('fr-FR')}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-2">
-                            <span className={`
-                              inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                              ${reservation.status === 'confirmed' ? 'bg-green-100 text-green-800' : ''}
-                              ${reservation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                              ${reservation.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                            `}>
-                              {reservation.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+        <CardContent className="p-0">
+          <BookingPlanningGridMobile 
+            reservations={reservations} 
+            isLoading={loadingData}
+          />
         </CardContent>
       </Card>
     </div>

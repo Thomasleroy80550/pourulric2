@@ -1,8 +1,10 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import CalendarGridMobile from '@/components/CalendarGridMobile';
+import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
@@ -139,6 +141,7 @@ const CalendarPage: React.FC = () => {
           .filter(override => override.closed)
           .map((override): KrossbookingReservation => ({
             id: `override-${override.id}`, // Prefix to avoid ID collision
+            label: 'Période bloquée',
             guest_name: 'Période bloquée',
             property_name: override.room_name,
             krossbooking_room_id: override.room_id,
@@ -284,12 +287,18 @@ const CalendarPage: React.FC = () => {
           </TabsList>
           <TabsContent value="monthly" className="mt-6">
             {isMobile ? (
-              <CalendarGridMobile 
-                refreshTrigger={refreshTrigger} 
-                userRooms={userRooms} 
-                reservations={reservations}
-                onReservationChange={handleReservationChange}
-                profile={profile}
+              <BookingPlanningGridMobile 
+                reservations={reservations.map(r => ({
+                  id: r.id,
+                  room_id: r.krossbooking_room_id || r.property_name,
+                  room_name: r.property_name,
+                  start_date: r.check_in_date,
+                  end_date: r.check_out_date,
+                  guest_name: r.guest_name,
+                  status: r.status,
+                  platform: r.channel_identifier || 'Unknown',
+                  total_amount: parseFloat(r.amount) || 0
+                }))} 
               />
             ) : (
               <BookingPlanningGrid 

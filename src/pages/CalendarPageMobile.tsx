@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
+import BookingListMobile from '@/components/BookingListMobile';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
@@ -157,7 +157,7 @@ const CalendarPageMobile: React.FC = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Planning
+              Réservations
             </CardTitle>
             <Button
               variant="ghost"
@@ -171,7 +171,7 @@ const CalendarPageMobile: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <BookingPlanningGridMobile 
+          <BookingListMobile 
             reservations={reservations} 
             isLoading={loadingData}
           />

@@ -5,6 +5,7 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import BookingPlanningGrid from '@/components/BookingPlanningGrid';
 import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
+import BookingListMobile from '@/components/BookingListMobile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';

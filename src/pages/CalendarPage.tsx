@@ -255,6 +255,81 @@ const CalendarPage: React.FC = () => {
     );
   }
 
+  // Si c'est mobile, afficher directement la vue liste
+  if (isMobile) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h1 className="text-3xl font-bold">Calendrier</h1>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center w-full sm:w-auto">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Réservation Propriétaire
+              </Button>
+              <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Configurer Prix & Restrictions
+              </Button>
+              <Button 
+                onClick={handleReservationChange} 
+                variant="outline" 
+                className="flex items-center w-full sm:w-auto"
+                disabled={Date.now() < cooldownEndTime}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {Date.now() < cooldownEndTime ? `Attendre ${remainingTime}` : 'Rafraîchir'}
+              </Button>
+            </div>
+          </div>
+          
+          {/* Vue liste mobile directe */}
+          <BookingListMobile 
+            reservations={reservations.map(r => ({
+              id: r.id,
+              room_id: r.krossbooking_room_id || r.property_name,
+              room_name: r.property_name,
+              start_date: r.check_in_date,
+              end_date: r.check_out_date,
+              guest_name: r.guest_name,
+              status: r.status,
+              platform: r.channel_identifier || 'Unknown',
+              total_amount: parseFloat(r.amount) || 0
+            }))} 
+          />
+        </div>
+        <OwnerReservationDialog
+          isOpen={isOwnerReservationDialogOpen}
+          onOpenChange={setIsOwnerReservationDialogOpen}
+          userRooms={userRooms}
+          allReservations={reservations}
+          onReservationCreated={handleReservationChange}
+          profile={profile}
+        />
+        <PriceRestrictionDialog
+          isOpen={isPriceRestrictionDialogOpen}
+          onOpenChange={setIsPriceRestrictionDialogOpen}
+          userRooms={userRooms}
+          onSettingsSaved={handlePriceRestrictionSaved}
+        />
+        <AlertDialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Accès non autorisé</AlertDialogTitle>
+              <AlertDialogDescription>
+                Vous n'avez pas la permission de configurer les prix et les restrictions. Veuillez contacter un administrateur pour demander l'accès à cette fonctionnalité.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setIsAccessDeniedDialogOpen(false)}>Compris</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </MainLayout>
+    );
+  }
+
+  // Version desktop avec onglets
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
@@ -287,29 +362,13 @@ const CalendarPage: React.FC = () => {
             <TabsTrigger value="yearly">Vue 12 Mois</TabsTrigger>
           </TabsList>
           <TabsContent value="monthly" className="mt-6">
-            {isMobile ? (
-              <BookingPlanningGridMobile 
-                reservations={reservations.map(r => ({
-                  id: r.id,
-                  room_id: r.krossbooking_room_id || r.property_name,
-                  room_name: r.property_name,
-                  start_date: r.check_in_date,
-                  end_date: r.check_out_date,
-                  guest_name: r.guest_name,
-                  status: r.status,
-                  platform: r.channel_identifier || 'Unknown',
-                  total_amount: parseFloat(r.amount) || 0
-                }))} 
-              />
-            ) : (
-              <BookingPlanningGrid 
-                refreshTrigger={refreshTrigger} 
-                userRooms={userRooms} 
-                reservations={reservations}
-                onReservationChange={handleReservationChange}
-                profile={profile}
-              />
-            )}
+            <BookingPlanningGrid 
+              refreshTrigger={refreshTrigger} 
+              userRooms={userRooms} 
+              reservations={reservations}
+              onReservationChange={handleReservationChange}
+              profile={profile}
+            />
           </TabsContent>
           <TabsContent value="yearly" className="mt-6">
             <TwelveMonthView 

@@ -259,22 +259,22 @@ const CalendarPage: React.FC = () => {
   if (isMobile) {
     return (
       <MainLayout>
-        <div className="container mx-auto py-6">
+        <div className="container mx-auto py-6 px-2 sm:px-4 max-w-full overflow-hidden">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold">Calendrier</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center w-full sm:w-auto">
+              <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Réservation Propriétaire
               </Button>
-              <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto">
+              <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
                 <DollarSign className="h-4 w-4 mr-2" />
-                Configurer Prix & Restrictions
+                Configurer Prix
               </Button>
               <Button 
                 onClick={handleReservationChange} 
                 variant="outline" 
-                className="flex items-center w-full sm:w-auto"
+                className="flex items-center w-full sm:w-auto text-sm sm:text-base"
                 disabled={Date.now() < cooldownEndTime}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -283,20 +283,22 @@ const CalendarPage: React.FC = () => {
             </div>
           </div>
           
-          {/* Vue liste mobile directe */}
-          <BookingListMobile 
-            reservations={reservations.map(r => ({
-              id: r.id,
-              room_id: r.krossbooking_room_id || r.property_name,
-              room_name: r.property_name,
-              start_date: r.check_in_date,
-              end_date: r.check_out_date,
-              guest_name: r.guest_name,
-              status: r.status,
-              platform: r.channel_identifier || 'Unknown',
-              total_amount: parseFloat(r.amount) || 0
-            }))} 
-          />
+          {/* Vue liste mobile directe avec contraintes de largeur */}
+          <div className="w-full max-w-full overflow-x-hidden">
+            <BookingListMobile 
+              reservations={reservations.map(r => ({
+                id: r.id,
+                room_id: r.krossbooking_room_id || r.property_name,
+                room_name: r.property_name,
+                start_date: r.check_in_date,
+                end_date: r.check_out_date,
+                guest_name: r.guest_name,
+                status: r.status,
+                platform: r.channel_identifier || 'Unknown',
+                total_amount: parseFloat(r.amount) || 0
+              }))} 
+            />
+          </div>
         </div>
         <OwnerReservationDialog
           isOpen={isOwnerReservationDialogOpen}

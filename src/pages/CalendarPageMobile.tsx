@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { getOverrides } from '@/lib/price-override-api';
-import { addDays, format } from 'date-fns';
+import { addDays, format, startOfDay, isAfter, isSameDay } from 'date-fns';
 import { useSession } from "@/components/SessionContextProvider";
 
 interface Reservation {
@@ -109,7 +109,15 @@ const CalendarPageMobile: React.FC = () => {
           total_amount: parseFloat(r.amount) || 0
         }));
 
-        setReservations([...convertedReservations, ...closedBlocks]);
+        // 7. Filtrer pour ne garder que les réservations futures et actuelles
+        const today = startOfDay(new Date());
+        const allReservations = [...convertedReservations, ...closedBlocks];
+        const futureReservations = allReservations.filter(reservation => {
+          const endDate = parseISO(reservation.end_date);
+          return isAfter(endDate, today) || isSameDay(endDate, today);
+        });
+
+        setReservations(futureReservations);
 
       } catch (error) {
         console.error("Error fetching data for CalendarPageMobile:", error);
@@ -137,7 +145,7 @@ const CalendarPageMobile: React.FC = () => {
 
   if (loadingData) {
     return (
-      <div className="container mx-auto p-2 space-y-4">
+      <div className="container mx-auto p-2 space-y-4 max-w-full overflow-hidden">
         <Card>
           <CardHeader className="p-3">
             <Skeleton className="h-6 w-32" />
@@ -157,7 +165,7 @@ const CalendarPageMobile: React.FC = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Réservations
+              Réservations à venir
             </CardTitle>
             <Button
               variant="ghost"
@@ -171,10 +179,13 @@ const CalendarPageMobile: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <BookingListMobile 
-            reservations={reservations} 
-            isLoading={loadingData}
-          />
+          {/* Vue liste mobile par logement avec contraintes de largeur */}
+          <div className="w-full max-w-full overflow-x-hidden">
+            <BookingListMobile 
+              reservations={reservations} 
+              isLoading={loadingData}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Calendar, User, DollarSign, MapPin } from 'lucide-react';
-import { format, parseISO, isSameDay } from 'date-fns';
+import { format, parseISO, isSameDay, isAfter, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,11 +33,20 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
+  // Filtrer pour ne garder que les réservations actuelles et futures
+  const futureReservations = useMemo(() => {
+    const today = startOfDay(new Date());
+    return reservations.filter(reservation => {
+      const endDate = parseISO(reservation.end_date);
+      return isAfter(endDate, today) || isSameDay(endDate, today);
+    });
+  }, [reservations]);
+
   // Grouper les réservations par logement
   const reservationsByRoom = useMemo(() => {
     const grouped = new Map<string, Reservation[]>();
     
-    reservations.forEach(reservation => {
+    futureReservations.forEach(reservation => {
       if (!grouped.has(reservation.room_id)) {
         grouped.set(reservation.room_id, []);
       }
@@ -52,7 +61,7 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
     });
 
     return grouped;
-  }, [reservations]);
+  }, [futureReservations]);
 
   // Obtenir la liste des logements
   const rooms = useMemo(() => {
@@ -129,7 +138,7 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
     );
   }
 
-  if (reservations.length === 0) {
+  if (futureReservations.length === 0) {
     return (
       <Card className="w-full">
         <CardHeader className="p-3">
@@ -138,7 +147,7 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
         <CardContent className="p-4">
           <div className="text-center py-8">
             <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aucune réservation trouvée</p>
+            <p className="text-muted-foreground">Aucune réservation à venir</p>
           </div>
         </CardContent>
       </Card>
@@ -149,7 +158,7 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
     <Card className="w-full max-w-full overflow-hidden">
       <CardHeader className="p-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Réservations par logement</CardTitle>
+          <CardTitle className="text-lg">Réservations à venir</CardTitle>
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
@@ -166,7 +175,7 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
 
       <CardContent className="p-0">
         <ScrollArea className="h-[70vh] w-full">
-          <div className="space-y-2 p-2">
+          <div className="space-y-2 p-2 max-w-full">
             {filteredRooms.map((room) => {
               const roomReservations = reservationsByRoom.get(room.id) || [];
               const isExpanded = expandedRooms.has(room.id);
@@ -178,7 +187,7 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
                 : roomReservations.filter(r => r.status === selectedStatus);
 
               return (
-                <div key={room.id} className="border rounded-lg overflow-hidden">
+                <div key={room.id} className="border rounded-lg overflow-hidden w-full">
                   {/* En-tête du logement */}
                   <button
                     onClick={() => toggleRoom(room.id)}

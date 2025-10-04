@@ -125,8 +125,24 @@
 }
 
 @layer base {
-  .halloween body::before {
+  body.halloween::before {
     content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: url('/images/halloween-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.2;
+    z-index: -1;
+    pointer-events: none;
+    filter: blur(2px) saturate(1.2);
+  }
+
+  /* Style alternatif pour forcer l'affichage */
+  .halloween-bg {
     position: fixed;
     top: 0;
     left: 0;

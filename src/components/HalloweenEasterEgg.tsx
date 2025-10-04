@@ -12,6 +12,16 @@ const HalloweenEasterEgg: React.FC = () => {
   const [clickCount, setClickCount] = useState(0);
   const [showSpiderWebs, setShowSpiderWebs] = useState(false);
 
+  // Debug: log du thème actuel
+  useEffect(() => {
+    console.log('Thème actuel:', theme);
+    if (theme === 'halloween') {
+      document.body.classList.add('halloween');
+    } else {
+      document.body.classList.remove('halloween');
+    }
+  }, [theme]);
+
   // Affiche la citrouille après 3 secondes sur la version standard
   useEffect(() => {
     if (theme === 'light' || theme === 'dark') {

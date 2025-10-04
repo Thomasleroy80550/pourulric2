@@ -54,6 +54,8 @@ const HalloweenDecorations = () => {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
+      {/* Image de fond Halloween */}
+      <div className="halloween-bg"></div>
       {decorations}
       {spiders}
       <div className="fog-layer fog-layer-1"></div>

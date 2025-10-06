@@ -19,7 +19,7 @@ const HalloweenMusicPlayer: React.FC<HalloweenMusicPlayerProps> = ({ className }
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // URL Google Drive direct (format raw)
+  // URL Google Drive avec le nouveau lien de partage
   const GOOGLE_DRIVE_AUDIO_URL = "https://drive.google.com/uc?export=download&id=1mdyVFnG-l491ypDCsOzz1DliyZGtrUgW";
 
   useEffect(() => {
@@ -68,8 +68,8 @@ const HalloweenMusicPlayer: React.FC<HalloweenMusicPlayerProps> = ({ className }
       console.error('Error playing audio:', error);
       // Fallback: essayer de charger depuis une autre source
       if (audio.src === GOOGLE_DRIVE_AUDIO_URL) {
-        // Vous pouvez ajouter ici une URL de secours si nécessaire
         console.log('Google Drive audio failed, trying alternative...');
+        // Vous pouvez ajouter ici une URL de secours si nécessaire
       }
     }
   };

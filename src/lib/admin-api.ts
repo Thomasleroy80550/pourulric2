@@ -784,7 +784,7 @@ export async function resendWelcomeEmail(userId: string): Promise<void> {
       <li>Mot de passe temporaire&nbsp;: <strong>${tempPassword}</strong></li>
     </ul>
     <p>Connectez-vous dès maintenant puis changez votre mot de passe depuis votre profil.</p>
-    <p><a href="${https://beta.proprietaire.hellokeys.fr}" style="display:inline-block;padding:10px 16px;background:#111827;color:#fff;border-radius:8px;text-decoration:none">Se connecter</a></p>
+    <p><a href="${loginUrl}" style="display:inline-block;padding:10px 16px;background:#111827;color:#fff;border-radius:8px;text-decoration:none">Se connecter</a></p>
     <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
     <p>Cordialement,<br/>L'équipe Hello Keys</p>
   `;

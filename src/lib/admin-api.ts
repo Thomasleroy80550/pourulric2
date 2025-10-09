@@ -773,7 +773,7 @@ export async function resendWelcomeEmail(userId: string): Promise<void> {
   }
 
   // 4) Envoyer l'email à l'utilisateur
-  const loginUrl = `${window.location.origin}/login`;
+  const loginUrl = 'https://beta.proprietaire.hellokeys.fr/login';
   const displayName = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Bonjour';
   const subject = "Votre accès Hello Keys – mot de passe temporaire";
   const html = `

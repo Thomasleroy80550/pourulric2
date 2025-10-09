@@ -738,6 +738,22 @@ export async function changeUserPassword(userId: string, newPassword: string): P
 }
 
 /**
+ * Updates a user's email. This is an admin-only function.
+ * @param userId The ID of the user whose email to update.
+ * @param newEmail The new email address.
+ */
+export async function updateUserEmail(userId: string, newEmail: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('update-user-email', {
+    body: { user_id: userId, new_email: newEmail },
+  });
+
+  if (error) {
+    console.error('Error updating user email:', error);
+    throw new Error(`Erreur lors de la mise à jour de l'email : ${error.message}`);
+  }
+}
+
+/**
  * Creates a link between an accountant and a client user.
  * @param accountantId The ID of the accountant profile.
  * @param clientId The ID of the client profile.

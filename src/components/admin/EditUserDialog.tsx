@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateUser, UpdateUserPayload } from '@/lib/admin-api';
+import { updateUser, UpdateUserPayload, updateUserEmail } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { supabase } from '@/integrations/supabase/client';
@@ -94,6 +94,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
   const [isUploading, setIsUploading] = useState(false);
   const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
   const [showTerminationNotice, setShowTerminationNotice] = useState(false);
+  const [newEmail, setNewEmail] = useState<string>('');
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -140,6 +141,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         stripe_account_id: user.stripe_account_id || '',
         pennylane_customer_id: user.pennylane_customer_id || undefined, // L'initialisation reste la même, car undefined est géré par z.string().optional().nullable()
       });
+      setNewEmail(user.email || '');
       setShowTerminationNotice(false);
       setLoadingRooms(true);
       getUserRoomsByUserId(user.id)
@@ -227,6 +229,17 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
       setIsUploading(false);
       setCguvFile(null);
     }
+  };
+
+  const handleChangeEmail = async () => {
+    if (!user) return;
+    if (!newEmail || !newEmail.includes('@')) {
+      toast.error("Veuillez saisir un email valide.");
+      return;
+    }
+    await updateUserEmail(user.id, newEmail);
+    toast.success("Email mis à jour avec succès !");
+    onUserUpdated();
   };
 
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
@@ -346,6 +359,24 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                     <CardContent className="space-y-4">
                       <FormField control={form.control} name="first_name" render={({ field }) => (<FormItem><FormLabel>Prénom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="last_name" render={({ field }) => (<FormItem><FormLabel>Nom</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                      <FormItem>
+                        <FormLabel>Email (admin)</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input
+                              value={newEmail}
+                              onChange={(e) => setNewEmail(e.target.value)}
+                              type="email"
+                              placeholder="nouvel@email.com"
+                            />
+                            <Button type="button" onClick={handleChangeEmail}>
+                              Mettre à jour l'email
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormDescription>Met à jour l'email côté authentification et profil.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
                       <FormField control={form.control} name="property_address" render={({ field }) => (<FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="property_city" render={({ field }) => (<FormItem><FormLabel>Ville</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="property_zip_code" render={({ field }) => (<FormItem><FormLabel>Code Postal</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />

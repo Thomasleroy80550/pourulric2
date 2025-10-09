@@ -737,6 +737,61 @@ export async function changeUserPassword(userId: string, newPassword: string): P
   }
 }
 
+// Générateur de mot de passe temporaire robuste
+function generateTempPassword(length = 12): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
+  const array = new Uint32Array(length);
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    crypto.getRandomValues(array);
+  } else {
+    for (let i = 0; i < length; i++) array[i] = Math.floor(Math.random() * 0xffffffff);
+  }
+  return Array.from(array, (v) => chars[v % chars.length]).join('');
+}
+
+/**
+ * Réinitialise le mot de passe d'un utilisateur avec un mot de passe temporaire
+ * et renvoie un email de création de compte contenant ces informations.
+ */
+export async function resendWelcomeEmail(userId: string): Promise<void> {
+  // 1) Récupérer le profil pour obtenir l'email et le nom
+  const profile = await getProfileById(userId);
+  if (!profile || !profile.email) {
+    throw new Error("Impossible de trouver l'email de l'utilisateur.");
+  }
+
+  // 2) Générer un mot de passe temporaire
+  const tempPassword = generateTempPassword();
+
+  // 3) Mettre à jour le mot de passe côté auth via l'edge function existante
+  const { error: pwError } = await supabase.functions.invoke('update-user-password', {
+    body: { user_id: userId, new_password: tempPassword },
+  });
+  if (pwError) {
+    console.error('Error updating password for welcome email:', pwError);
+    throw new Error(`Erreur lors de la réinitialisation du mot de passe : ${pwError.message}`);
+  }
+
+  // 4) Envoyer l'email à l'utilisateur
+  const loginUrl = `${window.location.origin}/login`;
+  const displayName = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Bonjour';
+  const subject = "Votre accès Hello Keys – mot de passe temporaire";
+  const html = `
+    <p>${displayName},</p>
+    <p>Votre compte Hello Keys est prêt. Voici vos identifiants de connexion&nbsp;:</p>
+    <ul>
+      <li>Email&nbsp;: <strong>${profile.email}</strong></li>
+      <li>Mot de passe temporaire&nbsp;: <strong>${tempPassword}</strong></li>
+    </ul>
+    <p>Connectez-vous dès maintenant puis changez votre mot de passe depuis votre profil.</p>
+    <p><a href="${loginUrl}" style="display:inline-block;padding:10px 16px;background:#111827;color:#fff;border-radius:8px;text-decoration:none">Se connecter</a></p>
+    <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+    <p>Cordialement,<br/>L'équipe Hello Keys</p>
+  `;
+
+  await sendEmail(profile.email, subject, html);
+}
+
 /**
  * Updates a user's email. This is an admin-only function.
  * @param userId The ID of the user whose email to update.

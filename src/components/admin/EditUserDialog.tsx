@@ -13,9 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload } from 'lucide-react';
+import { Loader2, Edit, AlertTriangle, Trash2, Download, Upload, Mail } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateUser, UpdateUserPayload, updateUserEmail } from '@/lib/admin-api';
+import { updateUser, UpdateUserPayload, updateUserEmail, resendWelcomeEmail } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { UserRoom, getUserRoomsByUserId, adminAddUserRoom, deleteUserRoom } from '@/lib/user-room-api';
 import { supabase } from '@/integrations/supabase/client';
@@ -242,6 +242,17 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
     onUserUpdated();
   };
 
+  const handleResendWelcomeEmail = async () => {
+    if (!user) return;
+    try {
+      toast.info("Envoi de l'email de création en cours...");
+      await resendWelcomeEmail(user.id);
+      toast.success("Email de création renvoyé avec un nouveau mot de passe temporaire !");
+    } catch (error: any) {
+      toast.error(`Erreur lors de l'envoi: ${error.message}`);
+    }
+  };
+
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
     if (!user) return;
 
@@ -362,19 +373,27 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       <FormItem>
                         <FormLabel>Email (admin)</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input
-                              value={newEmail}
-                              onChange={(e) => setNewEmail(e.target.value)}
-                              type="email"
-                              placeholder="nouvel@email.com"
-                            />
-                            <Button type="button" onClick={handleChangeEmail}>
-                              Mettre à jour l'email
-                            </Button>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex gap-2">
+                              <Input
+                                value={newEmail}
+                                onChange={(e) => setNewEmail(e.target.value)}
+                                type="email"
+                                placeholder="nouvel@email.com"
+                              />
+                              <Button type="button" onClick={handleChangeEmail}>
+                                Mettre à jour l'email
+                              </Button>
+                            </div>
+                            <div>
+                              <Button type="button" variant="outline" onClick={handleResendWelcomeEmail}>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Renvoyer l'email de création
+                              </Button>
+                            </div>
                           </div>
                         </FormControl>
-                        <FormDescription>Met à jour l'email côté authentification et profil.</FormDescription>
+                        <FormDescription>Met à jour l'email côté authentification et profil. Vous pouvez aussi renvoyer un email de création avec un nouveau mot de passe temporaire.</FormDescription>
                         <FormMessage />
                       </FormItem>
                       <FormField control={form.control} name="property_address" render={({ field }) => (<FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />

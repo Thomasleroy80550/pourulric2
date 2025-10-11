@@ -18,8 +18,10 @@ import {
   FAQ_CONTACT_SECTION_TITLE_KEY,
   FAQ_CONTACT_SECTION_SUBTITLE_KEY,
   MIGRATION_NOTICE_KEY,
+  APP_VERSION_KEY,
 } from '@/lib/constants';
 import { Switch } from '@/components/ui/switch';
+import { createChangelogEntry } from '@/lib/changelog-api';
 
 interface EmailTemplate {
   subject: string;

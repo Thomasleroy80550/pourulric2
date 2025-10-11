@@ -2,6 +2,7 @@ export const EMAIL_TEMPLATE_KEY = 'statement_email_template';
 export const CONTACT_EMAIL_KEY = 'contact_email';
 export const CONTACT_PHONE_KEY = 'contact_phone';
 export const CURRENT_CGUV_VERSION = '1.0';
+export const APP_VERSION_KEY = 'app_version';
 
 // New FAQ page content keys
 export const FAQ_MAIN_TITLE_KEY = 'faq_main_title';

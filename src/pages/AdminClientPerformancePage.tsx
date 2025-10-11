@@ -248,6 +248,63 @@ const AdminClientPerformancePage: React.FC = () => {
     return profiles.find(p => p.id === selectedUserId) || null;
   }, [profiles, selectedUserId]);
 
+  // Calculate yearly totals
+  const yearlyTotals = useMemo(() => {
+    if (!selectedYear || !selectedUserId) return null;
+
+    const yearlyData = monthsFrOrdered.map((monthLabel, idx) => {
+      const period = `${monthLabel} ${selectedYear}`;
+      const inv = userInvoices.find(i => i.period === period);
+      const t = inv?.totals || {};
+      const ca = typeof t.totalCA === 'number'
+        ? t.totalCA
+        : (typeof t.totalRevenuGenere === 'number' ? t.totalRevenuGenere : 0);
+      const verse = typeof t.totalMontantVerse === 'number' ? t.totalMontantVerse : 0;
+      const hkFees = typeof t.totalFacture === 'number' ? t.totalFacture : (typeof t.totalCommission === 'number' ? t.totalCommission : 0);
+      const nuits = typeof t.totalNuits === 'number' ? t.totalNuits : 0;
+
+      const days = getDaysInMonth(new Date(Number(selectedYear), idx, 1));
+      const totalAvailableNights = roomsCount > 0 ? roomsCount * days : 0;
+      const adr = nuits > 0 ? ca / nuits : 0;
+      const revpar = totalAvailableNights > 0 ? ca / totalAvailableNights : 0;
+      const occupation = totalAvailableNights > 0 ? (nuits / totalAvailableNights) * 100 : 0;
+
+      return {
+        month: monthLabel.slice(0, 3),
+        totalCA: ca,
+        totalMontantVerse: verse,
+        totalFacture: hkFees,
+        totalNuits: nuits,
+        adr,
+        revpar,
+        occupation: Number(occupation.toFixed(1)),
+      };
+    });
+
+    const totalCA = yearlyData.reduce((sum, item) => sum + item.totalCA, 0);
+    const totalMontantVerse = yearlyData.reduce((sum, item) => sum + item.totalMontantVerse, 0);
+    const totalFacture = yearlyData.reduce((sum, item) => sum + item.totalFacture, 0);
+    const totalNuits = yearlyData.reduce((sum, item) => sum + item.totalNuits, 0);
+    const totalReservations = yearlyData.reduce((sum, item) => sum + item.totalReservations, 0);
+    const totalVoyageurs = yearlyData.reduce((sum, item) => sum + item.totalVoyageurs, 0);
+
+    const yearlyOccupation = totalNuits > 0 ? (totalNuits / (roomsCount * 365)) * 100 : 0;
+    const net = totalMontantVerse - totalFacture;
+
+    return {
+      totalCA,
+      totalMontantVerse,
+      totalFacture,
+      totalNuits,
+      totalReservations,
+      totalVoyageurs,
+      adr: totalNuits > 0 ? totalCA / totalNuits : 0,
+      revpar: totalNuits > 0 ? totalCA / (roomsCount * 365) : 0,
+      yearlyOccupation,
+      net,
+    };
+  }, [selectedYear, selectedUserId, userInvoices, roomsCount]);
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -416,6 +473,58 @@ const AdminClientPerformancePage: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-8">
+              {/* KPIs annuels */}
+              {yearlyTotals && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Synthèse annuelle</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <KpiCard title="CA Annuel" value={formatCurrencyEUR(yearlyTotals.totalCA)} icon={Euro} colorClass="text-green-600" />
+                    <KpiCard title="Montant Versé Annuel" value={formatCurrencyEUR(yearlyTotals.totalMontantVerse)} icon={Euro} colorClass="text-emerald-600" />
+                    <KpiCard title="Frais HK Annuel" value={formatCurrencyEUR(yearlyTotals.totalFacture)} icon={Euro} colorClass="text-rose-600" />
+                    <KpiCard title="Nuits Annuelles" value={yearlyTotals.totalNuits.toLocaleString('fr-FR')} icon={BedDouble} colorClass="text-blue-600" />
+                    <KpiCard title="Réservations Annuelles" value={yearlyTotals.totalReservations.toLocaleString('fr-FR')} icon={CalendarDays} colorClass="text-indigo-600" />
+                    <KpiCard title="ADR Annuel" value={formatCurrencyEUR(yearlyTotals.adr)} icon={TrendingUp} colorClass="text-orange-600" />
+                    <KpiCard title="Bénéfice Net Annuel" value={formatCurrencyEUR(yearlyTotals.net)} icon={Euro} colorClass="text-teal-600" />
+                    <KpiCard title="Taux d'Occupation Annuel" value={`${yearlyTotals.yearlyOccupation.toFixed(1)} %`} icon={TrendingUp} colorClass="text-cyan-600" />
+                  </div>
+                </div>
+              )}
+
+              {/* Tableau récapitulatif mensuel */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Détail mensuel</h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Mois</TableHead>
+                        <TableHead className="text-right">CA</TableHead>
+                        <TableHead className="text-right">Montant Versé</TableHead>
+                        <TableHead className="text-right">Frais HK</TableHead>
+                        <TableHead className="text-right">Nuits</TableHead>
+                        <TableHead className="text-right">Réservations</TableHead>
+                        <TableHead className="text-right">ADR</TableHead>
+                        <TableHead className="text-right">Occupation (%)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {monthlySeries.map((month, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{month.month}</TableCell>
+                          <TableCell className="text-right">{formatCurrencyEUR(month.totalCA)}</TableCell>
+                          <TableCell className="text-right">{formatCurrencyEUR(month.totalMontantVerse)}</TableCell>
+                          <TableCell className="text-right">{formatCurrencyEUR(month.totalFacture)}</TableCell>
+                          <TableCell className="text-right">{month.totalNuits.toLocaleString('fr-FR')}</TableCell>
+                          <TableCell className="text-right">{month.totalReservations.toLocaleString('fr-FR')}</TableCell>
+                          <TableCell className="text-right">{formatCurrencyEUR(month.adr)}</TableCell>
+                          <TableCell className="text-right">{month.occupation.toFixed(1)} %</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
               {/* CA vs Versé */}
               <div>
                 <div className="mb-2 text-sm text-muted-foreground">CA vs Montant versé (mensuel)</div>
@@ -449,7 +558,7 @@ const AdminClientPerformancePage: React.FC = () => {
 
               {/* Occupation (%) */}
               <div>
-                <div className="mb-2 text-sm text-muted-foreground">Taux d’occupation mensuel (%)</div>
+                <div className="mb-2 text-sm text-muted-foreground">Taux d'occupation mensuel (%)</div>
                 <ChartContainer config={chartConfig} className="h-72">
                   <BarChart
                     data={monthlySeries}

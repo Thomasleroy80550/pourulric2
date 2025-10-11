@@ -60,6 +60,7 @@ import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new consta
 import { useTheme } from 'next-themes';
 import HalloweenDecorations from './HalloweenDecorations';
 import HalloweenEasterEgg from './HalloweenEasterEgg'; // Ajout de l'import
+import { useVersion } from '@/hooks/use-version';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -218,6 +219,9 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
             ))}
           </ul>
         )}
+        <div className="mt-4 text-xs text-sidebar-foreground/60 text-center">
+          Version {useVersion()}
+        </div>
       </nav>
     </div>
   );

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlusCircle, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -40,6 +40,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getSetting, updateSetting } from '@/lib/admin-api';
+import { APP_VERSION_KEY } from '@/lib/constants';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const getCategoryBadgeVariant = (category?: string): BadgeProps['variant'] => {
   switch (category?.toLowerCase()) {
@@ -59,6 +64,15 @@ const AdminChangelogPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<ChangelogEntry | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('1.0.0.0');
+  const [savingVersion, setSavingVersion] = useState(false);
+
+  // au chargement
+  useEffect(() => {
+    getSetting(APP_VERSION_KEY)
+      .then((s) => setAppVersion(s?.value || '1.0.0.0'))
+      .catch(() => setAppVersion('1.0.0.0'));
+  }, []);
 
   const { data: entries, isLoading, error } = useQuery<ChangelogEntry[]>({
     queryKey: ['changelog'],
@@ -110,11 +124,51 @@ const AdminChangelogPage = () => {
     }
   };
 
+  const handleSaveVersion = async () => {
+    setSavingVersion(true);
+    try {
+      await updateSetting(APP_VERSION_KEY, appVersion);
+      await createChangelogEntry({
+        version: appVersion,
+        title: `Mise à jour ${appVersion}`,
+        description: 'Améliorations et corrections diverses.',
+        is_public: true,
+        category: 'Amélioration',
+      });
+      queryClient.invalidateQueries({ queryKey: ['changelog'] });
+      toast.success('Version sauvegardée et entrée changelog créée !');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSavingVersion(false);
+    }
+  };
+
   if (isLoading) return <AdminLayout><div>Chargement...</div></AdminLayout>;
   if (error) return <AdminLayout><div>Erreur: {error.message}</div></AdminLayout>;
 
   return (
     <AdminLayout>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Version actuelle de l'application</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-end gap-3">
+          <div className="flex-1">
+            <Label htmlFor="versionField">Numéro de version</Label>
+            <Input
+              id="versionField"
+              value={appVersion}
+              onChange={(e) => setAppVersion(e.target.value)}
+              placeholder="1.0.0.0"
+            />
+          </div>
+          <Button onClick={handleSaveVersion} disabled={savingVersion}>
+            {savingVersion && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Sauvegarder
+          </Button>
+        </CardContent>
+      </Card>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Gestion du Changelog</h1>
         <Button onClick={() => openDialog()}>

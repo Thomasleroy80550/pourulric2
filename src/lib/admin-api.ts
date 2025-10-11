@@ -133,6 +133,19 @@ export interface UserProfile {
   stripe_account_id?: string | null;
 }
 
+export interface RoomUtilityEvent {
+  id: string;
+  user_room_id: string;
+  user_id: string;
+  utility: 'electricity' | 'water';
+  action: 'cut' | 'restored';
+  created_at: string;
+  profiles?: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+}
+
 /**
  * Interface for the summary of transfers per user.
  */
@@ -1452,4 +1465,68 @@ export async function updateInvoiceSourceTransferStatus(invoiceId: string, sourc
     console.error("Error updating source transfer status:", error);
     throw new Error(`Erreur lors de la mise à jour du statut du virement pour la source ${source} : ${error.message}`);
   }
+}
+
+/**
+ * Met à jour le statut de coupure d'un compteur et enregistre un événement d'historique.
+ * @param userRoomId ID du logement (user_rooms.id)
+ * @param utility 'electricity' | 'water'
+ * @param isCut true = coupé, false = rétabli
+ */
+export async function setRoomUtilityCutStatus(
+  userRoomId: string,
+  utility: 'electricity' | 'water',
+  isCut: boolean
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Utilisateur non authentifié.");
+
+  const column = utility === 'electricity' ? 'is_electricity_cut' : 'is_water_cut';
+
+  const { error: updateError } = await supabase
+    .from('user_rooms')
+    .update({ [column]: isCut })
+    .eq('id', userRoomId);
+
+  if (updateError) {
+    console.error("Error updating counter status:", updateError);
+    throw new Error(`Erreur lors de la mise à jour du compteur : ${updateError.message}`);
+  }
+
+  const { error: insertError } = await supabase
+    .from('room_utility_events')
+    .insert({
+      user_room_id: userRoomId,
+      user_id: user.id,
+      utility,
+      action: isCut ? 'cut' : 'restored',
+    });
+
+  if (insertError) {
+    console.error("Error logging utility event:", insertError);
+    // On n'empêche pas la MAJ si le log échoue, mais on informe
+  }
+}
+
+/**
+ * Récupère l'historique des compteurs d'un logement
+ */
+export async function getRoomUtilityEvents(userRoomId: string): Promise<RoomUtilityEvent[]> {
+  const { data, error } = await supabase
+    .from('room_utility_events')
+    .select(`
+      *,
+      profiles!user_id (
+        first_name,
+        last_name
+      )
+    `)
+    .eq('user_room_id', userRoomId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching room utility events:", error);
+    throw new Error(`Erreur lors de la récupération de l'historique : ${error.message}`);
+  }
+  return data || [];
 }

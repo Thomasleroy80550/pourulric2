@@ -232,6 +232,14 @@ const TouristTaxPage: React.FC = () => {
           </AlertDescription>
         </Alert>
 
+        <Alert className="mb-6 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Information sur les données de réservation</AlertTitle>
+          <AlertDescription>
+            Pour le moment nous ne pouvons pas afficher le nombre de personnes car l'API de notre logiciel ne les transmet pas. Nous allons contourner le problème et développons une solution. La mise à jour sera bientôt disponible.
+          </AlertDescription>
+        </Alert>
+
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Déclaration par mois pour l'année en cours</CardTitle>

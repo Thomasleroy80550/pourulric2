@@ -3,12 +3,21 @@ import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAllProfiles, getInvoicesByUserId, type SavedInvoice } from '@/lib/admin-api';
 import { getUserRoomsByUserId } from '@/lib/user-room-api';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Users, CalendarDays, BedDouble, TrendingUp, Euro } from 'lucide-react';
 import { getDaysInMonth } from 'date-fns';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 type SimpleProfile = {
   id: string;
@@ -22,13 +31,18 @@ const monthIndexFr: Record<string, number> = {
   "juillet": 6, "août": 7, "aout": 7, "septembre": 8, "octobre": 9, "novembre": 10, "décembre": 11, "decembre": 11
 };
 
-function parsePeriod(period: string): { year: number; monthIndex: number } | null {
+const monthsFrOrdered = [
+  "Janvier","Février","Mars","Avril","Mai","Juin",
+  "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+];
+
+function parsePeriod(period: string): { year: number; monthIndex: number; monthLabel: string } | null {
   if (!period) return null;
   const [mois, anneeRaw] = period.toLowerCase().split(' ');
   const year = parseInt(anneeRaw, 10);
   const monthIndex = monthIndexFr[mois];
   if (Number.isNaN(year) || monthIndex === undefined) return null;
-  return { year, monthIndex };
+  return { year, monthIndex, monthLabel: monthsFrOrdered[monthIndex] };
 }
 
 function formatCurrencyEUR(value: number) {
@@ -53,6 +67,7 @@ const AdminClientPerformancePage: React.FC = () => {
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState<SimpleProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [userInvoices, setUserInvoices] = useState<SavedInvoice[]>([]);
@@ -62,7 +77,9 @@ const AdminClientPerformancePage: React.FC = () => {
   const [loadingRooms, setLoadingRooms] = useState(false);
 
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<number | "">("");
 
+  // Fetch clients
   useEffect(() => {
     setLoadingProfiles(true);
     getAllProfiles().then((list: any[]) => {
@@ -76,11 +93,13 @@ const AdminClientPerformancePage: React.FC = () => {
     }).finally(() => setLoadingProfiles(false));
   }, []);
 
+  // Fetch invoices + rooms when client changes
   useEffect(() => {
     if (!selectedUserId) {
       setUserInvoices([]);
       setSelectedPeriod("");
       setRoomsCount(0);
+      setSelectedYear("");
       return;
     }
     setLoadingInvoices(true);
@@ -90,7 +109,6 @@ const AdminClientPerformancePage: React.FC = () => {
         if (a.created_at && b.created_at) {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }
-        // fallback: essai de tri par période
         const pa = parsePeriod(a.period);
         const pb = parsePeriod(b.period);
         if (pa && pb) {
@@ -103,8 +121,11 @@ const AdminClientPerformancePage: React.FC = () => {
       setUserInvoices(sorted);
       if (sorted.length > 0) {
         setSelectedPeriod(sorted[0].period);
+        const firstParsed = parsePeriod(sorted[0].period);
+        setSelectedYear(firstParsed ? firstParsed.year : "");
       } else {
         setSelectedPeriod("");
+        setSelectedYear("");
       }
     }).finally(() => setLoadingInvoices(false));
 
@@ -113,6 +134,25 @@ const AdminClientPerformancePage: React.FC = () => {
       setRoomsCount(rooms?.length || 0);
     }).finally(() => setLoadingRooms(false));
   }, [selectedUserId]);
+
+  const filteredProfiles = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return profiles;
+    return profiles.filter(p => {
+      const name = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
+      const email = (p.email || '').toLowerCase();
+      return name.includes(q) || email.includes(q);
+    });
+  }, [profiles, searchQuery]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    userInvoices.forEach(inv => {
+      const parsed = parsePeriod(inv.period);
+      if (parsed) years.add(parsed.year);
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [userInvoices]);
 
   const selectedInvoice = useMemo(
     () => userInvoices.find((i) => i.period === selectedPeriod) || null,
@@ -124,26 +164,19 @@ const AdminClientPerformancePage: React.FC = () => {
       return null;
     }
     const t = selectedInvoice.totals || {};
-    // CA brut
     const totalCA = typeof t.totalCA === 'number'
       ? t.totalCA
-      : 0;
+      : (typeof t.totalRevenuGenere === 'number' ? t.totalRevenuGenere : 0);
 
-    // Montant versé au total sur la période
     const totalMontantVerse = typeof t.totalMontantVerse === 'number' ? t.totalMontantVerse : 0;
+    const totalFacture = typeof t.totalFacture === 'number' ? t.totalFacture : (typeof t.totalCommission === 'number' ? t.totalCommission : 0);
 
-    // Facture HK (frais)
-    const totalFacture = typeof t.totalFacture === 'number' ? t.totalFacture : 0;
-
-    // Nuits, Réservations, Voyageurs
     const totalNuits = typeof t.totalNuits === 'number' ? t.totalNuits : 0;
     const totalReservations = typeof t.totalReservations === 'number' ? t.totalReservations : (selectedInvoice.invoice_data?.length || 0);
     const totalVoyageurs = typeof t.totalVoyageurs === 'number' ? t.totalVoyageurs : 0;
 
-    // ADR = CA / Nuits (si nuits > 0)
     const adr = totalNuits > 0 ? totalCA / totalNuits : 0;
 
-    // RevPAR et Occupation mensuelle si période + roomsCount
     let revpar = 0;
     let monthlyOccupation = 0;
     const periodParsed = parsePeriod(selectedInvoice.period);
@@ -154,7 +187,6 @@ const AdminClientPerformancePage: React.FC = () => {
       monthlyOccupation = totalAvailableNights > 0 ? (totalNuits / totalAvailableNights) * 100 : 0;
     }
 
-    // Net de la période (versé - facture HK) en restant cohérent avec les relevés
     const net = totalMontantVerse - totalFacture;
 
     return {
@@ -170,6 +202,47 @@ const AdminClientPerformancePage: React.FC = () => {
       net,
     };
   }, [selectedInvoice, roomsCount]);
+
+  // Build monthly series for selected year
+  const monthlySeries = useMemo(() => {
+    if (!selectedYear || !selectedUserId) return [];
+
+    return monthsFrOrdered.map((monthLabel, idx) => {
+      const period = `${monthLabel} ${selectedYear}`;
+      const inv = userInvoices.find(i => i.period === period);
+      const t = inv?.totals || {};
+      const ca = typeof t.totalCA === 'number'
+        ? t.totalCA
+        : (typeof t.totalRevenuGenere === 'number' ? t.totalRevenuGenere : 0);
+      const verse = typeof t.totalMontantVerse === 'number' ? t.totalMontantVerse : 0;
+      const hkFees = typeof t.totalFacture === 'number' ? t.totalFacture : (typeof t.totalCommission === 'number' ? t.totalCommission : 0);
+      const nuits = typeof t.totalNuits === 'number' ? t.totalNuits : 0;
+
+      const days = getDaysInMonth(new Date(Number(selectedYear), idx, 1));
+      const totalAvailableNights = roomsCount > 0 ? roomsCount * days : 0;
+      const adr = nuits > 0 ? ca / nuits : 0;
+      const revpar = totalAvailableNights > 0 ? ca / totalAvailableNights : 0;
+      const occupation = totalAvailableNights > 0 ? (nuits / totalAvailableNights) * 100 : 0;
+
+      return {
+        month: monthLabel.slice(0, 3), // court pour XAxis
+        totalCA: ca,
+        totalMontantVerse: verse,
+        totalFacture: hkFees,
+        totalNuits: nuits,
+        adr,
+        revpar,
+        occupation: Number(occupation.toFixed(1)),
+      };
+    });
+  }, [selectedYear, selectedUserId, userInvoices, roomsCount]);
+
+  const chartConfig = {
+    totalCA: { label: "CA", color: "#3b82f6" }, // blue-500
+    totalMontantVerse: { label: "Versé", color: "#10b981" }, // emerald-500
+    totalFacture: { label: "Frais HK", color: "#f43f5e" }, // rose-500
+    occupation: { label: "Occupation (%)", color: "#f59e0b" }, // amber-500
+  };
 
   const selectedProfile = useMemo(() => {
     return profiles.find(p => p.id === selectedUserId) || null;
@@ -191,15 +264,24 @@ const AdminClientPerformancePage: React.FC = () => {
           <CardHeader>
             <CardTitle>Sélection</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm text-muted-foreground mb-2">Client</div>
+          <CardContent className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">Rechercher un client</div>
+              <Input
+                placeholder="Nom ou email…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">Client</div>
               <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={loadingProfiles}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder={loadingProfiles ? "Chargement..." : "Choisir un client"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {profiles.map((p) => (
+                  {filteredProfiles.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {(p.first_name || '') + ' ' + (p.last_name || '')} {p.email ? `(${p.email})` : ''}
                     </SelectItem>
@@ -208,8 +290,8 @@ const AdminClientPerformancePage: React.FC = () => {
               </Select>
             </div>
 
-            <div>
-              <div className="text-sm text-muted-foreground mb-2">Période</div>
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">Période (mois)</div>
               <Select
                 value={selectedPeriod}
                 onValueChange={setSelectedPeriod}
@@ -307,6 +389,86 @@ const AdminClientPerformancePage: React.FC = () => {
               </CardContent>
             </Card>
           </>
+        )}
+
+        {/* Vue annuelle avec graphiques */}
+        {selectedUserId && availableYears.length > 0 && (
+          <Card className="mt-8">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Vue annuelle</CardTitle>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-muted-foreground">Année</div>
+                  <Select
+                    value={String(selectedYear)}
+                    onValueChange={(v) => setSelectedYear(v ? Number(v) : "")}
+                  >
+                    <SelectTrigger className="w-28">
+                      <SelectValue placeholder="Année" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableYears.map(y => (
+                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* CA vs Versé */}
+              <div>
+                <div className="mb-2 text-sm text-muted-foreground">CA vs Montant versé (mensuel)</div>
+                <ChartContainer config={chartConfig} className="h-72">
+                  <LineChart
+                    data={monthlySeries}
+                    margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Line
+                      type="monotone"
+                      dataKey="totalCA"
+                      stroke="var(--color-totalCA)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="totalMontantVerse"
+                      stroke="var(--color-totalMontantVerse)"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ChartContainer>
+              </div>
+
+              {/* Occupation (%) */}
+              <div>
+                <div className="mb-2 text-sm text-muted-foreground">Taux d’occupation mensuel (%)</div>
+                <ChartContainer config={chartConfig} className="h-72">
+                  <BarChart
+                    data={monthlySeries}
+                    margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis domain={[0, 100]} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Bar
+                      dataKey="occupation"
+                      fill="var(--color-occupation)"
+                    />
+                  </BarChart>
+                </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {!loadingInvoices && selectedUserId && userInvoices.length === 0 && (

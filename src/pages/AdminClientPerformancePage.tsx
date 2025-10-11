@@ -478,14 +478,14 @@ const AdminClientPerformancePage: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Synthèse annuelle</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <KpiCard title="CA Annuel" value={formatCurrencyEUR(yearlyTotals.totalCA)} icon={Euro} colorClass="text-green-600" />
-                    <KpiCard title="Montant Versé Annuel" value={formatCurrencyEUR(yearlyTotals.totalMontantVerse)} icon={Euro} colorClass="text-emerald-600" />
-                    <KpiCard title="Frais HK Annuel" value={formatCurrencyEUR(yearlyTotals.totalFacture)} icon={Euro} colorClass="text-rose-600" />
-                    <KpiCard title="Nuits Annuelles" value={yearlyTotals.totalNuits.toLocaleString('fr-FR')} icon={BedDouble} colorClass="text-blue-600" />
-                    <KpiCard title="Réservations Annuelles" value={yearlyTotals.totalReservations.toLocaleString('fr-FR')} icon={CalendarDays} colorClass="text-indigo-600" />
-                    <KpiCard title="ADR Annuel" value={formatCurrencyEUR(yearlyTotals.adr)} icon={TrendingUp} colorClass="text-orange-600" />
-                    <KpiCard title="Bénéfice Net Annuel" value={formatCurrencyEUR(yearlyTotals.net)} icon={Euro} colorClass="text-teal-600" />
-                    <KpiCard title="Taux d'Occupation Annuel" value={`${yearlyTotals.yearlyOccupation.toFixed(1)} %`} icon={TrendingUp} colorClass="text-cyan-600" />
+                    <KpiCard title="CA Annuel" value={formatCurrencyEUR(yearlyTotals.totalCA || 0)} icon={Euro} colorClass="text-green-600" />
+                    <KpiCard title="Montant Versé Annuel" value={formatCurrencyEUR(yearlyTotals.totalMontantVerse || 0)} icon={Euro} colorClass="text-emerald-600" />
+                    <KpiCard title="Frais HK Annuel" value={formatCurrencyEUR(yearlyTotals.totalFacture || 0)} icon={Euro} colorClass="text-rose-600" />
+                    <KpiCard title="Nuits Annuelles" value={(yearlyTotals.totalNuits || 0).toLocaleString('fr-FR')} icon={BedDouble} colorClass="text-blue-600" />
+                    <KpiCard title="Réservations Annuelles" value={(yearlyTotals.totalReservations || 0).toLocaleString('fr-FR')} icon={CalendarDays} colorClass="text-indigo-600" />
+                    <KpiCard title="ADR Annuel" value={formatCurrencyEUR(yearlyTotals.adr || 0)} icon={TrendingUp} colorClass="text-orange-600" />
+                    <KpiCard title="Bénéfice Net Annuel" value={formatCurrencyEUR(yearlyTotals.net || 0)} icon={Euro} colorClass="text-teal-600" />
+                    <KpiCard title="Taux d'Occupation Annuel" value={`${(yearlyTotals.yearlyOccupation || 0).toFixed(1)} %`} icon={TrendingUp} colorClass="text-cyan-600" />
                   </div>
                 </div>
               )}

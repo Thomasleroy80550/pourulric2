@@ -62,6 +62,7 @@ import TicketDetailPage from "./pages/TicketDetailPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import AdminMarketplacePage from "./pages/AdminMarketplacePage"; // New import
 import CalendarPageMobile from "./pages/CalendarPageMobile";
+import AdminUtilityCutsPage from "./pages/AdminUtilityCutsPage"; // New import
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,7 @@ function App() {
                   <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}
                   <Route path="/admin/manual-stats" element={<AdminManualStatsPage />} /> {/* New route */}
                   <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
+                  <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/blog" element={<BlogPage />} />

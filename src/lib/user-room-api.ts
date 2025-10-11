@@ -42,6 +42,10 @@ export interface UserRoom {
   has_house_manual?: boolean;
   has_smoke_detector?: boolean;
   has_co_detector?: boolean;
+
+  // Nouveaux champs pour statut des compteurs
+  is_electricity_cut?: boolean;
+  is_water_cut?: boolean;
 }
 
 /**

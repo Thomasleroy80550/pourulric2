@@ -32,6 +32,7 @@ import {
   ArrowRightLeft, // New icon for transfers
   FileSymlink,
   Store, // New icon for marketplace
+  PlugZap, // New icon for utility cuts
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -74,6 +75,7 @@ const adminNavigationCategories = [
     items: [
       { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
+      { name: 'Compteurs coupés', href: '/admin/utility-cuts', icon: PlugZap, description: 'Liste des logements où électricité/eau sont coupées.' },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },
       { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
       { name: 'Marketplace', href: '/admin/marketplace', icon: Store, description: 'Gérer les prestataires de la marketplace.' },

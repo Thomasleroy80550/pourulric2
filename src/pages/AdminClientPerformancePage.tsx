@@ -8,6 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getAllProfiles, getInvoicesByUserId, type SavedInvoice } from '@/lib/admin-api';
 import { getUserRoomsByUserId } from '@/lib/user-room-api';
 import { useNavigate } from 'react-router-dom';
+import { generatePerformanceSummary } from '@/lib/performance-api';
+import { generatePerformanceSummaryPdf } from '@/lib/pdf-utils';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2, Users, CalendarDays, BedDouble, TrendingUp, Euro } from 'lucide-react';
 import { getDaysInMonth } from 'date-fns';
 import {
@@ -81,6 +84,9 @@ const AdminClientPerformancePage: React.FC = () => {
 
   // Ajout d'un état pour le filtre année global
   const [globalYearFilter, setGlobalYearFilter] = useState<number>(2025);
+
+  const { toast } = useToast();
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   // Fetch clients
   useEffect(() => {
@@ -300,6 +306,67 @@ const AdminClientPerformancePage: React.FC = () => {
     return profiles.find(p => p.id === selectedUserId) || null;
   }, [profiles, selectedUserId]);
 
+  const handleGenerateSummaryPdf = async () => {
+    if (!selectedUserId || !selectedProfile || !yearlyTotals) return;
+    setGeneratingPdf(true);
+    toast({ title: 'Génération du PDF…', description: `Synthèse annuelle ${globalYearFilter} en cours` });
+
+    try {
+      const summaryText = await generatePerformanceSummary({
+        clientName: `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim() || 'Client',
+        year: globalYearFilter || (selectedYear || new Date().getFullYear()),
+        yearlyTotals: {
+          totalCA: yearlyTotals.totalCA,
+          totalMontantVerse: yearlyTotals.totalMontantVerse,
+          totalFacture: yearlyTotals.totalFacture,
+          net: yearlyTotals.net,
+          adr: yearlyTotals.adr,
+          revpar: yearlyTotals.revpar,
+          yearlyOccupation: yearlyTotals.yearlyOccupation,
+          totalNuits: yearlyTotals.totalNuits,
+          totalReservations: yearlyTotals.totalReservations,
+          totalVoyageurs: yearlyTotals.totalVoyageurs,
+        },
+        monthlySeries: monthlySeries.map(m => ({
+          month: m.month,
+          totalCA: m.totalCA,
+          totalMontantVerse: m.totalMontantVerse,
+          totalFacture: m.totalFacture,
+          totalNuits: m.totalNuits,
+          adr: m.adr,
+          revpar: m.revpar,
+          occupation: m.occupation,
+        })),
+      });
+
+      await generatePerformanceSummaryPdf({
+        clientName: `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim() || 'Client',
+        year: globalYearFilter || (selectedYear || new Date().getFullYear()),
+        yearlyTotals: {
+          totalCA: yearlyTotals.totalCA,
+          totalMontantVerse: yearlyTotals.totalMontantVerse,
+          totalFacture: yearlyTotals.totalFacture,
+          net: yearlyTotals.net,
+          adr: yearlyTotals.adr,
+          revpar: yearlyTotals.revpar,
+          yearlyOccupation: yearlyTotals.yearlyOccupation,
+          totalNuits: yearlyTotals.totalNuits,
+          totalReservations: yearlyTotals.totalReservations,
+          totalVoyageurs: yearlyTotals.totalVoyageurs,
+        },
+        monthly: monthlySeries.map(m => ({ month: m.month, totalCA: m.totalCA, occupation: m.occupation })),
+        summaryText,
+      });
+
+      toast({ title: 'PDF généré', description: 'Le récap annuel a été téléchargé.' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message || 'La génération a échoué.' });
+      throw e;
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -308,6 +375,12 @@ const AdminClientPerformancePage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => navigate('/admin/statements' + (selectedUserId ? `?userId=${selectedUserId}` : ''))}>
               Voir les relevés
+            </Button>
+            <Button
+              onClick={handleGenerateSummaryPdf}
+              disabled={!selectedUserId || !yearlyTotals || generatingPdf}
+            >
+              {generatingPdf ? 'Génération…' : 'Générer PDF récap'}
             </Button>
           </div>
         </div>

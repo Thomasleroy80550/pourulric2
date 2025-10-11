@@ -95,44 +95,65 @@ const AdminClientPerformancePage: React.FC = () => {
 
   // Fetch invoices + rooms when client changes
   useEffect(() => {
-    if (!selectedUserId) {
-      setUserInvoices([]);
-      setSelectedPeriod("");
-      setRoomsCount(0);
-      setSelectedYear("");
-      return;
-    }
-    setLoadingInvoices(true);
-    getInvoicesByUserId(selectedUserId).then((invs) => {
-      // tri du plus récent au plus ancien par created_at (si dispo) sinon par période
-      const sorted = [...invs].sort((a, b) => {
-        if (a.created_at && b.created_at) {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    const fetchData = async () => {
+      if (!selectedUserId) {
+        setUserInvoices([]);
+        setSelectedPeriod("");
+        setRoomsCount(0);
+        setSelectedYear("");
+        return;
+      }
+      
+      try {
+        setLoadingInvoices(true);
+        const invs = await getInvoicesByUserId(selectedUserId);
+        
+        // tri du plus récent au plus ancien par created_at (si dispo) sinon par période
+        const sorted = [...invs].sort((a, b) => {
+          if (a.created_at && b.created_at) {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          }
+          const pa = parsePeriod(a.period);
+          const pb = parsePeriod(b.period);
+          if (pa && pb) {
+            const da = new Date(pa.year, pa.monthIndex).getTime();
+            const db = new Date(pb.year, pb.monthIndex).getTime();
+            return db - da;
+          }
+          return 0;
+        });
+        
+        setUserInvoices(sorted);
+        if (sorted.length > 0) {
+          setSelectedPeriod(sorted[0].period);
+          const firstParsed = parsePeriod(sorted[0].period);
+          setSelectedYear(firstParsed ? firstParsed.year : "");
+        } else {
+          setSelectedPeriod("");
+          setSelectedYear("");
         }
-        const pa = parsePeriod(a.period);
-        const pb = parsePeriod(b.period);
-        if (pa && pb) {
-          const da = new Date(pa.year, pa.monthIndex).getTime();
-          const db = new Date(pb.year, pb.monthIndex).getTime();
-          return db - da;
-        }
-        return 0;
-      });
-      setUserInvoices(sorted);
-      if (sorted.length > 0) {
-        setSelectedPeriod(sorted[0].period);
-        const firstParsed = parsePeriod(sorted[0].period);
-        setSelectedYear(firstParsed ? firstParsed.year : "");
-      } else {
+      } catch (error) {
+        console.error("Erreur lors du chargement des invoices:", error);
+        setUserInvoices([]);
         setSelectedPeriod("");
         setSelectedYear("");
+      } finally {
+        setLoadingInvoices(false);
       }
-    }).finally(() => setLoadingInvoices(false));
 
-    setLoadingRooms(true);
-    getUserRoomsByUserId(selectedUserId).then((rooms) => {
-      setRoomsCount(rooms?.length || 0);
-    }).finally(() => setLoadingRooms(false));
+      try {
+        setLoadingRooms(true);
+        const rooms = await getUserRoomsByUserId(selectedUserId);
+        setRoomsCount(rooms?.length || 0);
+      } catch (error) {
+        console.error("Erreur lors du chargement des rooms:", error);
+        setRoomsCount(0);
+      } finally {
+        setLoadingRooms(false);
+      }
+    };
+    
+    fetchData();
   }, [selectedUserId]);
 
   const filteredProfiles = useMemo(() => {

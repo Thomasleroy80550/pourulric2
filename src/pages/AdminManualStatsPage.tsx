@@ -149,8 +149,11 @@ const AdminManualStatsPage: React.FC = () => {
       await addManualStatements(userId, formattedStatements);
       toast.success("Statistiques manuelles ajoutées avec succès !", { id: toastId });
       form.reset();
-      setSelectedUser(null); // Reset user selection
+      setSelectedUser(null);
       form.setValue('userId', '');
+      // recharge la liste
+      const updated = await getInvoicesByUserId(userId);
+      setInvoices(updated.filter((i) => i.source_type === 'manual'));
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`, { id: toastId });
     } finally {

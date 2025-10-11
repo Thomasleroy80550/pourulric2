@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { useQuery } from '@tanstack/react-query';
 import { getAllUserRooms, AdminUserRoom } from '@/lib/admin-api';
@@ -6,15 +6,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlugZap, Droplet } from 'lucide-react';
+import { PlugZap, Droplet, Building, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DownloadRoomSummaryButton } from '@/components/DownloadRoomSummaryButton';
+import EditUserRoomDialog from '@/components/EditUserRoomDialog';
 
 const AdminUserRoomsPage: React.FC = () => {
-  const { data: userRooms, isLoading, error } = useQuery<AdminUserRoom[]>({
+  const { data: userRooms, isLoading, error, refetch } = useQuery<AdminUserRoom[]>({
     queryKey: ['adminUserRooms'],
     queryFn: getAllUserRooms,
   });
+
+  const [editingRoom, setEditingRoom] = useState<AdminUserRoom | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleEdit = (room: AdminUserRoom) => {
+    setEditingRoom(room);
+    setDialogOpen(true);
+  };
+
+  const handleRoomSaved = () => {
+    refetch();
+    setDialogOpen(false);
+    setEditingRoom(null);
+  };
 
   return (
     <AdminLayout>
@@ -44,12 +59,14 @@ const AdminUserRoomsPage: React.FC = () => {
                     <TableRow>
                       <TableHead>Nom du Logement</TableHead>
                       <TableHead>Propriétaire</TableHead>
+                      <TableHead>ID Chambre</TableHead>
                       <TableHead>Type de Propriété</TableHead>
                       <TableHead>Code Boîte à Clés</TableHead>
                       <TableHead>Code Wi-Fi</TableHead>
                       <TableHead>Instructions Arrivée</TableHead>
                       <TableHead>Infos Parking</TableHead>
                       <TableHead>Règlement Intérieur</TableHead>
+                      <TableHead>Statut Compteurs</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -58,9 +75,15 @@ const AdminUserRoomsPage: React.FC = () => {
                       const clientName = `${room.profiles?.first_name || ''} ${room.profiles?.last_name || ''}`.trim() || '—';
                       return (
                         <TableRow key={room.id}>
-                          <TableCell>{clientName}</TableCell>
                           <TableCell className="font-medium">{room.room_name}</TableCell>
+                          <TableCell>{clientName}</TableCell>
                           <TableCell className="text-muted-foreground">{room.room_id}</TableCell>
+                          <TableCell>{room.property_type || '—'}</TableCell>
+                          <TableCell>{room.keybox_code || '—'}</TableCell>
+                          <TableCell>{room.wifi_code || '—'}</TableCell>
+                          <TableCell>{room.arrival_instructions || '—'}</TableCell>
+                          <TableCell>{room.parking_info || '—'}</TableCell>
+                          <TableCell>{room.house_rules || '—'}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {room.is_electricity_cut && (
@@ -80,7 +103,7 @@ const AdminUserRoomsPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(room)}>
-                              Modifier
+                              <Edit className="h-4 w-4 mr-1" /> Modifier
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -95,6 +118,16 @@ const AdminUserRoomsPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {editingRoom && (
+        <EditUserRoomDialog
+          isOpen={dialogOpen}
+          onOpenChange={setDialogOpen}
+          userId={editingRoom.user_id}
+          initialRoom={editingRoom}
+          onRoomSaved={handleRoomSaved}
+        />
+      )}
     </AdminLayout>
   );
 };

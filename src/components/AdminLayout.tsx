@@ -66,6 +66,7 @@ const adminNavigationCategories = [
     items: [
       { name: 'Tableau de Bord', href: '/admin', icon: Home, description: "Vue d'ensemble de l'activité." },
       { name: 'Stats Hello Keys', href: '/admin/hello-keys-stats', icon: BarChart3, description: 'Statistiques de facturation de Hello Keys.' }, // New item
+      { name: 'Revue Client', href: '/admin/client-performance', icon: BarChart3, description: 'Synthèse mensuelle par client.' }, // Added item
     ]
   },
   {

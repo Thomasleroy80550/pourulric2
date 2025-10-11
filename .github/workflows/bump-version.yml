@@ -14,12 +14,12 @@ jobs:
 
       - name: Bump version
         run: |
-          # récupère la dernière version ou commence à 1.0.0
-          OLD=$(git tag --sort=-version:refname | head -n1 || echo "v1.0.0")
-          # incrémente le patch
-          IFS='.' read -r major minor patch <<<"${OLD#v}"
-          patch=$((patch + 1))
-          NEW="v${major}.${minor}.${patch}"
+          # récupère la dernière version ou commence à 1.0.0.0
+          OLD=$(git tag --sort=-version:refname | head -n1 || echo "v1.0.0.0")
+          # incrémente le dernier segment
+          IFS='.' read -r major minor patch build <<<"${OLD#v}"
+          build=$((build + 1))
+          NEW="v${major}.${minor}.${patch}.${build}"
           echo "NEW=$NEW" >> $GITHUB_ENV
 
       - name: Crée le fichier version.json

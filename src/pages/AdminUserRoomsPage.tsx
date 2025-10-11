@@ -5,7 +5,9 @@ import { getAllUserRooms, AdminUserRoom } from '@/lib/admin-api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { PlugZap, Droplet } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { DownloadRoomSummaryButton } from '@/components/DownloadRoomSummaryButton';
 
 const AdminUserRoomsPage: React.FC = () => {
@@ -52,21 +54,38 @@ const AdminUserRoomsPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {userRooms.map((room) => (
-                      <TableRow key={room.id}>
-                        <TableCell className="font-medium">{room.room_name}</TableCell>
-                        <TableCell>{room.profiles ? `${room.profiles.first_name} ${room.profiles.last_name}` : 'N/A'}</TableCell>
-                        <TableCell>{room.property_type || '-'}</TableCell>
-                        <TableCell>{room.keybox_code || '-'}</TableCell>
-                        <TableCell>{room.wifi_code || '-'}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{room.arrival_instructions || '-'}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{room.parking_info || '-'}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{room.house_rules || '-'}</TableCell>
-                        <TableCell className="text-right">
-                          <DownloadRoomSummaryButton room={room} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {userRooms.map((room) => {
+                      const clientName = `${room.profiles?.first_name || ''} ${room.profiles?.last_name || ''}`.trim() || '—';
+                      return (
+                        <TableRow key={room.id}>
+                          <TableCell>{clientName}</TableCell>
+                          <TableCell className="font-medium">{room.room_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{room.room_id}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {room.is_electricity_cut && (
+                                <Badge variant="secondary" className="text-amber-700 border-amber-300">
+                                  <PlugZap className="h-3 w-3 mr-1" /> Élec coupée
+                                </Badge>
+                              )}
+                              {room.is_water_cut && (
+                                <Badge variant="secondary" className="text-sky-700 border-sky-300">
+                                  <Droplet className="h-3 w-3 mr-1" /> Eau coupée
+                                </Badge>
+                              )}
+                              {!room.is_electricity_cut && !room.is_water_cut && (
+                                <Badge variant="outline">Tous actifs</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(room)}>
+                              Modifier
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

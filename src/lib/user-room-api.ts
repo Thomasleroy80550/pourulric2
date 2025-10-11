@@ -160,7 +160,10 @@ export async function adminAddUserRoom(user_id: string, room_id: string, room_na
  * @param updates An object containing the fields to update (room_id, room_name, room_id_2).
  * @returns The updated UserRoom object.
  */
-export async function updateUserRoom(id: string, updates: Partial<Omit<UserRoom, 'id' | 'user_id'>>): Promise<UserRoom> {
+export async function updateUserRoom(
+  id: string,
+  updates: Partial<Omit<UserRoom, 'id' | 'user_id'>>
+): Promise<UserRoom> {
   const { data, error } = await supabase
     .from('user_rooms')
     .update(updates)

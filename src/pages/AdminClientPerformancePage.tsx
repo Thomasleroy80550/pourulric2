@@ -79,6 +79,9 @@ const AdminClientPerformancePage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<number | "">("");
 
+  // Ajout d'un état pour le filtre année global
+  const [globalYearFilter, setGlobalYearFilter] = useState<number>(2025);
+
   // Fetch clients
   useEffect(() => {
     setLoadingProfiles(true);
@@ -158,6 +161,55 @@ const AdminClientPerformancePage: React.FC = () => {
     () => userInvoices.find((i) => i.period === selectedPeriod) || null,
     [userInvoices, selectedPeriod]
   );
+
+  // Calcul des totaux annuels pour l'année sélectionnée
+  const yearlyTotals = useMemo(() => {
+    if (!globalYearFilter || !selectedUserId) return null;
+
+    const yearInvoices = userInvoices.filter(inv => {
+      const parsed = parsePeriod(inv.period);
+      return parsed && parsed.year === globalYearFilter;
+    });
+
+    let totalCA = 0;
+    let totalMontantVerse = 0;
+    let totalFacture = 0;
+    let totalNuits = 0;
+    let totalReservations = 0;
+    let totalVoyageurs = 0;
+
+    yearInvoices.forEach(inv => {
+      const t = inv.totals || {};
+      totalCA += typeof t.totalCA === 'number' ? t.totalCA : (typeof t.totalRevenuGenere === 'number' ? t.totalRevenuGenere : 0);
+      totalMontantVerse += typeof t.totalMontantVerse === 'number' ? t.totalMontantVerse : 0;
+      totalFacture += typeof t.totalFacture === 'number' ? t.totalFacture : (typeof t.totalCommission === 'number' ? t.totalCommission : 0);
+      totalNuits += typeof t.totalNuits === 'number' ? t.totalNuits : 0;
+      totalReservations += typeof t.totalReservations === 'number' ? t.totalReservations : (inv.invoice_data?.length || 0);
+      totalVoyageurs += typeof t.totalVoyageurs === 'number' ? t.totalVoyageurs : 0;
+    });
+
+    const daysInYear = globalYearFilter % 4 === 0 ? 366 : 365;
+    const totalAvailableNights = roomsCount > 0 ? roomsCount * daysInYear : 0;
+    
+    const adr = totalNuits > 0 ? totalCA / totalNuits : 0;
+    const revpar = totalAvailableNights > 0 ? totalCA / totalAvailableNights : 0;
+    const yearlyOccupation = totalAvailableNights > 0 ? (totalNuits / totalAvailableNights) * 100 : 0;
+    const net = totalMontantVerse - totalFacture;
+
+    return {
+      totalCA,
+      totalMontantVerse,
+      totalFacture,
+      totalNuits,
+      totalReservations,
+      totalVoyageurs,
+      adr,
+      revpar,
+      yearlyOccupation,
+      net,
+      invoiceCount: yearInvoices.length
+    };
+  }, [globalYearFilter, selectedUserId, userInvoices, roomsCount]);
 
   const kpis = useMemo(() => {
     if (!selectedInvoice) {
@@ -264,7 +316,7 @@ const AdminClientPerformancePage: React.FC = () => {
           <CardHeader>
             <CardTitle>Sélection</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <CardContent className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <div className="text-sm text-muted-foreground">Rechercher un client</div>
               <Input
@@ -285,6 +337,24 @@ const AdminClientPerformancePage: React.FC = () => {
                     <SelectItem key={p.id} value={p.id}>
                       {(p.first_name || '') + ' ' + (p.last_name || '')} {p.email ? `(${p.email})` : ''}
                     </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm text-muted-foreground">Vue annuelle</div>
+              <Select
+                value={String(globalYearFilter)}
+                onValueChange={(v) => setGlobalYearFilter(Number(v))}
+                disabled={!selectedUserId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Année" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(y => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -317,6 +387,36 @@ const AdminClientPerformancePage: React.FC = () => {
             <Loader2 className="h-4 w-4 animate-spin" />
             Chargement des données…
           </div>
+        )}
+
+        {/* Vue annuelle globale */}
+        {yearlyTotals && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Résumé annuel {globalYearFilter}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <KpiCard title="CA Total" value={formatCurrencyEUR(yearlyTotals.totalCA)} icon={Euro} colorClass="text-green-600" />
+                <KpiCard title="Total Versé" value={formatCurrencyEUR(yearlyTotals.totalMontantVerse)} icon={Euro} colorClass="text-emerald-600" />
+                <KpiCard title="Frais HK Total" value={formatCurrencyEUR(yearlyTotals.totalFacture)} icon={Euro} colorClass="text-rose-600" />
+                <KpiCard title="Bénéfice Net" value={formatCurrencyEUR(yearlyTotals.net)} icon={Euro} colorClass="text-blue-600" />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard title="Nuits Total" value={yearlyTotals.totalNuits.toLocaleString('fr-FR')} icon={BedDouble} colorClass="text-purple-600" />
+                <KpiCard title="Réservations" value={yearlyTotals.totalReservations.toLocaleString('fr-FR')} icon={CalendarDays} colorClass="text-indigo-600" />
+                <KpiCard title="Voyageurs" value={yearlyTotals.totalVoyageurs.toLocaleString('fr-FR')} icon={Users} colorClass="text-teal-600" />
+                <KpiCard title="Relevés" value={yearlyTotals.invoiceCount.toString()} icon={CalendarDays} colorClass="text-orange-600" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <KpiCard title="ADR Annuel" value={formatCurrencyEUR(yearlyTotals.adr)} icon={TrendingUp} colorClass="text-cyan-600" />
+                <KpiCard title="RevPAR Annuel" value={formatCurrencyEUR(yearlyTotals.revpar)} icon={TrendingUp} colorClass="text-pink-600" />
+                <KpiCard title="Occupation Annuelle" value={`${yearlyTotals.yearlyOccupation.toFixed(1)} %`} icon={TrendingUp} colorClass="text-amber-600" />
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {selectedInvoice && kpis && (
@@ -396,7 +496,7 @@ const AdminClientPerformancePage: React.FC = () => {
           <Card className="mt-8">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Vue annuelle</CardTitle>
+                <CardTitle>Vue annuelle détaillée {globalYearFilter}</CardTitle>
                 <div className="flex items-center gap-2">
                   <div className="text-sm text-muted-foreground">Année</div>
                   <Select

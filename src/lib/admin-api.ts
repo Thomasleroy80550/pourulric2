@@ -596,6 +596,19 @@ export async function deleteInvoice(invoiceId: string): Promise<void> {
   }
 }
 
+export async function deleteManualInvoice(invoiceId: string): Promise<void> {
+  const { error } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', invoiceId)
+    .eq('source_type', 'manual'); // sécurité : uniquement manuel
+
+  if (error) {
+    console.error('Erreur suppression facture manuelle:', error);
+    throw new Error(`Impossible de supprimer la statistique : ${error.message}`);
+  }
+}
+
 export interface ManualStatementEntry {
   period: string;
   totalCA: number;

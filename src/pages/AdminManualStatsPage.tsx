@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAllProfiles, addManualStatements, getInvoicesByUserId } from '@/lib/admin-api';
+import { getAllProfiles, addManualStatements, getInvoicesByUserId, deleteManualInvoice } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -155,6 +155,19 @@ const AdminManualStatsPage: React.FC = () => {
       toast.error(`Erreur: ${error.message}`, { id: toastId });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (invoiceId: string) => {
+    if (!confirm('Supprimer cette statistique ?')) return;
+    try {
+      await deleteManualInvoice(invoiceId);
+      toast.success('Statistique supprimée');
+      // re-fetch la liste
+      const updated = await getInvoicesByUserId(selectedUser!.id);
+      setInvoices(updated);
+    } catch (e: any) {
+      toast.error(e.message);
     }
   };
 

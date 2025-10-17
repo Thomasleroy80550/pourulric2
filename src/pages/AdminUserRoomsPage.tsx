@@ -38,6 +38,11 @@ const AdminUserRoomsPage: React.FC = () => {
     setEditingRoom(null);
   };
 
+  const openManage = (room: AdminUserRoom) => {
+    setManageRoom(room);
+    setManageOpen(true);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">

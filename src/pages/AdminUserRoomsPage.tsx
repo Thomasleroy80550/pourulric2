@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlugZap, Droplet, Building, Edit } from 'lucide-react';
+import { PlugZap, Droplet, Building, Edit, History, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DownloadRoomSummaryButton } from '@/components/DownloadRoomSummaryButton';
 import EditUserRoomDialog from '@/components/EditUserRoomDialog';
+import AdminRoomManagementDialog from '@/components/AdminRoomManagementDialog';
 
 const AdminUserRoomsPage: React.FC = () => {
   const { data: userRooms, isLoading, error, refetch } = useQuery<AdminUserRoom[]>({
@@ -19,6 +20,12 @@ const AdminUserRoomsPage: React.FC = () => {
 
   const [editingRoom, setEditingRoom] = useState<AdminUserRoom | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [manageRoom, setManageRoom] = useState<AdminUserRoom | null>(null);
+
+  const openHistory = (room: AdminUserRoom) => {
+    // Implement history opening logic if needed
+  };
 
   const handleEdit = (room: AdminUserRoom) => {
     setEditingRoom(room);
@@ -102,9 +109,17 @@ const AdminUserRoomsPage: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => handleEdit(room)}>
-                              <Edit className="h-4 w-4 mr-1" /> Modifier
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" size="sm" onClick={() => handleEdit(room)}>
+                                <Edit className="h-4 w-4 mr-1" /> Modifier
+                              </Button>
+                              <Button variant="secondary" size="sm" onClick={() => openManage(room)}>
+                                <Settings className="h-4 w-4 mr-1" /> Gérer
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => openHistory(room)}>
+                                <History className="h-4 w-4 mr-1" /> Historique
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -126,6 +141,14 @@ const AdminUserRoomsPage: React.FC = () => {
           userId={editingRoom.user_id}
           initialRoom={editingRoom}
           onRoomSaved={handleRoomSaved}
+        />
+      )}
+
+      {manageRoom && (
+        <AdminRoomManagementDialog
+          room={manageRoom}
+          isOpen={manageOpen}
+          onOpenChange={setManageOpen}
         />
       )}
     </AdminLayout>

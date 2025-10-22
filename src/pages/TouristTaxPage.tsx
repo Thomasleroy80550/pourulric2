@@ -13,8 +13,6 @@ import { fr } from 'date-fns/locale';
 import { Info, Terminal, CheckCircle, CalendarDays, Clock, BedDouble } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface MonthlyTaxData {
   month: string;
@@ -23,6 +21,12 @@ interface MonthlyTaxData {
   totalActualTax: number;
   reservations: KrossbookingReservation[];
 }
+
+// Paramètres fixes pour le calcul proportionnel
+const PROPORTIONAL_RATE_PCT = 5;            // 5% du coût HT par occupant et par nuit
+const CAP_PER_ADULT_PER_NIGHT = 4.80;       // Plafond 4,80€ par adulte et par nuit
+const TVA_PCT = 10;                         // Hypothèse de TVA 10%
+const DEFAULT_OCCUPANTS_GUESS = 2;          // Hypothèse d'occupation par défaut (2 personnes)
 
 const TouristTaxPage: React.FC = () => {
   const { profile } = useSession();
@@ -33,16 +37,6 @@ const TouristTaxPage: React.FC = () => {
   const [selectedMonthReservations, setSelectedMonthReservations] = useState<KrossbookingReservation[]>([]);
   const [selectedMonthName, setSelectedMonthName] = useState<string>('');
   const isMobile = useIsMobile();
-
-  // Nouveau: paramètre de taxe et overrides manuels
-  const [taxPerAdultPerNight, setTaxPerAdultPerNight] = useState<number>(0);
-  const [overrides, setOverrides] = useState<Record<string, { adults: number; children: number }>>({});
-
-  // Nouveau: paramètres de taxe proportionnelle
-  const [propRatePct, setPropRatePct] = useState<number>(5); // 5%
-  const [capPerAdultPerNight, setCapPerAdultPerNight] = useState<number>(4.80); // 4,80€
-  const [tvaPct, setTvaPct] = useState<number>(10); // TVA par défaut 10%
-  const [defaultOccupantsGuess, setDefaultOccupantsGuess] = useState<number>(2); // Estimation simple
 
   const currentMonthIndex = getMonth(new Date());
   const currentYear = getYear(new Date());
@@ -236,72 +230,12 @@ const TouristTaxPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Prévisionnel de Taxe de Séjour</h1>
 
-        {/* Paramètres de calcul proportionnel */}
-        <Card className="mb-6 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Paramètres de calcul (taxe proportionnelle)</CardTitle>
-          </CardHeader>
-          <CardContent className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="tva-pct">TVA (%)</Label>
-              <Input
-                id="tva-pct"
-                type="number"
-                step="0.1"
-                value={tvaPct}
-                onChange={(e) => setTvaPct(Math.max(parseFloat(e.target.value || '0') || 0, 0))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="prop-rate-pct">Taux proportionnel (%)</Label>
-              <Input
-                id="prop-rate-pct"
-                type="number"
-                step="0.1"
-                value={propRatePct}
-                onChange={(e) => setPropRatePct(Math.max(parseFloat(e.target.value || '0') || 0, 0))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cap-per-night">Plafond par adulte et par nuit (€)</Label>
-              <Input
-                id="cap-per-night"
-                type="number"
-                step="0.01"
-                value={capPerAdultPerNight}
-                onChange={(e) => setCapPerAdultPerNight(Math.max(parseFloat(e.target.value || '0') || 0, 0))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="default-occupants">Occupants totaux (estimation par défaut)</Label>
-              <Input
-                id="default-occupants"
-                type="number"
-                step="1"
-                min={1}
-                value={defaultOccupantsGuess}
-                onChange={(e) => setDefaultOccupantsGuess(Math.max(parseInt(e.target.value || '1', 10) || 1, 1))}
-              />
-            </div>
-            <p className="sm:col-span-2 lg:col-span-4 text-xs text-muted-foreground">
-              Règle: taxe = min(5% × coût HT par nuit et par occupant, 4,80€) × nombre d'adultes × nombre de nuits. Les enfants ne paient pas. HT estimé via TVA.
-            </p>
-          </CardContent>
-        </Card>
-
         <Alert className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700">
           <Info className="h-4 w-4" />
-          <AlertTitle>Information sur le calcul</AlertTitle>
+          <AlertTitle>Règle de calcul proportionnelle</AlertTitle>
           <AlertDescription>
-            Ce tableau présente une estimation de la taxe de séjour à déclarer pour l'année en cours. Le calcul est basé sur le montant de taxe de séjour fourni par Krossbooking pour chaque réservation confirmée, en excluant celles provenant d'Airbnb et Booking.com (qui collectent déjà la taxe). Cliquez sur un mois pour voir le détail des réservations.
-          </AlertDescription>
-        </Alert>
-
-        <Alert className="mb-6 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Information sur les données de réservation</AlertTitle>
-          <AlertDescription>
-            L'API ne fournit pas le nombre d'adultes et d'enfants. Nous estimons les adultes via la règle proportionnelle sur la base HT et vous pouvez ajuster manuellement par réservation dans le détail.
+            La taxe correspond à 5,00% du coût HT de la nuitée par occupant, plafonnée à 4,80€ par adulte et par nuit. 
+            Les enfants sont exonérés (0€). Les répartitions Adultes/Enfants ci-dessous sont calculées automatiquement à partir des montants fournis par Krossbooking.
           </AlertDescription>
         </Alert>
 
@@ -320,7 +254,7 @@ const TouristTaxPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Détail des réservations pour {selectedMonthName}</DialogTitle>
             <DialogDescription>
-              Ajustez les adultes/enfants si nécessaire. Prix/nuit calculé à partir du montant et des nuitées (HT via TVA).
+              Copiez-collez les informations: Arrivée, Départ, Adultes, Enfants (0), Prix/nuit. Les valeurs sont calculées automatiquement.
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
@@ -330,7 +264,7 @@ const TouristTaxPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Arrivée</TableHead>
                     <TableHead>Départ</TableHead>
-                    <TableHead className="text-center">Adultes (estimés)</TableHead>
+                    <TableHead className="text-center">Adultes</TableHead>
                     <TableHead className="text-center">Enfants</TableHead>
                     <TableHead className="text-right">Prix/nuit (TTC)</TableHead>
                   </TableRow>
@@ -350,55 +284,24 @@ const TouristTaxPage: React.FC = () => {
                     })();
 
                     const pricePerNightTTC = nights > 0 ? numericAmount / nights : 0;
-                    const pricePerNightHT = pricePerNightTTC / (1 + (tvaPct / 100));
+
+                    const pricePerNightHT = pricePerNightTTC / (1 + (TVA_PCT / 100));
+                    const costPerNightPerOccupantHT = DEFAULT_OCCUPANTS_GUESS > 0 ? (pricePerNightHT / DEFAULT_OCCUPANTS_GUESS) : 0;
+                    const taxPerAdultPerNight = Math.min((PROPORTIONAL_RATE_PCT / 100) * costPerNightPerOccupantHT, CAP_PER_ADULT_PER_NIGHT);
 
                     const totalTaxActual = reservation.tourist_tax_amount || 0;
-
-                    // Estimation adultes via règle proportionnelle (en supposant occupants default)
-                    const occupantsGuess = defaultOccupantsGuess;
-                    const costPerNightPerOccupantHT = occupantsGuess > 0 ? (pricePerNightHT / occupantsGuess) : 0;
-                    const taxPerAdultPerNight = Math.min((propRatePct / 100) * costPerNightPerOccupantHT, capPerAdultPerNight);
-
-                    const estimatedAdultsBase = (nights > 0 && taxPerAdultPerNight > 0)
-                      ? Math.round(totalTaxActual / (taxPerAdultPerNight * nights))
+                    const estimatedAdults = (nights > 0 && taxPerAdultPerNight > 0)
+                      ? Math.max(Math.round(totalTaxActual / (taxPerAdultPerNight * nights)), 0)
                       : 0;
 
-                    const currentOverride = overrides[reservation.id] || { adults: Math.max(estimatedAdultsBase, 0), children: 0 };
+                    const children = 0;
 
                     return (
                       <TableRow key={reservation.id}>
                         <TableCell>{format(checkIn, 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{format(checkOut, 'dd/MM/yyyy')}</TableCell>
-                        <TableCell className="text-center">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={currentOverride.adults}
-                            onChange={(e) => {
-                              const val = Math.max(parseInt(e.target.value || '0', 10) || 0, 0);
-                              setOverrides((prev) => ({
-                                ...prev,
-                                [reservation.id]: { adults: val, children: (prev[reservation.id]?.children ?? 0) }
-                              }));
-                            }}
-                            className="w-20 mx-auto text-center"
-                          />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={currentOverride.children}
-                            onChange={(e) => {
-                              const val = Math.max(parseInt(e.target.value || '0', 10) || 0, 0);
-                              setOverrides((prev) => ({
-                                ...prev,
-                                [reservation.id]: { adults: (prev[reservation.id]?.adults ?? Math.max(estimatedAdultsBase, 0)), children: val }
-                              }));
-                            }}
-                            className="w-20 mx-auto text-center"
-                          />
-                        </TableCell>
+                        <TableCell className="text-center">{estimatedAdults}</TableCell>
+                        <TableCell className="text-center">{children}</TableCell>
                         <TableCell className="text-right font-medium">
                           {pricePerNightTTC.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                         </TableCell>

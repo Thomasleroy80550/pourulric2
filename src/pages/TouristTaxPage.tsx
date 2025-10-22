@@ -262,6 +262,7 @@ const TouristTaxPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Nom du voyageur</TableHead>
                     <TableHead>Arrivée</TableHead>
                     <TableHead>Départ</TableHead>
                     <TableHead className="text-center">Adultes</TableHead>
@@ -298,6 +299,7 @@ const TouristTaxPage: React.FC = () => {
 
                     return (
                       <TableRow key={reservation.id}>
+                        <TableCell className="font-medium">{reservation.customer_name || 'N/A'}</TableCell>
                         <TableCell>{format(checkIn, 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{format(checkOut, 'dd/MM/yyyy')}</TableCell>
                         <TableCell className="text-center">{estimatedAdults}</TableCell>

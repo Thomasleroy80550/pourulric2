@@ -254,7 +254,7 @@ const TouristTaxPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Détail des réservations pour {selectedMonthName}</DialogTitle>
             <DialogDescription>
-              Copiez-collez les informations: Arrivée, Départ, Adultes, Enfants (0), Prix/nuit. Les valeurs sont calculées automatiquement.
+              Copiez-collez les informations: Arrivée, Départ, Adultes, Enfants (0), Prix total des nuits. Les valeurs sont calculées automatiquement.
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
@@ -266,7 +266,7 @@ const TouristTaxPage: React.FC = () => {
                     <TableHead>Départ</TableHead>
                     <TableHead className="text-center">Adultes</TableHead>
                     <TableHead className="text-center">Enfants</TableHead>
-                    <TableHead className="text-right">Prix/nuit (TTC)</TableHead>
+                    <TableHead className="text-right">Prix total des nuits</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -277,13 +277,13 @@ const TouristTaxPage: React.FC = () => {
 
                     // Parse montant (ex: "123€") -> nombre TTC
                     const rawAmount = (reservation.amount || '').toString().trim();
-                    const numericAmount = (() => {
+                    const totalAmount = (() => {
                       const cleaned = rawAmount.replace(/[^\d,.\-]/g, '').replace(',', '.');
                       const parsed = parseFloat(cleaned);
                       return isNaN(parsed) ? 0 : parsed;
                     })();
 
-                    const pricePerNightTTC = nights > 0 ? numericAmount / nights : 0;
+                    const pricePerNightTTC = nights > 0 ? totalAmount / nights : 0;
 
                     const pricePerNightHT = pricePerNightTTC / (1 + (TVA_PCT / 100));
                     const costPerNightPerOccupantHT = DEFAULT_OCCUPANTS_GUESS > 0 ? (pricePerNightHT / DEFAULT_OCCUPANTS_GUESS) : 0;
@@ -303,7 +303,7 @@ const TouristTaxPage: React.FC = () => {
                         <TableCell className="text-center">{estimatedAdults}</TableCell>
                         <TableCell className="text-center">{children}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {pricePerNightTTC.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                          {totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                         </TableCell>
                       </TableRow>
                     );

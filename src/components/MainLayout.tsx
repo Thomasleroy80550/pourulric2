@@ -37,6 +37,7 @@ import {
   Ban, // Ajout de l'icône Ban
   MessageSquare, // Ajout de l'icône pour les tickets
   Store, // Ajout de l'icône pour la marketplace
+  Wrench, // Ajout de l'icône pour le ménage
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -65,6 +66,15 @@ import { useVersion } from '@/hooks/use-version';
 interface MainLayoutProps {
   children: React.ReactNode;
 }
+
+const housekeepingSidebarSections = [
+  {
+    title: 'Ménage',
+    items: [
+      { name: 'Mes rapports', href: '/housekeeping-reports', icon: Wrench },
+    ],
+  },
+];
 
 const defaultSidebarSections = (isPaymentSuspended: boolean) => [
   {
@@ -119,7 +129,14 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
 
-  const sidebarSections = profile?.role === 'accountant' ? accountantSidebarSections(isPaymentSuspended) : defaultSidebarSections(isPaymentSuspended);
+  let sidebarSections;
+  if (profile?.role === 'housekeeper') {
+    sidebarSections = housekeepingSidebarSections;
+  } else if (profile?.role === 'accountant') {
+    sidebarSections = accountantSidebarSections(isPaymentSuspended);
+  } else {
+    sidebarSections = defaultSidebarSections(isPaymentSuspended);
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -141,23 +158,25 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
       </div>
 
       <nav id="tour-sidebar-nav" className="flex-grow space-y-6 px-4 overflow-y-auto">
-        <div className="mb-4">
-          <Button
-            asChild
-            variant="ghost"
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            onClick={onLinkClick}
-          >
-            <a
-              href="https://proprietaire.hellokeys.fr"
-              target="_blank"
-              rel="noopener noreferrer"
+        {profile?.role !== 'housekeeper' && (
+          <div className="mb-4">
+            <Button
+              asChild
+              variant="ghost"
+              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              onClick={onLinkClick}
             >
-              <LogOut className="h-5 w-5 mr-3" />
-              Retour à Hello Keys V1
-            </a>
-          </Button>
-        </div>
+              <a
+                href="https://proprietaire.hellokeys.fr"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <LogOut className="h-5 w-5 mr-3" />
+                Retour à Hello Keys V1
+              </a>
+            </Button>
+          </div>
+        )}
 
         {sidebarSections.map((section) => (
           <div key={section.title}>
@@ -171,14 +190,13 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
                     to={item.href}
                     className={cn(
                       "flex items-center px-4 py-2.5 rounded-md text-sm font-medium tracking-wide transition-all",
-                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", // Default styles
-                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) && 'bg-sidebar-accent text-sidebar-accent-foreground', // Active state styles
-                      item.name === 'Nouveautés' && 'bg-primary text-primary-foreground hover:bg-primary/90', // Highlight for "Nouveautés"
-                      item.disabled && "opacity-50 cursor-not-allowed pointer-events-none" // Disabled styles
+                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) && 'bg-sidebar-accent text-sidebar-accent-foreground',
+                      item.disabled && "opacity-50 cursor-not-allowed pointer-events-none"
                     )}
                     onClick={item.disabled ? (e) => e.preventDefault() : onLinkClick}
                   >
-                    <item.icon className={cn("h-5 w-5 mr-3", item.name === 'Nouveautés' && 'text-primary-foreground')} />
+                    <item.icon className="h-5 w-5 mr-3" />
                     {item.name}
                   </Link>
                 </li>
@@ -199,7 +217,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
             </Link>
           </div>
         )}
-        {profile?.role !== 'accountant' && (
+        {profile?.role !== 'accountant' && profile?.role !== 'housekeeper' && (
           <ul>
             {accountNavigationItems.map((item) => (
               <li key={item.name}>

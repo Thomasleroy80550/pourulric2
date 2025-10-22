@@ -8,11 +8,12 @@ import { getUserRooms } from '@/lib/user-room-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
-import { parseISO, differenceInDays, getMonth, format, getYear } from 'date-fns';
+import { parseISO, differenceInDays, getMonth, format, getYear, parse, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Info, Terminal, CheckCircle, CalendarDays, Clock, BedDouble } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getMyStatements } from '@/lib/statements-api';
 
 interface MonthlyTaxData {
   month: string;
@@ -38,6 +39,29 @@ const TouristTaxPage: React.FC = () => {
   const [selectedMonthName, setSelectedMonthName] = useState<string>('');
   const isMobile = useIsMobile();
 
+  // Ajout: index pour retrouver le prixSejour depuis les relevés
+  const [priceIndex, setPriceIndex] = useState<Map<string, number>>(new Map());
+
+  // Helpers pour normaliser et parser les dates
+  const normalizeName = (s: string) =>
+    (s || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+
+  const toKey = (name: string, checkIn: Date, checkOut: Date) =>
+    `${normalizeName(name)}|${format(checkIn, 'yyyy-MM-dd')}|${format(checkOut, 'yyyy-MM-dd')}`;
+
+  const parseAnyDate = (input: string) => {
+    if (!input) return null;
+    // Essayer formats courants des relevés (dd/MM/yyyy) puis ISO
+    const p1 = parse(input, 'dd/MM/yyyy', new Date());
+    if (isValid(p1)) return p1;
+    const p2 = parseISO(input);
+    return isValid(p2) ? p2 : null;
+  };
+
   const currentMonthIndex = getMonth(new Date());
   const currentYear = getYear(new Date());
 
@@ -54,12 +78,37 @@ const TouristTaxPage: React.FC = () => {
         const userRooms = await getUserRooms();
         if (userRooms.length === 0) {
           setMonthlyData([]);
+          setPriceIndex(new Map()); // reset index
           setLoading(false);
           return;
         }
 
         const bookings = await fetchKrossbookingReservations(userRooms);
-        
+
+        // Nouveau: charger les relevés et construire un index [nom+dates] -> prixSejour
+        const myStatements = await getMyStatements();
+        const newIndex = new Map<string, number>();
+
+        for (const inv of myStatements) {
+          const rows = Array.isArray(inv.invoice_data) ? inv.invoice_data : [];
+          for (const row of rows) {
+            // On attend les champs 'voyageur', 'arrivee', 'depart', 'prixSejour' issus du contexte de génération
+            const name = typeof row?.voyageur === 'string' ? row.voyageur : '';
+            const dIn = typeof row?.arrivee === 'string' ? parseAnyDate(row.arrivee) : null;
+            const dOut = typeof row?.depart === 'string' ? parseAnyDate(row.depart) : null;
+            const prixSejour = typeof row?.prixSejour === 'number' ? row.prixSejour : NaN;
+
+            if (name && dIn && dOut && isValid(dIn) && isValid(dOut) && !isNaN(prixSejour) && prixSejour > 0) {
+              const key = toKey(name, dIn, dOut);
+              // En cas de doublon, on conserve le premier inséré
+              if (!newIndex.has(key)) {
+                newIndex.set(key, prixSejour);
+              }
+            }
+          }
+        }
+        setPriceIndex(newIndex);
+
         const dataByMonth: { [key: number]: { taxableNights: number; totalActualTax: number; reservations: KrossbookingReservation[] } } = {};
 
         for (let i = 0; i < 12; i++) {
@@ -276,7 +325,7 @@ const TouristTaxPage: React.FC = () => {
                     const checkOut = parseISO(reservation.check_out_date);
                     const nights = Math.max(differenceInDays(checkOut, checkIn), 0);
 
-                    // Parse montant (ex: "123€") -> nombre TTC
+                    // Parse montant (ex: "123€") -> nombre TTC (fallback si on ne retrouve pas le prixSejour)
                     const rawAmount = (reservation.amount || '').toString().trim();
                     const totalAmount = (() => {
                       const cleaned = rawAmount.replace(/[^\d,.\-]/g, '').replace(',', '.');
@@ -284,8 +333,15 @@ const TouristTaxPage: React.FC = () => {
                       return isNaN(parsed) ? 0 : parsed;
                     })();
 
-                    const pricePerNightTTC = nights > 0 ? totalAmount / nights : 0;
+                    // Chercher le prix du séjour (total des nuits) dans les relevés
+                    const key = toKey(reservation.guest_name || '', checkIn, checkOut);
+                    const nightsTotalFromStatements = priceIndex.get(key);
+                    const totalNightsPrice = typeof nightsTotalFromStatements === 'number' && nightsTotalFromStatements > 0
+                      ? nightsTotalFromStatements
+                      : totalAmount; // fallback sur le total Kross si non trouvé
 
+                    // Conserver les calculs d'estimation adultes existants (basés sur TTC par nuit)
+                    const pricePerNightTTC = nights > 0 ? totalAmount / nights : 0;
                     const pricePerNightHT = pricePerNightTTC / (1 + (TVA_PCT / 100));
                     const costPerNightPerOccupantHT = DEFAULT_OCCUPANTS_GUESS > 0 ? (pricePerNightHT / DEFAULT_OCCUPANTS_GUESS) : 0;
                     const taxPerAdultPerNight = Math.min((PROPORTIONAL_RATE_PCT / 100) * costPerNightPerOccupantHT, CAP_PER_ADULT_PER_NIGHT);
@@ -305,7 +361,7 @@ const TouristTaxPage: React.FC = () => {
                         <TableCell className="text-center">{estimatedAdults}</TableCell>
                         <TableCell className="text-center">{children}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                          {totalNightsPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                         </TableCell>
                       </TableRow>
                     );

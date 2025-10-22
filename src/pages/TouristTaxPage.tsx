@@ -13,6 +13,8 @@ import { fr } from 'date-fns/locale';
 import { Info, Terminal, CheckCircle, CalendarDays, Clock, BedDouble } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface MonthlyTaxData {
   month: string;
@@ -31,6 +33,10 @@ const TouristTaxPage: React.FC = () => {
   const [selectedMonthReservations, setSelectedMonthReservations] = useState<KrossbookingReservation[]>([]);
   const [selectedMonthName, setSelectedMonthName] = useState<string>('');
   const isMobile = useIsMobile();
+
+  // Nouveau: paramètre de taxe et overrides manuels
+  const [taxPerAdultPerNight, setTaxPerAdultPerNight] = useState<number>(0);
+  const [overrides, setOverrides] = useState<Record<string, { adults: number; children: number }>>({});
 
   const currentMonthIndex = getMonth(new Date());
   const currentYear = getYear(new Date());
@@ -224,6 +230,28 @@ const TouristTaxPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Prévisionnel de Taxe de Séjour</h1>
 
+        <Card className="mb-6 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Paramètre de calcul</CardTitle>
+          </CardHeader>
+          <CardContent className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tax-per-adult-night">Taxe par adulte et par nuit (€)</Label>
+              <Input
+                id="tax-per-adult-night"
+                type="number"
+                step="0.01"
+                placeholder="Ex: 1.50"
+                value={taxPerAdultPerNight === 0 ? '' : taxPerAdultPerNight}
+                onChange={(e) => setTaxPerAdultPerNight(parseFloat(e.target.value) || 0)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Utilisée pour estimer le nombre d'adultes par réservation (les enfants ne paient pas).
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         <Alert className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700">
           <Info className="h-4 w-4" />
           <AlertTitle>Information sur le calcul</AlertTitle>
@@ -236,7 +264,7 @@ const TouristTaxPage: React.FC = () => {
           <Info className="h-4 w-4" />
           <AlertTitle>Information sur les données de réservation</AlertTitle>
           <AlertDescription>
-            Pour le moment nous ne pouvons pas afficher le nombre de personnes car l'API de notre logiciel ne les transmet pas. Nous allons contourner le problème et développons une solution. La mise à jour sera bientôt disponible.
+            L'API ne fournit pas le nombre d'adultes et d'enfants. Nous estimons les adultes à partir de la taxe par nuit (enfants = 0€) et vous pouvez ajuster manuellement par réservation dans le détail.
           </AlertDescription>
         </Alert>
 
@@ -251,11 +279,11 @@ const TouristTaxPage: React.FC = () => {
       </div>
 
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="sm:max-w-[800px]">
+        <DialogContent className="sm:max-w-[900px]">
           <DialogHeader>
             <DialogTitle>Détail des réservations pour {selectedMonthName}</DialogTitle>
             <DialogDescription>
-              Voici les réservations incluses dans le calcul de la taxe de séjour pour ce mois.
+              Ajustez les adultes/enfants si nécessaire. Prix/nuit calculé à partir du montant et des nuitées.
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
@@ -263,25 +291,79 @@ const TouristTaxPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Propriété</TableHead>
                     <TableHead>Arrivée</TableHead>
                     <TableHead>Départ</TableHead>
+                    <TableHead className="text-center">Adultes (estimés)</TableHead>
+                    <TableHead className="text-center">Enfants</TableHead>
+                    <TableHead className="text-right">Prix/nuit</TableHead>
                     <TableHead className="text-right">Taxe de Séjour</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedMonthReservations.map((reservation) => (
-                    <TableRow key={reservation.id}>
-                      <TableCell>{reservation.guest_name}</TableCell>
-                      <TableCell>{reservation.property_name}</TableCell>
-                      <TableCell>{format(parseISO(reservation.check_in_date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell>{format(parseISO(reservation.check_out_date), 'dd/MM/yyyy')}</TableCell>
-                      <TableCell className="text-right">
-                        {(reservation.tourist_tax_amount || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {selectedMonthReservations.map((reservation) => {
+                    const checkIn = parseISO(reservation.check_in_date);
+                    const checkOut = parseISO(reservation.check_out_date);
+                    const nights = Math.max(differenceInDays(checkOut, checkIn), 0);
+
+                    // Parse montant (ex: "123€") -> nombre
+                    const rawAmount = (reservation.amount || '').toString().trim();
+                    const numericAmount = (() => {
+                      const cleaned = rawAmount.replace(/[^\d,.\-]/g, '').replace(',', '.');
+                      const parsed = parseFloat(cleaned);
+                      return isNaN(parsed) ? 0 : parsed;
+                    })();
+                    const pricePerNight = nights > 0 ? numericAmount / nights : 0;
+
+                    const totalTax = reservation.tourist_tax_amount || 0;
+                    const estimatedAdults = taxPerAdultPerNight > 0 && nights > 0
+                      ? Math.max(Math.round(totalTax / (taxPerAdultPerNight * nights)), 0)
+                      : 0;
+
+                    const currentOverride = overrides[reservation.id] || { adults: estimatedAdults, children: 0 };
+
+                    return (
+                      <TableRow key={reservation.id}>
+                        <TableCell>{format(checkIn, 'dd/MM/yyyy')}</TableCell>
+                        <TableCell>{format(checkOut, 'dd/MM/yyyy')}</TableCell>
+                        <TableCell className="text-center">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={currentOverride.adults}
+                            onChange={(e) => {
+                              const val = Math.max(parseInt(e.target.value || '0', 10) || 0, 0);
+                              setOverrides((prev) => ({
+                                ...prev,
+                                [reservation.id]: { adults: val, children: (prev[reservation.id]?.children ?? 0) }
+                              }));
+                            }}
+                            className="w-20 mx-auto text-center"
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={currentOverride.children}
+                            onChange={(e) => {
+                              const val = Math.max(parseInt(e.target.value || '0', 10) || 0, 0);
+                              setOverrides((prev) => ({
+                                ...prev,
+                                [reservation.id]: { adults: (prev[reservation.id]?.adults ?? estimatedAdults), children: val }
+                              }));
+                            }}
+                            className="w-20 mx-auto text-center"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {pricePerNight.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {totalTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             ) : (

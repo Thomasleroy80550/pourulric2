@@ -9,15 +9,19 @@ import { useSession } from "@/components/SessionContextProvider";
 import { toast } from "sonner";
 import { createHousekeepingNote, getMyHousekeepingNotes, HousekeepingNote } from "@/lib/housekeeping-notes-api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import RoomSelectorCombobox, { RoomOption } from "@/components/RoomSelectorCombobox";
+import HousekeepingMediaUploader from "@/components/HousekeepingMediaUploader";
+import { uploadFiles } from "@/lib/storage-api";
+import { supabase } from "@/integrations/supabase/client";
 
 const HousekeepingReportsPage: React.FC = () => {
   const { profile } = useSession();
   const queryClient = useQueryClient();
 
-  const [roomId, setRoomId] = useState("");
-  const [roomName, setRoomName] = useState("");
+  const [selectedRoom, setSelectedRoom] = useState<RoomOption | null>(null);
   const [cleaningDate, setCleaningDate] = useState<string>("");
   const [content, setContent] = useState("");
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
 
   const { data: myNotes = [] } = useQuery({
     queryKey: ["myHousekeepingNotes"],
@@ -26,19 +30,33 @@ const HousekeepingReportsPage: React.FC = () => {
   });
 
   const { mutate: submitNote, isPending } = useMutation({
-    mutationFn: () =>
-      createHousekeepingNote({
-        room_id: roomId.trim(),
-        room_name: roomName.trim() || undefined,
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Utilisateur non authentifié.");
+      }
+
+      // Upload des médias si présents
+      let uploadedUrls: string[] = [];
+      if (mediaFiles.length > 0) {
+        const basePath = `notes/${user.id}/${Date.now()}`;
+        uploadedUrls = await uploadFiles(mediaFiles, "housekeeping-notes", basePath);
+      }
+
+      return createHousekeepingNote({
+        room_id: selectedRoom?.id_room?.toString() || "",
+        room_name: selectedRoom?.label || undefined,
         content: content.trim(),
         cleaning_date: cleaningDate || undefined,
-      }),
+        photos: uploadedUrls.length > 0 ? uploadedUrls : undefined,
+      });
+    },
     onSuccess: () => {
       toast.success("Note créée avec succès.");
       setContent("");
-      setRoomId("");
-      setRoomName("");
       setCleaningDate("");
+      setMediaFiles([]);
+      setSelectedRoom(null);
       queryClient.invalidateQueries({ queryKey: ["myHousekeepingNotes"] });
     },
     onError: (err: any) => {
@@ -69,8 +87,8 @@ const HousekeepingReportsPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roomId.trim()) {
-      toast.error("Veuillez saisir l'ID du logement (room_id).");
+    if (!selectedRoom) {
+      toast.error("Veuillez sélectionner un logement.");
       return;
     }
     if (!content.trim()) {
@@ -82,11 +100,11 @@ const HousekeepingReportsPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6 px-2 sm:px-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Rapports ménage</h1>
-          <p className="text-muted-foreground">
-            Saisissez une note de passage pour un logement. Les propriétaires verront ces notes sur leur interface.
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Rapports ménage</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Saisissez une note de passage pour un logement, ajoutez des photos/vidéos, et enregistrez votre rapport.
           </p>
         </div>
 
@@ -96,26 +114,15 @@ const HousekeepingReportsPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="roomId">ID du logement (room_id Krossbooking)</Label>
-                  <Input
-                    id="roomId"
-                    placeholder="Ex: 123456"
-                    value={roomId}
-                    onChange={(e) => setRoomId(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="roomName">Nom du logement (optionnel)</Label>
-                  <Input
-                    id="roomName"
-                    placeholder="Ex: Studio Mer"
-                    value={roomName}
-                    onChange={(e) => setRoomName(e.target.value)}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Logement</Label>
+                <RoomSelectorCombobox
+                  value={selectedRoom}
+                  onChange={setSelectedRoom}
+                  placeholder="Choisir un logement (avec recherche)"
+                />
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="cleaningDate">Date de passage (optionnel)</Label>
@@ -127,6 +134,7 @@ const HousekeepingReportsPage: React.FC = () => {
                   />
                 </div>
               </div>
+
               <div>
                 <Label htmlFor="content">Note de passage</Label>
                 <Textarea
@@ -137,6 +145,15 @@ const HousekeepingReportsPage: React.FC = () => {
                   rows={6}
                 />
               </div>
+
+              <div>
+                <Label>Médias (photos/vidéos)</Label>
+                <HousekeepingMediaUploader files={mediaFiles} onChange={setMediaFiles} />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Conseil: limitez la taille des vidéos pour un téléversement plus rapide. Les fichiers seront stockés et accessibles aux propriétaires.
+                </p>
+              </div>
+
               <div className="flex justify-end">
                 <Button type="submit" disabled={isPending}>
                   {isPending ? "Envoi..." : "Enregistrer la note"}
@@ -169,6 +186,20 @@ const HousekeepingReportsPage: React.FC = () => {
                       </div>
                     )}
                     <div className="mt-2 text-sm whitespace-pre-wrap">{note.content}</div>
+                    {Array.isArray((note as any).photos) && (note as any).photos.length > 0 && (
+                      <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {(note as any).photos.map((url: string, idx: number) => (
+                          <div key={idx} className="relative">
+                            {/* Affiche une image si c'est une image, sinon une vidéo */}
+                            {url.match(/\.(mp4|webm|ogg)(\?.*)?$/i) ? (
+                              <video src={url} className="w-full rounded-md" controls />
+                            ) : (
+                              <img src={url} alt={`media-${idx}`} className="w-full rounded-md" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

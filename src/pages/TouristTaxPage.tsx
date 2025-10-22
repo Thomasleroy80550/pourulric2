@@ -299,7 +299,7 @@ const TouristTaxPage: React.FC = () => {
 
                     return (
                       <TableRow key={reservation.id}>
-                        <TableCell className="font-medium">{reservation.customer_name || 'N/A'}</TableCell>
+                        <TableCell className="font-medium">{reservation.guest_name || 'N/A'}</TableCell>
                         <TableCell>{format(checkIn, 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{format(checkOut, 'dd/MM/yyyy')}</TableCell>
                         <TableCell className="text-center">{estimatedAdults}</TableCell>

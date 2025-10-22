@@ -29,7 +29,7 @@ import ChangePasswordDialog from '@/components/admin/ChangePasswordDialog';
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
   last_name: z.string().min(1, "Le nom est requis."),
-  role: z.enum(['user', 'admin', 'accountant'], { required_error: "Le rôle est requis." }),
+  role: z.enum(['user', 'admin', 'accountant', 'housekeeper'], { required_error: "Le rôle est requis." }),
   onboarding_status: z.enum(['estimation_sent', 'estimation_validated', 'cguv_accepted', 'keys_pending_reception', 'keys_retrieved', 'photoshoot_done', 'live']).optional(),
   property_address: z.string().optional().nullable(),
   property_city: z.string().optional().nullable(),
@@ -399,7 +399,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       <FormField control={form.control} name="property_address" render={({ field }) => (<FormItem><FormLabel>Adresse</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="property_city" render={({ field }) => (<FormItem><FormLabel>Ville</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                       <FormField control={form.control} name="property_zip_code" render={({ field }) => (<FormItem><FormLabel>Code Postal</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                      <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                      <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>Rôle</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="user">Utilisateur</SelectItem><SelectItem value="admin">Administrateur</SelectItem><SelectItem value="accountant">Comptable</SelectItem><SelectItem value="housekeeper">Femme de ménage</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                       <Button type="button" variant="secondary" className="w-full" onClick={() => setIsChangePasswordDialogOpen(true)}>
                         Changer le mot de passe
                       </Button>

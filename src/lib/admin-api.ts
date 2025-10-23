@@ -32,6 +32,7 @@ export interface SavedInvoice {
   krossbooking_property_id?: number | null; // Assurez-vous que ce champ est présent
   transfer_statuses?: { [key: string]: boolean } | null; // Remplacement de transfer_completed
   source_type?: 'generated' | 'manual'; // Ajout du type de source
+  created_by?: string | null; // Nouvel attribut: admin créateur
 }
 
 export interface InvoiceTotals {
@@ -483,12 +484,17 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
   const userProfile = await getProfileById(actualUserId);
   const krossbookingPropertyId = userProfile?.krossbooking_property_id || null;
 
+  // Récupère l'admin connecté pour l'attribuer à created_by
+  const { data: authData } = await supabase.auth.getUser();
+  const creatorId = authData?.user?.id ?? null;
+
   const payload = {
     user_id: actualUserId,
     period: period,
     invoice_data: invoiceData,
     totals: totals,
     krossbooking_property_id: krossbookingPropertyId, // Add krossbooking_property_id to the payload
+    created_by: creatorId, // Enregistre l'admin qui crée le relevé
   };
 
   const { data, error } = await supabase
@@ -633,6 +639,10 @@ export interface ManualStatementEntry {
 }
 
 export async function addManualStatements(userId: string, statements: ManualStatementEntry[]): Promise<SavedInvoice[]> {
+  // Récupère l'admin connecté pour l'attribuer à created_by
+  const { data: authData } = await supabase.auth.getUser();
+  const creatorId = authData?.user?.id ?? null;
+
   const insertPayloads = statements.map(statement => {
     const { period, totalCA, totalMontantVerse, totalFacture, totalNuits, totalVoyageurs, totalReservations } = statement;
 
@@ -660,6 +670,7 @@ export async function addManualStatements(userId: string, statements: ManualStat
       totals,
       source_type: 'manual' as const,
       pennylane_status: 'not_applicable',
+      created_by: creatorId, // trace l'admin créateur
     };
   });
 
@@ -671,7 +682,7 @@ export async function addManualStatements(userId: string, statements: ManualStat
     .from('invoices')
     .insert(insertPayloads)
     .select(`*, profiles!user_id (first_name, last_name)`);
-
+  
   if (error) {
     console.error("Error saving manual statements:", error);
     throw new Error(`Erreur lors de la sauvegarde des statistiques manuelles : ${error.message}`);

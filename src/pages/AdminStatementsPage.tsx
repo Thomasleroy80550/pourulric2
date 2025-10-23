@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil } from 'lucide-react';
-import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane } from '@/lib/admin-api';
+import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -42,6 +42,24 @@ const AdminStatementsPage: React.FC = () => {
   const itemsPerPage = 10;
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Charge tous les profils pour faire le mapping id -> nom (inclut admins)
+  const [profilesMap, setProfilesMap] = useState<Record<string, { first_name: string | null; last_name: string | null }>>({});
+  useEffect(() => {
+    const loadProfiles = async () => {
+      try {
+        const profiles = await getAllProfiles();
+        const map: Record<string, { first_name: string | null; last_name: string | null }> = {};
+        profiles.forEach((p: any) => {
+          map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null };
+        });
+        setProfilesMap(map);
+      } catch (e) {
+        // silence: ne bloque pas la page si ça échoue
+      }
+    };
+    loadProfiles();
+  }, []);
 
   const loadStatements = async () => {
     setLoading(true);
@@ -226,6 +244,7 @@ const AdminStatementsPage: React.FC = () => {
                       <TableHead>Client</TableHead>
                       <TableHead>Période</TableHead>
                       <TableHead>Date de Création</TableHead>
+                      <TableHead>Créé par</TableHead>
                       <TableHead>Statut Pennylane</TableHead>
                       <TableHead>Commentaire</TableHead>
                       <TableHead className="text-right">Montant Facturé</TableHead>
@@ -235,11 +254,14 @@ const AdminStatementsPage: React.FC = () => {
                   <TableBody>
                     {currentStatements.map((statement) => {
                       const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client Supprimé';
+                      const creator = statement.created_by ? profilesMap[statement.created_by] : null;
+                      const creatorName = creator ? `${creator.first_name ?? ''} ${creator.last_name ?? ''}`.trim() || statement.created_by : '—';
                       return (
                         <TableRow key={statement.id}>
                           <TableCell className="font-medium">{clientName}</TableCell>
                           <TableCell>{statement.period}</TableCell>
                           <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
+                          <TableCell>{creatorName}</TableCell>
                           <TableCell>
                             <StatusBadge status={statement.pennylane_status} />
                           </TableCell>

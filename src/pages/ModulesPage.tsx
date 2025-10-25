@@ -9,6 +9,7 @@ import AccountantAccessDialog from '@/components/AccountantAccessDialog';
 import { useSession } from '@/components/SessionContextProvider';
 import { updateProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Module {
   name: string;
@@ -26,6 +27,7 @@ const ModulesPage: React.FC = () => {
   const { profile, refreshProfile } = useSession();
   const [loading, setLoading] = useState(true);
   const [isAccountantDialogOpen, setIsAccountantDialogOpen] = useState(false);
+  const [requestedModules, setRequestedModules] = useState<Set<string>>(new Set());
 
   const handleActivateBooklet = async () => {
     try {
@@ -36,6 +38,67 @@ const ModulesPage: React.FC = () => {
       toast.error("Erreur lors de l'activation du module.");
     }
   };
+
+  // Crée une demande d'activation pour un module
+  const handleRequestActivation = async (moduleName: string) => {
+    const { data: auth } = await supabase.auth.getUser();
+    const user = auth?.user;
+    if (!user) {
+      toast.error("Vous devez être connecté pour créer une demande.");
+      return;
+    }
+
+    // Vérifie s'il existe déjà une demande en attente
+    const { data: existing, error: checkError } = await supabase
+      .from('module_activation_requests')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('module_name', moduleName)
+      .eq('status', 'pending');
+
+    if (checkError) {
+      toast.error("Impossible de vérifier les demandes existantes.");
+      return;
+    }
+
+    if (existing && existing.length > 0) {
+      toast.info("Demande déjà envoyée pour ce module.");
+      setRequestedModules((prev) => new Set([...prev, moduleName]));
+      return;
+    }
+
+    const { error } = await supabase
+      .from('module_activation_requests')
+      .insert({ user_id: user.id, module_name: moduleName });
+
+    if (error) {
+      toast.error("Erreur lors de la création de la demande.");
+      return;
+    }
+
+    setRequestedModules((prev) => new Set([...prev, moduleName]));
+    toast.success("Demande d'activation envoyée !");
+  };
+
+  useEffect(() => {
+    // Charge les demandes existantes pour l'utilisateur afin de refléter 'Demande envoyée'
+    const loadRequested = async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const user = auth?.user;
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('module_activation_requests')
+        .select('module_name, status')
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+
+      if (error || !data) return;
+      const names = data.map((r: { module_name: string }) => r.module_name);
+      setRequestedModules(new Set(names));
+    };
+    loadRequested();
+  }, []);
 
   const modules: Module[] = [
     {
@@ -84,11 +147,12 @@ const ModulesPage: React.FC = () => {
       name: 'Taxe de Séjour',
       description: 'Nous gérons votre déclaration et le paiement directement sur le site du syndicat.',
       icon: Banknote,
-      status: 'Activé',
+      status: 'Nouveau',
       info: '149€ HT / an / logement',
-      actionText: 'Actif',
-      buttonVariant: 'outline',
-      buttonDisabled: true,
+      actionText: 'Demander',
+      buttonVariant: 'default',
+      buttonDisabled: false,
+      onClick: () => handleRequestActivation('Taxe de Séjour'),
     },
     {
       name: 'Supervision Travaux',
@@ -114,11 +178,12 @@ const ModulesPage: React.FC = () => {
       name: 'Consommables',
       description: 'Gestion et l’achat de vos consommables (papier, pastilles lave-vaisselle, sacs poubelles, etc.)',
       icon: CheckCheck,
-      status: 'Activé',
+      status: 'Nouveau',
       info: '2€ HT / mois / logement',
-      actionText: 'Actif',
-      buttonVariant: 'outline',
-      buttonDisabled: true,
+      actionText: 'Demander',
+      buttonVariant: 'default',
+      buttonDisabled: false,
+      onClick: () => handleRequestActivation('Consommables'),
     },
   ];
 
@@ -177,8 +242,13 @@ const ModulesPage: React.FC = () => {
                         {module.status}
                       </span>
                     </div>
-                    <Button variant={module.buttonVariant} size="sm" disabled={module.buttonDisabled} onClick={module.onClick}>
-                      {module.actionText}
+                    <Button
+                      variant={requestedModules.has(module.name) ? 'outline' : module.buttonVariant}
+                      size="sm"
+                      disabled={module.buttonDisabled || requestedModules.has(module.name)}
+                      onClick={requestedModules.has(module.name) ? undefined : module.onClick}
+                    >
+                      {requestedModules.has(module.name) ? 'Demande envoyée' : module.actionText}
                     </Button>
                   </div>
                 </CardContent>

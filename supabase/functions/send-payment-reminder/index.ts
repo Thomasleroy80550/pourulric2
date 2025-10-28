@@ -13,6 +13,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://beta.proprietaire.hellokeys.fr";
 
+// Pennylane
+const PENNYLANE_API_KEY = Deno.env.get("PENNYLANE_API_KEY") ?? null;
+const PENNYLANE_API_URL = "https://app.pennylane.com/api/external/v2";
+
 const MAX_ATTACHMENT_BYTES = 12 * 1024 * 1024; // 12MB maximum par pièce jointe pour éviter OOM
 
 if (!RESEND_API_KEY) {
@@ -32,7 +36,6 @@ async function getRemoteFileSize(url: string): Promise<number | null> {
 
 async function fetchPdfAsBase64(url: string): Promise<{ base64: string; filename: string } | null> {
   try {
-    // Vérifie la taille avant de télécharger pour limiter la mémoire
     const size = await getRemoteFileSize(url);
     if (size !== null && size > MAX_ATTACHMENT_BYTES) {
       console.warn(`Skip attachment (too large): ${size} bytes > ${MAX_ATTACHMENT_BYTES}`);
@@ -45,7 +48,6 @@ async function fetchPdfAsBase64(url: string): Promise<{ base64: string; filename
       return null;
     }
 
-    // Si HEAD n'a pas donné la taille, on peut vérifier après coup
     const arrayBuffer = await res.arrayBuffer();
     if (size === null && arrayBuffer.byteLength > MAX_ATTACHMENT_BYTES) {
       console.warn(`Skip attachment after fetch (too large): ${arrayBuffer.byteLength} bytes > ${MAX_ATTACHMENT_BYTES}`);
@@ -61,6 +63,75 @@ async function fetchPdfAsBase64(url: string): Promise<{ base64: string; filename
     console.error("Error fetching PDF:", e);
     return null;
   }
+}
+
+// Parse "Juillet 2024" ou "07/2024" -> { month, year }
+function parsePeriodToMonthYear(period: string): { month: number; year: number } | null {
+  if (!period) return null;
+  const p = period.trim().toLowerCase();
+
+  const months: Record<string, number> = {
+    "janvier": 1, "février": 2, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
+    "juillet": 7, "août": 8, "aout": 8, "septembre": 9, "octobre": 10, "novembre": 11, "décembre": 12, "decembre": 12,
+  };
+
+  // Forme "Mois YYYY"
+  const parts = p.split(/\s+/);
+  if (parts.length >= 2 && months[parts[0]]) {
+    const year = parseInt(parts[1], 10);
+    if (!isNaN(year)) return { month: months[parts[0]], year };
+  }
+
+  // Forme "MM/YYYY"
+  const m = p.match(/(\d{1,2})\s*[\/\-\.]\s*(\d{4})/);
+  if (m) {
+    const month = parseInt(m[1], 10);
+    const year = parseInt(m[2], 10);
+    if (month >= 1 && month <= 12 && year > 1900) return { month, year };
+  }
+
+  return null;
+}
+
+async function findPennylaneInvoiceUrl(customerId: number, targetMonth: number, targetYear: number): Promise<string | null> {
+  if (!PENNYLANE_API_KEY) return null;
+
+  const params = new URLSearchParams();
+  params.append("q[s]", `customer_id eq ${customerId}`);
+  params.append("limit", "200");
+
+  const url = `${PENNYLANE_API_URL}/customer_invoices?${params.toString()}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "accept": "application/json",
+      "X-Api-Key": PENNYLANE_API_KEY,
+    },
+  });
+
+  if (!response.ok) {
+    console.warn("Pennylane API response not ok for list_invoices:", response.status);
+    return null;
+  }
+
+  const data = await response.json();
+  const items = Array.isArray(data?.items) ? data.items : [];
+
+  // Cherche une facture dont la date (YYYY-MM-DD) correspond au mois/année cible
+  const match = items.find((inv: any) => {
+    const d = inv?.date;
+    if (!d || typeof d !== "string") return false;
+    const mm = parseInt(d.slice(5, 7), 10);
+    const yy = parseInt(d.slice(0, 4), 10);
+    return mm === targetMonth && yy === targetYear;
+  });
+
+  if (match) {
+    // Préférence à file_url, sinon public_file_url
+    return match.file_url || match.public_file_url || null;
+  }
+
+  return null;
 }
 
 serve(async (req) => {
@@ -106,10 +177,10 @@ serve(async (req) => {
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Load invoice with user profile
+    // Load invoice with user profile (incl. pennylane_customer_id)
     const { data: invoice, error: invErr } = await adminClient
       .from("invoices")
-      .select("*, profiles!user_id(first_name,last_name)")
+      .select("*, profiles!user_id(first_name,last_name,pennylane_customer_id)")
       .eq("id", invoice_id)
       .single();
 
@@ -173,17 +244,16 @@ serve(async (req) => {
     const attachments: Array<{ filename: string; content: string }> = [];
 
     // 1) Statement PDF from storage
-    // If the client provided a path (after generating/uploading), prefer it, else fallback to default deterministic path
-    const statementPath = statement_path ?? `${invoice.user_id}/${invoice.id}.pdf`;
+    const statementPathFinal = statement_path ?? `${invoice.user_id}/${invoice.id}.pdf`;
     const { data: signed } = await adminClient.storage
       .from("statements")
-      .createSignedUrl(statementPath, 3600);
+      .createSignedUrl(statementPathFinal, 3600);
 
     if (signed?.signedUrl) {
       const statementPdf = await fetchPdfAsBase64(signed.signedUrl);
       if (statementPdf) {
         attachments.push({
-          filename: `Releve_${userName.replace(/\s+/g, "_")}_${period.replace(/\s/g, "_")}.pdf`,
+          filename: `Releve_${userName.replace(/\s+/g, "_")}_${String(period).replace(/\s/g, "_")}.pdf`,
           content: statementPdf.base64,
         });
       }
@@ -191,15 +261,37 @@ serve(async (req) => {
       console.warn("No signed URL for statement PDF; attachment skipped.");
     }
 
-    // 2) Pennylane invoice PDF (if available)
-    if (invoice.pennylane_invoice_url) {
-      const pennylanePdf = await fetchPdfAsBase64(invoice.pennylane_invoice_url);
+    // 2) Pennylane invoice PDF (if available or retrievable)
+    let pennylaneUrl: string | null = invoice.pennylane_invoice_url || null;
+
+    if (!pennylaneUrl && PENNYLANE_API_KEY && invoice.profiles?.pennylane_customer_id) {
+      // Essaye de trouver la facture du même mois/année
+      const target = parsePeriodToMonthYear(period) || { month: createdAt.getMonth() + 1, year: createdAt.getFullYear() };
+      const customerId = parseInt(invoice.profiles.pennylane_customer_id, 10);
+      if (!isNaN(customerId)) {
+        try {
+          const candidateUrl = await findPennylaneInvoiceUrl(customerId, target.month, target.year);
+          if (candidateUrl) {
+            pennylaneUrl = candidateUrl;
+          }
+        } catch (e) {
+          console.warn("Fallback Pennylane lookup failed:", e);
+        }
+      }
+    }
+
+    if (pennylaneUrl) {
+      const pennylanePdf = await fetchPdfAsBase64(pennylaneUrl);
       if (pennylanePdf) {
         attachments.push({
-          filename: pennylanePdf.filename || `Facture_Pennylane_${period.replace(/\s/g, "_")}.pdf`,
+          filename: pennylanePdf.filename || `Facture_Pennylane_${String(period).replace(/\s/g, "_")}.pdf`,
           content: pennylanePdf.base64,
         });
+      } else {
+        console.warn("Pennylane PDF fetch returned null; attachment skipped.");
       }
+    } else {
+      console.info("No Pennylane invoice URL available for attachment.");
     }
 
     // Send email via Resend API

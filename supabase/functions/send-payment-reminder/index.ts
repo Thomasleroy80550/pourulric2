@@ -23,9 +23,9 @@ if (!RESEND_API_KEY) {
   throw new Error("RESEND_API_KEY is not set.");
 }
 
-async function getRemoteFileSize(url: string): Promise<number | null> {
+async function getRemoteFileSize(url: string, headers?: HeadersInit): Promise<number | null> {
   try {
-    const head = await fetch(url, { method: "HEAD" });
+    const head = await fetch(url, { method: "HEAD", headers });
     if (!head.ok) return null;
     const len = head.headers.get("content-length");
     return len ? parseInt(len, 10) : null;
@@ -34,15 +34,15 @@ async function getRemoteFileSize(url: string): Promise<number | null> {
   }
 }
 
-async function fetchPdfAsBase64(url: string): Promise<{ base64: string; filename: string } | null> {
+async function fetchPdfAsBase64(url: string, headers?: HeadersInit): Promise<{ base64: string; filename: string } | null> {
   try {
-    const size = await getRemoteFileSize(url);
+    const size = await getRemoteFileSize(url, headers);
     if (size !== null && size > MAX_ATTACHMENT_BYTES) {
       console.warn(`Skip attachment (too large): ${size} bytes > ${MAX_ATTACHMENT_BYTES}`);
       return null;
     }
 
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
     if (!res.ok) {
       console.warn(`Failed to fetch PDF at ${url}: ${res.status}`);
       return null;
@@ -281,7 +281,12 @@ serve(async (req) => {
     }
 
     if (pennylaneUrl) {
-      const pennylanePdf = await fetchPdfAsBase64(pennylaneUrl);
+      const needsPennylaneAuth = /pennylane\.com/i.test(pennylaneUrl) && !!PENNYLANE_API_KEY;
+      const pennylaneHeaders: HeadersInit | undefined = needsPennylaneAuth
+        ? { "accept": "application/pdf", "X-Api-Key": PENNYLANE_API_KEY as string }
+        : undefined;
+
+      const pennylanePdf = await fetchPdfAsBase64(pennylaneUrl, pennylaneHeaders);
       if (pennylanePdf) {
         attachments.push({
           filename: pennylanePdf.filename || `Facture_Pennylane_${String(period).replace(/\s/g, "_")}.pdf`,

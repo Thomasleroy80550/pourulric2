@@ -72,7 +72,7 @@ const BlogPage: React.FC = () => {
                   <CardTitle className="text-xl font-semibold">{post.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 dark:text-gray-300 mb-4">{post.content.substring(0, 150)}...</p> {/* Display excerpt from content */}
+                  <p className="text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{post.content.substring(0, 150)}...</p>
                   <p className="text-sm text-gray-500 mb-4">Publié le {new Date(post.created_at).toLocaleDateString()}</p>
                   <Button variant="outline" className="w-full" asChild>
                     <Link to={`/blog/${post.slug}`}>

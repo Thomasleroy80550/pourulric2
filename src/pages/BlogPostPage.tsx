@@ -77,8 +77,8 @@ const BlogPostPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-4xl font-bold mb-4">{blogPost.title}</h1>
         <p className="text-sm text-gray-500 mb-6">Publié le {new Date(blogPost.created_at).toLocaleDateString()}</p>
-        <div className="prose dark:prose-invert max-w-none"> {/* Using prose for basic markdown styling */}
-          <p>{blogPost.content}</p>
+        <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap">
+          {blogPost.content}
         </div>
       </div>
     </MainLayout>

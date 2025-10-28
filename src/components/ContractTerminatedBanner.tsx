@@ -54,68 +54,60 @@ const ContractTerminatedBanner: React.FC = () => {
   if (!visible || checking) return null;
 
   return (
-    <div className="fixed inset-x-0 top-0 z-50">
-      <div className="mx-auto max-w-screen-2xl px-3">
-        <div className="mt-2 rounded-lg border-2 border-destructive shadow-2xl overflow-hidden">
-          <div className="relative">
-            <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-700 text-destructive-foreground">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 md:p-5">
-                <div className="flex items-start md:items-center gap-3">
-                  <div className="shrink-0">
-                    <div className="rounded-full bg-red-800/70 p-2 md:p-3 ring-2 ring-red-400/60">
-                      <Ban className="h-6 w-6 md:h-7 md:w-7 text-white" />
-                    </div>
-                  </div>
-                  <div className="text-white">
-                    <h3 className="text-xl md:text-2xl font-extrabold tracking-tight">
-                      Contrat résilié — accès fortement limité
-                    </h3>
-                    <p className="mt-1 text-sm md:text-base text-red-50">
-                      Votre contrat a été résilié. Certains services sont désactivés et vos accès sont restreints.
-                      Contactez le support pour connaître les prochaines étapes.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 md:gap-3">
-                  <Button
-                    variant="secondary"
-                    className="bg-white/95 text-red-700 hover:bg-white"
-                    onClick={() => {
-                      window.location.href = "/help";
-                    }}
-                  >
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    Centre d’aide
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="bg-white/95 text-red-700 hover:bg-white"
-                    onClick={() => {
-                      window.location.href = "mailto:support@hellokeys.fr?subject=Contrat%20résilié%20-%20Assistance";
-                    }}
-                  >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Contacter le support
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-white/60 text-white hover:bg-white/10"
-                    onClick={() => {
-                      localStorage.setItem(STORAGE_KEY, "true");
-                      setVisible(false);
-                    }}
-                  >
-                    Compris
-                  </Button>
-                </div>
+    <div className="mx-auto max-w-screen-2xl px-3">
+      <div className="mt-3 rounded-md border border-red-500 bg-red-50 dark:bg-red-900/10 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4">
+          <div className="flex items-start md:items-center gap-3">
+            <div className="shrink-0">
+              <div className="rounded-full bg-red-600/10 p-2 ring-2 ring-red-300/60">
+                <Ban className="h-5 w-5 text-red-700 dark:text-red-300" />
               </div>
             </div>
+            <div className="text-red-900 dark:text-red-100">
+              <h3 className="text-base md:text-lg font-bold tracking-tight">
+                Contrat résilié — accès limité
+              </h3>
+              <p className="mt-1 text-xs md:text-sm text-red-800 dark:text-red-200">
+                Certaines fonctionnalités sont désactivées. Contactez le support pour connaître les prochaines étapes.
+              </p>
+            </div>
+          </div>
 
-            {/* Barre d'accent animée pour renforcer l'impact visuel */}
-            <div className="absolute inset-x-0 bottom-0 h-1 bg-red-300 animate-pulse" />
+          <div className="flex items-center gap-2 md:gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-300 text-red-700 hover:bg-red-50"
+              onClick={() => { window.location.href = "/help"; }}
+            >
+              <HelpCircle className="mr-2 h-4 w-4" />
+              Centre d'aide
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                window.location.href = "mailto:support@hellokeys.fr?subject=Contrat%20r%C3%A9sili%C3%A9%20-%20Assistance";
+              }}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Contacter le support
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-700 hover:bg-red-100"
+              onClick={() => {
+                localStorage.setItem(STORAGE_KEY, "true");
+                setVisible(false);
+              }}
+            >
+              Compris
+            </Button>
           </div>
         </div>
+
+        <div className="h-1 w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600" />
       </div>
     </div>
   );

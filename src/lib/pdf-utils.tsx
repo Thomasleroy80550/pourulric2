@@ -33,13 +33,14 @@ export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => 
         }
 
         const canvas = await html2canvas(statementElement as HTMLElement, {
-          scale: 2,
+          scale: 1.4, // réduit par rapport à 2 pour baisser la taille
           useCORS: true,
-          width: statementElement.scrollWidth,
-          height: statementElement.scrollHeight,
+          width: (statementElement as HTMLElement).scrollWidth,
+          height: (statementElement as HTMLElement).scrollHeight,
         });
 
-        const imgData = canvas.toDataURL('image/png');
+        // Utiliser JPEG avec qualité pour diminuer drastiquement le poids
+        const imgData = canvas.toDataURL('image/jpeg', 0.82);
         const pdf = new jsPDF({
           orientation: 'p',
           unit: 'mm',
@@ -49,17 +50,17 @@ export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width; // Calculer la hauteur de l'image dans les unités du PDF
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width; 
         let heightLeft = imgHeight;
         let position = 0;
 
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
         heightLeft -= pdfHeight;
 
         while (heightLeft >= 0) {
           position = heightLeft - imgHeight;
           pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+          pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
           heightLeft -= pdfHeight;
         }
         
@@ -83,7 +84,6 @@ export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => 
       </React.StrictMode>
     );
     
-    // Attendre que le rendu soit terminé avant de capturer
     setTimeout(captureAndResolve, 500);
   });
 };

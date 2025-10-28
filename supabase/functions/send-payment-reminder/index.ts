@@ -13,20 +13,46 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://beta.proprietaire.hellokeys.fr";
 
+const MAX_ATTACHMENT_BYTES = 12 * 1024 * 1024; // 12MB maximum par pièce jointe pour éviter OOM
+
 if (!RESEND_API_KEY) {
   throw new Error("RESEND_API_KEY is not set.");
 }
 
+async function getRemoteFileSize(url: string): Promise<number | null> {
+  try {
+    const head = await fetch(url, { method: "HEAD" });
+    if (!head.ok) return null;
+    const len = head.headers.get("content-length");
+    return len ? parseInt(len, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchPdfAsBase64(url: string): Promise<{ base64: string; filename: string } | null> {
   try {
+    // Vérifie la taille avant de télécharger pour limiter la mémoire
+    const size = await getRemoteFileSize(url);
+    if (size !== null && size > MAX_ATTACHMENT_BYTES) {
+      console.warn(`Skip attachment (too large): ${size} bytes > ${MAX_ATTACHMENT_BYTES}`);
+      return null;
+    }
+
     const res = await fetch(url);
     if (!res.ok) {
       console.warn(`Failed to fetch PDF at ${url}: ${res.status}`);
       return null;
     }
+
+    // Si HEAD n'a pas donné la taille, on peut vérifier après coup
     const arrayBuffer = await res.arrayBuffer();
+    if (size === null && arrayBuffer.byteLength > MAX_ATTACHMENT_BYTES) {
+      console.warn(`Skip attachment after fetch (too large): ${arrayBuffer.byteLength} bytes > ${MAX_ATTACHMENT_BYTES}`);
+      return null;
+    }
+
     const base64 = encodeBase64(new Uint8Array(arrayBuffer));
-    // Try to infer filename from URL
     const urlObj = new URL(url);
     const pathname = urlObj.pathname.split("/").pop() || "document.pdf";
     const filename = pathname.endsWith(".pdf") ? pathname : `${pathname}.pdf`;

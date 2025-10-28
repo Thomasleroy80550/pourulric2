@@ -5,6 +5,7 @@ import { getBlogPostBySlug, BlogPost } from '@/lib/blog-api';
 import { Loader2, Terminal } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import DOMPurify from 'dompurify';
 
 const BlogPostPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -77,9 +78,10 @@ const BlogPostPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-4xl font-bold mb-4">{blogPost.title}</h1>
         <p className="text-sm text-gray-500 mb-6">Publié le {new Date(blogPost.created_at).toLocaleDateString()}</p>
-        <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap">
-          {blogPost.content}
-        </div>
+        <div
+          className="prose dark:prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(blogPost.content) }}
+        />
       </div>
     </MainLayout>
   );

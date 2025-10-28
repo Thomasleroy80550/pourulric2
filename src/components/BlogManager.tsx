@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import RichTextEditor from '@/components/RichTextEditor';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -147,12 +147,11 @@ const BlogManager: React.FC = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="content">Contenu de l'Article</Label>
-              <Textarea
-                id="content"
-                placeholder="Écrivez le contenu de votre article ici..."
+              <RichTextEditor
                 value={currentBlogPost.content || ''}
-                onChange={handleInputChange}
-                rows={8}
+                onChange={(html) =>
+                  setCurrentBlogPost((prev) => ({ ...prev, content: html }))
+                }
                 disabled={loading}
               />
             </div>

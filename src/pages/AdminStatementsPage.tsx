@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil } from 'lucide-react';
-import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles } from '@/lib/admin-api';
+import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles, sendPaymentReminder } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -37,6 +37,7 @@ const AdminStatementsPage: React.FC = () => {
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
   const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
+  const [remindingId, setRemindingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -162,6 +163,22 @@ const AdminStatementsPage: React.FC = () => {
     }
   };
 
+  const handleSendPaymentReminder = async (statement: SavedInvoice) => {
+    if (!window.confirm("Envoyer une relance de paiement par email au client avec les pièces jointes ?")) {
+      return;
+    }
+    setRemindingId(statement.id);
+    const toastId = toast.loading("Préparation de la relance...");
+    try {
+      await sendPaymentReminder(statement.id);
+      toast.success("Relance envoyée avec succès !", { id: toastId });
+    } catch (err: any) {
+      toast.error(`Erreur lors de la relance: ${err.message}`, { id: toastId });
+    } finally {
+      setRemindingId(null);
+    }
+  };
+
   const filteredStatements = statements.filter(statement => {
     const term = searchTerm.toLowerCase();
     const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}`.toLowerCase() : 'client supprimé';
@@ -273,6 +290,15 @@ const AdminStatementsPage: React.FC = () => {
                             <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)} title="Ajouter/Voir commentaire"><MessageSquare className="h-4 w-4" /></Button>
                             <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
                               {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleSendPaymentReminder(statement)}
+                              disabled={remindingId === statement.id}
+                              title="Relancer paiement (email avec pièces jointes)"
+                            >
+                              {remindingId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                             </Button>
                             {statement.pennylane_invoice_url ? (
                               <Button variant="outline" size="icon" asChild title="Voir facture Pennylane">

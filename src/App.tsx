@@ -64,6 +64,7 @@ import MarketplacePage from "./pages/MarketplacePage";
 import AdminMarketplacePage from "./pages/AdminMarketplacePage"; // New import
 import CalendarPageMobile from "./pages/CalendarPageMobile";
 import AdminUtilityCutsPage from "./pages/AdminUtilityCutsPage"; // New import
+import ContractTerminatedBanner from "./components/ContractTerminatedBanner";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,8 @@ function App() {
           <BrowserRouter>
             <InvoiceGenerationProvider>
               <SessionContextProvider>
+                {/* Bandeau global Contrat résilié */}
+                <ContractTerminatedBanner />
                 {/* The SessionContextProvider handles its own loading state and redirects */}
                 <Routes>
                   <Route path="/login" element={<Login />} />

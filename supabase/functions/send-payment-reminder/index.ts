@@ -127,8 +127,8 @@ async function findPennylaneInvoiceUrl(customerId: number, targetMonth: number, 
   });
 
   if (match) {
-    // Préférence à file_url, sinon public_file_url
-    return match.file_url || match.public_file_url || null;
+    // Préférence à public_file_url, sinon file_url
+    return match.public_file_url || match.file_url || null;
   }
 
   return null;
@@ -220,52 +220,17 @@ serve(async (req) => {
         ? `Relance 2 – Paiement en retard (${daysLate} jours) – ${period}`
         : `Dernière relance – Paiement très en retard (${daysLate} jours) – ${period}`;
 
-    const bodyLines = [
-      `Bonjour ${userName},`,
-      "",
-      `Nous vous rappelons que le règlement du relevé pour la période « ${period} » est en attente.`,
-      `Date d'échéance: ${dueDate.toLocaleDateString("fr-FR")}.`,
-      daysLate > 0 ? `Le retard actuel est de ${daysLate} jour(s).` : `Le paiement est à effectuer avant la date ci-dessus.`,
-      "",
-      "Vous trouverez en pièces jointes:",
-      "• Le relevé au format PDF (Hello Keys).",
-      "• La facture Pennylane (PDF) si disponible.",
-      "",
-      `Pour toute question, vous pouvez vous connecter à votre espace: ${APP_BASE_URL}/finances`,
-      "",
-      "Merci de procéder au paiement dès que possible.",
-      "",
-      "Cordialement,",
-      "L'équipe Hello Keys",
-    ];
-    const htmlBody = `<p>${bodyLines.join("<br>")}</p>`;
-
-    // Attachments
-    const attachments: Array<{ filename: string; content: string }> = [];
-
-    // 1) Statement PDF from storage
+    // Déterminer l'URL signée du relevé
     const statementPathFinal = statement_path ?? `${invoice.user_id}/${invoice.id}.pdf`;
     const { data: signed } = await adminClient.storage
       .from("statements")
-      .createSignedUrl(statementPathFinal, 3600);
+      .createSignedUrl(statementPathFinal, 7 * 24 * 60 * 60); // 7 jours
+    const statementUrl = signed?.signedUrl ?? null;
 
-    if (signed?.signedUrl) {
-      const statementPdf = await fetchPdfAsBase64(signed.signedUrl);
-      if (statementPdf) {
-        attachments.push({
-          filename: `Releve_${userName.replace(/\s+/g, "_")}_${String(period).replace(/\s/g, "_")}.pdf`,
-          content: statementPdf.base64,
-        });
-      }
-    } else {
-      console.warn("No signed URL for statement PDF; attachment skipped.");
-    }
-
-    // 2) Pennylane invoice PDF (if available or retrievable)
+    // Trouver l'URL Pennylane (public_file_url préféré)
     let pennylaneUrl: string | null = invoice.pennylane_invoice_url || null;
 
     if (!pennylaneUrl && PENNYLANE_API_KEY && invoice.profiles?.pennylane_customer_id) {
-      // Essaye de trouver la facture du même mois/année
       const target = parsePeriodToMonthYear(period) || { month: createdAt.getMonth() + 1, year: createdAt.getFullYear() };
       const customerId = parseInt(invoice.profiles.pennylane_customer_id, 10);
       if (!isNaN(customerId)) {
@@ -280,26 +245,38 @@ serve(async (req) => {
       }
     }
 
-    if (pennylaneUrl) {
-      const needsPennylaneAuth = /pennylane\.com/i.test(pennylaneUrl) && !!PENNYLANE_API_KEY;
-      const pennylaneHeaders: HeadersInit | undefined = needsPennylaneAuth
-        ? { "accept": "application/pdf", "X-Api-Key": PENNYLANE_API_KEY as string }
-        : undefined;
+    // Adapter le corps HTML pour afficher des liens
+    const linesTop = [
+      `Bonjour ${userName},`,
+      "",
+      `Nous vous rappelons que le règlement du relevé pour la période « ${period} » est en attente.`,
+      `Date d'échéance: ${dueDate.toLocaleDateString("fr-FR")}.`,
+      daysLate > 0 ? `Le retard actuel est de ${daysLate} jour(s).` : `Le paiement est à effectuer avant la date ci-dessus.`,
+      "",
+      "Vous trouverez les documents en ligne :",
+    ];
 
-      const pennylanePdf = await fetchPdfAsBase64(pennylaneUrl, pennylaneHeaders);
-      if (pennylanePdf) {
-        attachments.push({
-          filename: pennylanePdf.filename || `Facture_Pennylane_${String(period).replace(/\s/g, "_")}.pdf`,
-          content: pennylanePdf.base64,
-        });
-      } else {
-        console.warn("Pennylane PDF fetch returned null; attachment skipped.");
-      }
-    } else {
-      console.info("No Pennylane invoice URL available for attachment.");
+    const links: string[] = [];
+    if (statementUrl) {
+      links.push(`• <a href="${statementUrl}" target="_blank" rel="noopener noreferrer">Relevé PDF (Hello Keys)</a>`);
+    }
+    if (pennylaneUrl) {
+      links.push(`• <a href="${pennylaneUrl}" target="_blank" rel="noopener noreferrer">Facture Pennylane (PDF)</a>`);
     }
 
-    // Send email via Resend API
+    const linesBottom = [
+      "",
+      `Pour toute question, vous pouvez vous connecter à votre espace: ${APP_BASE_URL}/finances`,
+      "",
+      "Merci de procéder au paiement dès que possible.",
+      "",
+      "Cordialement,",
+      "L'équipe Hello Keys",
+    ];
+
+    const htmlBody = `<p>${[...linesTop, ...links, ...linesBottom].join("<br>")}</p>`;
+
+    // Envoi via Resend sans attachments
     const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -311,7 +288,6 @@ serve(async (req) => {
         to: [recipientEmail],
         subject,
         html: htmlBody,
-        attachments,
       }),
     });
 

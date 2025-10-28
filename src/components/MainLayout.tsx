@@ -38,6 +38,7 @@ import {
   MessageSquare, // Ajout de l'icône pour les tickets
   Store, // Ajout de l'icône pour la marketplace
   Wrench, // Ajout de l'icône pour le ménage
+  Mail, // icône e-mail
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -488,23 +489,68 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </Alert>
             )}
             {profile?.is_contract_terminated && (
-              <div className="mb-6 sticky top-0 z-10 bg-white/80 backdrop-blur-sm border border-red-200 rounded-xl shadow-sm">
-                <div className="flex items-center p-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                      <Ban className="h-5 w-5 text-red-600" />
+              <div className="mb-6 sticky top-0 z-10 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/10 shadow-sm">
+                <div className="p-4 md:p-5">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center ring-2 ring-red-200">
+                          <Ban className="h-5 w-5 text-red-600" />
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-lg md:text-xl font-bold text-red-900 dark:text-red-100">
+                          Contrat résilié — sauvegardez vos données
+                        </h3>
+                        <ul className="mt-2 text-sm text-red-800 dark:text-red-200 space-y-1 list-disc pl-5">
+                          <li>Accès aux principales fonctionnalités restreint.</li>
+                          <li>Vos relevés, documents et données pourront être supprimés prochainement.</li>
+                          <li>Téléchargez vos relevés et sauvegardez vos documents dès maintenant.</li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                      <Button
+                        variant="outline"
+                        className="border-red-300 text-red-700 hover:bg-red-100"
+                        onClick={() => navigate('/finances')}
+                        title="Accéder à mes relevés et factures"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Voir mes relevés
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="border-red-300 text-red-700 hover:bg-red-100"
+                        onClick={() => navigate('/profile')}
+                        title="Accéder à mes documents"
+                      >
+                        <Lock className="h-4 w-4 mr-2" />
+                        Mes documents
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="border-red-300 text-red-700 hover:bg-red-100"
+                        onClick={() => navigate('/help')}
+                        title="Centre d'aide"
+                      >
+                        <HelpCircle className="h-4 w-4 mr-2" />
+                        Aide
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          window.location.href = 'mailto:support@hellokeys.fr?subject=Contrat%20r%C3%A9sili%C3%A9%20-%20Assistance';
+                        }}
+                        title="Contacter le support"
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        Contacter le support
+                      </Button>
                     </div>
                   </div>
-                  <div className="ml-4 flex-1">
-                    <h3 className="text-base font-semibold text-gray-900">Contrat résilié</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Votre contrat a été résilié. Veuillez sauvegarder vos données importantes car votre compte sera supprimé prochainement.
-                    </p>
-                  </div>
-                  <div className="ml-4 flex-shrink-0">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  </div>
                 </div>
+                <div className="h-1 w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600" />
               </div>
             )}
             {children}

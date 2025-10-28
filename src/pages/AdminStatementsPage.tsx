@@ -170,8 +170,19 @@ const AdminStatementsPage: React.FC = () => {
     setRemindingId(statement.id);
     const toastId = toast.loading("Préparation de la relance...");
     try {
-      await sendPaymentReminder(statement.id);
-      toast.success("Relance envoyée avec succès !", { id: toastId });
+      // Générer le PDF du relevé pour garantir la PJ
+      toast.info("Génération du PDF du relevé...", { id: toastId });
+      const pdfFile = await generateStatementPdf(statement);
+
+      // Téléverser le PDF dans le bucket statements
+      toast.info("Téléversement du relevé...", { id: toastId });
+      const { path } = await uploadStatementPdf(statement.user_id, statement.id, pdfFile);
+
+      // Appeler l'edge function avec le chemin exact du relevé
+      toast.info("Envoi de la relance...", { id: toastId });
+      await sendPaymentReminder(statement.id, path);
+
+      toast.success("Relance envoyée avec succès avec les pièces jointes !", { id: toastId });
     } catch (err: any) {
       toast.error(`Erreur lors de la relance: ${err.message}`, { id: toastId });
     } finally {

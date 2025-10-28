@@ -1546,9 +1546,9 @@ export async function getRoomUtilityEvents(userRoomId: string): Promise<RoomUtil
  * Envoie une relance de paiement par email (avec pièces jointes) pour une facture donnée.
  * Admin uniquement.
  */
-export async function sendPaymentReminder(invoiceId: string): Promise<void> {
+export async function sendPaymentReminder(invoiceId: string, statementPath?: string): Promise<void> {
   const { error } = await supabase.functions.invoke('send-payment-reminder', {
-    body: { invoice_id: invoiceId },
+    body: { invoice_id: invoiceId, statement_path: statementPath },
   });
 
   if (error) {

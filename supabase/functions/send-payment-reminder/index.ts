@@ -70,7 +70,7 @@ serve(async (req) => {
       });
     }
 
-    const { invoice_id } = await req.json();
+    const { invoice_id, statement_path } = await req.json();
     if (!invoice_id) {
       return new Response(JSON.stringify({ error: "Missing 'invoice_id' in body." }), {
         status: 400,
@@ -146,8 +146,9 @@ serve(async (req) => {
     // Attachments
     const attachments: Array<{ filename: string; content: string }> = [];
 
-    // 1) Statement PDF from storage: path is deterministic `${userId}/${invoiceId}.pdf`
-    const statementPath = `${invoice.user_id}/${invoice.id}.pdf`;
+    // 1) Statement PDF from storage
+    // If the client provided a path (after generating/uploading), prefer it, else fallback to default deterministic path
+    const statementPath = statement_path ?? `${invoice.user_id}/${invoice.id}.pdf`;
     const { data: signed } = await adminClient.storage
       .from("statements")
       .createSignedUrl(statementPath, 3600);

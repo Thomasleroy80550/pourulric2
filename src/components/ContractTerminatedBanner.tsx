@@ -87,7 +87,7 @@ const ContractTerminatedBanner: React.FC = () => {
               variant="destructive"
               size="sm"
               onClick={() => {
-                window.location.href = "mailto:support@hellokeys.fr?subject=Contrat%20r%C3%A9sili%C3%A9%20-%20Assistance";
+                window.location.href = "mailto:contact@hellokeys.fr?subject=Contrat%20r%C3%A9sili%C3%A9%20-%20Assistance";
               }}
             >
               <Mail className="mr-2 h-4 w-4" />

@@ -43,6 +43,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
+import VerisureOfferCard from "@/components/VerisureOfferCard";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -418,6 +419,9 @@ const DashboardPage = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+
+        {/* Offre Verisure */}
+        <VerisureOfferCard />
 
         {/* To-Do List Card */}
         <div className="mt-6">

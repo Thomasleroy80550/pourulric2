@@ -253,7 +253,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 export const useSession = () => {
   const context = useContext(SessionContext);
   if (context === undefined) {
-    throw new Error('useSession must be used within a SessionContextProvider');
+    // Fallback pour éviter le crash si un composant est rendu hors provider
+    console.warn('useSession called outside of SessionContextProvider. Returning fallback context.');
+    return { session: null, loading: true, profile: null };
   }
   return context;
 };

@@ -228,6 +228,22 @@ export interface StripeTransfer {
   transfer_group: string | null;
 }
 
+export interface Prospect {
+  id: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  message?: string | null;
+  consent: boolean;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  source?: string | null;
+  page_path?: string | null;
+  created_at: string;
+}
+
 /**
  * Fetches and aggregates billing statistics for Hello Keys.
  * @param period Optional period string (e.g., "Juin 2024") for filtering.
@@ -1555,4 +1571,18 @@ export async function sendPaymentReminder(invoiceId: string, statementPath?: str
     console.error("Error sending payment reminder:", error);
     throw new Error(`Erreur lors de l'envoi de la relance : ${error.message}`);
   }
+}
+
+export async function getLatestProspects(limit: number = 10): Promise<Prospect[]> {
+  const { data, error } = await supabase
+    .from('prospects')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Error fetching prospects:", error);
+    throw new Error("Erreur lors de la récupération des prospects.");
+  }
+  return data || [];
 }

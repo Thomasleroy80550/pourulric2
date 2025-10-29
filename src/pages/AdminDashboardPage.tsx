@@ -12,7 +12,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getAllProfiles, getAllUserRooms, getSavedInvoices, getAccountantRequests, getAllIdeas, AccountantRequest, AdminIdea, SavedInvoice } from '@/lib/admin-api';
+import { getAllProfiles, getAllUserRooms, getSavedInvoices, getAccountantRequests, getAllIdeas, AccountantRequest, AdminIdea, SavedInvoice, getLatestProspects, Prospect } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { AdminUserRoom } from '@/lib/admin-api';
 import StatCard from '@/components/admin/StatCard';
@@ -35,6 +35,7 @@ const AdminDashboardPage: React.FC = () => {
   const [accountantRequests, setAccountantRequests] = useState<AccountantRequest[]>([]);
   const [pendingIdeas, setPendingIdeas] = useState<AdminIdea[]>([]);
   const [pendingModuleRequests, setPendingModuleRequests] = useState<ModuleActivationRequest[]>([]);
+  const [prospects, setProspects] = useState<Prospect[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,7 @@ const AdminDashboardPage: React.FC = () => {
           accountantRequestsData,
           ideasData,
           moduleRequestsData,
+          prospectsData,
         ] = await Promise.all([
           getAllProfiles(),
           getAllUserRooms(),
@@ -61,6 +63,7 @@ const AdminDashboardPage: React.FC = () => {
           getAccountantRequests(),
           getAllIdeas(),
           getAllModuleActivationRequests(),
+          getLatestProspects(10),
         ]);
 
         // Calculate stats
@@ -94,6 +97,7 @@ const AdminDashboardPage: React.FC = () => {
         setAccountantRequests(accountantRequestsData.filter(r => r.status === 'pending'));
         setPendingIdeas(ideasData.filter(i => i.status === 'new'));
         setPendingModuleRequests(moduleRequestsData.filter(r => r.status === 'pending'));
+        setProspects(prospectsData);
 
       } catch (err: any) {
         setError(err.message);
@@ -185,6 +189,27 @@ const AdminDashboardPage: React.FC = () => {
     </Table>
   );
 
+  const renderProspects = () => (
+    <Table>
+      <TableHeader><TableRow><TableHead>Nom</TableHead><TableHead>Email</TableHead><TableHead>Téléphone</TableHead><TableHead>Date</TableHead><TableHead></TableHead></TableRow></TableHeader>
+      <TableBody>
+        {prospects.map(p => (
+          <TableRow key={p.id}>
+            <TableCell className="font-medium">{[p.first_name, p.last_name].filter(Boolean).join(' ') || '—'}</TableCell>
+            <TableCell>{p.email}</TableCell>
+            <TableCell>{p.phone || '—'}</TableCell>
+            <TableCell>{format(new Date(p.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+            <TableCell className="text-right">
+              <Button asChild variant="outline" size="sm">
+                <a href={`mailto:${p.email}`}>Contacter</a>
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
   if (error) return <AdminLayout><Alert variant="destructive"><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></AdminLayout>;
 
   return (
@@ -199,7 +224,7 @@ const AdminDashboardPage: React.FC = () => {
           <StatCard title="Total Utilisateurs" value={stats.totalUsers.toString()} icon={<Users className="h-4 w-4 text-muted-foreground" />} description={`${stats.newUsersLast30Days} nouveaux ce mois-ci`} loading={loading} />
           <StatCard title="Logements Actifs" value={stats.totalRooms.toString()} icon={<BedDouble className="h-4 w-4 text-muted-foreground" />} description="Total des propriétés gérées" loading={loading} />
           <StatCard title="Revenus (HT)" value={new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(stats.totalRevenue)} icon={<DollarSign className="h-4 w-4 text-muted-foreground" />} description="Revenus totaux générés" loading={loading} />
-          <StatCard title="Tâches en Attente" value={(pendingTechReports.length + reservationReports.length + accountantRequests.length + pendingIdeas.length + pendingModuleRequests.length).toString()} icon={<FileCheck className="h-4 w-4 text-muted-foreground" />} description="Actions requises de votre part" loading={loading} />
+          <StatCard title="Tâches en Attente" value={(pendingTechReports.length + reservationReports.length + accountantRequests.length + pendingIdeas.length + pendingModuleRequests.length + prospects.length).toString()} icon={<FileCheck className="h-4 w-4 text-muted-foreground" />} description="Actions requises de votre part" loading={loading} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -234,12 +259,13 @@ const AdminDashboardPage: React.FC = () => {
           <CardHeader><CardTitle>Tâches en Attente</CardTitle></CardHeader>
           <CardContent>
             <Tabs defaultValue="tech_reports">
-              <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+              <TabsList className="grid w-full grid-cols-2 md:grid-cols-6">
                 <TabsTrigger value="tech_reports"><Wrench className="mr-2 h-4 w-4" />Rapports Tech ({pendingTechReports.length})</TabsTrigger>
                 <TabsTrigger value="reservations"><AlertTriangle className="mr-2 h-4 w-4" />Signalements ({reservationReports.length})</TabsTrigger>
                 <TabsTrigger value="accountants"><MailWarning className="mr-2 h-4 w-4" />Demandes Comptable ({accountantRequests.length})</TabsTrigger>
                 <TabsTrigger value="ideas"><Lightbulb className="mr-2 h-4 w-4" />Idées ({pendingIdeas.length})</TabsTrigger>
                 <TabsTrigger value="module_requests"><Puzzle className="mr-2 h-4 w-4" />Modules ({pendingModuleRequests.length})</TabsTrigger>
+                <TabsTrigger value="prospects"><UserPlus className="mr-2 h-4 w-4" />Prospects ({prospects.length})</TabsTrigger>
               </TabsList>
               <TabsContent value="tech_reports" className="mt-4">
                 {loading ? <Skeleton className="h-48 w-full" /> : pendingTechReports.length > 0 ? renderTechReports() : <p className="text-center text-sm text-gray-500 py-8">Aucun rapport technique en attente.</p>}
@@ -255,6 +281,9 @@ const AdminDashboardPage: React.FC = () => {
               </TabsContent>
               <TabsContent value="module_requests" className="mt-4">
                 {loading ? <Skeleton className="h-48 w-full" /> : pendingModuleRequests.length > 0 ? renderModuleRequests() : <p className="text-center text-sm text-gray-500 py-8">Aucune demande d'activation de module en attente.</p>}
+              </TabsContent>
+              <TabsContent value="prospects" className="mt-4">
+                {loading ? <Skeleton className="h-48 w-full" /> : prospects.length > 0 ? renderProspects() : <p className="text-center text-sm text-gray-500 py-8">Aucun nouveau prospect.</p>}
               </TabsContent>
             </Tabs>
           </CardContent>

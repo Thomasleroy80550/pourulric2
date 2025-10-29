@@ -234,8 +234,9 @@ const AdminDashboardPage: React.FC = () => {
                 size="sm"
                 onClick={async () => {
                   await updateProspectStatus(p.id, 'cancelled');
-                  setProspects(prev => prev.map(x => x.id === p.id ? { ...x, status: 'cancelled' } : x));
-                  toast.success("Prospect annulé.");
+                  // archiver = ne plus l'afficher dans la liste
+                  setProspects(prev => prev.filter(x => x.id !== p.id));
+                  toast.success("Prospect annulé et archivé.");
                 }}
               >
                 Annuler

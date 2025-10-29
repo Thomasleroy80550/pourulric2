@@ -244,6 +244,7 @@ export interface Prospect {
   created_at: string;
   status?: string | null;
   converted_user_id?: string | null;
+  archived?: boolean | null;
 }
 
 /**
@@ -1579,6 +1580,7 @@ export async function getLatestProspects(limit: number = 10): Promise<Prospect[]
   const { data, error } = await supabase
     .from('prospects')
     .select('*')
+    .eq('archived', false)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -1593,9 +1595,14 @@ export async function getLatestProspects(limit: number = 10): Promise<Prospect[]
 export type ProspectStatus = 'new' | 'callback_pending' | 'cancelled' | 'converted';
 
 export async function updateProspectStatus(id: string, status: ProspectStatus): Promise<void> {
+  const updateData: Record<string, any> = { status };
+  if (status === 'cancelled') {
+    updateData.archived = true;
+  }
+
   const { error } = await supabase
     .from('prospects')
-    .update({ status })
+    .update(updateData)
     .eq('id', id);
 
   if (error) {

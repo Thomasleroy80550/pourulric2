@@ -17,6 +17,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Shield, Sparkles, CheckCircle2, TrendingUp, Calendar, Wand2, Stars, PhoneCall } from "lucide-react";
 import { sendUnauthenticatedEmail } from "@/lib/unauthenticated-email-api";
+import EmailSendEffect from "@/components/EmailSendEffect";
 
 const prospectSchema = z.object({
   first_name: z.string().min(1, "Prénom requis"),
@@ -30,6 +31,7 @@ const prospectSchema = z.object({
 type ProspectFormValues = z.infer<typeof prospectSchema>;
 
 const ProspectSignupPage: React.FC = () => {
+  const [sendingEffect, setSendingEffect] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,6 +59,7 @@ const ProspectSignupPage: React.FC = () => {
   });
 
   const onSubmit = async (values: ProspectFormValues) => {
+    setSendingEffect(true);
     const payload = {
       email: values.email,
       first_name: values.first_name,
@@ -71,6 +74,7 @@ const ProspectSignupPage: React.FC = () => {
 
     if (error) {
       toast.error(`Erreur: ${error.message}`);
+      setSendingEffect(false);
       return;
     }
 
@@ -108,12 +112,16 @@ const ProspectSignupPage: React.FC = () => {
       sendUnauthenticatedEmail(values.email, prospectSubject, prospectHtml),
     ]);
 
-    toast.success("Merci ! Votre demande a bien été enregistrée.");
-    navigate("/login");
+    // Laisser l'effet d'envoi visible un court instant, puis afficher le toast et rediriger
+    setTimeout(() => {
+      toast.success("Merci ! Votre demande a bien été enregistrée.");
+      navigate("/login");
+    }, 900);
   };
 
   return (
     <div className="min-h-screen bg-background">
+      <EmailSendEffect show={sendingEffect} />
       {/* Hero */}
       <section className="bg-gradient-to-b from-primary/10 via-background to-background">
         <div className="mx-auto max-w-6xl px-4 pt-10 pb-12">
@@ -238,7 +246,7 @@ const ProspectSignupPage: React.FC = () => {
               <CardHeader><CardTitle>3. Gestion & Suivi</CardTitle></CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Gestion quotidienne, qualité d’accueil, reporting propriétaire et optimisation continue.
+                  Gestion quotidienne, qualité d'accueil, reporting propriétaire et optimisation continue.
                 </p>
               </CardContent>
             </Card>
@@ -252,7 +260,7 @@ const ProspectSignupPage: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Questions fréquentes</CardTitle>
-              <CardDescription>Tout ce qu’il faut savoir avant de démarrer.</CardDescription>
+              <CardDescription>Tout ce qu'il faut savoir avant de démarrer.</CardDescription>
             </CardHeader>
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
@@ -271,7 +279,7 @@ const ProspectSignupPage: React.FC = () => {
                 <AccordionItem value="item-3">
                   <AccordionTrigger>Proposez-vous un suivi propriétaire ?</AccordionTrigger>
                   <AccordionContent>
-                    Oui, vous disposez d’un tableau de bord et de rapports réguliers sur vos revenus et performances.
+                    Oui, vous disposez d'un tableau de bord et de rapports réguliers sur vos revenus et performances.
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

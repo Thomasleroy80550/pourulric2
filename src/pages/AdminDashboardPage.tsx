@@ -12,7 +12,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getAllProfiles, getAllUserRooms, getSavedInvoices, getAccountantRequests, getAllIdeas, AccountantRequest, AdminIdea, SavedInvoice, getLatestProspects, Prospect } from '@/lib/admin-api';
+import { getAllProfiles, getAllUserRooms, getSavedInvoices, getAccountantRequests, getAllIdeas, AccountantRequest, AdminIdea, SavedInvoice, getLatestProspects, Prospect, updateProspectStatus, convertProspectToClient } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { AdminUserRoom } from '@/lib/admin-api';
 import StatCard from '@/components/admin/StatCard';
@@ -20,6 +20,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAllModuleActivationRequests, ModuleActivationRequest } from '@/lib/module-activation-api';
+import { toast } from "sonner";
 
 const AdminDashboardPage: React.FC = () => {
   const { profile } = useSession();
@@ -191,7 +192,16 @@ const AdminDashboardPage: React.FC = () => {
 
   const renderProspects = () => (
     <Table>
-      <TableHeader><TableRow><TableHead>Nom</TableHead><TableHead>Email</TableHead><TableHead>Téléphone</TableHead><TableHead>Date</TableHead><TableHead></TableHead></TableRow></TableHeader>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Nom</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Téléphone</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead>Statut</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
       <TableBody>
         {prospects.map(p => (
           <TableRow key={p.id}>
@@ -199,9 +209,51 @@ const AdminDashboardPage: React.FC = () => {
             <TableCell>{p.email}</TableCell>
             <TableCell>{p.phone || '—'}</TableCell>
             <TableCell>{format(new Date(p.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-            <TableCell className="text-right">
+            <TableCell>
+              <span className="text-xs rounded bg-muted px-2 py-1">
+                {p.status || 'new'}
+              </span>
+            </TableCell>
+            <TableCell className="text-right space-x-2">
               <Button asChild variant="outline" size="sm">
                 <a href={`mailto:${p.email}`}>Contacter</a>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  await updateProspectStatus(p.id, 'callback_pending');
+                  setProspects(prev => prev.map(x => x.id === p.id ? { ...x, status: 'callback_pending' } : x));
+                  toast.success("Prospect marqué en attente de rappel.");
+                }}
+              >
+                Attente de rappel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  await updateProspectStatus(p.id, 'cancelled');
+                  setProspects(prev => prev.map(x => x.id === p.id ? { ...x, status: 'cancelled' } : x));
+                  toast.success("Prospect annulé.");
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const { userId } = await convertProspectToClient(p);
+                    setProspects(prev => prev.map(x => x.id === p.id ? { ...x, status: 'converted', converted_user_id: userId } : x));
+                    toast.success("Prospect converti en client et compte créé.");
+                  } catch (err: any) {
+                    toast.error(err.message || "Erreur lors de la conversion.");
+                  }
+                }}
+                disabled={p.status === 'converted'}
+              >
+                Convertir en client
               </Button>
             </TableCell>
           </TableRow>

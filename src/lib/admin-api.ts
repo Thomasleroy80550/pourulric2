@@ -242,6 +242,8 @@ export interface Prospect {
   source?: string | null;
   page_path?: string | null;
   created_at: string;
+  status?: string | null;
+  converted_user_id?: string | null;
 }
 
 /**
@@ -1585,4 +1587,50 @@ export async function getLatestProspects(limit: number = 10): Promise<Prospect[]
     throw new Error("Erreur lors de la récupération des prospects.");
   }
   return data || [];
+}
+
+// Nouveau: types et fonctions de gestion de prospects
+export type ProspectStatus = 'new' | 'callback_pending' | 'cancelled' | 'converted';
+
+export async function updateProspectStatus(id: string, status: ProspectStatus): Promise<void> {
+  const { error } = await supabase
+    .from('prospects')
+    .update({ status })
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error updating prospect status:", error);
+    throw new Error(`Erreur lors de la mise à jour du prospect : ${error.message}`);
+  }
+}
+
+export async function convertProspectToClient(prospect: Prospect): Promise<{ userId: string }> {
+  if (!prospect.email || !prospect.first_name || !prospect.last_name) {
+    throw new Error("Le prospect doit avoir email, prénom et nom pour être converti.");
+  }
+
+  // Générer un mot de passe temporaire robuste (utilise le générateur interne)
+  const tempPassword = generateTempPassword();
+
+  // Créer l'utilisateur via l'edge function (enverra un email de bienvenue automatiquement)
+  const { user } = await createUser({
+    email: prospect.email,
+    password: tempPassword,
+    first_name: prospect.first_name,
+    last_name: prospect.last_name,
+    role: 'user',
+  });
+
+  // Mettre à jour le prospect comme converti et lier l'utilisateur créé
+  const { error } = await supabase
+    .from('prospects')
+    .update({ status: 'converted', converted_user_id: user.id })
+    .eq('id', prospect.id);
+
+  if (error) {
+    console.error("Error marking prospect converted:", error);
+    throw new Error(`Erreur lors de la mise à jour du prospect converti : ${error.message}`);
+  }
+
+  return { userId: user.id };
 }

@@ -64,6 +64,7 @@ import MarketplacePage from "./pages/MarketplacePage";
 import AdminMarketplacePage from "./pages/AdminMarketplacePage"; // New import
 import CalendarPageMobile from "./pages/CalendarPageMobile";
 import AdminUtilityCutsPage from "./pages/AdminUtilityCutsPage"; // New import
+import AdminNewsletterPage from "./pages/AdminNewsletterPage";
 import ContractTerminatedBanner from "./components/ContractTerminatedBanner";
 
 const queryClient = new QueryClient();
@@ -103,6 +104,7 @@ function App() {
                   <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                   <Route path="/admin/ideas" element={<AdminIdeasPage />} />
                   <Route path="/admin/documents" element={<AdminDocumentsPage />} />
+                  <Route path="/admin/newsletter" element={<AdminNewsletterPage />} />
                   <Route path="/admin/marketplace" element={<AdminMarketplacePage />} /> {/* New route */}
                   <Route path="/admin/stripe-transactions" element={<AdminStripeTransactionsPage />} />
                   <Route path="/admin/stripe-match" element={<AdminStripeMatchPage />} /> {/* New route */}

@@ -112,8 +112,9 @@ const ProspectSignupPage: React.FC = () => {
       sendUnauthenticatedEmail(values.email, prospectSubject, prospectHtml),
     ]);
 
-    // Laisser l'effet d'envoi visible un court instant, puis afficher le toast et rediriger
+    // Laisser l'effet d'envoi visible un court instant, puis fermer et rediriger
     setTimeout(() => {
+      setSendingEffect(false);
       toast.success("Merci ! Votre demande a bien été enregistrée.");
       navigate("/login");
     }, 900);

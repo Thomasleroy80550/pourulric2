@@ -56,18 +56,29 @@ serve(async (req) => {
       });
     }
 
-    // Fetch all client emails (exclude banned and null emails)
-    const { data: recipients, error: recipientsError } = await supabase
-      .from('profiles')
-      .select('email, first_name, last_name, is_banned')
-      .neq('email', null);
+    // Parse testMode flag
+    const parsedBody = await req.json();
+    const testMode = !!parsedBody?.testMode;
 
-    if (recipientsError) {
-      console.error("Recipients fetch error:", recipientsError);
-      return new Response(JSON.stringify({ error: "Unable to fetch recipients" }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+    // Fetch recipients: test mode -> single recipient, else -> all profiles (excluding banned/null)
+    let recipients: Array<{ email: string; first_name?: string; last_name?: string; is_banned?: boolean }> = [];
+
+    if (testMode) {
+      recipients = [{ email: "thomasleroy80550@gmail.com", first_name: "Thomas", last_name: "Leroy", is_banned: false }];
+    } else {
+      const { data: list, error: recipientsError } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name, is_banned')
+        .neq('email', null);
+
+      if (recipientsError) {
+        console.error("Recipients fetch error:", recipientsError);
+        return new Response(JSON.stringify({ error: "Unable to fetch recipients" }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      recipients = list ?? [];
     }
 
     let sent = 0;
@@ -97,7 +108,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ message: "Newsletter processed", sent, failed }), {
+    return new Response(JSON.stringify({ message: "Newsletter processed", sent, failed, testMode }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

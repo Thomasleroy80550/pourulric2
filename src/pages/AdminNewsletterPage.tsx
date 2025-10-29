@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Mail, Send, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,6 +16,7 @@ const AdminNewsletterPage: React.FC = () => {
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
   const [sending, setSending] = useState(false);
+  const [testMode, setTestMode] = useState(false);
 
   const handleSend = async () => {
     if (!subject.trim() || !html.trim()) {
@@ -22,7 +25,7 @@ const AdminNewsletterPage: React.FC = () => {
     }
     setSending(true);
     const { data, error } = await supabase.functions.invoke("send-newsletter", {
-      body: { subject, html },
+      body: { subject, html, testMode },
     });
 
     setSending(false);
@@ -53,6 +56,15 @@ const AdminNewsletterPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+              <Switch id="newsletter-test-mode" checked={testMode} onCheckedChange={setTestMode} />
+              <div className="space-y-0.5">
+                <Label htmlFor="newsletter-test-mode">Mode test</Label>
+                <p className="text-xs text-muted-foreground">
+                  Envoie uniquement à thomasleroy80550@gmail.com pour vérification.
+                </p>
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium mb-1">Sujet</label>
               <Input
@@ -86,7 +98,7 @@ const AdminNewsletterPage: React.FC = () => {
                 ) : (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    Envoyer à tous les clients
+                    {testMode ? "Envoyer l'email de test" : "Envoyer à tous les clients"}
                   </>
                 )}
               </Button>

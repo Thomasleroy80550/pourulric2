@@ -26,12 +26,8 @@ export function buildNewsletterHtml({
   const fontStack =
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-  // Construire une URL absolue pour le logo (fallback production)
-  const origin =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : "https://hellokeys.fr";
-  const logoUrl = `${origin}/logo.png`;
+  // Construire une URL absolue pour le logo (fourni par le client)
+  const logoUrl = "https://beta.proprietaire.hellokeys.fr/logo.png";
 
   // Email HTML avec styles inline et structure table 600px (responsive)
   return `<!doctype html>

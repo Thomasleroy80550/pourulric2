@@ -11,10 +11,15 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import EmailHtmlEditor from "@/components/EmailHtmlEditor";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import DOMPurify from "dompurify";
+import { Eye } from "lucide-react";
 
 const AdminNewsletterPage: React.FC = () => {
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
+  const sanitizedHtml = React.useMemo(() => DOMPurify.sanitize(html), [html]);
   const [sending, setSending] = useState(false);
   const [testMode, setTestMode] = useState(false);
 
@@ -25,7 +30,7 @@ const AdminNewsletterPage: React.FC = () => {
     }
     setSending(true);
     const { data, error } = await supabase.functions.invoke("send-newsletter", {
-      body: { subject, html, testMode },
+      body: { subject, html: sanitizedHtml, testMode },
     });
 
     setSending(false);
@@ -73,19 +78,44 @@ const AdminNewsletterPage: React.FC = () => {
                 onChange={(e) => setSubject(e.target.value)}
               />
             </div>
-            <div>
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium mb-1">Contenu HTML</label>
+                <label className="block text-sm font-medium mb-1">Contenu de l'email</label>
                 <span className="text-xs text-muted-foreground">
-                  Vous pouvez coller du HTML formaté (liens, listes, styles inline, etc.)
+                  Composez en mode visuel ou éditez le HTML brut si besoin.
                 </span>
               </div>
-              <Textarea
-                className="min-h-[280px] font-mono text-sm"
-                placeholder="<p>Bonjour,</p><p>Voici nos dernières actualités...</p>"
-                value={html}
-                onChange={(e) => setHtml(e.target.value)}
-              />
+              <Tabs defaultValue="visual" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="visual">Éditeur visuel</TabsTrigger>
+                  <TabsTrigger value="html">HTML brut</TabsTrigger>
+                </TabsList>
+                <TabsContent value="visual">
+                  <EmailHtmlEditor
+                    value={html}
+                    onChange={setHtml}
+                    className="min-h-[280px]"
+                  />
+                </TabsContent>
+                <TabsContent value="html">
+                  <Textarea
+                    className="min-h-[280px] font-mono text-xs"
+                    placeholder="<p>Bonjour,</p><p>Voici nos dernières actualités...</p>"
+                    value={html}
+                    onChange={(e) => setHtml(e.target.value)}
+                  />
+                </TabsContent>
+              </Tabs>
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Eye className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Aperçu du mail (rendu HTML)</span>
+                </div>
+                <div
+                  className="prose prose-sm max-w-none prose-headings:mt-3 prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
+                  dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-end">

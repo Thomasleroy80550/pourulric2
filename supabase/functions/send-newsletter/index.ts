@@ -25,7 +25,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
-    // Auth required
+    // Auth requise
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -34,7 +34,7 @@ serve(async (req) => {
       });
     }
 
-    // Must be admin
+    // Vérifier que l'utilisateur est admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -48,7 +48,12 @@ serve(async (req) => {
       });
     }
 
-    const { subject, html } = await req.json();
+    // Lire le corps UNE SEULE FOIS
+    const body = await req.json().catch(() => null);
+    const subject = body?.subject as string | undefined;
+    const html = body?.html as string | undefined;
+    const testMode = Boolean(body?.testMode);
+
     if (!subject || !html) {
       return new Response(JSON.stringify({ error: "Missing subject or html" }), {
         status: 400,
@@ -56,11 +61,7 @@ serve(async (req) => {
       });
     }
 
-    // Parse testMode flag
-    const parsedBody = await req.json();
-    const testMode = !!parsedBody?.testMode;
-
-    // Fetch recipients: test mode -> single recipient, else -> all profiles (excluding banned/null)
+    // Récupération des destinataires
     let recipients: Array<{ email: string; first_name?: string; last_name?: string; is_banned?: boolean }> = [];
 
     if (testMode) {
@@ -84,7 +85,7 @@ serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
-    // Send one-by-one for clarity; can be optimized later if needed
+    // Envoi un par un
     for (const r of recipients) {
       if (!r?.email || r.is_banned === true) continue;
 

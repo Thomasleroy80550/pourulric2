@@ -13,6 +13,63 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const RATE_LIMIT_RPS = 2;               // 2 requêtes par seconde
+const MIN_DELAY_MS = Math.ceil(1000 / RATE_LIMIT_RPS) + 150; // marge de sécurité (~650ms)
+let lastSentAt = 0;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function ensureRate() {
+  const now = Date.now();
+  const elapsed = now - lastSentAt;
+  if (elapsed < MIN_DELAY_MS) {
+    await sleep(MIN_DELAY_MS - elapsed);
+  }
+  // petite gigue pour éviter des collisions exactes
+  await sleep(Math.floor(Math.random() * 80));
+  lastSentAt = Date.now();
+}
+
+async function sendEmailWithRetry(toEmail: string, subject: string, html: string, maxRetries = 3) {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    try {
+      const { error } = await resend.emails.send({
+        from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
+        to: [toEmail],
+        subject,
+        html,
+      });
+      if (error) {
+        // Si c'est une limite de débit, réessayer avec délai
+        const statusCode = (error as any)?.statusCode;
+        const name = (error as any)?.name;
+        if (statusCode === 429 || name === 'rate_limit_exceeded') {
+          attempt += 1;
+          // attendre un peu plus d'1 seconde avant retry
+          await sleep(1200 + attempt * 300);
+          continue;
+        }
+        // autre type d'erreur: échec direct
+        return { ok: false, error };
+      }
+      return { ok: true };
+    } catch (e) {
+      const statusCode = (e as any)?.statusCode;
+      const name = (e as any)?.name;
+      if (statusCode === 429 || name === 'rate_limit_exceeded') {
+        attempt += 1;
+        await sleep(1200 + attempt * 300);
+        continue;
+      }
+      return { ok: false, error: e };
+    }
+  }
+  return { ok: false, error: new Error("Rate limit exceeded after retries") };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -85,31 +142,24 @@ serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
-    // Envoi un par un
+    // Envoi séquentiel avec throttling et retry 429
     for (const r of recipients) {
       if (!r?.email || r.is_banned === true) continue;
 
       const toEmail = r.email as string;
-      try {
-        const { error } = await resend.emails.send({
-          from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
-          to: [toEmail],
-          subject,
-          html,
-        });
-        if (error) {
-          console.error("Resend error for", toEmail, error);
-          failed += 1;
-        } else {
-          sent += 1;
-        }
-      } catch (e) {
-        console.error("Send error for", toEmail, e);
+
+      await ensureRate();
+      const result = await sendEmailWithRetry(toEmail, subject, html, 3);
+
+      if (result.ok) {
+        sent += 1;
+      } else {
         failed += 1;
+        console.error("Resend error for", toEmail, result.error);
       }
     }
 
-    return new Response(JSON.stringify({ message: "Newsletter processed", sent, failed, testMode }), {
+    return new Response(JSON.stringify({ message: "Newsletter processed", sent, failed, testMode, rateLimited: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

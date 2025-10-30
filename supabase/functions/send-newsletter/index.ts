@@ -27,9 +27,16 @@ async function ensureRate() {
   if (elapsed < MIN_DELAY_MS) {
     await sleep(MIN_DELAY_MS - elapsed);
   }
-  // petite gigue pour éviter des collisions exactes
   await sleep(Math.floor(Math.random() * 80));
   lastSentAt = Date.now();
+}
+
+// Nouveau: calculer un hash stable de la campagne (sujet + HTML)
+async function hashContent(subject: string, html: string): Promise<string> {
+  const data = new TextEncoder().encode(`${subject}::${html}`);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  const bytes = new Uint8Array(digest);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function sendEmailWithRetry(toEmail: string, subject: string, html: string, maxRetries = 3) {
@@ -118,6 +125,9 @@ serve(async (req) => {
       });
     }
 
+    // Calculer le hash de campagne
+    const contentHash = await hashContent(subject, html);
+
     // Récupération des destinataires
     let recipients: Array<{ email: string; first_name?: string; last_name?: string; is_banned?: boolean }> = [];
 
@@ -137,6 +147,17 @@ serve(async (req) => {
         });
       }
       recipients = list ?? [];
+
+      // Dédupliquer: récupérer les emails déjà servis pour cette campagne
+      const { data: alreadySent, error: alreadyError } = await supabase
+        .from('newsletter_deliveries')
+        .select('email')
+        .eq('content_hash', contentHash);
+
+      if (!alreadyError && Array.isArray(alreadySent)) {
+        const sentSet = new Set(alreadySent.map(r => (r.email || '').toLowerCase()));
+        recipients = recipients.filter(r => r?.email && !sentSet.has((r.email as string).toLowerCase()));
+      }
     }
 
     let sent = 0;
@@ -153,6 +174,18 @@ serve(async (req) => {
 
       if (result.ok) {
         sent += 1;
+        // Enregistrer l'envoi réussi pour éviter futurs doublons
+        const { error: insertErr } = await supabase
+          .from('newsletter_deliveries')
+          .insert({
+            email: toEmail,
+            subject,
+            content_hash: contentHash,
+            created_by: user.id,
+          });
+        if (insertErr) {
+          console.error("Failed to record newsletter delivery for", toEmail, insertErr);
+        }
       } else {
         failed += 1;
         console.error("Resend error for", toEmail, result.error);

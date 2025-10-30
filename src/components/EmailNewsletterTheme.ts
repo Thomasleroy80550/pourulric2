@@ -70,7 +70,7 @@ export function buildNewsletterHtml({
         <table role="presentation" class="container" border="0" cellpadding="0" cellspacing="0" width="600" style="width:600px; max-width:600px; background:${containerBg}; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.06); font-family:${fontStack};">
           <!-- Header -->
           <tr>
-            <td style="background:${brandPrimary}; color:${brandPrimaryText};">
+            <td style="background:${brandLightBg}; color:${brandPrimary};">
               <div class="header-inner" style="padding: 20px 24px;">
                 <table role="presentation" width="100%">
                   <tr>

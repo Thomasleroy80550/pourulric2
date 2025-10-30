@@ -15,11 +15,17 @@ import EmailHtmlEditor from "@/components/EmailHtmlEditor";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import DOMPurify from "dompurify";
 import { Eye } from "lucide-react";
+import EmailThemePreview from "@/components/EmailThemePreview";
+import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
 
 const AdminNewsletterPage: React.FC = () => {
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
   const sanitizedHtml = React.useMemo(() => DOMPurify.sanitize(html), [html]);
+  const themedHtml = React.useMemo(
+    () => buildNewsletterHtml({ subject: subject || "Newsletter", bodyHtml: sanitizedHtml }),
+    [subject, sanitizedHtml]
+  );
   const [sending, setSending] = useState(false);
   const [testMode, setTestMode] = useState(false);
 
@@ -30,7 +36,7 @@ const AdminNewsletterPage: React.FC = () => {
     }
     setSending(true);
     const { data, error } = await supabase.functions.invoke("send-newsletter", {
-      body: { subject, html: sanitizedHtml, testMode },
+      body: { subject, html: themedHtml, testMode },
     });
 
     setSending(false);
@@ -106,15 +112,20 @@ const AdminNewsletterPage: React.FC = () => {
                   />
                 </TabsContent>
               </Tabs>
-              <div className="rounded-lg border bg-muted/20 p-4">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                <div className="flex items-center gap-2">
                   <Eye className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Aperçu du mail (rendu HTML)</span>
+                  <span className="text-sm font-medium">Aperçu du contenu brut (rendu HTML)</span>
                 </div>
                 <div
                   className="prose prose-sm max-w-none prose-headings:mt-3 prose-p:my-2 prose-ul:my-2 prose-ol:my-2"
                   dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
                 />
+                <div className="flex items-center gap-2 mt-6">
+                  <Eye className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Aperçu avec thème (version envoyée)</span>
+                </div>
+                <EmailThemePreview subject={subject || "Newsletter"} rawHtml={html} />
               </div>
             </div>
 

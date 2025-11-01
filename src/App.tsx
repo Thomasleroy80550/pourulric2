@@ -68,6 +68,7 @@ import AdminNewsletterPage from "./pages/AdminNewsletterPage";
 import ProspectSignupPage from "./pages/ProspectSignupPage";
 import ContractTerminatedBanner from "./components/ContractTerminatedBanner";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
+import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ function App() {
                   <Route path="/admin/stripe-transfers" element={<AdminStripeTransfersPage />} /> {/* New route */}
                   <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}
                   <Route path="/admin/manual-stats" element={<AdminManualStatsPage />} /> {/* New route */}
+                  <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
                   <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                   <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
                   <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />

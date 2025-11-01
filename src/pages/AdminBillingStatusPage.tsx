@@ -161,7 +161,7 @@ const AdminBillingStatusPage: React.FC = () => {
       <div className="container mx-auto py-6 space-y-4">
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
               <FileText className="h-8 w-8" />
               <div>
                 <CardTitle>Statuts de facturation</CardTitle>
@@ -169,7 +169,7 @@ const AdminBillingStatusPage: React.FC = () => {
                   Liste des clients avec leur dernier relevé existant pour contrôler qui n&apos;a pas été facturé.
                 </CardDescription>
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="sm:ml-auto flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">Clients: {totalClients}</Badge>
                 <Badge variant="destructive">Non facturés: {notInvoicedCount}</Badge>
                 <Button variant="outline" size="icon" onClick={fetchData} title="Rafraîchir">
@@ -210,7 +210,7 @@ const AdminBillingStatusPage: React.FC = () => {
                 </div>
                 <div className="flex-1 overflow-x-auto">
                   <Tabs value={String(selectedMonthIndex)} onValueChange={(v) => setSelectedMonthIndex(parseInt(v))}>
-                    <TabsList className="w-full">
+                    <TabsList className="w-full overflow-x-auto whitespace-nowrap">
                       {MONTHS_FR.map((m, i) => (
                         <TabsTrigger key={m} value={String(i)} className="shrink-0">
                           {m}
@@ -260,12 +260,12 @@ const AdminBillingStatusPage: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Client</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
                     <TableHead>Agence</TableHead>
                     <TableHead>Relevé: {selectedPeriod}</TableHead>
-                    <TableHead>Créé le</TableHead>
-                    <TableHead>Statut Pennylane</TableHead>
-                    <TableHead>Dernier relevé existant</TableHead>
+                    <TableHead className="hidden md:table-cell">Créé le</TableHead>
+                    <TableHead className="hidden md:table-cell">Statut Pennylane</TableHead>
+                    <TableHead className="hidden md:table-cell">Dernier relevé existant</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -273,7 +273,7 @@ const AdminBillingStatusPage: React.FC = () => {
                   {loading ? (
                     Array.from({ length: 8 }).map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell colSpan={6}>
+                        <TableCell colSpan={7}>
                           <Skeleton className="h-8 w-full" />
                         </TableCell>
                       </TableRow>
@@ -290,16 +290,16 @@ const AdminBillingStatusPage: React.FC = () => {
                               <Badge variant="destructive" className="ml-2">Non facturé</Badge>
                             )}
                           </TableCell>
-                          <TableCell>{p.email ?? '—'}</TableCell>
+                          <TableCell className="hidden md:table-cell">{p.email ?? '—'}</TableCell>
                           <TableCell>{(p.agency ?? '').trim() || 'Sans agence'}</TableCell>
                           <TableCell>{selectedInv ? selectedInv.period : 'Aucun'}</TableCell>
-                          <TableCell>
+                          <TableCell className="hidden md:table-cell">
                             {selectedInv ? new Date(selectedInv.created_at).toLocaleDateString() : '—'}
                           </TableCell>
-                          <TableCell className="capitalize">
+                          <TableCell className="hidden md:table-cell capitalize">
                             {selectedInv?.pennylane_status ?? '—'}
                           </TableCell>
-                          <TableCell>{latest ? latest.period : 'Aucun'}</TableCell>
+                          <TableCell className="hidden md:table-cell">{latest ? latest.period : 'Aucun'}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
@@ -317,7 +317,7 @@ const AdminBillingStatusPage: React.FC = () => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
                         Aucun client ne correspond aux critères.
                       </TableCell>
                     </TableRow>

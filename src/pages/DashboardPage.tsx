@@ -416,7 +416,7 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto py-6 overflow-x-hidden">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
 
@@ -448,7 +448,7 @@ const DashboardPage = () => {
                 <ul className="space-y-2">
                   {todoTasks.map(task => (
                     <li key={task.id}>
-                      <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors -m-3">
+                      <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full">
                         <div>
                           <p className="font-medium text-sm">{task.title}</p>
                           {task.property_name && ( // Afficher property_name si c'est un rapport technique
@@ -713,7 +713,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
@@ -756,7 +756,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
@@ -794,7 +794,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8}/>

@@ -11,6 +11,14 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { FileText, RefreshCcw, Search } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type LatestInvoice = {
   id: string;
@@ -23,10 +31,20 @@ type LatestInvoice = {
 const AdminBillingStatusPage: React.FC = () => {
   const [profiles, setProfiles] = React.useState<UserProfile[]>([]);
   const [latestByUser, setLatestByUser] = React.useState<Map<string, LatestInvoice>>(new Map());
+  const [invoicesByUserAndPeriod, setInvoicesByUserAndPeriod] = React.useState<Map<string, Map<string, LatestInvoice>>>(new Map());
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState('');
-  const [onlyNotInvoiced, setOnlyNotInvoiced] = React.useState(false);
+  const [onlyNotInvoiced, setOnlyNotInvoiced] = React.useState(true);
+
+  const MONTHS_FR = [
+    'Janvier','Février','Mars','Avril','Mai','Juin',
+    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'
+  ];
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = React.useState<number>(currentYear);
+  const [selectedMonthIndex, setSelectedMonthIndex] = React.useState<number>(new Date().getMonth());
+  const selectedPeriod = `${MONTHS_FR[selectedMonthIndex]} ${selectedYear}`;
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
@@ -47,21 +65,33 @@ const AdminBillingStatusPage: React.FC = () => {
 
       // 3) Construire un map user_id -> dernier relevé
       const latestMap = new Map<string, LatestInvoice>();
+      const byPeriodMap = new Map<string, Map<string, LatestInvoice>>();
       (invoices || []).forEach((inv) => {
         const uid = inv.user_id as string;
+        const record: LatestInvoice = {
+          id: inv.id as string,
+          user_id: uid,
+          period: inv.period as string,
+          created_at: inv.created_at as string,
+          pennylane_status: inv.pennylane_status ?? null,
+        };
+        // dernier relevé pour l'utilisateur (grâce à l'ordre desc, on prend le premier)
         if (!latestMap.has(uid)) {
-          latestMap.set(uid, {
-            id: inv.id as string,
-            user_id: uid,
-            period: inv.period as string,
-            created_at: inv.created_at as string,
-            pennylane_status: inv.pennylane_status ?? null,
-          });
+          latestMap.set(uid, record);
+        }
+        // relevé par période (mois année) pour l'utilisateur
+        if (!byPeriodMap.has(uid)) {
+          byPeriodMap.set(uid, new Map());
+        }
+        const perPeriod = byPeriodMap.get(uid)!;
+        if (!perPeriod.has(record.period)) {
+          perPeriod.set(record.period, record);
         }
       });
 
       setProfiles(allProfiles);
       setLatestByUser(latestMap);
+      setInvoicesByUserAndPeriod(byPeriodMap);
     } catch (e: any) {
       console.error('Erreur chargement statuts de facturation:', e);
       setError(e.message || 'Erreur inconnue');
@@ -81,14 +111,17 @@ const AdminBillingStatusPage: React.FC = () => {
       const fullName = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim().toLowerCase();
       const email = (p.email ?? '').toLowerCase();
       const matches = !term || fullName.includes(term) || email.includes(term);
-      const hasInvoice = latestByUser.has(p.id);
-      const passesFilter = onlyNotInvoiced ? !hasInvoice : true;
+      const hasInvoiceForSelected =
+        invoicesByUserAndPeriod.get(p.id)?.has(selectedPeriod) ?? false;
+      const passesFilter = onlyNotInvoiced ? !hasInvoiceForSelected : true;
       return matches && passesFilter;
     });
-  }, [profiles, search, latestByUser, onlyNotInvoiced]);
+  }, [profiles, search, invoicesByUserAndPeriod, onlyNotInvoiced, selectedPeriod]);
 
   const totalClients = profiles.length;
-  const notInvoicedCount = profiles.filter((p) => !latestByUser.has(p.id)).length;
+  const notInvoicedCount = profiles.filter(
+    (p) => !(invoicesByUserAndPeriod.get(p.id)?.has(selectedPeriod) ?? false)
+  ).length;
 
   return (
     <AdminLayout>
@@ -113,6 +146,39 @@ const AdminBillingStatusPage: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Sélection d'année + onglets mois */}
+            <div className="flex flex-col gap-2 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Année</span>
+                  <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue placeholder="Année" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={String(currentYear - 1)}>{currentYear - 1}</SelectItem>
+                      <SelectItem value={String(currentYear)}>{currentYear}</SelectItem>
+                      <SelectItem value={String(currentYear + 1)}>{currentYear + 1}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1 overflow-x-auto">
+                  <Tabs value={String(selectedMonthIndex)} onValueChange={(v) => setSelectedMonthIndex(parseInt(v))}>
+                    <TabsList className="w-full">
+                      {MONTHS_FR.map((m, i) => (
+                        <TabsTrigger key={m} value={String(i)} className="shrink-0">
+                          {m}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Mois sélectionné: {selectedPeriod}
+              </div>
+            </div>
+
             <div className="flex flex-wrap items-center gap-2 mb-4">
               <div className="flex items-center gap-2">
                 <Input
@@ -132,7 +198,7 @@ const AdminBillingStatusPage: React.FC = () => {
                   onCheckedChange={(v) => setOnlyNotInvoiced(Boolean(v))}
                 />
                 <label htmlFor="only-not-invoiced" className="text-sm text-muted-foreground">
-                  Afficher uniquement les non facturés
+                  Afficher uniquement les non facturés pour {selectedPeriod}
                 </label>
               </div>
             </div>
@@ -149,9 +215,10 @@ const AdminBillingStatusPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Client</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Dernier relevé</TableHead>
+                    <TableHead>Relevé: {selectedPeriod}</TableHead>
                     <TableHead>Créé le</TableHead>
                     <TableHead>Statut Pennylane</TableHead>
+                    <TableHead>Dernier relevé existant</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -167,22 +234,24 @@ const AdminBillingStatusPage: React.FC = () => {
                   ) : filteredProfiles.length > 0 ? (
                     filteredProfiles.map((p) => {
                       const latest = latestByUser.get(p.id);
+                      const selectedInv = invoicesByUserAndPeriod.get(p.id)?.get(selectedPeriod);
                       return (
-                        <TableRow key={p.id} className={!latest ? 'bg-red-50' : ''}>
+                        <TableRow key={p.id} className={!selectedInv ? 'bg-red-50' : ''}>
                           <TableCell className="font-medium">
                             {(p.first_name ?? '') + ' ' + (p.last_name ?? '')}
-                            {!latest && (
+                            {!selectedInv && (
                               <Badge variant="destructive" className="ml-2">Non facturé</Badge>
                             )}
                           </TableCell>
                           <TableCell>{p.email ?? '—'}</TableCell>
-                          <TableCell>{latest ? latest.period : 'Aucun'}</TableCell>
+                          <TableCell>{selectedInv ? selectedInv.period : 'Aucun'}</TableCell>
                           <TableCell>
-                            {latest ? new Date(latest.created_at).toLocaleDateString() : '—'}
+                            {selectedInv ? new Date(selectedInv.created_at).toLocaleDateString() : '—'}
                           </TableCell>
                           <TableCell className="capitalize">
-                            {latest?.pennylane_status ?? '—'}
+                            {selectedInv?.pennylane_status ?? '—'}
                           </TableCell>
+                          <TableCell>{latest ? latest.period : 'Aucun'}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"

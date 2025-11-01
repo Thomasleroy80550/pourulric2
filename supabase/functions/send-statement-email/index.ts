@@ -26,7 +26,7 @@ serve(async (req) => {
     // 1. Récupérer les détails de la facture, le profil et le modèle d'e-mail
     const { data: invoice, error: invoiceError } = await supabaseAdmin
       .from('invoices')
-      .select('*, profiles(first_name, last_name)')
+      .select('*, profiles:profiles!invoices_user_id_fkey(first_name, last_name)')
       .eq('id', invoiceId)
       .single();
 

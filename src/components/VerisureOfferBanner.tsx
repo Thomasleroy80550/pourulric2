@@ -22,7 +22,7 @@ const VerisureOfferBanner: React.FC = () => {
       <div className="rounded-lg border border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-200 px-3 py-2 w-full overflow-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Shield className="h-4 w-4 text-orange-600 flex-shrink-0" />
-          <p className="text-sm font-medium truncate">
+          <p className="text-sm font-medium truncate text-center sm:text-left break-words">
             Sécurité connectée Verisure — Offre spéciale Hello Keys
           </p>
         </div>
@@ -33,19 +33,19 @@ const VerisureOfferBanner: React.FC = () => {
         </DialogTrigger>
       </div>
 
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-lg md:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center justify-center md:justify-start gap-2 text-center md:text-left">
             <Shield className="h-5 w-5 text-orange-600" />
             Sécurité connectée Verisure — Offre spéciale Hello Keys
           </DialogTitle>
-          <DialogDescription className="flex items-center gap-2">
+          <DialogDescription className="flex items-center justify-center md:justify-start gap-2">
             <Badge className="bg-orange-600 text-white">Limité aux 20 premiers clients</Badge>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+          <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2 text-center md:text-left break-words">
             <p>
               Hello 👋 Chez Hello Keys, on sait qu'etre propriétaire d'un logement Airbnb, c'est aussi vivre avec une petite boule au ventre à chaque réservation…
             </p>
@@ -58,7 +58,7 @@ const VerisureOfferBanner: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="rounded-lg border p-3">
+            <div className="rounded-lg border p-3 text-center">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-orange-600" />
                 <span className="font-medium">Installation complète</span>
@@ -67,7 +67,7 @@ const VerisureOfferBanner: React.FC = () => {
                 199€ HT <span className="text-gray-500">au lieu de 1 399€ HT</span>
               </p>
             </div>
-            <div className="rounded-lg border p-3">
+            <div className="rounded-lg border p-3 text-center">
               <div className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4 text-orange-600" />
                 <span className="font-medium">Serrure connectée</span>
@@ -76,7 +76,7 @@ const VerisureOfferBanner: React.FC = () => {
                 +99€ HT <span className="text-gray-500">avec pavé à code extérieur</span>
               </p>
             </div>
-            <div className="rounded-lg border p-3">
+            <div className="rounded-lg border p-3 text-center">
               <div className="flex items-center gap-2">
                 <Smartphone className="h-4 w-4 text-orange-600" />
                 <span className="font-medium">Abonnement Verisure</span>
@@ -88,34 +88,34 @@ const VerisureOfferBanner: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-sm">
               <CheckCircle className="h-4 w-4 text-green-600" />
               Zéro squat, zéro intrusion
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-sm">
               <CheckCircle className="h-4 w-4 text-green-600" />
               Contrôle total des entrées/sorties depuis votre téléphone
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-sm">
               <CheckCircle className="h-4 w-4 text-green-600" />
               Alarme, vidéosurveillance et intervention en cas d'alerte
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center justify-center sm:justify-start gap-2 text-sm">
               <CheckCircle className="h-4 w-4 text-green-600" />
               Tranquillité d'esprit, même à distance 😌
             </div>
           </div>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 text-center md:text-left">
             ⚠️ Offre strictement limitée aux 20 premiers clients Hello Keys. Après, le tarif préférentiel ne sera plus disponible.
           </p>
         </div>
 
-        <DialogFooter className="mt-2">
-          <Button asChild className="bg-orange-600 hover:bg-orange-700">
+        <DialogFooter className="mt-2 flex flex-col sm:flex-row gap-2 justify-center">
+          <Button asChild className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700">
             <a href={mailtoHref}>Je suis intéressé(e)</a>
           </Button>
-          <Button variant="outline" className="gap-2" asChild>
+          <Button variant="outline" className="w-full sm:w-auto gap-2" asChild>
             <a href={mailtoHref}>
               <Lock className="h-4 w-4" />
               Demander plus d'infos

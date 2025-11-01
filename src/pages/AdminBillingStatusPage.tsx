@@ -158,7 +158,7 @@ const AdminBillingStatusPage: React.FC = () => {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto py-6 space-y-4">
+      <div className="container mx-auto py-6 space-y-4 overflow-x-hidden">
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
@@ -231,7 +231,7 @@ const AdminBillingStatusPage: React.FC = () => {
                   placeholder="Rechercher un client (nom, email)…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-64"
+                  className="w-full sm:w-64"
                 />
                 <Button variant="outline" size="icon" title="Rechercher">
                   <Search className="h-4 w-4" />
@@ -255,7 +255,7 @@ const AdminBillingStatusPage: React.FC = () => {
               </div>
             )}
 
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

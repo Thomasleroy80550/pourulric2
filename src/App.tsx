@@ -67,6 +67,7 @@ import AdminUtilityCutsPage from "./pages/AdminUtilityCutsPage"; // New import
 import AdminNewsletterPage from "./pages/AdminNewsletterPage";
 import ProspectSignupPage from "./pages/ProspectSignupPage";
 import ContractTerminatedBanner from "./components/ContractTerminatedBanner";
+import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +103,7 @@ function App() {
                   <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                   <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
                   <Route path="/admin/faq" element={<AdminFaqPage />} />
+                  <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
                   <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                   <Route path="/admin/ideas" element={<AdminIdeasPage />} />
                   <Route path="/admin/documents" element={<AdminDocumentsPage />} />

@@ -295,16 +295,20 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
         formattedDeadlineDate
       );
 
+      // Envoi d'email pour notifier le relevé, même en mode "Sauvegarder" simple
       if (sendEmail) {
         const toastId = toast.loading("Génération du PDF du relevé…");
-        // 1) Générer le PDF à partir du relevé sauvegardé
         const pdfFile = await generateStatementPdf(savedInvoice);
-        // 2) Uploader dans le bucket 'statements' sous userId/invoiceId.pdf
         const { path } = await uploadStatementPdf(savedInvoice.user_id, savedInvoice.id, pdfFile);
-        // 3) Envoyer l'email via la fonction edge (avec lien signé/PIÈCE JOINTE côté serveur)
         await sendStatementByEmail(savedInvoice.id, path);
         toast.dismiss(toastId);
         toast.success("DING DONG ! Votre relevé est arrivé par email.");
+      } else {
+        // Mode silencieux: générer le PDF et envoyer l'email sans loader
+        const pdfFile = await generateStatementPdf(savedInvoice);
+        const { path } = await uploadStatementPdf(savedInvoice.user_id, savedInvoice.id, pdfFile);
+        await sendStatementByEmail(savedInvoice.id, path);
+        toast.success("Email de notification du relevé envoyé.");
       }
       
       toast.success(isUpdate ? "Relevé mis à jour avec succès !" : "Relevé sauvegardé avec succès !");

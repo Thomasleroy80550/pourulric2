@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { getStripePaymentIntents, StripePaymentIntent } from '@/lib/stripe-api';
 import { Terminal, CreditCard, Search } from 'lucide-react';
+import { ClipboardCopy } from 'lucide-react';
 import { useDebounce } from 'react-use';
 
 const AdminStripeTransactionsPage: React.FC = () => {
@@ -17,6 +18,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [commissionDelta, setCommissionDelta] = useState<number>(0.25); // Delta en monnaie (ex: EUR)
 
   useDebounce(
     () => {
@@ -87,7 +89,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSearch} className="flex items-center gap-2 mb-4">
+            <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2 mb-4">
               <Input
                 type="text"
                 placeholder="Rechercher par ID (pi_...)"
@@ -98,6 +100,17 @@ const AdminStripeTransactionsPage: React.FC = () => {
               <Button type="submit" variant="outline" size="icon">
                 <Search className="h-4 w-4" />
               </Button>
+              <div className="flex items-center gap-2 ml-auto">
+                <label htmlFor="commission-delta" className="text-sm text-muted-foreground">Δ commission</label>
+                <Input
+                  id="commission-delta"
+                  type="number"
+                  step="0.01"
+                  value={commissionDelta}
+                  onChange={(e) => setCommissionDelta(parseFloat(e.target.value || '0'))}
+                  className="w-24"
+                />
+              </div>
             </form>
 
             {error && (
@@ -115,6 +128,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
                     <TableHead>ID Paiement</TableHead>
                     <TableHead>Montant</TableHead>
                     <TableHead>Commission</TableHead>
+                    <TableHead>Commission à déclarer</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Client</TableHead>
@@ -133,6 +147,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
                   ) : paymentIntents.length > 0 ? (
                     paymentIntents.map((pi) => {
                       const fee = pi.latest_charge?.balance_transaction?.fee;
+                      const declarable = typeof fee === 'number' ? (fee / 100) + commissionDelta : null;
                       return (
                         <TableRow key={pi.id}>
                           <TableCell className="font-mono text-xs">{pi.id}</TableCell>
@@ -141,6 +156,27 @@ const AdminStripeTransactionsPage: React.FC = () => {
                             {typeof fee === 'number'
                               ? `${(fee / 100).toFixed(2)} ${pi.currency.toUpperCase()}`
                               : 'N/A'}
+                          </TableCell>
+                          <TableCell className="flex items-center gap-2">
+                            {declarable !== null
+                              ? `${declarable.toFixed(2)} ${pi.currency.toUpperCase()}`
+                              : 'N/A'}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={declarable === null}
+                              onClick={() => {
+                                if (declarable !== null) {
+                                  const text = declarable.toFixed(2);
+                                  navigator.clipboard.writeText(text);
+                                  toast.success("Commission à déclarer copiée");
+                                }
+                              }}
+                              title="Copier"
+                            >
+                              <ClipboardCopy className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                           <TableCell>{pi.status}</TableCell>
                           <TableCell>{new Date(pi.created * 1000).toLocaleString()}</TableCell>

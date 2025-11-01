@@ -39,16 +39,24 @@ serve(async (req) => {
       throw new Error(`E-mail de l'utilisateur non trouvé pour user_id: ${invoice.user_id}`);
     }
 
+    // Charger en priorité le système de templates d'événements
+    const { data: notifTemplatesSetting } = await supabaseAdmin
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'notification_templates')
+      .single();
+
+    // Fallback vers l'ancien template
     const { data: templateSetting } = await supabaseAdmin
       .from('app_settings')
       .select('value')
       .eq('key', 'statement_email_template')
       .single();
 
-    // 2. Générer un lien signé pour le PDF au lieu de le télécharger
+    // 2. Générer un lien signé pour le PDF
     const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin.storage
       .from('statements')
-      .createSignedUrl(pdfPath, 3600); // URL valide pour 1 heure (3600 secondes)
+      .createSignedUrl(pdfPath, 3600);
 
     if (signedUrlError) throw signedUrlError;
     if (!signedUrlData || !signedUrlData.signedUrl) throw new Error("Impossible de générer l'URL signée pour le PDF");
@@ -60,21 +68,32 @@ serve(async (req) => {
       subject: 'Votre relevé Hello Keys pour {{period}} est disponible',
       body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en cliquant sur le lien ci-dessous et sur votre espace client.\n\nCliquez ici pour télécharger votre relevé : {{pdfLink}}\n\nConnectez-vous pour consulter tous vos relevés : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
     };
-    const template = templateSetting?.value || defaultTemplate;
-    
+
+    // Chercher un event template "statement_email" si présent et activé
+    const eventTemplates = notifTemplatesSetting?.value?.events ?? [];
+    const statementEvent = Array.isArray(eventTemplates)
+      ? eventTemplates.find((e: any) => e?.key === 'statement_email' && (e?.sendEmail ?? true))
+      : null;
+
+    const effectiveTemplate = statementEvent
+      ? { subject: statementEvent.subject ?? defaultTemplate.subject, body: statementEvent.body ?? defaultTemplate.body }
+      : (templateSetting?.value || defaultTemplate);
+
     // Utilisation de la variable d'environnement APP_BASE_URL
     const appUrl = Deno.env.get('APP_BASE_URL') ?? 'https://beta.proprietaire.hellokeys.fr';
-    
     const userName = invoice.profiles?.first_name || 'Client';
     const period = invoice.period;
 
-    let subject = template.subject.replace('{{userName}}', userName).replace('{{period}}', period);
-    let body = template.body
-      .replace(/{{userName}}/g, userName)
-      .replace(/{{period}}/g, period)
-      .replace(/{{appUrl}}/g, appUrl)
-      .replace(/{{pdfLink}}/g, pdfDownloadUrl); // Nouvelle variable pour le lien PDF
-    
+    // Remplacement basique des variables
+    const replaceVars = (tpl: string) =>
+      tpl
+        .replace(/{{userName}}/g, userName)
+        .replace(/{{period}}/g, period)
+        .replace(/{{appUrl}}/g, appUrl)
+        .replace(/{{pdfLink}}/g, pdfDownloadUrl);
+
+    const subject = replaceVars(effectiveTemplate.subject);
+    const body = replaceVars(effectiveTemplate.body);
     const htmlBody = body.replace(/\n/g, '<br>');
 
     // 4. Envoyer l'e-mail SANS pièce jointe
@@ -92,7 +111,6 @@ serve(async (req) => {
             to: [user.email],
             subject: subject,
             html: htmlBody,
-            // attachments: [], // Les pièces jointes sont supprimées
         }),
     });
 
@@ -101,20 +119,23 @@ serve(async (req) => {
         throw new Error(`Échec de l'envoi de l'e-mail: ${JSON.stringify(errorBody)}`);
     }
 
-    // 5. Créer une notification pour l'utilisateur
-    await supabaseAdmin.from('notifications').insert({
-      user_id: invoice.user_id,
-      message: `Votre relevé pour la période "${period}" vous a été envoyé par email.`,
-      link: '/finances'
-    })
+    // 5. Créer une notification pour l'utilisateur (si activée via event template ou par défaut)
+    const shouldNotify = statementEvent ? (statementEvent.sendNotification ?? true) : true;
+    if (shouldNotify) {
+      await supabaseAdmin.from('notifications').insert({
+        user_id: invoice.user_id,
+        message: `Votre relevé pour la période "${period}" vous a été envoyé par email.`,
+        link: '/finances'
+      })
+    }
 
-    return new Response(JSON.stringify({ message: "E-mail envoyé avec succès avec le lien PDF" }), {
+    return new Response(JSON.stringify({ message: "E-mail envoyé avec succès avec le lien PDF", subject, body }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
     console.error(error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as any).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

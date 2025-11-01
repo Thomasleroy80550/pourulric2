@@ -19,16 +19,16 @@ const VerisureOfferBanner: React.FC = () => {
 
   return (
     <Dialog>
-      <div className="rounded-lg border border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-200 px-3 py-2 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="rounded-lg border border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-200 px-3 py-2 w-full overflow-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <Shield className="h-4 w-4 text-orange-600 flex-shrink-0" />
           <p className="text-sm font-medium truncate">
             Sécurité connectée Verisure — Offre spéciale Hello Keys
           </p>
         </div>
         <DialogTrigger asChild>
-          <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
-            Découvrir l’offre
+          <Button size="sm" className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white flex-shrink-0">
+            Découvrir l'offre
           </Button>
         </DialogTrigger>
       </div>
@@ -47,10 +47,10 @@ const VerisureOfferBanner: React.FC = () => {
         <div className="space-y-4">
           <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
             <p>
-              Hello 👋 Chez Hello Keys, on sait qu’être propriétaire d’un logement Airbnb, c’est aussi vivre avec une petite boule au ventre à chaque réservation…
+              Hello 👋 Chez Hello Keys, on sait qu'etre propriétaire d'un logement Airbnb, c'est aussi vivre avec une petite boule au ventre à chaque réservation…
             </p>
             <p>
-              🔑 Clés égarées, 🚪 portes laissées ouvertes, 😬 peur du squat ou d’une intrusion pendant la basse saison… Alors on a décidé d’agir 💪
+              🔑 Clés égarées, 🚪 portes laissées ouvertes, 😬 peur du squat ou d'une intrusion pendant la basse saison… Alors on a décidé d'agir 💪
             </p>
             <p>
               En partenariat avec Verisure, le leader européen de la sécurité connectée, on vous a négocié une offre exceptionnelle réservée aux clients Hello Keys :
@@ -82,7 +82,7 @@ const VerisureOfferBanner: React.FC = () => {
                 <span className="font-medium">Abonnement Verisure</span>
               </div>
               <p className="mt-1 text-sm">
-                49,90€ TTC/mois <span className="text-gray-500">au lieu de 59,90€ TTC (120€ d’économie/an)</span>
+                49,90€ TTC/mois <span className="text-gray-500">au lieu de 59,90€ TTC (120€ d'économie/an)</span>
               </p>
             </div>
           </div>
@@ -98,11 +98,11 @@ const VerisureOfferBanner: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Alarme, vidéosurveillance et intervention en cas d’alerte
+              Alarme, vidéosurveillance et intervention en cas d'alerte
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Tranquillité d’esprit, même à distance 😌
+              Tranquillité d'esprit, même à distance 😌
             </div>
           </div>
 
@@ -118,7 +118,7 @@ const VerisureOfferBanner: React.FC = () => {
           <Button variant="outline" className="gap-2" asChild>
             <a href={mailtoHref}>
               <Lock className="h-4 w-4" />
-              Demander plus d’infos
+              Demander plus d'infos
             </a>
           </Button>
         </DialogFooter>

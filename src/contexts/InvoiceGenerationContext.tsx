@@ -3,6 +3,8 @@ import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
 import { saveInvoice, sendStatementByEmail, sendStatementDataToMakeWebhook, updateInvoice, SavedInvoice } from '@/lib/admin-api';
+import { uploadStatementPdf } from '@/lib/storage-api';
+import { generateStatementPdf } from '@/lib/pdf-utils';
 import { addDays, format, parseISO } from 'date-fns';
 
 // Interface for a processed reservation row
@@ -294,8 +296,15 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
       );
 
       if (sendEmail) {
-        // This part needs to be implemented: generate PDF, upload, then send email
-        toast.info("La génération PDF et l'envoi d'e-mail ne sont pas encore implémentés ici.");
+        const toastId = toast.loading("Génération du PDF du relevé…");
+        // 1) Générer le PDF à partir du relevé sauvegardé
+        const pdfFile = await generateStatementPdf(savedInvoice);
+        // 2) Uploader dans le bucket 'statements' sous userId/invoiceId.pdf
+        const { path } = await uploadStatementPdf(savedInvoice.user_id, savedInvoice.id, pdfFile);
+        // 3) Envoyer l'email via la fonction edge (avec lien signé/PIÈCE JOINTE côté serveur)
+        await sendStatementByEmail(savedInvoice.id, path);
+        toast.dismiss(toastId);
+        toast.success("DING DONG ! Votre relevé est arrivé par email.");
       }
       
       toast.success(isUpdate ? "Relevé mis à jour avec succès !" : "Relevé sauvegardé avec succès !");

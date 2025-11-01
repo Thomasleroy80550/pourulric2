@@ -478,7 +478,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto p-6 bg-muted/40">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 bg-muted/40">
             {profile?.is_payment_suspended && (
               <Alert variant="destructive" className="mb-6 sticky top-0 z-10">
                 <Ban className="h-4 w-4" />

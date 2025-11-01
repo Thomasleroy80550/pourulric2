@@ -416,13 +416,11 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6 overflow-x-hidden">
+      <div className="container mx-auto px-2 sm:px-4 py-6 overflow-x-hidden">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
-
         {/* Offre Verisure - bandeau discret */}
         <VerisureOfferBanner />
-
         {/* To-Do List Card */}
         <div className="mt-6">
           <Card id="tour-todo-list" className="shadow-md">
@@ -474,7 +472,7 @@ const DashboardPage = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
           {/* Bilan Financier Card */}
           <Card id="tour-financial-summary" className="shadow-md">
             <CardHeader>
@@ -627,11 +625,11 @@ const DashboardPage = () => {
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col p-4 h-[320px]">
+            <CardContent className="flex flex-col p-4 h-[320px] w-full max-w-full">
               {loadingFinancialData ? (
                 <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
                   <Skeleton className="w-full md:w-3/5 h-[280px]" />
-                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
+                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 w-full max-w-full flex flex-col items-start break-words">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Skeleton key={i} className="h-4 w-full" />
                     ))}
@@ -670,7 +668,7 @@ const DashboardPage = () => {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 flex flex-col items-start">
+                    <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 w-full max-w-full flex flex-col items-start break-words">
                       {activityData.map((item) => (
                         <div key={item.name} className="flex items-center">
                           <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
@@ -686,8 +684,7 @@ const DashboardPage = () => {
           </Card>
         </div>
 
-        {/* New 3-column grid for charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
           {/* Statistiques Financières Mensuelles Card */}
           <Card id="tour-monthly-financials" className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -713,7 +710,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
@@ -756,7 +753,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
@@ -794,7 +791,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8}/>

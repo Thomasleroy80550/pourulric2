@@ -45,6 +45,16 @@ const AdminBillingStatusPage: React.FC = () => {
   const [selectedYear, setSelectedYear] = React.useState<number>(currentYear);
   const [selectedMonthIndex, setSelectedMonthIndex] = React.useState<number>(new Date().getMonth());
   const selectedPeriod = `${MONTHS_FR[selectedMonthIndex]} ${selectedYear}`;
+  const [selectedAgency, setSelectedAgency] = React.useState<string>('Toutes');
+  const agencies = React.useMemo(() => {
+    const set = new Set<string>();
+    profiles.forEach((p) => {
+      const a = (p.agency ?? '').trim();
+      if (a) set.add(a);
+      else set.add('Sans agence');
+    });
+    return ['Toutes', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [profiles]);
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
@@ -113,15 +123,38 @@ const AdminBillingStatusPage: React.FC = () => {
       const matches = !term || fullName.includes(term) || email.includes(term);
       const hasInvoiceForSelected =
         invoicesByUserAndPeriod.get(p.id)?.has(selectedPeriod) ?? false;
+      const agencyMatch =
+        selectedAgency === 'Toutes'
+          ? true
+          : selectedAgency === 'Sans agence'
+          ? !(p.agency && p.agency.trim())
+          : (p.agency ?? '').trim() === selectedAgency;
       const passesFilter = onlyNotInvoiced ? !hasInvoiceForSelected : true;
-      return matches && passesFilter;
+      return matches && agencyMatch && passesFilter;
+    }).sort((a, b) => {
+      const aAgency = (a.agency ?? 'Sans agence');
+      const bAgency = (b.agency ?? 'Sans agence');
+      const byAgency = aAgency.localeCompare(bAgency);
+      if (byAgency !== 0) return byAgency;
+      const aName = `${a.last_name ?? ''} ${a.first_name ?? ''}`.trim();
+      const bName = `${b.last_name ?? ''} ${b.first_name ?? ''}`.trim();
+      return aName.localeCompare(bName);
     });
-  }, [profiles, search, invoicesByUserAndPeriod, onlyNotInvoiced, selectedPeriod]);
+  }, [profiles, search, invoicesByUserAndPeriod, onlyNotInvoiced, selectedPeriod, selectedAgency]);
 
-  const totalClients = profiles.length;
-  const notInvoicedCount = profiles.filter(
-    (p) => !(invoicesByUserAndPeriod.get(p.id)?.has(selectedPeriod) ?? false)
-  ).length;
+  const matchesAgency = React.useCallback(
+    (p: UserProfile) =>
+      selectedAgency === 'Toutes'
+        ? true
+        : selectedAgency === 'Sans agence'
+        ? !(p.agency && p.agency.trim())
+        : (p.agency ?? '').trim() === selectedAgency,
+    [selectedAgency]
+  );
+  const totalClients = profiles.filter(matchesAgency).length;
+  const notInvoicedCount = profiles
+    .filter(matchesAgency)
+    .filter((p) => !(invoicesByUserAndPeriod.get(p.id)?.has(selectedPeriod) ?? false)).length;
 
   return (
     <AdminLayout>
@@ -159,6 +192,19 @@ const AdminBillingStatusPage: React.FC = () => {
                       <SelectItem value={String(currentYear - 1)}>{currentYear - 1}</SelectItem>
                       <SelectItem value={String(currentYear)}>{currentYear}</SelectItem>
                       <SelectItem value={String(currentYear + 1)}>{currentYear + 1}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Agence</span>
+                  <Select value={selectedAgency} onValueChange={(v) => setSelectedAgency(v)}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Agence" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agencies.map((a) => (
+                        <SelectItem key={a} value={a}>{a}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -215,6 +261,7 @@ const AdminBillingStatusPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Client</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Agence</TableHead>
                     <TableHead>Relevé: {selectedPeriod}</TableHead>
                     <TableHead>Créé le</TableHead>
                     <TableHead>Statut Pennylane</TableHead>
@@ -244,6 +291,7 @@ const AdminBillingStatusPage: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell>{p.email ?? '—'}</TableCell>
+                          <TableCell>{(p.agency ?? '').trim() || 'Sans agence'}</TableCell>
                           <TableCell>{selectedInv ? selectedInv.period : 'Aucun'}</TableCell>
                           <TableCell>
                             {selectedInv ? new Date(selectedInv.created_at).toLocaleDateString() : '—'}

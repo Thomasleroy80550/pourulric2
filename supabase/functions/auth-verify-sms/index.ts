@@ -3,18 +3,24 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const APP_BASE_URL = Deno.env.get('APP_BASE_URL');
+// Try multiple keys for APP_BASE_URL in case it was saved with newline characters
+const APP_BASE_URL_RAW =
+  Deno.env.get('APP_BASE_URL') ||
+  Deno.env.get('APP_BASE_URL\n') ||
+  Deno.env.get('APP_BASE_URL\n\n') ||
+  Deno.env.get('APP_BASE_URL\r\n');
+
+const APP_BASE_URL = APP_BASE_URL_RAW ? APP_BASE_URL_RAW.trim() : undefined;
 
 console.log('--- auth-verify-sms function starting ---');
 console.log(`SUPABASE_URL: ${SUPABASE_URL ? 'Loaded' : 'MISSING'}`);
 console.log(`SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? 'Loaded' : 'MISSING'}`);
-console.log(`APP_BASE_URL: ${APP_BASE_URL ? 'Loaded' : 'MISSING'}`);
+console.log(`APP_BASE_URL: ${APP_BASE_URL ? 'Loaded' : 'Not set, proceeding without redirect'}`);
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !APP_BASE_URL) {
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   const missing = [];
   if (!SUPABASE_URL) missing.push('SUPABASE_URL');
   if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-  if (!APP_BASE_URL) missing.push('APP_BASE_URL');
   const errorMessage = `Missing environment variables: ${missing.join(', ')}`;
   console.error(`Critical Error: ${errorMessage}`);
   throw new Error(errorMessage);
@@ -134,9 +140,8 @@ serve(async (req) => {
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: userEmail,
-      options: {
-        redirectTo: `${APP_BASE_URL}/`
-      }
+      // Only include redirectTo if APP_BASE_URL is present
+      options: APP_BASE_URL ? { redirectTo: `${APP_BASE_URL}/` } : undefined
     });
 
     if (linkError) {

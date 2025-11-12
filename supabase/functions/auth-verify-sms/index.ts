@@ -136,23 +136,40 @@ serve(async (req) => {
       }
     }
 
-    // 3. Generate session tokens directly via Admin API instead of magic link
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({ user_id: userId });
+    // 3. Générer un magic link et l'appeler côté serveur pour récupérer les tokens
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userEmail,
+      options: APP_BASE_URL ? { redirectTo: APP_BASE_URL } : undefined
+    });
 
-    if (sessionError || !sessionData?.session) {
-      console.error('Error creating session:', sessionError);
-      throw new Error('Impossible de créer la session de connexion.');
+    if (linkError || !linkData?.properties?.action_link) {
+      console.error('Error generating magic link:', linkError);
+      throw new Error("Impossible de générer le lien de connexion.");
     }
 
-    const accessToken = sessionData.session.access_token;
-    const refreshToken = sessionData.session.refresh_token;
+    // Appeler le lien de vérification sans suivre la redirection pour lire l'en-tête Location
+    const verifyResp = await fetch(linkData.properties.action_link, { redirect: 'manual' });
+    const locationHeader = verifyResp.headers.get('location') || '';
+
+    if (!locationHeader) {
+      console.error('Missing Location header from verify response', verifyResp.status);
+      throw new Error("Impossible d'extraire les tokens de session.");
+    }
+
+    // Les tokens sont placés dans le fragment de l'URL (#access_token=...&refresh_token=...)
+    const fragment = locationHeader.split('#')[1] || '';
+    const params = new URLSearchParams(fragment);
+
+    const accessToken = params.get('access_token') || undefined;
+    const refreshToken = params.get('refresh_token') || undefined;
 
     if (!accessToken || !refreshToken) {
-      console.error('Failed to obtain tokens from created session.', { session: sessionData.session });
-      throw new Error('Impossible d\'obtenir les tokens de session.');
+      console.error('Failed to extract tokens from Location fragment.', { locationHeader });
+      throw new Error("Impossible d'extraire les tokens de session. Vérifiez que APP_BASE_URL est autorisé dans Supabase Auth → Redirect URLs.");
     }
 
-    // 4. Return tokens
+    // 4. Retourner les tokens
     return new Response(JSON.stringify({
       message: 'Connexion réussie.',
       access_token: accessToken,

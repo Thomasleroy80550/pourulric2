@@ -79,60 +79,96 @@ serve(async (req) => {
     let userEmail;
     let userId;
 
-    // Using listUsers with a high perPage limit to avoid pagination issues
-    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
-      perPage: 1000,
-    });
+    // Tenter d'abord de faire correspondre le numéro au bon compte via la table profiles
+    const { data: matchedProfile, error: profileMatchError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email')
+      .eq('phone_number', phoneNumber)
+      .limit(1)
+      .single();
 
-    if (listUsersError) {
-      console.error('Error listing users:', listUsersError);
-      throw new Error('Erreur lors de la recherche de l\'utilisateur.');
-    }
+    let existingUser;
 
-    let existingUser = users.find(u => u.phone === phoneNumber);
+    if (!profileMatchError && matchedProfile) {
+      // On a trouvé un profil avec ce numéro: récupérer l'utilisateur Auth par son id
+      const { data: userById, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(matchedProfile.id);
+      if (getUserError || !userById?.user) {
+        console.error('Profil trouvé mais utilisateur Auth introuvable:', getUserError, matchedProfile.id);
+        throw new Error('Utilisateur introuvable pour ce numéro. Veuillez contacter le support.');
+      }
+      existingUser = userById.user;
 
-    // If user not found by phone, try finding by the dummy email
-    if (!existingUser) {
-      const dummyEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
-      existingUser = users.find(u => u.email === dummyEmail);
-      if (existingUser && !existingUser.phone) {
-        // If found by dummy email but phone is not set, update the phone
-        const { error: updatePhoneError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { phone: phoneNumber });
-        if (updatePhoneError) {
-          console.error('Error updating user phone:', updatePhoneError);
-          throw new Error('Impossible de mettre à jour le numéro de téléphone de l\'utilisateur existant.');
+      userId = existingUser.id;
+      userEmail = existingUser.email || matchedProfile.email || `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
+
+      // S'assurer que le téléphone et l'email sont bien renseignés sur l’utilisateur Auth
+      const needsPhoneUpdate = existingUser.phone !== phoneNumber;
+      const needsEmailUpdate = !existingUser.email;
+
+      if (needsPhoneUpdate || needsEmailUpdate) {
+        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+          phone: phoneNumber,
+          email: userEmail,
+        });
+        if (updateAuthError) {
+          console.error('Erreur mise à jour utilisateur Auth (phone/email):', updateAuthError);
+          throw new Error('Impossible de mettre à jour le compte utilisateur.');
         }
       }
-    }
-
-    if (!existingUser) {
-      // Create new user
-      userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
-      const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-        phone: phoneNumber,
-        email: userEmail,
-        phone_confirm: true,
-        email_confirm: true,
-      });
-      if (createUserError) {
-        if (createUserError.message.includes('duplicate key value violates unique constraint')) {
-             return new Response(JSON.stringify({ error: 'Un conflit est survenu. Veuillez réessayer.' }), { status: 409, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-          }
-        console.error('Error creating user:', createUserError);
-        throw new Error('Impossible de créer un nouvel utilisateur.');
-      }
-      userId = newUser.user.id;
-      userEmail = newUser.user.email; // Ensure userEmail is set from the newly created user
     } else {
-      userId = existingUser.id;
-      userEmail = existingUser.email;
-      if (!userEmail) {
-          userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
+      // Fallback précédent: rechercher côté Auth par téléphone ou email "dummy", puis créer si nécessaire
+      const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
+        perPage: 1000,
+      });
+
+      if (listUsersError) {
+        console.error('Error listing users:', listUsersError);
+        throw new Error('Erreur lors de la recherche de l\'utilisateur.');
+      }
+
+      existingUser = users.find(u => u.phone === phoneNumber);
+
+      // Si non trouvé par téléphone, essayer par l'email "dummy" construit avec le numéro
+      if (!existingUser) {
+        const dummyEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
+        existingUser = users.find(u => u.email === dummyEmail);
+        if (existingUser && !existingUser.phone) {
+          const { error: updatePhoneError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { phone: phoneNumber });
+          if (updatePhoneError) {
+            console.error('Error updating user phone:', updatePhoneError);
+            throw new Error('Impossible de mettre à jour le numéro de téléphone de l\'utilisateur existant.');
+          }
+        }
+      }
+
+      if (!existingUser) {
+        // Créer un nouvel utilisateur (cas rare si aucun profil n'était lié à ce numéro)
+        userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
+        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
+          phone: phoneNumber,
+          email: userEmail,
+          phone_confirm: true,
+          email_confirm: true,
+        });
+        if (createUserError) {
+          if (createUserError.message.includes('duplicate key value violates unique constraint')) {
+            return new Response(JSON.stringify({ error: 'Un conflit est survenu. Veuillez réessayer.' }), { status: 409, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+          }
+          console.error('Error creating user:', createUserError);
+          throw new Error('Impossible de créer un nouvel utilisateur.');
+        }
+        userId = newUser.user.id;
+        userEmail = newUser.user.email;
+      } else {
+        userId = existingUser.id;
+        userEmail = existingUser.email || `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
+        if (!existingUser.email) {
           const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: userEmail });
           if (updateUserError) {
-              console.error('Error updating user with dummy email:', updateUserError);
-              throw new Error('Impossible de mettre à jour le profil utilisateur.');
+            console.error('Error updating user with dummy email:', updateUserError);
+            throw new Error('Impossible de mettre à jour le profil utilisateur.');
           }
+        }
       }
     }
 
@@ -156,16 +192,12 @@ serve(async (req) => {
     const locationHeader = verifyResp.headers.get('location') || '';
 
     if (locationHeader) {
-      // Les tokens sont placés dans le fragment de l'URL (#access_token=...&refresh_token=...)
       const fragment = locationHeader.split('#')[1] || '';
       const params = new URLSearchParams(fragment);
       accessToken = params.get('access_token') || undefined;
       refreshToken = params.get('refresh_token') || undefined;
     } else {
-      // Pas d'en-tête Location: Supabase peut renvoyer un HTML qui fait une redirection côté client.
       const html = await verifyResp.text();
-
-      // Essayer d'extraire le fragment "#access_token=...&refresh_token=..." depuis le HTML
       const hashMatch = html.match(/#access_token=([^&]+)&refresh_token=([^&"']+)/);
       if (hashMatch && hashMatch.length >= 3) {
         accessToken = decodeURIComponent(hashMatch[1]);

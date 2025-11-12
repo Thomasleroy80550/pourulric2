@@ -75,100 +75,52 @@ serve(async (req) => {
       });
     }
 
-    // 2. Find or create user
+    // 2. Find linked user strictly via profiles
     let userEmail;
     let userId;
+
+    // Normaliser légèrement le numéro (supprimer les espaces)
+    const normalizedPhone = typeof phoneNumber === 'string' ? phoneNumber.replace(/\s+/g, '') : phoneNumber;
 
     // Tenter d'abord de faire correspondre le numéro au bon compte via la table profiles
     const { data: matchedProfile, error: profileMatchError } = await supabaseAdmin
       .from('profiles')
       .select('id, email')
-      .eq('phone_number', phoneNumber)
+      .eq('phone_number', normalizedPhone)
       .limit(1)
       .single();
 
-    let existingUser;
-
-    if (!profileMatchError && matchedProfile) {
-      // On a trouvé un profil avec ce numéro: récupérer l'utilisateur Auth par son id
-      const { data: userById, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(matchedProfile.id);
-      if (getUserError || !userById?.user) {
-        console.error('Profil trouvé mais utilisateur Auth introuvable:', getUserError, matchedProfile.id);
-        throw new Error('Utilisateur introuvable pour ce numéro. Veuillez contacter le support.');
-      }
-      existingUser = userById.user;
-
-      userId = existingUser.id;
-      userEmail = existingUser.email || matchedProfile.email || `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
-
-      // S'assurer que le téléphone et l'email sont bien renseignés sur l’utilisateur Auth
-      const needsPhoneUpdate = existingUser.phone !== phoneNumber;
-      const needsEmailUpdate = !existingUser.email;
-
-      if (needsPhoneUpdate || needsEmailUpdate) {
-        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-          phone: phoneNumber,
-          email: userEmail,
-        });
-        if (updateAuthError) {
-          console.error('Erreur mise à jour utilisateur Auth (phone/email):', updateAuthError);
-          throw new Error('Impossible de mettre à jour le compte utilisateur.');
-        }
-      }
-    } else {
-      // Fallback précédent: rechercher côté Auth par téléphone ou email "dummy", puis créer si nécessaire
-      const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
-        perPage: 1000,
+    if (profileMatchError || !matchedProfile) {
+      // Aucun profil avec ce numéro: ne pas créer d'utilisateur, retourner une erreur claire
+      return new Response(JSON.stringify({ error: 'Aucun compte n’est associé à ce numéro. Veuillez contacter le support.' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
+    }
 
-      if (listUsersError) {
-        console.error('Error listing users:', listUsersError);
-        throw new Error('Erreur lors de la recherche de l\'utilisateur.');
-      }
+    // On a trouvé un profil avec ce numéro: récupérer l'utilisateur Auth par son id
+    const { data: userById, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(matchedProfile.id);
+    if (getUserError || !userById?.user) {
+      console.error('Profil trouvé mais utilisateur Auth introuvable:', getUserError, matchedProfile.id);
+      throw new Error('Utilisateur introuvable pour ce numéro. Veuillez contacter le support.');
+    }
 
-      existingUser = users.find(u => u.phone === phoneNumber);
+    const existingUser = userById.user;
+    userId = existingUser.id;
+    userEmail = existingUser.email || matchedProfile.email || `${normalizedPhone}@${DUMMY_EMAIL_DOMAIN}`;
 
-      // Si non trouvé par téléphone, essayer par l'email "dummy" construit avec le numéro
-      if (!existingUser) {
-        const dummyEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
-        existingUser = users.find(u => u.email === dummyEmail);
-        if (existingUser && !existingUser.phone) {
-          const { error: updatePhoneError } = await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { phone: phoneNumber });
-          if (updatePhoneError) {
-            console.error('Error updating user phone:', updatePhoneError);
-            throw new Error('Impossible de mettre à jour le numéro de téléphone de l\'utilisateur existant.');
-          }
-        }
-      }
+    // S'assurer que le téléphone et l'email sont bien renseignés/mis à jour sur l’utilisateur Auth
+    const needsPhoneUpdate = existingUser.phone !== normalizedPhone;
+    const needsEmailUpdate = !existingUser.email && !!userEmail;
 
-      if (!existingUser) {
-        // Créer un nouvel utilisateur (cas rare si aucun profil n'était lié à ce numéro)
-        userEmail = `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
-        const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
-          phone: phoneNumber,
-          email: userEmail,
-          phone_confirm: true,
-          email_confirm: true,
-        });
-        if (createUserError) {
-          if (createUserError.message.includes('duplicate key value violates unique constraint')) {
-            return new Response(JSON.stringify({ error: 'Un conflit est survenu. Veuillez réessayer.' }), { status: 409, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-          }
-          console.error('Error creating user:', createUserError);
-          throw new Error('Impossible de créer un nouvel utilisateur.');
-        }
-        userId = newUser.user.id;
-        userEmail = newUser.user.email;
-      } else {
-        userId = existingUser.id;
-        userEmail = existingUser.email || `${phoneNumber}@${DUMMY_EMAIL_DOMAIN}`;
-        if (!existingUser.email) {
-          const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: userEmail });
-          if (updateUserError) {
-            console.error('Error updating user with dummy email:', updateUserError);
-            throw new Error('Impossible de mettre à jour le profil utilisateur.');
-          }
-        }
+    if (needsPhoneUpdate || needsEmailUpdate) {
+      const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        phone: normalizedPhone,
+        email: userEmail,
+      });
+      if (updateAuthError) {
+        console.error('Erreur mise à jour utilisateur Auth (phone/email):', updateAuthError);
+        throw new Error('Impossible de mettre à jour le compte utilisateur.');
       }
     }
 

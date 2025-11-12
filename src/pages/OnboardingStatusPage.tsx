@@ -5,11 +5,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CheckCircle, Circle, Loader2, Rocket, KeyRound } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Rocket, KeyRound, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CGUVModal from '@/components/CGUVModal';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import OnboardingVisualProgress from '@/components/OnboardingVisualProgress'; // Import the new component
+import { supabase } from '@/integrations/supabase/client';
 
 const statusSteps: { status: OnboardingStatus; title: string; description: string; action?: string }[] = [
   { status: 'estimation_sent', title: 'Estimation envoyée', description: 'Nous vous avons envoyé une estimation de revenus. Veuillez la consulter et la valider.' },
@@ -27,6 +28,7 @@ const OnboardingStatusPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isCguvModalOpen, setIsCguvModalOpen] = useState(false);
   const [isSubmittingChoice, setIsSubmittingChoice] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const fetchProfileData = useCallback(async () => {
     setLoading(true);
@@ -98,6 +100,14 @@ const OnboardingStatusPage: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await supabase.auth.signOut();
+    toast.success('Vous avez été déconnecté.');
+    setIsLoggingOut(false);
+    // La redirection vers /login est gérée par SessionContextProvider
+  };
+
   if (loading || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
@@ -123,6 +133,15 @@ const OnboardingStatusPage: React.FC = () => {
             <Link to="/">
               <Button size="lg" className="w-full">Découvrir mon tableau de bord</Button>
             </Link>
+            <Button
+              variant="outline"
+              className="w-full mt-3"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <LogOut className="mr-2 h-4 w-4" />}
+              Se déconnecter
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -138,6 +157,17 @@ const OnboardingStatusPage: React.FC = () => {
           <img src="/logo.png" alt="Hello Keys Logo" className="h-12 mx-auto mb-4" />
           <h1 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">Bienvenue, {profile.first_name} !</h1>
           <p className="text-base text-gray-600 dark:text-gray-400">Suivez les étapes de notre collaboration pour mettre en ligne votre logement.</p>
+          <div className="mt-4 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="text-sm"
+            >
+              {isLoggingOut ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <LogOut className="mr-2 h-4 w-4" />}
+              Se déconnecter
+            </Button>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -150,23 +150,35 @@ serve(async (req) => {
 
     // Appeler le lien de vérification sans suivre la redirection pour lire l'en-tête Location
     const verifyResp = await fetch(linkData.properties.action_link, { redirect: 'manual' });
+    let accessToken: string | undefined;
+    let refreshToken: string | undefined;
+
     const locationHeader = verifyResp.headers.get('location') || '';
 
-    if (!locationHeader) {
-      console.error('Missing Location header from verify response', verifyResp.status);
-      throw new Error("Impossible d'extraire les tokens de session.");
+    if (locationHeader) {
+      // Les tokens sont placés dans le fragment de l'URL (#access_token=...&refresh_token=...)
+      const fragment = locationHeader.split('#')[1] || '';
+      const params = new URLSearchParams(fragment);
+      accessToken = params.get('access_token') || undefined;
+      refreshToken = params.get('refresh_token') || undefined;
+    } else {
+      // Pas d'en-tête Location: Supabase peut renvoyer un HTML qui fait une redirection côté client.
+      const html = await verifyResp.text();
+
+      // Essayer d'extraire le fragment "#access_token=...&refresh_token=..." depuis le HTML
+      const hashMatch = html.match(/#access_token=([^&]+)&refresh_token=([^&"']+)/);
+      if (hashMatch && hashMatch.length >= 3) {
+        accessToken = decodeURIComponent(hashMatch[1]);
+        refreshToken = decodeURIComponent(hashMatch[2]);
+      } else {
+        console.error('Failed to extract tokens from magic link.', { action_link: linkData.properties.action_link });
+        throw new Error("Impossible d'extraire les tokens de session. Vérifiez que l'URL de base de votre application (APP_BASE_URL) est bien ajoutée à la liste des URLs de redirection autorisées dans les paramètres d'authentification de votre projet Supabase.");
+      }
     }
 
-    // Les tokens sont placés dans le fragment de l'URL (#access_token=...&refresh_token=...)
-    const fragment = locationHeader.split('#')[1] || '';
-    const params = new URLSearchParams(fragment);
-
-    const accessToken = params.get('access_token') || undefined;
-    const refreshToken = params.get('refresh_token') || undefined;
-
     if (!accessToken || !refreshToken) {
-      console.error('Failed to extract tokens from Location fragment.', { locationHeader });
-      throw new Error("Impossible d'extraire les tokens de session. Vérifiez que APP_BASE_URL est autorisé dans Supabase Auth → Redirect URLs.");
+      console.error('Failed to obtain tokens after parsing response.');
+      throw new Error("Impossible d'obtenir les tokens de session.");
     }
 
     // 4. Retourner les tokens

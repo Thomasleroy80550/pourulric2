@@ -136,32 +136,20 @@ serve(async (req) => {
       }
     }
 
-    // 3. Generate session tokens via magic link
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: userEmail,
-      // Only include redirectTo if APP_BASE_URL is present
-      options: APP_BASE_URL ? { redirectTo: `${APP_BASE_URL}/` } : undefined
-    });
+    // 3. Generate session tokens directly via Admin API instead of magic link
+    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.admin.createSession({ user_id: userId });
 
-    if (linkError) {
-      console.error('Error generating magic link:', linkError);
-      throw new Error('Impossible de générer la session de connexion.');
+    if (sessionError || !sessionData?.session) {
+      console.error('Error creating session:', sessionError);
+      throw new Error('Impossible de créer la session de connexion.');
     }
 
-    if (!linkData?.properties?.action_link) {
-      console.error('Error: generateLink did not return an action_link.', linkData);
-      throw new Error('Impossible de générer le lien de connexion. Réponse de l\'API invalide.');
-    }
-
-    const url = new URL(linkData.properties.action_link);
-    const params = new URLSearchParams(url.hash.substring(1));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
+    const accessToken = sessionData.session.access_token;
+    const refreshToken = sessionData.session.refresh_token;
 
     if (!accessToken || !refreshToken) {
-      console.error('Failed to extract tokens from magic link.', { action_link: linkData.properties.action_link });
-      throw new Error('Impossible d\'extraire les tokens de session. Vérifiez que l\'URL de base de votre application (APP_BASE_URL) est bien ajoutée à la liste des URLs de redirection autorisées dans les paramètres d\'authentification de votre projet Supabase.');
+      console.error('Failed to obtain tokens from created session.', { session: sessionData.session });
+      throw new Error('Impossible d\'obtenir les tokens de session.');
     }
 
     // 4. Return tokens

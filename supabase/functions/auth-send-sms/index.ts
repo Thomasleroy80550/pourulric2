@@ -28,15 +28,28 @@ serve(async (req) => {
       });
     }
 
+    // Normalisation côté serveur (France par défaut)
+    const normalizeFR = (raw: string): string => {
+      let p = raw.trim().replace(/[\s\-\(\)]/g, '');
+      if (p.startsWith('00')) p = `+${p.slice(2)}`;
+      if (p.startsWith('33') && !p.startsWith('+')) p = `+${p}`;
+      if (!p.startsWith('+') && p.length === 10 && p.startsWith('0')) p = `+33${p.slice(1)}`;
+      if (p.startsWith('+0')) p = `+33${p.slice(2)}`;
+      return p;
+    };
+
+    const normalizedPhone = normalizeFR(phoneNumber);
+    const smsRecipient = normalizedPhone.replace('+', ''); // SMSFactor attend sans '+'
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Store or update OTP in the database
+    // Store or update OTP in the database avec numéro normalisé
     const { error: dbError } = await supabaseAdmin.from('sms_otps').upsert(
       {
-        phone_number: phoneNumber,
+        phone_number: normalizedPhone,
         otp_code: otp,
         expires_at: expiresAt.toISOString(),
       },
@@ -54,7 +67,7 @@ serve(async (req) => {
         "message": {
           "text": `Votre code de connexion Hello Keys est : ${otp}`,
         },
-        "recipients": { "gsm": [{ "value": phoneNumber.replace('+', '') }] }
+        "recipients": { "gsm": [{ "value": smsRecipient }] }
       }
     };
 

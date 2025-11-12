@@ -1,16 +1,35 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// AJOUT: helper pour normaliser le numéro en format E.164 simple
-function normalizePhoneE164(phoneNumber: string): string {
+// REMPLACE: normalisation E.164 FR (par défaut France)
+// - "06XXXXXXXX" -> "+33" + "6XXXXXXXX"
+// - "0033XXXXXXXXX" -> "+33XXXXXXXXX"
+// - "33XXXXXXXXX" -> "+33XXXXXXXXX"
+// - garde les numéros déjà au format "+33XXXXXXXXX"
+// - nettoie espaces/tirets/parenthèses
+function normalizePhoneFR(phoneNumber: string): string {
   if (!phoneNumber) return phoneNumber;
-  const trimmed = phoneNumber.trim();
-  const digitsOnly = trimmed.replace(/[^\d]/g, ""); // retire espaces, tirets, parenthèses, etc.
-  // Toujours préfixer avec + pour l'E.164
-  return `+${digitsOnly}`;
+  let p = phoneNumber.trim().replace(/[\s\-\(\)]/g, "");
+  // International prefix "00" -> "+"
+  if (p.startsWith("00")) {
+    p = `+${p.slice(2)}`;
+  }
+  // Si commence par "33" sans "+", ajoute le "+"
+  if (p.startsWith("33") && !p.startsWith("+")) {
+    p = `+${p}`;
+  }
+  // Si commence par "0" (format national FR), convertir en +33 (en retirant le 0)
+  if (!p.startsWith("+") && p.length === 10 && p.startsWith("0")) {
+    p = `+33${p.slice(1)}`;
+  }
+  // Si commence par "+" mais immédiatement suivi d'un "0", corriger vers +33
+  if (p.startsWith("+0")) {
+    p = `+33${p.slice(2)}`;
+  }
+  return p;
 }
 
 export async function sendLoginOtp(phoneNumber: string): Promise<void> {
-  const normalized = normalizePhoneE164(phoneNumber);
+  const normalized = normalizePhoneFR(phoneNumber);
   const { data, error } = await supabase.functions.invoke('auth-send-sms', {
     body: { phoneNumber: normalized },
   });
@@ -24,7 +43,7 @@ export async function sendLoginOtp(phoneNumber: string): Promise<void> {
 }
 
 export async function verifyLoginOtp(phoneNumber: string, otp: string): Promise<{ access_token: string; refresh_token: string; }> {
-  const normalized = normalizePhoneE164(phoneNumber);
+  const normalized = normalizePhoneFR(phoneNumber);
   const { data, error } = await supabase.functions.invoke('auth-verify-sms', {
     body: { phoneNumber: normalized, otp },
   });

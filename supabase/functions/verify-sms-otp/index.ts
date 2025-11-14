@@ -31,6 +31,24 @@ function normalizeFR(raw: string): string {
   return p;
 }
 
+// AJOUT: Génère des variantes possibles du numéro pour matcher ce qui est stocké dans profiles
+function buildPhoneCandidates(raw: string): string[] {
+  const n = normalizeFR(raw);
+  const digits = n.replace(/\D/g, '');
+
+  const candidates = new Set<string>();
+  candidates.add(n);                    // +33XXXXXXXXX
+  candidates.add('+' + digits);         // +336XXXXXXXX (équiv. à n)
+  candidates.add(digits);               // 336XXXXXXXXX
+
+  if (n.startsWith('+33')) {
+    const local = '0' + digits.slice(2); // 0XXXXXXXXX
+    candidates.add(local);
+  }
+
+  return Array.from(candidates);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -98,18 +116,37 @@ serve(async (req) => {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     if (flowMode === 'login') {
-      // 1) Chercher le profil lié au numéro
-      const { data: matchedProfile, error: profileMatchError } = await supabaseAdmin
+      // 1) Chercher le profil lié au numéro (tolérance formats)
+      const candidates = buildPhoneCandidates(phoneNumber);
+      const normalizedPhone = normalizeFR(phoneNumber);
+      const digits = normalizedPhone.replace(/\D/g, '');
+
+      const { data: candidateMatches, error: profileMatchError } = await supabaseAdmin
         .from('profiles')
-        .select('id, email')
-        .eq('phone_number', normalizedPhone)
-        .limit(1)
-        .single();
+        .select('id, email, phone_number')
+        .in('phone_number', candidates)
+        .limit(1);
+
+      let matchedProfile = candidateMatches?.[0] ?? null;
+
+      // Fallback fuzzy: match sur les derniers chiffres si rien trouvé
+      if (!matchedProfile && !profileMatchError) {
+        const last9 = digits.slice(-9); // ex: XXXXXXXXX
+        const { data: fuzzyMatches, error: fuzzyErr } = await supabaseAdmin
+          .from('profiles')
+          .select('id, email, phone_number')
+          .ilike('phone_number', `%${last9}%`)
+          .limit(1);
+
+        if (!fuzzyErr && fuzzyMatches && fuzzyMatches.length > 0) {
+          matchedProfile = fuzzyMatches[0];
+        }
+      }
 
       let userId: string | undefined;
       let userEmail: string | undefined;
 
-      if (!profileMatchError && matchedProfile) {
+      if (matchedProfile) {
         // Profil trouvé: récupérer l’utilisateur Auth
         const { data: userById, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(matchedProfile.id);
         if (getUserError || !userById?.user) {
@@ -134,16 +171,16 @@ serve(async (req) => {
           }
         }
 
-        // S'assurer que le profil a bien le numéro (par cohérence)
+        // Normaliser le profil en E.164 pour les prochaines fois
         const { error: updateProfileErr } = await supabaseAdmin
           .from('profiles')
           .update({ phone_number: normalizedPhone })
           .eq('id', userId);
         if (updateProfileErr) {
-          console.warn('Impossible de mettre à jour phone_number dans profiles (profil existant):', updateProfileErr);
+          console.warn('Impossible de normaliser phone_number dans profiles:', updateProfileErr);
         }
       } else {
-        // Fallback: aucun profil lié au numéro → on crée un utilisateur Auth + profil
+        // Fallback: aucun profil lié au numéro → création utilisateur + normalisation profil
         const dummyEmail = `${normalizedPhone}@${DUMMY_EMAIL_DOMAIN}`;
         const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email: dummyEmail,
@@ -159,7 +196,6 @@ serve(async (req) => {
         userId = created.user.id;
         userEmail = created.user.email || dummyEmail;
 
-        // Mettre à jour le profil avec le numéro (le trigger handle_new_user crée le profil mais sans phone_number)
         const { error: updErr } = await supabaseAdmin
           .from('profiles')
           .update({ phone_number: normalizedPhone })

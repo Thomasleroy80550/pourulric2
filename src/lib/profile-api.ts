@@ -40,7 +40,7 @@ export interface UserProfile {
   notify_cancellation_sms?: boolean;
   is_banned?: boolean;
   is_payment_suspended?: boolean;
-  is_contract_terminated?: boolean; // Nouveau champ pour la résiliation
+  is_contract_terminated?: boolean;
   can_manage_prices?: boolean;
   kyc_status?: 'not_verified' | 'pending_review' | 'verified' | 'rejected';
   kyc_documents?: KycDocument[];
@@ -58,10 +58,6 @@ export interface UserProfile {
   stripe_account_id?: string;
 }
 
-/**
- * Fetches the current user's profile from the 'profiles' table.
- * @returns The user's profile data or null if not found/authenticated.
- */
 export async function getProfile(): Promise<UserProfile | null> {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
@@ -80,7 +76,7 @@ export async function getProfile(): Promise<UserProfile | null> {
       revyoos_holding_ids,
       kyc_documents,
       krossbooking_property_id
-    `) // Ensure kyc_documents is selected
+    `)
     .eq('id', user.id)
     .single();
 
@@ -91,11 +87,6 @@ export async function getProfile(): Promise<UserProfile | null> {
   return data;
 }
 
-/**
- * Fetches a user's profile by their ID from the 'profiles' table.
- * @param userId The ID of the user whose profile to fetch.
- * @returns The user's profile data or null if not found.
- */
 export async function getProfileById(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
@@ -114,16 +105,11 @@ export async function getProfileById(userId: string): Promise<UserProfile | null
 
   if (error) {
     console.error(`Error fetching user profile by ID ${userId}:`, error.message);
-    // Depending on the context, you might want to throw an error or return null
-    // For now, let's return null as it's a common pattern for "not found"
     return null;
   }
   return data;
 }
 
-/**
- * Updates the last_seen_at timestamp for the current user.
- */
 export async function updateUserLastSeen(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -134,17 +120,10 @@ export async function updateUserLastSeen(): Promise<void> {
     .eq('id', user.id);
 
   if (error) {
-    // This might fail if the user is offline, so we don't want to throw a visible error.
-    // We can just log it for debugging purposes.
     console.warn("Could not update user's last_seen_at timestamp:", error.message);
   }
 }
 
-/**
- * Updates the current user's profile in the 'profiles' table.
- * @param updates An object containing the fields to update.
- * @returns The updated user profile data.
- */
 export async function updateProfile(updates: Partial<Omit<UserProfile, 'id' | 'role' | 'is_banned' | 'can_manage_prices' | 'kyc_status'>>): Promise<UserProfile> {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
@@ -168,25 +147,25 @@ export async function updateProfile(updates: Partial<Omit<UserProfile, 'id' | 'r
 
 export async function sendSmsOtp(phoneNumber: string): Promise<void> {
   const { data, error } = await supabase.functions.invoke('send-sms-otp', {
-    body: { phoneNumber },
+    body: { phoneNumber, mode: 'profile' },
   });
 
   if (error) {
     console.error("Error sending SMS OTP:", error);
-    throw new Error(error.message);
+    throw new Error(error.message || "Une erreur est survenue lors de l'envoi du code.");
   }
   return data;
 }
 
 export async function verifySmsOtp(phoneNumber: string, otp: string): Promise<void> {
   const { data, error } = await supabase.functions.invoke('verify-sms-otp', {
-    body: { phoneNumber, otp },
+    body: { phoneNumber, otp, mode: 'profile' },
   });
 
   if (error) {
     console.error("Error verifying SMS OTP:", error);
     const context = (error as any).context;
-    throw new Error(context?.error || error.message);
+    throw new Error(context?.error || error.message || "Une erreur est survenue lors de la vérification du code.");
   }
   return data;
 }

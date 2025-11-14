@@ -1,8 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const SUPABASE_URL_RAW = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_SERVICE_ROLE_KEY_RAW = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const TWILIO_ACCOUNT_SID_RAW = Deno.env.get('TWILIO_ACCOUNT_SID') ?? '';
+const TWILIO_AUTH_TOKEN_RAW = Deno.env.get('TWILIO_AUTH_TOKEN') ?? '';
+const TWILIO_VERIFY_SERVICE_SID_RAW = Deno.env.get('TWILIO_VERIFY_SERVICE_SID') ?? '';
+
+const SUPABASE_URL = SUPABASE_URL_RAW.trim();
+const SUPABASE_SERVICE_ROLE_KEY = SUPABASE_SERVICE_ROLE_KEY_RAW.trim();
+const TWILIO_ACCOUNT_SID = TWILIO_ACCOUNT_SID_RAW.trim();
+const TWILIO_AUTH_TOKEN = TWILIO_AUTH_TOKEN_RAW.trim();
+const TWILIO_VERIFY_SERVICE_SID = TWILIO_VERIFY_SERVICE_SID_RAW.trim();
 
 const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
@@ -37,17 +46,24 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // NEW: runtime check with explicit JSON error
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
-    const missing = [];
-    if (!SUPABASE_URL) missing.push('SUPABASE_URL');
-    if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-    if (!TWILIO_ACCOUNT_SID) missing.push('TWILIO_ACCOUNT_SID');
-    if (!TWILIO_AUTH_TOKEN) missing.push('TWILIO_AUTH_TOKEN');
-    if (!TWILIO_VERIFY_SERVICE_SID) missing.push('TWILIO_VERIFY_SERVICE_SID');
+  // Extend runtime check: missing + invalid format hints
+  const missing = [];
+  const invalid = [];
+  if (!SUPABASE_URL) missing.push('SUPABASE_URL');
+  if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  if (!TWILIO_ACCOUNT_SID) missing.push('TWILIO_ACCOUNT_SID');
+  if (!TWILIO_AUTH_TOKEN) missing.push('TWILIO_AUTH_TOKEN');
+  if (!TWILIO_VERIFY_SERVICE_SID) missing.push('TWILIO_VERIFY_SERVICE_SID');
+
+  if (TWILIO_ACCOUNT_SID && !TWILIO_ACCOUNT_SID.startsWith('AC')) invalid.push('TWILIO_ACCOUNT_SID doit commencer par "AC"');
+  if (TWILIO_VERIFY_SERVICE_SID && !TWILIO_VERIFY_SERVICE_SID.startsWith('VA')) invalid.push('TWILIO_VERIFY_SERVICE_SID doit commencer par "VA"');
+
+  if (missing.length || invalid.length) {
     return new Response(JSON.stringify({
-      error: "Configuration manquante (Supabase/Twilio). Ajoutez les secrets requis dans Supabase → Edge Functions → Manage Secrets.",
-      missing
+      error: "Configuration manquante/invalide (Supabase/Twilio).",
+      missing,
+      invalid,
+      hint: "Mettez des valeurs correctes dans Supabase → Edge Functions → Manage Secrets (sans guillemets, sans espaces)."
     }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 

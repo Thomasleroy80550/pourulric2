@@ -9,21 +9,21 @@ import { supabase } from "@/integrations/supabase/client";
 function normalizePhoneFR(phoneNumber: string): string {
   if (!phoneNumber) return phoneNumber;
   let p = phoneNumber.trim().replace(/[\s\-\(\)]/g, "");
-  // International prefix "00" -> "+"
   if (p.startsWith("00")) {
     p = `+${p.slice(2)}`;
   }
-  // Si commence par "33" sans "+", ajoute le "+"
   if (p.startsWith("33") && !p.startsWith("+")) {
     p = `+${p}`;
   }
-  // Si commence par "0" (format national FR), convertir en +33 (en retirant le 0)
   if (!p.startsWith("+") && p.length === 10 && p.startsWith("0")) {
     p = `+33${p.slice(1)}`;
   }
-  // Si commence par "+" mais immédiatement suivi d'un "0", corriger vers +33
   if (p.startsWith("+0")) {
     p = `+33${p.slice(2)}`;
+  }
+  // NEW: remove trunk '0' after +33 (e.g. "+3306..." -> "+336...")
+  if (p.startsWith("+33") && p.length > 3 && p[3] === "0") {
+    p = `+33${p.slice(4)}`;
   }
   return p;
 }

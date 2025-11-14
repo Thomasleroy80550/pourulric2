@@ -4,9 +4,10 @@ const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
 const TWILIO_VERIFY_SERVICE_SID = Deno.env.get('TWILIO_VERIFY_SERVICE_SID');
 
-if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
-  throw new Error("Missing environment variables: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID");
-}
+// REMOVED: top-level throw on missing env (to avoid opaque 500 at boot)
+// if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
+//   throw new Error("Missing environment variables: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID");
+// }
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,6 +28,18 @@ function normalizeFR(raw: string): string {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // NEW: runtime check with explicit JSON error
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
+    const missing = [];
+    if (!TWILIO_ACCOUNT_SID) missing.push('TWILIO_ACCOUNT_SID');
+    if (!TWILIO_AUTH_TOKEN) missing.push('TWILIO_AUTH_TOKEN');
+    if (!TWILIO_VERIFY_SERVICE_SID) missing.push('TWILIO_VERIFY_SERVICE_SID');
+    return new Response(JSON.stringify({
+      error: "Configuration Twilio manquante. Merci d'ajouter ces secrets dans Supabase → Edge Functions → Manage Secrets.",
+      missing
+    }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 
   try {

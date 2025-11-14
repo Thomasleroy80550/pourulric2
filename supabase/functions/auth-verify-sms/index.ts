@@ -32,19 +32,23 @@ function normalizeFR(raw: string): string {
   return p;
 }
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
-  const missing = [];
-  if (!SUPABASE_URL) missing.push('SUPABASE_URL');
-  if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
-  if (!TWILIO_ACCOUNT_SID) missing.push('TWILIO_ACCOUNT_SID');
-  if (!TWILIO_AUTH_TOKEN) missing.push('TWILIO_AUTH_TOKEN');
-  if (!TWILIO_VERIFY_SERVICE_SID) missing.push('TWILIO_VERIFY_SERVICE_SID');
-  throw new Error(`Missing environment variables: ${missing.join(', ')}`);
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // NEW: runtime check with explicit JSON error
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
+    const missing = [];
+    if (!SUPABASE_URL) missing.push('SUPABASE_URL');
+    if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+    if (!TWILIO_ACCOUNT_SID) missing.push('TWILIO_ACCOUNT_SID');
+    if (!TWILIO_AUTH_TOKEN) missing.push('TWILIO_AUTH_TOKEN');
+    if (!TWILIO_VERIFY_SERVICE_SID) missing.push('TWILIO_VERIFY_SERVICE_SID');
+    return new Response(JSON.stringify({
+      error: "Configuration manquante (Supabase/Twilio). Ajoutez les secrets requis dans Supabase → Edge Functions → Manage Secrets.",
+      missing
+    }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 
   try {

@@ -36,8 +36,16 @@ export async function sendLoginOtp(phoneNumber: string): Promise<void> {
 
   if (error) {
     console.error("Error sending login SMS OTP:", error);
-    const errorMessage = (error as any).details?.error || error.message || "Une erreur est survenue lors de l'envoi du code.";
-    throw new Error(errorMessage);
+    const serverMsg =
+      (error as any)?.details?.error ||
+      (error as any)?.message ||
+      (error as any)?.error ||
+      "Une erreur est survenue lors de l'envoi du code.";
+    // Surface a helpful hint if it's a 500 (likely missing secrets)
+    if ((error as any)?.status && (error as any).status >= 500) {
+      throw new Error(`${serverMsg} Vérifiez la configuration Twilio (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID) dans Supabase.`);
+    }
+    throw new Error(serverMsg);
   }
   return data;
 }

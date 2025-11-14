@@ -106,42 +106,73 @@ serve(async (req) => {
         .limit(1)
         .single();
 
-      if (profileMatchError || !matchedProfile) {
-        return new Response(JSON.stringify({ error: 'Aucun compte n’est associé à ce numéro. Veuillez contacter le support.' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
+      let userId: string | undefined;
+      let userEmail: string | undefined;
 
-      // 2) Récupérer l’utilisateur auth
-      const { data: userById, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(matchedProfile.id);
-      if (getUserError || !userById?.user) {
-        console.error('Profil trouvé mais utilisateur Auth introuvable:', getUserError, matchedProfile.id);
-        throw new Error('Utilisateur introuvable pour ce numéro. Veuillez contacter le support.');
-      }
+      if (!profileMatchError && matchedProfile) {
+        // Profil trouvé: récupérer l’utilisateur Auth
+        const { data: userById, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(matchedProfile.id);
+        if (getUserError || !userById?.user) {
+          console.error('Profil trouvé mais utilisateur Auth introuvable:', getUserError, matchedProfile.id);
+          throw new Error('Utilisateur introuvable pour ce numéro. Veuillez contacter le support.');
+        }
+        const existingUser = userById.user;
+        userId = existingUser.id;
+        userEmail = existingUser.email || matchedProfile.email || `${normalizedPhone}@${DUMMY_EMAIL_DOMAIN}`;
 
-      const existingUser = userById.user;
-      const userId = existingUser.id;
-      const userEmail = existingUser.email || matchedProfile.email || `${normalizedPhone}@${DUMMY_EMAIL_DOMAIN}`;
+        // Mise à jour Auth si nécessaire (phone / email)
+        const needsPhoneUpdate = existingUser.phone !== normalizedPhone;
+        const needsEmailUpdate = !existingUser.email && !!userEmail;
+        if (needsPhoneUpdate || needsEmailUpdate) {
+          const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+            phone: normalizedPhone,
+            email: userEmail,
+          });
+          if (updateAuthError) {
+            console.error('Erreur mise à jour utilisateur Auth (phone/email):', updateAuthError);
+            throw new Error('Impossible de mettre à jour le compte utilisateur.');
+          }
+        }
 
-      // 3) Mise à jour (phone / email) si nécessaire
-      const needsPhoneUpdate = existingUser.phone !== normalizedPhone;
-      const needsEmailUpdate = !existingUser.email && !!userEmail;
-      if (needsPhoneUpdate || needsEmailUpdate) {
-        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        // S'assurer que le profil a bien le numéro (par cohérence)
+        const { error: updateProfileErr } = await supabaseAdmin
+          .from('profiles')
+          .update({ phone_number: normalizedPhone })
+          .eq('id', userId);
+        if (updateProfileErr) {
+          console.warn('Impossible de mettre à jour phone_number dans profiles (profil existant):', updateProfileErr);
+        }
+      } else {
+        // Fallback: aucun profil lié au numéro → on crée un utilisateur Auth + profil
+        const dummyEmail = `${normalizedPhone}@${DUMMY_EMAIL_DOMAIN}`;
+        const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email: dummyEmail,
           phone: normalizedPhone,
-          email: userEmail,
+          user_metadata: { signup_method: 'sms_otp' },
+          email_confirm: true,
         });
-        if (updateAuthError) {
-          console.error('Erreur mise à jour utilisateur Auth (phone/email):', updateAuthError);
-          throw new Error('Impossible de mettre à jour le compte utilisateur.');
+        if (createError || !created?.user) {
+          console.error('Erreur lors de la création de l’utilisateur (fallback):', createError);
+          throw new Error('Impossible de créer un compte pour ce numéro. Contactez le support.');
+        }
+
+        userId = created.user.id;
+        userEmail = created.user.email || dummyEmail;
+
+        // Mettre à jour le profil avec le numéro (le trigger handle_new_user crée le profil mais sans phone_number)
+        const { error: updErr } = await supabaseAdmin
+          .from('profiles')
+          .update({ phone_number: normalizedPhone })
+          .eq('id', userId);
+        if (updErr) {
+          console.warn('Impossible de mettre à jour phone_number dans profiles (nouvel utilisateur):', updErr);
         }
       }
 
       // 4) Générer le magic link et extraire les tokens
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
-        email: userEmail,
+        email: userEmail!,
         options: APP_BASE_URL ? { redirectTo: APP_BASE_URL } : undefined
       });
 
@@ -168,7 +199,7 @@ serve(async (req) => {
           refreshToken = decodeURIComponent(hashMatch[2]);
         } else {
           console.error('Failed to extract tokens from magic link.', { action_link: linkData.properties.action_link });
-          throw new Error("Impossible d'extraire les tokens de session. Vérifiez que APP_BASE_URL est ajouté aux URLs de redirection autorisées dans Supabase.");
+          throw new Error("Impossible d'extraire les tokens de session. Vérifiez que APP_BASE_URL est ajoutée aux URLs de redirection autorisées dans Supabase.");
         }
       }
 
@@ -186,7 +217,7 @@ serve(async (req) => {
       });
     }
 
-    // Mode 'profile': mise à jour du téléphone vérifié pour l’utilisateur courant
+    // Mode 'profile': mise à jour du téléphone vérifié pour l'utilisateur courant
     const anonKey = req.headers.get('apikey');
     const authHeader = req.headers.get('Authorization');
     if (!anonKey || !authHeader) {

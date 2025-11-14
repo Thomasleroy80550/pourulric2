@@ -155,10 +155,29 @@ const Login = () => {
       });
       if (error) throw error;
       toast.success("Lien magique envoyé ! Vérifiez votre email pour vous connecter.");
-      // La redirection sera gérée par SessionContextProvider après la connexion.
     } catch (error: any) {
       toast.error(`Erreur: ${error.message || "Impossible d'envoyer le lien magique."}`);
       console.error("Magic link error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Nouvelle méthode de connexion: Google OAuth
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      // Redirection automatique vers Google, puis retour avec session
+    } catch (error: any) {
+      toast.error(`Erreur Google: ${error.message || "Impossible de démarrer la connexion Google."}`);
+      console.error("Google OAuth error:", error);
     } finally {
       setLoading(false);
     }
@@ -327,6 +346,23 @@ const Login = () => {
               )}
             </form>
           </Form>
+
+          {/* Séparateur et bouton Google (visible quel que soit le mode) */}
+          <div className="flex items-center my-2">
+            <div className="flex-1 h-px bg-muted"></div>
+            <span className="mx-3 text-xs text-muted-foreground">ou</span>
+            <div className="flex-1 h-px bg-muted"></div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+          >
+            Se connecter avec Google
+          </Button>
+
           <Button
             variant="link"
             className="w-full text-sm text-gray-600 dark:text-gray-400 mt-4"

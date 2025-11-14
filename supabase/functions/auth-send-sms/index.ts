@@ -53,12 +53,12 @@ serve(async (req) => {
 
     const normalizedPhone = normalizeFR(phoneNumber);
 
-    const verifyUrl = `https://verify.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Services/${TWILIO_VERIFY_SERVICE_SID}/Verifications`;
+    // REPLACED: ancien endpoint 2010-04-01 -> nouveau endpoint v2
+    const verifyUrl = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SERVICE_SID}/Verifications`;
     const bodyParams = new URLSearchParams({
       To: normalizedPhone,
       Channel: 'sms',
     });
-
     const authHeader = 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
     const resp = await fetch(verifyUrl, {
       method: 'POST',

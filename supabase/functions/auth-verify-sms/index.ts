@@ -62,8 +62,8 @@ serve(async (req) => {
 
     const normalizedPhone = normalizeFR(phoneNumber);
 
-    // Vérifier le code avec Twilio Verify
-    const checkUrl = `https://verify.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`;
+    // REPLACED: ancien endpoint 2010-04-01 -> nouveau endpoint v2
+    const checkUrl = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`;
     const bodyParams = new URLSearchParams({
       To: normalizedPhone,
       Code: otp,

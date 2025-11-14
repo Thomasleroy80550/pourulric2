@@ -3,8 +3,11 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
+const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
+const TWILIO_VERIFY_SERVICE_SID = Deno.env.get('TWILIO_VERIFY_SERVICE_SID');
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
   throw new Error("Missing environment variables.");
 }
 
@@ -45,41 +48,57 @@ serve(async (req) => {
       });
     }
 
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // Normalisation FR au format E.164 (+33)
+    function normalizeFR(raw: string): string {
+      let p = raw.trim().replace(/[\s\-\(\)]/g, '');
+      if (p.startsWith('00')) p = `+${p.slice(2)}`;
+      if (p.startsWith('33') && !p.startsWith('+')) p = `+${p}`;
+      if (!p.startsWith('+') && p.length === 10 && p.startsWith('0')) p = `+33${p.slice(1)}`;
+      if (p.startsWith('+0')) p = `+33${p.slice(2)}`;
+      // remove trunk '0' après +33 (ex: "+3306..." -> "+336...")
+      if (p.startsWith('+33') && p.length > 3 && p[3] === '0') p = `+33${p.slice(4)}`;
+      return p;
+    }
+    const normalizedPhone = normalizeFR(phoneNumber);
 
-    // Find OTP in database
-    const { data: otpData, error: findError } = await supabaseAdmin
-      .from('sms_otps')
-      .select('id, expires_at')
-      .eq('phone_number', phoneNumber)
-      .eq('otp_code', otp)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    // NEW: Twilio Verify - vérifier le code
+    const checkUrl = `https://verify.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`;
+    const bodyParams = new URLSearchParams({
+      To: normalizedPhone,
+      Code: otp,
+    });
+    const authHeader = 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+    const checkResp = await fetch(checkUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: bodyParams.toString(),
+    });
 
-    if (findError || !otpData) {
+    if (!checkResp.ok) {
+      const errText = await checkResp.text();
+      console.error('Twilio Verify check error:', errText);
       return new Response(JSON.stringify({ error: 'Code invalide ou expiré.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    if (new Date(otpData.expires_at) < new Date()) {
-      // Clean up expired OTP
-      await supabaseAdmin.from('sms_otps').delete().eq('id', otpData.id);
-      return new Response(JSON.stringify({ error: 'Code expiré.' }), {
+    const checkJson = await checkResp.json();
+    if (checkJson.status !== 'approved') {
+      return new Response(JSON.stringify({ error: 'Code invalide ou expiré.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    // OTP is valid, delete it
-    await supabaseAdmin.from('sms_otps').delete().eq('id', otpData.id);
-
-    // Update user's profile
+    // OTP validé: mise à jour du numéro dans le profil
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
-      .update({ phone_number: phoneNumber })
+      .update({ phone_number: normalizedPhone })
       .eq('id', user.id);
 
     if (updateError) {

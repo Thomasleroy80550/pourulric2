@@ -188,20 +188,44 @@ serve(async (req) => {
           user_metadata: { signup_method: 'sms_otp' },
           email_confirm: true,
         });
-        if (createError || !created?.user) {
-          console.error('Erreur lors de la création de l’utilisateur (fallback):', createError);
-          throw new Error('Impossible de créer un compte pour ce numéro. Contactez le support.');
+
+        if (createError) {
+          // Si l'utilisateur existe déjà avec cet email, on ne plante pas: on continue avec le magic link
+          const errStr = String((createError as any)?.code || (createError as any)?.message || createError);
+          const isEmailExists =
+            ((createError as any)?.status === 422) ||
+            errStr.includes('email_exists') ||
+            /email\s+has\s+already\s+been\s+registered/i.test(errStr) ||
+            /email.*exists/i.test(errStr);
+
+          console.warn('Création utilisateur: email déjà existant ?', { status: (createError as any)?.status, code: (createError as any)?.code, message: errStr });
+
+          if (isEmailExists) {
+            // On utilisera le dummyEmail pour générer le magic link
+            userEmail = dummyEmail;
+          } else {
+            console.error('Erreur lors de la création de l’utilisateur (fallback):', createError);
+            throw new Error('Impossible de créer un compte pour ce numéro. Contactez le support.');
+          }
         }
 
-        userId = created.user.id;
-        userEmail = created.user.email || dummyEmail;
+        if (created?.user) {
+          userId = created.user.id;
+          userEmail = created.user.email || dummyEmail;
 
-        const { error: updErr } = await supabaseAdmin
-          .from('profiles')
-          .update({ phone_number: normalizedPhone })
-          .eq('id', userId);
-        if (updErr) {
-          console.warn('Impossible de mettre à jour phone_number dans profiles (nouvel utilisateur):', updErr);
+          // Mettre à jour le profil avec le numéro (si possible)
+          const { error: updErr } = await supabaseAdmin
+            .from('profiles')
+            .update({ phone_number: normalizedPhone })
+            .eq('id', userId);
+          if (updErr) {
+            console.warn('Impossible de mettre à jour phone_number dans profiles (nouvel utilisateur):', updErr);
+          }
+        }
+
+        // Sécurité: s'assurer qu'on a bien un email pour la suite
+        if (!userEmail) {
+          userEmail = dummyEmail;
         }
       }
 

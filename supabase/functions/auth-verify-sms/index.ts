@@ -8,13 +8,11 @@ const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
 const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
 const TWILIO_VERIFY_SERVICE_SID = Deno.env.get('TWILIO_VERIFY_SERVICE_SID');
 
-// Try multiple keys for APP_BASE_URL in case it was saved with newline characters
 const APP_BASE_URL_RAW =
   Deno.env.get('APP_BASE_URL') ||
   Deno.env.get('APP_BASE_URL\n') ||
   Deno.env.get('APP_BASE_URL\n\n') ||
   Deno.env.get('APP_BASE_URL\r\n');
-
 const APP_BASE_URL = APP_BASE_URL_RAW ? APP_BASE_URL_RAW.trim() : undefined;
 
 const corsHeaders = {
@@ -30,6 +28,7 @@ function normalizeFR(raw: string): string {
   if (p.startsWith('33') && !p.startsWith('+')) p = `+${p}`;
   if (!p.startsWith('+') && p.length === 10 && p.startsWith('0')) p = `+33${p.slice(1)}`;
   if (p.startsWith('+0')) p = `+33${p.slice(2)}`;
+  if (p.startsWith('+33') && p.length > 3 && p[3] === '0') p = `+33${p.slice(4)}`;
   return p;
 }
 
@@ -59,7 +58,7 @@ serve(async (req) => {
 
     const normalizedPhone = normalizeFR(phoneNumber);
 
-    // Twilio Verify - check verification code
+    // Vérifier le code avec Twilio Verify
     const checkUrl = `https://verify.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`;
     const bodyParams = new URLSearchParams({
       To: normalizedPhone,
@@ -92,9 +91,8 @@ serve(async (req) => {
       });
     }
 
-    // Find linked user strictly via profiles
+    // Chercher le profil lié au numéro
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     const { data: matchedProfile, error: profileMatchError } = await supabaseAdmin
       .from('profiles')
       .select('id, email')
@@ -133,7 +131,7 @@ serve(async (req) => {
       }
     }
 
-    // Generate magic link and extract tokens
+    // Générer le magic link et en extraire les tokens
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: userEmail,
@@ -163,7 +161,7 @@ serve(async (req) => {
         refreshToken = decodeURIComponent(hashMatch[2]);
       } else {
         console.error('Failed to extract tokens from magic link.', { action_link: linkData.properties.action_link });
-        throw new Error("Impossible d'extraire les tokens de session. Vérifiez que l'URL de base de votre application (APP_BASE_URL) est bien ajoutée aux URLs de redirection autorisées dans Supabase.");
+        throw new Error("Impossible d'extraire les tokens de session. Vérifiez que APP_BASE_URL est ajouté aux URLs de redirection autorisées dans Supabase.");
       }
     }
 

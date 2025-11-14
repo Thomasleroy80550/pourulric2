@@ -19,7 +19,7 @@ function normalizeFR(raw: string): string {
   if (p.startsWith('33') && !p.startsWith('+')) p = `+${p}`;
   if (!p.startsWith('+') && p.length === 10 && p.startsWith('0')) p = `+33${p.slice(1)}`;
   if (p.startsWith('+0')) p = `+33${p.slice(2)}`;
-  // NEW: remove trunk '0' after +33 (e.g. "+3306..." -> "+336...")
+  // Corrige "+3306..." -> "+336..."
   if (p.startsWith('+33') && p.length > 3 && p[3] === '0') p = `+33${p.slice(4)}`;
   return p;
 }
@@ -40,7 +40,6 @@ serve(async (req) => {
 
     const normalizedPhone = normalizeFR(phoneNumber);
 
-    // Twilio Verify - start verification
     const verifyUrl = `https://verify.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Services/${TWILIO_VERIFY_SERVICE_SID}/Verifications`;
     const bodyParams = new URLSearchParams({
       To: normalizedPhone,

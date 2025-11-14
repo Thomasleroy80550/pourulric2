@@ -1,15 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
-const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
-const TWILIO_VERIFY_SERVICE_SID = Deno.env.get('TWILIO_VERIFY_SERVICE_SID');
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
-  throw new Error("Missing environment variables.");
-}
+const SUPABASE_URL = (Deno.env.get('SUPABASE_URL') ?? '').trim();
+const SUPABASE_SERVICE_ROLE_KEY = (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '').trim();
+const TWILIO_ACCOUNT_SID = (Deno.env.get('TWILIO_ACCOUNT_SID') ?? '').trim();
+const TWILIO_AUTH_TOKEN = (Deno.env.get('TWILIO_AUTH_TOKEN') ?? '').trim();
+const TWILIO_VERIFY_SERVICE_SID = (Deno.env.get('TWILIO_VERIFY_SERVICE_SID') ?? '').trim();
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,25 +17,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  // Runtime validation: missing/invalid secrets
+  const missing: string[] = [];
+  const invalid: string[] = [];
+  if (!SUPABASE_URL) missing.push('SUPABASE_URL');
+  if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+  if (!TWILIO_ACCOUNT_SID) missing.push('TWILIO_ACCOUNT_SID');
+  if (!TWILIO_AUTH_TOKEN) missing.push('TWILIO_AUTH_TOKEN');
+  if (!TWILIO_VERIFY_SERVICE_SID) missing.push('TWILIO_VERIFY_SERVICE_SID');
+  if (TWILIO_ACCOUNT_SID && !TWILIO_ACCOUNT_SID.startsWith('AC')) invalid.push('TWILIO_ACCOUNT_SID doit commencer par "AC"');
+  if (TWILIO_VERIFY_SERVICE_SID && !TWILIO_VERIFY_SERVICE_SID.startsWith('VA')) invalid.push('TWILIO_VERIFY_SERVICE_SID doit commencer par "VA"');
+
+  if (missing.length || invalid.length) {
+    return new Response(JSON.stringify({
+      error: "Configuration manquante/invalide (Supabase/Twilio).",
+      missing,
+      invalid,
+      hint: "Mettez des valeurs correctes dans Supabase → Edge Functions → Manage Secrets (sans guillemets, sans espaces)."
+    }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+  }
+
   try {
-    // Auth check
-    const anonKey = req.headers.get('apikey');
-    const authHeader = req.headers.get('Authorization');
-    if (!anonKey || !authHeader) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-    }
-    const supabaseAuthClient = createClient(SUPABASE_URL, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await supabaseAuthClient.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-
     const { phoneNumber, otp } = await req.json();
     if (!phoneNumber || !otp) {
       return new Response(JSON.stringify({ error: 'Missing parameters: phoneNumber and otp are required.' }), {
@@ -48,30 +46,28 @@ serve(async (req) => {
       });
     }
 
-    // Normalisation FR au format E.164 (+33)
     function normalizeFR(raw: string): string {
       let p = raw.trim().replace(/[\s\-\(\)]/g, '');
       if (p.startsWith('00')) p = `+${p.slice(2)}`;
       if (p.startsWith('33') && !p.startsWith('+')) p = `+${p}`;
       if (!p.startsWith('+') && p.length === 10 && p.startsWith('0')) p = `+33${p.slice(1)}`;
       if (p.startsWith('+0')) p = `+33${p.slice(2)}`;
-      // remove trunk '0' après +33 (ex: "+3306..." -> "+336...")
       if (p.startsWith('+33') && p.length > 3 && p[3] === '0') p = `+33${p.slice(4)}`;
       return p;
     }
     const normalizedPhone = normalizeFR(phoneNumber);
 
-    // NEW: Twilio Verify - vérifier le code
-    const checkUrl = `https://verify.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`;
+    // Twilio Verify v2 - vérifier le code
+    const checkUrl = `https://verify.twilio.com/v2/Services/${TWILIO_VERIFY_SERVICE_SID}/VerificationCheck`;
     const bodyParams = new URLSearchParams({
       To: normalizedPhone,
       Code: otp,
     });
-    const authHeader = 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+    const twilioAuthHeader = 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
     const checkResp = await fetch(checkUrl, {
       method: 'POST',
       headers: {
-        'Authorization': authHeader,
+        'Authorization': twilioAuthHeader,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: bodyParams.toString(),
@@ -94,12 +90,20 @@ serve(async (req) => {
       });
     }
 
-    // OTP validé: mise à jour du numéro dans le profil
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: { user }, error: getUserErr } = await createClient(SUPABASE_URL, req.headers.get('apikey') || '').auth.getUser();
+    const userId = user?.id;
+    if (!userId || getUserErr) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: User not authenticated.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({ phone_number: normalizedPhone })
-      .eq('id', user.id);
+      .eq('id', userId);
 
     if (updateError) {
       console.error('DB Error updating profile:', updateError);
@@ -113,7 +117,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Server Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

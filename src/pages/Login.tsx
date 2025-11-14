@@ -138,6 +138,32 @@ const Login = () => {
     }
   };
 
+  const handleMagicLink = async () => {
+    const email = form.getValues('email') as string;
+    if (!email) {
+      toast.error("Veuillez saisir votre email avant d'envoyer le lien magique.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      toast.success("Lien magique envoyé ! Vérifiez votre email pour vous connecter.");
+      // La redirection sera gérée par SessionContextProvider après la connexion.
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message || "Impossible d'envoyer le lien magique."}`);
+      console.error("Magic link error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onSubmit = (values: EmailFormValues | PhoneFormValues) => {
     if (authMethod === 'phone') {
       handlePhoneSubmit(values as PhoneFormValues);
@@ -208,6 +234,23 @@ const Login = () => {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? 'Connexion en cours...' : 'Se connecter'}
                   </Button>
+                  <div className="flex items-center my-2">
+                    <div className="flex-1 h-px bg-muted"></div>
+                    <span className="mx-3 text-xs text-muted-foreground">ou</span>
+                    <div className="flex-1 h-px bg-muted"></div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleMagicLink}
+                    disabled={loading}
+                  >
+                    Se connecter avec un lien magique
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Nous vous envoyons un lien par email pour vous connecter sans mot de passe.
+                  </p>
                 </>
               ) : (
                 <>

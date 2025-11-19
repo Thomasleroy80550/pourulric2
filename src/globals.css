@@ -384,6 +384,109 @@ body.hell-effect {
   background: radial-gradient(circle at bottom, rgba(30, 41, 59, 0.1) 0%, transparent 50%); /* Darker blue fog */
 }
 
+/* Compatibilité: applique les fonds Noël même si la classe est sur html (next-themes) */
+/* Ces sélecteurs plus spécifiques s'ajoutent à ceux existants. */
+html.noel body::before,
+body.noel::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('/images/noel-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.18;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(2px) saturate(1.05);
+}
+
+html.noel body::after,
+body.noel::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.35;
+  background-image:
+    radial-gradient(2px 2px at 20px 20px, rgba(255,255,255,0.9) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 60px 40px, rgba(255,255,255,0.8) 100%, transparent),
+    radial-gradient(1.2px 1.2px at 120px 80px, rgba(255,255,255,0.7) 100%, transparent),
+    radial-gradient(2px 2px at 180px 30px, rgba(255,255,255,0.85) 100%, transparent);
+  background-repeat: repeat;
+  background-size: 180px 360px, 220px 440px, 260px 520px, 200px 400px;
+  animation: snowfall 18s linear infinite;
+}
+
+/* Boule de neige tournante (overlay décoratif) */
+@keyframes globe-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.snow-globe {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: 96px;
+  height: 96px;
+  border-radius: 9999px;
+  /* socle et ombre */
+  box-shadow:
+    0 10px 20px rgba(0,0,0,0.25),
+    inset 0 0 20px rgba(255,255,255,0.35);
+  backdrop-filter: blur(4px);
+  animation: globe-spin 18s linear infinite;
+  z-index: 40; /* au-dessus du contenu */
+}
+
+.snow-globe-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 60%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.5) 35%, rgba(0,0,0,0.1) 100%);
+  border: 2px solid rgba(255,255,255,0.6);
+}
+
+/* neige interne (texture animée) */
+.snow-globe-snow {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.8px 1.8px at 20% 10%, rgba(255,255,255,0.95) 100%, transparent),
+    radial-gradient(1.2px 1.2px at 70% 35%, rgba(255,255,255,0.85) 100%, transparent),
+    radial-gradient(1.6px 1.6px at 40% 80%, rgba(255,255,255,0.9) 100%, transparent),
+    radial-gradient(1.4px 1.4px at 85% 60%, rgba(255,255,255,0.9) 100%, transparent);
+  background-repeat: repeat;
+  background-size: 140px 220px, 160px 260px, 180px 300px, 150px 240px;
+  animation: snowfall 8s linear infinite;
+  filter: blur(0.4px);
+}
+
+/* reflet du verre pour l'effet boule */
+.snow-globe-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0) 60%);
+  pointer-events: none;
+}
+
+/* Option: réduit la boule sur mobile pour ne pas gêner */
+@media (max-width: 640px) {
+  .snow-globe {
+    width: 76px;
+    height: 76px;
+    right: 0.75rem;
+    bottom: 0.75rem;
+  }
+}
+
 /* Custom styles for the new Booking Planning Grid */
 .grid-container {
   display: grid;

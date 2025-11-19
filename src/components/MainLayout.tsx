@@ -563,7 +563,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         navigate={navigate}
       />
       <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
-      {theme === 'noel' && <SnowfallOverlay />}
+      <SnowfallOverlay />
     </div>
   );
 };

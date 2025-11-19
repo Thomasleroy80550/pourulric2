@@ -24,6 +24,7 @@ import PhoneVerificationDialog from '@/components/PhoneVerificationDialog';
 import { useTheme } from 'next-themes';
 import PasswordChangeForm from '@/components/PasswordChangeForm';
 import DocumentsTab from '@/components/DocumentsTab';
+import DelegatedAccessPanel from '@/components/DelegatedAccessPanel';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -261,6 +262,7 @@ const ProfilePage: React.FC = () => {
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
             <TabsTrigger value="security">Sécurité</TabsTrigger>
             <TabsTrigger value="documents"><Lock className="h-4 w-4 mr-2" />Coffre-Fort</TabsTrigger>
+            <TabsTrigger value="delegated-access">Accès délégués</TabsTrigger>
           </TabsList>
 
           <TabsContent value="personal-data" className="flex-1">
@@ -540,6 +542,10 @@ const ProfilePage: React.FC = () => {
 
           <TabsContent value="documents" className="flex-1">
             <DocumentsTab className="w-full" />
+          </TabsContent>
+
+          <TabsContent value="delegated-access" className="flex-1">
+            <DelegatedAccessPanel className="w-full" />
           </TabsContent>
         </Tabs>
 

@@ -69,6 +69,7 @@ import ProspectSignupPage from "./pages/ProspectSignupPage";
 import ContractTerminatedBanner from "./components/ContractTerminatedBanner";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
+import RedeemInvitePage from './pages/RedeemInvitePage';
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,7 @@ function App() {
                   <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                   <Route path="/promotion" element={<PromotionPage />} />
                   <Route path="/new-version" element={<NewVersionPage />} />
+                  <Route path="/redeem-invite" element={<RedeemInvitePage />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

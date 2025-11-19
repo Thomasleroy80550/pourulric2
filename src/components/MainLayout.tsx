@@ -61,7 +61,7 @@ import { getSetting } from '@/lib/admin-api'; // Import getSetting
 import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new constant
 import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
-import SnowGlobe from './SnowGlobe';
+import SnowAccumulation from './SnowAccumulation';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -563,7 +563,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         navigate={navigate}
       />
       <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
-      {theme === 'noel' && <SnowGlobe />}
+      {theme === 'noel' && <SnowAccumulation />}
     </div>
   );
 };

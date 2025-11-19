@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import * as zod from 'zod';
 import {
   Form,
   FormField,
@@ -11,115 +10,31 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { sendLoginOtp, verifyLoginOtp } from '@/lib/auth-api';
-import { Home } from 'lucide-react'; // Import the Home icon
-import MigrationHelpDialog from '@/components/MigrationHelpDialog'; // Import the new dialog component
+import { Home } from 'lucide-react';
+import MigrationHelpDialog from '@/components/MigrationHelpDialog';
 
-// Zod schemas for validation
-const emailSchema = z.object({
-  email: z.string().email({ message: "Email invalide." }),
-  password: z.string().min(6, { message: "Le mot de passe doit contenir au moins 6 caractères." }),
+const emailSchema = zod.object({
+  email: zod.string().email({ message: 'Email invalide.' }),
+  password: zod.string().min(6, { message: 'Le mot de passe doit contenir au moins 6 caractères.' }),
 });
 
-const phoneSchema = z.object({
-  countryCode: z.string().min(1, "Indicatif requis."),
-  phone: z.string()
-    .min(1, "Le numéro de téléphone est requis.")
-    .transform(val => val.replace(/\s+|-/g, '')), // Nettoie les espaces et tirets
-  otp: z.string().optional(),
-});
-
-type EmailFormValues = z.infer<typeof emailSchema>;
-type PhoneFormValues = z.infer<typeof phoneSchema>;
-
-const countryCodes = [
-  { code: '33', name: 'FR (+33)' },
-  { code: '32', name: 'BE (+32)' },
-  { code: '41', name: 'CH (+41)' },
-  { code: '352', name: 'LU (+352)' },
-  { code: '1', name: 'US (+1)' },
-];
+type EmailFormValues = zod.infer<typeof emailSchema>;
 
 const Login = () => {
-  const navigate = useNavigate();
-  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
-  const [showOtpInput, setShowOtpInput] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isMigrationHelpDialogOpen, setIsMigrationHelpDialogOpen] = useState(false); // New state for dialog
-  
-  const form = useForm<EmailFormValues | PhoneFormValues>({
-    resolver: zodResolver(authMethod === 'email' ? emailSchema : phoneSchema),
+  const [isMigrationHelpDialogOpen, setIsMigrationHelpDialogOpen] = useState(false);
+
+  const form = useForm<EmailFormValues>({
+    resolver: zodResolver(emailSchema),
     defaultValues: {
       email: '',
       password: '',
-      countryCode: '33',
-      phone: '',
-      otp: '',
     },
   });
-
-  useEffect(() => {
-    form.reset({
-      email: '',
-      password: '',
-      countryCode: '33',
-      phone: '',
-      otp: '',
-    });
-    setShowOtpInput(false);
-  }, [authMethod, form]);
-
-  const handleAuthMethodChange = (checked: boolean) => {
-    setAuthMethod(checked ? 'phone' : 'email');
-  };
-
-  const handlePhoneSubmit = async (values: PhoneFormValues) => {
-    setLoading(true);
-    const phone = `+${values.countryCode}${values.phone}`;
-
-    try {
-      if (!showOtpInput) {
-        // Step 1: Send OTP via custom Edge Function
-        await sendLoginOtp(phone);
-        setShowOtpInput(true);
-        toast.success("Code de vérification envoyé !");
-      } else {
-        // Step 2: Verify OTP and sign in
-        if (!values.otp) {
-          throw new Error("Le code de vérification est requis.");
-        }
-        const { access_token, refresh_token } = await verifyLoginOtp(phone, values.otp);
-        
-        const { error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
-
-        if (error) throw error;
-
-        toast.success("Connexion réussie ! Redirection...");
-        // The onAuthStateChange listener in SessionContextProvider will handle navigation
-      }
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
-      console.error("Phone auth error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEmailSubmit = async (values: EmailFormValues) => {
     setLoading(true);
@@ -129,8 +44,8 @@ const Login = () => {
         password: values.password,
       });
       if (error) throw error;
-      toast.success("Connexion réussie !");
-      // The onAuthStateChange listener in SessionContextProvider will handle navigation
+      toast.success('Connexion réussie !');
+      // La navigation est gérée par le SessionContextProvider via onAuthStateChange
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
     } finally {
@@ -154,41 +69,17 @@ const Login = () => {
         },
       });
       if (error) throw error;
-      toast.success("Lien magique envoyé ! Vérifiez votre email pour vous connecter.");
+      toast.success('Lien magique envoyé ! Vérifiez votre email pour vous connecter.');
     } catch (error: any) {
       toast.error(`Erreur: ${error.message || "Impossible d'envoyer le lien magique."}`);
-      console.error("Magic link error:", error);
+      console.error('Magic link error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Nouvelle méthode de connexion: Google OAuth
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-      // Redirection automatique vers Google, puis retour avec session
-    } catch (error: any) {
-      toast.error(`Erreur Google: ${error.message || "Impossible de démarrer la connexion Google."}`);
-      console.error("Google OAuth error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onSubmit = (values: EmailFormValues | PhoneFormValues) => {
-    if (authMethod === 'phone') {
-      handlePhoneSubmit(values as PhoneFormValues);
-    } else {
-      handleEmailSubmit(values as EmailFormValues);
-    }
+  const onSubmit = (values: EmailFormValues) => {
+    handleEmailSubmit(values);
   };
 
   return (
@@ -205,168 +96,61 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="flex items-center justify-between space-x-2 mb-6">
-            <Label htmlFor="auth-method-switch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Utiliser mon email
-            </Label>
-            <Switch
-              id="auth-method-switch"
-              checked={authMethod === 'phone'}
-              onCheckedChange={handleAuthMethodChange}
-              disabled={loading}
-            />
-            <Label htmlFor="auth-method-switch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Utiliser mon numéro
-            </Label>
-          </div>
-
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {authMethod === 'email' ? (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="votre.email@example.com" {...field} disabled={loading} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mot de passe</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="********" {...field} disabled={loading} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Connexion en cours...' : 'Se connecter'}
-                  </Button>
-                  <div className="flex items-center my-2">
-                    <div className="flex-1 h-px bg-muted"></div>
-                    <span className="mx-3 text-xs text-muted-foreground">ou</span>
-                    <div className="flex-1 h-px bg-muted"></div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleMagicLink}
-                    disabled={loading}
-                  >
-                    Se connecter avec un lien magique
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Nous vous envoyons un lien par email pour vous connecter sans mot de passe.
-                  </p>
-                </>
-              ) : (
-                <>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Numéro de téléphone</FormLabel>
-                    <div className="flex gap-2">
-                       <FormField
-                        control={form.control}
-                        name="countryCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loading || showOtpInput}>
-                              <FormControl>
-                                <SelectTrigger className="w-[120px]">
-                                  <SelectValue placeholder="Indicatif" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {countryCodes.map(c => (
-                                  <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem className="flex-grow">
-                            <FormControl>
-                              <Input placeholder="6 12 34 56 78" {...field} disabled={loading || showOtpInput} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="votre.email@example.com" {...field} disabled={loading} />
+                    </FormControl>
+                    <FormMessage />
                   </FormItem>
-
-                  {showOtpInput && (
-                    <FormField
-                      control={form.control}
-                      name="otp"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col items-center">
-                          <FormLabel>Code de vérification</FormLabel>
-                          <FormControl>
-                            <InputOTP maxLength={6} {...field}>
-                              <InputOTPGroup>
-                                <InputOTPSlot index={0} />
-                                <InputOTPSlot index={1} />
-                                <InputOTPSlot index={2} />
-                                <InputOTPSlot index={3} />
-                                <InputOTPSlot index={4} />
-                                <InputOTPSlot index={5} />
-                              </InputOTPGroup>
-                            </InputOTP>
-                          </FormControl>
-                          <FormDescription>
-                            Entrez le code à 6 chiffres reçu par SMS.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (showOtpInput ? 'Vérification...' : 'Envoi du code...') : (showOtpInput ? 'Vérifier et se connecter' : 'Envoyer le code')}
-                  </Button>
-                </>
-              )}
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mot de passe</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="********" {...field} disabled={loading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Connexion en cours...' : 'Se connecter'}
+              </Button>
+              <div className="flex items-center my-2">
+                <div className="flex-1 h-px bg-muted"></div>
+                <span className="mx-3 text-xs text-muted-foreground">ou</span>
+                <div className="flex-1 h-px bg-muted"></div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleMagicLink}
+                disabled={loading}
+              >
+                Se connecter avec un lien magique
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                Nous vous envoyons un lien par email pour vous connecter sans mot de passe.
+              </p>
             </form>
           </Form>
-
-          {/* Séparateur et bouton Google (visible quel que soit le mode) */}
-          <div className="flex items-center my-2">
-            <div className="flex-1 h-px bg-muted"></div>
-            <span className="mx-3 text-xs text-muted-foreground">ou</span>
-            <div className="flex-1 h-px bg-muted"></div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-          >
-            Se connecter avec Google
-          </Button>
 
           <Button
             variant="link"
             className="w-full text-sm text-gray-600 dark:text-gray-400 mt-4"
-            onClick={() => setIsMigrationHelpDialogOpen(true)} // Open the dialog
+            onClick={() => setIsMigrationHelpDialogOpen(true)}
             disabled={loading}
           >
             Besoin d'aide pour la migration ?
@@ -378,7 +162,7 @@ const Login = () => {
         <div className="absolute -top-1/2 -right-1/2 w-[800px] h-[800px] bg-blue-600/20 rounded-full filter blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-1/2 -left-1/2 w-[600px] h-[600px] bg-purple-600/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
         <div className="text-center text-white space-y-6 relative z-10">
-          <Home size={80} className="mx-auto mb-4 text-white animate-float" /> {/* New house icon with animation */}
+          <Home size={80} className="mx-auto mb-4 text-white animate-float" />
           <h2 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-300 drop-shadow-lg">
             La gestion locative, réinventée.
           </h2>

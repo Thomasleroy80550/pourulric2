@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import CGUVModal from '@/components/CGUVModal';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
+import { getProfileById, UserProfile } from '@/lib/profile-api';
 
 type InviteRow = {
   id: string;
@@ -41,8 +42,9 @@ const RedeemInvitePage: React.FC = () => {
 
   // Info pour acceptation si connecté
   const [invite, setInvite] = useState<InviteRow | null>(null);
+  const [ownerProfile, setOwnerProfile] = useState<UserProfile | null>(null);
 
-  // Récupérer user + charger l’invitation (ou les infos d’invite via edge function si non connecté)
+  // Récupérer user + charger l'invitation (ou les infos d'invite via edge function si non connecté)
   useEffect(() => {
     const init = async () => {
       if (!token) {
@@ -89,6 +91,17 @@ const RedeemInvitePage: React.FC = () => {
     };
     init();
   }, [token, navigate]);
+
+  // Charger le profil de l'inviteur une fois l'invitation récupérée
+  useEffect(() => {
+    const loadOwner = async () => {
+      if (invite?.owner_id) {
+        const profile = await getProfileById(invite.owner_id);
+        setOwnerProfile(profile);
+      }
+    };
+    loadOwner();
+  }, [invite]);
 
   const acceptInviteAndSetCGUV = async () => {
     setLoading(true);
@@ -187,7 +200,7 @@ const RedeemInvitePage: React.FC = () => {
           <CardHeader>
             <CardTitle>Créer votre compte délégué</CardTitle>
             <CardDescription>
-              Vous avez été invité(e) à consulter les relevés d’un propriétaire. Créez votre compte et acceptez les CGUV pour continuer.
+              Vous avez été invité(e) à consulter les relevés d'un propriétaire. Créez votre compte et acceptez les CGUV pour continuer.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -195,7 +208,7 @@ const RedeemInvitePage: React.FC = () => {
               <label className="text-sm font-medium">Email</label>
               <Input value={inviteeEmail} disabled />
               <p className="text-xs text-muted-foreground mt-1">
-                Cet email est celui utilisé par l’invitation.
+                Cet email est celui utilisé par l'invitation.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -244,7 +257,7 @@ const RedeemInvitePage: React.FC = () => {
     );
   }
 
-  // Connecté → accepter l’invitation (et CGUV marquées acceptées)
+  // Connecté → accepter l'invitation (et CGUV marquées acceptées)
   if (!invite) {
     return (
       <div className="container mx-auto py-8">
@@ -265,6 +278,14 @@ const RedeemInvitePage: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {ownerProfile && (
+            <div className="border rounded-md p-3 bg-muted/30">
+              <p className="text-sm font-medium">Invité par</p>
+              <p className="text-sm text-muted-foreground">
+                {ownerProfile.first_name || ''} {ownerProfile.last_name || ''} {ownerProfile.email ? `(${ownerProfile.email})` : ''}
+              </p>
+            </div>
+          )}
           {isPending ? (
             <Button onClick={acceptInviteAndSetCGUV}>Accepter l'invitation</Button>
           ) : invite.status === 'accepted' ? (

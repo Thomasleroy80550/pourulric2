@@ -96,7 +96,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setShowCguvModal(false);
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
-      const publicPaths = ['/login', '/prospect-signup'];
+      const publicPaths = ['/login', '/prospect-signup', '/redeem-invite'];
       if (!publicPaths.includes(location.pathname)) {
         navigate('/login');
       }

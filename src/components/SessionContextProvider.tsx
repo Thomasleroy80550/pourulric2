@@ -68,13 +68,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         } else {
           // Regular user logic
           if (!isOnboardingComplete) {
-            // If onboarding is not complete, they must be on the onboarding page.
-            if (location.pathname !== '/onboarding-status') {
+            // Autoriser l'invitation même si l'onboarding n'est pas terminé
+            if (location.pathname !== '/onboarding-status' && !location.pathname.startsWith('/redeem-invite')) {
               navigate('/onboarding-status');
             }
           } else {
-            // If onboarding is complete, they should not be on the onboarding page.
-            if (location.pathname === '/onboarding-status' || location.pathname === '/login') {
+            // Si onboarding terminé, ne pas rediriger s'il est sur /redeem-invite
+            if ((location.pathname === '/onboarding-status' || location.pathname === '/login') && !location.pathname.startsWith('/redeem-invite')) {
               navigate('/');
             }
           }
@@ -97,7 +97,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
       const publicPaths = ['/login', '/prospect-signup', '/redeem-invite'];
-      if (!publicPaths.includes(location.pathname)) {
+      const isPublicPath = publicPaths.some((p) => location.pathname.startsWith(p));
+      if (!isPublicPath) {
         navigate('/login');
       }
     }

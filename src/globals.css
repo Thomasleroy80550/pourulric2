@@ -124,43 +124,43 @@
   }
 
   .noel {
-    --background: 150 35% 97%; /* Vert très pâle */
-    --foreground: 150 50% 20%;
+    --background: 148 30% 97%; /* Fond très pâle légèrement verdé */
+    --foreground: 210 30% 15%;
 
-    --card: 150 35% 95%;
-    --card-foreground: 150 50% 20%;
+    --card: 148 25% 96%;
+    --card-foreground: 210 30% 15%;
 
-    --popover: 150 35% 97%;
-    --popover-foreground: 150 50% 20%;
+    --popover: 148 25% 97%;
+    --popover-foreground: 210 30% 15%;
 
-    --primary: 142 72% 35%; /* Vert sapin */
+    /* Rouge profond pour les éléments principaux */
+    --primary: 0 70% 40%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 80% 90%; /* Rouge pâle */
-    --secondary-foreground: 0 70% 20%;
+    /* Vert sapin pour les surfaces secondaires */
+    --secondary: 142 30% 92%;
+    --secondary-foreground: 142 60% 20%;
 
-    --muted: 150 25% 92%;
-    --muted-foreground: 150 25% 35%;
-
-    --accent: 0 80% 55%; /* Rouge vif */
-    --accent-foreground: 0 0% 100%;
+    /* OR doré pour les accents */
+    --accent: 45 90% 55%;
+    --accent-foreground: 210 30% 10%;
 
     --destructive: 0 85% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 150 20% 85%;
-    --input: 150 20% 92%;
-    --ring: 142 72% 35%;
+    --border: 148 20% 85%;
+    --input: 148 20% 92%;
+    --ring: 0 70% 40%;
 
-    /* Couleurs Sidebar pour Noël */
-    --sidebar-background: 150 35% 96%;
-    --sidebar-foreground: 150 50% 25%;
-    --sidebar-primary: 142 72% 35%;
+    /* Couleurs Sidebar pour Noël (vert doux + rouge en accent, or pour hover) */
+    --sidebar-background: 142 20% 96%;
+    --sidebar-foreground: 142 50% 25%;
+    --sidebar-primary: 0 70% 40%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 30% 90%;
-    --sidebar-accent-foreground: 150 50% 25%;
-    --sidebar-border: 150 25% 85%;
-    --sidebar-ring: 142 72% 35%;
+    --sidebar-accent: 45 90% 85%;
+    --sidebar-accent-foreground: 142 50% 25%;
+    --sidebar-border: 142 25% 85%;
+    --sidebar-ring: 0 70% 40%;
   }
 }
 
@@ -197,7 +197,7 @@
     filter: blur(2px) saturate(1.2);
   }
 
-  /* Ajout: Fond de page pour Noël (optionnel) */
+  /* Fond de page Noël (image si disponible) */
   body.noel::before {
     content: "";
     position: fixed;
@@ -208,10 +208,28 @@
     background-image: url('/images/noel-bg.jpg');
     background-size: cover;
     background-position: center;
-    opacity: 0.15;
+    opacity: 0.18;
     z-index: -1;
     pointer-events: none;
-    filter: blur(2px) saturate(1.1);
+    filter: blur(2px) saturate(1.05);
+  }
+
+  /* Ajout: Effet de neige qui tombe en overlay (léger) */
+  body.noel::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.35;
+    background-image:
+      radial-gradient(2px 2px at 20px 20px, rgba(255,255,255,0.9) 100%, transparent),
+      radial-gradient(1.5px 1.5px at 60px 40px, rgba(255,255,255,0.8) 100%, transparent),
+      radial-gradient(1.2px 1.2px at 120px 80px, rgba(255,255,255,0.7) 100%, transparent),
+      radial-gradient(2px 2px at 180px 30px, rgba(255,255,255,0.85) 100%, transparent);
+    background-repeat: repeat;
+    background-size: 180px 360px, 220px 440px, 260px 520px, 200px 400px;
+    animation: snowfall 18s linear infinite;
   }
 
   * {
@@ -716,5 +734,14 @@ body.hell-effect {
   }
   .no-print {
     display: none !important;
+  }
+}
+
+@keyframes snowfall {
+  0% {
+    background-position: 0 0, 0 0, 0 0, 0 0;
+  }
+  100% {
+    background-position: 0 1200px, 0 1600px, 0 2000px, 0 1400px;
   }
 }

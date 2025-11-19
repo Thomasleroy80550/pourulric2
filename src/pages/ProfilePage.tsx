@@ -474,15 +474,15 @@ const ProfilePage: React.FC = () => {
                     onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                   />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+                <div className="flex items-center justify-between p-3 border rounded-md bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
                   <div>
-                    <Label htmlFor="halloweenMode" className="text-orange-800 dark:text-orange-300">🎃 Mode Halloween</Label>
-                    <p className="text-sm text-orange-600 dark:text-orange-400">Joyeux Halloween ! Activez un thème spécial.</p>
+                    <Label htmlFor="noelMode" className="text-green-800 dark:text-green-300">🎄 Mode Noël</Label>
+                    <p className="text-sm text-green-600 dark:text-green-400">Esprit de Noël ! Activez un thème spécial.</p>
                   </div>
                   <Switch
-                    id="halloweenMode"
-                    checked={theme === 'halloween'}
-                    onCheckedChange={(checked) => setTheme(checked ? 'halloween' : 'light')}
+                    id="noelMode"
+                    checked={theme === 'noel'}
+                    onCheckedChange={(checked) => setTheme(checked ? 'noel' : 'light')}
                   />
                 </div>
                 <div className="flex items-center justify-between p-3 border rounded-md">

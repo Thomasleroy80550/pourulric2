@@ -122,6 +122,46 @@
     --sidebar-border: 24 60% 80%; /* Orange clair pour bordures */
     --sidebar-ring: 24 95% 45%;
   }
+
+  .noel {
+    --background: 150 35% 97%; /* Vert très pâle */
+    --foreground: 150 50% 20%;
+
+    --card: 150 35% 95%;
+    --card-foreground: 150 50% 20%;
+
+    --popover: 150 35% 97%;
+    --popover-foreground: 150 50% 20%;
+
+    --primary: 142 72% 35%; /* Vert sapin */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 80% 90%; /* Rouge pâle */
+    --secondary-foreground: 0 70% 20%;
+
+    --muted: 150 25% 92%;
+    --muted-foreground: 150 25% 35%;
+
+    --accent: 0 80% 55%; /* Rouge vif */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 20% 85%;
+    --input: 150 20% 92%;
+    --ring: 142 72% 35%;
+
+    /* Couleurs Sidebar pour Noël */
+    --sidebar-background: 150 35% 96%;
+    --sidebar-foreground: 150 50% 25%;
+    --sidebar-primary: 142 72% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 30% 90%;
+    --sidebar-accent-foreground: 150 50% 25%;
+    --sidebar-border: 150 25% 85%;
+    --sidebar-ring: 142 72% 35%;
+  }
 }
 
 @layer base {
@@ -155,6 +195,23 @@
     z-index: -1;
     pointer-events: none;
     filter: blur(2px) saturate(1.2);
+  }
+
+  /* Ajout: Fond de page pour Noël (optionnel) */
+  body.noel::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: url('/images/noel-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    z-index: -1;
+    pointer-events: none;
+    filter: blur(2px) saturate(1.1);
   }
 
   * {

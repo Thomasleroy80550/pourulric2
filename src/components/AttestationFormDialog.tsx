@@ -104,7 +104,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
       useCORS: true,
     });
 
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -114,7 +114,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
     const fileName = `attestation-hellokeys-${(lastName || profile.last_name || 'client').toLowerCase()}.pdf`;
     pdf.save(fileName);
 
@@ -133,7 +133,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Générer l’attestation</DialogTitle>
+          <DialogTitle>Générer l'attestation</DialogTitle>
           <DialogDescription>
             Renseignez ou confirmez les informations ci-dessous avant de télécharger votre attestation.
           </DialogDescription>
@@ -172,7 +172,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
           </div>
 
           <div className="md:col-span-2 text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/40 border rounded-md p-3">
-            Disclaimer : Hello Keys n’est pas responsable de vos déclarations fiscales.
+            Disclaimer : Hello Keys n'est pas responsable de vos déclarations fiscales.
           </div>
         </div>
 
@@ -181,7 +181,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
             Annuler
           </Button>
           <Button onClick={handleGenerate} disabled={generating || !profile}>
-            {generating ? 'Génération…' : 'Télécharger l’attestation'}
+            {generating ? 'Génération…' : 'Télécharger l\'attestation'}
           </Button>
         </DialogFooter>
       </DialogContent>

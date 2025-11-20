@@ -157,6 +157,10 @@ const ProfilePage: React.FC = () => {
     setter(checked);
   };
 
+  const handleOpenAttestationDialog = () => {
+    setIsAttestationDialogOpen(true);
+  };
+
   const getClientSinceDays = () => {
     if (profile?.contract_start_date) {
       const date = parseISO(profile.contract_start_date);

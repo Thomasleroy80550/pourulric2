@@ -25,6 +25,7 @@ import { useTheme } from 'next-themes';
 import PasswordChangeForm from '@/components/PasswordChangeForm';
 import DocumentsTab from '@/components/DocumentsTab';
 import DelegatedAccessPanel from '@/components/DelegatedAccessPanel';
+import AttestationFormDialog from '@/components/AttestationFormDialog';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -37,6 +38,7 @@ const ProfilePage: React.FC = () => {
   const attestationRef = useRef<HTMLDivElement>(null);
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = useState(false);
   const [phoneToVerify, setPhoneToVerify] = useState('');
+  const [isAttestationDialogOpen, setIsAttestationDialogOpen] = useState(false);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -135,41 +137,6 @@ const ProfilePage: React.FC = () => {
       toast.error(errorMessage);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDownloadAttestation = async () => {
-    if (!attestationRef.current || !profile) {
-      toast.error("Impossible de générer l'attestation. Données du profil manquantes.");
-      return;
-    }
-
-    setIsDownloading(true);
-
-    try {
-      const canvas = await html2canvas(attestationRef.current, {
-        scale: 2,
-        useCORS: true,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`attestation-hellokeys-${profile.last_name?.toLowerCase() || 'client'}.pdf`);
-      toast.success("Attestation téléchargée avec succès !");
-    } catch (error) {
-      console.error("Erreur lors de la génération du PDF:", error);
-      toast.error("Une erreur est survenue lors de la génération de l'attestation.");
-    } finally {
-      setIsDownloading(false);
     }
   };
 
@@ -403,7 +370,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-4 md:col-span-2">
                   <Button variant="outline" onClick={() => setIsCguvModalOpen(true)}>Voir nos CGUV</Button>
-                  <Button variant="outline" onClick={handleDownloadAttestation} disabled={!profile || isDownloading}>
+                  <Button variant="outline" onClick={handleOpenAttestationDialog} disabled={!profile || isDownloading}>
                     {isDownloading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -567,6 +534,15 @@ const ProfilePage: React.FC = () => {
           phoneNumber={phoneToVerify}
           onVerified={fetchProfileData}
         />
+
+        {/* Popup formulaire d'attestation */}
+        {profile && (
+          <AttestationFormDialog
+            open={isAttestationDialogOpen}
+            onOpenChange={setIsAttestationDialogOpen}
+            profile={profile}
+          />
+        )}
       </div>
     </MainLayout>
   );

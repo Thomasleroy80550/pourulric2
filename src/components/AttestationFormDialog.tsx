@@ -44,57 +44,9 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     if (!profile) return;
     setGenerating(true);
 
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.width = '1024px';
-    document.body.appendChild(container);
-
-    const mountEl = document.createElement('div');
-    container.appendChild(mountEl);
-
-    const mount = mountEl;
-
-    // Render the AttestationContent into the temporary container
-    const Root = () => (
-      <AttestationContent
-        ref={printRef}
-        profile={{ ...profile, first_name: firstName, last_name: lastName }}
-        ownerAddress={ownerAddress}
-        occasionalStay={occasionalStay}
-        propertyAddressOverride={{
-          address: propertyAddress,
-          city: propertyCity,
-          zip: propertyZip,
-        }}
-      />
-    );
-
-    // Mount React tree manually
-    // Using ReactDOM.createRoot directly to avoid importing into this small component
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { createRoot } = (window as any).ReactDOM || {};
-    if (!createRoot) {
-      // Fallback if global isn't exposed (Vite dev usually exposes it)
-      const rootEl = document.createElement('div');
-      mount.appendChild(rootEl);
-    }
-    const root = createRoot ? createRoot(mount) : null;
-    if (root) {
-      root.render(
-        // Ensure strict mode for consistent render
-        React.createElement(React.StrictMode, null, React.createElement(Root, null))
-      );
-    } else {
-      mount.appendChild(document.createElement('div'));
-    }
-
-    // Wait a bit for layout
-    await new Promise((r) => setTimeout(r, 400));
-
-    const el = container.querySelector('div');
+    // Capture directement le composant rendu (aperçu caché)
+    const el = printRef.current;
     if (!el) {
-      document.body.removeChild(container);
       setGenerating(false);
       return;
     }
@@ -118,12 +70,6 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     const fileName = `attestation-hellokeys-${(lastName || profile.last_name || 'client').toLowerCase()}.pdf`;
     pdf.save(fileName);
 
-    // Cleanup
-    if (root) root.unmount();
-    if (document.body.contains(container)) {
-      document.body.removeChild(container);
-    }
-
     setGenerating(false);
     onOpenChange(false);
     toast.success('Attestation téléchargée avec succès !');
@@ -138,6 +84,21 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
             Renseignez ou confirmez les informations ci-dessous avant de télécharger votre attestation.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Aperçu caché de l'attestation pour la capture PDF */}
+        <div className="fixed -left-[9999px] top-0">
+          <AttestationContent
+            ref={printRef}
+            profile={{ ...profile!, first_name: firstName, last_name: lastName }}
+            ownerAddress={ownerAddress}
+            occasionalStay={occasionalStay}
+            propertyAddressOverride={{
+              address: propertyAddress,
+              city: propertyCity,
+              zip: propertyZip,
+            }}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">

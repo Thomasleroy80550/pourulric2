@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getProfile } from "./profile-api";
+import { getProfileById } from "./profile-api";
 
 const PENNYLANE_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/pennylane-proxy";
 
@@ -64,7 +65,27 @@ export async function fetchPennylaneInvoices(): Promise<PennylaneInvoice[]> {
       throw new Error("User not authenticated.");
     }
     const userProfile = await getProfile();
-    
+
+    // Check if current user is a delegated viewer and has an accepted invite
+    const { data: invites } = await supabase
+      .from('delegated_invoice_viewers')
+      .select('owner_id')
+      .eq('viewer_id', session.user.id)
+      .eq('status', 'accepted')
+      .order('accepted_at', { ascending: false })
+      .limit(1);
+
+    const delegatedOwnerId = invites && invites.length > 0 ? invites[0].owner_id : null;
+
+    // Determine which profile to use for Pennylane (owner if delegated, otherwise current)
+    let effectiveCustomerId = userProfile?.pennylane_customer_id;
+    if (delegatedOwnerId) {
+      const ownerProfile = await getProfileById(delegatedOwnerId);
+      if (ownerProfile?.pennylane_customer_id) {
+        effectiveCustomerId = ownerProfile.pennylane_customer_id as any;
+      }
+    }
+
     const { data, error } = await supabase.functions.invoke("pennylane-proxy", {
       body: { 
         action: "list_invoices",
@@ -72,9 +93,8 @@ export async function fetchPennylaneInvoices(): Promise<PennylaneInvoice[]> {
           field: "customer_id",
           operator: "eq",
           limit: 100,
-          value: userProfile.pennylane_customer_id 
+          value: effectiveCustomerId 
         }
-        
       }
     });
 

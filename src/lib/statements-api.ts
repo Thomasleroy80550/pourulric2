@@ -14,14 +14,7 @@ export async function getMyStatements(): Promise<SavedInvoice[]> {
 
   const { data, error } = await supabase
     .from('invoices')
-    .select(`
-      *,
-      profiles!user_id (
-        first_name,
-        last_name
-      )
-    `)
-    .eq('user_id', user.id)
+    .select('*') // Rely on RLS to return only allowed rows (own, delegated, accountant)
     .order('created_at', { ascending: false });
 
   if (error) {

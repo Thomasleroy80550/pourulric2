@@ -19,20 +19,17 @@ export async function getReviews(holdingIds?: string[]): Promise<Review[]> {
     return [];
   }
 
-  try {
-    const { data, error } = await supabase.functions.invoke('revyoos-proxy', {
-      body: { holdingIds },
-    });
+  const { data, error } = await supabase.functions.invoke('revyoos-proxy', {
+    body: { holdingIds },
+  });
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  } catch (error: any) {
+  if (error) {
     console.error("Error fetching reviews from Revyoos proxy:", error);
-    throw new Error(`Erreur lors de la récupération des avis : ${error.message}`);
+    // Retourner une liste vide pour éviter d'afficher une erreur bloquante côté UI
+    return [];
   }
+
+  return (data ?? []) as Review[];
 }
 
 /**
@@ -44,18 +41,15 @@ export async function getReviewSynthesis(holdingIds?: string[]): Promise<string>
     return "";
   }
 
-  try {
-    const { data, error } = await supabase.functions.invoke('review-analyzer', {
-      body: { holdingIds },
-    });
+  const { data, error } = await supabase.functions.invoke('review-analyzer', {
+    body: { holdingIds },
+  });
 
-    if (error) {
-      throw error;
-    }
-
-    return data as string;
-  } catch (error: any) {
+  if (error) {
     console.error("Error fetching synthesis from review-analyzer proxy:", error);
-    throw new Error(`Erreur lors de la récupération de la synthèse des avis : ${error.message}`);
+    // Retourner une chaîne vide pour éviter d'afficher une erreur bloquante côté UI
+    return "";
   }
+
+  return (data as string) ?? "";
 }

@@ -10,8 +10,8 @@ import BookingListMobile from '@/components/BookingListMobile';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
-import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { getOverrides } from '@/lib/price-override-api';
+import { getEffectiveUserRooms, UserRoom } from '@/lib/user-room-api';
+import { getOverridesEffective } from '@/lib/price-override-api';
 import { addDays, format, startOfDay, isAfter, isSameDay, parseISO } from 'date-fns';
 import { useSession } from "@/components/SessionContextProvider";
 

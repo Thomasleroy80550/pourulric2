@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectiveOwnerId } from "./delegation";
 
 export interface PriceOverride {
   id: string;
@@ -29,6 +30,26 @@ export async function getOverrides(): Promise<PriceOverride[]> {
     throw new Error(`Erreur lors de la récupération des modifications de prix : ${error.message}`);
   }
   return data || [];
+}
+
+export async function getOverridesByUser(userId: string): Promise<PriceOverride[]> {
+  const { data, error } = await supabase
+    .from('price_overrides')
+    .select('*')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching price overrides by user:", error);
+    throw new Error(`Erreur lors de la récupération des modifications de prix : ${error.message}`);
+  }
+  return data || [];
+}
+
+export async function getOverridesEffective(): Promise<PriceOverride[]> {
+  const ownerId = await getEffectiveOwnerId();
+  if (!ownerId) return [];
+  return getOverridesByUser(ownerId);
 }
 
 export async function addOverride(overrideData: NewPriceOverride): Promise<PriceOverride> {

@@ -19,7 +19,7 @@ import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
-import { addDays, format } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import { toast } from 'sonner';
@@ -72,7 +72,7 @@ const CalendarPage: React.FC = () => {
       setLoadingData(true);
       try {
         // 1. Fetch the user's configured rooms from Supabase
-        const configuredUserRooms = await getUserRooms();
+        const configuredUserRooms = await getEffectiveUserRooms();
         console.log("DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
 
         if (configuredUserRooms.length === 0) {
@@ -137,7 +137,7 @@ const CalendarPage: React.FC = () => {
         }
 
         // 5. Fetch price overrides and convert them to reservation-like blocks
-        const priceOverrides = await getOverrides();
+        const priceOverrides = await getOverridesEffective();
         const closedBlocks = priceOverrides
           .filter(override => override.closed)
           .map((override): KrossbookingReservation => ({

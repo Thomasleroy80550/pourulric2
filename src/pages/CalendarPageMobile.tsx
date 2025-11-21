@@ -10,9 +10,9 @@ import BookingListMobile from '@/components/BookingListMobile';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
-import { getEffectiveUserRooms, UserRoom } from '@/lib/user-room-api';
-import { getOverridesEffective } from '@/lib/price-override-api';
-import { addDays, format, startOfDay, isAfter, isSameDay, parseISO } from 'date-fns';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { getOverrides } from '@/lib/price-override-api';
+import { addDays, format, startOfDay, isAfter, isSameDay } from 'date-fns';
 import { useSession } from "@/components/SessionContextProvider";
 
 interface Reservation {
@@ -45,7 +45,7 @@ const CalendarPageMobile: React.FC = () => {
       setLoadingData(true);
       try {
         // 1. Récupérer les chambres configurées
-        const configuredUserRooms = await getEffectiveUserRooms();
+        const configuredUserRooms = await getUserRooms();
         
         if (configuredUserRooms.length === 0) {
           setReservations([]);
@@ -81,7 +81,7 @@ const CalendarPageMobile: React.FC = () => {
         }
 
         // 5. Convertir les périodes bloquées en réservations
-        const priceOverrides = await getOverridesEffective();
+        const priceOverrides = await getOverrides();
         const closedBlocks = priceOverrides
           .filter(override => override.closed)
           .map((override): Reservation => ({

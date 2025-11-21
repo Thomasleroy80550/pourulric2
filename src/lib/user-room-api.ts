@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getEffectiveOwnerId } from "./delegation";
 
 export interface UserRoom {
   id: string;
@@ -95,24 +94,6 @@ export async function getUserRooms(): Promise<UserRoom[]> {
 
   if (error) {
     throw new Error(`Erreur lors de la récupération des chambres : ${error.message}`);
-  }
-  return data || [];
-}
-
-/**
- * Fetches all room configurations for the effective owner (self or delegated owner).
- */
-export async function getEffectiveUserRooms(): Promise<UserRoom[]> {
-  const ownerId = await getEffectiveOwnerId();
-  if (!ownerId) return [];
-
-  const { data, error } = await supabase
-    .from('user_rooms')
-    .select('*')
-    .eq('user_id', ownerId);
-
-  if (error) {
-    throw new Error(`Erreur lors de la récupération des chambres (owner effectif) : ${error.message}`);
   }
   return data || [];
 }

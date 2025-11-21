@@ -11,15 +11,15 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
-import { getEffectiveUserRooms, UserRoom } from '@/lib/user-room-api';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
-import { getOverridesEffective } from '@/lib/price-override-api';
+import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import { toast } from 'sonner';
@@ -72,7 +72,7 @@ const CalendarPage: React.FC = () => {
       setLoadingData(true);
       try {
         // 1. Fetch the user's configured rooms from Supabase
-        const configuredUserRooms = await getEffectiveUserRooms();
+        const configuredUserRooms = await getUserRooms();
         console.log("DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
 
         if (configuredUserRooms.length === 0) {
@@ -137,7 +137,7 @@ const CalendarPage: React.FC = () => {
         }
 
         // 5. Fetch price overrides and convert them to reservation-like blocks
-        const priceOverrides = await getOverridesEffective();
+        const priceOverrides = await getOverrides();
         const closedBlocks = priceOverrides
           .filter(override => override.closed)
           .map((override): KrossbookingReservation => ({

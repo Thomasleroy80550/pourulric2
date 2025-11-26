@@ -50,26 +50,21 @@ const Hivernage2026Page: React.FC = () => {
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
-  // AJOUT: Empêcher la soumission si on n'est pas à la dernière étape
+  // MODIF: Empêcher toute soumission native du formulaire
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    if (!isLastStep) {
-      e.preventDefault();
-      toast.error("Veuillez terminer les étapes avant d'envoyer.");
-      return;
-    }
-    // seulement à la dernière étape, on délègue à react-hook-form
-    form.handleSubmit(onSubmit)(e);
+    e.preventDefault();
+    toast.error("L'envoi n'est possible qu'avec le bouton 'Envoyer ma demande'.");
   };
 
-  // AJOUT: Bloquer la touche Entrée qui déclenche une soumission implicite, sauf dans la textarea
+  // AJOUT: Déclencheur manuel d'envoi
+  const submitManually = () => {
+    form.handleSubmit(onSubmit)();
+  };
+
+  // MODIF: Bloquer la touche Entrée partout (aucune soumission implicite)
   const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
-    if (e.key === 'Enter' && !isLastStep) {
-      const target = e.target as HTMLElement;
-      const tagName = target.tagName.toLowerCase();
-      const isTextArea = tagName === 'textarea';
-      if (!isTextArea) {
-        e.preventDefault();
-      }
+    if (e.key === 'Enter') {
+      e.preventDefault();
     }
   };
 
@@ -142,6 +137,7 @@ const Hivernage2026Page: React.FC = () => {
               <form 
                 onSubmit={handleFormSubmit} 
                 onKeyDown={handleFormKeyDown}
+                noValidate
                 className="space-y-6"
               >
                 {/* Étape 1: choix du logement */}
@@ -394,7 +390,8 @@ const Hivernage2026Page: React.FC = () => {
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     ) : (
-                      <Button type="submit" variant="default">
+                      // MODIF: Bouton d'envoi manuel (plus de type submit)
+                      <Button type="button" variant="default" onClick={submitManually}>
                         Envoyer ma demande
                       </Button>
                     )}

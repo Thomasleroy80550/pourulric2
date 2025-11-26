@@ -42,7 +42,6 @@ export async function createHivernageRequest(payload: {
     })
     .select(`
       *,
-      profiles!user_id (first_name, last_name, email),
       user_rooms (room_name)
     `)
     .single();
@@ -62,7 +61,6 @@ export async function getMyHivernageRequests(): Promise<HivernageRequest[]> {
     .from('hivernage_requests')
     .select(`
       *,
-      profiles!user_id (first_name, last_name, email),
       user_rooms (room_name)
     `)
     .eq('user_id', user.id)
@@ -80,7 +78,6 @@ export async function getAllHivernageRequests(): Promise<HivernageRequest[]> {
     .from('hivernage_requests')
     .select(`
       *,
-      profiles!user_id (first_name, last_name, email),
       user_rooms (room_name)
     `)
     .order('created_at', { ascending: false });

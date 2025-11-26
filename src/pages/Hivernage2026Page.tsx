@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
+import { useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import { createHivernageRequest, HivernageInstructions } from '@/lib/hivernage-api';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -38,6 +39,11 @@ const Hivernage2026Page: React.FC = () => {
       comments: '',
     },
   });
+
+  // ADDED: watchers to avoid render-time updates loops
+  const selectedRoomId = useWatch({ control: form.control, name: 'user_room_id' });
+  const instructions = useWatch({ control: form.control, name: 'instructions' }) as HivernageInstructions;
+  const commentsVal = useWatch({ control: form.control, name: 'comments' });
 
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
@@ -146,7 +152,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -171,7 +177,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -196,7 +202,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -221,7 +227,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -246,7 +252,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -271,7 +277,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -296,7 +302,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -321,7 +327,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
-                                onCheckedChange={field.onChange}
+                                onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
@@ -359,8 +365,7 @@ const Hivernage2026Page: React.FC = () => {
                         <span className="text-sm font-medium">Logement:</span>{' '}
                         <span className="text-sm text-muted-foreground">
                           {(() => {
-                            const selectedId = form.watch('user_room_id');
-                            const found = rooms.find((r) => r.id === selectedId);
+                            const found = rooms.find((r) => r.id === selectedRoomId);
                             return found ? found.room_name : "Non spécifié";
                           })()}
                         </span>
@@ -368,18 +373,18 @@ const Hivernage2026Page: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium">Consignes:</span>
                         <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground space-y-1">
-                          {Object.entries(form.getValues().instructions).filter(([_, v]) => !!v).length === 0 ? (
+                          {!instructions || Object.entries(instructions).filter(([_, v]) => !!v).length === 0 ? (
                             <li>Aucune consigne sélectionnée</li>
                           ) : (
                             <>
-                              {form.getValues().instructions.cut_water && <li>Couper l'eau</li>}
-                              {form.getValues().instructions.cut_water_heater && <li>Couper le chauffe-eau</li>}
-                              {form.getValues().instructions.heating_frost_mode && <li>Laisser le chauffage en hors-gel</li>}
-                              {form.getValues().instructions.empty_fridge && <li>Vider le réfrigérateur</li>}
-                              {form.getValues().instructions.remove_linen && <li>Enlever le linge</li>}
-                              {form.getValues().instructions.put_linen && <li>Mettre le linge</li>}
-                              {form.getValues().instructions.close_shutters && <li>Fermer les volets</li>}
-                              {form.getValues().instructions.no_change && <li>Ne rien modifier</li>}
+                              {instructions.cut_water && <li>Couper l'eau</li>}
+                              {instructions.cut_water_heater && <li>Couper le chauffe-eau</li>}
+                              {instructions.heating_frost_mode && <li>Laisser le chauffage en hors-gel</li>}
+                              {instructions.empty_fridge && <li>Vider le réfrigérateur</li>}
+                              {instructions.remove_linen && <li>Enlever le linge</li>}
+                              {instructions.put_linen && <li>Mettre le linge</li>}
+                              {instructions.close_shutters && <li>Fermer les volets</li>}
+                              {instructions.no_change && <li>Ne rien modifier</li>}
                             </>
                           )}
                         </ul>
@@ -387,7 +392,7 @@ const Hivernage2026Page: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium">Commentaires:</span>{' '}
                         <span className="text-sm text-muted-foreground">
-                          {form.getValues().comments ? form.getValues().comments : "—"}
+                          {commentsVal ? commentsVal : "—"}
                         </span>
                       </div>
                     </div>

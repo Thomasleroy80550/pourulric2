@@ -72,6 +72,7 @@ import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
 import RedeemInvitePage from './pages/RedeemInvitePage';
 import Season2026Page from "./pages/Season2026Page";
 import AdminSeasonRequestsPage from "./pages/AdminSeasonRequestsPage";
+import AdminHivernageEmailPage from './pages/AdminHivernageEmailPage';
 
 const queryClient = new QueryClient();
 
@@ -124,6 +125,7 @@ function App() {
                   <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
                   <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                   <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
+                  <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                   <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />

@@ -7,7 +7,7 @@ import { Download } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { SeasonPricingRequest } from "@/lib/season-pricing-api";
 
@@ -28,12 +28,15 @@ const SingleRequestExportMenu: React.FC<Props> = ({ request }) => {
     Date: format(new Date(request.created_at), "dd/MM/yyyy", { locale: fr }),
   });
 
+  // Helper de formatage FR pour les dates "Du" / "Au"
+  const formatDateFR = (d?: string) => (d ? format(parseISO(d), "dd/MM/yyyy", { locale: fr }) : "");
+
   const toItemRows = () => {
     const items = Array.isArray(request.items) ? request.items : [];
     return items.map((it: any, idx: number) => ({
       "Période #": idx + 1,
-      Du: it.start_date || "",
-      Au: it.end_date || "",
+      Du: formatDateFR(it.start_date),
+      Au: formatDateFR(it.end_date),
       Type: it.period_type || "",
       Saison: it.season || "",
       Prix: typeof it.price === "number" ? it.price : "",
@@ -68,7 +71,7 @@ const SingleRequestExportMenu: React.FC<Props> = ({ request }) => {
   };
 
   const handleXLSX = async () => {
-    const id = toast.loading("Génération de l’Excel…");
+    const id = toast.loading("Génération de l'Excel…");
     const wb = XLSX.utils.book_new();
     const ws1 = XLSX.utils.json_to_sheet([toRequestRow()]);
     XLSX.utils.book_append_sheet(wb, ws1, "Demande");
@@ -110,7 +113,9 @@ const SingleRequestExportMenu: React.FC<Props> = ({ request }) => {
       pdf.text("Aucun détail fourni.", 10, y);
     } else {
       items.forEach((it: any, idx: number) => {
-        const line1 = `#${idx + 1} Du: ${it.start_date || "—"}  Au: ${it.end_date || "—"}  Type: ${it.period_type || "—"}  Saison: ${it.season || "—"}`;
+        const startFR = formatDateFR(it.start_date) || "—";
+        const endFR = formatDateFR(it.end_date) || "—";
+        const line1 = `#${idx + 1} Du: ${startFR}  Au: ${endFR}  Type: ${it.period_type || "—"}  Saison: ${it.season || "—"}`;
         const line2 = `Prix: ${typeof it.price === "number" ? `${it.price} €` : "—"}  Min séjour: ${typeof it.min_stay === "number" ? it.min_stay : "—"}`;
         const line3 = `Fermé: ${it.closed ? "Oui" : "Non"}  Arrivée fermée: ${it.closed_on_arrival ? "Oui" : "Non"}  Départ fermé: ${it.closed_on_departure ? "Oui" : "Non"}`;
 

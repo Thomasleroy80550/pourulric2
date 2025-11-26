@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { SeasonPricingRequest } from "@/lib/season-pricing-api";
 
@@ -20,6 +20,9 @@ type Props = {
 
 const ExportRequestsMenu: React.FC<Props> = ({ data, tableRef, currentStatus }) => {
   const fileBaseName = `demandes_saison_2026_${currentStatus}_${format(new Date(), "yyyyMMdd")}`;
+
+  // Helper de formatage FR pour les dates "Du" / "Au"
+  const formatDateFR = (d?: string) => (d ? format(parseISO(d), "dd/MM/yyyy", { locale: fr }) : "");
 
   const toRequestRows = () => {
     return (data || []).map((req) => ({
@@ -42,8 +45,8 @@ const ExportRequestsMenu: React.FC<Props> = ({ data, tableRef, currentStatus }) 
           Utilisateur: req.profiles ? `${(req.profiles.first_name || "").trim()} ${(req.profiles.last_name || "").trim()}`.trim() : "",
           Logement: req.room_name || req.room_id || "",
           "Période #": idx + 1,
-          Du: it.start_date || "",
-          Au: it.end_date || "",
+          Du: formatDateFR(it.start_date),
+          Au: formatDateFR(it.end_date),
           Type: it.period_type || "",
           Saison: it.season || "",
           Prix: typeof it.price === "number" ? it.price : "",

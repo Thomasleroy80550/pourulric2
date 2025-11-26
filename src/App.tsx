@@ -71,6 +71,7 @@ import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
 import RedeemInvitePage from './pages/RedeemInvitePage';
 import Season2026Page from "./pages/Season2026Page";
+import AdminSeasonRequestsPage from "./pages/AdminSeasonRequestsPage";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,7 @@ function App() {
                   <Route path="/admin/settings" element={<AdminSettingsPage />} />
                   <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
                   <Route path="/admin/module-requests" element={<AdminModuleRequestsPage />} />
+                  <Route path="/admin/season-requests" element={<AdminSeasonRequestsPage />} />
                   <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
                   <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                   <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />

@@ -20,6 +20,54 @@ export interface CreateSeasonPricingRequestPayload {
   items: SeasonPricingItem[];
 }
 
+export interface SeasonPricingRequest {
+  id: string;
+  user_id: string;
+  season_year: number;
+  room_id?: string | null;
+  room_name?: string | null;
+  items: SeasonPricingItem[];
+  status: 'pending' | 'processing' | 'done' | 'cancelled';
+  created_at: string;
+  profiles?: {
+    first_name: string | null;
+    last_name: string | null;
+  } | null;
+}
+
+export type SeasonPricingStatus = 'pending' | 'processing' | 'done' | 'cancelled';
+
+export const getAllSeasonPricingRequests = async (): Promise<SeasonPricingRequest[]> => {
+  const { data, error } = await supabase
+    .from('season_price_requests')
+    .select(`
+      *,
+      profiles!user_id (
+        first_name,
+        last_name
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching season pricing requests:", error);
+    throw new Error(error.message);
+  }
+  return data || [];
+};
+
+export const updateSeasonPricingRequestStatus = async (id: string, status: SeasonPricingStatus): Promise<void> => {
+  const { error } = await supabase
+    .from('season_price_requests')
+    .update({ status })
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error updating season pricing request status:", error);
+    throw new Error(error.message);
+  }
+};
+
 export const createSeasonPricingRequest = async (payload: CreateSeasonPricingRequestPayload) => {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError) throw new Error(userError.message);

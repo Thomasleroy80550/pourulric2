@@ -57,6 +57,18 @@ const Hivernage2026Page: React.FC = () => {
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
+  // Ajout: gestion fiable du clic tuile sans double toggle
+  const handleTileToggle = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    value: boolean,
+    onChange: (val: boolean) => void
+  ) => {
+    const target = e.target as HTMLElement;
+    // Si le clic vient de la checkbox, ne pas toggler au niveau de la tuile
+    if (target.closest('[data-checkbox-root="true"]')) return;
+    onChange(!value);
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -143,7 +155,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -151,8 +163,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Couper l'eau</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -169,7 +181,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -177,8 +189,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Couper le chauffe-eau</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -195,7 +207,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -203,8 +215,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Chauffage en hors-gel</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -221,7 +233,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -229,8 +241,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Vider le réfrigérateur</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -247,7 +259,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -255,8 +267,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Enlever le linge</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -273,7 +285,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -281,8 +293,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Mettre le linge</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -299,7 +311,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -307,8 +319,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Fermer les volets</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -325,7 +337,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
+                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -333,8 +345,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Ne rien modifier</span>
                               </div>
                               <Checkbox
+                                data-checkbox-root="true"
                                 checked={field.value}
-                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />

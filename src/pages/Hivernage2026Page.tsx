@@ -50,6 +50,16 @@ const Hivernage2026Page: React.FC = () => {
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
+  // AJOUT: bouton de validation d'étape
+  const validateCurrentStep = async () => {
+    const isValid = await form.trigger(); // valide les champs montés à l'écran
+    if (isValid) {
+      toast.success("Étape validée");
+    } else {
+      toast.error("Veuillez corriger les erreurs avant de continuer");
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -74,7 +84,7 @@ const Hivernage2026Page: React.FC = () => {
     setStep(0);
   };
 
-  // Watch pour afficher un résumé toujours à jour sans setter d’état
+  // Watch pour afficher un résumé toujours à jour sans setter d'état
   const watchedRoomId = useWatch({ control: form.control, name: 'user_room_id' });
   const watchedInstructions = useWatch({ control: form.control, name: 'instructions' }) as HivernageInstructions;
   const watchedComments = useWatch({ control: form.control, name: 'comments' });
@@ -336,21 +346,32 @@ const Hivernage2026Page: React.FC = () => {
                     Précédent
                   </Button>
 
-                  {!isLastStep ? (
+                  <div className="flex items-center gap-2">
+                    {/* AJOUT: bouton Valider */}
                     <Button
                       type="button"
-                      variant="default"
-                      className="flex items-center gap-1"
-                      onClick={next}
+                      variant="outline"
+                      onClick={validateCurrentStep}
                     >
-                      Suivant
-                      <ChevronRight className="h-4 w-4" />
+                      Valider
                     </Button>
-                  ) : (
-                    <Button type="submit" variant="default">
-                      Envoyer ma demande
-                    </Button>
-                  )}
+
+                    {!isLastStep ? (
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="flex items-center gap-1"
+                        onClick={next}
+                      >
+                        Suivant
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button type="submit" variant="default">
+                        Envoyer ma demande
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </form>
             </Form>

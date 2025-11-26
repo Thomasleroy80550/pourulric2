@@ -419,14 +419,14 @@ const DashboardPage = () => {
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
         <div className="mb-6">
-          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+          <Card className="border border-gray-200 bg-white dark:bg-neutral-900">
             <CardHeader>
               <CardTitle className="text-lg">
                 Hivernage — Fermeture du 4 au 11 janvier
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 Merci de nous transmettre vos consignes avant la fermeture (chauffage, eau, réfrigérateur, linge, volets, etc.).
               </p>
               <Button asChild>

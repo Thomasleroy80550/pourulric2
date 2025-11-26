@@ -20,6 +20,39 @@ import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 const DEFAULT_BATCH_SIZE = 50; // ≈ 30–40 secondes par lot (limite de fonction sûre)
 
+const PLAN_STORAGE_KEY = "newsletterSendPlan";
+
+type NewsletterPlan = {
+  subject: string;
+  html: string;
+  testMode: boolean;
+  batchSize: number;
+  intervalMs?: number;
+  sending: boolean;
+  offset?: number;
+};
+
+const savePlan = (plan: NewsletterPlan) => {
+  try {
+    localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plan));
+  } catch {}
+};
+
+const loadPlan = (): NewsletterPlan | null => {
+  try {
+    const raw = localStorage.getItem(PLAN_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearPlan = () => {
+  try {
+    localStorage.removeItem(PLAN_STORAGE_KEY);
+  } catch {}
+};
+
 const AdminNewsletterPage: React.FC = () => {
   const [subject, setSubject] = useState("");
   const [html, setHtml] = useState("");
@@ -46,6 +79,127 @@ const AdminNewsletterPage: React.FC = () => {
     };
   }, []);
 
+  // AJOUT: reprise automatique d'un plan si présent dans le stockage local
+  useEffect(() => {
+    const plan = loadPlan();
+    if (!plan || !plan.sending) return;
+
+    // Réhydrate l'UI
+    setSubject(plan.subject);
+    setHtml(plan.html);
+    setTestMode(plan.testMode);
+    setSpreadMode(true);
+    setBatchSize(plan.batchSize);
+
+    // Démarre/reprend le plan
+    startSpreadPlan(plan);
+  }, []);
+
+  // AJOUT: fonction centralisée pour démarrer/reprendre un plan étalé
+  const startSpreadPlan = async (plan: NewsletterPlan) => {
+    if (!plan.subject.trim() || !plan.html.trim()) {
+      toast.error("Veuillez renseigner un sujet et un contenu HTML.");
+      return;
+    }
+
+    setSending(true);
+
+    // 1) Preview pour connaître le volume restant
+    const previewRes = await supabase.functions.invoke("send-newsletter", {
+      body: { subject: plan.subject, html: buildNewsletterHtml({ subject: plan.subject || "Newsletter", bodyHtml: DOMPurify.sanitize(plan.html) }), testMode: plan.testMode, previewOnly: true },
+    });
+
+    if (previewRes.error) {
+      setSending(false);
+      clearPlan();
+      toast.error(`Erreur (preview): ${previewRes.error.message}`);
+      return;
+    }
+
+    const remaining = Number(previewRes.data?.totalRemaining ?? 0);
+    setTotalRemaining(remaining);
+
+    if (remaining <= 0) {
+      setSending(false);
+      clearPlan();
+      toast.success("Aucun destinataire restant pour cette campagne (déjà envoyé ou aucun email).");
+      return;
+    }
+
+    // 2) Calcul des lots et intervalle (ou reprise si interval stocké)
+    const lots = Math.ceil(remaining / plan.batchSize);
+    const intervalMs = Math.max(Math.floor(SIX_HOURS_MS / lots), 10_000);
+    const effectiveInterval = plan.intervalMs ?? intervalMs;
+
+    // Sauvegarde du plan
+    savePlan({ ...plan, intervalMs: effectiveInterval, sending: true, offset: 0 });
+    setOffset(0);
+
+    // 3) Fonction d'envoi d'un lot (reprend à chaque passage)
+    const sendBatch = async () => {
+      const themed = buildNewsletterHtml({ subject: plan.subject || "Newsletter", bodyHtml: DOMPurify.sanitize(plan.html) });
+
+      const { data, error } = await supabase.functions.invoke("send-newsletter", {
+        body: {
+          subject: plan.subject,
+          html: themed,
+          testMode: plan.testMode,
+          previewOnly: false,
+          maxEmails: plan.batchSize,
+        },
+      });
+
+      if (error) {
+        toast.error(`Erreur lors de l'envoi d'un lot: ${error.message}`);
+        setSending(false);
+        clearPlan();
+        return;
+      }
+
+      const sent = Number(data?.sent ?? 0);
+      const failed = Number(data?.failed ?? 0);
+      const remainingLeft = Number(data?.totalRemaining ?? 0);
+
+      // Mise à jour progression locale et plan persistant
+      setOffset((prev) => {
+        const next = prev + sent;
+        savePlan({ ...plan, intervalMs: effectiveInterval, sending: true, offset: next });
+        return next;
+      });
+
+      toast.success(`Lot envoyé: ${sent} succès, ${failed} échecs. Restant: ${remainingLeft}`);
+
+      setTotalRemaining(remainingLeft);
+
+      if (remainingLeft <= 0) {
+        setSending(false);
+        clearPlan();
+        toast.success("Newsletter terminée. Tous les lots ont été envoyés.");
+        return;
+      }
+
+      timerRef.current = window.setTimeout(() => {
+        sendBatch();
+      }, effectiveInterval);
+    };
+
+    // Premier lot immédiat
+    await sendBatch();
+  };
+
+  // AJOUT: annuler proprement le plan
+  const cancelPlan = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setSending(false);
+    clearPlan();
+    setTotalRemaining(null);
+    setOffset(0);
+    toast.info("Plan d'envoi annulé. Vous pourrez le reprendre plus tard.");
+  };
+
   const handleSendImmediate = async () => {
     setSending(true);
     const { data, error } = await supabase.functions.invoke("send-newsletter", {
@@ -69,76 +223,15 @@ const AdminNewsletterPage: React.FC = () => {
       return;
     }
 
-    // 1) Preview pour connaître le volume à envoyer
-    setSending(true);
-    const previewRes = await supabase.functions.invoke("send-newsletter", {
-      body: { subject, html: themedHtml, testMode, previewOnly: true },
-    });
-
-    if (previewRes.error) {
-      setSending(false);
-      toast.error(`Erreur (preview): ${previewRes.error.message}`);
-      return;
-    }
-
-    const remaining = Number(previewRes.data?.totalRemaining ?? 0);
-    setTotalRemaining(remaining);
-
-    if (remaining <= 0) {
-      setSending(false);
-      toast.success("Aucun destinataire restant pour cette campagne (déjà envoyé ou aucun email).");
-      return;
-    }
-
-    // 2) Calcul des lots et de l'intervalle pour couvrir ~6h
-    const lots = Math.ceil(remaining / batchSize);
-    const intervalMs = Math.max(Math.floor(SIX_HOURS_MS / lots), 10_000); // minimum 10s
-
-    toast.info(`Envoi planifié sur ~6h: ${lots} lots de ${batchSize} emails toutes ${Math.round(intervalMs / 60000)} min.`);
-
-    setOffset(0);
-
-    // Envoi du lot courant: on NE passe PAS d'offset
-    const sendBatch = async () => {
-      const { data, error } = await supabase.functions.invoke("send-newsletter", {
-        body: {
-          subject,
-          html: themedHtml,
-          testMode,
-          previewOnly: false,
-          maxEmails: batchSize,
-          // REMOVED: offset (on envoie toujours les premiers destinataires restants)
-        },
-      });
-
-      if (error) {
-        toast.error(`Erreur lors de l'envoi d'un lot: ${error.message}`);
-        setSending(false);
-        return;
-      }
-
-      const sent = Number(data?.sent ?? 0);
-      const failed = Number(data?.failed ?? 0);
-      const remainingLeft = Number(data?.totalRemaining ?? 0);
-
-      // Mise à jour de la progression locale
-      setOffset((prev) => prev + sent);
-
-      toast.success(`Lot envoyé: ${sent} succès, ${failed} échecs. Restant: ${remainingLeft}`);
-
-      if (remainingLeft <= 0) {
-        setSending(false);
-        toast.success("Newsletter terminée. Tous les lots ont été envoyés.");
-        return;
-      }
-
-      timerRef.current = window.setTimeout(() => {
-        sendBatch();
-      }, intervalMs);
+    // Démarre un nouveau plan (la logique est dans startSpreadPlan)
+    const plan: NewsletterPlan = {
+      subject,
+      html,
+      testMode,
+      batchSize,
+      sending: true,
     };
-
-    // 3) Premier lot immédiat, les autres seront espacés
-    await sendBatch();
+    await startSpreadPlan(plan);
   };
 
   const handleSend = async () => {
@@ -271,7 +364,12 @@ const AdminNewsletterPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-end gap-2">
+              {sending && spreadMode && (
+                <Button variant="secondary" onClick={cancelPlan}>
+                  Annuler le plan
+                </Button>
+              )}
               <Button onClick={handleSend} disabled={sending}>
                 {sending ? (
                   <>

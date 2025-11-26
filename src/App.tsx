@@ -73,6 +73,8 @@ import RedeemInvitePage from './pages/RedeemInvitePage';
 import Season2026Page from "./pages/Season2026Page";
 import AdminSeasonRequestsPage from "./pages/AdminSeasonRequestsPage";
 import AdminHivernageEmailPage from './pages/AdminHivernageEmailPage';
+import Hivernage2026Page from "./pages/Hivernage2026Page";
+import AdminHivernageRequestsPage from "./pages/AdminHivernageRequestsPage";
 
 const queryClient = new QueryClient();
 
@@ -125,6 +127,7 @@ function App() {
                   <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
                   <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                   <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
+                  <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                   <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                   <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
@@ -136,6 +139,7 @@ function App() {
                   <Route path="/new-version" element={<NewVersionPage />} />
                   <Route path="/redeem-invite" element={<RedeemInvitePage />} />
                   <Route path="/season-2026" element={<Season2026Page />} />
+                  <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

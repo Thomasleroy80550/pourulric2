@@ -2,6 +2,7 @@ import React from 'react';
 import { SavedInvoice } from '@/lib/admin-api';
 import StatementPrintLayout from '@/components/StatementPrintLayout';
 import PerformanceSummaryPrintLayout from '@/components/PerformanceSummaryPrintLayout';
+import HivernageRequestPrintLayout from '@/components/HivernageRequestPrintLayout';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -257,6 +258,130 @@ export const generatePerformanceSummaryPdf = (params: {
           monthly={params.monthly}
           summaryText={params.summaryText}
         />
+      </React.StrictMode>
+    );
+
+    setTimeout(captureAndResolve, 600);
+  });
+};
+
+export const generateHivernageRequestPdf = (request: import('@/lib/hivernage-api').HivernageRequest): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.width = '800px';
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    const cleanup = () => {
+      root.unmount();
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    };
+
+    const captureAndResolve = async () => {
+      try {
+        const element = container.querySelector('#hivernage-request-to-print');
+        if (!element) {
+          throw new Error("Impossible de trouver l'élément de la demande d'hivernage à imprimer.");
+        }
+
+        const canvas = await html2canvas(element as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: (element as HTMLElement).scrollWidth,
+          height: (element as HTMLElement).scrollHeight,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        const filename = `Hivernage_${(request.profiles?.first_name ?? 'Client')}_${(request.profiles?.last_name ?? '')}_${new Date(request.created_at).toISOString().slice(0,10)}.pdf`;
+        pdf.save(filename);
+        resolve();
+      } catch (error) {
+        reject(error);
+      } finally {
+        cleanup();
+      }
+    };
+
+    root.render(
+      <React.StrictMode>
+        <HivernageRequestPrintLayout request={request} />
+      </React.StrictMode>
+    );
+
+    setTimeout(captureAndResolve, 600);
+  });
+};
+
+export const openHivernageRequestPdfInNewWindow = (request: import('@/lib/hivernage-api').HivernageRequest): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.width = '800px';
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    const cleanup = () => {
+      root.unmount();
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    };
+
+    const captureAndResolve = async () => {
+      try {
+        const element = container.querySelector('#hivernage-request-to_print');
+        // NOTE: correcting the selector to the proper id
+        const el = container.querySelector('#hivernage-request-to-print') as HTMLElement | null;
+        if (!el) {
+          throw new Error("Élément d'impression non trouvé.");
+        }
+
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: el.scrollWidth,
+          height: el.scrollHeight,
+        });
+
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, imgHeight);
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const win = window.open(url, '_blank');
+        if (!win) {
+          throw new Error("Impossible d'ouvrir la fenêtre de prévisualisation PDF.");
+        }
+        resolve();
+      } catch (error) {
+        reject(error);
+      } finally {
+        cleanup();
+      }
+    };
+
+    root.render(
+      <React.StrictMode>
+        <HivernageRequestPrintLayout request={request} />
       </React.StrictMode>
     );
 

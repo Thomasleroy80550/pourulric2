@@ -33,7 +33,8 @@ import {
   FileSymlink,
   Store, // New icon for marketplace
   PlugZap, // New icon for utility cuts
-  CalendarDays // AJOUT: icône Saison
+  CalendarDays,
+  Snowflake // AJOUT de l'icône pour Hivernage
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -81,6 +82,7 @@ const adminNavigationCategories = [
       { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
       { name: 'Demandes Saison 2026', href: '/admin/season-requests', icon: CalendarDays, description: 'Voir et traiter les demandes de prix saison.' }, // AJOUT
       { name: 'Marketplace', href: '/admin/marketplace', icon: Store, description: 'Gérer les prestataires de la marketplace.' },
+      { name: 'Demandes Hivernage', href: '/admin/hivernage-requests', icon: Snowflake, description: 'Voir et exporter les demandes d"hivernage.' },
     ]
   },
   {

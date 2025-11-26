@@ -1,0 +1,19 @@
+Date début;Date fin;Type période;Saison;Séjour minimum;Commentaire
+01/01/2026;13/02/2026;Basse saison hiver;Basse;2 nuits;Hors vacances, faible demande
+14/02/2026;02/03/2026;Vacances hiver (zones A/C);Moyenne;3 nuits;Impact modéré en Baie de Somme
+03/03/2026;31/03/2026;Fin hiver / pré-printemps;Basse;2 nuits;Remplissage week-ends
+01/04/2026;03/04/2026;Printemps hors vacances;Moyenne;2 nuits;Début hausse de la demande
+04/04/2026;20/04/2026;Vacances printemps zone B;Haute;4 nuits;Familles, forte demande
+21/04/2026;30/04/2026;Intersaison;Moyenne;2 nuits;Bonne période couples
+01/05/2026;04/05/2026;Pont 1er mai;Haute;3 nuits;Week-end prolongé
+08/05/2026;11/05/2026;Pont 8 mai;Haute;3 nuits;Très forte demande
+14/05/2026;18/05/2026;Ascension;Très haute;4 nuits;Période la plus lucrative du printemps
+25/05/2026;27/05/2026;Pentecôte;Haute;3 nuits;Week-end prolongé
+28/05/2026;03/07/2026;Pré-été;Moyenne;2 nuits;Climat attractif, demandes stables
+04/07/2026;31/08/2026;Été;Très haute;7 nuits;Semaine complète conseillée
+01/09/2026;30/09/2026;Arrière-saison;Moyenne;2 nuits;Très bonne période météo
+01/10/2026;16/10/2026;Automne;Basse;2 nuits;Demande calme
+17/10/2026;02/11/2026;Vacances Toussaint;Moyenne;3 nuits;Séjours famille
+11/11/2026;13/11/2026;Pont 11 novembre;Moyenne;2 nuits;Courte montée de demande
+14/11/2026;19/12/2026;Basse saison;Basse;2 nuits;Période la plus creuse
+20/12/2026;03/01/2027;Noël / Nouvel An;Haute;3 nuits;Séjours fêtes

@@ -85,6 +85,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
       { name: 'Réservations', href: '/bookings', icon: Book, disabled: isPaymentSuspended },
       { name: 'Incidents', href: '/reports', icon: Wrench },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
+      { name: 'Saison 2026', href: '/season-2026', icon: CalendarDays },
     ],
   },
   {

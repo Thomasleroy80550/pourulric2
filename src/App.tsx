@@ -70,6 +70,7 @@ import ContractTerminatedBanner from "./components/ContractTerminatedBanner";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
 import RedeemInvitePage from './pages/RedeemInvitePage';
+import Season2026Page from "./pages/Season2026Page";
 
 const queryClient = new QueryClient();
 
@@ -130,6 +131,7 @@ function App() {
                   <Route path="/promotion" element={<PromotionPage />} />
                   <Route path="/new-version" element={<NewVersionPage />} />
                   <Route path="/redeem-invite" element={<RedeemInvitePage />} />
+                  <Route path="/season-2026" element={<Season2026Page />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

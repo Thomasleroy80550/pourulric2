@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/notifications-api";
 
 export interface SeasonPricingItem {
   start_date: string; // yyyy-MM-dd
@@ -80,15 +81,86 @@ export const getAllSeasonPricingRequests = async (): Promise<SeasonPricingReques
 };
 
 export const updateSeasonPricingRequestStatus = async (id: string, status: SeasonPricingStatus): Promise<void> => {
-  const { error } = await supabase
+  // Récupérer la demande pour connaître l'ancien statut et l'utilisateur
+  const { data: current, error: fetchError } = await supabase
+    .from('season_price_requests')
+    .select('id, user_id, season_year, room_name, status')
+    .eq('id', id)
+    .single();
+
+  if (fetchError || !current) {
+    console.error("Error fetching season pricing request before update:", fetchError);
+    throw new Error(fetchError?.message || "Impossible de charger la demande.");
+  }
+
+  const previousStatus = current.status;
+
+  const { error: updateError } = await supabase
     .from('season_price_requests')
     .update({ status })
     .eq('id', id);
 
-  if (error) {
-    console.error("Error updating season pricing request status:", error);
-    throw new Error(error.message);
+  if (updateError) {
+    console.error("Error updating season pricing request status:", updateError);
+    throw new Error(updateError.message);
   }
+
+  // Déterminer si l'on doit envoyer un email pour cette transition
+  const shouldEmail =
+    (previousStatus === 'pending' && status === 'processing') ||
+    (previousStatus === 'processing' && status === 'done') ||
+    (status === 'cancelled' && previousStatus !== 'cancelled');
+
+  if (!shouldEmail) {
+    return;
+  }
+
+  // Récupérer l'email du propriétaire
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('email, first_name, last_name')
+    .eq('id', current.user_id)
+    .single();
+
+  if (profileError || !profile?.email) {
+    console.error("Error fetching user email for season request status change:", profileError);
+    throw new Error(profileError?.message || "Email du propriétaire introuvable.");
+  }
+
+  const userName = `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Bonjour';
+  const year = current.season_year;
+  const room = current.room_name ? ` (${current.room_name})` : '';
+
+  let subject = '';
+  let html = '';
+
+  if (previousStatus === 'pending' && status === 'processing') {
+    subject = `Votre demande de tarifs saison ${year} est en cours`;
+    html = `
+      <p>${userName},</p>
+      <p>Votre demande de tarifs pour la saison ${year}${room} est passée d'&lt;strong&gt;en attente&lt;/strong&gt; à &lt;strong&gt;en cours&lt;/strong&gt;.</p>
+      <p>Notre équipe traite actuellement vos informations. Vous serez notifié dès que la demande sera terminée.</p>
+      <p>Cordialement,&lt;br/&gt;L'équipe Hello Keys</p>
+    `;
+  } else if (previousStatus === 'processing' && status === 'done') {
+    subject = `Votre demande de tarifs saison ${year} est terminée`;
+    html = `
+      <p>${userName},</p>
+      <p>Bonne nouvelle&nbsp;! Votre demande de tarifs pour la saison ${year}${room} est &lt;strong&gt;terminée&lt;/strong&gt;.</p>
+      <p>Vous pouvez consulter les détails depuis votre espace client Hello Keys.</p>
+      <p>Cordialement,&lt;br/&gt;L'équipe Hello Keys</p>
+    `;
+  } else if (status === 'cancelled') {
+    subject = `Votre demande de tarifs saison ${year} a été annulée`;
+    html = `
+      <p>${userName},</p>
+      <p>Votre demande de tarifs pour la saison ${year}${room} a été &lt;strong&gt;annulée&lt;/strong&gt;.</p>
+      <p>Si vous pensez qu'il s'agit d'une erreur ou souhaitez la relancer, contactez-nous.</p>
+      <p>Cordialement,&lt;br/&gt;L'équipe Hello Keys</p>
+    `;
+  }
+
+  await sendEmail(profile.email, subject, html);
 };
 
 export const createSeasonPricingRequest = async (payload: CreateSeasonPricingRequestPayload) => {

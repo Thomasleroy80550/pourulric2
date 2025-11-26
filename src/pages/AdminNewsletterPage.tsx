@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Mail, Send, Loader2, Eye } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+// AJOUT: panneau d'info
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import EmailHtmlEditor from "@/components/EmailHtmlEditor";
@@ -70,6 +72,8 @@ const AdminNewsletterPage: React.FC = () => {
   const [totalRemaining, setTotalRemaining] = useState<number | null>(null);
   const [batchSize, setBatchSize] = useState<number>(DEFAULT_BATCH_SIZE);
   const timerRef = useRef<number | null>(null);
+  // AJOUT: état pour la prévisualisation du plan
+  const [planPreview, setPlanPreview] = useState<{ remaining: number; lots: number; intervalMs: number } | null>(null);
 
   useEffect(() => {
     return () => {
@@ -200,6 +204,38 @@ const AdminNewsletterPage: React.FC = () => {
     toast.info("Plan d'envoi annulé. Vous pourrez le reprendre plus tard.");
   };
 
+  // AJOUT: Prévisualiser le plan (aucun envoi, utilise previewOnly)
+  const handlePreviewPlan = async () => {
+    if (!subject.trim() || !html.trim()) {
+      toast.error("Veuillez renseigner un sujet et un contenu HTML.");
+      return;
+    }
+
+    const previewRes = await supabase.functions.invoke("send-newsletter", {
+      body: { subject, html: themedHtml, testMode, previewOnly: true },
+    });
+
+    if (previewRes.error) {
+      toast.error(`Erreur (preview): ${previewRes.error.message}`);
+      return;
+    }
+
+    const remaining = Number(previewRes.data?.totalRemaining ?? 0);
+    setTotalRemaining(remaining);
+
+    if (remaining <= 0) {
+      setPlanPreview({ remaining: 0, lots: 0, intervalMs: 0 });
+      toast.info("Aucun destinataire restant pour cette campagne.");
+      return;
+    }
+
+    const lots = Math.max(1, Math.ceil(remaining / batchSize));
+    const intervalMs = Math.max(Math.floor(SIX_HOURS_MS / lots), 10_000);
+    setPlanPreview({ remaining, lots, intervalMs });
+
+    toast.info(`Plan: ${remaining} destinataires, ${lots} lots, intervalle ≈ ${Math.round(intervalMs / 60000)} min.`);
+  };
+
   const handleSendImmediate = async () => {
     setSending(true);
     const { data, error } = await supabase.functions.invoke("send-newsletter", {
@@ -298,7 +334,7 @@ const AdminNewsletterPage: React.FC = () => {
                     Nombre d'emails par lot (50 recommandé).
                   </p>
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end justify-between">
                   <div className="text-xs text-muted-foreground">
                     {totalRemaining !== null ? (
                       <span>Destinataires restants (preview): {totalRemaining}</span>
@@ -306,8 +342,24 @@ const AdminNewsletterPage: React.FC = () => {
                       <span>Prévisualisez pour estimer le volume à envoyer.</span>
                     )}
                   </div>
+                  <Button variant="secondary" onClick={handlePreviewPlan} className="ml-3">
+                    Prévisualiser le plan
+                  </Button>
                 </div>
               </div>
+            )}
+
+            {/* AJOUT: Panneau d'information du plan (pas d'envoi) */}
+            {spreadMode && planPreview && (
+              <Alert className="mt-3">
+                <AlertTitle>Test du plan d'étalement</AlertTitle>
+                <AlertDescription className="text-sm">
+                  • Destinataires restants: {planPreview.remaining}<br />
+                  • Nombre de lots: {planPreview.lots}<br />
+                  • Intervalle estimé: ~{Math.round(planPreview.intervalMs / 60000)} minutes entre lots<br />
+                  La protection anti-double envoi est active: un même contenu (hash) n'est jamais envoyé 2 fois au même email.
+                </AlertDescription>
+              </Alert>
             )}
 
             <div>

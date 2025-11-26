@@ -13,6 +13,7 @@ import { fr } from "date-fns/locale";
 import { CalendarDays, Eye, CheckCircle, Ban } from "lucide-react";
 import { getAllSeasonPricingRequests, updateSeasonPricingRequestStatus, SeasonPricingRequest, SeasonPricingStatus } from "@/lib/season-pricing-api";
 import ExportRequestsMenu from "@/components/admin/ExportRequestsMenu";
+import SingleRequestExportMenu from "@/components/admin/SingleRequestExportMenu";
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -96,6 +97,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                     <Ban className="h-4 w-4 mr-2" /> Annuler
                   </Button>
                 )}
+                <SingleRequestExportMenu request={req} />
               </TableCell>
             </TableRow>
 

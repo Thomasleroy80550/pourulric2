@@ -50,6 +50,29 @@ const Hivernage2026Page: React.FC = () => {
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
+  // AJOUT: Empêcher la soumission si on n'est pas à la dernière étape
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (!isLastStep) {
+      e.preventDefault();
+      toast.error("Veuillez terminer les étapes avant d'envoyer.");
+      return;
+    }
+    // seulement à la dernière étape, on délègue à react-hook-form
+    form.handleSubmit(onSubmit)(e);
+  };
+
+  // AJOUT: Bloquer la touche Entrée qui déclenche une soumission implicite, sauf dans la textarea
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter' && !isLastStep) {
+      const target = e.target as HTMLElement;
+      const tagName = target.tagName.toLowerCase();
+      const isTextArea = tagName === 'textarea';
+      if (!isTextArea) {
+        e.preventDefault();
+      }
+    }
+  };
+
   // AJOUT: bouton de validation d'étape
   const validateCurrentStep = async () => {
     const isValid = await form.trigger(); // valide les champs montés à l'écran
@@ -116,7 +139,11 @@ const Hivernage2026Page: React.FC = () => {
             </div>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form 
+                onSubmit={handleFormSubmit} 
+                onKeyDown={handleFormKeyDown}
+                className="space-y-6"
+              >
                 {/* Étape 1: choix du logement */}
                 {step === 0 && (
                   <FormItem>

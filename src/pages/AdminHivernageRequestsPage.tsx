@@ -32,7 +32,7 @@ const AdminHivernageRequestsPage: React.FC = () => {
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-4">
           <Snowflake className="h-7 w-7 text-primary" />
-          <h1 className="text-3xl font-bold">Demandes d’hivernage</h1>
+          <h1 className="text-3xl font-bold">Demandes d'hivernage</h1>
         </div>
 
         <Card>
@@ -62,7 +62,7 @@ const AdminHivernageRequestsPage: React.FC = () => {
                   </TableRow>
                 ) : (
                   requests.map((r) => {
-                    const owner = `${r.profiles?.first_name ?? ''} ${r.profiles?.last_name ?? ''}`.trim() || r.profiles?.email ?? r.user_id;
+                    const owner = `${r.profiles?.first_name ?? ''} ${r.profiles?.last_name ?? ''}`.trim() || r.profiles?.email || r.user_id;
                     const room = r.user_rooms?.room_name ?? '—';
                     const i = r.instructions || {};
                     const summary = [

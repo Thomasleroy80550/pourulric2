@@ -83,6 +83,7 @@ const adminNavigationCategories = [
       { name: 'Demandes Saison 2026', href: '/admin/season-requests', icon: CalendarDays, description: 'Voir et traiter les demandes de prix saison.' }, // AJOUT
       { name: 'Marketplace', href: '/admin/marketplace', icon: Store, description: 'Gérer les prestataires de la marketplace.' },
       { name: 'Demandes Hivernage', href: '/admin/hivernage-requests', icon: Snowflake, description: 'Voir et exporter les demandes d"hivernage.' },
+      { name: 'IDs Revyoos manquants', href: '/admin/revyoos-missing', icon: Link2, description: 'Complétez les IDs Revyoos manquants.' },
     ]
   },
   {

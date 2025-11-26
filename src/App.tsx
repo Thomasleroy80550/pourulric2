@@ -75,6 +75,7 @@ import AdminSeasonRequestsPage from "./pages/AdminSeasonRequestsPage";
 import AdminHivernageEmailPage from './pages/AdminHivernageEmailPage';
 import Hivernage2026Page from "./pages/Hivernage2026Page";
 import AdminHivernageRequestsPage from "./pages/AdminHivernageRequestsPage";
+import AdminRevyoosMissingPage from "./pages/AdminRevyoosMissingPage";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,7 @@ function App() {
                   <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
                   <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                   <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
+                  <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
                   <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                   <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                   <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />

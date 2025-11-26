@@ -143,7 +143,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -152,6 +152,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -168,7 +169,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -177,6 +178,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -193,7 +195,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -202,6 +204,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -218,7 +221,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -227,6 +230,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -243,7 +247,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -252,6 +256,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -268,7 +273,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -277,6 +282,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -293,7 +299,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -302,6 +308,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
@@ -318,7 +325,7 @@ const Hivernage2026Page: React.FC = () => {
                           <FormItem>
                             <button
                               type="button"
-                              onClick={() => field.onChange(!field.value)}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); field.onChange(!field.value); }}
                               className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
                             >
                               <div className="flex items-center gap-3">
@@ -327,6 +334,7 @@ const Hivernage2026Page: React.FC = () => {
                               </div>
                               <Checkbox
                                 checked={field.value}
+                                onClick={(e) => e.stopPropagation()}
                                 onCheckedChange={(checked) => field.onChange(checked === true)}
                                 className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />

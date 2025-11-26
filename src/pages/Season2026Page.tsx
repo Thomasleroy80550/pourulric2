@@ -25,42 +25,6 @@ type CsvRow = {
   comment: string;
 };
 
-// Ajout: correction des périodes d'hiver et filtrage Zone A
-const applyWinterHolidayCorrection = (rows: CsvRow[]): CsvRow[] => {
-  const isZoneA = (text: string) => /\bzone\s*a\b/i.test(text);
-  const isZoneB = (text: string) => /\bzone\s*b\b/i.test(text);
-  const isZoneC = (text: string) => /\bzone\s*c\b/i.test(text);
-  const isWinter = (r: CsvRow) => {
-    const all = `${r.periodType} ${r.season} ${r.comment}`.toLowerCase();
-    return /vacances?\s*d['’]hiver/.test(all) || /\bhiver\b/.test(all);
-  };
-
-  return rows
-    // Ignorer les lignes Zone A
-    .filter((r) => !isZoneA(`${r.periodType} ${r.season} ${r.comment}`))
-    // Corriger les dates pour Zone B et Zone C sur Vacances d'hiver
-    .map((r) => {
-      const all = `${r.periodType} ${r.season} ${r.comment}`;
-      if (isWinter(r) && isZoneB(all)) {
-        return {
-          ...r,
-          start: "14/02/2026",
-          end: "01/03/2026",
-          comment: r.comment ? `${r.comment} (corrigé Zone B)` : "Corrigé Zone B",
-        };
-      }
-      if (isWinter(r) && isZoneC(all)) {
-        return {
-          ...r,
-          start: "21/01/2026",
-          end: "08/02/2026",
-          comment: r.comment ? `${r.comment} (corrigé Zone C)` : "Corrigé Zone C",
-        };
-      }
-      return r;
-    });
-};
-
 const parseCsv = (csvText: string): CsvRow[] => {
   const lines = csvText.trim().split(/\r?\n/);
   const rows: CsvRow[] = [];
@@ -79,8 +43,8 @@ const parseCsv = (csvText: string): CsvRow[] => {
       comment: parts[5],
     });
   }
-  // Appliquer le correctif hiver (ignore Zone A, force dates B/C)
-  return applyWinterHolidayCorrection(rows);
+  // Utiliser les dates telles qu'elles sont dans le CSV
+  return rows;
 };
 
 const toISO = (ddmmyyyy: string): string => {

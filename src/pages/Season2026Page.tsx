@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, CalendarDays, CheckCircle } from "lucide-react";
+import { Terminal, CalendarDays, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { getUserRooms, UserRoom } from "@/lib/user-room-api";
@@ -175,6 +175,19 @@ const Season2026Page: React.FC = () => {
             </Button>
           )}
         </div>
+
+        {/* Alerte smart pricing bien visible */}
+        {!isSmartPricingUser && (
+          <Alert
+            className="mb-4 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-600"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Important</AlertTitle>
+            <AlertDescription>
+              Si vous utilisez le smart pricing, votre demande sera automatiquement rejetée.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="mb-6">
           <CardHeader>

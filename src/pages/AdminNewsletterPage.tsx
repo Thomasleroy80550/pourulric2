@@ -98,7 +98,8 @@ const AdminNewsletterPage: React.FC = () => {
 
     setOffset(0);
 
-    const sendBatch = async (currentOffset: number) => {
+    // Envoi du lot courant: on NE passe PAS d'offset
+    const sendBatch = async () => {
       const { data, error } = await supabase.functions.invoke("send-newsletter", {
         body: {
           subject,
@@ -106,7 +107,7 @@ const AdminNewsletterPage: React.FC = () => {
           testMode,
           previewOnly: false,
           maxEmails: batchSize,
-          offset: currentOffset,
+          // REMOVED: offset (on envoie toujours les premiers destinataires restants)
         },
       });
 
@@ -118,10 +119,10 @@ const AdminNewsletterPage: React.FC = () => {
 
       const sent = Number(data?.sent ?? 0);
       const failed = Number(data?.failed ?? 0);
-      const nextOffset = Number(data?.nextOffset ?? currentOffset + batchSize);
       const remainingLeft = Number(data?.totalRemaining ?? 0);
 
-      setOffset(nextOffset);
+      // Mise à jour de la progression locale
+      setOffset((prev) => prev + sent);
 
       toast.success(`Lot envoyé: ${sent} succès, ${failed} échecs. Restant: ${remainingLeft}`);
 
@@ -132,12 +133,12 @@ const AdminNewsletterPage: React.FC = () => {
       }
 
       timerRef.current = window.setTimeout(() => {
-        sendBatch(nextOffset);
+        sendBatch();
       }, intervalMs);
     };
 
     // 3) Premier lot immédiat, les autres seront espacés
-    await sendBatch(0);
+    await sendBatch();
   };
 
   const handleSend = async () => {
@@ -191,7 +192,7 @@ const AdminNewsletterPage: React.FC = () => {
             {spreadMode && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border bg-muted/30 px-3 py-2">
                 <div>
-                  <Label htmlFor="batch-size" className="block text-sm font-medium mb-1">Taille d’un lot</Label>
+                  <Label htmlFor="batch-size" className="block text-sm font-medium mb-1">Taille d'un lot</Label>
                   <Input
                     id="batch-size"
                     type="number"
@@ -201,7 +202,7 @@ const AdminNewsletterPage: React.FC = () => {
                     onChange={(e) => setBatchSize(Math.max(10, Math.min(500, Number(e.target.value || DEFAULT_BATCH_SIZE))))}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Nombre d’emails par lot (50 recommandé).
+                    Nombre d'emails par lot (50 recommandé).
                   </p>
                 </div>
                 <div className="flex items-end">

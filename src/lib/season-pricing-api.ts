@@ -38,22 +38,45 @@ export interface SeasonPricingRequest {
 export type SeasonPricingStatus = 'pending' | 'processing' | 'done' | 'cancelled';
 
 export const getAllSeasonPricingRequests = async (): Promise<SeasonPricingRequest[]> => {
-  const { data, error } = await supabase
+  // Récupère les demandes sans embed
+  const { data: requests, error } = await supabase
     .from('season_price_requests')
-    .select(`
-      *,
-      profiles!user_id (
-        first_name,
-        last_name
-      )
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error("Error fetching season pricing requests:", error);
     throw new Error(error.message);
   }
-  return data || [];
+
+  const list = requests || [];
+  const userIds = Array.from(new Set(list.map(r => r.user_id).filter(Boolean)));
+
+  if (userIds.length === 0) {
+    return list.map(r => ({ ...r, profiles: null })) as SeasonPricingRequest[];
+  }
+
+  // Récupère les profils pour associer prénom/nom
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error("Error fetching profiles for season pricing requests:", profilesError);
+    // Si l'embed échoue, on retourne quand même les demandes sans profils
+    return list.map(r => ({ ...r, profiles: null })) as SeasonPricingRequest[];
+  }
+
+  const profileMap = new Map<string, { first_name: string | null; last_name: string | null }>();
+  (profiles || []).forEach(p => {
+    profileMap.set(p.id, { first_name: p.first_name ?? null, last_name: p.last_name ?? null });
+  });
+
+  return list.map(r => ({
+    ...r,
+    profiles: profileMap.get(r.user_id) ?? null,
+  })) as SeasonPricingRequest[];
 };
 
 export const updateSeasonPricingRequestStatus = async (id: string, status: SeasonPricingStatus): Promise<void> => {

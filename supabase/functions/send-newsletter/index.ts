@@ -50,16 +50,13 @@ async function sendEmailWithRetry(toEmail: string, subject: string, html: string
         html,
       });
       if (error) {
-        // Si c'est une limite de débit, réessayer avec délai
         const statusCode = (error as any)?.statusCode;
         const name = (error as any)?.name;
         if (statusCode === 429 || name === 'rate_limit_exceeded') {
           attempt += 1;
-          // attendre un peu plus d'1 seconde avant retry
           await sleep(1200 + attempt * 300);
           continue;
         }
-        // autre type d'erreur: échec direct
         return { ok: false, error };
       }
       return { ok: true };
@@ -118,6 +115,12 @@ serve(async (req) => {
     const html = body?.html as string | undefined;
     const testMode = Boolean(body?.testMode);
 
+    // Nouveaux paramètres pour l'étalement par lots
+    const previewOnly = Boolean(body?.previewOnly);
+    let maxEmails = Number(body?.maxEmails ?? 50);
+    if (!Number.isFinite(maxEmails) || maxEmails <= 0) maxEmails = 50;
+    let offset = Math.max(0, Number(body?.offset ?? 0));
+
     if (!subject || !html) {
       return new Response(JSON.stringify({ error: "Missing subject or html" }), {
         status: 400,
@@ -160,11 +163,30 @@ serve(async (req) => {
       }
     }
 
+    // Mode preview: renvoyer uniquement le volume restant sans envoyer
+    const totalRemainingAll = recipients.length;
+    if (previewOnly) {
+      return new Response(JSON.stringify({
+        message: "Preview only",
+        totalRemaining: totalRemainingAll,
+        contentHash,
+        testMode
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // Envoi par lot (offset + maxEmails)
+    const startIndex = Math.min(offset, totalRemainingAll);
+    const endIndex = Math.min(startIndex + maxEmails, totalRemainingAll);
+    const batchRecipients = recipients.slice(startIndex, endIndex);
+
     let sent = 0;
     let failed = 0;
 
-    // Envoi séquentiel avec throttling et retry 429
-    for (const r of recipients) {
+    // Envoi séquentiel avec throttling et retry 429 (pour le lot seulement)
+    for (const r of batchRecipients) {
       if (!r?.email || r.is_banned === true) continue;
 
       const toEmail = r.email as string;
@@ -192,7 +214,18 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ message: "Newsletter processed", sent, failed, testMode, rateLimited: true }), {
+    const totalRemainingLeft = Math.max(0, totalRemainingAll - endIndex);
+
+    return new Response(JSON.stringify({
+      message: "Newsletter processed",
+      sent,
+      failed,
+      testMode,
+      rateLimited: true,
+      totalRemaining: totalRemainingLeft,
+      nextOffset: endIndex,
+      batchSizeUsed: batchRecipients.length
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

@@ -38,7 +38,13 @@ const Hivernage2026Page: React.FC = () => {
       },
       comments: '',
     },
+    shouldUnregister: false, // assure la conservation des valeurs quand on change d'étape
   });
+
+  // ADDED: snapshots pour le résumé (lecture fiable des valeurs actuelles)
+  const instructionsSnapshot = form.getValues('instructions');
+  const selectedRoomIdSnapshot = form.getValues('user_room_id');
+  const commentsSnapshot = form.getValues('comments');
 
   // ADDED: watchers to avoid render-time updates loops
   const selectedRoomId = useWatch({ control: form.control, name: 'user_room_id' });
@@ -293,7 +299,7 @@ const Hivernage2026Page: React.FC = () => {
                         <span className="text-sm font-medium">Logement:</span>{' '}
                         <span className="text-sm text-muted-foreground">
                           {(() => {
-                            const found = rooms.find((r) => r.id === selectedRoomId);
+                            const found = rooms.find((r) => r.id === selectedRoomIdSnapshot);
                             return found ? found.room_name : "Non spécifié";
                           })()}
                         </span>
@@ -301,18 +307,18 @@ const Hivernage2026Page: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium">Consignes:</span>
                         <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground space-y-1">
-                          {!instructions || Object.entries(instructions).filter(([_, v]) => !!v).length === 0 ? (
+                          {!instructionsSnapshot || Object.entries(instructionsSnapshot).filter(([_, v]) => !!v).length === 0 ? (
                             <li>Aucune consigne sélectionnée</li>
                           ) : (
                             <>
-                              {instructions.cut_water && <li>Couper l'eau</li>}
-                              {instructions.cut_water_heater && <li>Couper le chauffe-eau</li>}
-                              {instructions.heating_frost_mode && <li>Laisser le chauffage en hors-gel</li>}
-                              {instructions.empty_fridge && <li>Vider le réfrigérateur</li>}
-                              {instructions.remove_linen && <li>Enlever le linge</li>}
-                              {instructions.put_linen && <li>Mettre le linge</li>}
-                              {instructions.close_shutters && <li>Fermer les volets</li>}
-                              {instructions.no_change && <li>Ne rien modifier</li>}
+                              {instructionsSnapshot.cut_water && <li>Couper l'eau</li>}
+                              {instructionsSnapshot.cut_water_heater && <li>Couper le chauffe-eau</li>}
+                              {instructionsSnapshot.heating_frost_mode && <li>Laisser le chauffage en hors-gel</li>}
+                              {instructionsSnapshot.empty_fridge && <li>Vider le réfrigérateur</li>}
+                              {instructionsSnapshot.remove_linen && <li>Enlever le linge</li>}
+                              {instructionsSnapshot.put_linen && <li>Mettre le linge</li>}
+                              {instructionsSnapshot.close_shutters && <li>Fermer les volets</li>}
+                              {instructionsSnapshot.no_change && <li>Ne rien modifier</li>}
                             </>
                           )}
                         </ul>
@@ -320,7 +326,7 @@ const Hivernage2026Page: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium">Commentaires:</span>{' '}
                         <span className="text-sm text-muted-foreground">
-                          {commentsVal ? commentsVal : "—"}
+                          {commentsSnapshot ? commentsSnapshot : "—"}
                         </span>
                       </div>
                     </div>

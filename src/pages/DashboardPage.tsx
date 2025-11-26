@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ListChecks, ChevronRight, CheckCircle } from "lucide-react"; 
+import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle } from "lucide-react"; 
 import {
   ResponsiveContainer,
   PieChart,
@@ -43,6 +43,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
+import { Badge } from "@/components/ui/badge";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -419,17 +420,23 @@ const DashboardPage = () => {
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
         <div className="mb-6">
-          <Card className="border border-gray-200 bg-white dark:bg-neutral-900">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Hivernage — Fermeture du 4 au 11 janvier
-              </CardTitle>
+          <Card className="border-2 border-orange-400 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 shadow-lg">
+            <CardHeader className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                <CardTitle className="text-lg font-semibold text-orange-800 dark:text-orange-300">
+                  Hivernage — Fermeture du 4 au 11 janvier
+                </CardTitle>
+              </div>
+              <Badge className="bg-orange-100 text-orange-800 border border-orange-300 dark:bg-orange-900/40 dark:text-orange-200">
+                Important
+              </Badge>
             </CardHeader>
             <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+              <p className="text-sm text-gray-800 dark:text-gray-200">
                 Merci de nous transmettre vos consignes avant la fermeture (chauffage, eau, réfrigérateur, linge, volets, etc.).
               </p>
-              <Button asChild>
+              <Button asChild variant="default" className="bg-orange-600 hover:bg-orange-700 text-white">
                 <Link to="/hivernage-2026">Envoyer mes consignes</Link>
               </Button>
             </CardContent>

@@ -10,7 +10,8 @@ import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import { createHivernageRequest, HivernageInstructions } from '@/lib/hivernage-api';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { Snowflake, ChevronLeft, ChevronRight, Droplet, Flame, Trash2, Shirt, Lock, Ban } from 'lucide-react';
+import { Snowflake, ChevronLeft, ChevronRight, Droplet, Flame, Trash2, Lock, Ban } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 
@@ -29,8 +30,6 @@ const Hivernage2026Page: React.FC = () => {
         cut_water_heater: false,
         heating_frost_mode: true,
         empty_fridge: false,
-        remove_linen: false,
-        put_linen: false,
         close_shutters: true,
         no_change: false,
       },
@@ -164,6 +163,14 @@ const Hivernage2026Page: React.FC = () => {
                 {step === 1 && (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">Activez les actions à effectuer pour votre logement.</p>
+
+                    <Alert className="bg-muted/40">
+                      <AlertTitle>Information linge</AlertTitle>
+                      <AlertDescription>
+                        Votre logement n&apos;aura pas de linge pendant la période de fermeture.
+                      </AlertDescription>
+                    </Alert>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
@@ -221,38 +228,6 @@ const Hivernage2026Page: React.FC = () => {
                             <div className="flex items-center gap-3">
                               <Trash2 className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
                               <FormLabel className="text-sm font-medium">Vider le réfrigérateur</FormLabel>
-                            </div>
-                            <FormControl>
-                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="instructions.remove_linen"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="flex items-center gap-3">
-                              <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                              <FormLabel className="text-sm font-medium">Enlever le linge</FormLabel>
-                            </div>
-                            <FormControl>
-                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="instructions.put_linen"
-                        render={({ field }) => (
-                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                            <div className="flex items-center gap-3">
-                              <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                              <FormLabel className="text-sm font-medium">Mettre le linge</FormLabel>
                             </div>
                             <FormControl>
                               <Switch checked={!!field.value} onCheckedChange={field.onChange} />
@@ -338,8 +313,6 @@ const Hivernage2026Page: React.FC = () => {
                               {watchedInstructions.cut_water_heater && <li>Couper le chauffe-eau</li>}
                               {watchedInstructions.heating_frost_mode && <li>Laisser le chauffage en hors-gel</li>}
                               {watchedInstructions.empty_fridge && <li>Vider le réfrigérateur</li>}
-                              {watchedInstructions.remove_linen && <li>Enlever le linge</li>}
-                              {watchedInstructions.put_linen && <li>Mettre le linge</li>}
                               {watchedInstructions.close_shutters && <li>Fermer les volets</li>}
                               {watchedInstructions.no_change && <li>Ne rien modifier</li>}
                             </>

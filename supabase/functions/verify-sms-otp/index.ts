@@ -230,11 +230,11 @@ serve(async (req) => {
       }
 
       // 4) Générer le magic link et extraire les tokens
-      const redirectTarget = APP_BASE_URL ? `${APP_BASE_URL.replace(/\/+$/, '')}/login` : undefined;
+      const redirectTarget = `${(APP_BASE_URL ? APP_BASE_URL.replace(/\/+$/, '') : 'https://beta.proprietaire.hellokeys.fr')}/login`;
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: userEmail!,
-        options: redirectTarget ? { redirectTo: redirectTarget } : undefined
+        options: { redirectTo: redirectTarget }
       });
 
       if (linkError || !linkData?.properties?.action_link) {

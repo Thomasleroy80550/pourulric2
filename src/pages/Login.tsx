@@ -65,8 +65,8 @@ const Login = () => {
         email,
         options: {
           shouldCreateUser: false,
-          // Redirige explicitement vers /login sur le domaine courant
-          emailRedirectTo: `${window.location.origin}/login`,
+          // Redirection explicite vers production
+          emailRedirectTo: 'https://beta.proprietaire.hellokeys.fr/login',
         },
       });
       if (error) throw error;

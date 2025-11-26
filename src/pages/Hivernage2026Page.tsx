@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { useWatch } from 'react-hook-form';
@@ -15,6 +14,7 @@ import { createHivernageRequest, HivernageInstructions } from '@/lib/hivernage-a
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { Snowflake, ChevronLeft, ChevronRight, Droplet, Flame, Trash2, Shirt, Lock, Ban } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import ToggleTile from '@/components/ToggleTile';
 
 type FormValues = {
   user_room_id?: string | null;
@@ -56,16 +56,6 @@ const Hivernage2026Page: React.FC = () => {
 
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
-
-  // Ajout: gestion fiable du clic tuile sans double toggle
-  const handleTileToggle = (
-    e: React.MouseEvent<HTMLButtonElement>,
-    value: boolean,
-    onChange: (val: boolean) => void
-  ) => {
-    // Basculer une seule fois via la tuile
-    onChange(!value);
-  };
 
   useEffect(() => {
     (async () => {
@@ -151,20 +141,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.cut_water"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Droplet className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Couper l'eau</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Couper l'eau"
+                              Icon={Droplet}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -175,20 +157,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.cut_water_heater"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Flame className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Couper le chauffe-eau</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Couper le chauffe-eau"
+                              Icon={Flame}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -199,20 +173,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.heating_frost_mode"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Snowflake className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Chauffage en hors-gel</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Chauffage en hors-gel"
+                              Icon={Snowflake}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -223,20 +189,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.empty_fridge"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Trash2 className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Vider le réfrigérateur</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Vider le réfrigérateur"
+                              Icon={Trash2}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -247,20 +205,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.remove_linen"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Enlever le linge</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Enlever le linge"
+                              Icon={Shirt}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -271,20 +221,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.put_linen"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Mettre le linge</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Mettre le linge"
+                              Icon={Shirt}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -295,20 +237,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.close_shutters"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Lock className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Fermer les volets</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Fermer les volets"
+                              Icon={Lock}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}
@@ -319,20 +253,12 @@ const Hivernage2026Page: React.FC = () => {
                         name="instructions.no_change"
                         render={({ field }) => (
                           <FormItem>
-                            <button
-                              type="button"
-                              onClick={(e) => handleTileToggle(e, field.value, (v) => field.onChange(v))}
-                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Ban className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-sm font-medium">Ne rien modifier</span>
-                              </div>
-                              <Checkbox
-                                checked={field.value}
-                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </button>
+                            <ToggleTile
+                              label="Ne rien modifier"
+                              Icon={Ban}
+                              checked={field.value}
+                              onToggle={() => field.onChange(!field.value)}
+                            />
                             <FormMessage />
                           </FormItem>
                         )}

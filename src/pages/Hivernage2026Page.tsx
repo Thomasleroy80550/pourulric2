@@ -63,9 +63,7 @@ const Hivernage2026Page: React.FC = () => {
     value: boolean,
     onChange: (val: boolean) => void
   ) => {
-    const target = e.target as HTMLElement;
-    // Si le clic vient de la checkbox, ne pas toggler au niveau de la tuile
-    if (target.closest('[data-checkbox-root="true"]')) return;
+    // Basculer une seule fois via la tuile
     onChange(!value);
   };
 
@@ -163,10 +161,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Couper l'eau</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />
@@ -189,10 +185,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Couper le chauffe-eau</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />
@@ -215,10 +209,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Chauffage en hors-gel</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />
@@ -241,10 +233,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Vider le réfrigérateur</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />
@@ -267,10 +257,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Enlever le linge</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />
@@ -293,10 +281,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Mettre le linge</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />
@@ -319,10 +305,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Fermer les volets</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />
@@ -345,10 +329,8 @@ const Hivernage2026Page: React.FC = () => {
                                 <span className="text-sm font-medium">Ne rien modifier</span>
                               </div>
                               <Checkbox
-                                data-checkbox-root="true"
                                 checked={field.value}
-                                onCheckedChange={(checked) => field.onChange(checked === true)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                className="pointer-events-none data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                               />
                             </button>
                             <FormMessage />

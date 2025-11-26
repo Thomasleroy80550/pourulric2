@@ -12,7 +12,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { createHivernageRequest, HivernageInstructions } from '@/lib/hivernage-api';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
-import { Snowflake, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Snowflake, ChevronLeft, ChevronRight, Droplet, Flame, Trash2, Shirt, Lock, Ban } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 type FormValues = {
@@ -129,100 +129,203 @@ const Hivernage2026Page: React.FC = () => {
                     <p className="text-sm text-muted-foreground">
                       Cochez les actions à effectuer pour votre logement.
                     </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
                         name="instructions.cut_water"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Couper l'eau</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Droplet className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Couper l'eau</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="instructions.cut_water_heater"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Couper le chauffe-eau</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Flame className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Couper le chauffe-eau</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="instructions.heating_frost_mode"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Laisser le chauffage en hors-gel</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Snowflake className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Chauffage en hors-gel</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="instructions.empty_fridge"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Vider le réfrigérateur</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Trash2 className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Vider le réfrigérateur</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="instructions.remove_linen"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Enlever le linge</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Enlever le linge</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="instructions.put_linen"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Mettre le linge</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Mettre le linge</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="instructions.close_shutters"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Fermer les volets</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Lock className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Fermer les volets</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
+
                       <FormField
                         control={form.control}
                         name="instructions.no_change"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="!m-0">Ne rien modifier</FormLabel>
+                          <FormItem>
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(!field.value)}
+                              className={`w-full rounded-lg border p-4 flex items-center justify-between transition-colors cursor-pointer ${field.value ? 'bg-primary/5 border-primary' : 'border-input'} hover:bg-primary/5 hover:border-primary/60`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Ban className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-sm font-medium">Ne rien modifier</span>
+                              </div>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </button>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />

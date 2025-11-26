@@ -14,6 +14,7 @@ import { CalendarDays, Eye, CheckCircle, Ban } from "lucide-react";
 import { getAllSeasonPricingRequests, updateSeasonPricingRequestStatus, SeasonPricingRequest, SeasonPricingStatus } from "@/lib/season-pricing-api";
 import ExportRequestsMenu from "@/components/admin/ExportRequestsMenu";
 import SingleRequestExportMenu from "@/components/admin/SingleRequestExportMenu";
+import { safeFormat } from "@/lib/date-utils";
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -113,8 +114,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
                       <div className="grid gap-2">
                         {Array.isArray(req.items) && req.items.length > 0 ? req.items.map((it, idx) => (
                           <div key={idx} className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm p-2 rounded bg-muted">
-                            <div><span className="font-semibold">Du:</span> {it.start_date}</div>
-                            <div><span className="font-semibold">Au:</span> {it.end_date}</div>
+                            <div><span className="font-semibold">Du:</span> {safeFormat(it.start_date, 'dd/MM/yyyy')}</div>
+                            <div><span className="font-semibold">Au:</span> {safeFormat(it.end_date, 'dd/MM/yyyy')}</div>
                             <div className="hidden md:block"><span className="font-semibold">Type:</span> {it.period_type || '—'}</div>
                             <div className="hidden md:block"><span className="font-semibold">Saison:</span> {it.season || '—'}</div>
                             <div><span className="font-semibold">Prix:</span> {typeof it.price === "number" ? `${it.price} €` : '—'}</div>

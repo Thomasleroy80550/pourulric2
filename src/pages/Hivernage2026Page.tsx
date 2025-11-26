@@ -5,16 +5,14 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useForm } from 'react-hook-form';
-import { useWatch } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import { createHivernageRequest, HivernageInstructions } from '@/lib/hivernage-api';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { Snowflake, ChevronLeft, ChevronRight, Droplet, Flame, Trash2, Shirt, Lock, Ban } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import ToggleTile from '@/components/ToggleTile';
+import { Switch } from '@/components/ui/switch';
 
 type FormValues = {
   user_room_id?: string | null;
@@ -38,23 +36,12 @@ const Hivernage2026Page: React.FC = () => {
       },
       comments: '',
     },
-    shouldUnregister: false, // assure la conservation des valeurs quand on change d'étape
+    shouldUnregister: false,
   });
-
-  // ADDED: snapshots pour le résumé (lecture fiable des valeurs actuelles)
-  const instructionsSnapshot = form.getValues('instructions');
-  const selectedRoomIdSnapshot = form.getValues('user_room_id');
-  const commentsSnapshot = form.getValues('comments');
-
-  // ADDED: watchers to avoid render-time updates loops
-  const selectedRoomId = useWatch({ control: form.control, name: 'user_room_id' });
-  const instructions = useWatch({ control: form.control, name: 'instructions' }) as HivernageInstructions;
-  const commentsVal = useWatch({ control: form.control, name: 'comments' });
 
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
 
-  // AJOUT: gestion des étapes
   const steps = ["Logement", "Consignes", "Commentaires", "Résumé"];
   const [step, setStep] = useState(0);
   const isLastStep = step === steps.length - 1;
@@ -84,7 +71,13 @@ const Hivernage2026Page: React.FC = () => {
     });
     toast.success("Votre demande d'hivernage a été envoyée !");
     form.reset();
+    setStep(0);
   };
+
+  // Watch pour afficher un résumé toujours à jour sans setter d’état
+  const watchedRoomId = useWatch({ control: form.control, name: 'user_room_id' });
+  const watchedInstructions = useWatch({ control: form.control, name: 'instructions' }) as HivernageInstructions;
+  const watchedComments = useWatch({ control: form.control, name: 'comments' });
 
   return (
     <MainLayout>
@@ -104,7 +97,6 @@ const Hivernage2026Page: React.FC = () => {
             <CardDescription>Choisissez le logement et les actions souhaitées, puis envoyez-nous vos instructions.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Barre de progression + titre d'étape */}
             <div className="space-y-3 mb-6">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">{steps[step]}</span>
@@ -138,22 +130,20 @@ const Hivernage2026Page: React.FC = () => {
                 {/* Étape 2: consignes */}
                 {step === 1 && (
                   <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Cochez les actions à effectuer pour votre logement.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Activez les actions à effectuer pour votre logement.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <FormField
                         control={form.control}
                         name="instructions.cut_water"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Couper l'eau"
-                              Icon={Droplet}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Droplet className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Couper l'eau</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -162,14 +152,14 @@ const Hivernage2026Page: React.FC = () => {
                         control={form.control}
                         name="instructions.cut_water_heater"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Couper le chauffe-eau"
-                              Icon={Flame}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Flame className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Couper le chauffe-eau</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -178,14 +168,14 @@ const Hivernage2026Page: React.FC = () => {
                         control={form.control}
                         name="instructions.heating_frost_mode"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Chauffage en hors-gel"
-                              Icon={Snowflake}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Snowflake className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Chauffage en hors-gel</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -194,14 +184,14 @@ const Hivernage2026Page: React.FC = () => {
                         control={form.control}
                         name="instructions.empty_fridge"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Vider le réfrigérateur"
-                              Icon={Trash2}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Trash2 className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Vider le réfrigérateur</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -210,14 +200,14 @@ const Hivernage2026Page: React.FC = () => {
                         control={form.control}
                         name="instructions.remove_linen"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Enlever le linge"
-                              Icon={Shirt}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Enlever le linge</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -226,14 +216,14 @@ const Hivernage2026Page: React.FC = () => {
                         control={form.control}
                         name="instructions.put_linen"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Mettre le linge"
-                              Icon={Shirt}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Shirt className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Mettre le linge</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -242,14 +232,14 @@ const Hivernage2026Page: React.FC = () => {
                         control={form.control}
                         name="instructions.close_shutters"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Fermer les volets"
-                              Icon={Lock}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Lock className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Fermer les volets</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -258,14 +248,14 @@ const Hivernage2026Page: React.FC = () => {
                         control={form.control}
                         name="instructions.no_change"
                         render={({ field }) => (
-                          <FormItem>
-                            <ToggleTile
-                              label="Ne rien modifier"
-                              Icon={Ban}
-                              checked={field.value}
-                              onToggle={() => field.onChange(!field.value)}
-                            />
-                            <FormMessage />
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Ban className={`h-5 w-5 ${field.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <FormLabel className="text-sm font-medium">Ne rien modifier</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -299,7 +289,7 @@ const Hivernage2026Page: React.FC = () => {
                         <span className="text-sm font-medium">Logement:</span>{' '}
                         <span className="text-sm text-muted-foreground">
                           {(() => {
-                            const found = rooms.find((r) => r.id === selectedRoomIdSnapshot);
+                            const found = rooms.find((r) => r.id === watchedRoomId);
                             return found ? found.room_name : "Non spécifié";
                           })()}
                         </span>
@@ -307,18 +297,18 @@ const Hivernage2026Page: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium">Consignes:</span>
                         <ul className="mt-2 list-disc list-inside text-sm text-muted-foreground space-y-1">
-                          {!instructionsSnapshot || Object.entries(instructionsSnapshot).filter(([_, v]) => !!v).length === 0 ? (
+                          {!watchedInstructions || Object.values(watchedInstructions).filter(Boolean).length === 0 ? (
                             <li>Aucune consigne sélectionnée</li>
                           ) : (
                             <>
-                              {instructionsSnapshot.cut_water && <li>Couper l'eau</li>}
-                              {instructionsSnapshot.cut_water_heater && <li>Couper le chauffe-eau</li>}
-                              {instructionsSnapshot.heating_frost_mode && <li>Laisser le chauffage en hors-gel</li>}
-                              {instructionsSnapshot.empty_fridge && <li>Vider le réfrigérateur</li>}
-                              {instructionsSnapshot.remove_linen && <li>Enlever le linge</li>}
-                              {instructionsSnapshot.put_linen && <li>Mettre le linge</li>}
-                              {instructionsSnapshot.close_shutters && <li>Fermer les volets</li>}
-                              {instructionsSnapshot.no_change && <li>Ne rien modifier</li>}
+                              {watchedInstructions.cut_water && <li>Couper l'eau</li>}
+                              {watchedInstructions.cut_water_heater && <li>Couper le chauffe-eau</li>}
+                              {watchedInstructions.heating_frost_mode && <li>Laisser le chauffage en hors-gel</li>}
+                              {watchedInstructions.empty_fridge && <li>Vider le réfrigérateur</li>}
+                              {watchedInstructions.remove_linen && <li>Enlever le linge</li>}
+                              {watchedInstructions.put_linen && <li>Mettre le linge</li>}
+                              {watchedInstructions.close_shutters && <li>Fermer les volets</li>}
+                              {watchedInstructions.no_change && <li>Ne rien modifier</li>}
                             </>
                           )}
                         </ul>
@@ -326,7 +316,7 @@ const Hivernage2026Page: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium">Commentaires:</span>{' '}
                         <span className="text-sm text-muted-foreground">
-                          {commentsSnapshot ? commentsSnapshot : "—"}
+                          {watchedComments ? watchedComments : "—"}
                         </span>
                       </div>
                     </div>

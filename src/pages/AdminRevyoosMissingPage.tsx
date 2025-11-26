@@ -5,7 +5,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { getAllProfiles, updateUser } from "@/lib/admin-api";
+import { Badge } from "@/components/ui/badge";
+import { getAllProfiles, updateUser, getAllUserRooms } from "@/lib/admin-api";
 
 type ProfileRow = {
   id: string;
@@ -19,6 +20,7 @@ const AdminRevyoosMissingPage: React.FC = () => {
   const [profiles, setProfiles] = React.useState<ProfileRow[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [inputs, setInputs] = React.useState<Record<string, string>>({});
+  const [roomsByUser, setRoomsByUser] = React.useState<Record<string, string[]>>({}); // AJOUT
 
   const loadProfiles = async () => {
     setLoading(true);
@@ -34,6 +36,17 @@ const AdminRevyoosMissingPage: React.FC = () => {
         init[p.id] = "";
       });
       setInputs(init);
+
+      // Récupérer tous les logements et les regrouper par utilisateur
+      const allRooms = await getAllUserRooms();
+      const map: Record<string, string[]> = {};
+      allRooms.forEach((r) => {
+        const userId = (r as any).user_id as string;
+        const name = (r as any).room_name as string | undefined;
+        if (!map[userId]) map[userId] = [];
+        if (name) map[userId].push(name);
+      });
+      setRoomsByUser(map);
     } catch (err: any) {
       toast.error(`Erreur de chargement: ${err.message}`);
     } finally {
@@ -105,6 +118,7 @@ const AdminRevyoosMissingPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Utilisateur</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Logements</TableHead> {/* AJOUT */}
                     <TableHead>IDs Revyoos (comma)</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
@@ -116,6 +130,19 @@ const AdminRevyoosMissingPage: React.FC = () => {
                         {(p.first_name || "") + " " + (p.last_name || "")}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">{p.email || "—"}</TableCell>
+                      <TableCell className="max-w-[280px]">
+                        <div className="flex flex-wrap gap-1">
+                          {(roomsByUser[p.id] && roomsByUser[p.id].length > 0) ? (
+                            roomsByUser[p.id].map((name) => (
+                              <Badge key={name} variant="secondary" className="truncate max-w-[160px]">
+                                {name}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="w-[40%]">
                         <Input
                           value={inputs[p.id] ?? ""}

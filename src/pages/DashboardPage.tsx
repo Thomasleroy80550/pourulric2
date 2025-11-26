@@ -420,23 +420,23 @@ const DashboardPage = () => {
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
         <div className="mb-6">
-          <Card className="border-2 border-orange-400 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 shadow-lg">
+          <Card className="border-2 border-[hsl(var(--primary))] bg-gradient-to-r from-[hsl(var(--accent)/0.08)] to-[hsl(var(--accent)/0.16)] dark:from-slate-900/20 dark:to-slate-900/30 shadow-md">
             <CardHeader className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-orange-500" />
-                <CardTitle className="text-lg font-semibold text-orange-800 dark:text-orange-300">
+                <AlertTriangle className="h-5 w-5 text-[hsl(var(--primary))]" />
+                <CardTitle className="text-lg font-semibold text-foreground">
                   Hivernage — Fermeture du 4 au 11 janvier
                 </CardTitle>
               </div>
-              <Badge className="bg-orange-100 text-orange-800 border border-orange-300 dark:bg-orange-900/40 dark:text-orange-200">
+              <Badge className="bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))] border border-[hsl(var(--accent))]">
                 Important
               </Badge>
             </CardHeader>
             <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <p className="text-sm text-gray-800 dark:text-gray-200">
+              <p className="text-sm text-foreground">
                 Merci de nous transmettre vos consignes avant la fermeture (chauffage, eau, réfrigérateur, linge, volets, etc.).
               </p>
-              <Button asChild variant="default" className="bg-orange-600 hover:bg-orange-700 text-white">
+              <Button asChild variant="default">
                 <Link to="/hivernage-2026">Envoyer mes consignes</Link>
               </Button>
             </CardContent>

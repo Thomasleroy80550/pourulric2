@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CalendarDays, Eye, CheckCircle, Ban } from "lucide-react";
 import { getAllSeasonPricingRequests, updateSeasonPricingRequestStatus, SeasonPricingRequest, SeasonPricingStatus } from "@/lib/season-pricing-api";
+import ExportRequestsMenu from "@/components/admin/ExportRequestsMenu";
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -19,6 +20,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tab, setTab] = useState<SeasonPricingStatus>("pending");
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,7 +105,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                   <Card className="mt-2">
                     <CardHeader>
                       <CardTitle>Détails des périodes ({Array.isArray(req.items) ? req.items.length : 0})</CardTitle>
-                      <CardDescription>Prix et restrictions soumis par l’utilisateur.</CardDescription>
+                      <CardDescription>Prix et restrictions soumis par l'utilisateur.</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="grid gap-2">
@@ -157,17 +159,20 @@ const AdminSeasonRequestsPage: React.FC = () => {
             <CalendarDays className="h-6 w-6" />
             Demandes Saison 2026
           </h1>
-          {!loading && (
-            <span className="text-sm text-muted-foreground">
-              Total: {requests.length}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {!loading && (
+              <span className="text-sm text-muted-foreground">
+                Total: {requests.length}
+              </span>
+            )}
+            <ExportRequestsMenu data={requests.filter(r => r.status === tab)} tableRef={tableRef} currentStatus={tab} />
+          </div>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Suivi des demandes</CardTitle>
-            <CardDescription>Filtrez par statut et mettez à jour l’état des demandes.</CardDescription>
+            <CardDescription>Filtrez par statut et mettez à jour l'état des demandes.</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -180,10 +185,10 @@ const AdminSeasonRequestsPage: React.FC = () => {
                   <TabsTrigger value="done">Terminées ({requests.filter(r => r.status === 'done').length})</TabsTrigger>
                   <TabsTrigger value="cancelled">Annulées ({requests.filter(r => r.status === 'cancelled').length})</TabsTrigger>
                 </TabsList>
-                <TabsContent value="pending" className="mt-4">{renderTable()}</TabsContent>
-                <TabsContent value="processing" className="mt-4">{renderTable()}</TabsContent>
-                <TabsContent value="done" className="mt-4">{renderTable()}</TabsContent>
-                <TabsContent value="cancelled" className="mt-4">{renderTable()}</TabsContent>
+                <TabsContent value="pending" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
+                <TabsContent value="processing" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
+                <TabsContent value="done" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
+                <TabsContent value="cancelled" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
               </Tabs>
             )}
           </CardContent>

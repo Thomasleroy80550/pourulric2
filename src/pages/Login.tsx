@@ -65,7 +65,8 @@ const Login = () => {
         email,
         options: {
           shouldCreateUser: false,
-          emailRedirectTo: window.location.origin,
+          // Redirige explicitement vers /login sur le domaine courant
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
       if (error) throw error;

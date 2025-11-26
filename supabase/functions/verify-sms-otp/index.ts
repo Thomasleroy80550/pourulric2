@@ -147,7 +147,7 @@ serve(async (req) => {
       let userEmail: string | undefined;
 
       if (matchedProfile) {
-        // Profil trouvé: récupérer l’utilisateur Auth
+        // Profil trouvé: récupérer l'utilisateur Auth
         const { data: userById, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(matchedProfile.id);
         if (getUserError || !userById?.user) {
           console.error('Profil trouvé mais utilisateur Auth introuvable:', getUserError, matchedProfile.id);
@@ -204,7 +204,7 @@ serve(async (req) => {
             // On utilisera le dummyEmail pour générer le magic link
             userEmail = dummyEmail;
           } else {
-            console.error('Erreur lors de la création de l’utilisateur (fallback):', createError);
+            console.error('Erreur lors de la création de l\'utilisateur (fallback):', createError);
             throw new Error('Impossible de créer un compte pour ce numéro. Contactez le support.');
           }
         }
@@ -230,10 +230,11 @@ serve(async (req) => {
       }
 
       // 4) Générer le magic link et extraire les tokens
+      const redirectTarget = APP_BASE_URL ? `${APP_BASE_URL.replace(/\/+$/, '')}/login` : undefined;
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'magiclink',
         email: userEmail!,
-        options: APP_BASE_URL ? { redirectTo: APP_BASE_URL } : undefined
+        options: redirectTarget ? { redirectTo: redirectTarget } : undefined
       });
 
       if (linkError || !linkData?.properties?.action_link) {

@@ -270,7 +270,7 @@ export const generateHivernageRequestPdf = (request: import('@/lib/hivernage-api
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.left = '-9999px';
-    container.style.width = '800px';
+    container.style.width = '1024px'; // largeur plus grande pour un rendu net
     document.body.appendChild(container);
 
     const root = createRoot(container);
@@ -290,7 +290,7 @@ export const generateHivernageRequestPdf = (request: import('@/lib/hivernage-api
         }
 
         const canvas = await html2canvas(element as HTMLElement, {
-          scale: 2,
+          scale: 2, // meilleure netteté du texte
           useCORS: true,
           backgroundColor: '#ffffff',
           width: (element as HTMLElement).scrollWidth,
@@ -301,11 +301,25 @@ export const generateHivernageRequestPdf = (request: import('@/lib/hivernage-api
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const margin = 10; // marges pour éviter le contenu collé aux bords
+        const targetWidth = pdfWidth - margin * 2;
+        const imgHeight = (canvas.height * targetWidth) / canvas.width;
         let heightLeft = imgHeight;
         let position = 0;
 
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        // Première page
+        pdf.addImage(imgData, 'PNG', margin, margin + position, targetWidth, imgHeight);
+        heightLeft -= (pdfHeight - margin * 2);
+
+        // Pages suivantes si nécessaire
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', margin, margin + position, targetWidth, imgHeight);
+          heightLeft -= (pdfHeight - margin * 2);
+        }
+
         const filename = `Hivernage_${(request.profiles?.first_name ?? 'Client')}_${(request.profiles?.last_name ?? '')}_${new Date(request.created_at).toISOString().slice(0,10)}.pdf`;
         pdf.save(filename);
         resolve();
@@ -331,7 +345,7 @@ export const openHivernageRequestPdfInNewWindow = (request: import('@/lib/hivern
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.left = '-9999px';
-    container.style.width = '800px';
+    container.style.width = '1024px'; // cohérent avec la génération de PDF
     document.body.appendChild(container);
 
     const root = createRoot(container);
@@ -345,8 +359,6 @@ export const openHivernageRequestPdfInNewWindow = (request: import('@/lib/hivern
 
     const captureAndResolve = async () => {
       try {
-        const element = container.querySelector('#hivernage-request-to_print');
-        // NOTE: correcting the selector to the proper id
         const el = container.querySelector('#hivernage-request-to-print') as HTMLElement | null;
         if (!el) {
           throw new Error("Élément d'impression non trouvé.");
@@ -362,9 +374,23 @@ export const openHivernageRequestPdfInNewWindow = (request: import('@/lib/hivern
 
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const margin = 10;
+        const targetWidth = pdfWidth - margin * 2;
+        const imgHeight = (canvas.height * targetWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
 
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, imgHeight);
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin + position, targetWidth, imgHeight);
+        heightLeft -= (pdfHeight - margin * 2);
+
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin + position, targetWidth, imgHeight);
+          heightLeft -= (pdfHeight - margin * 2);
+        }
+
         const blob = pdf.output('blob');
         const url = URL.createObjectURL(blob);
         const win = window.open(url, '_blank');

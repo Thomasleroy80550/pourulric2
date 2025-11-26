@@ -15,6 +15,7 @@ import { useSession } from "@/components/SessionContextProvider";
 import { getUserRooms, UserRoom } from "@/lib/user-room-api";
 import { createSeasonPricingRequest, SeasonPricingItem } from "@/lib/season-pricing-api";
 import { hasExistingSeasonPricingRequest } from "@/lib/season-pricing-api";
+import { getExistingSeasonPricingRoomIds } from "@/lib/season-pricing-api";
 
 type CsvRow = {
   start: string; // dd/MM/yyyy
@@ -88,8 +89,15 @@ const Season2026Page: React.FC = () => {
       try {
         const rooms = await getUserRooms();
         setUserRooms(rooms);
+
+        // récupérer les logements ayant déjà une demande pour 2026
+        const existing = await getExistingSeasonPricingRoomIds(2026);
+        setExistingRoomIds(existing);
+
+        // Sélectionner par défaut le premier logement non déjà demandé
         if (rooms.length > 0) {
-          setSelectedRoomId(rooms[0].room_id);
+          const firstAvailable = rooms.find((r) => !existing.includes(r.room_id)) ?? rooms[0];
+          setSelectedRoomId(firstAvailable.room_id);
         }
       } catch (err: any) {
         console.error("Error fetching user rooms:", err);
@@ -97,6 +105,9 @@ const Season2026Page: React.FC = () => {
     };
     fetchAll();
   }, []);
+
+  // AJOUT: logements déjà demandés pour 2026
+  const [existingRoomIds, setExistingRoomIds] = useState<string[]>([]);
 
   const handleInputChange = (index: number, field: "price" | "minStay" | "closed" | "clArr" | "clDep", value: any) => {
     setInputsByIndex((prev) => ({
@@ -219,11 +230,21 @@ const Season2026Page: React.FC = () => {
                       value={selectedRoomId}
                       onChange={(e) => setSelectedRoomId(e.target.value)}
                     >
-                      {userRooms.map((room) => (
-                        <option key={room.id} value={room.room_id}>
-                          {room.room_name}
-                        </option>
-                      ))}
+                      {userRooms.map((room) => {
+                        const isUsed = existingRoomIds.includes(room.room_id);
+                        const label = isUsed
+                          ? `${room.room_name} • déjà demandé`
+                          : room.room_name;
+                        return (
+                          <option
+                            key={room.id}
+                            value={room.room_id}
+                            disabled={isUsed}
+                          >
+                            {label}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">

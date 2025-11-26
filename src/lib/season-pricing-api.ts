@@ -104,6 +104,30 @@ export const hasExistingSeasonPricingRequest = async (season_year: number, room_
   return Array.isArray(data) && data.length > 0;
 };
 
+export const getExistingSeasonPricingRoomIds = async (season_year: number): Promise<string[]> => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw new Error(userError.message);
+  if (!user) throw new Error("Utilisateur non authentifié.");
+
+  const { data, error } = await supabase
+    .from('season_price_requests')
+    .select('room_id, status')
+    .eq('user_id', user.id)
+    .eq('season_year', season_year)
+    .neq('status', 'cancelled');
+
+  if (error) {
+    console.error("Error fetching existing season pricing room ids:", error);
+    throw new Error(error.message);
+  }
+
+  const ids = (data || [])
+    .map((r: { room_id?: string | null }) => r.room_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+  return Array.from(new Set(ids));
+};
+
 export const updateSeasonPricingRequestStatus = async (id: string, status: SeasonPricingStatus): Promise<void> => {
   // Récupérer la demande pour connaître l'ancien statut et l'utilisateur
   const { data: current, error: fetchError } = await supabase

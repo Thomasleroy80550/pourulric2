@@ -82,6 +82,28 @@ export const getAllSeasonPricingRequests = async (): Promise<SeasonPricingReques
   })) as SeasonPricingRequest[];
 };
 
+export const hasExistingSeasonPricingRequest = async (season_year: number, room_id: string): Promise<boolean> => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw new Error(userError.message);
+  if (!user) throw new Error("Utilisateur non authentifié.");
+
+  const { data, error } = await supabase
+    .from('season_price_requests')
+    .select('id, status')
+    .eq('user_id', user.id)
+    .eq('season_year', season_year)
+    .eq('room_id', room_id)
+    .neq('status', 'cancelled')
+    .limit(1);
+
+  if (error) {
+    console.error("Error checking existing season pricing request:", error);
+    throw new Error(error.message);
+  }
+
+  return Array.isArray(data) && data.length > 0;
+};
+
 export const updateSeasonPricingRequestStatus = async (id: string, status: SeasonPricingStatus): Promise<void> => {
   // Récupérer la demande pour connaître l'ancien statut et l'utilisateur
   const { data: current, error: fetchError } = await supabase
@@ -140,7 +162,7 @@ export const updateSeasonPricingRequestStatus = async (id: string, status: Seaso
     subject = `Votre demande de tarifs saison ${year} est en cours`;
     bodyHtml = `
       <p>${userName},</p>
-      <p>Votre demande de tarifs pour la saison ${year}${room} est passée d’<strong>en attente</strong> à <strong>en cours</strong>.</p>
+      <p>Votre demande de tarifs pour la saison ${year}${room} est passée d'&lt;strong&gt;en attente&lt;/strong&gt; à &lt;strong&gt;en cours&lt;/strong&gt;.</p>
       <p>Notre équipe traite actuellement vos informations. Vous serez notifié dès que la demande sera terminée.</p>
       <p><a data-btn href="https://beta.proprietaire.hellokeys.fr">Accéder à mon espace</a></p>
       <p>Cordialement,<br/>L'équipe Hello Keys</p>
@@ -149,7 +171,7 @@ export const updateSeasonPricingRequestStatus = async (id: string, status: Seaso
     subject = `Votre demande de tarifs saison ${year} est terminée`;
     bodyHtml = `
       <p>${userName},</p>
-      <p>Bonne nouvelle&nbsp;! Votre demande de tarifs pour la saison ${year}${room} est <strong>terminée</strong>.</p>
+      <p>Bonne nouvelle&nbsp;! Votre demande de tarifs pour la saison ${year}${room} est &lt;strong&gt;terminée&lt;/strong&gt;.</p>
       <p>Vous pouvez consulter les détails depuis votre espace client Hello Keys.</p>
       <p><a data-btn href="https://beta.proprietaire.hellokeys.fr">Accéder à mon espace</a></p>
       <p>Cordialement,<br/>L'équipe Hello Keys</p>
@@ -158,7 +180,7 @@ export const updateSeasonPricingRequestStatus = async (id: string, status: Seaso
     subject = `Votre demande de tarifs saison ${year} a été annulée`;
     bodyHtml = `
       <p>${userName},</p>
-      <p>Votre demande de tarifs pour la saison ${year}${room} a été <strong>annulée</strong>.</p>
+      <p>Votre demande de tarifs pour la saison ${year}${room} a été &lt;strong&gt;annulée&lt;/strong&gt;.</p>
       <p>Si vous pensez qu'il s'agit d'une erreur ou souhaitez la relancer, contactez-nous.</p>
       <p><a data-btn href="https://beta.proprietaire.hellokeys.fr">Accéder à mon espace</a></p>
       <p>Cordialement,<br/>L'équipe Hello Keys</p>

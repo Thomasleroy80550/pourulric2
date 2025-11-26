@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { getUserRooms, UserRoom } from "@/lib/user-room-api";
 import { createSeasonPricingRequest, SeasonPricingItem } from "@/lib/season-pricing-api";
+import { hasExistingSeasonPricingRequest } from "@/lib/season-pricing-api";
 
 type CsvRow = {
   start: string; // dd/MM/yyyy
@@ -119,6 +120,13 @@ const Season2026Page: React.FC = () => {
       return;
     }
 
+    // Empêcher les doublons pour le même logement en 2026
+    const alreadyExists = await hasExistingSeasonPricingRequest(2026, selectedRoom.room_id);
+    if (alreadyExists) {
+      toast.error("Une demande existe déjà pour ce logement en 2026. Merci d'attendre son traitement ou contacter l'administration pour l'annuler.");
+      return;
+    }
+
     const items: SeasonPricingItem[] = rows.map((row, i) => {
       const userInputs = inputsByIndex[i] || {};
       const minStayDefault = extractMinStay(row.minStayText);
@@ -172,7 +180,10 @@ const Season2026Page: React.FC = () => {
           <CardHeader>
             <CardTitle>Préambule</CardTitle>
             <CardDescription>
-              Saisissez vos prix et restrictions pour chaque période de 2026. À la soumission, une demande sera créée auprès de l’administration (traitement manuel).
+              Saisissez vos prix et restrictions pour chaque période de 2026. À la soumission, une demande sera créée auprès de l'administration (traitement manuel).
+              <p className="mt-2 text-sm italic text-muted-foreground">
+                Si vous utilisez le smart pricing, votre demande sera automatiquement rejetée.
+              </p>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -181,7 +192,7 @@ const Season2026Page: React.FC = () => {
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Fonctionnalité non disponible</AlertTitle>
                 <AlertDescription>
-                  Votre compte utilise le “smart pricing”. Cette fonctionnalité n’est pas accessible. Merci de contacter l’administration si besoin.
+                  Votre compte utilise le "smart pricing". Cette fonctionnalité n'est pas accessible. Merci de contacter l'administration si besoin.
                 </AlertDescription>
               </Alert>
             ) : (
@@ -203,7 +214,7 @@ const Season2026Page: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    Saisies libres: si vous laissez vide le prix, l’admin appliquera ses règles.
+                    Saisies libres: si vous laissez vide le prix, l'admin appliquera ses règles.
                   </div>
                 </div>
               </div>

@@ -79,6 +79,17 @@ function addDays(d: Date, delta: number) {
   nd.setDate(nd.getDate() + delta);
   return nd;
 }
+function addMonths(d: Date, delta: number) {
+  const nd = new Date(d);
+  nd.setMonth(nd.getMonth() + delta, 1);
+  return nd;
+}
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function startOfYear(d: Date) {
+  return new Date(d.getFullYear(), 0, 1);
+}
 function eachDayStrings(startISO: string, endISO: string) {
   // [start, end) exclusif
   const days: string[] = [];
@@ -160,6 +171,7 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [chartView, setChartView] = React.useState<"area" | "bars" | "bars-solid">("bars");
+  const barsPointLimit = 220;
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);
@@ -710,6 +722,62 @@ const ElectricityConsumptionPage: React.FC = () => {
     });
   }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type]);
 
+  const tooManyPointsForBars = chartDisplayData.length > barsPointLimit;
+
+  React.useEffect(() => {
+    if ((chartView === "bars" || chartView === "bars-solid") && tooManyPointsForBars) {
+      setChartView("area");
+      toast.message("Période large: passage automatique en vue aire pour une meilleure lisibilité.");
+    }
+  }, [chartDisplayData.length, chartView, tooManyPointsForBars]);
+
+  // Périodes rapides
+  const setQuickRange = (preset: "7d" | "30d" | "90d" | "this-month" | "last-month" | "ytd" | "365d") => {
+    const today = new Date();
+    const tomorrow = addDays(today, 1); // end exclusif
+    if (preset === "7d") {
+      setStart(toISODate(addDays(today, -7)));
+      setEnd(toISODate(tomorrow));
+      return;
+    }
+    if (preset === "30d") {
+      setStart(toISODate(addDays(today, -30)));
+      setEnd(toISODate(tomorrow));
+      return;
+    }
+    if (preset === "90d") {
+      setStart(toISODate(addDays(today, -90)));
+      setEnd(toISODate(tomorrow));
+      return;
+    }
+    if (preset === "365d") {
+      setStart(toISODate(addDays(today, -365)));
+      setEnd(toISODate(tomorrow));
+      return;
+    }
+    if (preset === "this-month") {
+      const s = startOfMonth(today);
+      const e = addMonths(s, 1);
+      setStart(toISODate(s));
+      setEnd(toISODate(e));
+      return;
+    }
+    if (preset === "last-month") {
+      const thisMonthStart = startOfMonth(today);
+      const prevStart = addMonths(thisMonthStart, -1);
+      setStart(toISODate(prevStart));
+      setEnd(toISODate(thisMonthStart));
+      return;
+    }
+    if (preset === "ytd") {
+      const s = startOfYear(today);
+      const e = addMonths(s, 12);
+      setStart(toISODate(s));
+      setEnd(toISODate(e));
+      return;
+    }
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
@@ -906,6 +974,18 @@ const ElectricityConsumptionPage: React.FC = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Périodes rapides */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Label className="text-xs text-muted-foreground mr-2 mt-2">Périodes rapides:</Label>
+              <Button size="sm" variant="outline" onClick={() => setQuickRange("7d")}>7 jours</Button>
+              <Button size="sm" variant="outline" onClick={() => setQuickRange("30d")}>30 jours</Button>
+              <Button size="sm" variant="outline" onClick={() => setQuickRange("90d")}>90 jours</Button>
+              <Button size="sm" variant="outline" onClick={() => setQuickRange("365d")}>365 jours</Button>
+              <Button size="sm" variant="secondary" onClick={() => setQuickRange("this-month")}>Mois en cours</Button>
+              <Button size="sm" variant="secondary" onClick={() => setQuickRange("last-month")}>Mois précédent</Button>
+              <Button size="sm" variant="secondary" onClick={() => setQuickRange("ytd")}>Année en cours</Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -1053,9 +1133,14 @@ const ElectricityConsumptionPage: React.FC = () => {
                         <Tabs value={chartView} onValueChange={(v) => setChartView(v as any)} className="w-full">
                           <TabsList className="mb-3">
                             <TabsTrigger value="area">Vue aire</TabsTrigger>
-                            <TabsTrigger value="bars">Vue colonnes</TabsTrigger>
-                            <TabsTrigger value="bars-solid">Colonnes pleines</TabsTrigger>
+                            <TabsTrigger value="bars" disabled={tooManyPointsForBars}>Vue colonnes</TabsTrigger>
+                            <TabsTrigger value="bars-solid" disabled={tooManyPointsForBars}>Colonnes pleines</TabsTrigger>
                           </TabsList>
+                          {tooManyPointsForBars && (
+                            <p className="text-xs text-muted-foreground mb-2">
+                              Période large: les vues "colonnes" sont désactivées. Réduisez la période ou utilisez la vue aire.
+                            </p>
+                          )}
                           <TabsContent value="area" className="m-0">
                             <div className="h-[380px] md:h-[420px]">
                               <ResponsiveContainer width="100%" height="100%">

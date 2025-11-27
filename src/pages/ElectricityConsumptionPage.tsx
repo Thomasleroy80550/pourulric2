@@ -94,6 +94,27 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [start, setStart] = React.useState<string>(() => localStorage.getItem("conso_start") || "");
   const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
 
+  // Sauvegarde auto des champs pour éviter de perdre les valeurs en quittant la page
+  React.useEffect(() => {
+    localStorage.setItem("conso_prm", prm);
+  }, [prm]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_token", token);
+  }, [token]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_type", type);
+  }, [type]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_start", start);
+  }, [start]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_end", end);
+  }, [end]);
+
   const [params, setParams] = React.useState<FetchParams | null>(null);
 
   const { data, isFetching, isError, error, refetch } = useQuery({

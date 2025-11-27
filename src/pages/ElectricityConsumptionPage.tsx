@@ -24,6 +24,7 @@ import {
   ComposedChart,
   Bar,
   Line,
+  Cell,
 } from "recharts";
 import { Copy, Eye, EyeOff, Zap, Settings, Euro, TrendingUp, Gauge, CalendarDays, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import {
@@ -78,17 +79,6 @@ function addDays(d: Date, delta: number) {
   const nd = new Date(d);
   nd.setDate(nd.getDate() + delta);
   return nd;
-}
-function addMonths(d: Date, delta: number) {
-  const nd = new Date(d);
-  nd.setMonth(nd.getMonth() + delta, 1);
-  return nd;
-}
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-function startOfYear(d: Date) {
-  return new Date(d.getFullYear(), 0, 1);
 }
 function eachDayStrings(startISO: string, endISO: string) {
   // [start, end) exclusif
@@ -345,6 +335,9 @@ const ElectricityConsumptionPage: React.FC = () => {
     return toChartData(normalizedArray);
   }, [normalizedArray]);
 
+  // Liste des jours de la période sélectionnée (utile pour afficher même sans données)
+  const daysInRange = React.useMemo(() => eachDayStrings(start, end), [start, end]);
+
   // Calcul énergie totale (kWh) en fonction du type retourné
   const energyKWhTotal = React.useMemo(() => {
     if (!chartData || chartData.length === 0) return 0;
@@ -365,7 +358,7 @@ const ElectricityConsumptionPage: React.FC = () => {
     return energyKWhTotal * p;
   }, [energyKWhTotal, pricePerKWh, canComputeEnergyCost]);
 
-  // Indicateurs: jours de période, moyenne/jour, pic et points
+  // Indicateurs
   const periodDays = React.useMemo(() => {
     if (!isValidDateStr(start) || !isValidDateStr(end)) return 0;
     return eachDayStrings(start, end).length;
@@ -396,386 +389,14 @@ const ElectricityConsumptionPage: React.FC = () => {
 
   const nbPoints = chartData.length;
 
-  const unitOptions = isEnergyType ? ["Wh", "kWh", "MWh"] : ["W", "kW"];
-
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success(`${label} copié`);
-    } catch {
-      toast.error(`Impossible de copier ${label}`);
-    }
-  };
-
-  // Gestion explicite des paramètres stockés
-  const handleSaveCredentials = () => {
-    localStorage.setItem("conso_prm", prm);
-    localStorage.setItem("conso_token", token);
-    toast.success("Paramètres enregistrés localement");
-  };
-
-  const handleClearCredentials = () => {
-    localStorage.removeItem("conso_prm");
-    localStorage.removeItem("conso_token");
-    setPrm("");
-    setToken("");
-    toast.success("Paramètres effacés de cet appareil");
-  };
-
-  // Enregistrer PRM/Token dans le profil Supabase
-  const saveCredentialsToProfile = async () => {
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
-      toast.error(authError.message);
-      return;
-    }
-    const userId = userData?.user?.id;
-    if (!userId) {
-      toast.error("Veuillez vous connecter.");
-      return;
-    }
-    const { error } = await supabase
-      .from("profiles")
-      .update({ conso_prm: prm || null, conso_token: token || null })
-      .eq("id", userId);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Paramètres enregistrés dans votre profil.");
-  };
-
-  // Charger PRM/Token depuis le profil Supabase
-  const loadCredentialsFromProfile = async () => {
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError) {
-      toast.error(authError.message);
-      return;
-    }
-    const userId = userData?.user?.id;
-    if (!userId) {
-      toast.error("Veuillez vous connecter.");
-      return;
-    }
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("conso_prm, conso_token")
-      .eq("id", userId)
-      .single();
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const newPrm = data?.conso_prm || "";
-    const newToken = data?.conso_token || "";
-    setPrm(newPrm);
-    setToken(newToken);
-    // synchro localStorage via useEffect déjà en place
-    toast.success("Paramètres chargés depuis votre profil.");
-  };
-
-  // Construit une map { 'YYYY-MM-DD': Wh } à partir d'une réponse daily_consumption
-  const buildDailyConsoMap = (dataAny: any): Record<string, number> => {
-    let arr: any[] = [];
-    if (Array.isArray(dataAny)) arr = dataAny;
-    else if (dataAny && typeof dataAny === "object") {
-      for (const k of Object.keys(dataAny)) {
-        const v = dataAny[k];
-        if (Array.isArray(v)) {
-          arr = v;
-          break;
-        }
-      }
-    }
-    const map: Record<string, number> = {};
-    if (arr.length === 0) return map;
-    const { dateKey, valueKey } = inferKeys(arr[0]);
-    if (!dateKey || !valueKey) return map;
-    for (const it of arr) {
-      const d = it[dateKey];
-      const v = it[valueKey];
-      const iso = typeof d === "string" ? d.slice(0, 10) : toISODate(new Date(d));
-      const num = typeof v === "number" ? v : Number(v);
-      if (!Number.isNaN(num)) map[iso] = (map[iso] || 0) + num; // Wh par jour
-    }
-    return map;
-  };
-
-  // Récupère la conso daily pour la période et renvoie une map date->Wh (utilise cache local si dispo)
-  const getDailyConsoMapForRange = async (): Promise<Record<string, number>> => {
-    const key = makeCacheKey({ prm, type: "daily_consumption", start, end });
-    const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
-    if (cachedRaw) {
-      try {
-        const cached = JSON.parse(cachedRaw);
-        if (cached?.data) return buildDailyConsoMap(cached.data);
-      } catch {
-        // ignore
-      }
-    }
-    const { data, error } = await supabase.functions.invoke("conso-proxy", {
-      body: { prm, token, type: "daily_consumption", start, end },
-    });
-    if (error) throw new Error(error.message || "Erreur conso daily");
-    // cache pour usages ultérieurs
-    localStorage.setItem(
-      `conso_cache_${key}`,
-      JSON.stringify({ data, cachedAt: new Date().toISOString() })
-    );
-    return buildDailyConsoMap(data);
-  };
-
-  // Libellé du mois courant basé sur la date de début sélectionnée
-  const monthLabel = React.useMemo(() => {
-    const d = isValidDateStr(start) ? new Date(start) : new Date();
-    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  }, [start]);
-
-  // Charge les données pour une plage donnée (et met à jour cache/params)
-  const loadForRange = React.useCallback(
-    (newStart: string, newEnd: string) => {
-      // Validations minimales (utilise PRM/Token actuels)
-      if (!/^\d{14}$/.test(prm)) {
-        toast.error("Le PRM doit contenir 14 chiffres.");
-        return;
-      }
-      if (!token || token.length < 10) {
-        toast.error("Veuillez renseigner votre token Conso API.");
-        return;
-      }
-      if (!isValidDateStr(newStart) || !isValidDateStr(newEnd) || new Date(newEnd) <= new Date(newStart)) {
-        toast.error("Plage de dates invalide.");
-        return;
-      }
-
-      // Persistance
-      localStorage.setItem("conso_start", newStart);
-      localStorage.setItem("conso_end", newEnd);
-
-      // Seed affichage instantané si cache dispo
-      const key = makeCacheKey({ prm, type, start: newStart, end: newEnd });
-      const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
-      if (cachedRaw) {
-        try {
-          const cached = JSON.parse(cachedRaw);
-          if (cached?.data) {
-            queryClient.setQueryData(["conso", key], cached.data);
-          }
-        } catch {
-          // ignore
-        }
-      }
-      localStorage.setItem("conso_last_key", key);
-      localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start: newStart, end: newEnd }));
-
-      // Déclenche la requête
-      setParams({ prm, token, type, start: newStart, end: newEnd });
-      toast.message("Chargement du mois sélectionné…");
-    },
-    [prm, token, type, queryClient]
-  );
-
-  // Navigation mois précédent / suivant
-  const goToMonth = (delta: number) => {
-    const base = isValidDateStr(start) ? new Date(start) : new Date();
-    const s0 = startOfMonth(base);
-    const s1 = addMonths(s0, delta);
-    const e1 = addMonths(s1, 1);
-    const newStart = toISODate(s1);
-    const newEnd = toISODate(e1);
-    setStart(newStart);
-    setEnd(newEnd);
-    loadForRange(newStart, newEnd);
-  };
-
-  // Forcer l'actualisation (bypass affichage seed, mais refetch côté réseau)
-  const forceRefresh = async () => {
-    if (!params) {
-      toast.message("Aucune requête en cours à actualiser.");
-      return;
-    }
-    toast.message("Actualisation en cours…");
-    try {
-      await refetch({ cancelRefetch: false });
-      toast.success("Données actualisées");
-    } catch {
-      toast.error("Échec de l'actualisation");
-    }
-  };
-
-  const analyzeReservations = async () => {
-    // Validations de base
-    if (!/^\d{14}$/.test(prm)) {
-      toast.error("Le PRM doit contenir 14 chiffres.");
-      return;
-    }
-    if (!token || token.length < 10) {
-      toast.error("Veuillez renseigner votre token Conso API.");
-      return;
-    }
-    if (!isValidDateStr(start) || !isValidDateStr(end)) {
-      toast.error("Dates invalides (YYYY-MM-DD).");
-      return;
-    }
-    setIsAnalyzing(true);
-    try {
-      // 1) Conso daily mappée par jour
-      const dayMap = await getDailyConsoMapForRange();
-
-      // 1bis) Récupérer l'utilisateur courant
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw new Error(authError.message);
-      const userId = userData?.user?.id;
-      if (!userId) {
-        toast.error("Veuillez vous connecter pour analyser vos logements.");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      // 2) Récupérer UNIQUEMENT les rooms de l'utilisateur connecté
-      const { data: rooms, error: roomsError } = await supabase
-        .from("user_rooms")
-        .select("room_id, room_name, user_id")
-        .eq("user_id", userId);
-      if (roomsError) throw new Error(roomsError.message);
-      if (!rooms || rooms.length === 0) {
-        setResRows([]);
-        toast.message("Aucun logement trouvé pour votre compte.");
-        return;
-      }
-
-      // 3) Récupérer les réservations par room
-      const allResArrays = await Promise.all(
-        rooms.map(async (r: any) => {
-          const { data, error } = await supabase.functions.invoke("krossbooking-proxy", {
-            body: { action: "get_reservations_for_room", id_room: r.room_id },
-          });
-          if (error) {
-            console.warn("Erreur KB room", r.room_id, error);
-            return [];
-          }
-          const arr = (data && data.data) || [];
-          // Attache room info pour faciliter l'affichage
-          return arr.map((x: any) => ({ ...x, __room_name: r.room_name, __room_id: r.room_id }));
-        })
-      );
-      const rawReservations = allResArrays.flat();
-
-      // 4) Filtrer uniquement par chevauchement [start, end)
-      const startD = new Date(start);
-      const endD = new Date(end);
-      const filtered = rawReservations.filter((res: any) => {
-        const arrivalStr = String(res.arrival || "");
-        const departureStr = String(res.departure || "");
-        if (!isValidDateStr(arrivalStr) || !isValidDateStr(departureStr)) return false;
-        const a = new Date(arrivalStr);
-        const b = new Date(departureStr);
-        // chevauchement simple: a < end && b > start
-        return a < endD && b > startD;
-      });
-
-      // 5) Calcul kWh et coût par résa
-      const p = Number((pricePerKWh || "").replace(",", "."));
-      const rows: ReservationCostRow[] = filtered.map((res: any) => {
-        const id = String(res.id_reservation ?? res.id ?? "");
-        const arrivalStr = String(res.arrival);
-        const departureStr = String(res.departure);
-        const nights = Math.max(
-          0,
-          Math.round(
-            (new Date(departureStr).getTime() - new Date(arrivalStr).getTime()) /
-              (24 * 3600 * 1000)
-          )
-        );
-        // jours à sommer: [arrival, departure)
-        const days = eachDayStrings(arrivalStr, departureStr);
-        let sumWh = 0;
-        for (const d of days) {
-          if (dayMap[d] != null) sumWh += dayMap[d];
-        }
-        const energyKWh = sumWh / 1000;
-        const costEUR = p > 0 ? energyKWh * p : 0;
-        return {
-          id,
-          roomName: res.__room_name,
-          arrival: arrivalStr,
-          departure: departureStr,
-          nights,
-          energyKWh,
-          costEUR,
-        };
-      });
-
-      // 6) Trier par arrivée
-      rows.sort((a, b) => (a.arrival < b.arrival ? -1 : a.arrival > b.arrival ? 1 : 0));
-      setResRows(rows);
-      toast.success("Analyse par réservation terminée");
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Erreur lors de l'analyse des réservations");
-      setResRows([]);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const onSubmit = () => {
-    // Basic validations
-    if (!/^\d{14}$/.test(prm)) {
-      toast.error("Le PRM doit contenir 14 chiffres.");
-      return;
-    }
-    if (!token || token.length < 10) {
-      toast.error("Veuillez renseigner votre token Conso API (Authorization Bearer).");
-      return;
-    }
-    if (!isValidDateStr(start) || !isValidDateStr(end)) {
-      toast.error("Veuillez renseigner des dates valides (YYYY-MM-DD).");
-      return;
-    }
-    if (new Date(end) <= new Date(start)) {
-      toast.error("La date de fin doit être postérieure à la date de début.");
-      return;
-    }
-
-    // Persist minimal values for convenience
-    localStorage.setItem("conso_prm", prm);
-    localStorage.setItem("conso_token", token);
-    localStorage.setItem("conso_type", type);
-    localStorage.setItem("conso_start", start);
-    localStorage.setItem("conso_end", end);
-
-    // Seed affichage instantané depuis le cache si disponible
-    const key = makeCacheKey({ prm, type, start, end });
-    const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
-    if (cachedRaw) {
-      try {
-        const cached = JSON.parse(cachedRaw);
-        if (cached?.data) {
-          queryClient.setQueryData(["conso", key], cached.data);
-        }
-      } catch {
-        // ignore parsing issues
-      }
-    }
-    localStorage.setItem("conso_last_key", key);
-    localStorage.setItem(
-      "conso_last_params",
-      JSON.stringify({ prm, token, type, start, end })
-    );
-
-    setParams({ prm, token, type, start, end });
-    toast.success("Requête envoyée. Récupération des données...");
-  };
-
   // Afficher la série coût seulement si un prix/kWh valide est présent et que le type s'y prête
   const showCost = React.useMemo(
     () => canComputeEnergyCost && Number((pricePerKWh || "").replace(",", ".")) > 0,
     [canComputeEnergyCost, pricePerKWh]
   );
 
+  // Construire l'affichage en incluant chaque jour de la période (jours sans donnée marqués)
   const chartDisplayData = React.useMemo(() => {
-    if (!chartData || chartData.length === 0) return [];
     // facteur d'affichage pour la série "valeur" (unité choisie)
     const factor = (() => {
       if (isEnergyType) {
@@ -790,25 +411,40 @@ const ElectricityConsumptionPage: React.FC = () => {
       }
     })();
     const p = Number((pricePerKWh || "").replace(",", "."));
-    return chartData.map((d) => {
-      const raw = Number(d.value) || 0; // Wh (énergie) ou W (puissance) selon le type
-      let cost: number | undefined = undefined;
-      if (canComputeEnergyCost && p > 0) {
-        if (type === "daily_consumption" || type === "daily_production") {
-          // raw en Wh par point -> kWh
-          cost = (raw / 1000) * p; // kWh * €/kWh
-        } else if (type === "consumption_load_curve" || type === "production_load_curve") {
-          // raw en W moyen sur 30 minutes -> énergie point = W * 0.5 h -> kWh = W * 0.5 / 1000
-          cost = ((raw * 0.5) / 1000) * p;
-        }
+
+    // Si on est en daily_*: afficher chaque jour, même sans donnée
+    if (type === "daily_consumption" || type === "daily_production") {
+      const byDay = new Map<string, number>();
+      for (const d of chartData) {
+        const day = String(d.name).slice(0, 10);
+        const val = Number(d.value) || 0; // Wh
+        byDay.set(day, (byDay.get(day) || 0) + val);
       }
-      return {
-        name: d.name,
-        value: raw * factor,
-        cost,
-      };
+      return daysInRange.map((day) => {
+        const rawWh = byDay.get(day);
+        const noData = rawWh == null;
+        const value = (rawWh ?? 0) * factor; // affichage en Wh/kWh/MWh
+        let cost: number | undefined = undefined;
+        if (!noData && canComputeEnergyCost && p > 0) {
+          cost = (rawWh! / 1000) * p; // kWh * €/kWh
+        } else if (showCost) {
+          cost = 0; // afficher une colonne 0 hachurée pour cohérence visuelle
+        }
+        return { name: day, value, cost, noData };
+      });
+    }
+
+    // Autres types: on garde le comportement original (pas d'extension des jours)
+    if (!chartData || chartData.length === 0) return [];
+    return chartData.map((d) => {
+      const raw = Number(d.value) || 0; // W (puissance) sur courbes
+      let cost: number | undefined = undefined;
+      if (canComputeEnergyCost && p > 0 && (type === "consumption_load_curve" || type === "production_load_curve")) {
+        cost = ((raw * 0.5) / 1000) * p; // W * 0.5h -> kWh * €/kWh
+      }
+      return { name: d.name, value: raw * factor, cost, noData: false };
     });
-  }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type]);
+  }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type, daysInRange]);
 
   const tooManyPointsForBars = chartDisplayData.length > barsPointLimit;
 
@@ -1144,15 +780,16 @@ const ElectricityConsumptionPage: React.FC = () => {
                 <Skeleton className="h-64 w-full" />
                 <Skeleton className="h-40 w-full" />
               </div>
-            ) : isError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Erreur de récupération</AlertTitle>
-                <AlertDescription>
-                  {(error as any)?.message || "Une erreur s'est produite."}
-                </AlertDescription>
-              </Alert>
             ) : (
               <>
+                {isError && (
+                  <Alert variant="destructive" className="mb-3">
+                    <AlertTitle>Erreur de récupération</AlertTitle>
+                    <AlertDescription>
+                      {(error as any)?.message || "Une erreur s'est produite."}
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {normalizedArray.length > 0 ? (
                   <>
                     {/* Barre de navigation mensuelle + Forcer l'actualisation */}
@@ -1230,7 +867,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                       </Badge>
                       {canComputeEnergyCost && pricePerKWh && Number((pricePerKWh || "").replace(",", ".")) > 0 && (
                         <Badge variant="outline" className="text-xs">
-                          Prix: {Number((pricePerKWh || "").replace(",", ".")).toLocaleString(undefined, { maximumFractionDigits: 4 })} €/kWh
+                          Prix: {Number((pricePerKWh || "").replace(",", ".").replace(/,/g, "."))?.toLocaleString(undefined, { maximumFractionDigits: 4 })} €/kWh
                         </Badge>
                       )}
                     </div>
@@ -1369,6 +1006,10 @@ const ElectricityConsumptionPage: React.FC = () => {
                                       <rect width="6" height="6" fill="#10b981" opacity="0.25" />
                                       <path d="M0,6 l6,-6 M-1,1 l2,-2 M5,7 l2,-2" stroke="#10b981" strokeWidth="1" />
                                     </pattern>
+                                    <pattern id="noDataPattern" patternUnits="userSpaceOnUse" width="6" height="6">
+                                      <rect width="6" height="6" fill="#9ca3af" opacity="0.25" />
+                                      <path d="M0,0 l6,6" stroke="#9ca3af" strokeWidth="1" />
+                                    </pattern>
                                   </defs>
                                   <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
                                   <XAxis
@@ -1414,8 +1055,12 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     }}
                                     labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
                                     itemStyle={{ color: "#e5e7eb" }}
-                                    formatter={(val: any, name: any) => {
+                                    formatter={(val: any, name: any, item: any) => {
                                       const n = String(name);
+                                      const nd = item?.payload?.noData;
+                                      if (nd) {
+                                        return ["Pas de donnée", n];
+                                      }
                                       if (n === "Coût (€)") {
                                         return [
                                           Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
@@ -1438,7 +1083,11 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     barSize={16}
                                     isAnimationActive
                                     animationDuration={500}
-                                  />
+                                  >
+                                    {chartDisplayData.map((d: any, i: number) => (
+                                      <Cell key={`v-${i}`} fill={d.noData ? "url(#noDataPattern)" : "url(#colValue)"} />
+                                    ))}
+                                  </Bar>
                                   {showCost && (
                                     <Bar
                                       name="Coût (€)"
@@ -1451,13 +1100,16 @@ const ElectricityConsumptionPage: React.FC = () => {
                                       barSize={12}
                                       isAnimationActive
                                       animationDuration={500}
-                                    />
+                                    >
+                                      {chartDisplayData.map((d: any, i: number) => (
+                                        <Cell key={`c-${i}`} fill={d.noData ? "url(#noDataPattern)" : "url(#costPattern)"} />
+                                      ))}
+                                    </Bar>
                                   )}
                                 </ComposedChart>
                               </ResponsiveContainer>
                             </div>
                           </TabsContent>
-                          {/* REMOVED: Vue colonnes pleines (bars-solid) */}
                         </Tabs>
                       </div>
                     ) : (

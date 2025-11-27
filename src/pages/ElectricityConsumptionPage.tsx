@@ -137,6 +137,9 @@ const ElectricityConsumptionPage: React.FC = () => {
     }
   }, [isEnergyType]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Définir avant usage dans chartDisplayData
+  const canComputeEnergyCost = type !== "consumption_max_power";
+
   // Sauvegarde auto des champs pour éviter de perdre les valeurs en quittant la page
   React.useEffect(() => {
     localStorage.setItem("conso_prm", prm);
@@ -263,7 +266,6 @@ const ElectricityConsumptionPage: React.FC = () => {
   }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type]);
 
   // Calcul énergie totale (kWh) en fonction du type retourné
-  const canComputeEnergyCost = type !== "consumption_max_power";
   const energyKWhTotal = React.useMemo(() => {
     if (!chartData || chartData.length === 0) return 0;
     if (type === "daily_consumption" || type === "daily_production") {

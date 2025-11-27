@@ -88,6 +88,7 @@ const AdminUsersPage: React.FC = () => {
   const [selectedStripeAccountId, setSelectedStripeAccountId] = useState<string | null>(null);
   const [creatingStripeAccountFor, setCreatingStripeAccountFor] = useState<string | null>(null);
   const [updatingPricingFor, setUpdatingPricingFor] = useState<string | null>(null);
+  const [bulkUpdatingSmartPricing, setBulkUpdatingSmartPricing] = useState(false);
   const navigate = useNavigate();
 
   const fetchUsers = useCallback(async () => {
@@ -237,6 +238,26 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleDisableSmartPricingForAll = async () => {
+    const toUpdate = users.filter(u => !u.can_manage_prices);
+    if (toUpdate.length === 0) {
+      toast.info('Le Smart Pricing est déjà désactivé pour tous.');
+      return;
+    }
+    setBulkUpdatingSmartPricing(true);
+    try {
+      await Promise.allSettled(
+        toUpdate.map(u => updateUser({ user_id: u.id, can_manage_prices: true }))
+      );
+      toast.success(`Smart Pricing désactivé pour ${toUpdate.length} client(s).`);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(`Erreur lors de la désactivation en masse : ${error.message}`);
+    } finally {
+      setBulkUpdatingSmartPricing(false);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const term = searchTerm.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
@@ -359,6 +380,17 @@ const AdminUsersPage: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Gestion des Clients</h1>
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              onClick={handleDisableSmartPricingForAll}
+              disabled={bulkUpdatingSmartPricing || loading}
+              title="Désactiver Smart Pricing pour tous les clients"
+            >
+              {bulkUpdatingSmartPricing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Désactiver Smart Pricing (Tous)
+            </Button>
             <Button onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="h-4 w-4 mr-2" />
               Importer des clients

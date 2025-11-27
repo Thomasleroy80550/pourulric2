@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +38,11 @@ type FetchParams = {
   start: string; // YYYY-MM-DD
   end: string;   // YYYY-MM-DD
 };
+
+// Crée une clé de cache stable pour une combinaison de paramètres (sans inclure le token)
+function makeCacheKey(p: { prm: string; type: ConsoType; start: string; end: string }) {
+  return `${p.prm}::${p.type}::${p.start}::${p.end}`;
+}
 
 function isValidDateStr(s: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
@@ -91,6 +96,7 @@ function toChartData(data: any[]): { name: string; value: number }[] {
 }
 
 const ElectricityConsumptionPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [prm, setPrm] = React.useState<string>(() => localStorage.getItem("conso_prm") || "");
   const [token, setToken] = React.useState<string>(() => localStorage.getItem("conso_token") || "");
   const [type, setType] = React.useState<ConsoType>(() => (localStorage.getItem("conso_type") as ConsoType) || "daily_consumption");
@@ -162,9 +168,10 @@ const ElectricityConsumptionPage: React.FC = () => {
   }, [end]);
 
   const [params, setParams] = React.useState<FetchParams | null>(null);
+  const paramKey = React.useMemo(() => (params ? makeCacheKey(params) : null), [params]);
 
   const { data, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ["conso", params],
+    queryKey: ["conso", paramKey],
     queryFn: async () => {
       if (!params) return null;
       const { data, error } = await supabase.functions.invoke("conso-proxy", {
@@ -182,7 +189,55 @@ const ElectricityConsumptionPage: React.FC = () => {
       return data;
     },
     enabled: !!params,
+    // Sur succès: enregistrer en cache local + mémoriser la dernière recherche
+    onSuccess: (resp) => {
+      if (!params) return;
+      const key = makeCacheKey(params);
+      localStorage.setItem(`conso_cache_${key}`, JSON.stringify({ data: resp, cachedAt: new Date().toISOString() }));
+      localStorage.setItem("conso_last_key", key);
+      localStorage.setItem("conso_last_params", JSON.stringify(params));
+    },
   });
+
+  // Au montage: restaurer la dernière recherche depuis le cache et l'afficher instantanément
+  React.useEffect(() => {
+    const lastKey = localStorage.getItem("conso_last_key");
+    const lastParamsRaw = localStorage.getItem("conso_last_params");
+    if (!lastKey || !lastParamsRaw) return;
+    try {
+      const lastParams = JSON.parse(lastParamsRaw) as FetchParams;
+      const cachedRaw = localStorage.getItem(`conso_cache_${lastKey}`);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (cached?.data) {
+          queryClient.setQueryData(["conso", lastKey], cached.data);
+        }
+      }
+      // Déclenche l'affichage immédiat + un refetch en arrière-plan
+      setParams(lastParams);
+    } catch {
+      // ignore parsing issues
+    }
+  }, [queryClient]);
+
+  // Planifier un rechargement automatique chaque jour à 00:00
+  React.useEffect(() => {
+    let timeoutId: number | undefined;
+    function scheduleMidnightRefetch() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1, 0); // 00:00:01
+      const ms = next.getTime() - now.getTime();
+      timeoutId = window.setTimeout(() => {
+        // Refetch la requête courante si des paramètres sont définis
+        if (params) refetch();
+        scheduleMidnightRefetch();
+      }, ms);
+    }
+    scheduleMidnightRefetch();
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [refetch, params]);
 
   // Normalise la réponse pour trouver un tableau exploitable, même si l'API renvoie un objet.
   const normalizedArray = React.useMemo(() => {
@@ -339,6 +394,22 @@ const ElectricityConsumptionPage: React.FC = () => {
     localStorage.setItem("conso_type", type);
     localStorage.setItem("conso_start", start);
     localStorage.setItem("conso_end", end);
+
+    // Seed affichage instantané depuis le cache si disponible
+    const key = makeCacheKey({ prm, type, start, end });
+    const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw);
+        if (cached?.data) {
+          queryClient.setQueryData(["conso", key], cached.data);
+        }
+      } catch {
+        // ignore parsing issues
+      }
+    }
+    localStorage.setItem("conso_last_key", key);
+    localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start, end }));
 
     setParams({ prm, token, type, start, end });
     toast.success("Requête envoyée. Récupération des données...");

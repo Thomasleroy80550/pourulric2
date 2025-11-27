@@ -157,6 +157,41 @@ const extractMinStay = (minStayText: string): number | null => {
   return match ? parseInt(match[0], 10) : null;
 };
 
+// AJOUT: états prix minimum / standard
+// et helpers pour suggestions
+// ----------------------------------------------------
+const normalize = (s?: string) => (s || "").toLowerCase();
+
+const seasonMultiplier = (season: string) => {
+  const s = normalize(season);
+  if (s.includes("très haute")) return 1.25;
+  if (s.includes("tres haute")) return 1.25; // fallback sans accent
+  if (s.includes("haute")) return 1.15;
+  if (s.includes("moyenne")) return 1.0;
+  if (s.includes("basse")) return 0.85;
+  return 1.0;
+};
+
+const extraBoostMultiplier = (periodType: string, comment: string) => {
+  const p = normalize(periodType);
+  const c = normalize(comment);
+  let boost = 0;
+  if (p.includes("week-end") || p.includes("weekend")) boost += 0.10;
+  if (c.includes("vacances") || c.includes("zone ")) boost += 0.05;
+  return 1 + boost;
+};
+
+const computeSuggestedPrice = (row: CsvRow, baseMin: number | null, baseStd: number | null): number | null => {
+  if (baseStd == null || baseStd <= 0) return null;
+  const mult = seasonMultiplier(row.season) * extraBoostMultiplier(row.periodType, row.comment || "");
+  const raw = Math.round(baseStd * mult);
+  if (baseMin != null && baseMin > 0) {
+    return Math.max(raw, baseMin);
+  }
+  return raw;
+};
+// ----------------------------------------------------
+
 const Season2026Page: React.FC = () => {
   const { profile } = useSession();
   const [loadingCsv, setLoadingCsv] = useState(true);
@@ -165,6 +200,18 @@ const Season2026Page: React.FC = () => {
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string>("");
   const [inputsByIndex, setInputsByIndex] = useState<Record<number, { price?: number | null; minStay?: number | null; closed?: boolean; clArr?: boolean; clDep?: boolean }>>({});
+
+  // AJOUT: logements déjà demandés pour 2026
+  const [existingRoomIds, setExistingRoomIds] = useState<string[]>([]);
+
+  // AJOUT: prix minimum / prix standard saisis par l'utilisateur
+  const [baseMinPrice, setBaseMinPrice] = useState<number | null>(null);
+  const [baseStdPrice, setBaseStdPrice] = useState<number | null>(null);
+
+  // Suggestions calculées pour chaque ligne
+  const suggestions = useMemo(() => {
+    return rows.map((r) => computeSuggestedPrice(r, baseMinPrice, baseStdPrice));
+  }, [rows, baseMinPrice, baseStdPrice]);
 
   // Blocage pour clients en smart pricing (ceux qui ne peuvent pas gérer leurs prix)
   const isSmartPricingUser = useMemo(() => !profile?.can_manage_prices, [profile]);
@@ -204,9 +251,6 @@ const Season2026Page: React.FC = () => {
     };
     fetchAll();
   }, []);
-
-  // AJOUT: logements déjà demandés pour 2026
-  const [existingRoomIds, setExistingRoomIds] = useState<string[]>([]);
 
   const handleInputChange = (index: number, field: "price" | "minStay" | "closed" | "clArr" | "clDep", value: any) => {
     setInputsByIndex((prev) => ({
@@ -270,6 +314,25 @@ const Season2026Page: React.FC = () => {
     } catch (err: any) {
       toast.error(`Erreur lors de la création de la demande : ${err.message}`, { id: toastId });
     }
+  };
+
+  // AJOUT: appliquer suggestions aux prix vides
+  const applySuggestions = () => {
+    if (baseStdPrice == null || baseStdPrice <= 0) {
+      toast.error("Veuillez saisir votre prix standard pour générer des suggestions.");
+      return;
+    }
+    const next: Record<number, { price?: number | null; minStay?: number | null; closed?: boolean; clArr?: boolean; clDep?: boolean }> = { ...inputsByIndex };
+    rows.forEach((row, i) => {
+      const suggested = suggestions[i];
+      const current = next[i];
+      const currentPrice = current?.price;
+      if (suggested != null && (currentPrice == null || currentPrice === undefined)) {
+        next[i] = { ...current, price: suggested };
+      }
+    });
+    setInputsByIndex(next);
+    toast.success("Prix suggérés appliqués aux lignes sans prix.");
   };
 
   return (
@@ -351,6 +414,35 @@ const Season2026Page: React.FC = () => {
                     Saisies libres: si vous laissez vide le prix, l'admin appliquera ses règles.
                   </div>
                 </div>
+
+                {/* AJOUT: prix de base */}
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">Prix minimum (€)</label>
+                    <Input
+                      type="number"
+                      step="1"
+                      placeholder="ex: 90"
+                      value={baseMinPrice ?? ""}
+                      onChange={(e) => setBaseMinPrice(e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">Prix standard (€)</label>
+                    <Input
+                      type="number"
+                      step="1"
+                      placeholder="ex: 120"
+                      value={baseStdPrice ?? ""}
+                      onChange={(e) => setBaseStdPrice(e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button variant="secondary" className="w-full" onClick={applySuggestions}>
+                      Appliquer les suggestions
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
@@ -386,6 +478,7 @@ const Season2026Page: React.FC = () => {
                         <TableHead>Type période</TableHead>
                         <TableHead>Saison</TableHead>
                         <TableHead>Commentaire</TableHead>
+                        <TableHead>Prix suggéré</TableHead>
                         <TableHead>Prix (€)</TableHead>
                         <TableHead>Min séjour</TableHead>
                         <TableHead>Fermé</TableHead>
@@ -397,6 +490,7 @@ const Season2026Page: React.FC = () => {
                       {rows.map((r, i) => {
                         const defaultsMinStay = extractMinStay(r.minStayText);
                         const inputs = inputsByIndex[i] || {};
+                        const suggested = suggestions[i];
                         return (
                           <TableRow key={`${r.start}-${r.end}-${i}`}>
                             <TableCell>{r.start}</TableCell>
@@ -404,11 +498,18 @@ const Season2026Page: React.FC = () => {
                             <TableCell>{r.periodType}</TableCell>
                             <TableCell>{r.season}</TableCell>
                             <TableCell className="text-xs text-muted-foreground">{r.comment}</TableCell>
+                            <TableCell className="min-w-[110px]">
+                              {suggested != null ? (
+                                <span className="font-medium">{suggested} €</span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
                             <TableCell className="min-w-[120px]">
                               <Input
                                 type="number"
-                                step="0.01"
-                                placeholder="ex: 120"
+                                step="1"
+                                placeholder={suggested != null ? String(suggested) : "ex: 120"}
                                 value={typeof inputs.price === "number" ? inputs.price : ""}
                                 onChange={(e) =>
                                   handleInputChange(i, "price", e.target.value === "" ? null : Number(e.target.value))
@@ -448,8 +549,14 @@ const Season2026Page: React.FC = () => {
                       })}
                     </TableBody>
                   </Table>
-                  <div className="flex justify-end mt-4">
-                    <Button onClick={handleSubmit}>Envoyer ma demande</Button>
+                  <div className="flex justify-between mt-4">
+                    <div className="text-xs text-muted-foreground">
+                      Les suggestions sont calculées à partir de vos prix de base et de la saison/du type de période. Elles respectent votre prix minimum.
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" onClick={applySuggestions}>Appliquer les suggestions</Button>
+                      <Button onClick={handleSubmit}>Envoyer ma demande</Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

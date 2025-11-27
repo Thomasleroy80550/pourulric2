@@ -52,7 +52,7 @@ interface TodoTask {
   title: string; // Titre principal de la tâche
   description?: string; // Description optionnelle
   link: string; // URL vers laquelle naviguer
-  category: 'technical_report' | 'room_setup'; // Catégorie de la tâche
+  category: 'technical_report' | 'room_setup' | 'hivernage' | 'season_pricing'; // Catégorie de la tâche
   property_name?: string; // Spécifique aux rapports techniques
 }
 
@@ -322,6 +322,22 @@ const DashboardPage = () => {
           category: 'room_setup',
         });
       }
+
+      // Ajouter Hivernage et Saison 2026 comme actions requises
+      allTodoTasks.push({
+        id: 'hivernage-2026',
+        title: "Envoyer mes consignes d'hivernage",
+        description: "Fermeture du 4 au 11 janvier. Chauffage, eau, réfrigérateur, linge, volets...",
+        link: '/hivernage-2026',
+        category: 'hivernage',
+      });
+      allTodoTasks.push({
+        id: 'season-2026-config',
+        title: "Configurer mes prix Saison 2026",
+        description: "Saisissez vos prix par périodes et envoyez votre demande (une par logement et par année).",
+        link: '/season-2026',
+        category: 'season_pricing',
+      });
 
       setTodoTasks(allTodoTasks); // Mettre à jour l'état avec toutes les tâches
 

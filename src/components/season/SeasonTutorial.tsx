@@ -8,8 +8,7 @@ import {
   CalendarDays,
   Wand2,
   Lock,
-  CheckCircle,
-  AlertTriangle
+  CheckCircle
 } from "lucide-react";
 
 interface TutorialSlide {
@@ -23,67 +22,31 @@ interface TutorialSlide {
 const slides: TutorialSlide[] = [
   {
     id: 1,
-    title: "Bienvenue dans la Saison 2026",
+    title: "Saison 2026 est là ✨",
     content:
-      "Cette page vous permet de saisir vos prix et restrictions pour chaque période de 2026, puis d'envoyer une demande à l'administration.",
+      "Préparez votre année avec des prix attractifs et des périodes optimisées. Un parcours pensé pour être simple, clair et efficace.",
     icon: <CalendarDays className="h-12 w-12 text-blue-600" />,
   },
   {
     id: 2,
-    title: "Prix minimum et prix standard",
+    title: "Prix intelligents, sans prise de tête",
     content:
-      "Renseignez votre prix minimum (plancher) et votre prix standard. Nous proposons des prix par période, calculés selon la saison et le type (week-end, vacances), tout en respectant votre minimum.",
+      "Définissez votre minimum et votre standard, et laissez nos suggestions ajuster selon les saisons, les week-ends et les vacances scolaires — tout en respectant vos règles.",
     icon: <Wand2 className="h-12 w-12 text-violet-600" />,
-    example: (
-      <div className="mt-4 p-4 bg-violet-50 rounded-lg text-sm">
-        <div className="font-medium text-violet-700 mb-2">Règles simples (révisées) :</div>
-        <ul className="space-y-1 text-violet-700/80">
-          <li>• Très haute saison: ×1.20</li>
-          <li>• Haute saison: ×1.10</li>
-          <li>• Moyenne saison: ×1.00</li>
-          <li>• Basse saison: ×0.90</li>
-          <li>• Bonus week-end: +8%</li>
-          <li>• Bonus vacances scolaires: +4%</li>
-        </ul>
-      </div>
-    ),
   },
   {
     id: 3,
-    title: "Correction du week-end de Pâques",
+    title: "Contrôle simplifié",
     content:
-      "Les dates du week-end de Pâques (03/04 → 06/04/2026) sont ajustées automatiquement pour éviter les 'trous'. La période est scindée en avant/pendant/après pour conserver la continuité.",
-    icon: <AlertTriangle className="h-12 w-12 text-amber-600" />,
+      "Renseignez la durée minimale de séjour et la fermeture si besoin. Laissez vide pour que l'administration applique ses réglages par défaut.",
+    icon: <Lock className="h-12 w-12 text-slate-600" />,
   },
   {
     id: 4,
-    title: "Restrictions et options",
+    title: "Envoyez en un clic",
     content:
-      "Vous pouvez définir la fermeture et la durée minimale de séjour. Laissez vide un champ si vous souhaitez que l'admin applique ses règles.",
-    icon: <Lock className="h-12 w-12 text-slate-600" />,
-    example: (
-      <div className="mt-4 p-4 bg-slate-50 rounded-lg text-sm">
-        <div className="font-medium text-slate-700 mb-2">Exemples :</div>
-        <ul className="space-y-1 text-slate-700/80">
-          <li>• Min séjour: 2 nuits</li>
-          <li>• Fermé: oui/non</li>
-        </ul>
-      </div>
-    ),
-  },
-  {
-    id: 5,
-    title: "Envoi et traitement",
-    content:
-      "Cliquez sur 'Envoyer ma demande'. Nous empêchons les doublons par logement/année. L'administration traite ensuite manuellement (et peut appliquer vos prix/périodes au logement).",
+      "Un bouton, une demande. Pas de doublons par logement/année, l'administration se charge du reste. Vous êtes prêts pour 2026.",
     icon: <CheckCircle className="h-12 w-12 text-green-600" />,
-  },
-  {
-    id: 6,
-    title: "Conseils rapides",
-    content:
-      "Vérifiez les suggestions avant d'appliquer. Si vous êtes en smart pricing, la demande sera rejetée. Contactez l'administration si vous avez besoin de clarifications.",
-    icon: <CalendarDays className="h-12 w-12 text-blue-600" />,
   },
 ];
 
@@ -116,7 +79,6 @@ const SeasonTutorial: React.FC<SeasonTutorialProps> = ({ onClose }) => {
               <div className="flex justify-center mb-6">{c.icon}</div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">{c.title}</h2>
               <p className="text-gray-600 text-lg leading-relaxed">{c.content}</p>
-              {c.example}
             </div>
 
             <div className="flex justify-center space-x-2 mb-8">

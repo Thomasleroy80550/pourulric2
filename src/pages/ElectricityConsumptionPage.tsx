@@ -97,6 +97,39 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
   const [showToken, setShowToken] = React.useState(false);
 
+  // Détermine la catégorie d'unité selon le type choisi
+  const isEnergyType = React.useMemo(
+    () => ["daily_consumption", "daily_production"].includes(type),
+    [type]
+  );
+
+  // Unité affichée (par défaut: kWh pour l'énergie, kW pour la puissance)
+  const [unit, setUnit] = React.useState<string>(() => {
+    const saved = localStorage.getItem("conso_unit");
+    if (saved) return saved;
+    return ["daily_consumption", "daily_production"].includes(
+      (localStorage.getItem("conso_type") as any) || "daily_consumption"
+    )
+      ? "kWh"
+      : "kW";
+  });
+
+  // Mémoriser l'unité choisie
+  React.useEffect(() => {
+    localStorage.setItem("conso_unit", unit);
+  }, [unit]);
+
+  // Ajuster automatiquement l'unité par défaut quand le type change (sans écraser le choix si cohérent)
+  React.useEffect(() => {
+    const desiredDefault = isEnergyType ? "kWh" : "kW";
+    if (
+      (isEnergyType && !["Wh", "kWh", "MWh"].includes(unit)) ||
+      (!isEnergyType && !["W", "kW"].includes(unit))
+    ) {
+      setUnit(desiredDefault);
+    }
+  }, [isEnergyType]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sauvegarde auto des champs pour éviter de perdre les valeurs en quittant la page
   React.useEffect(() => {
     localStorage.setItem("conso_prm", prm);
@@ -166,6 +199,28 @@ const ElectricityConsumptionPage: React.FC = () => {
     if (!normalizedArray || normalizedArray.length === 0) return [];
     return toChartData(normalizedArray);
   }, [normalizedArray]);
+
+  // Convertit la valeur selon l'unité sélectionnée
+  const convertedChartData = React.useMemo(() => {
+    if (!chartData || chartData.length === 0) return [];
+    const factor = (() => {
+      if (isEnergyType) {
+        // Source en Wh → Wh, kWh, MWh
+        if (unit === "Wh") return 1;
+        if (unit === "kWh") return 1 / 1000;
+        if (unit === "MWh") return 1 / 1_000_000;
+        return 1;
+      } else {
+        // Source en W → W, kW
+        if (unit === "W") return 1;
+        if (unit === "kW") return 1 / 1000;
+        return 1;
+      }
+    })();
+    return chartData.map((d) => ({ ...d, value: d.value * factor }));
+  }, [chartData, unit, isEnergyType]);
+
+  const unitOptions = isEnergyType ? ["Wh", "kWh", "MWh"] : ["W", "kW"];
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -284,7 +339,7 @@ const ElectricityConsumptionPage: React.FC = () => {
 
               <div className="flex flex-col gap-2">
                 <Label>Type de donnée</Label>
-                <Select value={type} onValueChange={(v) => setType(v as ConsoType)}>
+                <Select value={type} onValueChange={(v) => setType(v as any)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choisir un type" />
                   </SelectTrigger>
@@ -296,6 +351,26 @@ const ElectricityConsumptionPage: React.FC = () => {
                     <SelectItem value="production_load_curve">Courbe de production (30 min)</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Sélecteur d'unité d'affichage */}
+              <div className="flex flex-col gap-2">
+                <Label>Unité d'affichage</Label>
+                <Select value={unit} onValueChange={(v) => setUnit(v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir une unité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((u) => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Source: {isEnergyType ? "Wh (énergie)" : "W (puissance)"} — conversion appliquée au graphique.
+                </p>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -351,10 +426,10 @@ const ElectricityConsumptionPage: React.FC = () => {
               <>
                 {normalizedArray.length > 0 ? (
                   <>
-                    {chartData.length > 0 ? (
-                      <div className="h-72 mb-6">
+                    {convertedChartData.length > 0 ? (
+                      <div className="h-72 mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <AreaChart data={convertedChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
@@ -363,8 +438,18 @@ const ElectricityConsumptionPage: React.FC = () => {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip />
+                            <YAxis
+                              tick={{ fontSize: 12 }}
+                              tickFormatter={(v: number) =>
+                                `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                              }
+                            />
+                            <Tooltip
+                              formatter={(val: any) => [
+                                `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
+                                "Valeur",
+                              ]}
+                            />
                             <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="url(#colorValue)" />
                           </AreaChart>
                         </ResponsiveContainer>
@@ -377,6 +462,8 @@ const ElectricityConsumptionPage: React.FC = () => {
                         </AlertDescription>
                       </Alert>
                     )}
+
+                    <p className="text-xs text-muted-foreground mb-4">Unité d'affichage du graphique: {unit}</p>
 
                     <div className="overflow-auto rounded-md border">
                       <table className="w-full text-sm">

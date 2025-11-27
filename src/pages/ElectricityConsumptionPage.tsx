@@ -508,6 +508,14 @@ const ElectricityConsumptionPage: React.FC = () => {
     toast.success("Paramètres enregistrés localement");
   };
 
+  const handleClearCredentials = () => {
+    localStorage.removeItem("conso_prm");
+    localStorage.removeItem("conso_token");
+    setPrm("");
+    setToken("");
+    toast.success("Paramètres effacés de cet appareil");
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">

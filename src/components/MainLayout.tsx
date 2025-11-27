@@ -391,7 +391,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="hidden md:flex flex-1 items-center justify-center">
               <div className="inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs md:text-sm text-amber-900 shadow-sm dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-200">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span className="font-semibold">La conciergerie ferme du 4 au 11 inclus</span>
+                <span className="font-semibold">La conciergerie ferme du 4 janvier au 11 février</span>
               </div>
             </div>
 

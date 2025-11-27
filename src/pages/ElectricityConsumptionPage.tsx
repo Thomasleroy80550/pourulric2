@@ -159,7 +159,7 @@ const ElectricityConsumptionPage: React.FC = () => {
   );
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const [chartView, setChartView] = React.useState<"area" | "bars">("area");
+  const [chartView, setChartView] = React.useState<"area" | "bars" | "bars-solid">("area");
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);
@@ -1054,6 +1054,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                           <TabsList className="mb-3">
                             <TabsTrigger value="area">Vue aire</TabsTrigger>
                             <TabsTrigger value="bars">Vue barres</TabsTrigger>
+                            <TabsTrigger value="bars-solid">Barres pleines</TabsTrigger>
                           </TabsList>
                           <TabsContent value="area" className="m-0">
                             <div className="h-[380px] md:h-[420px]">
@@ -1242,6 +1243,57 @@ const ElectricityConsumptionPage: React.FC = () => {
                                       activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
                                     />
                                   )}
+                                </ComposedChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </TabsContent>
+                          <TabsContent value="bars-solid" className="m-0">
+                            <div className="h-[380px] md:h-[420px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                                  <XAxis
+                                    dataKey="name"
+                                    minTickGap={18}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
+                                  />
+                                  <YAxis
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    width={64}
+                                    tickFormatter={(v: number) =>
+                                      `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                                    }
+                                    domain={[0, "auto"]}
+                                  />
+                                  <Tooltip
+                                    wrapperStyle={{ outline: "none" }}
+                                    contentStyle={{
+                                      background: "rgba(17, 24, 39, 0.92)",
+                                      border: "1px solid #374151",
+                                      borderRadius: 8,
+                                      boxShadow:
+                                        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+                                    }}
+                                    labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                                    itemStyle={{ color: "#e5e7eb" }}
+                                    formatter={(val: any) => [
+                                      `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
+                                      "Valeur",
+                                    ]}
+                                  />
+                                  <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
+                                  <Bar
+                                    name="Valeur"
+                                    dataKey="value"
+                                    fill="#6366f1"
+                                    radius={[6, 6, 0, 0]}
+                                    barSize={18}
+                                  />
                                 </ComposedChart>
                               </ResponsiveContainer>
                             </div>

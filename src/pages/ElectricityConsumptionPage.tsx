@@ -299,6 +299,21 @@ const ElectricityConsumptionPage: React.FC = () => {
     }
   };
 
+  // Gestion explicite des paramètres stockés
+  const handleSaveCredentials = () => {
+    localStorage.setItem("conso_prm", prm);
+    localStorage.setItem("conso_token", token);
+    toast.success("Paramètres enregistrés localement");
+  };
+
+  const handleClearCredentials = () => {
+    localStorage.removeItem("conso_prm");
+    localStorage.removeItem("conso_token");
+    setPrm("");
+    setToken("");
+    toast.success("Paramètres effacés de cet appareil");
+  };
+
   const onSubmit = () => {
     // Basic validations
     if (!/^\d{14}$/.test(prm)) {
@@ -337,9 +352,10 @@ const ElectricityConsumptionPage: React.FC = () => {
           Renseignez votre PRM, votre token et la période pour récupérer vos données Linky via Conso API.
         </p>
 
+        {/* Section dédiée aux paramètres persistés */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Paramètres</CardTitle>
+            <CardTitle>Mes paramètres (stockés localement)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -401,10 +417,28 @@ const ElectricityConsumptionPage: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Astuce: le token est stocké localement sur votre appareil (localStorage).
+                  Ces valeurs sont sauvegardées sur cet appareil (localStorage).
                 </p>
               </div>
 
+              <div className="flex items-end gap-2">
+                <Button className="w-full" variant="default" onClick={handleSaveCredentials}>
+                  Enregistrer
+                </Button>
+                <Button className="w-full" variant="outline" onClick={handleClearCredentials}>
+                  Effacer
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Requête</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex flex-col gap-2">
                 <Label>Type de donnée</Label>
                 <Select value={type} onValueChange={(v) => setType(v as any)}>

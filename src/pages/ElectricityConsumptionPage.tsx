@@ -318,74 +318,6 @@ const ElectricityConsumptionPage: React.FC = () => {
     return toChartData(normalizedArray);
   }, [normalizedArray]);
 
-  // Indicateurs: jours de période, moyenne/jour, pic et points
-  const periodDays = React.useMemo(() => {
-    if (!isValidDateStr(start) || !isValidDateStr(end)) return 0;
-    return eachDayStrings(start, end).length;
-  }, [start, end]);
-
-  const avgKWhPerDay = React.useMemo(() => {
-    if (!canComputeEnergyCost || periodDays <= 0) return 0;
-    return energyKWhTotal / periodDays;
-  }, [energyKWhTotal, canComputeEnergyCost, periodDays]);
-
-  const peakDisplay = React.useMemo(() => {
-    if (!chartData || chartData.length === 0) return 0;
-    const rawMax = Math.max(...chartData.map((d) => Number(d.value) || 0));
-    const factor = (() => {
-      if (isEnergyType) {
-        if (unit === "Wh") return 1;
-        if (unit === "kWh") return 1 / 1000;
-        if (unit === "MWh") return 1 / 1_000_000;
-        return 1;
-      } else {
-        if (unit === "W") return 1;
-        if (unit === "kW") return 1 / 1000;
-        return 1;
-      }
-    })();
-    return rawMax * factor;
-  }, [chartData, unit, isEnergyType]);
-
-  const nbPoints = chartData.length;
-
-  // Données pour le graphique avec série coût (€) sur l'axe droit
-  const chartDisplayData = React.useMemo(() => {
-    if (!chartData || chartData.length === 0) return [];
-    // facteur d'affichage pour la série "valeur" (unité choisie)
-    const factor = (() => {
-      if (isEnergyType) {
-        if (unit === "Wh") return 1;
-        if (unit === "kWh") return 1 / 1000;
-        if (unit === "MWh") return 1 / 1_000_000;
-        return 1;
-      } else {
-        if (unit === "W") return 1;
-        if (unit === "kW") return 1 / 1000;
-        return 1;
-      }
-    })();
-    const p = Number((pricePerKWh || "").replace(",", "."));
-    return chartData.map((d) => {
-      const raw = Number(d.value) || 0; // Wh (énergie) ou W (puissance) selon le type
-      let cost: number | undefined = undefined;
-      if (canComputeEnergyCost && p > 0) {
-        if (type === "daily_consumption" || type === "daily_production") {
-          // raw en Wh par point -> kWh
-          cost = (raw / 1000) * p; // kWh * €/kWh
-        } else if (type === "consumption_load_curve" || type === "production_load_curve") {
-          // raw en W moyen sur 30 minutes -> énergie point = W * 0.5 h -> kWh = W * 0.5 / 1000
-          cost = (raw * 0.5) / 1000 * p;
-        }
-      }
-      return {
-        name: d.name,
-        value: raw * factor,
-        cost,
-      };
-    });
-  }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type]);
-
   // Calcul énergie totale (kWh) en fonction du type retourné
   const energyKWhTotal = React.useMemo(() => {
     if (!chartData || chartData.length === 0) return 0;
@@ -1115,7 +1047,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                       </Alert>
                     )}
 
-                    {/* Légende d’unité déjà incluse dans les badges au-dessus */}
+                    {/* Légende d'unité déjà incluse dans les badges au-dessus */}
                   </>
                 ) : (
                   <>

@@ -504,13 +504,10 @@ const ElectricityConsumptionPage: React.FC = () => {
       );
       const rawReservations = allResArrays.flat();
 
-      // 4) Filtrer par statut confirmé et intervalle [start, end)
-      const allowed = new Set(["PROP0", "PROPRI"]);
+      // 4) Filtrer uniquement par chevauchement [start, end)
       const startD = new Date(start);
       const endD = new Date(end);
       const filtered = rawReservations.filter((res: any) => {
-        const status = String(res.cod_reservation_status || "");
-        if (!allowed.has(status)) return false;
         const arrivalStr = String(res.arrival || "");
         const departureStr = String(res.departure || "");
         if (!isValidDateStr(arrivalStr) || !isValidDateStr(departureStr)) return false;

@@ -22,7 +22,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { Copy, Eye, EyeOff, Zap, Settings } from "lucide-react";
+import { Copy, Eye, EyeOff, Zap, Settings, Euro, TrendingUp, Gauge, CalendarDays } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import ElectricitySpark from "@/components/ElectricitySpark";
+import { Badge } from "@/components/ui/badge";
 
 type ConsoType =
   | "daily_consumption"
@@ -316,6 +317,37 @@ const ElectricityConsumptionPage: React.FC = () => {
     if (!normalizedArray || normalizedArray.length === 0) return [];
     return toChartData(normalizedArray);
   }, [normalizedArray]);
+
+  // Indicateurs: jours de période, moyenne/jour, pic et points
+  const periodDays = React.useMemo(() => {
+    if (!isValidDateStr(start) || !isValidDateStr(end)) return 0;
+    return eachDayStrings(start, end).length;
+  }, [start, end]);
+
+  const avgKWhPerDay = React.useMemo(() => {
+    if (!canComputeEnergyCost || periodDays <= 0) return 0;
+    return energyKWhTotal / periodDays;
+  }, [energyKWhTotal, canComputeEnergyCost, periodDays]);
+
+  const peakDisplay = React.useMemo(() => {
+    if (!chartData || chartData.length === 0) return 0;
+    const rawMax = Math.max(...chartData.map((d) => Number(d.value) || 0));
+    const factor = (() => {
+      if (isEnergyType) {
+        if (unit === "Wh") return 1;
+        if (unit === "kWh") return 1 / 1000;
+        if (unit === "MWh") return 1 / 1_000_000;
+        return 1;
+      } else {
+        if (unit === "W") return 1;
+        if (unit === "kW") return 1 / 1000;
+        return 1;
+      }
+    })();
+    return rawMax * factor;
+  }, [chartData, unit, isEnergyType]);
+
+  const nbPoints = chartData.length;
 
   // Données pour le graphique avec série coût (€) sur l'axe droit
   const chartDisplayData = React.useMemo(() => {
@@ -948,6 +980,67 @@ const ElectricityConsumptionPage: React.FC = () => {
               <>
                 {normalizedArray.length > 0 ? (
                   <>
+                    {/* Indicateurs en tête */}
+                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Zap className="h-4 w-4 text-yellow-400" /> Énergie totale
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {canComputeEnergyCost
+                            ? `${energyKWhTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`
+                            : "N/A"}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Euro className="h-4 w-4 text-emerald-500" /> Coût estimé
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {canComputeEnergyCost && Number((pricePerKWh || "").replace(",", ".")) > 0
+                            ? totalCost.toLocaleString(undefined, { style: "currency", currency: "EUR" })
+                            : "—"}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <TrendingUp className="h-4 w-4 text-blue-500" /> Moyenne/jour
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {canComputeEnergyCost && periodDays > 0
+                            ? `${avgKWhPerDay.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh/j`
+                            : "—"}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Gauge className="h-4 w-4 text-indigo-500" /> Pic
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {`${peakDisplay.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Badges info rapide */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <Badge variant="secondary" className="text-xs">
+                        <CalendarDays className="h-3.5 w-3.5 mr-1" />
+                        {start || "—"} → {end || "—"} (fin exclue)
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Points: {nbPoints}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Unité: {unit}
+                      </Badge>
+                      {canComputeEnergyCost && pricePerKWh && Number((pricePerKWh || "").replace(",", ".")) > 0 && (
+                        <Badge variant="outline" className="text-xs">
+                          Prix: {Number((pricePerKWh || "").replace(",", ".")).toLocaleString(undefined, { maximumFractionDigits: 4 })} €/kWh
+                        </Badge>
+                      )}
+                    </div>
+
                     {chartDisplayData.length > 0 ? (
                       <div className="h-72 mb-2">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1022,27 +1115,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                       </Alert>
                     )}
 
-                    {/* Résumé énergie + coût */}
-                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="rounded-md border p-3">
-                        <div className="text-xs text-muted-foreground">Énergie totale estimée</div>
-                        <div className="text-lg font-semibold">
-                          {canComputeEnergyCost
-                            ? `${energyKWhTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`
-                            : "N/A"}
-                        </div>
-                      </div>
-                      <div className="rounded-md border p-3">
-                        <div className="text-xs text-muted-foreground">Coût estimé</div>
-                        <div className="text-lg font-semibold">
-                          {canComputeEnergyCost && Number((pricePerKWh || "").replace(",", ".")) > 0
-                            ? `${totalCost.toLocaleString(undefined, { style: "currency", currency: "EUR" })}`
-                            : "Saisissez un prix par kWh"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-muted-foreground mb-4">Unité d'affichage du graphique: {unit}</p>
+                    {/* Légende d’unité déjà incluse dans les badges au-dessus */}
                   </>
                 ) : (
                   <>

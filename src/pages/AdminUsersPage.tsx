@@ -229,6 +229,7 @@ const AdminUsersPage: React.FC = () => {
   const crotoyClients = filteredUsers.filter(user => user.krossbooking_property_id === 1);
   const berckClients = filteredUsers.filter(user => user.krossbooking_property_id === 2);
   const allClients = filteredUsers;
+  const smartPricingClients = filteredUsers.filter(user => !user.can_manage_prices);
 
   const renderUserTable = (clientList: UserProfile[]) => (
     <Table>
@@ -342,6 +343,12 @@ const AdminUsersPage: React.FC = () => {
             <TabsTrigger value="all">Tous les clients</TabsTrigger>
             <TabsTrigger value="crotoy">Clients Crotoy</TabsTrigger>
             <TabsTrigger value="berck">Clients Berck</TabsTrigger>
+            <TabsTrigger value="smartPricing">
+              Smart Pricing
+              {smartPricingClients.length > 0 && (
+                <Badge className="ml-2">{smartPricingClients.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="requests">
               Demandes Comptable
               {requests.filter(r => r.status === 'pending').length > 0 && (
@@ -420,6 +427,31 @@ const AdminUsersPage: React.FC = () => {
                   </div>
                 ) : (
                   renderUserTable(berckClients)
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="smartPricing" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Clients en Smart Pricing</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full md:w-1/3"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  renderUserTable(smartPricingClients)
                 )}
               </CardContent>
             </Card>

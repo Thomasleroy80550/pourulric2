@@ -1106,10 +1106,10 @@ const ElectricityConsumptionPage: React.FC = () => {
                               itemStyle={{ color: "#e5e7eb" }}
                               formatter={(val: any, name: any) => {
                                 const n = String(name);
-                                if (n === "Coût") {
+                                if (n === "Coût (€)") {
                                   return [
                                     Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
-                                    "Coût",
+                                    "Coût (€)",
                                   ];
                                 }
                                 return [
@@ -1133,17 +1133,20 @@ const ElectricityConsumptionPage: React.FC = () => {
                             />
                             {showCost && (
                               <Area
-                                name="Coût"
+                                name="Coût (€)"
                                 yAxisId="right"
                                 type="monotoneX"
                                 dataKey="cost"
                                 stroke="#10b981"
                                 strokeWidth={2.5}
-                                fill="url(#colorCost)"
+                                strokeDasharray="6 4"
+                                fill="transparent"
+                                fillOpacity={0}
                                 dot={false}
                                 activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
                                 connectNulls
                                 animationDuration={500}
+                                legendType="line"
                               />
                             )}
                           </AreaChart>

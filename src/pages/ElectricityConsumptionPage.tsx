@@ -1044,44 +1044,66 @@ const ElectricityConsumptionPage: React.FC = () => {
                     </div>
 
                     {chartDisplayData.length > 0 ? (
-                      <div className="h-72 mb-2">
+                      <div className="h-[380px] md:h-[420px] mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={chartDisplayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <AreaChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                <stop offset="0%" stopColor="#6366f1" stopOpacity={0.28} />
+                                <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
+                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
                               </linearGradient>
                               <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
-                                <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.26} />
+                                <stop offset="70%" stopColor="#10b981" stopOpacity={0.06} />
+                                <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                               </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
                             <XAxis
                               dataKey="name"
-                              tick={{ fontSize: 12 }}
-                              minTickGap={20}
+                              minTickGap={18}
+                              tickLine={false}
+                              axisLine={false}
+                              tick={{ fontSize: 12, fill: "#6b7280" }}
                               tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
                             />
                             <YAxis
-                              tick={{ fontSize: 12 }}
+                              tick={{ fontSize: 12, fill: "#6b7280" }}
+                              tickLine={false}
+                              axisLine={false}
+                              width={64}
                               tickFormatter={(v: number) =>
                                 `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
                               }
+                              domain={[0, "auto"]}
                             />
                             {/* Axe droit pour le coût (€) */}
                             {showCost && (
                               <YAxis
                                 yAxisId="right"
                                 orientation="right"
-                                tick={{ fontSize: 12 }}
+                                tick={{ fontSize: 12, fill: "#6b7280" }}
+                                tickLine={false}
+                                axisLine={false}
+                                width={64}
                                 tickFormatter={(v: number) =>
                                   Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
                                 }
+                                domain={[0, "auto"]}
                               />
                             )}
                             <Tooltip
+                              wrapperStyle={{ outline: "none" }}
+                              contentStyle={{
+                                background: "rgba(17, 24, 39, 0.92)",
+                                border: "1px solid #374151",
+                                borderRadius: 8,
+                                boxShadow:
+                                  "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+                              }}
+                              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                              itemStyle={{ color: "#e5e7eb" }}
                               formatter={(val: any, name: any) => {
                                 const n = String(name);
                                 if (n === "Coût") {
@@ -1096,30 +1118,32 @@ const ElectricityConsumptionPage: React.FC = () => {
                                 ];
                               }}
                             />
-                            <Legend verticalAlign="top" height={28} />
+                            <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
                             <Area
                               name="Valeur"
-                              type="monotone"
+                              type="monotoneX"
                               dataKey="value"
-                              stroke="#3b82f6"
-                              strokeWidth={2}
+                              stroke="#6366f1"
+                              strokeWidth={2.5}
                               fill="url(#colorValue)"
                               dot={false}
-                              activeDot={{ r: 2 }}
+                              activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
                               connectNulls
+                              animationDuration={500}
                             />
                             {showCost && (
                               <Area
                                 name="Coût"
                                 yAxisId="right"
-                                type="monotone"
+                                type="monotoneX"
                                 dataKey="cost"
-                                stroke="#22c55e"
-                                strokeWidth={2}
+                                stroke="#10b981"
+                                strokeWidth={2.5}
                                 fill="url(#colorCost)"
                                 dot={false}
-                                activeDot={{ r: 2 }}
+                                activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
                                 connectNulls
+                                animationDuration={500}
                               />
                             )}
                           </AreaChart>

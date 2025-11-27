@@ -80,6 +80,7 @@ import AdminCRMPage from "./pages/AdminCRMPage";
 import MessagesPage from "./pages/MessagesPage";
 import AdminV2Dashboard from "./pages/admin-v2/Dashboard";
 import AdminV2Users from "./pages/admin-v2/Users";
+import ElectricityConsumptionPage from "./pages/ElectricityConsumptionPage";
 
 const queryClient = new QueryClient();
 
@@ -169,6 +170,7 @@ function App() {
                   <Route path="/admin-v2" element={<AdminV2Dashboard />} />
                   <Route path="/admin-v2/users" element={<AdminV2Users />} />
                   <Route path="/messages" element={<MessagesPage />} />
+                  <Route path="/electricity" element={<ElectricityConsumptionPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </SessionContextProvider>

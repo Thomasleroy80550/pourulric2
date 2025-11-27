@@ -39,6 +39,7 @@ import {
   Store, // Ajout de l'icône pour la marketplace
   Wrench, // Ajout de l'icône pour le ménage
   Mail, // icône e-mail
+  Zap, // icône éclair pour conso électricité
 } from "lucide-react";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -96,6 +97,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
       { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
       { name: 'Mes Avis', href: '/reviews', icon: Star },
       { name: 'Analyse Concurrentielle', href: '/comp-set', icon: Copy },
+      { name: 'Conso Électricité', href: '/electricity', icon: Zap },
     ],
   },
   {

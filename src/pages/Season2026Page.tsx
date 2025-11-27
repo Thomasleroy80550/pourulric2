@@ -26,6 +26,68 @@ type CsvRow = {
   comment: string;
 };
 
+// AJOUT: utilitaires de date pour dd/MM/yyyy
+const dmyToDate = (dmy: string) => {
+  const [dd, mm, yyyy] = dmy.split("/").map((s) => parseInt(s, 10));
+  return new Date(yyyy, mm - 1, dd);
+};
+const dateToDmy = (date: Date) => {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+// AJOUT: correction ciblée pour le week-end de Pâques 2026
+const adjustEasterWeekend = (rows: CsvRow[]): CsvRow[] => {
+  const easterStartDmy = "03/04/2026";
+  const easterEndDmy = "06/04/2026";
+  const easterStart = dmyToDate(easterStartDmy);
+  const easterEnd = dmyToDate(easterEndDmy);
+
+  const patchedRows = [...rows];
+
+  // Chercher une ligne qui mentionne Pâques
+  let idx = patchedRows.findIndex((r) =>
+    /pâques|paques/i.test(`${r.periodType} ${r.comment}`)
+  );
+
+  // Sinon, trouver une ligne qui chevauche le week-end (sécurité si libellé différent)
+  if (idx === -1) {
+    idx = patchedRows.findIndex((r) => {
+      const rs = dmyToDate(r.start);
+      const re = dmyToDate(r.end);
+      return rs <= easterEnd && re >= easterStart;
+    });
+  }
+
+  const correctionNote = "Corrigé Pâques 2026 (ven 3 → lun 6, min 3 nuits)";
+
+  if (idx !== -1) {
+    const r = patchedRows[idx];
+    patchedRows[idx] = {
+      ...r,
+      start: easterStartDmy,
+      end: easterEndDmy,
+      season: "TRÈS HAUTE SAISON",
+      minStayText: "3 nuits",
+      comment: r.comment ? `${r.comment} • ${correctionNote}` : correctionNote,
+    };
+  } else {
+    // Aucune ligne correspondante: ajouter la période Pâques
+    patchedRows.push({
+      start: easterStartDmy,
+      end: easterEndDmy,
+      periodType: "Week-end Pâques",
+      season: "TRÈS HAUTE SAISON",
+      minStayText: "3 nuits",
+      comment: "Ajout automatique selon dates officielles",
+    });
+  }
+
+  return patchedRows;
+};
+
 const parseCsv = (csvText: string): CsvRow[] => {
   const lines = csvText.trim().split(/\r?\n/);
   const rows: CsvRow[] = [];
@@ -44,8 +106,8 @@ const parseCsv = (csvText: string): CsvRow[] => {
       comment: parts[5],
     });
   }
-  // Utiliser les dates telles qu'elles sont dans le CSV
-  return rows;
+  // Utiliser les dates telles qu'elles sont dans le CSV puis corriger Pâques 2026
+  return adjustEasterWeekend(rows);
 };
 
 const toISO = (ddmmyyyy: string): string => {

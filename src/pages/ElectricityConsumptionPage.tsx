@@ -162,8 +162,18 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [type, setType] = React.useState<ConsoType>(
     () => (localStorage.getItem("conso_type") as ConsoType) || "daily_consumption"
   );
-  const [start, setStart] = React.useState<string>(() => localStorage.getItem("conso_start") || "");
-  const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
+  const [start, setStart] = React.useState<string>(() => {
+    const saved = localStorage.getItem("conso_start");
+    if (saved && isValidDateStr(saved)) return saved;
+    const today = new Date();
+    return toISODate(addDays(today, -7)); // défaut: 7 jours
+  });
+  const [end, setEnd] = React.useState<string>(() => {
+    const saved = localStorage.getItem("conso_end");
+    if (saved && isValidDateStr(saved)) return saved;
+    const tomorrow = addDays(new Date(), 1); // fin exclue
+    return toISODate(tomorrow);
+  });
   const [showToken, setShowToken] = React.useState(false);
   const [pricePerKWh, setPricePerKWh] = React.useState<string>(
     () => localStorage.getItem("conso_price_per_kwh") || ""

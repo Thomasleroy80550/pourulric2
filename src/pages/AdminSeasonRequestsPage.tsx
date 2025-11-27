@@ -10,11 +10,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarDays, Eye, CheckCircle, Ban } from "lucide-react";
+import { CalendarDays, Eye, CheckCircle, Ban, Wrench } from "lucide-react";
 import { getAllSeasonPricingRequests, updateSeasonPricingRequestStatus, SeasonPricingRequest, SeasonPricingStatus } from "@/lib/season-pricing-api";
 import ExportRequestsMenu from "@/components/admin/ExportRequestsMenu";
 import SingleRequestExportMenu from "@/components/admin/SingleRequestExportMenu";
 import { safeFormat } from "@/lib/date-utils";
+import { saveChannelManagerSettings } from "@/lib/krossbooking";
+import { addOverrides, NewPriceOverride } from "@/lib/price-override-api";
+import { getAllUserRooms, AdminUserRoom } from "@/lib/admin-api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -23,6 +35,9 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [tab, setTab] = useState<SeasonPricingStatus>("pending");
   const tableRef = useRef<HTMLDivElement>(null);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+  const [pendingApply, setPendingApply] = useState<SeasonPricingRequest | null>(null);
+  const [allUserRooms, setAllUserRooms] = useState<AdminUserRoom[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,7 +54,106 @@ const AdminSeasonRequestsPage: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const rooms = await getAllUserRooms();
+        setAllUserRooms(rooms);
+      } catch (err: any) {
+        console.error("Erreur chargement des logements admin:", err);
+      }
+    };
+    fetchRooms();
+  }, []);
+
   const filtered = useMemo(() => requests.filter(r => r.status === tab), [requests, tab]);
+
+  // Appliquer une demande au logement (Krossbooking + overrides)
+  const applyRequestToRoom = async (req: SeasonPricingRequest) => {
+    const toastId = toast.loading("Application des prix & restrictions...");
+    try {
+      setApplyingId(req.id);
+
+      // Trouver le logement correspondant (par user_id et room_id)
+      const matchingRoom = allUserRooms.find(
+        (r) =>
+          r.user_id === req.user_id &&
+          ((req.room_id && r.room_id === req.room_id) ||
+            (req.room_name && r.room_name === req.room_name))
+      );
+
+      // Déterminer l'id_room_type à envoyer au Channel Manager
+      const roomTypeId = matchingRoom?.room_id_2
+        ? parseInt(matchingRoom.room_id_2, 10)
+        : req.room_id
+        ? parseInt(req.room_id, 10)
+        : NaN;
+
+      if (isNaN(roomTypeId)) {
+        toast.error(
+          "Impossible de déterminer l'ID de type de chambre (room_id_2/room_id). Vérifiez la configuration du logement.",
+          { id: toastId }
+        );
+        setApplyingId(null);
+        return;
+      }
+
+      // Construire le payload Channel Manager à partir des items
+      const cmBlocks: Record<string, any> = {};
+      req.items.forEach((it, idx) => {
+        const block: any = {
+          id_room_type: roomTypeId,
+          id_rate: 1,
+          cod_channel: "BE",
+          date_from: it.start_date,
+          date_to: it.end_date,
+        };
+
+        if (typeof it.price === "number") block.price = it.price;
+        if (it.closed === true) block.closed = true;
+
+        const restrictions: any = {};
+        restrictions.MINST =
+          typeof it.min_stay === "number" && it.min_stay > 0 ? it.min_stay : 2;
+        if (it.closed_on_arrival === true) restrictions.CLARR = true;
+        if (it.closed_on_departure === true) restrictions.CLDEP = true;
+
+        block.restrictions = restrictions;
+
+        cmBlocks[`block_${req.id}_${idx}`] = block;
+      });
+
+      const cmPayload = { cm: cmBlocks };
+
+      // Envoyer au Channel Manager
+      await saveChannelManagerSettings(cmPayload);
+
+      // Enregistrer des overrides pour traçabilité
+      const overrides: NewPriceOverride[] = req.items.map((it) => ({
+        room_id: matchingRoom?.room_id || req.room_id || String(roomTypeId),
+        room_name: matchingRoom?.room_name || req.room_name || "N/A",
+        room_id_2: matchingRoom?.room_id_2 || undefined,
+        start_date: it.start_date,
+        end_date: it.end_date,
+        price: typeof it.price === "number" ? it.price : undefined,
+        closed: it.closed === true ? true : false,
+        min_stay:
+          typeof it.min_stay === "number" && it.min_stay > 0 ? it.min_stay : undefined,
+        closed_on_arrival: it.closed_on_arrival === true ? true : false,
+        closed_on_departure: it.closed_on_departure === true ? true : false,
+      }));
+
+      await addOverrides(overrides);
+
+      toast.success("Prix & restrictions appliqués avec succès.", { id: toastId });
+      setPendingApply(null);
+    } catch (err: any) {
+      console.error("Erreur application de la demande au logement:", err);
+      toast.error(err.message || "Erreur lors de l'application de la demande.", { id: toastId });
+    } finally {
+      setApplyingId(null);
+    }
+  };
 
   const updateStatus = async (id: string, status: SeasonPricingStatus) => {
     const toastId = toast.loading("Mise à jour du statut...");
@@ -82,6 +196,14 @@ const AdminSeasonRequestsPage: React.FC = () => {
               <TableCell className="text-right space-x-2">
                 <Button variant="outline" size="sm" onClick={() => setExpandedId(expandedId === req.id ? null : req.id)}>
                   <Eye className="h-4 w-4 mr-2" /> Détails
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPendingApply(req)}
+                  disabled={applyingId === req.id}
+                >
+                  <Wrench className="h-4 w-4 mr-2" /> Appliquer au logement
                 </Button>
                 {req.status !== "processing" && (
                   <Button variant="outline" size="sm" onClick={() => updateStatus(req.id, "processing")}>
@@ -196,6 +318,26 @@ const AdminSeasonRequestsPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Dialog de confirmation pour l'application */}
+        <AlertDialog open={!!pendingApply} onOpenChange={(open) => !open && setPendingApply(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Appliquer sur le logement ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action enverra les prix et restrictions de la demande au Channel Manager
+                et enregistrera les modifications comme overrides. Confirmez pour continuer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => pendingApply && applyRequestToRoom(pendingApply)}
+              >
+                Confirmer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

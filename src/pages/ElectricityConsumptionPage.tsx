@@ -22,7 +22,14 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { Copy, Eye, EyeOff, Zap } from "lucide-react";
+import { Copy, Eye, EyeOff, Zap, Settings } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import ElectricitySpark from "@/components/ElectricitySpark";
 
 type ConsoType =
@@ -667,106 +674,115 @@ const ElectricityConsumptionPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Zap className="h-6 w-6 text-yellow-400" />
-          <h1 className="text-2xl md:text-3xl font-bold">Conso Électricité (Linky)</h1>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <Zap className="h-6 w-6 text-yellow-400" />
+            <h1 className="text-2xl md:text-3xl font-bold">Conso Électricité (Linky)</h1>
+          </div>
+          {/* Bouton Paramètres ouvrant le popup */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" title="Paramètres">
+                <Settings className="h-5 w-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Mes paramètres (stockés localement)</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="prm">PRM (14 chiffres)</Label>
+                  <div className="relative">
+                    <Input
+                      id="prm"
+                      inputMode="numeric"
+                      pattern="\d{14}"
+                      placeholder="Ex: 12345678901234"
+                      value={prm}
+                      onChange={(e) => setPrm(e.target.value.replace(/\D/g, "").slice(0, 14))}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2"
+                      onClick={() => copyToClipboard(prm, "PRM")}
+                      disabled={!prm}
+                      title="Copier le PRM"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="token">Token Conso API</Label>
+                  <div className="relative">
+                    <Input
+                      id="token"
+                      type={showToken ? "text" : "password"}
+                      placeholder="Bearer token"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                    />
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowToken((v) => !v)}
+                        title={showToken ? "Masquer le token" : "Afficher le token"}
+                      >
+                        {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(token, "Token")}
+                        disabled={!token}
+                        title="Copier le token"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ces valeurs sont sauvegardées sur cet appareil (localStorage).
+                  </p>
+                </div>
+
+                <div className="flex items-end gap-2">
+                  <Button className="w-full" variant="default" onClick={handleSaveCredentials}>
+                    Enregistrer
+                  </Button>
+                  <Button className="w-full" variant="outline" onClick={handleClearCredentials}>
+                    Effacer
+                  </Button>
+                </div>
+                <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
+                  <Button className="w-full sm:w-auto" variant="secondary" onClick={saveCredentialsToProfile}>
+                    Enregistrer dans mon profil
+                  </Button>
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={loadCredentialsFromProfile}>
+                    Charger depuis mon profil
+                  </Button>
+                  <p className="text-xs text-muted-foreground ml-auto">
+                    Stockage chiffré côté Supabase recommandé pour éviter de perdre vos identifiants entre appareils.
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         <p className="text-muted-foreground">
           Renseignez votre PRM, votre token et la période pour récupérer vos données Linky via Conso API.
         </p>
         <ElectricitySpark className="mt-4 mb-6" />
 
-        {/* Section dédiée aux paramètres persistés */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Mes paramètres (stockés localement)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="prm">PRM (14 chiffres)</Label>
-                <div className="relative">
-                  <Input
-                    id="prm"
-                    inputMode="numeric"
-                    pattern="\d{14}"
-                    placeholder="Ex: 12345678901234"
-                    value={prm}
-                    onChange={(e) => setPrm(e.target.value.replace(/\D/g, "").slice(0, 14))}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="absolute right-1 top-1/2 -translate-y-1/2"
-                    onClick={() => copyToClipboard(prm, "PRM")}
-                    disabled={!prm}
-                    title="Copier le PRM"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="token">Token Conso API</Label>
-                <div className="relative">
-                  <Input
-                    id="token"
-                    type={showToken ? "text" : "password"}
-                    placeholder="Bearer token"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                  />
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowToken((v) => !v)}
-                      title={showToken ? "Masquer le token" : "Afficher le token"}
-                    >
-                      {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(token, "Token")}
-                      disabled={!token}
-                      title="Copier le token"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Ces valeurs sont sauvegardées sur cet appareil (localStorage).
-                </p>
-              </div>
-
-              <div className="flex items-end gap-2">
-                <Button className="w-full" variant="default" onClick={handleSaveCredentials}>
-                  Enregistrer
-                </Button>
-                <Button className="w-full" variant="outline" onClick={handleClearCredentials}>
-                  Effacer
-                </Button>
-              </div>
-              <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
-                <Button className="w-full sm:w-auto" variant="secondary" onClick={saveCredentialsToProfile}>
-                  Enregistrer dans mon profil
-                </Button>
-                <Button className="w-full sm:w-auto" variant="outline" onClick={loadCredentialsFromProfile}>
-                  Charger depuis mon profil
-                </Button>
-                <p className="text-xs text-muted-foreground ml-auto">
-                  Stockage chiffré côté Supabase recommandé pour éviter de perdre vos identifiants entre appareils.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* REMOVED: la section Mes paramètres affichée en plein page.
+            Elle est désormais accessible via le bouton Paramètres (popup). */}
 
         <Card className="mb-6">
           <CardHeader>

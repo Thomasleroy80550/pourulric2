@@ -39,6 +39,16 @@ type FetchParams = {
   end: string;   // YYYY-MM-DD
 };
 
+type ReservationCostRow = {
+  id: string;
+  roomName?: string;
+  arrival: string;
+  departure: string;
+  nights: number;
+  energyKWh: number;
+  costEUR: number;
+};
+
 // Crée une clé de cache stable pour une combinaison de paramètres (sans inclure le token)
 function makeCacheKey(p: { prm: string; type: ConsoType; start: string; end: string }) {
   return `${p.prm}::${p.type}::${p.start}::${p.end}`;
@@ -67,21 +77,6 @@ function eachDayStrings(startISO: string, endISO: string) {
     cur = addDays(cur, 1);
   }
   return days;
-}
-
-type ReservationCostRow = {
-  id: string;
-  roomName?: string;
-  arrival: string;
-  departure: string;
-  nights: number;
-  energyKWh: number;
-  costEUR: number;
-};
-
-// Crée une clé de cache stable pour une combinaison de paramètres (sans inclure le token)
-function makeCacheKey(p: { prm: string; type: ConsoType; start: string; end: string }) {
-  return `${p.prm}::${p.type}::${p.start}::${p.end}`;
 }
 
 function isValidDateStr(s: string) {
@@ -137,14 +132,18 @@ function toChartData(data: any[]): { name: string; value: number }[] {
 
 const ElectricityConsumptionPage: React.FC = () => {
   const queryClient = useQueryClient();
+
   const [prm, setPrm] = React.useState<string>(() => localStorage.getItem("conso_prm") || "");
   const [token, setToken] = React.useState<string>(() => localStorage.getItem("conso_token") || "");
-  const [type, setType] = React.useState<ConsoType>(() => (localStorage.getItem("conso_type") as ConsoType) || "daily_consumption");
+  const [type, setType] = React.useState<ConsoType>(
+    () => (localStorage.getItem("conso_type") as ConsoType) || "daily_consumption"
+  );
   const [start, setStart] = React.useState<string>(() => localStorage.getItem("conso_start") || "");
   const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
   const [showToken, setShowToken] = React.useState(false);
-  // Prix par kWh (€), mémorisé localement
-  const [pricePerKWh, setPricePerKWh] = React.useState<string>(() => localStorage.getItem("conso_price_per_kwh") || "");
+  const [pricePerKWh, setPricePerKWh] = React.useState<string>(
+    () => localStorage.getItem("conso_price_per_kwh") || ""
+  );
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
 
@@ -212,175 +211,6 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [params, setParams] = React.useState<FetchParams | null>(null);
   const paramKey = React.useMemo(() => (params ? makeCacheKey(params) : null), [params]);
 
-  // Construit une map { 'YYYY-MM-DD': Wh } à partir d'une réponse daily_consumption
-  const buildDailyConsoMap = (dataAny: any): Record<string, number> => {
-    let arr: any[] = [];
-    if (Array.isArray(dataAny)) arr = dataAny;
-    else if (dataAny && typeof dataAny === "object") {
-      for (const k of Object.keys(dataAny)) {
-        const v = dataAny[k];
-        if (Array.isArray(v)) {
-          arr = v;
-          break;
-        }
-      }
-    }
-    const map: Record<string, number> = {};
-    if (arr.length === 0) return map;
-    const { dateKey, valueKey } = inferKeys(arr[0]);
-    if (!dateKey || !valueKey) return map;
-    for (const it of arr) {
-      const d = it[dateKey];
-      const v = it[valueKey];
-      const iso = typeof d === "string" ? d.slice(0, 10) : toISODate(new Date(d));
-      const num = typeof v === "number" ? v : Number(v);
-      if (!Number.isNaN(num)) map[iso] = (map[iso] || 0) + num; // Wh par jour
-    }
-    return map;
-  };
-
-  // Récupère la conso daily pour la période et renvoie une map date->Wh (utilise cache local si dispo)
-  const getDailyConsoMapForRange = async (): Promise<Record<string, number>> => {
-    const key = makeCacheKey({ prm, type: "daily_consumption", start, end });
-    const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
-    if (cachedRaw) {
-      try {
-        const cached = JSON.parse(cachedRaw);
-        if (cached?.data) return buildDailyConsoMap(cached.data);
-      } catch {
-        // ignore
-      }
-    }
-    const { data, error } = await supabase.functions.invoke("conso-proxy", {
-      body: { prm, token, type: "daily_consumption", start, end },
-    });
-    if (error) throw new Error(error.message || "Erreur conso daily");
-    // cache pour usages ultérieurs
-    localStorage.setItem(`conso_cache_${key}`, JSON.stringify({ data, cachedAt: new Date().toISOString() }));
-    return buildDailyConsoMap(data);
-  };
-
-  const analyzeReservations = async () => {
-    // Validations de base
-    if (!/^\d{14}$/.test(prm)) {
-      toast.error("Le PRM doit contenir 14 chiffres.");
-      return;
-    }
-    if (!token || token.length < 10) {
-      toast.error("Veuillez renseigner votre token Conso API.");
-      return;
-    }
-    if (!isValidDateStr(start) || !isValidDateStr(end)) {
-      toast.error("Dates invalides (YYYY-MM-DD).");
-      return;
-    }
-    setIsAnalyzing(true);
-    try {
-      // 1) Conso daily mappée par jour
-      const dayMap = await getDailyConsoMapForRange();
-      // 2) Récupérer les rooms de l'utilisateur
-      const { data: rooms, error: roomsError } = await supabase
-        .from("user_rooms")
-        .select("room_id, room_name");
-      if (roomsError) throw new Error(roomsError.message);
-      if (!rooms || rooms.length === 0) {
-        setResRows([]);
-        toast.message("Aucun logement trouvé.");
-        return;
-      }
-      // 3) Récupérer les réservations par room
-      const allResArrays = await Promise.all(
-        rooms.map(async (r: any) => {
-          const { data, error } = await supabase.functions.invoke("krossbooking-proxy", {
-            body: { action: "get_reservations_for_room", id_room: r.room_id },
-          });
-          if (error) {
-            console.warn("Erreur KB room", r.room_id, error);
-            return [];
-          }
-          const arr = (data && data.data) || [];
-          // Attache room info pour faciliter l'affichage
-          return arr.map((x: any) => ({ ...x, __room_name: r.room_name, __room_id: r.room_id }));
-        })
-      );
-      const rawReservations = allResArrays.flat();
-      // 4) Filtrer par statut confirmé et intervalle [start, end)
-      const allowed = new Set(["PROP0", "PROPRI"]);
-      const startD = new Date(start);
-      const endD = new Date(end);
-      const filtered = rawReservations.filter((res: any) => {
-        const status = String(res.cod_reservation_status || "");
-        if (!allowed.has(status)) return false;
-        const arrivalStr = String(res.arrival || "");
-        const departureStr = String(res.departure || "");
-        if (!isValidDateStr(arrivalStr) || !isValidDateStr(departureStr)) return false;
-        const a = new Date(arrivalStr);
-        const b = new Date(departureStr);
-        // chevauchement simple: a < end && b > start
-        return a < endD && b > startD;
-      });
-      // 5) Calcul kWh et coût par résa
-      const p = Number((pricePerKWh || "").replace(",", "."));
-      const rows: ReservationCostRow[] = filtered.map((res: any) => {
-        const id = String(res.id_reservation ?? res.id ?? "");
-        const arrivalStr = String(res.arrival);
-        const departureStr = String(res.departure);
-        const nights = Math.max(0, Math.round((new Date(departureStr).getTime() - new Date(arrivalStr).getTime()) / (24 * 3600 * 1000)));
-        // jours à sommer: [arrival, departure)
-        const days = eachDayStrings(arrivalStr, departureStr);
-        let sumWh = 0;
-        for (const d of days) {
-          if (dayMap[d] != null) sumWh += dayMap[d];
-        }
-        const energyKWh = sumWh / 1000;
-        const costEUR = p > 0 ? energyKWh * p : 0;
-        return {
-          id,
-          roomName: res.__room_name,
-          arrival: arrivalStr,
-          departure: departureStr,
-          nights,
-          energyKWh,
-          costEUR,
-        };
-      });
-      // 6) Trier par arrivée
-      rows.sort((a, b) => (a.arrival < b.arrival ? -1 : a.arrival > b.arrival ? 1 : 0));
-      setResRows(rows);
-      toast.success("Analyse par réservation terminée");
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Erreur lors de l'analyse des réservations");
-      setResRows([]);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  // Définir avant usage dans chartDisplayData
-  const canComputeEnergyCost = type !== "consumption_max_power";
-
-  // Sauvegarde auto des champs pour éviter de perdre les valeurs en quittant la page
-  React.useEffect(() => {
-    localStorage.setItem("conso_prm", prm);
-  }, [prm]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_token", token);
-  }, [token]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_type", type);
-  }, [type]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_start", start);
-  }, [start]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_end", end);
-  }, [end]);
-
   const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["conso", paramKey],
     queryFn: async () => {
@@ -404,7 +234,10 @@ const ElectricityConsumptionPage: React.FC = () => {
     onSuccess: (resp) => {
       if (!params) return;
       const key = makeCacheKey(params);
-      localStorage.setItem(`conso_cache_${key}`, JSON.stringify({ data: resp, cachedAt: new Date().toISOString() }));
+      localStorage.setItem(
+        `conso_cache_${key}`,
+        JSON.stringify({ data: resp, cachedAt: new Date().toISOString() })
+      );
       localStorage.setItem("conso_last_key", key);
       localStorage.setItem("conso_last_params", JSON.stringify(params));
     },
@@ -476,24 +309,6 @@ const ElectricityConsumptionPage: React.FC = () => {
     return toChartData(normalizedArray);
   }, [normalizedArray]);
 
-  // Convertit la valeur selon l'unité sélectionnée
-  const convertedChartData = React.useMemo(() => {
-    if (!chartData || chartData.length === 0) return [];
-    const factor = (() => {
-      if (isEnergyType) {
-        if (unit === "Wh") return 1;
-        if (unit === "kWh") return 1 / 1000;
-        if (unit === "MWh") return 1 / 1_000_000;
-        return 1;
-      } else {
-        if (unit === "W") return 1;
-        if (unit === "kW") return 1 / 1000;
-        return 1;
-      }
-    })();
-    return chartData.map((d) => ({ ...d, value: d.value * factor }));
-  }, [chartData, unit, isEnergyType]);
-
   // Données pour le graphique avec série coût (€) sur l'axe droit
   const chartDisplayData = React.useMemo(() => {
     if (!chartData || chartData.length === 0) return [];
@@ -516,7 +331,7 @@ const ElectricityConsumptionPage: React.FC = () => {
       let cost: number | undefined = undefined;
       if (canComputeEnergyCost && p > 0) {
         if (type === "daily_consumption" || type === "daily_production") {
-          // raw en Wh par point
+          // raw en Wh par point -> kWh
           cost = (raw / 1000) * p; // kWh * €/kWh
         } else if (type === "consumption_load_curve" || type === "production_load_curve") {
           // raw en W moyen sur 30 minutes -> énergie point = W * 0.5 h -> kWh = W * 0.5 / 1000
@@ -580,6 +395,160 @@ const ElectricityConsumptionPage: React.FC = () => {
     toast.success("Paramètres effacés de cet appareil");
   };
 
+  // Construit une map { 'YYYY-MM-DD': Wh } à partir d'une réponse daily_consumption
+  const buildDailyConsoMap = (dataAny: any): Record<string, number> => {
+    let arr: any[] = [];
+    if (Array.isArray(dataAny)) arr = dataAny;
+    else if (dataAny && typeof dataAny === "object") {
+      for (const k of Object.keys(dataAny)) {
+        const v = dataAny[k];
+        if (Array.isArray(v)) {
+          arr = v;
+          break;
+        }
+      }
+    }
+    const map: Record<string, number> = {};
+    if (arr.length === 0) return map;
+    const { dateKey, valueKey } = inferKeys(arr[0]);
+    if (!dateKey || !valueKey) return map;
+    for (const it of arr) {
+      const d = it[dateKey];
+      const v = it[valueKey];
+      const iso = typeof d === "string" ? d.slice(0, 10) : toISODate(new Date(d));
+      const num = typeof v === "number" ? v : Number(v);
+      if (!Number.isNaN(num)) map[iso] = (map[iso] || 0) + num; // Wh par jour
+    }
+    return map;
+  };
+
+  // Récupère la conso daily pour la période et renvoie une map date->Wh (utilise cache local si dispo)
+  const getDailyConsoMapForRange = async (): Promise<Record<string, number>> => {
+    const key = makeCacheKey({ prm, type: "daily_consumption", start, end });
+    const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw);
+        if (cached?.data) return buildDailyConsoMap(cached.data);
+      } catch {
+        // ignore
+      }
+    }
+    const { data, error } = await supabase.functions.invoke("conso-proxy", {
+      body: { prm, token, type: "daily_consumption", start, end },
+    });
+    if (error) throw new Error(error.message || "Erreur conso daily");
+    // cache pour usages ultérieurs
+    localStorage.setItem(
+      `conso_cache_${key}`,
+      JSON.stringify({ data, cachedAt: new Date().toISOString() })
+    );
+    return buildDailyConsoMap(data);
+  };
+
+  const analyzeReservations = async () => {
+    // Validations de base
+    if (!/^\d{14}$/.test(prm)) {
+      toast.error("Le PRM doit contenir 14 chiffres.");
+      return;
+    }
+    if (!token || token.length < 10) {
+      toast.error("Veuillez renseigner votre token Conso API.");
+      return;
+    }
+    if (!isValidDateStr(start) || !isValidDateStr(end)) {
+      toast.error("Dates invalides (YYYY-MM-DD).");
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      // 1) Conso daily mappée par jour
+      const dayMap = await getDailyConsoMapForRange();
+      // 2) Récupérer les rooms de l'utilisateur
+      const { data: rooms, error: roomsError } = await supabase
+        .from("user_rooms")
+        .select("room_id, room_name");
+      if (roomsError) throw new Error(roomsError.message);
+      if (!rooms || rooms.length === 0) {
+        setResRows([]);
+        toast.message("Aucun logement trouvé.");
+        return;
+      }
+      // 3) Récupérer les réservations par room
+      const allResArrays = await Promise.all(
+        rooms.map(async (r: any) => {
+          const { data, error } = await supabase.functions.invoke("krossbooking-proxy", {
+            body: { action: "get_reservations_for_room", id_room: r.room_id },
+          });
+          if (error) {
+            console.warn("Erreur KB room", r.room_id, error);
+            return [];
+          }
+          const arr = (data && data.data) || [];
+          // Attache room info pour faciliter l'affichage
+          return arr.map((x: any) => ({ ...x, __room_name: r.room_name, __room_id: r.room_id }));
+        })
+      );
+      const rawReservations = allResArrays.flat();
+      // 4) Filtrer par statut confirmé et intervalle [start, end)
+      const allowed = new Set(["PROP0", "PROPRI"]);
+      const startD = new Date(start);
+      const endD = new Date(end);
+      const filtered = rawReservations.filter((res: any) => {
+        const status = String(res.cod_reservation_status || "");
+        if (!allowed.has(status)) return false;
+        const arrivalStr = String(res.arrival || "");
+        const departureStr = String(res.departure || "");
+        if (!isValidDateStr(arrivalStr) || !isValidDateStr(departureStr)) return false;
+        const a = new Date(arrivalStr);
+        const b = new Date(departureStr);
+        // chevauchement simple: a < end && b > start
+        return a < endD && b > startD;
+      });
+      // 5) Calcul kWh et coût par résa
+      const p = Number((pricePerKWh || "").replace(",", "."));
+      const rows: ReservationCostRow[] = filtered.map((res: any) => {
+        const id = String(res.id_reservation ?? res.id ?? "");
+        const arrivalStr = String(res.arrival);
+        const departureStr = String(res.departure);
+        const nights = Math.max(
+          0,
+          Math.round(
+            (new Date(departureStr).getTime() - new Date(arrivalStr).getTime()) /
+              (24 * 3600 * 1000)
+          )
+        );
+        // jours à sommer: [arrival, departure)
+        const days = eachDayStrings(arrivalStr, departureStr);
+        let sumWh = 0;
+        for (const d of days) {
+          if (dayMap[d] != null) sumWh += dayMap[d];
+        }
+        const energyKWh = sumWh / 1000;
+        const costEUR = p > 0 ? energyKWh * p : 0;
+        return {
+          id,
+          roomName: res.__room_name,
+          arrival: arrivalStr,
+          departure: departureStr,
+          nights,
+          energyKWh,
+          costEUR,
+        };
+      });
+      // 6) Trier par arrivée
+      rows.sort((a, b) => (a.arrival < b.arrival ? -1 : a.arrival > b.arrival ? 1 : 0));
+      setResRows(rows);
+      toast.success("Analyse par réservation terminée");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erreur lors de l'analyse des réservations");
+      setResRows([]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const onSubmit = () => {
     // Basic validations
     if (!/^\d{14}$/.test(prm)) {
@@ -620,7 +589,10 @@ const ElectricityConsumptionPage: React.FC = () => {
       }
     }
     localStorage.setItem("conso_last_key", key);
-    localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start, end }));
+    localStorage.setItem(
+      "conso_last_params",
+      JSON.stringify({ prm, token, type, start, end })
+    );
 
     setParams({ prm, token, type, start, end });
     toast.success("Requête envoyée. Récupération des données...");

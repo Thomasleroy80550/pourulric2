@@ -20,6 +20,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  Legend,
 } from "recharts";
 import { Copy, Eye, EyeOff } from "lucide-react";
 
@@ -223,6 +224,43 @@ const ElectricityConsumptionPage: React.FC = () => {
     })();
     return chartData.map((d) => ({ ...d, value: d.value * factor }));
   }, [chartData, unit, isEnergyType]);
+
+  // Données pour le graphique avec série coût (€) sur l'axe droit
+  const chartDisplayData = React.useMemo(() => {
+    if (!chartData || chartData.length === 0) return [];
+    // facteur d'affichage pour la série "valeur" (unité choisie)
+    const factor = (() => {
+      if (isEnergyType) {
+        if (unit === "Wh") return 1;
+        if (unit === "kWh") return 1 / 1000;
+        if (unit === "MWh") return 1 / 1_000_000;
+        return 1;
+      } else {
+        if (unit === "W") return 1;
+        if (unit === "kW") return 1 / 1000;
+        return 1;
+      }
+    })();
+    const p = Number((pricePerKWh || "").replace(",", "."));
+    return chartData.map((d) => {
+      const raw = Number(d.value) || 0; // Wh (énergie) ou W (puissance) selon le type
+      let cost: number | undefined = undefined;
+      if (canComputeEnergyCost && p > 0) {
+        if (type === "daily_consumption" || type === "daily_production") {
+          // raw en Wh par point
+          cost = (raw / 1000) * p; // kWh * €/kWh
+        } else if (type === "consumption_load_curve" || type === "production_load_curve") {
+          // raw en W moyen sur 30 minutes -> énergie point = W * 0.5 h -> kWh = W * 0.5 / 1000
+          cost = (raw * 0.5) / 1000 * p;
+        }
+      }
+      return {
+        name: d.name,
+        value: raw * factor,
+        cost,
+      };
+    });
+  }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type]);
 
   // Calcul énergie totale (kWh) en fonction du type retourné
   const canComputeEnergyCost = type !== "consumption_max_power";
@@ -469,14 +507,18 @@ const ElectricityConsumptionPage: React.FC = () => {
               <>
                 {normalizedArray.length > 0 ? (
                   <>
-                    {convertedChartData.length > 0 ? (
+                    {chartDisplayData.length > 0 ? (
                       <div className="h-72 mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={convertedChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <AreaChart data={chartDisplayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
                                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                              </linearGradient>
+                              <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+                                <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -487,13 +529,46 @@ const ElectricityConsumptionPage: React.FC = () => {
                                 `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
                               }
                             />
-                            <Tooltip
-                              formatter={(val: any) => [
-                                `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
-                                "Valeur",
-                              ]}
+                            {/* Axe droit pour le coût (€) */}
+                            <YAxis
+                              yAxisId="right"
+                              orientation="right"
+                              tick={{ fontSize: 12 }}
+                              tickFormatter={(v: number) =>
+                                Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
+                              }
                             />
-                            <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="url(#colorValue)" />
+                            <Tooltip
+                              formatter={(val: any, name: any) => {
+                                const n = String(name);
+                                if (n === "Coût") {
+                                  return [
+                                    Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
+                                    "Coût",
+                                  ];
+                                }
+                                return [
+                                  `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
+                                  "Valeur",
+                                ];
+                              }}
+                            />
+                            <Legend />
+                            <Area
+                              name="Valeur"
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#3b82f6"
+                              fill="url(#colorValue)"
+                            />
+                            <Area
+                              name="Coût"
+                              yAxisId="right"
+                              type="monotone"
+                              dataKey="cost"
+                              stroke="#22c55e"
+                              fill="url(#colorCost)"
+                            />
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>
@@ -527,40 +602,6 @@ const ElectricityConsumptionPage: React.FC = () => {
                     </div>
 
                     <p className="text-xs text-muted-foreground mb-4">Unité d'affichage du graphique: {unit}</p>
-
-                    <div className="overflow-auto rounded-md border">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-muted/40">
-                            <th className="text-left p-2">#</th>
-                            <th className="text-left p-2">Clé</th>
-                            <th className="text-left p-2">Valeur</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {normalizedArray.slice(0, 100).map((item: any, idx: number) => (
-                            <tr key={idx} className="border-t">
-                              <td className="p-2 align-top">{idx + 1}</td>
-                              <td className="p-2 align-top">
-                                <pre className="whitespace-pre-wrap break-words">
-                                  {Object.keys(item).join(", ")}
-                                </pre>
-                              </td>
-                              <td className="p-2 align-top">
-                                <pre className="whitespace-pre-wrap break-words">
-                                  {JSON.stringify(item, null, 2)}
-                                </pre>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {normalizedArray.length > 100 && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Affichage limité aux 100 premières entrées.
-                      </p>
-                    )}
                   </>
                 ) : (
                   <>

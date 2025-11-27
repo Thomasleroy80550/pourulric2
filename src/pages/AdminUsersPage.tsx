@@ -340,7 +340,12 @@ const AdminUsersPage: React.FC = () => {
 
         <Tabs defaultValue="all" className="w-full">
           <TabsList>
-            <TabsTrigger value="all">Tous les clients</TabsTrigger>
+            <TabsTrigger value="all">
+              Tous les clients
+              {allClients.length > 0 && (
+                <Badge className="ml-2">{allClients.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="crotoy">Clients Crotoy</TabsTrigger>
             <TabsTrigger value="berck">Clients Berck</TabsTrigger>
             <TabsTrigger value="smartPricing">

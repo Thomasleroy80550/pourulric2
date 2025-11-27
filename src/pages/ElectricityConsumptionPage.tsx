@@ -516,6 +516,53 @@ const ElectricityConsumptionPage: React.FC = () => {
     toast.success("Paramètres effacés de cet appareil");
   };
 
+  const saveCredentialsToProfile = async () => {
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      toast.error(authError.message);
+      return;
+    }
+    const userId = userData?.user?.id;
+    if (!userId) {
+      toast.error("Veuillez vous connecter.");
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ conso_prm: prm || null, conso_token: token || null })
+      .eq("id", userId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Paramètres enregistrés dans votre profil.");
+  };
+
+  const loadCredentialsFromProfile = async () => {
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      toast.error(authError.message);
+      return;
+    }
+    const userId = userData?.user?.id;
+    if (!userId) {
+      toast.error("Veuillez vous connecter.");
+      return;
+    }
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("conso_prm, conso_token")
+      .eq("id", userId)
+      .single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setPrm(data?.conso_prm || "");
+    setToken(data?.conso_token || "");
+    toast.success("Paramètres chargés depuis votre profil.");
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">

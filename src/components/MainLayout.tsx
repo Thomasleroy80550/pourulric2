@@ -387,6 +387,14 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </Link>
             </div>
 
+            {/* Info fermetures (visible sur desktop) */}
+            <div className="hidden md:flex flex-1 items-center justify-center">
+              <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                Fermeture 4 au 11 inclus
+              </div>
+            </div>
+
             <div className="w-1/3 md:w-auto flex items-center justify-end space-x-2 sm:space-x-4">
               <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4">
                 <Plus className="h-4 w-4" />

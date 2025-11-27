@@ -44,7 +44,6 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
-import NotificationCenter, { NotificationItem } from "@/components/NotificationCenter";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -423,25 +422,7 @@ const DashboardPage = () => {
     setIsForecastDialogOpen(true);
   };
 
-  const notificationItems: NotificationItem[] = [
-    {
-      id: "hivernage",
-      title: "Hivernage — Fermeture du 4 au 11 janvier",
-      description:
-        "Merci de nous transmettre vos consignes (chauffage, eau, réfrigérateur, linge, volets, etc.) avant la fermeture.",
-      ctaLabel: "Envoyer mes consignes",
-      to: "/hivernage-2026",
-      badge: "Important",
-    },
-    {
-      id: "season-2026",
-      title: "Saison 2026 — Définissez vos tarifs",
-      description:
-        "Saisissez vos prix par périodes et envoyez votre demande en quelques clics. Une demande par logement et par année.",
-      ctaLabel: "Configurer mes prix",
-      to: "/season-2026",
-    },
-  ];
+  // REMOVED: notificationItems (les actions sont désormais dans 'Mes actions requises')
 
   if (profile?.is_banned) {
     return (
@@ -456,9 +437,7 @@ const DashboardPage = () => {
       <div className="container mx-auto px-2 sm:px-4 py-6 overflow-x-hidden">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
-        <div className="mb-6">
-          <NotificationCenter items={notificationItems} title="Centre de notifications" />
-        </div>
+        {/* REMOVED: Centre de notifications (déplacé dans 'Mes actions requises') */}
         {/* To-Do List Card */}
         <div className="mt-6">
           <Card id="tour-todo-list" className="shadow-md">

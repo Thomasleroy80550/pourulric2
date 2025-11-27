@@ -96,6 +96,12 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [start, setStart] = React.useState<string>(() => localStorage.getItem("conso_start") || "");
   const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
   const [showToken, setShowToken] = React.useState(false);
+  // Prix par kWh (€), mémorisé localement
+  const [pricePerKWh, setPricePerKWh] = React.useState<string>(() => localStorage.getItem("conso_price_per_kwh") || "");
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_price_per_kwh", pricePerKWh);
+  }, [pricePerKWh]);
 
   // Détermine la catégorie d'unité selon le type choisi
   const isEnergyType = React.useMemo(
@@ -205,13 +211,11 @@ const ElectricityConsumptionPage: React.FC = () => {
     if (!chartData || chartData.length === 0) return [];
     const factor = (() => {
       if (isEnergyType) {
-        // Source en Wh → Wh, kWh, MWh
         if (unit === "Wh") return 1;
         if (unit === "kWh") return 1 / 1000;
         if (unit === "MWh") return 1 / 1_000_000;
         return 1;
       } else {
-        // Source en W → W, kW
         if (unit === "W") return 1;
         if (unit === "kW") return 1 / 1000;
         return 1;
@@ -219,6 +223,30 @@ const ElectricityConsumptionPage: React.FC = () => {
     })();
     return chartData.map((d) => ({ ...d, value: d.value * factor }));
   }, [chartData, unit, isEnergyType]);
+
+  // Calcul énergie totale (kWh) en fonction du type retourné
+  const canComputeEnergyCost = type !== "consumption_max_power";
+  const energyKWhTotal = React.useMemo(() => {
+    if (!chartData || chartData.length === 0) return 0;
+    if (type === "daily_consumption" || type === "daily_production") {
+      // valeurs en Wh -> somme puis conversion en kWh
+      const sumWh = chartData.reduce((s, d) => s + (Number(d.value) || 0), 0);
+      return sumWh / 1000;
+    }
+    if (type === "consumption_load_curve" || type === "production_load_curve") {
+      // valeurs en W moyen sur 30 minutes -> énergie = W * 0.5 h -> kWh = W * 0.5 / 1000
+      const sumW = chartData.reduce((s, d) => s + (Number(d.value) || 0), 0);
+      return (sumW * 0.5) / 1000;
+    }
+    // Puissance max quotidienne: pas pertinent pour un coût basé sur l'énergie
+    return 0;
+  }, [chartData, type]);
+
+  const totalCost = React.useMemo(() => {
+    const p = Number((pricePerKWh || "").replace(",", "."));
+    if (!canComputeEnergyCost || Number.isNaN(p) || p <= 0) return 0;
+    return energyKWhTotal * p;
+  }, [energyKWhTotal, pricePerKWh, canComputeEnergyCost]);
 
   const unitOptions = isEnergyType ? ["Wh", "kWh", "MWh"] : ["W", "kW"];
 
@@ -373,6 +401,21 @@ const ElectricityConsumptionPage: React.FC = () => {
                 </p>
               </div>
 
+              {/* Prix par kWh */}
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="price">Prix par kWh (€)</Label>
+                <Input
+                  id="price"
+                  inputMode="decimal"
+                  placeholder="Ex: 0.25"
+                  value={pricePerKWh}
+                  onChange={(e) => setPricePerKWh(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Le coût est calculé sur l'énergie estimée (kWh). Pour les courbes 30 min, W moyens → kWh via ×0,5 h.
+                </p>
+              </div>
+
               <div className="flex flex-col gap-2">
                 <Label htmlFor="start">Début (inclus)</Label>
                 <Input
@@ -462,6 +505,26 @@ const ElectricityConsumptionPage: React.FC = () => {
                         </AlertDescription>
                       </Alert>
                     )}
+
+                    {/* Résumé énergie + coût */}
+                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="rounded-md border p-3">
+                        <div className="text-xs text-muted-foreground">Énergie totale estimée</div>
+                        <div className="text-lg font-semibold">
+                          {canComputeEnergyCost
+                            ? `${energyKWhTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`
+                            : "N/A"}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <div className="text-xs text-muted-foreground">Coût estimé</div>
+                        <div className="text-lg font-semibold">
+                          {canComputeEnergyCost && Number((pricePerKWh || "").replace(",", ".")) > 0
+                            ? `${totalCost.toLocaleString(undefined, { style: "currency", currency: "EUR" })}`
+                            : "Saisissez un prix par kWh"}
+                        </div>
+                      </div>
+                    </div>
 
                     <p className="text-xs text-muted-foreground mb-4">Unité d'affichage du graphique: {unit}</p>
 

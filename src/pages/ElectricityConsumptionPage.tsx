@@ -1053,8 +1053,8 @@ const ElectricityConsumptionPage: React.FC = () => {
                         <Tabs value={chartView} onValueChange={(v) => setChartView(v as any)} className="w-full">
                           <TabsList className="mb-3">
                             <TabsTrigger value="area">Vue aire</TabsTrigger>
-                            <TabsTrigger value="bars">Vue barres</TabsTrigger>
-                            <TabsTrigger value="bars-solid">Barres pleines</TabsTrigger>
+                            <TabsTrigger value="bars">Vue colonnes</TabsTrigger>
+                            <TabsTrigger value="bars-solid">Colonnes pleines</TabsTrigger>
                           </TabsList>
                           <TabsContent value="area" className="m-0">
                             <div className="h-[380px] md:h-[420px]">
@@ -1163,7 +1163,12 @@ const ElectricityConsumptionPage: React.FC = () => {
                           <TabsContent value="bars" className="m-0">
                             <div className="h-[380px] md:h-[420px]">
                               <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                                <ComposedChart 
+                                  data={chartDisplayData} 
+                                  margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
+                                  barCategoryGap="22%"
+                                  barGap={4}
+                                >
                                   <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
                                   <XAxis
                                     dataKey="name"
@@ -1227,8 +1232,11 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     name="Valeur"
                                     dataKey="value"
                                     fill="#6366f1"
-                                    opacity={0.9}
-                                    radius={[4, 4, 0, 0]}
+                                    opacity={0.95}
+                                    radius={[6, 6, 0, 0]}
+                                    barSize={16}
+                                    isAnimationActive
+                                    animationDuration={500}
                                   />
                                   {showCost && (
                                     <Line
@@ -1250,7 +1258,12 @@ const ElectricityConsumptionPage: React.FC = () => {
                           <TabsContent value="bars-solid" className="m-0">
                             <div className="h-[380px] md:h-[420px]">
                               <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                                <ComposedChart 
+                                  data={chartDisplayData} 
+                                  margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
+                                  barCategoryGap="22%"
+                                  barGap={4}
+                                >
                                   <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
                                   <XAxis
                                     dataKey="name"
@@ -1291,8 +1304,10 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     name="Valeur"
                                     dataKey="value"
                                     fill="#6366f1"
-                                    radius={[6, 6, 0, 0]}
-                                    barSize={18}
+                                    radius={[8, 8, 0, 0]}
+                                    barSize={20}
+                                    isAnimationActive
+                                    animationDuration={500}
                                   />
                                 </ComposedChart>
                               </ResponsiveContainer>

@@ -159,7 +159,7 @@ const ElectricityConsumptionPage: React.FC = () => {
   );
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const [chartView, setChartView] = React.useState<"area" | "bars" | "bars-solid">("area");
+  const [chartView, setChartView] = React.useState<"area" | "bars" | "bars-solid">("bars");
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);
@@ -1169,6 +1169,16 @@ const ElectricityConsumptionPage: React.FC = () => {
                                   barCategoryGap="22%"
                                   barGap={4}
                                 >
+                                  <defs>
+                                    <linearGradient id="colValue" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.95} />
+                                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.85} />
+                                    </linearGradient>
+                                    <pattern id="costPattern" patternUnits="userSpaceOnUse" width="6" height="6">
+                                      <rect width="6" height="6" fill="#10b981" opacity="0.25" />
+                                      <path d="M0,6 l6,-6 M-1,1 l2,-2 M5,7 l2,-2" stroke="#10b981" strokeWidth="1" />
+                                    </pattern>
+                                  </defs>
                                   <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
                                   <XAxis
                                     dataKey="name"
@@ -1231,24 +1241,25 @@ const ElectricityConsumptionPage: React.FC = () => {
                                   <Bar
                                     name="Valeur"
                                     dataKey="value"
-                                    fill="#6366f1"
-                                    opacity={0.95}
+                                    fill="url(#colValue)"
+                                    opacity={1}
                                     radius={[6, 6, 0, 0]}
                                     barSize={16}
                                     isAnimationActive
                                     animationDuration={500}
                                   />
                                   {showCost && (
-                                    <Line
+                                    <Bar
                                       name="Coût (€)"
                                       yAxisId="right"
-                                      type="monotone"
                                       dataKey="cost"
+                                      fill="url(#costPattern)"
                                       stroke="#10b981"
-                                      strokeWidth={2.5}
-                                      strokeDasharray="6 4"
-                                      dot={false}
-                                      activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
+                                      strokeWidth={1}
+                                      radius={[6, 6, 0, 0]}
+                                      barSize={12}
+                                      isAnimationActive
+                                      animationDuration={500}
                                     />
                                   )}
                                 </ComposedChart>

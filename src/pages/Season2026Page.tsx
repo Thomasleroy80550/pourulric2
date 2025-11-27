@@ -410,38 +410,6 @@ const Season2026Page: React.FC = () => {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Présentation Saison 2026</CardTitle>
-            <CardDescription>
-              Aperçu des périodes chargées (issues du CSV officiel), avec ajustement automatique du week-end de Pâques.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-4 gap-3 text-sm">
-              <div className="p-3 rounded bg-muted">
-                <div className="font-medium">Très haute saison</div>
-                <div className="text-muted-foreground">{seasonCounts.tresHaute} périodes</div>
-              </div>
-              <div className="p-3 rounded bg-muted">
-                <div className="font-medium">Haute saison</div>
-                <div className="text-muted-foreground">{seasonCounts.haute} périodes</div>
-              </div>
-              <div className="p-3 rounded bg-muted">
-                <div className="font-medium">Moyenne saison</div>
-                <div className="text-muted-foreground">{seasonCounts.moyenne} périodes</div>
-              </div>
-              <div className="p-3 rounded bg-muted">
-                <div className="font-medium">Basse saison</div>
-                <div className="text-muted-foreground">{seasonCounts.basse} périodes</div>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Note: Le week-end de Pâques (03/04 → 06/04/2026) est corrigé automatiquement pour éviter les "trous" entre périodes.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-6">
-          <CardHeader>
             <CardTitle>Préambule</CardTitle>
             <CardDescription>
               Saisissez vos prix et restrictions pour chaque période de 2026. À la soumission, une demande sera créée auprès de l'administration (traitement manuel).

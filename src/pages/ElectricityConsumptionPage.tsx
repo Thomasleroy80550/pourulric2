@@ -20,6 +20,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
+import { Copy, Eye, EyeOff } from "lucide-react";
 
 type ConsoType =
   | "daily_consumption"
@@ -93,6 +94,7 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [type, setType] = React.useState<ConsoType>(() => (localStorage.getItem("conso_type") as ConsoType) || "daily_consumption");
   const [start, setStart] = React.useState<string>(() => localStorage.getItem("conso_start") || "");
   const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
+  const [showToken, setShowToken] = React.useState(false);
 
   // Sauvegarde auto des champs pour éviter de perdre les valeurs en quittant la page
   React.useEffect(() => {
@@ -145,6 +147,15 @@ const ElectricityConsumptionPage: React.FC = () => {
     return [];
   }, [data]);
 
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copié`);
+    } catch {
+      toast.error(`Impossible de copier ${label}`);
+    }
+  };
+
   const onSubmit = () => {
     // Basic validations
     if (!/^\d{14}$/.test(prm)) {
@@ -191,25 +202,64 @@ const ElectricityConsumptionPage: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="prm">PRM (14 chiffres)</Label>
-                <Input
-                  id="prm"
-                  inputMode="numeric"
-                  pattern="\d{14}"
-                  placeholder="Ex: 12345678901234"
-                  value={prm}
-                  onChange={(e) => setPrm(e.target.value.replace(/\D/g, "").slice(0, 14))}
-                />
+                <div className="relative">
+                  <Input
+                    id="prm"
+                    inputMode="numeric"
+                    pattern="\d{14}"
+                    placeholder="Ex: 12345678901234"
+                    value={prm}
+                    onChange={(e) => setPrm(e.target.value.replace(/\D/g, "").slice(0, 14))}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2"
+                    onClick={() => copyToClipboard(prm, "PRM")}
+                    disabled={!prm}
+                    title="Copier le PRM"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="token">Token Conso API</Label>
-                <Input
-                  id="token"
-                  type="password"
-                  placeholder="Bearer token"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="token"
+                    type={showToken ? "text" : "password"}
+                    placeholder="Bearer token"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                  />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowToken((v) => !v)}
+                      title={showToken ? "Masquer le token" : "Afficher le token"}
+                    >
+                      {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(token, "Token")}
+                      disabled={!token}
+                      title="Copier le token"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Astuce: le token est stocké localement sur votre appareil (localStorage).
+                </p>
               </div>
 
               <div className="flex flex-col gap-2">

@@ -22,7 +22,8 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { Copy, Eye, EyeOff } from "lucide-react";
+import { Copy, Eye, EyeOff, Zap } from "lucide-react";
+import ElectricitySpark from "@/components/ElectricitySpark";
 
 type ConsoType =
   | "daily_consumption"
@@ -395,6 +396,58 @@ const ElectricityConsumptionPage: React.FC = () => {
     toast.success("Paramètres effacés de cet appareil");
   };
 
+  // Enregistrer PRM/Token dans le profil Supabase
+  const saveCredentialsToProfile = async () => {
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      toast.error(authError.message);
+      return;
+    }
+    const userId = userData?.user?.id;
+    if (!userId) {
+      toast.error("Veuillez vous connecter.");
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ conso_prm: prm || null, conso_token: token || null })
+      .eq("id", userId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Paramètres enregistrés dans votre profil.");
+  };
+
+  // Charger PRM/Token depuis le profil Supabase
+  const loadCredentialsFromProfile = async () => {
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      toast.error(authError.message);
+      return;
+    }
+    const userId = userData?.user?.id;
+    if (!userId) {
+      toast.error("Veuillez vous connecter.");
+      return;
+    }
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("conso_prm, conso_token")
+      .eq("id", userId)
+      .single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const newPrm = data?.conso_prm || "";
+    const newToken = data?.conso_token || "";
+    setPrm(newPrm);
+    setToken(newToken);
+    // synchro localStorage via useEffect déjà en place
+    toast.success("Paramètres chargés depuis votre profil.");
+  };
+
   // Construit une map { 'YYYY-MM-DD': Wh } à partir d'une réponse daily_consumption
   const buildDailyConsoMap = (dataAny: any): Record<string, number> => {
     let arr: any[] = [];
@@ -614,10 +667,14 @@ const ElectricityConsumptionPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">Conso Électricité (Linky)</h1>
-        <p className="text-muted-foreground mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Zap className="h-6 w-6 text-yellow-400" />
+          <h1 className="text-2xl md:text-3xl font-bold">Conso Électricité (Linky)</h1>
+        </div>
+        <p className="text-muted-foreground">
           Renseignez votre PRM, votre token et la période pour récupérer vos données Linky via Conso API.
         </p>
+        <ElectricitySpark className="mt-4 mb-6" />
 
         {/* Section dédiée aux paramètres persistés */}
         <Card className="mb-6">
@@ -695,6 +752,17 @@ const ElectricityConsumptionPage: React.FC = () => {
                 <Button className="w-full" variant="outline" onClick={handleClearCredentials}>
                   Effacer
                 </Button>
+              </div>
+              <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
+                <Button className="w-full sm:w-auto" variant="secondary" onClick={saveCredentialsToProfile}>
+                  Enregistrer dans mon profil
+                </Button>
+                <Button className="w-full sm:w-auto" variant="outline" onClick={loadCredentialsFromProfile}>
+                  Charger depuis mon profil
+                </Button>
+                <p className="text-xs text-muted-foreground ml-auto">
+                  Stockage chiffré côté Supabase recommandé pour éviter de perdre vos identifiants entre appareils.
+                </p>
               </div>
             </div>
           </CardContent>

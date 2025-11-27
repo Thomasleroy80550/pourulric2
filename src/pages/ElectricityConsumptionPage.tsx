@@ -381,9 +381,6 @@ const ElectricityConsumptionPage: React.FC = () => {
     localStorage.setItem("conso_end", end);
   }, [end]);
 
-  const [params, setParams] = React.useState<FetchParams | null>(null);
-  const paramKey = React.useMemo(() => (params ? makeCacheKey(params) : null), [params]);
-
   const { data, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["conso", paramKey],
     queryFn: async () => {

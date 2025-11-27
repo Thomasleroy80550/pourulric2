@@ -21,6 +21,9 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  ComposedChart,
+  Bar,
+  Line,
 } from "recharts";
 import { Copy, Eye, EyeOff, Zap, Settings, Euro, TrendingUp, Gauge, CalendarDays } from "lucide-react";
 import {
@@ -32,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import ElectricitySpark from "@/components/ElectricitySpark";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type ConsoType =
   | "daily_consumption"
@@ -155,6 +159,7 @@ const ElectricityConsumptionPage: React.FC = () => {
   );
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [chartView, setChartView] = React.useState<"area" | "bars">("area");
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);
@@ -1044,113 +1049,204 @@ const ElectricityConsumptionPage: React.FC = () => {
                     </div>
 
                     {chartDisplayData.length > 0 ? (
-                      <div className="h-[380px] md:h-[420px] mb-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#6366f1" stopOpacity={0.28} />
-                                <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
-                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                              </linearGradient>
-                              <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.26} />
-                                <stop offset="70%" stopColor="#10b981" stopOpacity={0.06} />
-                                <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
-                            <XAxis
-                              dataKey="name"
-                              minTickGap={18}
-                              tickLine={false}
-                              axisLine={false}
-                              tick={{ fontSize: 12, fill: "#6b7280" }}
-                              tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
-                            />
-                            <YAxis
-                              tick={{ fontSize: 12, fill: "#6b7280" }}
-                              tickLine={false}
-                              axisLine={false}
-                              width={64}
-                              tickFormatter={(v: number) =>
-                                `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
-                              }
-                              domain={[0, "auto"]}
-                            />
-                            {/* Axe droit pour le coût (€) */}
-                            {showCost && (
-                              <YAxis
-                                yAxisId="right"
-                                orientation="right"
-                                tick={{ fontSize: 12, fill: "#6b7280" }}
-                                tickLine={false}
-                                axisLine={false}
-                                width={64}
-                                tickFormatter={(v: number) =>
-                                  Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
-                                }
-                                domain={[0, "auto"]}
-                              />
-                            )}
-                            <Tooltip
-                              wrapperStyle={{ outline: "none" }}
-                              contentStyle={{
-                                background: "rgba(17, 24, 39, 0.92)",
-                                border: "1px solid #374151",
-                                borderRadius: 8,
-                                boxShadow:
-                                  "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
-                              }}
-                              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                              itemStyle={{ color: "#e5e7eb" }}
-                              formatter={(val: any, name: any) => {
-                                const n = String(name);
-                                if (n === "Coût (€)") {
-                                  return [
-                                    Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
-                                    "Coût (€)",
-                                  ];
-                                }
-                                return [
-                                  `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
-                                  "Valeur",
-                                ];
-                              }}
-                            />
-                            <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
-                            <Area
-                              name="Valeur"
-                              type="monotoneX"
-                              dataKey="value"
-                              stroke="#6366f1"
-                              strokeWidth={2.5}
-                              fill="url(#colorValue)"
-                              dot={false}
-                              activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
-                              connectNulls
-                              animationDuration={500}
-                            />
-                            {showCost && (
-                              <Area
-                                name="Coût (€)"
-                                yAxisId="right"
-                                type="monotoneX"
-                                dataKey="cost"
-                                stroke="#10b981"
-                                strokeWidth={2.5}
-                                strokeDasharray="6 4"
-                                fill="transparent"
-                                fillOpacity={0}
-                                dot={false}
-                                activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
-                                connectNulls
-                                animationDuration={500}
-                                legendType="line"
-                              />
-                            )}
-                          </AreaChart>
-                        </ResponsiveContainer>
+                      <div className="mb-2">
+                        <Tabs value={chartView} onValueChange={(v) => setChartView(v as any)} className="w-full">
+                          <TabsList className="mb-3">
+                            <TabsTrigger value="area">Vue aire</TabsTrigger>
+                            <TabsTrigger value="bars">Vue barres</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="area" className="m-0">
+                            <div className="h-[380px] md:h-[420px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                                  <defs>
+                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.28} />
+                                      <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
+                                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                                    </linearGradient>
+                                  </defs>
+                                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                                  <XAxis
+                                    dataKey="name"
+                                    minTickGap={18}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
+                                  />
+                                  <YAxis
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    width={64}
+                                    tickFormatter={(v: number) =>
+                                      `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                                    }
+                                    domain={[0, "auto"]}
+                                  />
+                                  {showCost && (
+                                    <YAxis
+                                      yAxisId="right"
+                                      orientation="right"
+                                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                                      tickLine={false}
+                                      axisLine={false}
+                                      width={64}
+                                      tickFormatter={(v: number) =>
+                                        Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
+                                      }
+                                      domain={[0, "auto"]}
+                                    />
+                                  )}
+                                  <Tooltip
+                                    wrapperStyle={{ outline: "none" }}
+                                    contentStyle={{
+                                      background: "rgba(17, 24, 39, 0.92)",
+                                      border: "1px solid #374151",
+                                      borderRadius: 8,
+                                      boxShadow:
+                                        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+                                    }}
+                                    labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                                    itemStyle={{ color: "#e5e7eb" }}
+                                    formatter={(val: any, name: any) => {
+                                      const n = String(name);
+                                      if (n === "Coût (€)") {
+                                        return [
+                                          Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
+                                          "Coût (€)",
+                                        ];
+                                      }
+                                      return [
+                                        `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
+                                        "Valeur",
+                                      ];
+                                    }}
+                                  />
+                                  <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
+                                  <Area
+                                    name="Valeur"
+                                    type="monotoneX"
+                                    dataKey="value"
+                                    stroke="#6366f1"
+                                    strokeWidth={2.5}
+                                    fill="url(#colorValue)"
+                                    dot={false}
+                                    activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
+                                    connectNulls
+                                    animationDuration={500}
+                                  />
+                                  {showCost && (
+                                    <Area
+                                      name="Coût (€)"
+                                      yAxisId="right"
+                                      type="monotoneX"
+                                      dataKey="cost"
+                                      stroke="#10b981"
+                                      strokeWidth={2.5}
+                                      strokeDasharray="6 4"
+                                      fill="transparent"
+                                      fillOpacity={0}
+                                      dot={false}
+                                      activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
+                                      connectNulls
+                                      animationDuration={500}
+                                      legendType="line"
+                                    />
+                                  )}
+                                </AreaChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </TabsContent>
+                          <TabsContent value="bars" className="m-0">
+                            <div className="h-[380px] md:h-[420px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                                  <XAxis
+                                    dataKey="name"
+                                    minTickGap={18}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
+                                  />
+                                  <YAxis
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    width={64}
+                                    tickFormatter={(v: number) =>
+                                      `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                                    }
+                                    domain={[0, "auto"]}
+                                  />
+                                  {showCost && (
+                                    <YAxis
+                                      yAxisId="right"
+                                      orientation="right"
+                                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                                      tickLine={false}
+                                      axisLine={false}
+                                      width={64}
+                                      tickFormatter={(v: number) =>
+                                        Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
+                                      }
+                                      domain={[0, "auto"]}
+                                    />
+                                  )}
+                                  <Tooltip
+                                    wrapperStyle={{ outline: "none" }}
+                                    contentStyle={{
+                                      background: "rgba(17, 24, 39, 0.92)",
+                                      border: "1px solid #374151",
+                                      borderRadius: 8,
+                                      boxShadow:
+                                        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+                                    }}
+                                    labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                                    itemStyle={{ color: "#e5e7eb" }}
+                                    formatter={(val: any, name: any) => {
+                                      const n = String(name);
+                                      if (n === "Coût (€)") {
+                                        return [
+                                          Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
+                                          "Coût (€)",
+                                        ];
+                                      }
+                                      return [
+                                        `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
+                                        "Valeur",
+                                      ];
+                                    }}
+                                  />
+                                  <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
+                                  <Bar
+                                    name="Valeur"
+                                    dataKey="value"
+                                    fill="#6366f1"
+                                    opacity={0.9}
+                                    radius={[4, 4, 0, 0]}
+                                  />
+                                  {showCost && (
+                                    <Line
+                                      name="Coût (€)"
+                                      yAxisId="right"
+                                      type="monotone"
+                                      dataKey="cost"
+                                      stroke="#10b981"
+                                      strokeWidth={2.5}
+                                      strokeDasharray="6 4"
+                                      dot={false}
+                                      activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
+                                    />
+                                  )}
+                                </ComposedChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
                       </div>
                     ) : (
                       <Alert className="mb-4">

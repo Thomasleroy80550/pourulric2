@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Mail, Send, Loader2, Eye } from "lucide-react";
+import { Mail, Send, Loader2, Eye, History, RefreshCcw, Copy, Play, Save } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 // AJOUT: panneau d'info
@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import DOMPurify from "dompurify";
 import EmailThemePreview from "@/components/EmailThemePreview";
 import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
+import { listCampaigns, createCampaign, duplicateCampaign, getDeliveryCount, type NewsletterCampaign } from "@/lib/newsletter-api";
 
 const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 const DEFAULT_BATCH_SIZE = 50; // ≈ 30–40 secondes par lot (limite de fonction sûre)
@@ -75,6 +76,33 @@ const AdminNewsletterPage: React.FC = () => {
   // AJOUT: état pour la prévisualisation du plan
   const [planPreview, setPlanPreview] = useState<{ remaining: number; lots: number; intervalMs: number } | null>(null);
 
+  // Historique des campagnes
+  const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  const loadCampaigns = async () => {
+    setLoadingCampaigns(true);
+    const list = await listCampaigns(50);
+    setCampaigns(list);
+    // Récupère les compteurs d'envois pour les 20 premières campagnes (limiter la charge)
+    const top = list.slice(0, 20);
+    const entries = await Promise.all(top.map(async (c) => {
+      const ct = await getDeliveryCount(c.content_hash);
+      return [c.content_hash, ct] as const;
+    }));
+    const nextCounts: Record<string, number> = {};
+    for (const [hash, ct] of entries) nextCounts[hash] = ct;
+    setCounts(nextCounts);
+    setLoadingCampaigns(false);
+  };
+
+  useEffect(() => {
+    loadCampaigns().catch(() => {
+      setLoadingCampaigns(false);
+    });
+  }, []);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) {
@@ -104,6 +132,16 @@ const AdminNewsletterPage: React.FC = () => {
     if (!plan.subject.trim() || !plan.html.trim()) {
       toast.error("Veuillez renseigner un sujet et un contenu HTML.");
       return;
+    }
+
+    // Enregistre la campagne (brouillon) avant de lancer l'envoi étalé
+    try {
+      await createCampaign(plan.subject, plan.html, "scheduled");
+      // recharge l'historique
+      loadCampaigns().catch(() => {});
+    } catch (e: any) {
+      // On n'arrête pas l'envoi si l'enregistrement échoue, mais on notifie
+      toast.error(`Impossible d'enregistrer la campagne: ${e?.message || e}`);
     }
 
     setSending(true);
@@ -234,6 +272,47 @@ const AdminNewsletterPage: React.FC = () => {
     setPlanPreview({ remaining, lots, intervalMs });
 
     toast.info(`Plan: ${remaining} destinataires, ${lots} lots, intervalle ≈ ${Math.round(intervalMs / 60000)} min.`);
+  };
+
+  // Enregistrer comme brouillon sans envoyer
+  const handleSaveDraft = async () => {
+    if (!subject.trim() || !html.trim()) {
+      toast.error("Veuillez renseigner un sujet et un contenu HTML.");
+      return;
+    }
+    const draft = await createCampaign(subject, html, "draft");
+    toast.success("Campagne enregistrée.");
+    await loadCampaigns();
+    return draft;
+  };
+
+  // Actions d'historique
+  const handleLoadCampaign = (c: NewsletterCampaign) => {
+    setSubject(c.subject);
+    setHtml(c.html);
+    toast.success("Campagne chargée dans l'éditeur.");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleDuplicateCampaign = async (c: NewsletterCampaign) => {
+    const dup = await duplicateCampaign(c);
+    toast.success("Campagne dupliquée.");
+    await loadCampaigns();
+    // Option: charger la copie directement
+    handleLoadCampaign(dup);
+  };
+
+  const handleContinueSending = async (c: NewsletterCampaign) => {
+    // Utilise le même contenu; le hash identique empêchera l'envoi aux emails déjà servis
+    const plan: NewsletterPlan = {
+      subject: c.subject,
+      html: c.html,
+      testMode: false,
+      batchSize,
+      sending: true,
+    };
+    await startSpreadPlan(plan);
+    toast.info("Reprise de l'envoi programmée pour cette campagne.");
   };
 
   const handleSendImmediate = async () => {
@@ -417,6 +496,10 @@ const AdminNewsletterPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-end gap-2">
+              <Button variant="secondary" onClick={handleSaveDraft} disabled={sending}>
+                <Save className="mr-2 h-4 w-4" />
+                Enregistrer comme brouillon
+              </Button>
               {sending && spreadMode && (
                 <Button variant="secondary" onClick={cancelPlan}>
                   Annuler le plan
@@ -436,6 +519,57 @@ const AdminNewsletterPage: React.FC = () => {
                 )}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Historique des campagnes */}
+        <Card className="mt-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle>Historique des campagnes</CardTitle>
+                <CardDescription>Chargez, dupliquez ou poursuivez un envoi existant.</CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" onClick={() => loadCampaigns()}>
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Rafraîchir
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loadingCampaigns ? (
+              <div className="text-sm text-muted-foreground">Chargement de l'historique…</div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Aucune campagne pour le moment.</div>
+            ) : (
+              <div className="space-y-3">
+                {campaigns.map((c) => (
+                  <div key={c.id} className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between rounded-md border p-3">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{c.subject}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Créée le {new Date(c.created_at).toLocaleString()} • Statut: {c.status}
+                        {typeof counts[c.content_hash] !== "undefined" && (
+                          <> • Envoyés: {counts[c.content_hash]}</>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button size="sm" variant="secondary" onClick={() => handleLoadCampaign(c)}>
+                        Charger
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDuplicateCampaign(c)}>
+                        <Copy className="h-4 w-4 mr-1" /> Dupliquer
+                      </Button>
+                      <Button size="sm" onClick={() => handleContinueSending(c)}>
+                        <Play className="h-4 w-4 mr-1" /> Continuer l'envoi
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

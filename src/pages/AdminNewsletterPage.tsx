@@ -24,6 +24,7 @@ const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 const DEFAULT_BATCH_SIZE = 50; // ≈ 30–40 secondes par lot (limite de fonction sûre)
 
 const PLAN_STORAGE_KEY = "newsletterSendPlan";
+const DRAFT_STORAGE_KEY = "newsletterDraftV1";
 
 type NewsletterPlan = {
   subject: string;
@@ -33,6 +34,8 @@ type NewsletterPlan = {
   intervalMs?: number;
   sending: boolean;
   offset?: number;
+  campaignId?: string;
+  campaignCreated?: boolean;
 };
 
 const savePlan = (plan: NewsletterPlan) => {
@@ -80,6 +83,48 @@ const AdminNewsletterPage: React.FC = () => {
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>({});
+
+  // Sauvegarde auto du brouillon (sujet/html/options) et restauration
+  useEffect(() => {
+    // Restaurer le brouillon au chargement
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (typeof d.subject === "string") setSubject(d.subject);
+        if (typeof d.html === "string") setHtml(d.html);
+        if (typeof d.testMode === "boolean") setTestMode(d.testMode);
+        if (typeof d.spreadMode === "boolean") setSpreadMode(d.spreadMode);
+        if (typeof d.batchSize === "number" && d.batchSize >= 10 && d.batchSize <= 500) {
+          setBatchSize(d.batchSize);
+        }
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Débouncer la sauvegarde locale pour éviter d'écrire trop souvent
+    const t = window.setTimeout(() => {
+      const draft = { subject, html, testMode, spreadMode, batchSize, updatedAt: Date.now() };
+      try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      } catch {}
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [subject, html, testMode, spreadMode, batchSize]);
+
+  // Avertir avant de quitter si envoi en cours ou contenu saisi
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (sending || subject.trim().length > 0 || html.trim().length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [sending, subject, html]);
 
   const loadCampaigns = async () => {
     setLoadingCampaigns(true);
@@ -134,14 +179,20 @@ const AdminNewsletterPage: React.FC = () => {
       return;
     }
 
-    // Enregistre la campagne (brouillon) avant de lancer l'envoi étalé
-    try {
-      await createCampaign(plan.subject, plan.html, "scheduled");
-      // recharge l'historique
-      loadCampaigns().catch(() => {});
-    } catch (e: any) {
-      // On n'arrête pas l'envoi si l'enregistrement échoue, mais on notifie
-      toast.error(`Impossible d'enregistrer la campagne: ${e?.message || e}`);
+    // Enregistre la campagne une seule fois (évite duplication lors d'une reprise)
+    if (!plan.campaignCreated) {
+      try {
+        const created = await createCampaign(plan.subject, plan.html, "scheduled");
+        // Marquer comme créé et persister le plan
+        const nextPlan = { ...plan, campaignCreated: true, campaignId: created.id, sending: true };
+        savePlan(nextPlan);
+        // recharge l'historique
+        loadCampaigns().catch(() => {});
+        plan = nextPlan;
+      } catch (e: any) {
+        // On n'arrête pas l'envoi si l'enregistrement échoue, mais on notifie
+        toast.error(`Impossible d'enregistrer la campagne: ${e?.message || e}`);
+      }
     }
 
     setSending(true);
@@ -310,6 +361,8 @@ const AdminNewsletterPage: React.FC = () => {
       testMode: false,
       batchSize,
       sending: true,
+      campaignId: c.id,
+      campaignCreated: true,
     };
     await startSpreadPlan(plan);
     toast.info("Reprise de l'envoi programmée pour cette campagne.");

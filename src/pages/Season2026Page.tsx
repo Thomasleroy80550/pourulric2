@@ -9,13 +9,14 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, CalendarDays, CheckCircle, AlertTriangle } from "lucide-react";
+import { Terminal, CalendarDays, CheckCircle, AlertTriangle, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { getUserRooms, UserRoom } from "@/lib/user-room-api";
 import { createSeasonPricingRequest, SeasonPricingItem } from "@/lib/season-pricing-api";
 import { hasExistingSeasonPricingRequest } from "@/lib/season-pricing-api";
 import { getExistingSeasonPricingRoomIds } from "@/lib/season-pricing-api";
+import SeasonTutorial from "@/components/season/SeasonTutorial";
 
 type CsvRow = {
   start: string; // dd/MM/yyyy
@@ -216,6 +217,8 @@ const Season2026Page: React.FC = () => {
   // Blocage pour clients en smart pricing (ceux qui ne peuvent pas gérer leurs prix)
   const isSmartPricingUser = useMemo(() => !profile?.can_manage_prices, [profile]);
 
+  const [showTutorial, setShowTutorial] = useState(false);
+
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -343,12 +346,25 @@ const Season2026Page: React.FC = () => {
             <CalendarDays className="h-6 w-6" />
             Bienvenue dans la Saison 2026
           </h1>
-          {!isSmartPricingUser && (
-            <Button onClick={handleSubmit} disabled={loadingCsv || rows.length === 0}>
-              Envoyer ma demande
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTutorial(true)}
+              className="flex items-center space-x-2"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span>Aide</span>
             </Button>
-          )}
+            {!isSmartPricingUser && (
+              <Button onClick={handleSubmit} disabled={loadingCsv || rows.length === 0}>
+                Envoyer ma demande
+              </Button>
+            )}
+          </div>
         </div>
+
+        {showTutorial && <SeasonTutorial onClose={() => setShowTutorial(false)} />}
 
         {/* Alerte smart pricing bien visible */}
         {!isSmartPricingUser && (

@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Card } from "@/components/ui/card";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 type SeasonTutorialProps = {
   onClose: () => void;
@@ -31,6 +32,78 @@ const AnimatedNumber: React.FC<{ from: number; to: number; duration?: number; cl
   return <span className={className}>{value}{suffix}</span>;
 };
 
+// slides minimalistes au format Finance
+type TutorialSlide = {
+  id: number;
+  title: string;
+  content: string;
+  example?: React.ReactNode;
+};
+
+const tutorialSlides: TutorialSlide[] = [
+  {
+    id: 1,
+    title: "Bienvenue — Saison 2026",
+    content:
+      "Ce court tutoriel vous présente la saisie des prix par périodes et l'envoi de votre demande en quelques clics.",
+  },
+  {
+    id: 2,
+    title: "Périodes et prix",
+    content:
+      "Définissez vos prix par grandes périodes (très haute, haute, week-ends & vacances). Voici un aperçu chiffré :",
+    example: (
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-lg border p-4">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">
+            Très haute saison
+          </div>
+          <div className="mt-2 text-3xl font-extrabold">
+            <AnimatedNumber from={99} to={129} />
+          </div>
+        </div>
+        <div className="rounded-lg border p-4">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">
+            Haute saison
+          </div>
+          <div className="mt-2 text-3xl font-extrabold">
+            <AnimatedNumber from={89} to={115} />
+          </div>
+        </div>
+        <div className="rounded-lg border p-4">
+          <div className="text-xs uppercase tracking-widest text-muted-foreground">
+            Week-ends & vacances
+          </div>
+          <div className="mt-2 text-3xl font-extrabold">
+            <AnimatedNumber from={79} to={99} />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 3,
+    title: "Saisie simplifiée",
+    content:
+      "Renseignez les montants et, si besoin, le minimum de séjour par période. Laissez vide si vous souhaitez conserver le réglage par défaut.",
+    example: (
+      <div className="mt-4 p-4 rounded-lg border bg-slate-50 dark:bg-slate-900/40">
+        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+          <li>Prix par période</li>
+          <li>Min. séjour optionnel</li>
+          <li>Une demande par logement & par année</li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    id: 4,
+    title: "Prêt à commencer ?",
+    content:
+      "Passez à la configuration de vos prix 2026 dès maintenant. Vous pourrez revenir à ce tutoriel à tout moment.",
+  },
+];
+
 const SeasonTutorial: React.FC<SeasonTutorialProps> = ({ onClose }) => {
   // léger effet de montée au montage
   const [visible, setVisible] = useState(false);
@@ -39,134 +112,83 @@ const SeasonTutorial: React.FC<SeasonTutorialProps> = ({ onClose }) => {
     return () => clearTimeout(t);
   }, []);
 
+  // état des slides
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const nextSlide = () =>
+    setCurrentSlide((i) => (i < tutorialSlides.length - 1 ? i + 1 : i));
+  const prevSlide = () => setCurrentSlide((i) => (i > 0 ? i - 1 : i));
+
+  const slide = tutorialSlides[currentSlide];
+
   return (
-    <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <Card
+        className={[
+          "max-w-2xl w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden",
+          "animate-in fade-in-0",
+          visible ? "opacity-100" : "opacity-0",
+        ].join(" ")}
+      >
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10"
+          >
+            <X className="h-4 w-4" />
+          </Button>
 
-      {/* Modal */}
-      <div className="absolute inset-0 flex items-center justify-center px-4">
-        <div
-          className={[
-            "relative w-full max-w-7xl",
-            "rounded-xl border bg-white dark:bg-slate-900",
-            "shadow-lg",
-            "p-6 sm:p-10",
-            "min-h-[60vh] sm:min-h-[70vh]",
-            "animate-in fade-in-0",
-            visible ? "opacity-100" : "opacity-0",
-          ].join(" ")}
-        >
-          {/* Header minimal */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight">
-              Saison 2026
-            </h2>
-            <Button variant="ghost" onClick={onClose} className="text-sm">
-              Continuer
-            </Button>
-          </div>
+          <div className="p-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-4">
+                {slide.title}
+              </h2>
+              <p className="text-muted-foreground text-lg leading-relaxed">
+                {slide.content}
+              </p>
+              {slide.example}
+            </div>
 
-          {/* Texte d'intro sobre */}
-          <p className="mt-4 text-base sm:text-lg text-muted-foreground">
-            Prix clairs, suggestions rapides et envoi en un clic.
-          </p>
+            <div className="flex justify-center space-x-2 mb-8">
+              {tutorialSlides.map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    idx === currentSlide ? "bg-blue-600 w-8" : "bg-gray-300 w-2"
+                  }`}
+                />
+              ))}
+            </div>
 
-          {/* Slider minimaliste */}
-          <div className="mt-8 relative">
-            <Carousel className="w-full">
-              <CarouselContent>
-                {/* Slide 1: Prix animés épurés */}
-                <CarouselItem>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-6 sm:p-8">
-                      <div className="text-xs uppercase tracking-widest text-muted-foreground">
-                        Très haute saison
-                      </div>
-                      <div className="mt-4 text-4xl sm:text-6xl font-extrabold">
-                        <AnimatedNumber from={99} to={129} />
-                      </div>
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        Périodes à forte demande.
-                      </p>
-                    </div>
-                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-6 sm:p-8">
-                      <div className="text-xs uppercase tracking-widest text-muted-foreground">
-                        Haute saison
-                      </div>
-                      <div className="mt-4 text-4xl sm:text-6xl font-extrabold">
-                        <AnimatedNumber from={89} to={115} />
-                      </div>
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        Équilibre valeur / conversion.
-                      </p>
-                    </div>
-                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-6 sm:p-8">
-                      <div className="text-xs uppercase tracking-widest text-muted-foreground">
-                        Week-ends & vacances
-                      </div>
-                      <div className="mt-4 text-4xl sm:text-6xl font-extrabold">
-                        <AnimatedNumber from={79} to={99} />
-                      </div>
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        Ajustements automatiques.
-                      </p>
-                    </div>
-                  </div>
-                </CarouselItem>
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={prevSlide}
+                disabled={currentSlide === 0}
+                className="flex items-center space-x-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>Précédent</span>
+              </Button>
 
-                {/* Slide 2: Bénéfices en liste simple */}
-                <CarouselItem>
-                  <div className="grid sm:grid-cols-3 gap-6">
-                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-5">
-                      <div className="text-lg font-semibold">Suggestions rapides</div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Entrez vos bases, nous proposons selon les périodes.
-                      </p>
-                    </div>
-                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-5">
-                      <div className="text-lg font-semibold">Saisie simple</div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Min séjour facultatif; laissez vide pour le défaut.
-                      </p>
-                    </div>
-                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-5">
-                      <div className="text-lg font-semibold">Envoi en un clic</div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Une demande par logement et par année.
-                      </p>
-                    </div>
-                  </div>
-                </CarouselItem>
-
-                {/* Slide 3: CTA simple */}
-                <CarouselItem>
-                  <div className="flex flex-col items-center justify-center text-center rounded-xl border bg-white dark:bg-slate-900 p-8 sm:p-16 min-h-[40vh]">
-                    <h3 className="mt-1 text-3xl sm:text-5xl font-extrabold">
-                      Démarrer
-                    </h3>
-                    <p className="mt-3 max-w-2xl text-sm sm:text-base text-muted-foreground">
-                      Configurez vos prix 2026 en toute simplicité.
-                    </p>
-                    <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
-                      <Button size="lg" className="w-full sm:w-auto" onClick={onClose}>
-                        Configurer mes prix
-                      </Button>
-                      <Button variant="ghost" size="lg" className="w-full sm:w-auto" onClick={onClose}>
-                        Plus tard
-                      </Button>
-                    </div>
-                  </div>
-                </CarouselItem>
-              </CarouselContent>
-
-              {/* Flèches discrètes */}
-              <CarouselPrevious className="left-2 sm:left-4" />
-              <CarouselNext className="right-2 sm:right-4" />
-            </Carousel>
+              {currentSlide === tutorialSlides.length - 1 ? (
+                <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Terminer
+                </Button>
+              ) : (
+                <Button
+                  onClick={nextSlide}
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <span>Suivant</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

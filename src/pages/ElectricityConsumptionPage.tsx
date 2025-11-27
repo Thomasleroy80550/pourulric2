@@ -210,6 +210,9 @@ const ElectricityConsumptionPage: React.FC = () => {
     }
   }, [isEnergyType]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Options d'unité selon le type de donnée
+  const unitOptions = isEnergyType ? ["Wh", "kWh", "MWh"] : ["W", "kW"];
+
   // Définir avant usage dans chartDisplayData
   const canComputeEnergyCost = type !== "consumption_max_power";
 

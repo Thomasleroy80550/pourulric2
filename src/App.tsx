@@ -77,6 +77,8 @@ import Hivernage2026Page from "./pages/Hivernage2026Page";
 import AdminHivernageRequestsPage from "./pages/AdminHivernageRequestsPage";
 import AdminRevyoosMissingPage from "./pages/AdminRevyoosMissingPage";
 import AdminCRMPage from "./pages/AdminCRMPage";
+import AdminV2Dashboard from "./pages/admin-v2/Dashboard";
+import AdminV2Users from "./pages/admin-v2/Users";
 
 const queryClient = new QueryClient();
 
@@ -163,6 +165,8 @@ function App() {
                   <Route path="/tickets" element={<TicketsPage />} />
                   <Route path="/tickets/:id" element={<TicketDetailPage />} />
                   <Route path="/marketplace" element={<MarketplacePage />} /> {/* New route */}
+                  <Route path="/admin-v2" element={<AdminV2Dashboard />} />
+                  <Route path="/admin-v2/users" element={<AdminV2Users />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </SessionContextProvider>

@@ -44,6 +44,7 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
+import NotificationCenter, { NotificationItem } from "@/components/NotificationCenter";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -406,6 +407,26 @@ const DashboardPage = () => {
     setIsForecastDialogOpen(true);
   };
 
+  const notificationItems: NotificationItem[] = [
+    {
+      id: "hivernage",
+      title: "Hivernage — Fermeture du 4 au 11 janvier",
+      description:
+        "Merci de nous transmettre vos consignes (chauffage, eau, réfrigérateur, linge, volets, etc.) avant la fermeture.",
+      ctaLabel: "Envoyer mes consignes",
+      to: "/hivernage-2026",
+      badge: "Important",
+    },
+    {
+      id: "season-2026",
+      title: "Saison 2026 — Définissez vos tarifs",
+      description:
+        "Saisissez vos prix par périodes et envoyez votre demande en quelques clics. Une demande par logement et par année.",
+      ctaLabel: "Configurer mes prix",
+      to: "/season-2026",
+    },
+  ];
+
   if (profile?.is_banned) {
     return (
       <MainLayout>
@@ -420,27 +441,7 @@ const DashboardPage = () => {
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
         <div className="mb-6">
-          <Card className="border-2 border-[hsl(var(--primary))] bg-gradient-to-r from-[hsl(var(--primary)/0.08)] to-[hsl(var(--primary)/0.14)] dark:from-slate-900/25 dark:to-slate-900/35 shadow-lg shadow-[hsl(var(--primary)/0.25)]">
-            <CardHeader className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-[hsl(var(--primary))]" />
-                <CardTitle className="text-lg font-semibold text-foreground">
-                  Hivernage — Fermeture du 4 au 11 janvier
-                </CardTitle>
-              </div>
-              <Badge className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border border-[hsl(var(--primary))]">
-                Important
-              </Badge>
-            </CardHeader>
-            <CardContent className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <p className="text-sm text-foreground">
-                Merci de nous transmettre vos consignes avant la fermeture (chauffage, eau, réfrigérateur, linge, volets, etc.).
-              </p>
-              <Button asChild variant="default">
-                <Link to="/hivernage-2026">Envoyer mes consignes</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <NotificationCenter items={notificationItems} title="Centre de notifications" />
         </div>
         {/* To-Do List Card */}
         <div className="mt-6">

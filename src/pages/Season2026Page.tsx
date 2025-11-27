@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, CalendarDays, CheckCircle, AlertTriangle, HelpCircle } from "lucide-react";
+import { Terminal, CalendarDays, CheckCircle, AlertTriangle, HelpCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { getUserRooms, UserRoom } from "@/lib/user-room-api";
@@ -209,6 +209,9 @@ const Season2026Page: React.FC = () => {
   const [baseMinPrice, setBaseMinPrice] = useState<number | null>(null);
   const [baseStdPrice, setBaseStdPrice] = useState<number | null>(null);
 
+  // ADD: état loader pour l'application des suggestions
+  const [isApplyingSuggestions, setIsApplyingSuggestions] = useState(false);
+
   // Suggestions calculées pour chaque ligne
   const suggestions = useMemo(() => {
     return rows.map((r) => computeSuggestedPrice(r, baseMinPrice, baseStdPrice));
@@ -342,22 +345,29 @@ const Season2026Page: React.FC = () => {
   };
 
   // AJOUT: appliquer suggestions aux prix vides
-  const applySuggestions = () => {
+  const applySuggestions = async () => {
     if (baseStdPrice == null || baseStdPrice <= 0) {
       toast.error("Veuillez saisir votre prix standard pour générer des suggestions.");
       return;
     }
-    const next: Record<number, { price?: number | null; minStay?: number | null }> = { ...inputsByIndex };
-    rows.forEach((row, i) => {
-      const suggested = suggestions[i];
-      const current = next[i];
-      const currentPrice = current?.price;
-      if (suggested != null && (currentPrice == null || currentPrice === undefined)) {
-        next[i] = { ...current, price: suggested };
-      }
-    });
-    setInputsByIndex(next);
-    toast.success("Prix suggérés appliqués aux lignes sans prix.");
+    setIsApplyingSuggestions(true);
+    try {
+      const next: Record<number, { price?: number | null; minStay?: number | null }> = { ...inputsByIndex };
+      rows.forEach((row, i) => {
+        const suggested = suggestions[i];
+        const current = next[i];
+        const currentPrice = current?.price;
+        if (suggested != null && (currentPrice == null || currentPrice === undefined)) {
+          next[i] = { ...current, price: suggested };
+        }
+      });
+      // petite pause pour laisser voir le loader
+      await new Promise((r) => setTimeout(r, 600));
+      setInputsByIndex(next);
+      toast.success("Prix suggérés appliqués aux lignes sans prix.");
+    } finally {
+      setIsApplyingSuggestions(false);
+    }
   };
 
   return (
@@ -379,7 +389,7 @@ const Season2026Page: React.FC = () => {
               <span>Aide</span>
             </Button>
             {!isSmartPricingUser && (
-              <Button onClick={handleSubmit} disabled={loadingCsv || rows.length === 0}>
+              <Button onClick={handleSubmit} disabled={isApplyingSuggestions || loadingCsv || rows.length === 0}>
                 Envoyer ma demande
               </Button>
             )}
@@ -483,8 +493,20 @@ const Season2026Page: React.FC = () => {
                     />
                   </div>
                   <div className="flex items-end">
-                    <Button variant="secondary" className="w-full" onClick={applySuggestions}>
-                      Appliquer les suggestions
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={applySuggestions}
+                      disabled={isApplyingSuggestions}
+                    >
+                      {isApplyingSuggestions ? (
+                        <span className="inline-flex items-center">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Application...
+                        </span>
+                      ) : (
+                        "Appliquer les suggestions"
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -513,7 +535,12 @@ const Season2026Page: React.FC = () => {
                   <CardTitle>Périodes Saison 2026</CardTitle>
                   <CardDescription>Complétez vos prix et restrictions, puis envoyez la demande.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="relative">
+                  {isApplyingSuggestions && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  )}
                   <Table>
                     <TableCaption>Les périodes proviennent du CSV officiel de la saison 2026.</TableCaption>
                     <TableHeader>
@@ -578,8 +605,19 @@ const Season2026Page: React.FC = () => {
                       Les suggestions sont calculées à partir de vos prix de base et de la saison/du type de période. Elles respectent votre prix minimum.
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="secondary" onClick={applySuggestions}>Appliquer les suggestions</Button>
-                      <Button onClick={handleSubmit}>Envoyer ma demande</Button>
+                      <Button variant="secondary" onClick={applySuggestions} disabled={isApplyingSuggestions}>
+                        {isApplyingSuggestions ? (
+                          <span className="inline-flex items-center">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Application...
+                          </span>
+                        ) : (
+                          "Appliquer les suggestions"
+                        )}
+                      </Button>
+                      <Button onClick={handleSubmit} disabled={isApplyingSuggestions}>
+                        Envoyer ma demande
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

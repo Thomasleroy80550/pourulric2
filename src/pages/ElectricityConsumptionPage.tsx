@@ -502,6 +502,12 @@ const ElectricityConsumptionPage: React.FC = () => {
     }
   };
 
+  const handleSaveCredentials = () => {
+    localStorage.setItem("conso_prm", prm);
+    localStorage.setItem("conso_token", token);
+    toast.success("Paramètres enregistrés localement");
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">

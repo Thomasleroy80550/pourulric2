@@ -5,7 +5,6 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -200,7 +199,7 @@ const Season2026Page: React.FC = () => {
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string>("");
   const [inputsByIndex, setInputsByIndex] = useState<
-    Record<number, { price?: number | null; minStay?: number | null; closed?: boolean }>
+    Record<number, { price?: number | null; minStay?: number | null }>
   >({});
 
   // AJOUT: logements déjà demandés pour 2026
@@ -266,7 +265,7 @@ const Season2026Page: React.FC = () => {
 
   const handleInputChange = (
     index: number,
-    field: "price" | "minStay" | "closed",
+    field: "price" | "minStay",
     value: any
   ) => {
     setInputsByIndex((prev) => ({
@@ -324,7 +323,6 @@ const Season2026Page: React.FC = () => {
         season: row.season,
         price: priceFinal,
         min_stay: minStayFinal,
-        closed: !!userInputs.closed,
         comment: row.comment,
       };
     });
@@ -349,7 +347,7 @@ const Season2026Page: React.FC = () => {
       toast.error("Veuillez saisir votre prix standard pour générer des suggestions.");
       return;
     }
-    const next: Record<number, { price?: number | null; minStay?: number | null; closed?: boolean }> = { ...inputsByIndex };
+    const next: Record<number, { price?: number | null; minStay?: number | null }> = { ...inputsByIndex };
     rows.forEach((row, i) => {
       const suggested = suggestions[i];
       const current = next[i];
@@ -560,7 +558,6 @@ const Season2026Page: React.FC = () => {
                         <TableHead>Prix suggéré</TableHead>
                         <TableHead>Prix (€)</TableHead>
                         <TableHead>Min séjour</TableHead>
-                        <TableHead>Fermé</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -601,12 +598,6 @@ const Season2026Page: React.FC = () => {
                                 onChange={(e) =>
                                   handleInputChange(i, "minStay", e.target.value === "" ? null : Number(e.target.value))
                                 }
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Switch
-                                checked={!!inputs.closed}
-                                onCheckedChange={(v) => handleInputChange(i, "closed", v)}
                               />
                             </TableCell>
                           </TableRow>

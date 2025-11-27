@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Checkbox } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -86,6 +86,7 @@ const AdminUsersPage: React.FC = () => {
   const [isStripeDetailsOpen, setIsStripeDetailsOpen] = useState(false);
   const [selectedStripeAccountId, setSelectedStripeAccountId] = useState<string | null>(null);
   const [creatingStripeAccountFor, setCreatingStripeAccountFor] = useState<string | null>(null);
+  const [updatingPricingFor, setUpdatingPricingFor] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchUsers = useCallback(async () => {
@@ -219,6 +220,22 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleSmartPricingToggle = async (user: UserProfile, active: boolean) => {
+    if (typeof active !== 'boolean') return;
+    setUpdatingPricingFor(user.id);
+    try {
+      // Smart Pricing actif => can_manage_prices = false
+      // Désactivé => can_manage_prices = true
+      await updateUser({ user_id: user.id, can_manage_prices: !active });
+      toast.success(active ? 'Smart Pricing activé' : 'Smart Pricing désactivé');
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setUpdatingPricingFor(null);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const term = searchTerm.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
@@ -240,6 +257,7 @@ const AdminUsersPage: React.FC = () => {
           <TableHead>Rôle</TableHead>
           <TableHead>Statut Intégration</TableHead>
           <TableHead>Statut KYC</TableHead>
+          <TableHead>Smart Pricing</TableHead>
           <TableHead>Compte Stripe</TableHead>
           <TableHead>Dernière Connexion</TableHead>
           <TableHead>Acceptation CGUV</TableHead>
@@ -249,6 +267,7 @@ const AdminUsersPage: React.FC = () => {
       <TableBody>
         {clientList.map((user) => {
           const isOnline = user.last_seen_at && (new Date().getTime() - new Date(user.last_seen_at).getTime()) < 2 * 60 * 1000;
+          const smartPricingActive = !user.can_manage_prices;
           return (
             <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
               <TableCell>
@@ -268,6 +287,18 @@ const AdminUsersPage: React.FC = () => {
                 <Badge variant={getKycStatusVariant(user.kyc_status)}>
                   {getKycStatusText(user.kyc_status)}
                 </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={smartPricingActive}
+                    onCheckedChange={(val) => handleSmartPricingToggle(user, val === true)}
+                    disabled={updatingPricingFor === user.id}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {smartPricingActive ? 'Actif' : 'Désactivé'}
+                  </span>
+                </div>
               </TableCell>
               <TableCell>
                 {user.stripe_account_id ? (

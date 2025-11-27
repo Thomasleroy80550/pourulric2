@@ -38,6 +38,7 @@ serve(async (req) => {
         Authorization: `Bearer ${token}`,
         "User-Agent": "hellokeys-app v1",
         From: "contact@hellokeys.fr",
+        Accept: "application/json",
       },
     });
 
@@ -59,8 +60,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch {
-      // Non-JSON body fallback
-      return new Response(text, { status: 200, headers: baseHeaders });
+      // Body vide ou non-JSON: renvoyer tel quel (ex: 204 with empty body)
+      return new Response(text || "", { status: 200, headers: baseHeaders });
     }
   } catch (e) {
     console.error("conso-proxy error:", e);

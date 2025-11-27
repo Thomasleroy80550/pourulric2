@@ -141,11 +141,31 @@ const ElectricityConsumptionPage: React.FC = () => {
     enabled: !!params,
   });
 
-  const chartData = React.useMemo(() => {
+  // Normalise la réponse pour trouver un tableau exploitable, même si l'API renvoie un objet.
+  const normalizedArray = React.useMemo(() => {
     if (!data) return [];
-    if (Array.isArray(data)) return toChartData(data);
+    if (Array.isArray(data)) return data;
+    if (typeof data === "object") {
+      for (const key of Object.keys(data as any)) {
+        const val = (data as any)[key];
+        if (Array.isArray(val)) return val;
+      }
+    }
     return [];
   }, [data]);
+
+  const rawJson = React.useMemo(() => {
+    try {
+      return typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    } catch {
+      return String(data);
+    }
+  }, [data]);
+
+  const chartData = React.useMemo(() => {
+    if (!normalizedArray || normalizedArray.length === 0) return [];
+    return toChartData(normalizedArray);
+  }, [normalizedArray]);
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -329,7 +349,7 @@ const ElectricityConsumptionPage: React.FC = () => {
               </Alert>
             ) : (
               <>
-                {Array.isArray(data) && data.length > 0 ? (
+                {normalizedArray.length > 0 ? (
                   <>
                     {chartData.length > 0 ? (
                       <div className="h-72 mb-6">
@@ -368,7 +388,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {data.slice(0, 100).map((item: any, idx: number) => (
+                          {normalizedArray.slice(0, 100).map((item: any, idx: number) => (
                             <tr key={idx} className="border-t">
                               <td className="p-2 align-top">{idx + 1}</td>
                               <td className="p-2 align-top">
@@ -386,14 +406,23 @@ const ElectricityConsumptionPage: React.FC = () => {
                         </tbody>
                       </table>
                     </div>
-                    {data.length > 100 && (
+                    {normalizedArray.length > 100 && (
                       <p className="text-xs text-muted-foreground mt-2">
                         Affichage limité aux 100 premières entrées.
                       </p>
                     )}
                   </>
                 ) : (
-                  <p className="text-muted-foreground">Aucune donnée trouvée pour les paramètres donnés.</p>
+                  <>
+                    <p className="text-muted-foreground mb-2">
+                      Aucune donnée exploitable en tableau trouvée pour les paramètres donnés.
+                    </p>
+                    {rawJson && (
+                      <div className="rounded-md border bg-muted/30 p-3 max-h-80 overflow-auto">
+                        <pre className="text-xs whitespace-pre-wrap break-words">{rawJson}</pre>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}

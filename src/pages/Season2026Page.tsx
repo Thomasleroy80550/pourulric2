@@ -165,20 +165,19 @@ const normalize = (s?: string) => (s || "").toLowerCase();
 
 const seasonMultiplier = (season: string) => {
   const s = normalize(season);
-  if (s.includes("très haute")) return 1.25;
-  if (s.includes("tres haute")) return 1.25; // fallback sans accent
-  if (s.includes("haute")) return 1.15;
-  if (s.includes("moyenne")) return 1.0;
-  if (s.includes("basse")) return 0.85;
-  return 1.0;
+  if (s.includes("très haute") || s.includes("tres haute")) return 1.20;
+  if (s.includes("haute")) return 1.10;
+  if (s.includes("moyenne")) return 1.00;
+  if (s.includes("basse")) return 0.90;
+  return 1.00;
 };
 
 const extraBoostMultiplier = (periodType: string, comment: string) => {
   const p = normalize(periodType);
   const c = normalize(comment);
   let boost = 0;
-  if (p.includes("week-end") || p.includes("weekend")) boost += 0.10;
-  if (c.includes("vacances") || c.includes("zone ")) boost += 0.05;
+  if (p.includes("week-end") || p.includes("weekend")) boost += 0.08; // ajusté
+  if (c.includes("vacances") || c.includes("zone ")) boost += 0.04;   // ajusté
   return 1 + boost;
 };
 
@@ -200,7 +199,9 @@ const Season2026Page: React.FC = () => {
   const [rows, setRows] = useState<CsvRow[]>([]);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<string>("");
-  const [inputsByIndex, setInputsByIndex] = useState<Record<number, { price?: number | null; minStay?: number | null; closed?: boolean; clArr?: boolean; clDep?: boolean }>>({});
+  const [inputsByIndex, setInputsByIndex] = useState<
+    Record<number, { price?: number | null; minStay?: number | null; closed?: boolean }>
+  >({});
 
   // AJOUT: logements déjà demandés pour 2026
   const [existingRoomIds, setExistingRoomIds] = useState<string[]>([]);
@@ -255,7 +256,11 @@ const Season2026Page: React.FC = () => {
     fetchAll();
   }, []);
 
-  const handleInputChange = (index: number, field: "price" | "minStay" | "closed" | "clArr" | "clDep", value: any) => {
+  const handleInputChange = (
+    index: number,
+    field: "price" | "minStay" | "closed",
+    value: any
+  ) => {
     setInputsByIndex((prev) => ({
       ...prev,
       [index]: { ...prev[index], [field]: value },
@@ -263,6 +268,19 @@ const Season2026Page: React.FC = () => {
   };
 
   const selectedRoom = useMemo(() => userRooms.find(r => r.room_id === selectedRoomId), [userRooms, selectedRoomId]);
+
+  // Présentation rapide de la saison (compte par type)
+  const seasonCounts = useMemo(() => {
+    const counts = { tresHaute: 0, haute: 0, moyenne: 0, basse: 0 };
+    rows.forEach((r) => {
+      const s = (r.season || "").toLowerCase();
+      if (s.includes("très") || s.includes("tres")) counts.tresHaute++;
+      else if (s.includes("haute")) counts.haute++;
+      else if (s.includes("moyenne")) counts.moyenne++;
+      else if (s.includes("basse")) counts.basse++;
+    });
+    return counts;
+  }, [rows]);
 
   const handleSubmit = async () => {
     if (isSmartPricingUser) {
@@ -299,8 +317,6 @@ const Season2026Page: React.FC = () => {
         price: priceFinal,
         min_stay: minStayFinal,
         closed: !!userInputs.closed,
-        closed_on_arrival: !!userInputs.clArr,
-        closed_on_departure: !!userInputs.clDep,
         comment: row.comment,
       };
     });
@@ -325,7 +341,7 @@ const Season2026Page: React.FC = () => {
       toast.error("Veuillez saisir votre prix standard pour générer des suggestions.");
       return;
     }
-    const next: Record<number, { price?: number | null; minStay?: number | null; closed?: boolean; clArr?: boolean; clDep?: boolean }> = { ...inputsByIndex };
+    const next: Record<number, { price?: number | null; minStay?: number | null; closed?: boolean }> = { ...inputsByIndex };
     rows.forEach((row, i) => {
       const suggested = suggestions[i];
       const current = next[i];
@@ -378,6 +394,38 @@ const Season2026Page: React.FC = () => {
             </AlertDescription>
           </Alert>
         )}
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Présentation Saison 2026</CardTitle>
+            <CardDescription>
+              Aperçu des périodes chargées (issues du CSV officiel), avec ajustement automatique du week-end de Pâques.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-4 gap-3 text-sm">
+              <div className="p-3 rounded bg-muted">
+                <div className="font-medium">Très haute saison</div>
+                <div className="text-muted-foreground">{seasonCounts.tresHaute} périodes</div>
+              </div>
+              <div className="p-3 rounded bg-muted">
+                <div className="font-medium">Haute saison</div>
+                <div className="text-muted-foreground">{seasonCounts.haute} périodes</div>
+              </div>
+              <div className="p-3 rounded bg-muted">
+                <div className="font-medium">Moyenne saison</div>
+                <div className="text-muted-foreground">{seasonCounts.moyenne} périodes</div>
+              </div>
+              <div className="p-3 rounded bg-muted">
+                <div className="font-medium">Basse saison</div>
+                <div className="text-muted-foreground">{seasonCounts.basse} périodes</div>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Note: Le week-end de Pâques (03/04 → 06/04/2026) est corrigé automatiquement pour éviter les "trous" entre périodes.
+            </p>
+          </CardContent>
+        </Card>
 
         <Card className="mb-6">
           <CardHeader>
@@ -498,8 +546,6 @@ const Season2026Page: React.FC = () => {
                         <TableHead>Prix (€)</TableHead>
                         <TableHead>Min séjour</TableHead>
                         <TableHead>Fermé</TableHead>
-                        <TableHead>Arrivée fermée</TableHead>
-                        <TableHead>Départ fermé</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -546,18 +592,6 @@ const Season2026Page: React.FC = () => {
                               <Switch
                                 checked={!!inputs.closed}
                                 onCheckedChange={(v) => handleInputChange(i, "closed", v)}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Switch
-                                checked={!!inputs.clArr}
-                                onCheckedChange={(v) => handleInputChange(i, "clArr", v)}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Switch
-                                checked={!!inputs.clDep}
-                                onCheckedChange={(v) => handleInputChange(i, "clDep", v)}
                               />
                             </TableCell>
                           </TableRow>

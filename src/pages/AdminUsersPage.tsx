@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Checkbox } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -20,6 +20,7 @@ import ImportUsersDialog from '@/components/admin/ImportUsersDialog';
 import { Input } from '@/components/ui/input';
 import StripeAccountDetailsDialog from '@/components/admin/StripeAccountDetailsDialog';
 import { createStripeAccountLink } from '@/lib/admin-api';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {

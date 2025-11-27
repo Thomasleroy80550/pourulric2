@@ -44,6 +44,46 @@ function makeCacheKey(p: { prm: string; type: ConsoType; start: string; end: str
   return `${p.prm}::${p.type}::${p.start}::${p.end}`;
 }
 
+// Helpers dates
+function toISODate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function addDays(d: Date, delta: number) {
+  const nd = new Date(d);
+  nd.setDate(nd.getDate() + delta);
+  return nd;
+}
+function eachDayStrings(startISO: string, endISO: string) {
+  // [start, end) exclusif
+  const days: string[] = [];
+  if (!isValidDateStr(startISO) || !isValidDateStr(endISO)) return days;
+  let cur = new Date(startISO);
+  const end = new Date(endISO);
+  while (cur < end) {
+    days.push(toISODate(cur));
+    cur = addDays(cur, 1);
+  }
+  return days;
+}
+
+type ReservationCostRow = {
+  id: string;
+  roomName?: string;
+  arrival: string;
+  departure: string;
+  nights: number;
+  energyKWh: number;
+  costEUR: number;
+};
+
+// Crée une clé de cache stable pour une combinaison de paramètres (sans inclure le token)
+function makeCacheKey(p: { prm: string; type: ConsoType; start: string; end: string }) {
+  return `${p.prm}::${p.type}::${p.start}::${p.end}`;
+}
+
 function isValidDateStr(s: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const d = new Date(s);
@@ -105,6 +145,8 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [showToken, setShowToken] = React.useState(false);
   // Prix par kWh (€), mémorisé localement
   const [pricePerKWh, setPricePerKWh] = React.useState<string>(() => localStorage.getItem("conso_price_per_kwh") || "");
+  const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);
@@ -142,6 +184,178 @@ const ElectricityConsumptionPage: React.FC = () => {
       setUnit(desiredDefault);
     }
   }, [isEnergyType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Définir avant usage dans chartDisplayData
+  const canComputeEnergyCost = type !== "consumption_max_power";
+
+  // Sauvegarde auto des champs pour éviter de perdre les valeurs en quittant la page
+  React.useEffect(() => {
+    localStorage.setItem("conso_prm", prm);
+  }, [prm]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_token", token);
+  }, [token]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_type", type);
+  }, [type]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_start", start);
+  }, [start]);
+
+  React.useEffect(() => {
+    localStorage.setItem("conso_end", end);
+  }, [end]);
+
+  const [params, setParams] = React.useState<FetchParams | null>(null);
+  const paramKey = React.useMemo(() => (params ? makeCacheKey(params) : null), [params]);
+
+  // Construit une map { 'YYYY-MM-DD': Wh } à partir d'une réponse daily_consumption
+  const buildDailyConsoMap = (dataAny: any): Record<string, number> => {
+    let arr: any[] = [];
+    if (Array.isArray(dataAny)) arr = dataAny;
+    else if (dataAny && typeof dataAny === "object") {
+      for (const k of Object.keys(dataAny)) {
+        const v = dataAny[k];
+        if (Array.isArray(v)) {
+          arr = v;
+          break;
+        }
+      }
+    }
+    const map: Record<string, number> = {};
+    if (arr.length === 0) return map;
+    const { dateKey, valueKey } = inferKeys(arr[0]);
+    if (!dateKey || !valueKey) return map;
+    for (const it of arr) {
+      const d = it[dateKey];
+      const v = it[valueKey];
+      const iso = typeof d === "string" ? d.slice(0, 10) : toISODate(new Date(d));
+      const num = typeof v === "number" ? v : Number(v);
+      if (!Number.isNaN(num)) map[iso] = (map[iso] || 0) + num; // Wh par jour
+    }
+    return map;
+  };
+
+  // Récupère la conso daily pour la période et renvoie une map date->Wh (utilise cache local si dispo)
+  const getDailyConsoMapForRange = async (): Promise<Record<string, number>> => {
+    const key = makeCacheKey({ prm, type: "daily_consumption", start, end });
+    const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw);
+        if (cached?.data) return buildDailyConsoMap(cached.data);
+      } catch {
+        // ignore
+      }
+    }
+    const { data, error } = await supabase.functions.invoke("conso-proxy", {
+      body: { prm, token, type: "daily_consumption", start, end },
+    });
+    if (error) throw new Error(error.message || "Erreur conso daily");
+    // cache pour usages ultérieurs
+    localStorage.setItem(`conso_cache_${key}`, JSON.stringify({ data, cachedAt: new Date().toISOString() }));
+    return buildDailyConsoMap(data);
+  };
+
+  const analyzeReservations = async () => {
+    // Validations de base
+    if (!/^\d{14}$/.test(prm)) {
+      toast.error("Le PRM doit contenir 14 chiffres.");
+      return;
+    }
+    if (!token || token.length < 10) {
+      toast.error("Veuillez renseigner votre token Conso API.");
+      return;
+    }
+    if (!isValidDateStr(start) || !isValidDateStr(end)) {
+      toast.error("Dates invalides (YYYY-MM-DD).");
+      return;
+    }
+    setIsAnalyzing(true);
+    try {
+      // 1) Conso daily mappée par jour
+      const dayMap = await getDailyConsoMapForRange();
+      // 2) Récupérer les rooms de l'utilisateur
+      const { data: rooms, error: roomsError } = await supabase
+        .from("user_rooms")
+        .select("room_id, room_name");
+      if (roomsError) throw new Error(roomsError.message);
+      if (!rooms || rooms.length === 0) {
+        setResRows([]);
+        toast.message("Aucun logement trouvé.");
+        return;
+      }
+      // 3) Récupérer les réservations par room
+      const allResArrays = await Promise.all(
+        rooms.map(async (r: any) => {
+          const { data, error } = await supabase.functions.invoke("krossbooking-proxy", {
+            body: { action: "get_reservations_for_room", id_room: r.room_id },
+          });
+          if (error) {
+            console.warn("Erreur KB room", r.room_id, error);
+            return [];
+          }
+          const arr = (data && data.data) || [];
+          // Attache room info pour faciliter l'affichage
+          return arr.map((x: any) => ({ ...x, __room_name: r.room_name, __room_id: r.room_id }));
+        })
+      );
+      const rawReservations = allResArrays.flat();
+      // 4) Filtrer par statut confirmé et intervalle [start, end)
+      const allowed = new Set(["PROP0", "PROPRI"]);
+      const startD = new Date(start);
+      const endD = new Date(end);
+      const filtered = rawReservations.filter((res: any) => {
+        const status = String(res.cod_reservation_status || "");
+        if (!allowed.has(status)) return false;
+        const arrivalStr = String(res.arrival || "");
+        const departureStr = String(res.departure || "");
+        if (!isValidDateStr(arrivalStr) || !isValidDateStr(departureStr)) return false;
+        const a = new Date(arrivalStr);
+        const b = new Date(departureStr);
+        // chevauchement simple: a < end && b > start
+        return a < endD && b > startD;
+      });
+      // 5) Calcul kWh et coût par résa
+      const p = Number((pricePerKWh || "").replace(",", "."));
+      const rows: ReservationCostRow[] = filtered.map((res: any) => {
+        const id = String(res.id_reservation ?? res.id ?? "");
+        const arrivalStr = String(res.arrival);
+        const departureStr = String(res.departure);
+        const nights = Math.max(0, Math.round((new Date(departureStr).getTime() - new Date(arrivalStr).getTime()) / (24 * 3600 * 1000)));
+        // jours à sommer: [arrival, departure)
+        const days = eachDayStrings(arrivalStr, departureStr);
+        let sumWh = 0;
+        for (const d of days) {
+          if (dayMap[d] != null) sumWh += dayMap[d];
+        }
+        const energyKWh = sumWh / 1000;
+        const costEUR = p > 0 ? energyKWh * p : 0;
+        return {
+          id,
+          roomName: res.__room_name,
+          arrival: arrivalStr,
+          departure: departureStr,
+          nights,
+          energyKWh,
+          costEUR,
+        };
+      });
+      // 6) Trier par arrivée
+      rows.sort((a, b) => (a.arrival < b.arrival ? -1 : a.arrival > b.arrival ? 1 : 0));
+      setResRows(rows);
+      toast.success("Analyse par réservation terminée");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erreur lors de l'analyse des réservations");
+      setResRows([]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // Définir avant usage dans chartDisplayData
   const canComputeEnergyCost = type !== "consumption_max_power";
@@ -587,6 +801,60 @@ const ElectricityConsumptionPage: React.FC = () => {
                 </Button>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Consommation par réservation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row md:items-end gap-3 mb-4">
+              <div className="text-sm text-muted-foreground flex-1">
+                Calcule l'énergie totale (kWh) et le coût estimé (€) pour chaque réservation confirmée sur la période, en utilisant la consommation quotidienne.
+              </div>
+              <Button onClick={analyzeReservations} disabled={isAnalyzing}>
+                {isAnalyzing ? "Analyse en cours..." : "Analyser les réservations"}
+              </Button>
+            </div>
+            {resRows.length > 0 ? (
+              <div className="overflow-auto rounded-md border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/40">
+                      <th className="text-left p-2">Réservation</th>
+                      <th className="text-left p-2">Logement</th>
+                      <th className="text-left p-2">Arrivée</th>
+                      <th className="text-left p-2">Départ</th>
+                      <th className="text-right p-2">Nuits</th>
+                      <th className="text-right p-2">Énergie (kWh)</th>
+                      <th className="text-right p-2">Coût (€)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resRows.map((r) => (
+                      <tr key={`${r.id}-${r.arrival}`} className="border-t">
+                        <td className="p-2">{r.id || "-"}</td>
+                        <td className="p-2">{r.roomName || "-"}</td>
+                        <td className="p-2">{r.arrival}</td>
+                        <td className="p-2">{r.departure}</td>
+                        <td className="p-2 text-right">{r.nights}</td>
+                        <td className="p-2 text-right">
+                          {r.energyKWh.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-2 text-right">
+                          {r.costEUR.toLocaleString(undefined, { style: "currency", currency: "EUR" })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                Aucune donnée à afficher. Cliquez sur "Analyser les réservations".
+              </p>
+            )}
           </CardContent>
         </Card>
 

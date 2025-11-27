@@ -44,6 +44,7 @@ const adjustEasterWeekend = (rows: CsvRow[]): CsvRow[] => {
   const easterEndDmy = "06/04/2026";
   const easterStart = dmyToDate(easterStartDmy);
   const easterEnd = dmyToDate(easterEndDmy);
+  const dayMs = 24 * 60 * 60 * 1000;
 
   const patchedRows = [...rows];
 
@@ -65,16 +66,49 @@ const adjustEasterWeekend = (rows: CsvRow[]): CsvRow[] => {
 
   if (idx !== -1) {
     const r = patchedRows[idx];
-    patchedRows[idx] = {
-      ...r,
+    const rs = dmyToDate(r.start);
+    const re = dmyToDate(r.end);
+
+    // Retirer la ligne originale et la remplacer par des segments continus
+    patchedRows.splice(idx, 1);
+
+    // Segment avant Pâques (si la période originale démarre avant le 03/04)
+    if (rs < easterStart) {
+      const beforeEnd = new Date(easterStart.getTime() - dayMs); // jour précédent
+      patchedRows.push({
+        ...r,
+        start: r.start,
+        end: dateToDmy(beforeEnd),
+        // on garde la saison et le minStay original
+        comment: r.comment ? `${r.comment} • segment avant Pâques` : "segment avant Pâques",
+      });
+    }
+
+    // Segment Pâques (forcé Très Haute Saison et min 3 nuits)
+    patchedRows.push({
       start: easterStartDmy,
       end: easterEndDmy,
+      periodType: "Week-end Pâques",
       season: "TRÈS HAUTE SAISON",
       minStayText: "3 nuits",
       comment: r.comment ? `${r.comment} • ${correctionNote}` : correctionNote,
-    };
+    });
+
+    // Segment après Pâques (si la période originale se poursuit après le 06/04)
+    if (re > easterEnd) {
+      const afterStart = new Date(easterEnd.getTime() + dayMs); // jour suivant
+      patchedRows.push({
+        ...r,
+        start: dateToDmy(afterStart),
+        end: r.end,
+        comment: r.comment ? `${r.comment} • segment après Pâques` : "segment après Pâques",
+      });
+    }
+
+    // Trier par date de début pour préserver l'ordre
+    patchedRows.sort((a, b) => dmyToDate(a.start).getTime() - dmyToDate(b.start).getTime());
   } else {
-    // Aucune ligne correspondante: ajouter la période Pâques
+    // Aucune ligne correspondante: ajouter la période Pâques sans retirer les autres
     patchedRows.push({
       start: easterStartDmy,
       end: easterEndDmy,
@@ -83,6 +117,9 @@ const adjustEasterWeekend = (rows: CsvRow[]): CsvRow[] => {
       minStayText: "3 nuits",
       comment: "Ajout automatique selon dates officielles",
     });
+
+    // Trier par date de début après ajout
+    patchedRows.sort((a, b) => dmyToDate(a.start).getTime() - dmyToDate(b.start).getTime());
   }
 
   return patchedRows;

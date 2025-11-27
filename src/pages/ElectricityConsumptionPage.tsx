@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -123,20 +124,19 @@ const ElectricityConsumptionPage: React.FC = () => {
     queryKey: ["conso", params],
     queryFn: async () => {
       if (!params) return null;
-      const url = `https://conso.boris.sh/api/${params.type}?prm=${encodeURIComponent(params.prm)}&start=${encodeURIComponent(params.start)}&end=${encodeURIComponent(params.end)}`;
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${params.token}`,
-          "User-Agent": "hellokeys-app v1",
-          From: "contact@hellokeys.fr",
+      const { data, error } = await supabase.functions.invoke("conso-proxy", {
+        body: {
+          prm: params.prm,
+          token: params.token,
+          type: params.type,
+          start: params.start,
+          end: params.end,
         },
       });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `HTTP ${res.status}`);
+      if (error) {
+        throw new Error(error.message || "Erreur depuis la fonction Edge");
       }
-      // The API returns JSON (likely an array)
-      return res.json();
+      return data;
     },
     enabled: !!params,
   });

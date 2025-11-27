@@ -198,7 +198,14 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
                     onClick={item.disabled ? (e) => e.preventDefault() : onLinkClick}
                   >
                     <item.icon className="h-5 w-5 mr-3" />
-                    {item.name}
+                    <span className="flex-1">{item.name}</span>
+                    {item.href === '/season-2026' && (
+                      <span
+                        className="ml-2 inline-block h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"
+                        aria-label="Nouveau"
+                        title="Nouveau"
+                      />
+                    )}
                   </Link>
                 </li>
               ))}

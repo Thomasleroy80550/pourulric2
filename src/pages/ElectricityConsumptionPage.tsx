@@ -25,7 +25,7 @@ import {
   Bar,
   Line,
 } from "recharts";
-import { Copy, Eye, EyeOff, Zap, Settings, Euro, TrendingUp, Gauge, CalendarDays } from "lucide-react";
+import { Copy, Eye, EyeOff, Zap, Settings, Euro, TrendingUp, Gauge, CalendarDays, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -513,6 +513,84 @@ const ElectricityConsumptionPage: React.FC = () => {
       JSON.stringify({ data, cachedAt: new Date().toISOString() })
     );
     return buildDailyConsoMap(data);
+  };
+
+  // Libellé du mois courant basé sur la date de début sélectionnée
+  const monthLabel = React.useMemo(() => {
+    const d = isValidDateStr(start) ? new Date(start) : new Date();
+    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }, [start]);
+
+  // Charge les données pour une plage donnée (et met à jour cache/params)
+  const loadForRange = React.useCallback(
+    (newStart: string, newEnd: string) => {
+      // Validations minimales (utilise PRM/Token actuels)
+      if (!/^\d{14}$/.test(prm)) {
+        toast.error("Le PRM doit contenir 14 chiffres.");
+        return;
+      }
+      if (!token || token.length < 10) {
+        toast.error("Veuillez renseigner votre token Conso API.");
+        return;
+      }
+      if (!isValidDateStr(newStart) || !isValidDateStr(newEnd) || new Date(newEnd) <= new Date(newStart)) {
+        toast.error("Plage de dates invalide.");
+        return;
+      }
+
+      // Persistance
+      localStorage.setItem("conso_start", newStart);
+      localStorage.setItem("conso_end", newEnd);
+
+      // Seed affichage instantané si cache dispo
+      const key = makeCacheKey({ prm, type, start: newStart, end: newEnd });
+      const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
+      if (cachedRaw) {
+        try {
+          const cached = JSON.parse(cachedRaw);
+          if (cached?.data) {
+            queryClient.setQueryData(["conso", key], cached.data);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      localStorage.setItem("conso_last_key", key);
+      localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start: newStart, end: newEnd }));
+
+      // Déclenche la requête
+      setParams({ prm, token, type, start: newStart, end: newEnd });
+      toast.message("Chargement du mois sélectionné…");
+    },
+    [prm, token, type, queryClient]
+  );
+
+  // Navigation mois précédent / suivant
+  const goToMonth = (delta: number) => {
+    const base = isValidDateStr(start) ? new Date(start) : new Date();
+    const s0 = startOfMonth(base);
+    const s1 = addMonths(s0, delta);
+    const e1 = addMonths(s1, 1);
+    const newStart = toISODate(s1);
+    const newEnd = toISODate(e1);
+    setStart(newStart);
+    setEnd(newEnd);
+    loadForRange(newStart, newEnd);
+  };
+
+  // Forcer l'actualisation (bypass affichage seed, mais refetch côté réseau)
+  const forceRefresh = async () => {
+    if (!params) {
+      toast.message("Aucune requête en cours à actualiser.");
+      return;
+    }
+    toast.message("Actualisation en cours…");
+    try {
+      await refetch({ cancelRefetch: false });
+      toast.success("Données actualisées");
+    } catch {
+      toast.error("Échec de l’actualisation");
+    }
   };
 
   const analyzeReservations = async () => {
@@ -1067,6 +1145,25 @@ const ElectricityConsumptionPage: React.FC = () => {
               <>
                 {normalizedArray.length > 0 ? (
                   <>
+                    {/* Barre de navigation mensuelle + Forcer l'actualisation */}
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" onClick={() => goToMonth(-1)} title="Mois précédent">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="min-w-[160px] text-center font-medium capitalize">
+                          {monthLabel}
+                        </div>
+                        <Button variant="outline" size="icon" onClick={() => goToMonth(1)} title="Mois suivant">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={forceRefresh} title="Forcer l'actualisation">
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Forcer l'actualisation
+                      </Button>
+                    </div>
+
                     {/* Indicateurs en tête */}
                     <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">

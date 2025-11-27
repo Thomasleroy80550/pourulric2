@@ -464,16 +464,29 @@ const ElectricityConsumptionPage: React.FC = () => {
     try {
       // 1) Conso daily mappée par jour
       const dayMap = await getDailyConsoMapForRange();
-      // 2) Récupérer les rooms de l'utilisateur
+
+      // 1bis) Récupérer l'utilisateur courant
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw new Error(authError.message);
+      const userId = userData?.user?.id;
+      if (!userId) {
+        toast.error("Veuillez vous connecter pour analyser vos logements.");
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // 2) Récupérer UNIQUEMENT les rooms de l'utilisateur connecté
       const { data: rooms, error: roomsError } = await supabase
         .from("user_rooms")
-        .select("room_id, room_name");
+        .select("room_id, room_name, user_id")
+        .eq("user_id", userId);
       if (roomsError) throw new Error(roomsError.message);
       if (!rooms || rooms.length === 0) {
         setResRows([]);
-        toast.message("Aucun logement trouvé.");
+        toast.message("Aucun logement trouvé pour votre compte.");
         return;
       }
+
       // 3) Récupérer les réservations par room
       const allResArrays = await Promise.all(
         rooms.map(async (r: any) => {
@@ -490,6 +503,7 @@ const ElectricityConsumptionPage: React.FC = () => {
         })
       );
       const rawReservations = allResArrays.flat();
+
       // 4) Filtrer par statut confirmé et intervalle [start, end)
       const allowed = new Set(["PROP0", "PROPRI"]);
       const startD = new Date(start);
@@ -505,6 +519,7 @@ const ElectricityConsumptionPage: React.FC = () => {
         // chevauchement simple: a < end && b > start
         return a < endD && b > startD;
       });
+
       // 5) Calcul kWh et coût par résa
       const p = Number((pricePerKWh || "").replace(",", "."));
       const rows: ReservationCostRow[] = filtered.map((res: any) => {
@@ -536,6 +551,7 @@ const ElectricityConsumptionPage: React.FC = () => {
           costEUR,
         };
       });
+
       // 6) Trier par arrivée
       rows.sort((a, b) => (a.arrival < b.arrival ? -1 : a.arrival > b.arrival ? 1 : 0));
       setResRows(rows);

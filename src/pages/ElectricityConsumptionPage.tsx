@@ -322,16 +322,13 @@ const ElectricityConsumptionPage: React.FC = () => {
   const energyKWhTotal = React.useMemo(() => {
     if (!chartData || chartData.length === 0) return 0;
     if (type === "daily_consumption" || type === "daily_production") {
-      // valeurs en Wh -> somme puis conversion en kWh
       const sumWh = chartData.reduce((s, d) => s + (Number(d.value) || 0), 0);
       return sumWh / 1000;
     }
     if (type === "consumption_load_curve" || type === "production_load_curve") {
-      // valeurs en W moyen sur 30 minutes -> énergie = W * 0.5 h -> kWh = W * 0.5 / 1000
       const sumW = chartData.reduce((s, d) => s + (Number(d.value) || 0), 0);
       return (sumW * 0.5) / 1000;
     }
-    // Puissance max quotidienne: pas pertinent pour un coût basé sur l'énergie
     return 0;
   }, [chartData, type]);
 
@@ -340,6 +337,37 @@ const ElectricityConsumptionPage: React.FC = () => {
     if (!canComputeEnergyCost || Number.isNaN(p) || p <= 0) return 0;
     return energyKWhTotal * p;
   }, [energyKWhTotal, pricePerKWh, canComputeEnergyCost]);
+
+  // Indicateurs: jours de période, moyenne/jour, pic et points
+  const periodDays = React.useMemo(() => {
+    if (!isValidDateStr(start) || !isValidDateStr(end)) return 0;
+    return eachDayStrings(start, end).length;
+  }, [start, end]);
+
+  const avgKWhPerDay = React.useMemo(() => {
+    if (!canComputeEnergyCost || periodDays <= 0) return 0;
+    return energyKWhTotal / periodDays;
+  }, [energyKWhTotal, canComputeEnergyCost, periodDays]);
+
+  const peakDisplay = React.useMemo(() => {
+    if (!chartData || chartData.length === 0) return 0;
+    const rawMax = Math.max(...chartData.map((d) => Number(d.value) || 0));
+    const factor = (() => {
+      if (isEnergyType) {
+        if (unit === "Wh") return 1;
+        if (unit === "kWh") return 1 / 1000;
+        if (unit === "MWh") return 1 / 1_000_000;
+        return 1;
+      } else {
+        if (unit === "W") return 1;
+        if (unit === "kW") return 1 / 1000;
+        return 1;
+      }
+    })();
+    return rawMax * factor;
+  }, [chartData, unit, isEnergyType]);
+
+  const nbPoints = chartData.length;
 
   const unitOptions = isEnergyType ? ["Wh", "kWh", "MWh"] : ["W", "kW"];
 
@@ -973,10 +1001,10 @@ const ElectricityConsumptionPage: React.FC = () => {
                       )}
                     </div>
 
-                    {chartDisplayData.length > 0 ? (
+                    {chartData.length > 0 ? (
                       <div className="h-72 mb-2">
                         <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={chartDisplayData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />

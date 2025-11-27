@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Wand2, Sparkles, CheckCircle } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 type SeasonTutorialProps = {
@@ -43,150 +42,125 @@ const SeasonTutorial: React.FC<SeasonTutorialProps> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/40" />
 
       {/* Modal */}
       <div className="absolute inset-0 flex items-center justify-center px-4">
         <div
           className={[
             "relative w-full max-w-7xl",
-            "rounded-2xl border bg-gradient-to-br from-white via-white to-slate-50",
-            "dark:from-slate-900 dark:via-slate-900 dark:to-slate-950",
-            "shadow-2xl",
+            "rounded-xl border bg-white dark:bg-slate-900",
+            "shadow-lg",
             "p-6 sm:p-10",
-            "min-h-[70vh] sm:min-h-[78vh]",
-            "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4",
+            "min-h-[60vh] sm:min-h-[70vh]",
+            "animate-in fade-in-0",
             visible ? "opacity-100" : "opacity-0",
           ].join(" ")}
         >
-          {/* Decorative sparkles */}
-          <div className="absolute -top-4 -left-4 hidden sm:block">
-            <Sparkles className="h-10 w-10 text-violet-500 animate-bounce" />
-          </div>
-          <div className="absolute -bottom-5 -right-5 hidden sm:block">
-            <Sparkles className="h-10 w-10 text-blue-500 animate-bounce" />
-          </div>
-
-          {/* Header */}
+          {/* Header minimal */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <CalendarDays className="h-8 w-8 text-blue-600" />
-              <h2 className="text-3xl sm:text-5xl font-bold tracking-tight">
-                Saison 2026, prête à performer
-              </h2>
-            </div>
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight">
+              Saison 2026
+            </h2>
             <Button variant="ghost" onClick={onClose} className="text-sm">
               Continuer
             </Button>
           </div>
 
-          {/* Hero message */}
+          {/* Texte d'intro sobre */}
           <p className="mt-4 text-base sm:text-lg text-muted-foreground">
-            Construisez une année gagnante avec des prix clairs, des suggestions intelligentes et un envoi en un clic.
+            Prix clairs, suggestions rapides et envoi en un clic.
           </p>
 
-          {/* Slider marketing */}
+          {/* Slider minimaliste */}
           <div className="mt-8 relative">
             <Carousel className="w-full">
               <CarouselContent>
-                {/* Slide 1: Prix animés */}
+                {/* Slide 1: Prix animés épurés */}
                 <CarouselItem>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                    <div className="rounded-2xl border bg-white/70 dark:bg-slate-900/60 p-6 sm:p-8">
-                      <div className="flex items-center gap-2 text-sm text-violet-700 dark:text-violet-300">
-                        <Wand2 className="h-4 w-4" />
+                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-6 sm:p-8">
+                      <div className="text-xs uppercase tracking-widest text-muted-foreground">
                         Très haute saison
                       </div>
                       <div className="mt-4 text-4xl sm:text-6xl font-extrabold">
                         <AnimatedNumber from={99} to={129} />
                       </div>
                       <p className="mt-3 text-sm text-muted-foreground">
-                        Vos périodes phares, prêtes à maximiser la demande.
+                        Périodes à forte demande.
                       </p>
                     </div>
-                    <div className="rounded-2xl border bg-white/70 dark:bg-slate-900/60 p-6 sm:p-8">
-                      <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
-                        <Wand2 className="h-4 w-4" />
+                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-6 sm:p-8">
+                      <div className="text-xs uppercase tracking-widest text-muted-foreground">
                         Haute saison
                       </div>
                       <div className="mt-4 text-4xl sm:text-6xl font-extrabold">
                         <AnimatedNumber from={89} to={115} />
                       </div>
                       <p className="mt-3 text-sm text-muted-foreground">
-                        Un équilibre idéal entre valeur et conversion.
+                        Équilibre valeur / conversion.
                       </p>
                     </div>
-                    <div className="rounded-2xl border bg-white/70 dark:bg-slate-900/60 p-6 sm:p-8">
-                      <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300">
-                        <Wand2 className="h-4 w-4" />
+                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-6 sm:p-8">
+                      <div className="text-xs uppercase tracking-widest text-muted-foreground">
                         Week-ends & vacances
                       </div>
                       <div className="mt-4 text-4xl sm:text-6xl font-extrabold">
                         <AnimatedNumber from={79} to={99} />
                       </div>
                       <p className="mt-3 text-sm text-muted-foreground">
-                        Boosts automatiques sur les pics de demande.
+                        Ajustements automatiques.
                       </p>
                     </div>
                   </div>
                 </CarouselItem>
 
-                {/* Slide 2: Bénéfices clés */}
+                {/* Slide 2: Bénéfices en liste simple */}
                 <CarouselItem>
                   <div className="grid sm:grid-cols-3 gap-6">
-                    <div className="flex items-start gap-4 rounded-xl p-4 sm:p-6 bg-white/60 dark:bg-slate-900/60 border">
-                      <CheckCircle className="h-7 w-7 text-green-600 flex-shrink-0" />
-                      <div>
-                        <div className="text-xl font-semibold">Suggestions en un clic</div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Entrez vos bases, nous optimisons selon les périodes.
-                        </p>
-                      </div>
+                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-5">
+                      <div className="text-lg font-semibold">Suggestions rapides</div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Entrez vos bases, nous proposons selon les périodes.
+                      </p>
                     </div>
-                    <div className="flex items-start gap-4 rounded-xl p-4 sm:p-6 bg-white/60 dark:bg-slate-900/60 border">
-                      <CheckCircle className="h-7 w-7 text-green-600 flex-shrink-0" />
-                      <div>
-                        <div className="text-xl font-semibold">Saisie simplifiée</div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Min séjour facultatif. Laissez vide pour le réglage par défaut.
-                        </p>
-                      </div>
+                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-5">
+                      <div className="text-lg font-semibold">Saisie simple</div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Min séjour facultatif; laissez vide pour le défaut.
+                      </p>
                     </div>
-                    <div className="flex items-start gap-4 rounded-xl p-4 sm:p-6 bg-white/60 dark:bg-slate-900/60 border">
-                      <CheckCircle className="h-7 w-7 text-green-600 flex-shrink-0" />
-                      <div>
-                        <div className="text-xl font-semibold">Envoi rapide</div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Une demande par logement et par année. Pas de doublons.
-                        </p>
-                      </div>
+                    <div className="rounded-xl border bg-white dark:bg-slate-900 p-5">
+                      <div className="text-lg font-semibold">Envoi en un clic</div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Une demande par logement et par année.
+                      </p>
                     </div>
                   </div>
                 </CarouselItem>
 
-                {/* Slide 3: CTA fort */}
+                {/* Slide 3: CTA simple */}
                 <CarouselItem>
-                  <div className="flex flex-col items-center justify-center text-center rounded-2xl border bg-white/70 dark:bg-slate-900/60 p-8 sm:p-16 min-h-[40vh]">
-                    <div className="text-sm uppercase tracking-widest text-blue-600">Prêt pour 2026</div>
-                    <h3 className="mt-3 text-3xl sm:text-5xl font-extrabold">
-                      Lancez votre saison en toute confiance
+                  <div className="flex flex-col items-center justify-center text-center rounded-xl border bg-white dark:bg-slate-900 p-8 sm:p-16 min-h-[40vh]">
+                    <h3 className="mt-1 text-3xl sm:text-5xl font-extrabold">
+                      Démarrer
                     </h3>
-                    <p className="mt-3 max-w-3xl text-sm sm:text-base text-muted-foreground">
-                      Des tarifs clairs, une saisie rapide et un envoi en un clic pour accélérer la mise en marché.
+                    <p className="mt-3 max-w-2xl text-sm sm:text-base text-muted-foreground">
+                      Configurez vos prix 2026 en toute simplicité.
                     </p>
                     <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
                       <Button size="lg" className="w-full sm:w-auto" onClick={onClose}>
                         Configurer mes prix
                       </Button>
-                      <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={onClose}>
-                        Je verrai plus tard
+                      <Button variant="ghost" size="lg" className="w-full sm:w-auto" onClick={onClose}>
+                        Plus tard
                       </Button>
                     </div>
                   </div>
                 </CarouselItem>
               </CarouselContent>
 
-              {/* Flèches de navigation */}
+              {/* Flèches discrètes */}
               <CarouselPrevious className="left-2 sm:left-4" />
               <CarouselNext className="right-2 sm:right-4" />
             </Carousel>

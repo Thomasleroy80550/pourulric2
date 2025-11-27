@@ -220,6 +220,14 @@ const Season2026Page: React.FC = () => {
 
   const [showTutorial, setShowTutorial] = useState(false);
 
+  // Ouvrir automatiquement une seule fois (première visite)
+  useEffect(() => {
+    const seen = localStorage.getItem("season2026_tutorial_seen");
+    if (!seen) {
+      setShowTutorial(true);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -380,7 +388,14 @@ const Season2026Page: React.FC = () => {
           </div>
         </div>
 
-        {showTutorial && <SeasonTutorial onClose={() => setShowTutorial(false)} />}
+        {showTutorial && (
+          <SeasonTutorial
+            onClose={() => {
+              localStorage.setItem("season2026_tutorial_seen", "1");
+              setShowTutorial(false);
+            }}
+          />
+        )}
 
         {/* Alerte smart pricing bien visible */}
         {!isSmartPricingUser && (

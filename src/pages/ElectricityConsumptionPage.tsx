@@ -797,6 +797,9 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
 
+  // Après isEnergyType et le state unit, ajouter:
+  const unitOptions = React.useMemo(() => (isEnergyType ? ["Wh", "kWh", "MWh"] : ["W", "kW"]), [isEnergyType]);
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">

@@ -21,6 +21,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAllModuleActivationRequests, ModuleActivationRequest } from '@/lib/module-activation-api';
 import { toast } from "sonner";
+import NewsFeed from '@/components/admin/NewsFeed';
 
 const AdminDashboardPage: React.FC = () => {
   const { profile } = useSession();
@@ -307,6 +308,7 @@ const AdminDashboardPage: React.FC = () => {
               <Button asChild variant="outline"><Link to="/admin/newsletter"><Mail className="mr-2 h-4 w-4" /> Créer une newsletter</Link></Button>
             </CardContent>
           </Card>
+          <NewsFeed />
         </div>
 
         <Card>

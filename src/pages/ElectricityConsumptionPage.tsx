@@ -166,90 +166,26 @@ function toChartData(data: any[]): { name: string; value: number }[] {
 const ElectricityConsumptionPage: React.FC = () => {
   const queryClient = useQueryClient();
 
-  const [prm, setPrm] = React.useState<string>(() => localStorage.getItem("conso_prm") || "");
-  const [token, setToken] = React.useState<string>(() => localStorage.getItem("conso_token") || "");
-  const [type, setType] = React.useState<ConsoType>(
-    () => (localStorage.getItem("conso_type") as ConsoType) || "daily_consumption"
-  );
-  const [start, setStart] = React.useState<string>(() => localStorage.getItem("conso_start") || "");
-  const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
+  const [prm, setPrm] = React.useState<string>("");
+  const [token, setToken] = React.useState<string>("");
+  const [type, setType] = React.useState<ConsoType>("daily_consumption");
+  const [start, setStart] = React.useState<string>(() => {
+    const today = new Date();
+    return toISODate(addDays(today, -4)); // défaut: 5 jours (fin exclue demain) affichés
+  });
+  const [end, setEnd] = React.useState<string>(() => toISODate(addDays(new Date(), 1)));
   const [showToken, setShowToken] = React.useState(false);
-  const [pricePerKWh, setPricePerKWh] = React.useState<string>(
-    () => localStorage.getItem("conso_price_per_kwh") || ""
-  );
-  const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const barsPointLimit = 220;
-  const [showDebug, setShowDebug] = React.useState(false);
-  const [debugInfo, setDebugInfo] = React.useState<any>(null);
-  // Vue du graphique: 'area' ou 'bars'
-  const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
-  // Auto-load une seule fois depuis le profil si PRM/TOKEN absents en local
-  const autoLoadedRef = React.useRef(false);
+  const [pricePerKWh, setPricePerKWh] = React.useState<string>("");
 
-  React.useEffect(() => {
-    localStorage.setItem("conso_price_per_kwh", pricePerKWh);
-  }, [pricePerKWh]);
-
-  // Détermine la catégorie d'unité selon le type choisi
-  const isEnergyType = React.useMemo(
-    () => ["daily_consumption", "daily_production"].includes(type),
-    [type]
-  );
-
-  // Unité affichée (par défaut: kWh pour l'énergie, kW pour la puissance)
+  // Unité (pas sensible, mais on ne la stocke pas localement)
   const [unit, setUnit] = React.useState<string>(() => {
-    const saved = localStorage.getItem("conso_unit");
-    if (saved) return saved;
-    return ["daily_consumption", "daily_production"].includes(
-      (localStorage.getItem("conso_type") as any) || "daily_consumption"
-    )
-      ? "kWh"
-      : "kW";
+    return ["daily_consumption", "daily_production"].includes("daily_consumption") ? "kWh" : "kW";
   });
 
-  // Mémoriser l'unité choisie
-  React.useEffect(() => {
-    localStorage.setItem("conso_unit", unit);
-  }, [unit]);
-
-  // Ajuster automatiquement l'unité par défaut quand le type change (sans écraser le choix si cohérent)
-  React.useEffect(() => {
-    const desiredDefault = isEnergyType ? "kWh" : "kW";
-    if (
-      (isEnergyType && !["Wh", "kWh", "MWh"].includes(unit)) ||
-      (!isEnergyType && !["W", "kW"].includes(unit))
-    ) {
-      setUnit(desiredDefault);
-    }
-  }, [isEnergyType]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Options d'unité selon le type de donnée
-  const unitOptions = isEnergyType ? ["Wh", "kWh", "MWh"] : ["W", "kW"];
-
-  // Définir avant usage dans chartDisplayData
+  // Définir avant usage
   const canComputeEnergyCost = type !== "consumption_max_power";
 
-  // Sauvegarde auto des champs pour éviter de perdre les valeurs en quittant la page
-  React.useEffect(() => {
-    localStorage.setItem("conso_prm", prm);
-  }, [prm]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_token", token);
-  }, [token]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_type", type);
-  }, [type]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_start", start);
-  }, [start]);
-
-  React.useEffect(() => {
-    localStorage.setItem("conso_end", end);
-  }, [end]);
+  // REMOVED: toute persistance locale
 
   const [params, setParams] = React.useState<FetchParams | null>(null);
   const paramKey = React.useMemo(() => (params ? makeCacheKey(params) : null), [params]);
@@ -293,58 +229,36 @@ const ElectricityConsumptionPage: React.FC = () => {
       return data;
     },
     enabled: !!params,
-    // Sur succès: enregistrer en cache local + mémoriser la dernière recherche
-    onSuccess: (resp) => {
-      if (!params) return;
-      const key = makeCacheKey(params);
-      localStorage.setItem(
-        `conso_cache_${key}`,
-        JSON.stringify({ data: resp, cachedAt: new Date().toISOString() })
-      );
-      localStorage.setItem("conso_last_key", key);
-      localStorage.setItem("conso_last_params", JSON.stringify(params));
-    },
+    // REMOVED: écriture cache local
   });
 
-  // Au montage: restaurer la dernière recherche depuis le cache et l'afficher instantanément
-  React.useEffect(() => {
-    const lastKey = localStorage.getItem("conso_last_key");
-    const lastParamsRaw = localStorage.getItem("conso_last_params");
-    if (!lastKey || !lastParamsRaw) return;
-    try {
-      const lastParams = JSON.parse(lastParamsRaw) as FetchParams;
-      const cachedRaw = localStorage.getItem(`conso_cache_${lastKey}`);
-      if (cachedRaw) {
-        const cached = JSON.parse(cachedRaw);
-        if (cached?.data) {
-          queryClient.setQueryData(["conso", lastKey], cached.data);
-        }
-      }
-      // Déclenche l'affichage immédiat + un refetch en arrière-plan
-      setParams(lastParams);
-    } catch {
-      // ignore parsing issues
-    }
-  }, [queryClient]);
+  // Refetch minuit conservé
+  // ...
 
-  // Planifier un rechargement automatique chaque jour à 00:00
+  // Auto-load: au montage, charger PRM/token/prix depuis le profil (DB), sans rien stocker localement
+  const autoLoadedRef = React.useRef(false);
+
   React.useEffect(() => {
-    let timeoutId: number | undefined;
-    function scheduleMidnightRefetch() {
-      const now = new Date();
-      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1, 0); // 00:00:01
-      const ms = next.getTime() - now.getTime();
-      timeoutId = window.setTimeout(() => {
-        // Refetch la requête courante si des paramètres sont définis
-        if (params) refetch();
-        scheduleMidnightRefetch();
-      }, ms);
-    }
-    scheduleMidnightRefetch();
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [refetch, params]);
+    if (autoLoadedRef.current) return;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      autoLoadedRef.current = true;
+      if (!userId) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("conso_prm, conso_token, conso_price_per_kwh")
+        .eq("id", userId)
+        .single();
+      setPrm(data?.conso_prm || "");
+      setToken(data?.conso_token || "");
+      setPricePerKWh(data?.conso_price_per_kwh != null ? String(data?.conso_price_per_kwh) : "");
+      // Charger par défaut sur 5 jours dès qu'on a des identifiants
+      const s = start;
+      const e = end;
+      if (s && e) loadForRange(s, e);
+    })().catch(() => {});
+  }, []);
 
   // Normalise la réponse pour trouver un tableau exploitable, même si l'API renvoie un objet.
   const normalizedArray = React.useMemo(() => {
@@ -629,9 +543,6 @@ const ElectricityConsumptionPage: React.FC = () => {
         return;
       }
 
-      localStorage.setItem("conso_start", newStart);
-      localStorage.setItem("conso_end", newEnd);
-
       const effectiveEnd = clampEndToToday(newEnd);
       if (new Date(newStart) >= new Date(effectiveEnd)) {
         setParams(null);
@@ -650,29 +561,9 @@ const ElectricityConsumptionPage: React.FC = () => {
         return;
       }
 
-      const key = makeCacheKey({ prm, type, start: newStart, end: effectiveEnd });
-      const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
-      if (cachedRaw) {
-        try {
-          const cached = JSON.parse(cachedRaw);
-          if (cached?.data) {
-            queryClient.setQueryData(["conso", key], cached.data);
-          }
-        } catch {}
-      }
-      localStorage.setItem("conso_last_key", key);
-      localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start: newStart, end: effectiveEnd }));
-
       setDebugInfo((prev: any) => ({
         ...(prev || {}),
-        request: {
-          ts: new Date().toISOString(),
-          type,
-          prm: String(prm).replace(/^(\d{4})\d+(\d{4})$/, "$1********$2"),
-          start: newStart,
-          end: newEnd,
-          effectiveEnd,
-        },
+        request: { ts: new Date().toISOString(), type, prm: String(prm).replace(/^(\d{4})\d+(\d{4})$/, "$1********$2"), start: newStart, end: newEnd, effectiveEnd },
       }));
       setParams({ prm, token, type, start: newStart, end: effectiveEnd });
       toast.message("Chargement des données…");
@@ -697,7 +588,7 @@ const ElectricityConsumptionPage: React.FC = () => {
   const onSubmit = React.useCallback(() => {
     const today = new Date();
     const s = toISODate(addDays(today, -4));
-    const e = toISODate(addDays(today, 1)); // fin exclue
+    const e = toISODate(addDays(today, 1));
     setStart(s);
     setEnd(e);
     loadForRange(s, e);
@@ -741,42 +632,6 @@ const ElectricityConsumptionPage: React.FC = () => {
       loadForRange(s, e);
     }
   }, [params, loadForRange]);
-
-  // Charger automatiquement PRM/TOKEN depuis le profil si absents en local
-  React.useEffect(() => {
-    if (autoLoadedRef.current) return;
-    // Si l'un des deux manque, tenter un chargement profil
-    if (!prm || !token) {
-      (async () => {
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData?.user?.id;
-        if (!userId) {
-          autoLoadedRef.current = true;
-          return;
-        }
-        const { data } = await supabase
-          .from("profiles")
-          .select("conso_prm, conso_token")
-          .eq("id", userId)
-          .single();
-        const profPrm = data?.conso_prm || "";
-        const profTok = data?.conso_token || "";
-        if (profPrm && !prm) {
-          setPrm(profPrm);
-          localStorage.setItem("conso_prm", profPrm);
-        }
-        if (profTok && !token) {
-          setToken(profTok);
-          localStorage.setItem("conso_token", profTok);
-        }
-        autoLoadedRef.current = true;
-      })().catch(() => {
-        autoLoadedRef.current = true;
-      });
-    } else {
-      autoLoadedRef.current = true;
-    }
-  }, [prm, token]);
 
   // ADD: analyzeReservations function (self-contained)
   const analyzeReservations = async () => {
@@ -945,7 +800,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                 <DialogTitle>Mes paramètres (stockés localement)</DialogTitle>
               </DialogHeader>
               <p className="text-sm text-muted-foreground mb-2">
-                Si vous êtes connecté, le PRM et le token sont chargés automatiquement depuis votre profil.
+                Les informations sont chargées et enregistrées automatiquement dans votre profil (aucun stockage local).
               </p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex flex-col gap-2">
@@ -1020,27 +875,47 @@ const ElectricityConsumptionPage: React.FC = () => {
                     onChange={(e) => setPricePerKWh(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Utilisé pour calculer le coût estimé des consommations affichées.
+                    La valeur est sauvegardée dans votre profil.
                   </p>
                 </div>
 
-                <div className="flex items-end gap-2">
-                  <Button className="w-full" variant="default" onClick={handleSaveCredentials}>
-                    Enregistrer
-                  </Button>
-                  <Button className="w-full" variant="outline" onClick={handleClearCredentials}>
-                    Effacer
-                  </Button>
-                </div>
                 <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
-                  <Button className="w-full sm:w-auto" variant="secondary" onClick={saveCredentialsToProfile}>
+                  <Button className="w-full sm:w-auto" variant="default" onClick={async () => {
+                    const { data: userData, error: authError } = await supabase.auth.getUser();
+                    if (authError) { toast.error(authError.message); return; }
+                    const userId = userData?.user?.id;
+                    if (!userId) { toast.error("Veuillez vous connecter."); return; }
+                    const payload: any = {
+                      conso_prm: prm || null,
+                      conso_token: token || null,
+                      conso_price_per_kwh: pricePerKWh ? Number(String(pricePerKWh).replace(",", ".")) : null
+                    };
+                    const { error } = await supabase.from("profiles").update(payload).eq("id", userId);
+                    if (error) { toast.error(error.message); return; }
+                    toast.success("Paramètres enregistrés dans votre profil.");
+                  }}>
                     Enregistrer dans mon profil
                   </Button>
-                  <Button className="w-full sm:w-auto" variant="outline" onClick={loadCredentialsFromProfile}>
-                    Charger depuis mon profil
+                  <Button className="w-full sm:w-auto" variant="outline" onClick={async () => {
+                    const { data: userData, error: authError } = await supabase.auth.getUser();
+                    if (authError) { toast.error(authError.message); return; }
+                    const userId = userData?.user?.id;
+                    if (!userId) { toast.error("Veuillez vous connecter."); return; }
+                    const { data, error } = await supabase
+                      .from("profiles")
+                      .select("conso_prm, conso_token, conso_price_per_kwh")
+                      .eq("id", userId)
+                      .single();
+                    if (error) { toast.error(error.message); return; }
+                    setPrm(data?.conso_prm || "");
+                    setToken(data?.conso_token || "");
+                    setPricePerKWh(data?.conso_price_per_kwh != null ? String(data?.conso_price_per_kwh) : "");
+                    toast.success("Paramètres chargés depuis votre profil.");
+                  }}>
+                    Recharger depuis mon profil
                   </Button>
                   <p className="text-xs text-muted-foreground ml-auto">
-                    Stockage chiffré côté Supabase recommandé pour éviter de perdre vos identifiants entre appareils.
+                    Stockage 100% côté Supabase (aucun stockage local).
                   </p>
                 </div>
               </div>

@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Zap, ShieldCheck, Gauge, Euro, CheckCircle2, Activity, LineChart, Bell, Lock } from "lucide-react";
+import { Zap, ShieldCheck, Gauge, Euro, CheckCircle2, Activity, LineChart, Bell, Lock, Thermometer, Droplets, Flame, Home, AlertTriangle } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -369,6 +369,90 @@ const ElectricityServiceLanding: React.FC = () => {
                   </Accordion>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Roadmap PowerSense */}
+            <div className="mt-10">
+              <div className="flex items-center gap-2 mb-3">
+                <Badge variant="outline">Roadmap</Badge>
+                <h2 className="text-xl md:text-2xl font-bold">PowerSense — Feuille de route</h2>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card className="shadow-sm">
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <Home className="h-5 w-5 text-indigo-600 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">Détection sans location</p>
+                        <Badge variant="secondary" className="text-xs">En bêta</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Détecter des consommations anormales alors qu'aucune réservation/occupant n'est présent.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm">
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">Détection des pics</p>
+                        <Badge variant="secondary" className="text-xs">Disponible</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Identification des pics de consommation avec alertes pour agir au bon moment.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm">
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <Thermometer className="h-5 w-5 text-red-500 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">Prise de température à distance</p>
+                        <Badge variant="outline" className="text-xs">À venir</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Suivi des températures pièce par pièce, accessible depuis votre tableau de bord.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm">
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <Droplets className="h-5 w-5 text-sky-500 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">Contrôle hygrométrie</p>
+                        <Badge variant="outline" className="text-xs">À venir</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Pilotage de l'humidité pour protéger le logement et améliorer le confort.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm">
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <Flame className="h-5 w-5 text-rose-500 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">Gestion chauffage</p>
+                        <Badge variant="outline" className="text-xs">À venir</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Scénarios de chauffage intelligents pour réduire la conso et améliorer l'expérience voyageur.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
 
             {/* Bandeau accès */}

@@ -415,8 +415,15 @@ const ElectricityConsumptionPage: React.FC = () => {
     );
   };
 
-  const tooManyPointsForBars = chartDisplayData.length > 220;
+  // Déclarez la vue du graphique AVANT tout effet/variable qui l'utilise
+  const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
+  // Limite au-delà de laquelle la vue colonnes devient illisible
+  const barsPointLimit = 220;
 
+  // Recalcule la limite de points pour colonnes
+  const tooManyPointsForBars = chartDisplayData.length > barsPointLimit;
+
+  // Effet de bascule: si trop de points, passer automatiquement en vue aire
   React.useEffect(() => {
     if (chartView === "bars" && tooManyPointsForBars) {
       setChartView("area");
@@ -787,8 +794,8 @@ const ElectricityConsumptionPage: React.FC = () => {
 
   const [showDebug, setShowDebug] = React.useState(false);
   const [debugInfo, setDebugInfo] = React.useState<any>(null);
-  const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
-  const barsPointLimit = 220;
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
 
   return (
     <MainLayout>

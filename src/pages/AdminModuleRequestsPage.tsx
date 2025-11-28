@@ -18,9 +18,15 @@ import { fr } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle, Check, X } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLocation } from 'react-router-dom';
 
 const AdminModuleRequestsPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const initialFilter = params.get('module') === 'electricity' ? 'powersense' : 'all';
+  const [filter, setFilter] = React.useState<'all' | 'powersense'>(initialFilter);
 
   const { data: requests, isLoading, error } = useQuery<ModuleActivationRequest[]>({
     queryKey: ['moduleActivationRequests'],
@@ -55,6 +61,14 @@ const AdminModuleRequestsPage: React.FC = () => {
     }
   };
 
+  const filteredRequests = React.useMemo(() => {
+    if (!requests) return [];
+    if (filter === 'powersense') {
+      return requests.filter(r => r.module_name === 'electricity');
+    }
+    return requests;
+  }, [requests, filter]);
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -80,7 +94,7 @@ const AdminModuleRequestsPage: React.FC = () => {
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Erreur</AlertTitle>
-                <AlertDescription>{error.message}</AlertDescription>
+                <AlertDescription>{(error as any).message}</AlertDescription>
               </Alert>
             </TableCell>
           </TableRow>
@@ -88,7 +102,7 @@ const AdminModuleRequestsPage: React.FC = () => {
       );
     }
 
-    if (!requests || requests.length === 0) {
+    if (!filteredRequests || filteredRequests.length === 0) {
       return (
         <TableBody>
           <TableRow>
@@ -102,12 +116,12 @@ const AdminModuleRequestsPage: React.FC = () => {
 
     return (
       <TableBody>
-        {requests.map((request) => (
+        {filteredRequests.map((request) => (
           <TableRow key={request.id}>
             <TableCell>
               {request.profiles ? `${request.profiles.first_name} ${request.profiles.last_name}` : 'Utilisateur inconnu'}
             </TableCell>
-            <TableCell>{request.module_name}</TableCell>
+            <TableCell>{request.module_name === 'electricity' ? 'PowerSense' : request.module_name}</TableCell>
             <TableCell>{format(new Date(request.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
             <TableCell>
               <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
@@ -146,6 +160,12 @@ const AdminModuleRequestsPage: React.FC = () => {
     <AdminLayout>
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Demandes d'Activation de Modules</h1>
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'powersense')}>
+          <TabsList>
+            <TabsTrigger value="all">Tous</TabsTrigger>
+            <TabsTrigger value="powersense">PowerSense</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <div className="border rounded-lg">
           <Table>
             <TableHeader>

@@ -34,7 +34,8 @@ import {
   Store,
   PlugZap,
   CalendarDays,
-  Snowflake
+  Snowflake,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -67,9 +68,10 @@ const adminNavigationCategories = [
       { name: 'Compteurs coupés', href: '/admin/utility-cuts', icon: PlugZap, description: 'Liste des logements où électricité/eau sont coupées.' },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },
       { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
+      { name: 'Demandes PowerSense', href: '/admin/module-requests?module=electricity', icon: Zap, description: 'Candidatures PowerSense.' },
       { name: 'Demandes Saison 2026', href: '/admin/season-requests', icon: CalendarDays, description: 'Voir et traiter les demandes de prix saison.' },
       { name: 'Marketplace', href: '/admin/marketplace', icon: Store, description: 'Gérer les prestataires de la marketplace.' },
-      { name: 'Demandes Hivernage', href: '/admin/hivernage-requests', icon: Snowflake, description: 'Voir et exporter les demandes d"hivernage.' },
+      { name: 'Demandes Hivernage', href: '/admin/hivernage-requests', icon: Snowflake, description: 'Voir et exporter les demandes d\"hivernage.' },
       { name: 'IDs Revyoos manquants', href: '/admin/revyoos-missing', icon: Link2, description: 'Complétez les IDs Revyoos manquants.' },
     ]
   },

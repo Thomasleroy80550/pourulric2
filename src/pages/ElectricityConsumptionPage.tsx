@@ -185,6 +185,13 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [pricePerKWh, setPricePerKWh] = React.useState<string>(
     () => localStorage.getItem("conso_price_per_kwh") || ""
   );
+  // Mode de sélection: 'month' (par défaut) ou 'dates'
+  const [periodMode, setPeriodMode] = React.useState<"month" | "dates">(
+    () => ((localStorage.getItem("conso_period_mode") as "month" | "dates") || "month")
+  );
+  React.useEffect(() => {
+    localStorage.setItem("conso_period_mode", periodMode);
+  }, [periodMode]);
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
@@ -662,8 +669,17 @@ const ElectricityConsumptionPage: React.FC = () => {
   }, [start, loadForRange]);
 
   const onSubmit = React.useCallback(() => {
+    if (periodMode === "month") {
+      const s0 = startOfMonth(isValidDateStr(start) ? new Date(start) : new Date());
+      const newStart = toISODate(s0);
+      const newEnd = toISODate(addMonths(s0, 1));
+      setStart(newStart);
+      setEnd(newEnd);
+      loadForRange(newStart, newEnd);
+      return;
+    }
     loadForRange(start, end);
-  }, [loadForRange, start, end]);
+  }, [loadForRange, start, end, periodMode]);
 
   // Forcer l'actualisation (bypass affichage seed, mais refetch côté réseau)
   const forceRefresh = async () => {
@@ -988,59 +1004,83 @@ const ElectricityConsumptionPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Prix par kWh */}
+              {/* Mode de sélection */}
               <div className="flex flex-col gap-2">
-                <Label htmlFor="price">Prix par kWh (€)</Label>
-                <Input
-                  id="price"
-                  inputMode="decimal"
-                  placeholder="Ex: 0.25"
-                  value={pricePerKWh}
-                  onChange={(e) => setPricePerKWh(e.target.value)}
-                />
+                <Label>Mode de sélection</Label>
+                <Select value={periodMode} onValueChange={(v) => setPeriodMode(v as "month" | "dates")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir un mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="month">Mois</SelectItem>
+                    <SelectItem value="dates">Dates</SelectItem>
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
-                  Le coût est calculé sur l'énergie estimée (kWh). Pour les courbes 30 min, W moyens → kWh via ×0,5 h.
+                  Mois recommandé pour rester lisible; "Dates" disponible en option avancée.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="start">Début (inclus)</Label>
-                <Input
-                  id="start"
-                  type="date"
-                  value={start}
-                  onChange={(e) => setStart(e.target.value)}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="end">Fin (exclue)</Label>
-                <Input
-                  id="end"
-                  type="date"
-                  value={end}
-                  onChange={(e) => setEnd(e.target.value)}
-                />
-              </div>
+              {periodMode === "dates" ? (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="start">Début (inclus)</Label>
+                    <Input
+                      id="start"
+                      type="date"
+                      value={start}
+                      onChange={(e) => setStart(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="end">Fin (exclue)</Label>
+                    <Input
+                      id="end"
+                      type="date"
+                      value={end}
+                      onChange={(e) => setEnd(e.target.value)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Contrôles de navigation mensuelle dans la section Requête */}
+                  <div className="flex items-end">
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" onClick={() => goToMonth(-1)} title="Mois précédent">
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <div className="min-w-[140px] text-center font-medium capitalize">
+                        {monthLabel}
+                      </div>
+                      <Button variant="outline" size="icon" onClick={() => goToMonth(1)} title="Mois suivant">
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="flex items-end">
                 <Button className="w-full" onClick={onSubmit} disabled={isFetching}>
-                  {isFetching ? "Chargement..." : "Charger"}
+                  {isFetching ? "Chargement..." : (periodMode === "month" ? "Charger ce mois" : "Charger")}
                 </Button>
               </div>
             </div>
 
-            {/* Périodes rapides */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Label className="text-xs text-muted-foreground mr-2 mt-2">Périodes rapides:</Label>
-              <Button size="sm" variant="outline" onClick={() => setQuickRange("7d")}>7 jours</Button>
-              <Button size="sm" variant="outline" onClick={() => setQuickRange("30d")}>30 jours</Button>
-              <Button size="sm" variant="outline" onClick={() => setQuickRange("90d")}>90 jours</Button>
-              <Button size="sm" variant="outline" onClick={() => setQuickRange("365d")}>365 jours</Button>
-              <Button size="sm" variant="secondary" onClick={() => setQuickRange("this-month")}>Mois en cours</Button>
-              <Button size="sm" variant="secondary" onClick={() => setQuickRange("last-month")}>Mois précédent</Button>
-              <Button size="sm" variant="secondary" onClick={() => setQuickRange("ytd")}>Année en cours</Button>
-            </div>
+            {/* Périodes rapides visibles seulement en mode Dates */}
+            {periodMode === "dates" && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Label className="text-xs text-muted-foreground mr-2 mt-2">Périodes rapides:</Label>
+                <Button size="sm" variant="outline" onClick={() => setQuickRange("7d")}>7 jours</Button>
+                <Button size="sm" variant="outline" onClick={() => setQuickRange("30d")}>30 jours</Button>
+                <Button size="sm" variant="outline" onClick={() => setQuickRange("90d")}>90 jours</Button>
+                <Button size="sm" variant="outline" onClick={() => setQuickRange("365d")}>365 jours</Button>
+                <Button size="sm" variant="secondary" onClick={() => setQuickRange("this-month")}>Mois en cours</Button>
+                <Button size="sm" variant="secondary" onClick={() => setQuickRange("last-month")}>Mois précédent</Button>
+                <Button size="sm" variant="secondary" onClick={() => setQuickRange("ytd")}>Année en cours</Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

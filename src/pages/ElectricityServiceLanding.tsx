@@ -9,10 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Zap, ShieldCheck, Gauge, Euro, CheckCircle2 } from "lucide-react";
+import { Zap, ShieldCheck, Gauge, Euro, CheckCircle2, Activity, LineChart, Bell, Lock } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -76,7 +77,7 @@ const ElectricityServiceLanding: React.FC = () => {
         return;
       }
 
-      // 1) Créer une demande d’activation (trace), marquée pending (sans activer le service)
+      // 1) Créer une demande d'activation (trace), marquée pending (sans activer le service)
       const { error: reqErr } = await supabase
         .from("module_activation_requests")
         .insert({
@@ -99,24 +100,24 @@ const ElectricityServiceLanding: React.FC = () => {
         // fallback sur défaut
       }
 
-      const subject = "Demande d’activation — Conso Électricité (Linky)";
+      const subject = "Demande d'activation — Conso Électricité (Linky)";
       const html = `
         <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#111">
-          <h2 style="margin:0 0 8px">Nouvelle demande d’activation</h2>
+          <h2 style="margin:0 0 8px">Nouvelle demande d'activation</h2>
           <p><strong>Service :</strong> Conso Électricité (Linky)</p>
           <p><strong>Utilisateur :</strong> ${userEmail}</p>
           <p><strong>PRM :</strong> ${prm}</p>
           ${note ? `<p><strong>Commentaire :</strong> ${note.replace(/\n/g, "<br/>")}</p>` : ""}
-          <p style="margin-top:12px">Merci de traiter cette demande depuis l’admin.</p>
+          <p style="margin-top:12px">Merci de traiter cette demande depuis l'admin.</p>
         </div>
       `;
 
       await sendUnauthenticatedEmail(adminEmail, subject, html);
 
       toast.success("Votre demande a bien été envoyée. Nous reviendrons vers vous rapidement.");
-      // Rester sur la page (pas d’activation immédiate)
+      // Rester sur la page (pas d'activation immédiate)
     } catch (e: any) {
-      toast.error(e?.message || "Erreur lors de l’envoi de la demande");
+      toast.error(e?.message || "Erreur lors de l'envoi de la demande");
     } finally {
       setIsSubmitting(false);
     }
@@ -124,176 +125,268 @@ const ElectricityServiceLanding: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-yellow-500" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold">Conso Électricité (Linky)</h1>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Pourquoi + Exemple Chart */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Pourquoi activer le service ?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Gauge className="h-5 w-5 text-indigo-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Suivi quotidien</p>
-                    <p className="text-sm text-muted-foreground">
-                      Visualisez vos consommations sur 5 jours glissants, avec signalement des jours sans données.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Euro className="h-5 w-5 text-emerald-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Estimation du coût</p>
-                    <p className="text-sm text-muted-foreground">
-                      Suivez votre consommation et estimez votre coût d’énergie, consolidé par période et par réservation.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <ShieldCheck className="h-5 w-5 text-sky-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Sécurisé</p>
-                    <p className="text-sm text-muted-foreground">
-                      Vos informations sont stockées en base (Supabase). Pas de stockage local.
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-1">
-                  <Badge variant="secondary">Aperçu</Badge>
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={sampleData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="sampleColor" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.28} />
-                          <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
-                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
-                      <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#6b7280" }} />
-                      <YAxis
-                        tick={{ fontSize: 12, fill: "#6b7280" }}
-                        tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`}
-                      />
-                      <Tooltip
-                        wrapperStyle={{ outline: "none" }}
-                        contentStyle={{
-                          background: "rgba(17, 24, 39, 0.92)",
-                          border: "1px solid #374151",
-                          borderRadius: 8,
-                        }}
-                        labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                        itemStyle={{ color: "#e5e7eb" }}
-                        formatter={(val: any) => [
-                          `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`,
-                          "Valeur",
-                        ]}
-                      />
-                      <Legend />
-                      <Area
-                        name="Valeur"
-                        type="monotoneX"
-                        dataKey="value"
-                        stroke="#6366f1"
-                        strokeWidth={2.5}
-                        fill="url(#sampleColor)"
-                        dot={false}
-                        activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
-                        connectNulls
-                        animationDuration={500}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Formulaire de candidature */}
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Formulaire de candidature</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="prm">PRM (14 chiffres)</Label>
-                    <Input
-                      id="prm"
-                      inputMode="numeric"
-                      pattern="\d{14}"
-                      placeholder="Ex: 12345678901234"
-                      value={prm}
-                      onChange={(e) => setPrm(e.target.value.replace(/\D/g, "").slice(0, 14))}
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="note">Commentaire (optionnel)</Label>
-                    <Textarea
-                      id="note"
-                      placeholder="Ex: Je souhaite activer le service pour mon logement principal."
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
-
-                  <Alert>
-                    <AlertTitle>Comment ça marche ?</AlertTitle>
-                    <AlertDescription className="text-sm">
-                      Nous recevons votre candidature. Un administrateur valide votre accès et vous êtes notifié par email.
-                      Aucune activation immédiate n’est effectuée.
-                    </AlertDescription>
-                  </Alert>
-
-                  <div className="flex gap-2">
-                    <Button className="w-full" onClick={submit} disabled={isSubmitting}>
-                      {isSubmitting ? "Envoi en cours..." : "Envoyer ma candidature"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="w-full"
-                      onClick={() => navigate("/electricity")}
-                      title="Ouvrir le tableau de bord si vous avez déjà l'accès"
-                    >
-                      Ouvrir le tableau de bord
-                    </Button>
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    En soumettant, vous acceptez la création d’une demande d’activation et l’envoi d’un email à nos équipes.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="mt-6 shadow-sm">
-            <CardContent className="py-5">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  <span className="text-sm">Accès déjà activé ?</span>
-                </div>
-                <Button variant="secondary" onClick={() => navigate("/electricity")}>
-                  Ouvrir le tableau de bord Conso
+      <div className="relative">
+        {/* Héro gradient */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-indigo-600/10 via-sky-500/5 to-transparent" />
+        <section className="container mx-auto py-10 md:py-16">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <Badge variant="secondary" className="uppercase tracking-wide">Add-on PowerSense</Badge>
+                <Badge variant="outline">Linky</Badge>
+              </div>
+              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+                Votre électricité, sous contrôle — simplement.
+              </h1>
+              <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-3xl mx-auto">
+                PowerSense vous aide à suivre votre consommation Linky au quotidien, à repérer les anomalies
+                et à préparer vos décisions — sans prise de tête.
+              </p>
+              <div className="mt-5 flex items-center justify-center gap-2">
+                <Button size="lg" onClick={() => document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <Zap className="h-4 w-4 mr-2" /> Demander l'accès
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => navigate("/electricity")}>
+                  Voir mon tableau de bord
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            {/* Héro: Aperçu Chart + Points clés */}
+            <div className="mt-10 grid gap-6 md:grid-cols-2">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <LineChart className="h-5 w-5 text-indigo-500" />
+                    <CardTitle>Aperçu en temps réel (exemple)</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={sampleData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="sampleColor" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity={0.28} />
+                            <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                        <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#6b7280" }} />
+                        <YAxis
+                          tick={{ fontSize: 12, fill: "#6b7280" }}
+                          tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`}
+                        />
+                        <Tooltip
+                          wrapperStyle={{ outline: "none" }}
+                          contentStyle={{
+                            background: "rgba(17, 24, 39, 0.92)",
+                            border: "1px solid #374151",
+                            borderRadius: 8,
+                          }}
+                          labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                          itemStyle={{ color: "#e5e7eb" }}
+                          formatter={(val: any) => [
+                            `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`,
+                            "Valeur",
+                          ]}
+                        />
+                        <Legend />
+                        <Area
+                          name="Consommation"
+                          type="monotoneX"
+                          dataKey="value"
+                          stroke="#6366f1"
+                          strokeWidth={2.5}
+                          fill="url(#sampleColor)"
+                          dot={false}
+                          activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
+                          connectNulls
+                          animationDuration={500}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-4">
+                <Card>
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <Gauge className="h-5 w-5 text-indigo-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Suivi quotidien</p>
+                      <p className="text-sm text-muted-foreground">
+                        Visualisez vos consommations récentes et identifiez les jours sans remontée de données.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <Bell className="h-5 w-5 text-amber-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Anomalies & pics</p>
+                      <p className="text-sm text-muted-foreground">
+                        Repérez rapidement les pics de conso, pour réagir et optimiser vos coûts.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-5 flex items-start gap-3">
+                    <Lock className="h-5 w-5 text-emerald-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Sécurisé & simple</p>
+                      <p className="text-sm text-muted-foreground">
+                        Données stockées en base, pas de stockage local. Activation gérée par nos équipes.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Étapes */}
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="secondary">Étape 1</Badge>
+                    <Activity className="h-4 w-4 text-sky-500" />
+                  </div>
+                  <p className="font-medium">Envoyez votre PRM</p>
+                  <p className="text-sm text-muted-foreground">Soumettez votre candidature en 30 secondes.</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="secondary">Étape 2</Badge>
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <p className="font-medium">Validation</p>
+                  <p className="text-sm text-muted-foreground">Un admin active votre accès dans les meilleurs délais.</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="secondary">Étape 3</Badge>
+                    <LineChart className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <p className="font-medium">Suivi & décisions</p>
+                  <p className="text-sm text-muted-foreground">Accédez à votre tableau de bord PowerSense.</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Formulaire de candidature */}
+            <div id="apply-form" className="mt-10 grid gap-6 md:grid-cols-2">
+              <Card className="shadow-sm md:col-span-1">
+                <CardHeader>
+                  <CardTitle>Formulaire de candidature</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="prm">PRM (14 chiffres)</Label>
+                      <Input
+                        id="prm"
+                        inputMode="numeric"
+                        pattern="\d{14}"
+                        placeholder="Ex: 12345678901234"
+                        value={prm}
+                        onChange={(e) => setPrm(e.target.value.replace(/\D/g, "").slice(0, 14))}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="note">Commentaire (optionnel)</Label>
+                      <Textarea
+                        id="note"
+                        placeholder="Ex: Je souhaite activer le service pour mon logement principal."
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        rows={4}
+                      />
+                    </div>
+
+                    <Alert>
+                      <AlertTitle>Comment ça marche ?</AlertTitle>
+                      <AlertDescription className="text-sm">
+                        Votre candidature est transmise à nos équipes. Un administrateur valide l'accès. Aucune activation immédiate n'est effectuée.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="flex gap-2">
+                      <Button className="w-full" onClick={submit} disabled={isSubmitting}>
+                        {isSubmitting ? "Envoi en cours..." : "Envoyer ma candidature"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full"
+                        onClick={() => navigate("/electricity")}
+                        title="Ouvrir le tableau de bord si vous avez déjà l'accès"
+                      >
+                        Ouvrir le tableau de bord
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      En soumettant, vous acceptez la création d'une demande d'activation et l'envoi d'un email à nos équipes.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* FAQ & garanties */}
+              <Card className="shadow-sm md:col-span-1">
+                <CardHeader>
+                  <CardTitle>Questions fréquentes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="q1">
+                      <AccordionTrigger>Qu'est-ce que PowerSense ?</AccordionTrigger>
+                      <AccordionContent>
+                        PowerSense est l'add-on de suivi de la consommation électrique (Linky) intégré à votre espace. Il met en forme vos données et simplifie vos décisions.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="q2">
+                      <AccordionTrigger>Combien de temps pour l'activation ?</AccordionTrigger>
+                      <AccordionContent>
+                        Nous traitons les demandes rapidement. Vous recevrez un email dès que votre accès est prêt.
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="q3">
+                      <AccordionTrigger>Mes données sont-elles sécurisées ?</AccordionTrigger>
+                      <AccordionContent>
+                        Oui. Vos identifiants (PRM et autres) sont stockés côté serveur (Supabase), sans stockage local.
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Bandeau accès */}
+            <Card className="mt-10 shadow-sm">
+              <CardContent className="py-5">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    <span className="text-sm">Accès déjà activé ?</span>
+                  </div>
+                  <Button variant="secondary" onClick={() => navigate("/electricity")}>
+                    Ouvrir le tableau de bord PowerSense
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
       </div>
     </MainLayout>
   );

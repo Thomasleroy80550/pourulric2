@@ -633,6 +633,148 @@ const ElectricityConsumptionPage: React.FC = () => {
     return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   }, [start]);
 
+  // ADD: analyzeReservations function (self-contained)
+  const analyzeReservations = async () => {
+    // Validations de base
+    if (!/^\d{14}$/.test(prm)) {
+      toast.error("Le PRM doit contenir 14 chiffres.");
+      return;
+    }
+    if (!token || token.length < 10) {
+      toast.error("Veuillez renseigner votre token Conso API.");
+      return;
+    }
+    if (!isValidDateStr(start) || !isValidDateStr(end)) {
+      toast.error("Dates invalides (YYYY-MM-DD).");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      // 1) Conso daily sur la période
+      const { data: consoData, error: consoError } = await supabase.functions.invoke("conso-proxy", {
+        body: { prm, token, type: "daily_consumption", start, end },
+      });
+      if (consoError) throw new Error(consoError.message || "Erreur conso daily");
+
+      // 1bis) Normaliser en tableau et construire la map { 'YYYY-MM-DD': Wh }
+      let arr: any[] = Array.isArray(consoData) ? consoData : [];
+      if (!arr.length && consoData && typeof consoData === "object") {
+        for (const k of Object.keys(consoData)) {
+          const v = (consoData as any)[k];
+          if (Array.isArray(v)) {
+            arr = v;
+            break;
+          }
+        }
+      }
+      const dayMap: Record<string, number> = {};
+      if (arr.length > 0) {
+        const { dateKey, valueKey } = inferKeys(arr[0]);
+        if (dateKey && valueKey) {
+          for (const it of arr) {
+            const d = it[dateKey];
+            const v = it[valueKey];
+            const iso = typeof d === "string" ? d.slice(0, 10) : toISODate(new Date(d));
+            const num = typeof v === "number" ? v : Number(v);
+            if (!Number.isNaN(num)) {
+              dayMap[iso] = (dayMap[iso] || 0) + num; // Wh par jour
+            }
+          }
+        }
+      }
+
+      // 2) Utilisateur courant
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw new Error(authError.message);
+      const userId = userData?.user?.id;
+      if (!userId) {
+        toast.error("Veuillez vous connecter pour analyser vos logements.");
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // 3) Uniquement les rooms de l'utilisateur
+      const { data: rooms, error: roomsError } = await supabase
+        .from("user_rooms")
+        .select("room_id, room_name, user_id")
+        .eq("user_id", userId);
+      if (roomsError) throw new Error(roomsError.message);
+      if (!rooms || rooms.length === 0) {
+        setResRows([]);
+        toast.message("Aucun logement trouvé pour votre compte.");
+        return;
+      }
+
+      // 4) Récupérer les réservations Krossbooking par room
+      const allResArrays = await Promise.all(
+        rooms.map(async (r: any) => {
+          const { data, error } = await supabase.functions.invoke("krossbooking-proxy", {
+            body: { action: "get_reservations_for_room", id_room: r.room_id },
+          });
+          if (error) {
+            console.warn("Erreur KB room", r.room_id, error);
+            return [];
+          }
+          const list = (data && (data as any).data) || [];
+          return list.map((x: any) => ({ ...x, __room_name: r.room_name, __room_id: r.room_id }));
+        })
+      );
+      const rawReservations = allResArrays.flat();
+
+      // 5) Filtrer par chevauchement de période [start, end)
+      const startD = new Date(start);
+      const endD = new Date(end);
+      const filtered = rawReservations.filter((res: any) => {
+        const arrivalStr = String(res.arrival || "");
+        const departureStr = String(res.departure || "");
+        if (!isValidDateStr(arrivalStr) || !isValidDateStr(departureStr)) return false;
+        const a = new Date(arrivalStr);
+        const b = new Date(departureStr);
+        return a < endD && b > startD;
+      });
+
+      // 6) Calcul kWh et coût par résa
+      const p = Number((pricePerKWh || "").replace(",", "."));
+      const rows: ReservationCostRow[] = filtered.map((res: any) => {
+        const id = String(res.id_reservation ?? res.id ?? "");
+        const arrivalStr = String(res.arrival);
+        const departureStr = String(res.departure);
+        const nights = Math.max(
+          0,
+          Math.round((new Date(departureStr).getTime() - new Date(arrivalStr).getTime()) / (24 * 3600 * 1000))
+        );
+        // jours à sommer: [arrival, departure)
+        const days = eachDayStrings(arrivalStr, departureStr);
+        let sumWh = 0;
+        for (const d of days) {
+          if (dayMap[d] != null) sumWh += dayMap[d];
+        }
+        const energyKWh = sumWh / 1000;
+        const costEUR = p > 0 ? energyKWh * p : 0;
+        return {
+          id,
+          roomName: res.__room_name,
+          arrival: arrivalStr,
+          departure: departureStr,
+          nights,
+          energyKWh,
+          costEUR,
+        };
+      });
+
+      rows.sort((a, b) => (a.arrival < b.arrival ? -1 : a.arrival > b.arrival ? 1 : 0));
+      setResRows(rows);
+      toast.success("Analyse par réservation terminée");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erreur lors de l'analyse des réservations");
+      setResRows([]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">

@@ -359,6 +359,9 @@ const ElectricityConsumptionPage: React.FC = () => {
     [canComputeEnergyCost, pricePerKWh]
   );
 
+  // Afficher la série CO2 si on peut calculer une énergie (tous sauf puissance max)
+  const showCo2 = canComputeEnergyCost;
+
   // Construire l'affichage en incluant chaque jour de la période (jours sans donnée marqués)
   const chartDisplayData = React.useMemo(() => {
     // facteur d'affichage pour la série "valeur" (unité choisie)
@@ -389,12 +392,18 @@ const ElectricityConsumptionPage: React.FC = () => {
         const noData = rawWh == null;
         const value = (rawWh ?? 0) * factor; // affichage en Wh/kWh/MWh
         let cost: number | undefined = undefined;
+        let co2: number | undefined = undefined;
         if (!noData && canComputeEnergyCost && p > 0) {
           cost = (rawWh! / 1000) * p; // kWh * €/kWh
         } else if (showCost) {
           cost = 0; // afficher une colonne 0 hachurée pour cohérence visuelle
         }
-        return { name: day, value, cost, noData };
+        if (!noData && showCo2) {
+          co2 = (rawWh! / 1000) * CO2_PER_KWH_KG; // kWh * kg/kWh
+        } else if (showCo2) {
+          co2 = 0;
+        }
+        return { name: day, value, cost, co2, noData };
       });
     }
 
@@ -403,12 +412,16 @@ const ElectricityConsumptionPage: React.FC = () => {
     return chartData.map((d) => {
       const raw = Number(d.value) || 0; // W (puissance) sur courbes
       let cost: number | undefined = undefined;
+      let co2: number | undefined = undefined;
       if (canComputeEnergyCost && p > 0 && (type === "consumption_load_curve" || type === "production_load_curve")) {
         cost = ((raw * 0.5) / 1000) * p; // W * 0.5h -> kWh * €/kWh
       }
-      return { name: d.name, value: raw * factor, cost, noData: false };
+      if (showCo2 && (type === "consumption_load_curve" || type === "production_load_curve")) {
+        co2 = ((raw * 0.5) / 1000) * CO2_PER_KWH_KG; // kWh * kg/kWh
+      }
+      return { name: d.name, value: raw * factor, cost, co2, noData: false };
     });
-  }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type, daysInRange]);
+  }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type, daysInRange, showCo2]);
 
   // Label personnalisé: icône d'avertissement au-dessus des colonnes sans donnée
   const renderNoDataLabel = (props: any) => {
@@ -1208,6 +1221,16 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
                                     <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
                                   </linearGradient>
+                                  <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.26} />
+                                    <stop offset="70%" stopColor="#10b981" stopOpacity={0.06} />
+                                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                                  </linearGradient>
+                                  <linearGradient id="colorCo2" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.22} />
+                                    <stop offset="70%" stopColor="#14b8a6" stopOpacity={0.06} />
+                                    <stop offset="100%" stopColor="#14b8a6" stopOpacity={0} />
+                                  </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
                                 <XAxis
@@ -1242,6 +1265,20 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     domain={[0, "auto"]}
                                   />
                                 )}
+                                {showCo2 && (
+                                  <YAxis
+                                    yAxisId="rightCo2"
+                                    orientation="right"
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    width={64}
+                                    tickFormatter={(v: number) =>
+                                      `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`
+                                    }
+                                    domain={[0, "auto"]}
+                                  />
+                                )}
                                 <Tooltip
                                   wrapperStyle={{ outline: "none" }}
                                   contentStyle={{
@@ -1259,6 +1296,12 @@ const ElectricityConsumptionPage: React.FC = () => {
                                       return [
                                         Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
                                         "Coût (€)",
+                                      ];
+                                    }
+                                    if (n === "CO₂ (kg)") {
+                                      return [
+                                        `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`,
+                                        "CO₂ (kg)",
                                       ];
                                     }
                                     return [
@@ -1293,6 +1336,24 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     fillOpacity={0}
                                     dot={false}
                                     activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
+                                    connectNulls
+                                    animationDuration={500}
+                                    legendType="line"
+                                  />
+                                )}
+                                {showCo2 && (
+                                  <Area
+                                    name="CO₂ (kg)"
+                                    yAxisId="rightCo2"
+                                    type="monotoneX"
+                                    dataKey="co2"
+                                    stroke="#14b8a6"
+                                    strokeWidth={2.2}
+                                    strokeDasharray="4 3"
+                                    fill="transparent"
+                                    fillOpacity={0}
+                                    dot={false}
+                                    activeDot={{ r: 3, stroke: "#14b8a6", fill: "#fff" }}
                                     connectNulls
                                     animationDuration={500}
                                     legendType="line"
@@ -1358,6 +1419,20 @@ const ElectricityConsumptionPage: React.FC = () => {
                                     domain={[0, "auto"]}
                                   />
                                 )}
+                                {showCo2 && (
+                                  <YAxis
+                                    yAxisId="rightCo2"
+                                    orientation="right"
+                                    tick={{ fontSize: 12, fill: "#6b7280" }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    width={64}
+                                    tickFormatter={(v: number) =>
+                                      `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`
+                                    }
+                                    domain={[0, "auto"]}
+                                  />
+                                )}
                                 <Tooltip
                                   wrapperStyle={{ outline: "none" }}
                                   contentStyle={{
@@ -1379,6 +1454,12 @@ const ElectricityConsumptionPage: React.FC = () => {
                                       return [
                                         Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
                                         "Coût (€)",
+                                      ];
+                                    }
+                                    if (n === "CO₂ (kg)") {
+                                      return [
+                                        `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`,
+                                        "CO₂ (kg)",
                                       ];
                                     }
                                     return [
@@ -1420,6 +1501,19 @@ const ElectricityConsumptionPage: React.FC = () => {
                                       <Cell key={`c-${i}`} fill={d.noData ? "url(#noDataPattern)" : "url(#costPattern)"} />
                                     ))}
                                   </Bar>
+                                )}
+                                {showCo2 && (
+                                  <Line
+                                    name="CO₂ (kg)"
+                                    yAxisId="rightCo2"
+                                    type="monotone"
+                                    dataKey="co2"
+                                    stroke="#14b8a6"
+                                    strokeWidth={2.2}
+                                    strokeDasharray="4 3"
+                                    dot={false}
+                                    activeDot={{ r: 3, stroke: "#14b8a6", fill: "#fff" }}
+                                  />
                                 )}
                               </ComposedChart>
                             </ResponsiveContainer>

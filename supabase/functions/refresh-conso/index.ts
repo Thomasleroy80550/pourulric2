@@ -26,10 +26,11 @@ serve(async (req) => {
   // Auth simple par token de cron (supporte rotation: CRON_SECRET ou CRON_SECRET_V2)
   const cronSecret = Deno.env.get("CRON_SECRET");
   const cronSecretV2 = Deno.env.get("CRON_SECRET_V2");
+  const cronSecret2 = Deno.env.get("CRON_SECRET_2");
   const authHeader = req.headers.get("Authorization") || "";
   const headerToken = authHeader.replace(/^Bearer\s+/i, "");
   const xCron = req.headers.get("x-cron-secret") || "";
-  const candidates = [cronSecret, cronSecretV2].filter(Boolean) as string[];
+  const candidates = [cronSecret, cronSecretV2, cronSecret2].filter(Boolean) as string[];
   const okAuth = candidates.includes(headerToken) || candidates.includes(xCron);
 
   if (!okAuth) {

@@ -80,6 +80,18 @@ function addDays(d: Date, delta: number) {
   nd.setDate(nd.getDate() + delta);
   return nd;
 }
+// Helpers manquants pour navigation mensuelle et presets
+function addMonths(d: Date, delta: number) {
+  const nd = new Date(d);
+  nd.setMonth(nd.getMonth() + delta, 1);
+  return nd;
+}
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+function startOfYear(d: Date) {
+  return new Date(d.getFullYear(), 0, 1);
+}
 function eachDayStrings(startISO: string, endISO: string) {
   // [start, end) exclusif
   const days: string[] = [];

@@ -461,6 +461,19 @@ const ElectricityConsumptionPage: React.FC = () => {
     });
   }, [chartData, unit, isEnergyType, pricePerKWh, canComputeEnergyCost, type, daysInRange]);
 
+  // Label personnalisé: icône d'avertissement au-dessus des colonnes sans donnée
+  const renderNoDataLabel = (props: any) => {
+    const { x, y, width, payload } = props;
+    if (!payload?.noData) return null;
+    const cx = x + (width || 0) / 2;
+    const labelY = (y || 0) - 8;
+    return (
+      <text x={cx} y={labelY} textAnchor="middle" fontSize={12} fill="#9ca3af">
+        ⚠
+      </text>
+    );
+  };
+
   const tooManyPointsForBars = chartDisplayData.length > barsPointLimit;
 
   React.useEffect(() => {
@@ -1088,7 +1101,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                     </AlertDescription>
                   </Alert>
                 )}
-                {normalizedArray.length > 0 ? (
+                {chartDisplayData.length > 0 ? (
                   <>
                     {/* Barre de navigation mensuelle + Forcer l'actualisation */}
                     <div className="flex items-center justify-between gap-2 mb-3">
@@ -1170,256 +1183,246 @@ const ElectricityConsumptionPage: React.FC = () => {
                       )}
                     </div>
 
-                    {chartDisplayData.length > 0 ? (
-                      <div className="mb-2">
-                        <Tabs value={chartView} onValueChange={(v) => setChartView(v as any)} className="w-full">
-                          <TabsList className="mb-3">
-                            <TabsTrigger value="area">Vue aire</TabsTrigger>
-                            <TabsTrigger value="bars" disabled={tooManyPointsForBars}>Vue colonnes</TabsTrigger>
-                          </TabsList>
-                          {tooManyPointsForBars && (
-                            <p className="text-xs text-muted-foreground mb-2">
-                              Période large: la vue "colonnes" est désactivée. Réduisez la période ou utilisez la vue aire.
-                            </p>
-                          )}
-                          <TabsContent value="area" className="m-0">
-                            <div className="h-[380px] md:h-[420px]">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
-                                  <defs>
-                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.28} />
-                                      <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
-                                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                                    </linearGradient>
-                                  </defs>
-                                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
-                                  <XAxis
-                                    dataKey="name"
-                                    minTickGap={18}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tick={{ fontSize: 12, fill: "#6b7280" }}
-                                    tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
-                                  />
+                    <div className="mb-2">
+                      <Tabs value={chartView} onValueChange={(v) => setChartView(v as any)} className="w-full">
+                        <TabsList className="mb-3">
+                          <TabsTrigger value="area">Vue aire</TabsTrigger>
+                          <TabsTrigger value="bars" disabled={tooManyPointsForBars}>Vue colonnes</TabsTrigger>
+                        </TabsList>
+                        {tooManyPointsForBars && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Période large: la vue "colonnes" est désactivée. Réduisez la période ou utilisez la vue aire.
+                          </p>
+                        )}
+                        <TabsContent value="area" className="m-0">
+                          <div className="h-[380px] md:h-[420px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart data={chartDisplayData} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                                <defs>
+                                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.28} />
+                                    <stop offset="70%" stopColor="#6366f1" stopOpacity={0.06} />
+                                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                                  </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                                <XAxis
+                                  dataKey="name"
+                                  minTickGap={18}
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                                  tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
+                                />
+                                <YAxis
+                                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                                  tickLine={false}
+                                  axisLine={false}
+                                  width={64}
+                                  tickFormatter={(v: number) =>
+                                    `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                                  }
+                                  domain={[0, "auto"]}
+                                />
+                                {showCost && (
                                   <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
                                     tick={{ fontSize: 12, fill: "#6b7280" }}
                                     tickLine={false}
                                     axisLine={false}
                                     width={64}
                                     tickFormatter={(v: number) =>
-                                      `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                                      Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
                                     }
                                     domain={[0, "auto"]}
                                   />
-                                  {showCost && (
-                                    <YAxis
-                                      yAxisId="right"
-                                      orientation="right"
-                                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                                      tickLine={false}
-                                      axisLine={false}
-                                      width={64}
-                                      tickFormatter={(v: number) =>
-                                        Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
-                                      }
-                                      domain={[0, "auto"]}
-                                    />
-                                  )}
-                                  <Tooltip
-                                    wrapperStyle={{ outline: "none" }}
-                                    contentStyle={{
-                                      background: "rgba(17, 24, 39, 0.92)",
-                                      border: "1px solid #374151",
-                                      borderRadius: 8,
-                                      boxShadow:
-                                        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
-                                    }}
-                                    labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                                    itemStyle={{ color: "#e5e7eb" }}
-                                    formatter={(val: any, name: any) => {
-                                      const n = String(name);
-                                      if (n === "Coût (€)") {
-                                        return [
-                                          Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
-                                          "Coût (€)",
-                                        ];
-                                      }
+                                )}
+                                <Tooltip
+                                  wrapperStyle={{ outline: "none" }}
+                                  contentStyle={{
+                                    background: "rgba(17, 24, 39, 0.92)",
+                                    border: "1px solid #374151",
+                                    borderRadius: 8,
+                                    boxShadow:
+                                      "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+                                  }}
+                                  labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                                  itemStyle={{ color: "#e5e7eb" }}
+                                  formatter={(val: any, name: any) => {
+                                    const n = String(name);
+                                    if (n === "Coût (€)") {
                                       return [
-                                        `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
-                                        "Valeur",
+                                        Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
+                                        "Coût (€)",
                                       ];
-                                    }}
-                                  />
-                                  <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
+                                    }
+                                    return [
+                                      `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
+                                      "Valeur",
+                                    ];
+                                  }}
+                                />
+                                <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
+                                <Area
+                                  name="Valeur"
+                                  type="monotoneX"
+                                  dataKey="value"
+                                  stroke="#6366f1"
+                                  strokeWidth={2.5}
+                                  fill="url(#colorValue)"
+                                  dot={false}
+                                  activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
+                                  connectNulls
+                                  animationDuration={500}
+                                />
+                                {showCost && (
                                   <Area
-                                    name="Valeur"
+                                    name="Coût (€)"
+                                    yAxisId="right"
                                     type="monotoneX"
-                                    dataKey="value"
-                                    stroke="#6366f1"
+                                    dataKey="cost"
+                                    stroke="#10b981"
                                     strokeWidth={2.5}
-                                    fill="url(#colorValue)"
+                                    strokeDasharray="6 4"
+                                    fill="transparent"
+                                    fillOpacity={0}
                                     dot={false}
-                                    activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
+                                    activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
                                     connectNulls
                                     animationDuration={500}
+                                    legendType="line"
                                   />
-                                  {showCost && (
-                                    <Area
-                                      name="Coût (€)"
-                                      yAxisId="right"
-                                      type="monotoneX"
-                                      dataKey="cost"
-                                      stroke="#10b981"
-                                      strokeWidth={2.5}
-                                      strokeDasharray="6 4"
-                                      fill="transparent"
-                                      fillOpacity={0}
-                                      dot={false}
-                                      activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
-                                      connectNulls
-                                      animationDuration={500}
-                                      legendType="line"
-                                    />
-                                  )}
-                                </AreaChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </TabsContent>
-                          <TabsContent value="bars" className="m-0">
-                            <div className="h-[380px] md:h-[420px]">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart 
-                                  data={chartDisplayData} 
-                                  margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
-                                  barCategoryGap="22%"
-                                  barGap={4}
-                                >
-                                  <defs>
-                                    <linearGradient id="colValue" x1="0" y1="0" x2="0" y2="1">
-                                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.95} />
-                                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.85} />
-                                    </linearGradient>
-                                    <pattern id="costPattern" patternUnits="userSpaceOnUse" width="6" height="6">
-                                      <rect width="6" height="6" fill="#10b981" opacity="0.25" />
-                                      <path d="M0,6 l6,-6 M-1,1 l2,-2 M5,7 l2,-2" stroke="#10b981" strokeWidth="1" />
-                                    </pattern>
-                                    <pattern id="noDataPattern" patternUnits="userSpaceOnUse" width="6" height="6">
-                                      <rect width="6" height="6" fill="#9ca3af" opacity="0.25" />
-                                      <path d="M0,0 l6,6" stroke="#9ca3af" strokeWidth="1" />
-                                    </pattern>
-                                  </defs>
-                                  <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
-                                  <XAxis
-                                    dataKey="name"
-                                    minTickGap={18}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tick={{ fontSize: 12, fill: "#6b7280" }}
-                                    tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
-                                  />
+                                )}
+                              </AreaChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="bars" className="m-0">
+                          <div className="h-[380px] md:h-[420px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ComposedChart 
+                                data={chartDisplayData} 
+                                margin={{ top: 12, right: 16, left: 0, bottom: 0 }}
+                                barCategoryGap="22%"
+                                barGap={4}
+                              >
+                                <defs>
+                                  <linearGradient id="colValue" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.95} />
+                                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.85} />
+                                  </linearGradient>
+                                  <pattern id="costPattern" patternUnits="userSpaceOnUse" width="6" height="6">
+                                    <rect width="6" height="6" fill="#10b981" opacity="0.25" />
+                                    <path d="M0,6 l6,-6 M-1,1 l2,-2 M5,7 l2,-2" stroke="#10b981" strokeWidth="1" />
+                                  </pattern>
+                                  <pattern id="noDataPattern" patternUnits="userSpaceOnUse" width="6" height="6">
+                                    <rect width="6" height="6" fill="#9ca3af" opacity="0.25" />
+                                    <path d="M0,0 l6,6" stroke="#9ca3af" strokeWidth="1" />
+                                  </pattern>
+                                </defs>
+                                <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                                <XAxis
+                                  dataKey="name"
+                                  minTickGap={18}
+                                  tickLine={false}
+                                  axisLine={false}
+                                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                                  tickFormatter={(v: any) => String(v).replace("T", " ").slice(0, 16)}
+                                />
+                                <YAxis
+                                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                                  tickLine={false}
+                                  axisLine={false}
+                                  width={64}
+                                  tickFormatter={(v: number) =>
+                                    `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                                  }
+                                  domain={[0, "auto"]}
+                                />
+                                {showCost && (
                                   <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
                                     tick={{ fontSize: 12, fill: "#6b7280" }}
                                     tickLine={false}
                                     axisLine={false}
                                     width={64}
                                     tickFormatter={(v: number) =>
-                                      `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`
+                                      Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
                                     }
                                     domain={[0, "auto"]}
                                   />
-                                  {showCost && (
-                                    <YAxis
-                                      yAxisId="right"
-                                      orientation="right"
-                                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                                      tickLine={false}
-                                      axisLine={false}
-                                      width={64}
-                                      tickFormatter={(v: number) =>
-                                        Number(v).toLocaleString(undefined, { style: "currency", currency: "EUR" })
-                                      }
-                                      domain={[0, "auto"]}
-                                    />
-                                  )}
-                                  <Tooltip
-                                    wrapperStyle={{ outline: "none" }}
-                                    contentStyle={{
-                                      background: "rgba(17, 24, 39, 0.92)",
-                                      border: "1px solid #374151",
-                                      borderRadius: 8,
-                                      boxShadow:
-                                        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
-                                    }}
-                                    labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                                    itemStyle={{ color: "#e5e7eb" }}
-                                    formatter={(val: any, name: any, item: any) => {
-                                      const n = String(name);
-                                      const nd = item?.payload?.noData;
-                                      if (nd) {
-                                        return ["Pas de donnée", n];
-                                      }
-                                      if (n === "Coût (€)") {
-                                        return [
-                                          Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
-                                          "Coût (€)",
-                                        ];
-                                      }
+                                )}
+                                <Tooltip
+                                  wrapperStyle={{ outline: "none" }}
+                                  contentStyle={{
+                                    background: "rgba(17, 24, 39, 0.92)",
+                                    border: "1px solid #374151",
+                                    borderRadius: 8,
+                                    boxShadow:
+                                      "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+                                  }}
+                                  labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                                  itemStyle={{ color: "#e5e7eb" }}
+                                  formatter={(val: any, name: any, item: any) => {
+                                    const n = String(name);
+                                    const nd = item?.payload?.noData;
+                                    if (nd) {
+                                      return ["Pas de donnée", n];
+                                    }
+                                    if (n === "Coût (€)") {
                                       return [
-                                        `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
-                                        "Valeur",
+                                        Number(val).toLocaleString(undefined, { style: "currency", currency: "EUR" }),
+                                        "Coût (€)",
                                       ];
-                                    }}
-                                  />
-                                  <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
+                                    }
+                                    return [
+                                      `${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`,
+                                      "Valeur",
+                                    ];
+                                  }}
+                                />
+                                <Legend verticalAlign="top" height={28} wrapperStyle={{ paddingBottom: 6 }} />
+                                <Bar
+                                  name="Valeur"
+                                  dataKey="value"
+                                  fill="url(#colValue)"
+                                  opacity={1}
+                                  radius={[6, 6, 0, 0]}
+                                  barSize={16}
+                                  isAnimationActive
+                                  animationDuration={500}
+                                  label={renderNoDataLabel}
+                                >
+                                  {chartDisplayData.map((d: any, i: number) => (
+                                    <Cell key={`v-${i}`} fill={d.noData ? "url(#noDataPattern)" : "url(#colValue)"} />
+                                  ))}
+                                </Bar>
+                                {showCost && (
                                   <Bar
-                                    name="Valeur"
-                                    dataKey="value"
-                                    fill="url(#colValue)"
-                                    opacity={1}
+                                    name="Coût (€)"
+                                    yAxisId="right"
+                                    dataKey="cost"
+                                    fill="url(#costPattern)"
+                                    stroke="#10b981"
+                                    strokeWidth={1}
                                     radius={[6, 6, 0, 0]}
-                                    barSize={16}
+                                    barSize={12}
                                     isAnimationActive
                                     animationDuration={500}
                                   >
                                     {chartDisplayData.map((d: any, i: number) => (
-                                      <Cell key={`v-${i}`} fill={d.noData ? "url(#noDataPattern)" : "url(#colValue)"} />
+                                      <Cell key={`c-${i}`} fill={d.noData ? "url(#noDataPattern)" : "url(#costPattern)"} />
                                     ))}
                                   </Bar>
-                                  {showCost && (
-                                    <Bar
-                                      name="Coût (€)"
-                                      yAxisId="right"
-                                      dataKey="cost"
-                                      fill="url(#costPattern)"
-                                      stroke="#10b981"
-                                      strokeWidth={1}
-                                      radius={[6, 6, 0, 0]}
-                                      barSize={12}
-                                      isAnimationActive
-                                      animationDuration={500}
-                                    >
-                                      {chartDisplayData.map((d: any, i: number) => (
-                                        <Cell key={`c-${i}`} fill={d.noData ? "url(#noDataPattern)" : "url(#costPattern)"} />
-                                      ))}
-                                    </Bar>
-                                  )}
-                                </ComposedChart>
-                              </ResponsiveContainer>
-                            </div>
-                          </TabsContent>
-                        </Tabs>
-                      </div>
-                    ) : (
-                      <Alert className="mb-4">
-                        <AlertTitle>Format de données non reconnu pour l'affichage graphique</AlertTitle>
-                        <AlertDescription>
-                          Les données sont affichées ci-dessous en format brut.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    {/* Légende d'unité déjà incluse dans les badges au-dessus */}
+                                )}
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                    </div>
                   </>
                 ) : (
                   <>

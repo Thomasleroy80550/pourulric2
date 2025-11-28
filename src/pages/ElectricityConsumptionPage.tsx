@@ -80,6 +80,11 @@ function addDays(d: Date, delta: number) {
   nd.setDate(nd.getDate() + delta);
   return nd;
 }
+// Clamp la fin envoyée à l'API au maximum à demain (fin exclusive)
+function clampEndToTomorrow(endISO: string) {
+  const tomorrow = toISODate(addDays(new Date(), 1)); // fin exclue
+  return endISO > tomorrow ? tomorrow : endISO;
+}
 // Helpers manquants pour navigation mensuelle et presets
 function addMonths(d: Date, delta: number) {
   const nd = new Date(d);
@@ -607,12 +612,21 @@ const ElectricityConsumptionPage: React.FC = () => {
         return;
       }
 
-      // Persister la période
+      // Persister la période choisie (même si elle dépasse aujourd'hui, pour l'affichage)
       localStorage.setItem("conso_start", newStart);
       localStorage.setItem("conso_end", newEnd);
 
+      // Clamp pour la requête (évite les erreurs si la période va dans le futur)
+      const effectiveEnd = clampEndToTomorrow(newEnd);
+      if (new Date(newStart) >= new Date(effectiveEnd)) {
+        // Plage entièrement future: ne pas appeler l'API, afficher des colonnes "sans donnée"
+        setParams(null);
+        toast.message("Période future: affichage sans données disponibles.");
+        return;
+      }
+
       // Affichage instantané si cache déjà présent
-      const key = makeCacheKey({ prm, type, start: newStart, end: newEnd });
+      const key = makeCacheKey({ prm, type, start: newStart, end: effectiveEnd });
       const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
       if (cachedRaw) {
         try {
@@ -625,10 +639,10 @@ const ElectricityConsumptionPage: React.FC = () => {
         }
       }
       localStorage.setItem("conso_last_key", key);
-      localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start: newStart, end: newEnd }));
+      localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start: newStart, end: effectiveEnd }));
 
       // Déclenche la requête réseau via useQuery (en mettant à jour params)
-      setParams({ prm, token, type, start: newStart, end: newEnd });
+      setParams({ prm, token, type, start: newStart, end: effectiveEnd });
       toast.message("Chargement des données…");
     },
     [prm, token, type, queryClient]
@@ -689,9 +703,15 @@ const ElectricityConsumptionPage: React.FC = () => {
 
     setIsAnalyzing(true);
     try {
+      const effectiveEnd = clampEndToTomorrow(end);
+      if (new Date(start) >= new Date(effectiveEnd)) {
+        setResRows([]);
+        toast.message("Période future: aucune donnée de consommation disponible.");
+        return;
+      }
       // 1) Conso daily sur la période
       const { data: consoData, error: consoError } = await supabase.functions.invoke("conso-proxy", {
-        body: { prm, token, type: "daily_consumption", start, end },
+        body: { prm, token, type: "daily_consumption", start, end: effectiveEnd },
       });
       if (consoError) throw new Error(consoError.message || "Erreur conso daily");
 

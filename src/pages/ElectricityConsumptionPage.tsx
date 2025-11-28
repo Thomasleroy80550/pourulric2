@@ -609,6 +609,19 @@ const ElectricityConsumptionPage: React.FC = () => {
     [prm, token, type, queryClient]
   );
 
+  // Navigation mois précédent / suivant
+  const goToMonth = React.useCallback((delta: number) => {
+    const base = isValidDateStr(start) ? new Date(start) : new Date();
+    const s0 = startOfMonth(base);
+    const s1 = addMonths(s0, delta);
+    const e1 = addMonths(s1, 1);
+    const newStart = toISODate(s1);
+    const newEnd = toISODate(e1);
+    setStart(newStart);
+    setEnd(newEnd);
+    loadForRange(newStart, newEnd);
+  }, [start, loadForRange]);
+
   const onSubmit = React.useCallback(() => {
     loadForRange(start, end);
   }, [loadForRange, start, end]);

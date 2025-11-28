@@ -103,7 +103,7 @@ const PowerSenseLandingFull: React.FC = () => {
         // fallback
       }
 
-      const subject = "Demande d’activation — PowerSense (Conso Électricité)";
+      const subject = "Demande d'activation — PowerSense (Conso Électricité)";
       const html = `
         <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#111">
           <h2 style="margin:0 0 8px">Nouvelle demande d'activation</h2>
@@ -176,7 +176,7 @@ const PowerSenseLandingFull: React.FC = () => {
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <LineChart className="h-5 w-5 text-indigo-500" />
-                <CardTitle>Aperçu en temps réel (exemple)</CardTitle>
+                <CardTitle>Aperçu en temps réel</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -310,7 +310,7 @@ const PowerSenseLandingFull: React.FC = () => {
           <Card className="shadow-sm relative overflow-hidden">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <CardTitle>Aperçu tableau de bord (animé)</CardTitle>
+                <CardTitle>Aperçu du tableau de bord</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -358,7 +358,7 @@ const PowerSenseLandingFull: React.FC = () => {
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <CardTitle>Relevé d'événements (animé)</CardTitle>
+                <CardTitle>Relevé d'événements</CardTitle>
               </div>
             </CardHeader>
             <CardContent>

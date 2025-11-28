@@ -566,7 +566,49 @@ const ElectricityConsumptionPage: React.FC = () => {
     toast.success("Paramètres chargés depuis votre profil.");
   };
 
-  // Charger avec les dates courantes depuis le formulaire
+  // Charger les données pour une plage donnée, avec validations et cache local
+  const loadForRange = React.useCallback(
+    (newStart: string, newEnd: string) => {
+      if (!/^\d{14}$/.test(prm)) {
+        toast.error("Le PRM doit contenir 14 chiffres.");
+        return;
+      }
+      if (!token || token.length < 10) {
+        toast.error("Veuillez renseigner votre token Conso API.");
+        return;
+      }
+      if (!isValidDateStr(newStart) || !isValidDateStr(newEnd) || new Date(newEnd) <= new Date(newStart)) {
+        toast.error("Plage de dates invalide.");
+        return;
+      }
+
+      // Persister la période
+      localStorage.setItem("conso_start", newStart);
+      localStorage.setItem("conso_end", newEnd);
+
+      // Affichage instantané si cache déjà présent
+      const key = makeCacheKey({ prm, type, start: newStart, end: newEnd });
+      const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
+      if (cachedRaw) {
+        try {
+          const cached = JSON.parse(cachedRaw);
+          if (cached?.data) {
+            queryClient.setQueryData(["conso", key], cached.data);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      localStorage.setItem("conso_last_key", key);
+      localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start: newStart, end: newEnd }));
+
+      // Déclenche la requête réseau via useQuery (en mettant à jour params)
+      setParams({ prm, token, type, start: newStart, end: newEnd });
+      toast.message("Chargement des données…");
+    },
+    [prm, token, type, queryClient]
+  );
+
   const onSubmit = React.useCallback(() => {
     loadForRange(start, end);
   }, [loadForRange, start, end]);
@@ -582,9 +624,14 @@ const ElectricityConsumptionPage: React.FC = () => {
       await refetch({ cancelRefetch: false });
       toast.success("Données actualisées");
     } catch {
-      toast.error("Échec de l’actualisation");
+      toast.error("Échec de l'actualisation");
     }
   };
+
+  const monthLabel = React.useMemo(() => {
+    const d = isValidDateStr(start) ? new Date(start) : new Date();
+    return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }, [start]);
 
   return (
     <MainLayout>

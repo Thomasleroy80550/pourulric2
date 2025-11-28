@@ -16,9 +16,10 @@ type TokenResponse = {
 
 let cachedToken: { access_token: string; expires_at: number } | null = null;
 
-async function getOAuthToken(): Promise<string> {
+async function getOAuthToken(requestId?: string): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expires_at > now) {
+    console.log(`[ecowatt][${requestId}] Using cached token`);
     return cachedToken.access_token;
   }
 
@@ -26,9 +27,11 @@ async function getOAuthToken(): Promise<string> {
   const clientSecret = Deno.env.get("RTE_CLIENT_SECRET");
 
   if (!clientId || !clientSecret) {
+    console.error(`[ecowatt][${requestId}] Missing RTE_CLIENT_ID or RTE_CLIENT_SECRET`);
     throw new Error("Missing RTE_CLIENT_ID or RTE_CLIENT_SECRET environment variables");
   }
 
+  console.log(`[ecowatt][${requestId}] Requesting OAuth token from RTE…`);
   const body = new URLSearchParams({
     grant_type: "client_credentials",
     client_id: clientId,
@@ -43,14 +46,15 @@ async function getOAuthToken(): Promise<string> {
     body: body.toString(),
   });
 
+  console.log(`[ecowatt][${requestId}] Token response status: ${tokenRes.status}`);
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
-    throw new Error(`Failed to obtain token: ${tokenRes.status} ${tokenRes.statusText} - ${errText}`);
+    console.error(`[ecowatt][${requestId}] Failed to obtain token: ${tokenRes.status} ${tokenRes.statusText} - ${errText}`);
+    throw new Error(`Failed to obtain token: ${tokenRes.status} ${tokenRes.statusText}`);
   }
 
   const tokenJson = (await tokenRes.json()) as TokenResponse;
   const expiresInSec = tokenJson.expires_in ?? 3600;
-  // Petite marge pour éviter l'expiration côté RTE
   const expiresAt = Date.now() + (expiresInSec - 60) * 1000;
 
   cachedToken = {
@@ -58,12 +62,14 @@ async function getOAuthToken(): Promise<string> {
     expires_at: expiresAt,
   };
 
+  console.log(`[ecowatt][${requestId}] Token obtained successfully. Expires in ~${expiresInSec}s`);
   return tokenJson.access_token;
 }
 
-async function getSignals(): Promise<Response> {
-  const token = await getOAuthToken();
+async function getSignals(requestId?: string): Promise<Response> {
+  const token = await getOAuthToken(requestId);
 
+  console.log(`[ecowatt][${requestId}] Fetching Ecowatt signals from RTE…`);
   const signalsRes = await fetch("https://digital.iservices.rte-france.com/open_api/ecowatt/v5/signals", {
     method: "GET",
     headers: {
@@ -72,8 +78,10 @@ async function getSignals(): Promise<Response> {
     },
   });
 
+  console.log(`[ecowatt][${requestId}] Signals response status: ${signalsRes.status}`);
   const text = await signalsRes.text();
-  // On renvoie tel quel le JSON ou texte, avec le statut original, pour respecter la consigne "renvoie le JSON complet".
+
+  // Renvoie tel quel le JSON/texte, avec le statut original.
   return new Response(text, {
     status: signalsRes.status,
     headers: corsHeaders,
@@ -81,24 +89,30 @@ async function getSignals(): Promise<Response> {
 }
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  console.log(`[ecowatt][${requestId}] Incoming request: ${req.method}`);
+
   if (req.method === "OPTIONS") {
+    console.log(`[ecowatt][${requestId}] Preflight OK`);
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Accepte GET et POST (invoke envoie POST par défaut)
     if (req.method !== "GET" && req.method !== "POST") {
+      console.warn(`[ecowatt][${requestId}] Method not allowed: ${req.method}`);
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
         headers: corsHeaders,
       });
     }
 
-    const res = await getSignals();
+    const res = await getSignals(requestId);
+    console.log(`[ecowatt][${requestId}] Completed with status ${res.status}`);
     return res;
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    return new Response(JSON.stringify({ error: message }), {
+    console.error(`[ecowatt][${requestId}] Error: ${message}`);
+    return new Response(JSON.stringify({ error: message, requestId }), {
       status: 500,
       headers: corsHeaders,
     });

@@ -685,26 +685,98 @@ const ElectricityConsumptionPage: React.FC = () => {
       toast.error("Veuillez renseigner votre token Conso API.");
       return;
     }
-    if (!isValidDateStr(start) || !isValidDateStr(end)) {
-      toast.error("Dates invalides (YYYY-MM-DD).");
-      return;
-    }
 
     setIsAnalyzing(true);
     try {
-      const effectiveEnd = clampEndToToday(end);
-      if (new Date(start) >= new Date(effectiveEnd)) {
+      // 1) Utilisateur courant
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw new Error(authError.message);
+      const userId = userData?.user?.id;
+      if (!userId) {
+        toast.error("Veuillez vous connecter pour analyser vos logements.");
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // 2) Récupérer UNIQUEMENT les rooms de l'utilisateur connecté
+      const { data: rooms, error: roomsError } = await supabase
+        .from("user_rooms")
+        .select("room_id, room_name, user_id")
+        .eq("user_id", userId);
+      if (roomsError) throw new Error(roomsError.message);
+
+      toast.message(`Logements trouvés: ${rooms?.length || 0}`);
+      if (!rooms || rooms.length === 0) {
+        setResRows([]);
+        toast.message("Aucun logement trouvé pour votre compte.");
+        return;
+      }
+
+      // 3) Récupérer toutes les réservations Krossbooking par room
+      const allResArrays = await Promise.all(
+        rooms.map(async (r: any) => {
+          const { data, error } = await supabase.functions.invoke("krossbooking-proxy", {
+            body: { action: "get_reservations_for_room", id_room: r.room_id },
+          });
+          if (error) {
+            console.warn("Erreur KB room", r.room_id, error);
+            return [];
+          }
+          const arr = (data && (data as any).data) || [];
+          // Attache room info pour faciliter l'affichage
+          return arr.map((x: any) => ({ ...x, __room_name: r.room_name, __room_id: r.room_id }));
+        })
+      );
+      const rawReservations = allResArrays.flat();
+      toast.message(`Réservations récupérées: ${rawReservations.length}`);
+
+      // 4) Normaliser les dates (YYYY-MM-DD) et filtrer celles qui sont valides
+      type NormRes = {
+        id: string;
+        roomName?: string;
+        arrival: string;     // YYYY-MM-DD
+        departure: string;   // YYYY-MM-DD
+      };
+      const norm: NormRes[] = [];
+      for (const res of rawReservations) {
+        const id = String(res.id_reservation ?? res.id ?? "");
+        const a = normalizeDateStr(res.arrival ?? res.checkin ?? res.check_in ?? res.start_date ?? res.date_from);
+        const b = normalizeDateStr(res.departure ?? res.checkout ?? res.check_out ?? res.end_date ?? res.date_to);
+        if (!a || !b) continue;
+        norm.push({
+          id,
+          roomName: res.__room_name,
+          arrival: a,
+          departure: b,
+        });
+      }
+
+      if (norm.length === 0) {
+        setResRows([]);
+        toast.message("Aucune réservation valide trouvée (dates manquantes/invalides).");
+        return;
+      }
+
+      // 5) Déterminer la période globale min→max et la "clamp" à aujourd'hui (UTC)
+      const minArrivalISO = norm.reduce((min, r) => (r.arrival < min ? r.arrival : min), norm[0].arrival);
+      const maxDepartureISO = norm.reduce((max, r) => (r.departure > max ? r.departure : max), norm[0].departure);
+      const effectiveEnd = clampEndToToday(maxDepartureISO); // end exclusif, ≤ aujourd'hui (UTC)
+      // Si toute la période est dans le futur (extrêmement peu probable), pas d'appel API
+      if (new Date(minArrivalISO) >= new Date(effectiveEnd)) {
         setResRows([]);
         toast.message("Période future: aucune donnée de consommation disponible.");
         return;
       }
-      // 1) Conso daily sur la période
+
+      toast.message(`Période globale: ${minArrivalISO} → ${effectiveEnd} (fin exclue)`);
+
+      // 6) Charger la conso daily pour la période globale
       const { data: consoData, error: consoError } = await supabase.functions.invoke("conso-proxy", {
-        body: { prm, token, type: "daily_consumption", start, end: effectiveEnd },
+        body: { prm, token, type: "daily_consumption", start: minArrivalISO, end: effectiveEnd },
       });
       if (consoError) throw new Error(consoError.message || "Erreur conso daily");
 
-      // 1bis) Normaliser en tableau et construire la map { 'YYYY-MM-DD': Wh }
+      // 7) Construire la map { 'YYYY-MM-DD': Wh }
       let arr: any[] = Array.isArray(consoData) ? consoData : [];
       if (!arr.length && consoData && typeof consoData === "object") {
         for (const k of Object.keys(consoData)) {
@@ -731,89 +803,33 @@ const ElectricityConsumptionPage: React.FC = () => {
         }
       }
 
-      // 2) Utilisateur courant
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw new Error(authError.message);
-      const userId = userData?.user?.id;
-      if (!userId) {
-        toast.error("Veuillez vous connecter pour analyser vos logements.");
-        setIsAnalyzing(false);
-        return;
-      }
-
-      // 3) Uniquement les rooms de l'utilisateur
-      const { data: rooms, error: roomsError } = await supabase
-        .from("user_rooms")
-        .select("room_id, room_name, user_id")
-        .eq("user_id", userId);
-      if (roomsError) throw new Error(roomsError.message);
-
-      toast.message(`Logements trouvés: ${rooms?.length || 0}`);
-      if (!rooms || rooms.length === 0) {
-        setResRows([]);
-        toast.message("Aucun logement trouvé pour votre compte.");
-        return;
-      }
-
-      // 4) Récupérer les réservations Krossbooking par room
-      const allResArrays = await Promise.all(
-        rooms.map(async (r: any) => {
-          const { data, error } = await supabase.functions.invoke("krossbooking-proxy", {
-            body: { action: "get_reservations_for_room", id_room: r.room_id },
-          });
-          if (error) {
-            console.warn("Erreur KB room", r.room_id, error);
-            return [];
-          }
-          const list = (data && (data as any).data) || [];
-          return list.map((x: any) => ({ ...x, __room_name: r.room_name, __room_id: r.room_id }));
-        })
-      );
-      const rawReservations = allResArrays.flat();
-
-      toast.message(`Réservations récupérées: ${rawReservations.length}`);
-
-      // 5) Filtrer par chevauchement de période [start, end) en normalisant les dates
-      const startD = new Date(start);
-      const endD = new Date(end);
-      const filtered = rawReservations.filter((res: any) => {
-        // Alias possibles selon Krossbooking: arrival/departure ou variantes
-        const rawArrival = res.arrival ?? res.checkin ?? res.check_in ?? res.start_date ?? res.date_from;
-        const rawDeparture = res.departure ?? res.checkout ?? res.check_out ?? res.end_date ?? res.date_to;
-        const arrivalStr = normalizeDateStr(rawArrival);
-        const departureStr = normalizeDateStr(rawDeparture);
-        if (!arrivalStr || !departureStr) return false;
-        const a = new Date(arrivalStr);
-        const b = new Date(departureStr);
-        // chevauchement simple: a < end && b > start
-        return a < endD && b > startD;
-      });
-
-      toast.message(`Réservations dans la période: ${filtered.length}`);
-
-      // 6) Calcul kWh et coût/CO2 par résa
+      // 8) Calcul kWh, coût et CO₂ par réservation sur [arrival, min(departure, today)]
       const p = Number((pricePerKWh || "").replace(",", "."));
-      const rows: ReservationCostRow[] = filtered.map((res: any) => {
-        const id = String(res.id_reservation ?? res.id ?? "");
-        const arrivalStr = normalizeDateStr(res.arrival ?? res.checkin ?? res.check_in ?? res.start_date ?? res.date_from) || "";
-        const departureStr = normalizeDateStr(res.departure ?? res.checkout ?? res.check_out ?? res.end_date ?? res.date_to) || "";
+      const todayIncISO = toISODate(new Date()); // on borne departure à aujourd'hui (incluse) → intervalle exclusif s'arrête à min(dep, today+1), mais on somme [arrival, min(dep, today+1)) en bornant dans eachDayStrings
+      const rows: ReservationCostRow[] = norm.map((res) => {
+        const id = res.id;
+        const roomName = res.roomName;
+        const arrivalStr = res.arrival;
+        // on borne le départ à aujourd'hui (si départ futur)
+        const depBound = new Date(res.departure) > new Date(todayIncISO) ? todayIncISO : res.departure;
         const nights = Math.max(
           0,
-          Math.round((new Date(departureStr).getTime() - new Date(arrivalStr).getTime()) / (24 * 3600 * 1000))
+          Math.round((new Date(depBound).getTime() - new Date(arrivalStr).getTime()) / (24 * 3600 * 1000))
         );
-        // jours à sommer: [arrival, departure)
-        const days = eachDayStrings(arrivalStr, departureStr);
+
+        const days = eachDayStrings(arrivalStr, depBound); // [arrival, depBound)
         let sumWh = 0;
         for (const d of days) {
           if (dayMap[d] != null) sumWh += dayMap[d];
         }
         const energyKWh = sumWh / 1000;
         const costEUR = p > 0 ? energyKWh * p : 0;
+
         return {
           id,
-          roomName: res.__room_name,
+          roomName,
           arrival: arrivalStr,
-          departure: departureStr,
+          departure: depBound,
           nights,
           energyKWh,
           costEUR,

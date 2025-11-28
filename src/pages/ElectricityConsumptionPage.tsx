@@ -173,7 +173,7 @@ const ElectricityConsumptionPage: React.FC = () => {
     const saved = localStorage.getItem("conso_start");
     if (saved && isValidDateStr(saved)) return saved;
     const today = new Date();
-    return toISODate(addDays(today, -7)); // défaut: 7 jours
+    return toISODate(addDays(today, -5)); // défaut: 5 jours
   });
   const [end, setEnd] = React.useState<string>(() => {
     const saved = localStorage.getItem("conso_end");
@@ -668,9 +668,10 @@ const ElectricityConsumptionPage: React.FC = () => {
     loadForRange(newStart, newEnd);
   }, [start, loadForRange]);
 
+  // Charger via le bouton (utiliser 5 jours par défaut)
   const onSubmit = React.useCallback(() => {
     const today = new Date();
-    const s = toISODate(addDays(today, -7));
+    const s = toISODate(addDays(today, -5));
     const e = toISODate(addDays(today, 1)); // fin exclue
     setStart(s);
     setEnd(e);
@@ -697,12 +698,12 @@ const ElectricityConsumptionPage: React.FC = () => {
     return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   }, [start]);
 
-  // Après monthLabel et avant loadForRange, ajouter un auto-load par défaut si rien en cache
+  // Après monthLabel et avant loadForRange, auto-load par défaut si rien en cache
   React.useEffect(() => {
     const lastParamsRaw = localStorage.getItem("conso_last_params");
     if (!lastParamsRaw && !params) {
       const today = new Date();
-      const s = toISODate(addDays(today, -7));
+      const s = toISODate(addDays(today, -5));
       const e = toISODate(addDays(today, 1)); // fin exclue
       setStart(s);
       setEnd(e);
@@ -1013,20 +1014,20 @@ const ElectricityConsumptionPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Période affichée (lecture seule): 7 derniers jours */}
+              {/* Période affichée (lecture seule): 5 derniers jours */}
               <div className="flex flex-col gap-2">
                 <Label>Période</Label>
                 <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
                   {start || "—"} → {end || "—"} (fin exclue)
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Affichage par défaut: 7 derniers jours jusqu'à aujourd'hui.
+                  Affichage par défaut: 5 derniers jours jusqu'à aujourd'hui.
                 </p>
               </div>
 
               <div className="flex items-end">
                 <Button className="w-full" onClick={onSubmit} disabled={isFetching}>
-                  {isFetching ? "Chargement..." : "Charger 7 derniers jours"}
+                  {isFetching ? "Chargement..." : "Charger 5 derniers jours"}
                 </Button>
               </div>
             </div>

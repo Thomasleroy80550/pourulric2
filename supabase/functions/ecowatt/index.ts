@@ -1,4 +1,6 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
+// NEW: Supabase client for persistent fallback
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +22,66 @@ let cachedToken: { access_token: string; expires_at: number } | null = null;
 let cachedSignals: { text: string; status: number; expires_at: number } | null = null;
 // NEW: garder le dernier payload OK pour servir en cas de 429
 let lastOkSignals: { text: string; fetched_at: number } | null = null;
+
+// NEW: persistent fallback via app_settings
+const LAST_OK_KEY = 'ecowatt_last_ok_payload'
+const supabaseUrl = Deno.env.get('SUPABASE_URL')
+const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const supabaseAdmin = (supabaseUrl && serviceRoleKey)
+  ? createClient(supabaseUrl, serviceRoleKey, { global: { headers: { 'X-Client-Info': 'ecowatt-edge' } } })
+  : null
+
+async function saveLastOkToDB(jsonText: string, requestId?: string) {
+  if (!supabaseAdmin) return
+  try {
+    const parsed = JSON.parse(jsonText)
+    // Exists?
+    const { data: existing, error: selErr } = await supabaseAdmin
+      .from('app_settings')
+      .select('key')
+      .eq('key', LAST_OK_KEY)
+      .maybeSingle()
+    if (selErr) {
+      console.warn(`[ecowatt][${requestId}] Warning reading last OK from DB:`, selErr.message)
+    }
+    if (existing) {
+      const { error: updErr } = await supabaseAdmin
+        .from('app_settings')
+        .update({ value: { data: parsed, fetched_at: new Date().toISOString() } })
+        .eq('key', LAST_OK_KEY)
+      if (updErr) console.warn(`[ecowatt][${requestId}] Warning updating last OK in DB:`, updErr.message)
+    } else {
+      const { error: insErr } = await supabaseAdmin
+        .from('app_settings')
+        .insert([{ key: LAST_OK_KEY, value: { data: parsed, fetched_at: new Date().toISOString() } }])
+      if (insErr) console.warn(`[ecowatt][${requestId}] Warning inserting last OK in DB:`, insErr.message)
+    }
+  } catch (e) {
+    console.warn(`[ecowatt][${requestId}] Warning persisting last OK: ${(e as Error).message}`)
+  }
+}
+
+async function loadLastOkFromDB(requestId?: string): Promise<string | null> {
+  if (!supabaseAdmin) return null
+  const { data, error } = await supabaseAdmin
+    .from('app_settings')
+    .select('value')
+    .eq('key', LAST_OK_KEY)
+    .maybeSingle()
+  if (error) {
+    console.warn(`[ecowatt][${requestId}] Warning loading last OK from DB:`, error.message)
+    return null
+  }
+  const val = (data as any)?.value
+  if (val?.data) {
+    try {
+      return JSON.stringify(val.data)
+    } catch {
+      return null
+    }
+  }
+  return null
+}
 
 async function getOAuthToken(requestId?: string): Promise<string> {
   const now = Date.now();
@@ -120,22 +182,35 @@ async function getSignals(requestId?: string): Promise<Response> {
     console.log(`[ecowatt][${requestId}] Signals cached for ${Math.round(ttlMs / 1000)}s`);
   }
 
-  // Si OK, mémoriser le dernier payload OK
+  // Si OK, mémoriser en mémoire + DB
   if (signalsRes.ok) {
     lastOkSignals = { text, fetched_at: Date.now() };
+    // Persist last OK in DB (non bloquant)
+    saveLastOkToDB(text, requestId);
     return new Response(text, {
       status: signalsRes.status,
       headers: { ...corsHeaders, "X-Cache": "MISS" },
     });
   }
 
-  // En cas de 429, servir le dernier OK si disponible (stale <= 6h)
-  if (signalsRes.status === 429 && lastOkSignals && (Date.now() - lastOkSignals.fetched_at) < 6 * 60 * 60_000) {
-    console.warn(`[ecowatt][${requestId}] Rate limited (429). Serving last OK payload as STALE`);
-    return new Response(lastOkSignals.text, {
-      status: 200,
-      headers: { ...corsHeaders, "X-Cache": "STALE", "X-Original-Status": "429" },
-    });
+  // En cas de 429, servir d'abord le dernier OK en mémoire si disponible (stale <= 6h)
+  if (signalsRes.status === 429) {
+    if (lastOkSignals && (Date.now() - lastOkSignals.fetched_at) < 6 * 60 * 60_000) {
+      console.warn(`[ecowatt][${requestId}] Rate limited (429). Serving last OK payload as STALE`);
+      return new Response(lastOkSignals.text, {
+        status: 200,
+        headers: { ...corsHeaders, "X-Cache": "STALE", "X-Original-Status": "429" },
+      });
+    }
+    // Sinon, tenter le fallback persistant en base
+    const dbText = await loadLastOkFromDB(requestId);
+    if (dbText) {
+      console.warn(`[ecowatt][${requestId}] Rate limited (429). Serving DB-stored last OK payload as STALE_DB`);
+      return new Response(dbText, {
+        status: 200,
+        headers: { ...corsHeaders, "X-Cache": "STALE_DB", "X-Original-Status": "429" },
+      });
+    }
   }
 
   // Sinon, renvoyer tel quel (ex: 429 sans fallback, ou autres erreurs)

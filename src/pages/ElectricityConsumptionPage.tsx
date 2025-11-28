@@ -26,7 +26,7 @@ import {
   Line,
   Cell,
 } from "recharts";
-import { Copy, Eye, EyeOff, Zap, Settings, Euro, TrendingUp, Gauge, CalendarDays, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { Copy, Eye, EyeOff, Zap, Settings, Euro, TrendingUp, Gauge, CalendarDays, ChevronLeft, ChevronRight, RotateCcw, Leaf } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -192,6 +192,9 @@ const ElectricityConsumptionPage: React.FC = () => {
 
   // REMOVED: toute persistance locale
 
+  // Facteur CO₂ (kg) par kWh
+  const CO2_PER_KWH_KG = 0.05;
+
   const [params, setParams] = React.useState<FetchParams | null>(null);
   const paramKey = React.useMemo(() => (params ? makeCacheKey(params) : null), [params]);
 
@@ -313,6 +316,11 @@ const ElectricityConsumptionPage: React.FC = () => {
     if (!canComputeEnergyCost || Number.isNaN(p) || p <= 0) return 0;
     return energyKWhTotal * p;
   }, [energyKWhTotal, pricePerKWh, canComputeEnergyCost]);
+
+  // CO₂ total estimé (kg) sur la période
+  const co2TotalKg = React.useMemo(() => {
+    return energyKWhTotal * CO2_PER_KWH_KG;
+  }, [energyKWhTotal]);
 
   // Indicateurs
   const periodDays = React.useMemo(() => {
@@ -1037,6 +1045,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                       <th className="text-right p-2">Nuits</th>
                       <th className="text-right p-2">Énergie (kWh)</th>
                       <th className="text-right p-2">Coût (€)</th>
+                      <th className="text-right p-2">CO₂ (kg)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1052,6 +1061,9 @@ const ElectricityConsumptionPage: React.FC = () => {
                         </td>
                         <td className="p-2 text-right">
                           {r.costEUR.toLocaleString(undefined, { style: "currency", currency: "EUR" })}
+                        </td>
+                        <td className="p-2 text-right">
+                          {(r.energyKWh * CO2_PER_KWH_KG).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                         </td>
                       </tr>
                     ))}
@@ -1125,23 +1137,54 @@ const ElectricityConsumptionPage: React.FC = () => {
 
                 {chartDisplayData.length > 0 ? (
                   <>
-                    {/* Badges info rapide */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <Badge variant="secondary" className="text-xs">
-                        <CalendarDays className="h-3.5 w-3.5 mr-1" />
-                        {start || "—"} → {endInclusiveLabel || "—"} (inclus)
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Points: {nbPoints}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        Unité: {unit}
-                      </Badge>
-                      {canComputeEnergyCost && pricePerKWh && Number((pricePerKWh || "").replace(",", ".")) > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          Prix: {Number((pricePerKWh || "").replace(",", ".").replace(/,/g, "."))?.toLocaleString(undefined, { maximumFractionDigits: 4 })} €/kWh
-                        </Badge>
-                      )}
+                    {/* Indicateurs en tête */}
+                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Zap className="h-4 w-4 text-yellow-400" /> Énergie totale
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {canComputeEnergyCost
+                            ? `${energyKWhTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`
+                            : "N/A"}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Euro className="h-4 w-4 text-emerald-500" /> Coût estimé
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {canComputeEnergyCost && Number((pricePerKWh || "").replace(",", ".")) > 0
+                            ? totalCost.toLocaleString(undefined, { style: "currency", currency: "EUR" })
+                            : "—"}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <TrendingUp className="h-4 w-4 text-blue-500" /> Moyenne/jour
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {canComputeEnergyCost && periodDays > 0
+                            ? `${avgKWhPerDay.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh/j`
+                            : "—"}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Gauge className="h-4 w-4 text-indigo-500" /> Pic
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {`${peakDisplay.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`}
+                        </div>
+                      </div>
+                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Leaf className="h-4 w-4 text-emerald-600" /> CO₂ estimé
+                        </div>
+                        <div className="mt-1 text-xl font-semibold">
+                          {`${co2TotalKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg CO₂`}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="mb-2">
@@ -1386,16 +1429,12 @@ const ElectricityConsumptionPage: React.FC = () => {
                     </div>
                   </>
                 ) : (
-                  <>
-                    <p className="text-muted-foreground mb-2">
-                      Aucune donnée exploitable en tableau trouvée pour les paramètres donnés.
-                    </p>
-                    {rawJson && (
-                      <div className="rounded-md border bg-muted/30 p-3 max-h-80 overflow-auto">
-                        <pre className="text-xs whitespace-pre-wrap break-words">{rawJson}</pre>
-                      </div>
-                    )}
-                  </>
+                  <Alert className="mb-4">
+                    <AlertTitle>Format de données non reconnu pour l'affichage graphique</AlertTitle>
+                    <AlertDescription>
+                      Les données sont affichées ci-dessous en format brut.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </>
             )}

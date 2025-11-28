@@ -169,34 +169,19 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [type, setType] = React.useState<ConsoType>(
     () => (localStorage.getItem("conso_type") as ConsoType) || "daily_consumption"
   );
-  const [start, setStart] = React.useState<string>(() => {
-    const saved = localStorage.getItem("conso_start");
-    if (saved && isValidDateStr(saved)) return saved;
-    const today = new Date();
-    return toISODate(addDays(today, -4)); // défaut: 5 jours (fin exclue demain)
-  });
-  const [end, setEnd] = React.useState<string>(() => {
-    const saved = localStorage.getItem("conso_end");
-    if (saved && isValidDateStr(saved)) return saved;
-    const tomorrow = addDays(new Date(), 1); // fin exclue
-    return toISODate(tomorrow);
-  });
+  const [start, setStart] = React.useState<string>(() => localStorage.getItem("conso_start") || "");
+  const [end, setEnd] = React.useState<string>(() => localStorage.getItem("conso_end") || "");
   const [showToken, setShowToken] = React.useState(false);
   const [pricePerKWh, setPricePerKWh] = React.useState<string>(
     () => localStorage.getItem("conso_price_per_kwh") || ""
   );
-  // Mode de sélection: 'month' (par défaut) ou 'dates'
-  const [periodMode, setPeriodMode] = React.useState<"month" | "dates">(
-    () => ((localStorage.getItem("conso_period_mode") as "month" | "dates") || "month")
-  );
-  React.useEffect(() => {
-    localStorage.setItem("conso_period_mode", periodMode);
-  }, [periodMode]);
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const barsPointLimit = 220;
   const [showDebug, setShowDebug] = React.useState(false);
   const [debugInfo, setDebugInfo] = React.useState<any>(null);
+  // Vue du graphique: 'area' ou 'bars'
+  const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);

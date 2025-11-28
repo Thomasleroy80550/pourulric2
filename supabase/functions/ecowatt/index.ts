@@ -16,6 +16,9 @@ type TokenResponse = {
 
 let cachedToken: { access_token: string; expires_at: number } | null = null;
 
+// NEW: cache des signaux pour limiter les appels RTE
+let cachedSignals: { text: string; status: number; expires_at: number } | null = null;
+
 async function getOAuthToken(requestId?: string): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expires_at > now) {
@@ -69,6 +72,16 @@ async function getOAuthToken(requestId?: string): Promise<string> {
 }
 
 async function getSignals(requestId?: string): Promise<Response> {
+  const now = Date.now();
+  if (cachedSignals && cachedSignals.expires_at > now) {
+    console.log(`[ecowatt][${requestId}] Returning cached signals (cache HIT)`);
+    return new Response(cachedSignals.text, {
+      status: cachedSignals.status,
+      headers: { ...corsHeaders, "X-Cache": "HIT" },
+    });
+  }
+
+  console.log(`[ecowatt][${requestId}] Cache MISS -> fetching from RTE`);
   const token = await getOAuthToken(requestId);
 
   console.log(`[ecowatt][${requestId}] Fetching Ecowatt signals from RTE…`);
@@ -83,10 +96,24 @@ async function getSignals(requestId?: string): Promise<Response> {
   console.log(`[ecowatt][${requestId}] Signals response status: ${signalsRes.status}`);
   const text = await signalsRes.text();
 
-  // Renvoie tel quel le JSON/texte, avec le statut original.
+  // Définir une TTL: 5 min si OK; 60s sur 429; sinon pas de cache.
+  const ttlMs =
+    signalsRes.ok ? 5 * 60_000 :
+    signalsRes.status === 429 ? 60_000 :
+    0;
+
+  if (ttlMs > 0) {
+    cachedSignals = {
+      text,
+      status: signalsRes.status,
+      expires_at: Date.now() + ttlMs,
+    };
+    console.log(`[ecowatt][${requestId}] Signals cached for ${Math.round(ttlMs / 1000)}s`);
+  }
+
   return new Response(text, {
     status: signalsRes.status,
-    headers: corsHeaders,
+    headers: { ...corsHeaders, "X-Cache": "MISS" },
   });
 }
 

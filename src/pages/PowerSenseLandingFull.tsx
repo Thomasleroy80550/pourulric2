@@ -134,7 +134,7 @@ const PowerSenseLandingFull: React.FC = () => {
               <Zap className="h-5 w-5 text-yellow-500" />
             </div>
             <span className="text-xl font-semibold tracking-tight">PowerSense</span>
-            <Badge variant="outline" className="ml-2">Linky</Badge>
+            <Badge variant="outline" className="ml-2">by Hello Keys</Badge>
           </div>
           <div className="hidden md:flex items-center gap-2">
             <Button variant="ghost" onClick={() => document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' })}>

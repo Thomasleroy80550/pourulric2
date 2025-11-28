@@ -169,6 +169,11 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [prm, setPrm] = React.useState<string>("");
   const [token, setToken] = React.useState<string>("");
   const [type, setType] = React.useState<ConsoType>("daily_consumption");
+  // Type d'énergie (données en Wh) vs puissance (données en W)
+  const isEnergyType = React.useMemo(
+    () => ["daily_consumption", "daily_production"].includes(type),
+    [type]
+  );
   const [start, setStart] = React.useState<string>(() => {
     const today = new Date();
     return toISODate(addDays(today, -4)); // défaut: 5 jours (fin exclue demain) affichés

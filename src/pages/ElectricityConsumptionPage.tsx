@@ -184,6 +184,8 @@ const ElectricityConsumptionPage: React.FC = () => {
   const [debugInfo, setDebugInfo] = React.useState<any>(null);
   // Vue du graphique: 'area' ou 'bars'
   const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
+  // Auto-load une seule fois depuis le profil si PRM/TOKEN absents en local
+  const autoLoadedRef = React.useRef(false);
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);
@@ -740,6 +742,42 @@ const ElectricityConsumptionPage: React.FC = () => {
     }
   }, [params, loadForRange]);
 
+  // Charger automatiquement PRM/TOKEN depuis le profil si absents en local
+  React.useEffect(() => {
+    if (autoLoadedRef.current) return;
+    // Si l'un des deux manque, tenter un chargement profil
+    if (!prm || !token) {
+      (async () => {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+        if (!userId) {
+          autoLoadedRef.current = true;
+          return;
+        }
+        const { data } = await supabase
+          .from("profiles")
+          .select("conso_prm, conso_token")
+          .eq("id", userId)
+          .single();
+        const profPrm = data?.conso_prm || "";
+        const profTok = data?.conso_token || "";
+        if (profPrm && !prm) {
+          setPrm(profPrm);
+          localStorage.setItem("conso_prm", profPrm);
+        }
+        if (profTok && !token) {
+          setToken(profTok);
+          localStorage.setItem("conso_token", profTok);
+        }
+        autoLoadedRef.current = true;
+      })().catch(() => {
+        autoLoadedRef.current = true;
+      });
+    } else {
+      autoLoadedRef.current = true;
+    }
+  }, [prm, token]);
+
   // ADD: analyzeReservations function (self-contained)
   const analyzeReservations = async () => {
     // Validations de base
@@ -906,6 +944,9 @@ const ElectricityConsumptionPage: React.FC = () => {
               <DialogHeader>
                 <DialogTitle>Mes paramètres (stockés localement)</DialogTitle>
               </DialogHeader>
+              <p className="text-sm text-muted-foreground mb-2">
+                Si vous êtes connecté, le PRM et le token sont chargés automatiquement depuis votre profil.
+              </p>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="prm">PRM (14 chiffres)</Label>

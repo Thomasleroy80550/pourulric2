@@ -18,6 +18,8 @@ let cachedToken: { access_token: string; expires_at: number } | null = null;
 
 // NEW: cache des signaux pour limiter les appels RTE
 let cachedSignals: { text: string; status: number; expires_at: number } | null = null;
+// NEW: garder le dernier payload OK pour servir en cas de 429
+let lastOkSignals: { text: string; fetched_at: number } | null = null;
 
 async function getOAuthToken(requestId?: string): Promise<string> {
   const now = Date.now();
@@ -96,23 +98,19 @@ async function getSignals(requestId?: string): Promise<Response> {
   console.log(`[ecowatt][${requestId}] Signals response status: ${signalsRes.status}`);
   const text = await signalsRes.text();
 
-  // TTL:
-  // - 200 OK => 5 minutes
-  // - 429 => respecter Retry-After si présent, sinon 60s (cap entre 60s et 10min)
-  // - autres => pas de cache
+  // TTL calculé selon le statut
   let ttlMs = 0;
   if (signalsRes.ok) {
-    ttlMs = 5 * 60_000;
+    ttlMs = 5 * 60_000; // 5 min
   } else if (signalsRes.status === 429) {
     const retryAfter = signalsRes.headers.get("Retry-After");
     let seconds = parseInt(retryAfter ?? "", 10);
-    if (Number.isNaN(seconds) || seconds <= 0) {
-      seconds = 60;
-    }
-    seconds = Math.max(60, Math.min(seconds, 600)); // 60s..10min
+    if (Number.isNaN(seconds) || seconds <= 0) seconds = 60;
+    seconds = Math.max(60, Math.min(seconds, 600)); // borne 60s..10min
     ttlMs = seconds * 1000;
   }
 
+  // Mettre en cache la réponse brute (même 429) pour limiter la pression sur RTE
   if (ttlMs > 0) {
     cachedSignals = {
       text,
@@ -122,6 +120,25 @@ async function getSignals(requestId?: string): Promise<Response> {
     console.log(`[ecowatt][${requestId}] Signals cached for ${Math.round(ttlMs / 1000)}s`);
   }
 
+  // Si OK, mémoriser le dernier payload OK
+  if (signalsRes.ok) {
+    lastOkSignals = { text, fetched_at: Date.now() };
+    return new Response(text, {
+      status: signalsRes.status,
+      headers: { ...corsHeaders, "X-Cache": "MISS" },
+    });
+  }
+
+  // En cas de 429, servir le dernier OK si disponible (stale <= 6h)
+  if (signalsRes.status === 429 && lastOkSignals && (Date.now() - lastOkSignals.fetched_at) < 6 * 60 * 60_000) {
+    console.warn(`[ecowatt][${requestId}] Rate limited (429). Serving last OK payload as STALE`);
+    return new Response(lastOkSignals.text, {
+      status: 200,
+      headers: { ...corsHeaders, "X-Cache": "STALE", "X-Original-Status": "429" },
+    });
+  }
+
+  // Sinon, renvoyer tel quel (ex: 429 sans fallback, ou autres erreurs)
   return new Response(text, {
     status: signalsRes.status,
     headers: { ...corsHeaders, "X-Cache": "MISS" },

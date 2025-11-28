@@ -22,10 +22,14 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  ComposedChart,
+  Bar,
+  Line,
 } from "recharts";
 import { getSetting } from "@/lib/admin-api";
 import { CONTACT_EMAIL_KEY } from "@/lib/constants";
 import { sendUnauthenticatedEmail } from "@/lib/unauthenticated-email-api";
+import ElectricitySpark from "@/components/ElectricitySpark";
 
 const sampleData = [
   { day: "J-4", value: 4.2 },
@@ -40,6 +44,25 @@ const PowerSenseLandingFull: React.FC = () => {
   const [prm, setPrm] = React.useState("");
   const [note, setNote] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Données animées (exemple)
+  const [animatedData, setAnimatedData] = React.useState(sampleData);
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setAnimatedData((prev) =>
+        prev.map((d, i) => {
+          const jitter = (Math.random() - 0.5) * 0.2; // +/-0.1..0.2 kWh
+          const next = Math.max(0, d.value + jitter);
+          return { ...d, value: Number(next.toFixed(2)) };
+        })
+      );
+    }, 1400);
+    return () => clearInterval(id);
+  }, []);
+  const animatedCo2 = React.useMemo(
+    () => animatedData.map((d) => ({ ...d, co2: Number((d.value * 0.05).toFixed(3)) })), // 0,05 kg/kWh
+    [animatedData]
+  );
 
   const submit = async () => {
     if (!/^\d{14}$/.test(prm)) {
@@ -83,19 +106,19 @@ const PowerSenseLandingFull: React.FC = () => {
       const subject = "Demande d’activation — PowerSense (Conso Électricité)";
       const html = `
         <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#111">
-          <h2 style="margin:0 0 8px">Nouvelle demande d’activation</h2>
+          <h2 style="margin:0 0 8px">Nouvelle demande d'activation</h2>
           <p><strong>Service :</strong> PowerSense (Linky)</p>
           <p><strong>Utilisateur :</strong> ${userEmail}</p>
           <p><strong>PRM :</strong> ${prm}</p>
           ${note ? `<p><strong>Commentaire :</strong> ${note.replace(/\n/g, "<br/>")}</p>` : ""}
-          <p style="margin-top:12px">Merci de traiter cette demande depuis l’admin.</p>
+          <p style="margin-top:12px">Merci de traiter cette demande depuis l'admin.</p>
         </div>
       `;
       await sendUnauthenticatedEmail(adminEmail, subject, html);
 
       toast.success("Candidature envoyée. Nous reviendrons vers vous rapidement.");
     } catch (e: any) {
-      toast.error(e?.message || "Erreur lors de l’envoi de la demande");
+      toast.error(e?.message || "Erreur lors de l'envoi de la demande");
     } finally {
       setIsSubmitting(false);
     }
@@ -115,12 +138,15 @@ const PowerSenseLandingFull: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center gap-2">
             <Button variant="ghost" onClick={() => document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' })}>
-              Demander l’accès
+              Demander l'accès
             </Button>
             <Button variant="secondary" onClick={() => navigate("/electricity")}>
               Ouvrir le tableau de bord
             </Button>
           </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-4">
+          <ElectricitySpark className="mb-2" />
         </div>
       </header>
 
@@ -135,7 +161,7 @@ const PowerSenseLandingFull: React.FC = () => {
         </p>
         <div className="mt-5 flex items-center justify-center gap-2">
           <Button size="lg" onClick={() => document.getElementById('apply-form')?.scrollIntoView({ behavior: 'smooth' })}>
-            <Zap className="h-4 w-4 mr-2" /> Demander l’accès
+            <Zap className="h-4 w-4 mr-2" /> Demander l'accès
           </Button>
           <Button size="lg" variant="outline" onClick={() => navigate("/electricity")}>
             Voir mon tableau de bord
@@ -241,6 +267,130 @@ const PowerSenseLandingFull: React.FC = () => {
         </div>
       </section>
 
+      {/* Fonctionnalités clés */}
+      <section className="mx-auto max-w-6xl px-4 mt-10">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="secondary">Fonctionnalité</Badge>
+                <Zap className="h-4 w-4 text-yellow-500" />
+              </div>
+              <p className="font-medium">CO₂ et coût estimés</p>
+              <p className="text-sm text-muted-foreground">Suivi automatique du coût et des émissions (0,05 kg/kWh).</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="secondary">Fonctionnalité</Badge>
+                <LineChart className="h-4 w-4 text-indigo-600" />
+              </div>
+              <p className="font-medium">Analyse par réservation</p>
+              <p className="text-sm text-muted-foreground">Sommes par séjour (kWh, € et CO₂), même si la période affichée ne couvre pas toutes les résas.</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="secondary">Fonctionnalité</Badge>
+                <Bell className="h-4 w-4 text-amber-500" />
+              </div>
+              <p className="font-medium">Détection des pics</p>
+              <p className="text-sm text-muted-foreground">Mise en évidence des pics de conso pour décider rapidement.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Exemples animés: Dashboard et Relevé */}
+      <section className="mx-auto max-w-6xl px-4 mt-10">
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Dashboard animé */}
+          <Card className="shadow-sm relative overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle>Aperçu tableau de bord (animé)</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ElectricitySpark className="mb-3" />
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={animatedCo2} margin={{ top: 12, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                    <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#6b7280" }} />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                      tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fontSize: 12, fill: "#6b7280" }}
+                      tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg`}
+                    />
+                    <Tooltip
+                      wrapperStyle={{ outline: "none" }}
+                      contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 8 }}
+                      labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                      itemStyle={{ color: "#e5e7eb" }}
+                    />
+                    <Legend />
+                    <Bar dataKey="value" name="Consommation" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="co2"
+                      name="CO₂ (kg)"
+                      stroke="#14b8a6"
+                      strokeWidth={2.2}
+                      dot={false}
+                      activeDot={{ r: 3, stroke: "#14b8a6", fill: "#fff" }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Relevé animé */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle>Relevé d'événements (animé)</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ElectricitySpark className="mb-3" />
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <Zap className="h-5 w-5 text-yellow-500 animate-pulse mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Pic de consommation détecté</p>
+                    <p className="text-xs text-muted-foreground">Aujourd'hui, 11:02 — +18% vs veille</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Zap className="h-5 w-5 text-blue-500 animate-pulse mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Jour sans relevé</p>
+                    <p className="text-xs text-muted-foreground">Hier — aucune donnée remontée</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Zap className="h-5 w-5 text-emerald-500 animate-pulse mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">CO₂ estimé</p>
+                    <p className="text-xs text-muted-foreground">Semaine — 1,25 kg (facteur 0,05 kg/kWh)</p>
+                  </div>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* Étapes */}
       <section className="mx-auto max-w-6xl px-4 mt-10">
         <div className="grid gap-4 md:grid-cols-3">
@@ -312,8 +462,8 @@ const PowerSenseLandingFull: React.FC = () => {
                 <Alert>
                   <AlertTitle>Comment ça marche ?</AlertTitle>
                   <AlertDescription className="text-sm">
-                    Votre candidature est transmise à nos équipes. Un administrateur valide l’accès.
-                    Aucune activation immédiate n’est effectuée.
+                    Votre candidature est transmise à nos équipes. Un administrateur valide l'accès.
+                    Aucune activation immédiate n'est effectuée.
                   </AlertDescription>
                 </Alert>
 
@@ -326,13 +476,13 @@ const PowerSenseLandingFull: React.FC = () => {
                     variant="secondary"
                     className="w-full"
                     onClick={() => navigate("/electricity")}
-                    title="Ouvrir le tableau de bord si vous avez déjà l’accès"
+                    title="Ouvrir le tableau de bord si vous avez déjà l'accès"
                   >
                     Ouvrir le tableau de bord
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  En soumettant, vous acceptez la création d’une demande d’activation et l’envoi d’un email à nos équipes.
+                  En soumettant, vous acceptez la création d'une demande d'activation et l'envoi d'un email à nos équipes.
                 </p>
               </div>
             </CardContent>
@@ -345,13 +495,13 @@ const PowerSenseLandingFull: React.FC = () => {
             <CardContent>
               <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="q1">
-                  <AccordionTrigger>Qu’est-ce que PowerSense ?</AccordionTrigger>
+                  <AccordionTrigger>Qu'est-ce que PowerSense ?</AccordionTrigger>
                   <AccordionContent>
-                    PowerSense est l’add-on de suivi de la consommation électrique (Linky) intégré à votre espace. Il met en forme vos données et simplifie vos décisions.
+                    PowerSense est l'add-on de suivi de la consommation électrique (Linky) intégré à votre espace. Il met en forme vos données et simplifie vos décisions.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="q2">
-                  <AccordionTrigger>Combien de temps pour l’activation ?</AccordionTrigger>
+                  <AccordionTrigger>Combien de temps pour l'activation ?</AccordionTrigger>
                   <AccordionContent>
                     Nous traitons les demandes rapidement. Vous recevrez un email dès que votre accès est prêt.
                   </AccordionContent>

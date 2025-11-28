@@ -83,8 +83,9 @@ function addDays(d: Date, delta: number) {
 // Clamp la fin envoyée à l'API au maximum à aujourd'hui (fin exclusive)
 // L'API exige end < date courante; avec end = aujourd'hui (exclue) on récupère jusqu'à hier.
 function clampEndToToday(endISO: string) {
-  const today = toISODate(new Date());
-  return endISO > today ? today : endISO;
+  // Prend la date du jour en UTC pour éviter tout décalage de fuseau (ex: 28 local mais 29 en localtime)
+  const todayUtc = new Date().toISOString().slice(0, 10); // YYYY-MM-DD en UTC
+  return endISO > todayUtc ? todayUtc : endISO;
 }
 // Helpers manquants pour navigation mensuelle et presets
 function addMonths(d: Date, delta: number) {

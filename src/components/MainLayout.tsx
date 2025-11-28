@@ -97,7 +97,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
       { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
       { name: 'Mes Avis', href: '/reviews', icon: Star },
       { name: 'Analyse Concurrentielle', href: '/comp-set', icon: Copy },
-      { name: 'Conso Électricité', href: '/electricity', icon: Zap },
+      { name: 'PowerSense', href: '/electricity-start', icon: Zap },
     ],
   },
   {

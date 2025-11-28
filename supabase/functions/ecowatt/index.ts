@@ -96,11 +96,22 @@ async function getSignals(requestId?: string): Promise<Response> {
   console.log(`[ecowatt][${requestId}] Signals response status: ${signalsRes.status}`);
   const text = await signalsRes.text();
 
-  // Définir une TTL: 5 min si OK; 60s sur 429; sinon pas de cache.
-  const ttlMs =
-    signalsRes.ok ? 5 * 60_000 :
-    signalsRes.status === 429 ? 60_000 :
-    0;
+  // TTL:
+  // - 200 OK => 5 minutes
+  // - 429 => respecter Retry-After si présent, sinon 60s (cap entre 60s et 10min)
+  // - autres => pas de cache
+  let ttlMs = 0;
+  if (signalsRes.ok) {
+    ttlMs = 5 * 60_000;
+  } else if (signalsRes.status === 429) {
+    const retryAfter = signalsRes.headers.get("Retry-After");
+    let seconds = parseInt(retryAfter ?? "", 10);
+    if (Number.isNaN(seconds) || seconds <= 0) {
+      seconds = 60;
+    }
+    seconds = Math.max(60, Math.min(seconds, 600)); // 60s..10min
+    ttlMs = seconds * 1000;
+  }
 
   if (ttlMs > 0) {
     cachedSignals = {

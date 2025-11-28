@@ -194,8 +194,9 @@ const ElectricityConsumptionPage: React.FC = () => {
   }, [periodMode]);
   const [resRows, setResRows] = React.useState<ReservationCostRow[]>([]);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
-  const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
   const barsPointLimit = 220;
+  const [showDebug, setShowDebug] = React.useState(false);
+  const [debugInfo, setDebugInfo] = React.useState<any>(null);
 
   React.useEffect(() => {
     localStorage.setItem("conso_price_per_kwh", pricePerKWh);
@@ -268,6 +269,16 @@ const ElectricityConsumptionPage: React.FC = () => {
     queryKey: ["conso", paramKey],
     queryFn: async () => {
       if (!params) return null;
+      const safePrm = String(params.prm).replace(/^(\d{4})\d+(\d{4})$/, "$1********$2");
+      const reqMeta = {
+        ts: new Date().toISOString(),
+        type: params.type,
+        prm: safePrm,
+        start: params.start,
+        end: params.end,
+      };
+      setDebugInfo((prev: any) => ({ ...(prev || {}), request: reqMeta }));
+
       const { data, error } = await supabase.functions.invoke("conso-proxy", {
         body: {
           prm: params.prm,
@@ -278,8 +289,18 @@ const ElectricityConsumptionPage: React.FC = () => {
         },
       });
       if (error) {
+        setDebugInfo((prev: any) => ({ ...(prev || {}), response: { ok: false, message: error.message } }));
         throw new Error(error.message || "Erreur depuis la fonction Edge");
       }
+      setDebugInfo((prev: any) => ({
+        ...(prev || {}),
+        response: {
+          ok: true,
+          kind: Array.isArray(data) ? "array" : typeof data,
+          length: Array.isArray(data) ? data.length : undefined,
+          sample: Array.isArray(data) ? data.slice(0, 2) : data,
+        },
+      }));
       return data;
     },
     enabled: !!params,
@@ -619,20 +640,27 @@ const ElectricityConsumptionPage: React.FC = () => {
         return;
       }
 
-      // Persister la période choisie (même si elle dépasse aujourd'hui, pour l'affichage)
       localStorage.setItem("conso_start", newStart);
       localStorage.setItem("conso_end", newEnd);
 
-      // Clamp pour la requête (évite les erreurs si la période va dans le futur)
       const effectiveEnd = clampEndToTomorrow(newEnd);
       if (new Date(newStart) >= new Date(effectiveEnd)) {
-        // Plage entièrement future: ne pas appeler l'API, afficher des colonnes "sans donnée"
         setParams(null);
+        setDebugInfo({
+          request: {
+            ts: new Date().toISOString(),
+            type,
+            prm: String(prm).replace(/^(\d{4})\d+(\d{4})$/, "$1********$2"),
+            start: newStart,
+            end: newEnd,
+            effectiveEnd,
+            note: "Plage future, pas d'appel API",
+          },
+        });
         toast.message("Période future: affichage sans données disponibles.");
         return;
       }
 
-      // Affichage instantané si cache déjà présent
       const key = makeCacheKey({ prm, type, start: newStart, end: effectiveEnd });
       const cachedRaw = localStorage.getItem(`conso_cache_${key}`);
       if (cachedRaw) {
@@ -641,14 +669,22 @@ const ElectricityConsumptionPage: React.FC = () => {
           if (cached?.data) {
             queryClient.setQueryData(["conso", key], cached.data);
           }
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
       localStorage.setItem("conso_last_key", key);
       localStorage.setItem("conso_last_params", JSON.stringify({ prm, token, type, start: newStart, end: effectiveEnd }));
 
-      // Déclenche la requête réseau via useQuery (en mettant à jour params)
+      setDebugInfo((prev: any) => ({
+        ...(prev || {}),
+        request: {
+          ts: new Date().toISOString(),
+          type,
+          prm: String(prm).replace(/^(\d{4})\d+(\d{4})$/, "$1********$2"),
+          start: newStart,
+          end: newEnd,
+          effectiveEnd,
+        },
+      }));
       setParams({ prm, token, type, start: newStart, end: effectiveEnd });
       toast.message("Chargement des données…");
     },
@@ -1117,6 +1153,40 @@ const ElectricityConsumptionPage: React.FC = () => {
                     </AlertDescription>
                   </Alert>
                 )}
+
+                {/* Barre d'actions: Refresh + Logs */}
+                <div className="flex items-center justify-end gap-2 mb-3">
+                  <Button variant="ghost" size="sm" onClick={forceRefresh} title="Forcer l'actualisation">
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Forcer l'actualisation
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setShowDebug((v) => !v)} title="Afficher les logs">
+                    {showDebug ? "Masquer les logs" : "Afficher les logs"}
+                  </Button>
+                </div>
+
+                {showDebug && (
+                  <div className="mb-4 rounded-md border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm font-medium">Logs du dernier appel</div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2)).then(() =>
+                            toast.success("Logs copiés")
+                          )
+                        }
+                      >
+                        Copier
+                      </Button>
+                    </div>
+                    <pre className="text-xs whitespace-pre-wrap break-words">
+                      {debugInfo ? JSON.stringify(debugInfo, null, 2) : "Aucun log disponible"}
+                    </pre>
+                  </div>
+                )}
+
                 {chartDisplayData.length > 0 ? (
                   <>
                     {/* Badges info rapide */}

@@ -14,6 +14,7 @@ serve(async (req) => {
   try {
     payload = await req.json();
   } catch {
+    console.error("[conso-proxy] Invalid JSON body");
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -22,6 +23,7 @@ serve(async (req) => {
 
   const { token, prm, start, end, type } = payload || {};
   if (!token || !prm || !start || !end || !type) {
+    console.warn("[conso-proxy] Missing fields", { type, prm, start, end });
     return new Response(
       JSON.stringify({ error: "Missing required fields: token, prm, start, end, type" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -33,6 +35,15 @@ serve(async (req) => {
   )}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
 
   try {
+    console.log("[conso-proxy] Request", {
+      ts: new Date().toISOString(),
+      type,
+      prm_masked: String(prm).replace(/^(\d{4})\d+(\d{4})$/, "$1********$2"),
+      start,
+      end,
+      url,
+    });
+
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -42,14 +53,30 @@ serve(async (req) => {
       },
     });
 
+    const contentType = res.headers.get("content-type") || "";
     const text = await res.text();
-    const contentType = res.headers.get("content-type") || "application/json";
+
+    console.log("[conso-proxy] Response", {
+      status: res.status,
+      ok: res.ok,
+      contentType,
+      bodyPreview: text ? text.slice(0, 250) : "",
+    });
+
     const baseHeaders = { ...corsHeaders, "Content-Type": contentType.includes("json") ? "application/json" : "text/plain" };
 
     if (!res.ok) {
-      return new Response(text || `HTTP ${res.status}`, {
+      // Retour d'erreur structuré pour faciliter le debug côté client
+      const errorPayload = {
+        error: "Upstream error",
+        upstream_status: res.status,
+        upstream_content_type: contentType,
+        url,
+        body_preview: text ? text.slice(0, 500) : "",
+      };
+      return new Response(JSON.stringify(errorPayload), {
         status: res.status,
-        headers: baseHeaders,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -64,10 +91,20 @@ serve(async (req) => {
       return new Response(text || "", { status: 200, headers: baseHeaders });
     }
   } catch (e) {
-    console.error("conso-proxy error:", e);
-    return new Response(JSON.stringify({ error: "Fetch to Conso API failed", details: String(e) }), {
-      status: 502,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    console.error("[conso-proxy] Fetch failed", {
+      ts: new Date().toISOString(),
+      type,
+      prm_masked: String(prm).replace(/^(\d{4})\d+(\d{4})$/, "$1********$2"),
+      start,
+      end,
+      error: String(e),
     });
+    return new Response(
+      JSON.stringify({ error: "Fetch to Conso API failed", details: String(e) }),
+      {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });

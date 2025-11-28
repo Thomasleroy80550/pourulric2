@@ -669,17 +669,13 @@ const ElectricityConsumptionPage: React.FC = () => {
   }, [start, loadForRange]);
 
   const onSubmit = React.useCallback(() => {
-    if (periodMode === "month") {
-      const s0 = startOfMonth(isValidDateStr(start) ? new Date(start) : new Date());
-      const newStart = toISODate(s0);
-      const newEnd = toISODate(addMonths(s0, 1));
-      setStart(newStart);
-      setEnd(newEnd);
-      loadForRange(newStart, newEnd);
-      return;
-    }
-    loadForRange(start, end);
-  }, [loadForRange, start, end, periodMode]);
+    const today = new Date();
+    const s = toISODate(addDays(today, -7));
+    const e = toISODate(addDays(today, 1)); // fin exclue
+    setStart(s);
+    setEnd(e);
+    loadForRange(s, e);
+  }, [loadForRange]);
 
   // Forcer l'actualisation (bypass affichage seed, mais refetch côté réseau)
   const forceRefresh = async () => {
@@ -700,6 +696,19 @@ const ElectricityConsumptionPage: React.FC = () => {
     const d = isValidDateStr(start) ? new Date(start) : new Date();
     return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   }, [start]);
+
+  // Après monthLabel et avant loadForRange, ajouter un auto-load par défaut si rien en cache
+  React.useEffect(() => {
+    const lastParamsRaw = localStorage.getItem("conso_last_params");
+    if (!lastParamsRaw && !params) {
+      const today = new Date();
+      const s = toISODate(addDays(today, -7));
+      const e = toISODate(addDays(today, 1)); // fin exclue
+      setStart(s);
+      setEnd(e);
+      loadForRange(s, e);
+    }
+  }, [params, loadForRange]);
 
   // ADD: analyzeReservations function (self-contained)
   const analyzeReservations = async () => {
@@ -1004,83 +1013,23 @@ const ElectricityConsumptionPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Mode de sélection */}
+              {/* Période affichée (lecture seule): 7 derniers jours */}
               <div className="flex flex-col gap-2">
-                <Label>Mode de sélection</Label>
-                <Select value={periodMode} onValueChange={(v) => setPeriodMode(v as "month" | "dates")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir un mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="month">Mois</SelectItem>
-                    <SelectItem value="dates">Dates</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Période</Label>
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                  {start || "—"} → {end || "—"} (fin exclue)
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Mois recommandé pour rester lisible; "Dates" disponible en option avancée.
+                  Affichage par défaut: 7 derniers jours jusqu'à aujourd'hui.
                 </p>
               </div>
 
-              {periodMode === "dates" ? (
-                <>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="start">Début (inclus)</Label>
-                    <Input
-                      id="start"
-                      type="date"
-                      value={start}
-                      onChange={(e) => setStart(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="end">Fin (exclue)</Label>
-                    <Input
-                      id="end"
-                      type="date"
-                      value={end}
-                      onChange={(e) => setEnd(e.target.value)}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Contrôles de navigation mensuelle dans la section Requête */}
-                  <div className="flex items-end">
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" onClick={() => goToMonth(-1)} title="Mois précédent">
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <div className="min-w-[140px] text-center font-medium capitalize">
-                        {monthLabel}
-                      </div>
-                      <Button variant="outline" size="icon" onClick={() => goToMonth(1)} title="Mois suivant">
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-
               <div className="flex items-end">
                 <Button className="w-full" onClick={onSubmit} disabled={isFetching}>
-                  {isFetching ? "Chargement..." : (periodMode === "month" ? "Charger ce mois" : "Charger")}
+                  {isFetching ? "Chargement..." : "Charger 7 derniers jours"}
                 </Button>
               </div>
             </div>
-
-            {/* Périodes rapides visibles seulement en mode Dates */}
-            {periodMode === "dates" && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Label className="text-xs text-muted-foreground mr-2 mt-2">Périodes rapides:</Label>
-                <Button size="sm" variant="outline" onClick={() => setQuickRange("7d")}>7 jours</Button>
-                <Button size="sm" variant="outline" onClick={() => setQuickRange("30d")}>30 jours</Button>
-                <Button size="sm" variant="outline" onClick={() => setQuickRange("90d")}>90 jours</Button>
-                <Button size="sm" variant="outline" onClick={() => setQuickRange("365d")}>365 jours</Button>
-                <Button size="sm" variant="secondary" onClick={() => setQuickRange("this-month")}>Mois en cours</Button>
-                <Button size="sm" variant="secondary" onClick={() => setQuickRange("last-month")}>Mois précédent</Button>
-                <Button size="sm" variant="secondary" onClick={() => setQuickRange("ytd")}>Année en cours</Button>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -1163,67 +1112,6 @@ const ElectricityConsumptionPage: React.FC = () => {
                 )}
                 {chartDisplayData.length > 0 ? (
                   <>
-                    {/* Barre de navigation mensuelle + Forcer l'actualisation */}
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" onClick={() => goToMonth(-1)} title="Mois précédent">
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="min-w-[160px] text-center font-medium capitalize">
-                          {monthLabel}
-                        </div>
-                        <Button variant="outline" size="icon" onClick={() => goToMonth(1)} title="Mois suivant">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={forceRefresh} title="Forcer l'actualisation">
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Forcer l'actualisation
-                      </Button>
-                    </div>
-
-                    {/* Indicateurs en tête */}
-                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Zap className="h-4 w-4 text-yellow-400" /> Énergie totale
-                        </div>
-                        <div className="mt-1 text-xl font-semibold">
-                          {canComputeEnergyCost
-                            ? `${energyKWhTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh`
-                            : "N/A"}
-                        </div>
-                      </div>
-                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Euro className="h-4 w-4 text-emerald-500" /> Coût estimé
-                        </div>
-                        <div className="mt-1 text-xl font-semibold">
-                          {canComputeEnergyCost && Number((pricePerKWh || "").replace(",", ".")) > 0
-                            ? totalCost.toLocaleString(undefined, { style: "currency", currency: "EUR" })
-                            : "—"}
-                        </div>
-                      </div>
-                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <TrendingUp className="h-4 w-4 text-blue-500" /> Moyenne/jour
-                        </div>
-                        <div className="mt-1 text-xl font-semibold">
-                          {canComputeEnergyCost && periodDays > 0
-                            ? `${avgKWhPerDay.toLocaleString(undefined, { maximumFractionDigits: 2 })} kWh/j`
-                            : "—"}
-                        </div>
-                      </div>
-                      <div className="rounded-md border p-4 bg-muted/30 hover:bg-muted/40 transition">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Gauge className="h-4 w-4 text-indigo-500" /> Pic
-                        </div>
-                        <div className="mt-1 text-xl font-semibold">
-                          {`${peakDisplay.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`}
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Badges info rapide */}
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge variant="secondary" className="text-xs">

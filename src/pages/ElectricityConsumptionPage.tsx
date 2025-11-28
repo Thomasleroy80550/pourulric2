@@ -785,6 +785,13 @@ const ElectricityConsumptionPage: React.FC = () => {
     }
   };
 
+  const [showDebug, setShowDebug] = React.useState(false);
+  const [debugInfo, setDebugInfo] = React.useState<any>(null);
+  // Vue du graphique: 'area' ou 'bars'
+  const [chartView, setChartView] = React.useState<"area" | "bars">("bars");
+  // Limite au-delà de laquelle la vue colonnes devient illisible
+  const barsPointLimit = 220;
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">

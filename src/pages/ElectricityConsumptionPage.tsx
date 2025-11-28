@@ -173,7 +173,7 @@ const ElectricityConsumptionPage: React.FC = () => {
     const saved = localStorage.getItem("conso_start");
     if (saved && isValidDateStr(saved)) return saved;
     const today = new Date();
-    return toISODate(addDays(today, -5)); // défaut: 5 jours
+    return toISODate(addDays(today, -4)); // défaut: 5 jours (fin exclue demain)
   });
   const [end, setEnd] = React.useState<string>(() => {
     const saved = localStorage.getItem("conso_end");
@@ -671,7 +671,7 @@ const ElectricityConsumptionPage: React.FC = () => {
   // Charger via le bouton (utiliser 5 jours par défaut)
   const onSubmit = React.useCallback(() => {
     const today = new Date();
-    const s = toISODate(addDays(today, -5));
+    const s = toISODate(addDays(today, -4));
     const e = toISODate(addDays(today, 1)); // fin exclue
     setStart(s);
     setEnd(e);
@@ -703,7 +703,7 @@ const ElectricityConsumptionPage: React.FC = () => {
     const lastParamsRaw = localStorage.getItem("conso_last_params");
     if (!lastParamsRaw && !params) {
       const today = new Date();
-      const s = toISODate(addDays(today, -5));
+      const s = toISODate(addDays(today, -4));
       const e = toISODate(addDays(today, 1)); // fin exclue
       setStart(s);
       setEnd(e);

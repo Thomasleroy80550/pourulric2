@@ -566,6 +566,26 @@ const ElectricityConsumptionPage: React.FC = () => {
     toast.success("Paramètres chargés depuis votre profil.");
   };
 
+  // Charger avec les dates courantes depuis le formulaire
+  const onSubmit = React.useCallback(() => {
+    loadForRange(start, end);
+  }, [loadForRange, start, end]);
+
+  // Forcer l'actualisation (bypass affichage seed, mais refetch côté réseau)
+  const forceRefresh = async () => {
+    if (!params) {
+      toast.message("Aucune requête en cours à actualiser.");
+      return;
+    }
+    toast.message("Actualisation en cours…");
+    try {
+      await refetch({ cancelRefetch: false });
+      toast.success("Données actualisées");
+    } catch {
+      toast.error("Échec de l’actualisation");
+    }
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-6">

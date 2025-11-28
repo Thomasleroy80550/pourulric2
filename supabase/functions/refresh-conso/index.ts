@@ -112,11 +112,11 @@ serve(async (req) => {
             user_id: userId,
             prm,
             type: "daily_consumption",
-            start: startISO,
-            end: endISO,
+            start_date: startISO,
+            end_date: endISO,
             data: payload,
           },
-          { onConflict: "user_id,prm,type,start,end" }
+          { onConflict: "user_id,prm,type,start_date,end_date" }
         );
 
       if (upsertErr) {

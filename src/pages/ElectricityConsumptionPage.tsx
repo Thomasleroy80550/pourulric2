@@ -693,6 +693,12 @@ const ElectricityConsumptionPage: React.FC = () => {
     }
   };
 
+  const endInclusiveLabel = React.useMemo(() => {
+    if (!isValidDateStr(end)) return end || "";
+    const endInc = toISODate(addDays(new Date(end), -1));
+    return endInc;
+  }, [end]);
+
   const monthLabel = React.useMemo(() => {
     const d = isValidDateStr(start) ? new Date(start) : new Date();
     return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
@@ -1018,7 +1024,7 @@ const ElectricityConsumptionPage: React.FC = () => {
               <div className="flex flex-col gap-2">
                 <Label>Période</Label>
                 <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                  {start || "—"} → {end || "—"} (fin exclue)
+                  {start || "—"} → {endInclusiveLabel || "—"} (inclus)
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Affichage par défaut: 5 derniers jours jusqu'à aujourd'hui.
@@ -1117,7 +1123,7 @@ const ElectricityConsumptionPage: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge variant="secondary" className="text-xs">
                         <CalendarDays className="h-3.5 w-3.5 mr-1" />
-                        {start || "—"} → {end || "—"} (fin exclue)
+                        {start || "—"} → {endInclusiveLabel || "—"} (inclus)
                       </Badge>
                       <Badge variant="outline" className="text-xs">
                         Points: {nbPoints}

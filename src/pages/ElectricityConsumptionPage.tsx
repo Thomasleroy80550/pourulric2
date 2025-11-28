@@ -80,10 +80,11 @@ function addDays(d: Date, delta: number) {
   nd.setDate(nd.getDate() + delta);
   return nd;
 }
-// Clamp la fin envoyée à l'API au maximum à demain (fin exclusive)
-function clampEndToTomorrow(endISO: string) {
-  const tomorrow = toISODate(addDays(new Date(), 1)); // fin exclue
-  return endISO > tomorrow ? tomorrow : endISO;
+// Clamp la fin envoyée à l'API au maximum à aujourd'hui (fin exclusive)
+// L'API exige end < date courante; avec end = aujourd'hui (exclue) on récupère jusqu'à hier.
+function clampEndToToday(endISO: string) {
+  const today = toISODate(new Date());
+  return endISO > today ? today : endISO;
 }
 // Helpers manquants pour navigation mensuelle et presets
 function addMonths(d: Date, delta: number) {
@@ -628,7 +629,7 @@ const ElectricityConsumptionPage: React.FC = () => {
       localStorage.setItem("conso_start", newStart);
       localStorage.setItem("conso_end", newEnd);
 
-      const effectiveEnd = clampEndToTomorrow(newEnd);
+      const effectiveEnd = clampEndToToday(newEnd);
       if (new Date(newStart) >= new Date(effectiveEnd)) {
         setParams(null);
         setDebugInfo({
@@ -756,13 +757,12 @@ const ElectricityConsumptionPage: React.FC = () => {
 
     setIsAnalyzing(true);
     try {
-      const effectiveEnd = clampEndToTomorrow(end);
+      const effectiveEnd = clampEndToToday(end);
       if (new Date(start) >= new Date(effectiveEnd)) {
         setResRows([]);
         toast.message("Période future: aucune donnée de consommation disponible.");
         return;
       }
-      // 1) Conso daily sur la période
       const { data: consoData, error: consoError } = await supabase.functions.invoke("conso-proxy", {
         body: { prm, token, type: "daily_consumption", start, end: effectiveEnd },
       });

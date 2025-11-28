@@ -415,7 +415,7 @@ const ElectricityConsumptionPage: React.FC = () => {
     );
   };
 
-  const tooManyPointsForBars = chartDisplayData.length > barsPointLimit;
+  const tooManyPointsForBars = chartDisplayData.length > 220;
 
   React.useEffect(() => {
     if (chartView === "bars" && tooManyPointsForBars) {

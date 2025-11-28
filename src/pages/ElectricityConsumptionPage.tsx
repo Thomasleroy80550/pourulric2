@@ -118,6 +118,14 @@ function isValidDateStr(s: string) {
   return !Number.isNaN(d.getTime());
 }
 
+// Normalise une chaîne en date YYYY-MM-DD si possible (ex: '2025-11-28 12:34:00' -> '2025-11-28')
+function normalizeDateStr(s: any): string | null {
+  if (!s) return null;
+  const str = String(s);
+  const candidate = str.length >= 10 ? str.slice(0, 10) : str;
+  return isValidDateStr(candidate) ? candidate : null;
+}
+
 function inferKeys(sample: any): { dateKey?: string; valueKey?: string } {
   if (!sample || typeof sample !== "object") return {};
   const keys = Object.keys(sample);
@@ -690,6 +698,7 @@ const ElectricityConsumptionPage: React.FC = () => {
         toast.message("Période future: aucune donnée de consommation disponible.");
         return;
       }
+      // 1) Conso daily sur la période
       const { data: consoData, error: consoError } = await supabase.functions.invoke("conso-proxy", {
         body: { prm, token, type: "daily_consumption", start, end: effectiveEnd },
       });
@@ -713,9 +722,9 @@ const ElectricityConsumptionPage: React.FC = () => {
           for (const it of arr) {
             const d = it[dateKey];
             const v = it[valueKey];
-            const iso = typeof d === "string" ? d.slice(0, 10) : toISODate(new Date(d));
+            const iso = typeof d === "string" ? (normalizeDateStr(d) || toISODate(new Date(d))) : toISODate(new Date(d));
             const num = typeof v === "number" ? v : Number(v);
-            if (!Number.isNaN(num)) {
+            if (!Number.isNaN(num) && isValidDateStr(iso)) {
               dayMap[iso] = (dayMap[iso] || 0) + num; // Wh par jour
             }
           }
@@ -738,6 +747,8 @@ const ElectricityConsumptionPage: React.FC = () => {
         .select("room_id, room_name, user_id")
         .eq("user_id", userId);
       if (roomsError) throw new Error(roomsError.message);
+
+      toast.message(`Logements trouvés: ${rooms?.length || 0}`);
       if (!rooms || rooms.length === 0) {
         setResRows([]);
         toast.message("Aucun logement trouvé pour votre compte.");
@@ -760,24 +771,32 @@ const ElectricityConsumptionPage: React.FC = () => {
       );
       const rawReservations = allResArrays.flat();
 
-      // 5) Filtrer par chevauchement de période [start, end)
+      toast.message(`Réservations récupérées: ${rawReservations.length}`);
+
+      // 5) Filtrer par chevauchement de période [start, end) en normalisant les dates
       const startD = new Date(start);
       const endD = new Date(end);
       const filtered = rawReservations.filter((res: any) => {
-        const arrivalStr = String(res.arrival || "");
-        const departureStr = String(res.departure || "");
-        if (!isValidDateStr(arrivalStr) || !isValidDateStr(departureStr)) return false;
+        // Alias possibles selon Krossbooking: arrival/departure ou variantes
+        const rawArrival = res.arrival ?? res.checkin ?? res.check_in ?? res.start_date ?? res.date_from;
+        const rawDeparture = res.departure ?? res.checkout ?? res.check_out ?? res.end_date ?? res.date_to;
+        const arrivalStr = normalizeDateStr(rawArrival);
+        const departureStr = normalizeDateStr(rawDeparture);
+        if (!arrivalStr || !departureStr) return false;
         const a = new Date(arrivalStr);
         const b = new Date(departureStr);
+        // chevauchement simple: a < end && b > start
         return a < endD && b > startD;
       });
 
-      // 6) Calcul kWh et coût par résa
+      toast.message(`Réservations dans la période: ${filtered.length}`);
+
+      // 6) Calcul kWh et coût/CO2 par résa
       const p = Number((pricePerKWh || "").replace(",", "."));
       const rows: ReservationCostRow[] = filtered.map((res: any) => {
         const id = String(res.id_reservation ?? res.id ?? "");
-        const arrivalStr = String(res.arrival);
-        const departureStr = String(res.departure);
+        const arrivalStr = normalizeDateStr(res.arrival ?? res.checkin ?? res.check_in ?? res.start_date ?? res.date_from) || "";
+        const departureStr = normalizeDateStr(res.departure ?? res.checkout ?? res.check_out ?? res.end_date ?? res.date_to) || "";
         const nights = Math.max(
           0,
           Math.round((new Date(departureStr).getTime() - new Date(arrivalStr).getTime()) / (24 * 3600 * 1000))
@@ -803,7 +822,7 @@ const ElectricityConsumptionPage: React.FC = () => {
 
       rows.sort((a, b) => (a.arrival < b.arrival ? -1 : a.arrival > b.arrival ? 1 : 0));
       setResRows(rows);
-      toast.success("Analyse par réservation terminée");
+      toast.success(`Analyse terminée — ${rows.length} ligne(s)`);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || "Erreur lors de l'analyse des réservations");

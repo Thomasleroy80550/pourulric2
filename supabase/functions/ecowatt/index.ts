@@ -23,25 +23,27 @@ async function getOAuthToken(requestId?: string): Promise<string> {
     return cachedToken.access_token;
   }
 
-  const clientId = Deno.env.get("RTE_CLIENT_ID");
-  const clientSecret = Deno.env.get("RTE_CLIENT_SECRET");
+  const clientId = Deno.env.get("RTE_CLIENT_ID")?.trim();
+  const clientSecret = Deno.env.get("RTE_CLIENT_SECRET")?.trim();
 
   if (!clientId || !clientSecret) {
     console.error(`[ecowatt][${requestId}] Missing RTE_CLIENT_ID or RTE_CLIENT_SECRET`);
     throw new Error("Missing RTE_CLIENT_ID or RTE_CLIENT_SECRET environment variables");
   }
 
-  console.log(`[ecowatt][${requestId}] Requesting OAuth token from RTE…`);
+  console.log(`[ecowatt][${requestId}] Requesting OAuth token from RTE with Basic auth…`);
+  const basic = btoa(`${clientId}:${clientSecret}`);
+
   const body = new URLSearchParams({
     grant_type: "client_credentials",
-    client_id: clientId,
-    client_secret: clientSecret,
   });
 
   const tokenRes = await fetch("https://digital.iservices.rte-france.com/token/oauth/", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json",
+      "Authorization": `Basic ${basic}`,
     },
     body: body.toString(),
   });

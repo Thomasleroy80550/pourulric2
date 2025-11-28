@@ -969,6 +969,20 @@ const ElectricityConsumptionPage: React.FC = () => {
                   </p>
                 </div>
 
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="price_popup">Prix par kWh (€)</Label>
+                  <Input
+                    id="price_popup"
+                    inputMode="decimal"
+                    placeholder="Ex: 0.25"
+                    value={pricePerKWh}
+                    onChange={(e) => setPricePerKWh(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Utilisé pour calculer le coût estimé des consommations affichées.
+                  </p>
+                </div>
+
                 <div className="flex items-end gap-2">
                   <Button className="w-full" variant="default" onClick={handleSaveCredentials}>
                     Enregistrer

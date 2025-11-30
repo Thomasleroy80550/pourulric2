@@ -467,40 +467,36 @@ const DashboardPage = () => {
         
         {/* Notif box BILAN 2025 */}
         {showBilanNotice && (
-          <Card className="mb-6 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-sm">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5 text-amber-600" />
-                BILAN 2025
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="text-sm sm:text-base">
-                  <span className="inline-flex items-center gap-2">
+          <Alert className="mb-6 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-sm">
+            <div className="flex items-start gap-2">
+              <FileText className="h-5 w-5 text-amber-600" />
+              <div className="flex-1">
+                <AlertTitle className="text-base sm:text-lg font-semibold">BILAN 2025</AlertTitle>
+                <AlertDescription>
+                  <div className="inline-flex items-center gap-2 text-xs sm:text-sm">
                     <CalendarDays className="h-4 w-4 text-amber-700 dark:text-amber-200" />
                     Disponible entre le 4 janvier et le 1er mars.
-                  </span>
+                  </div>
                   <p className="mt-1 text-xs sm:text-sm text-amber-900 dark:text-amber-200">
                     Accédez à vos relevés dans la section Finances.
                   </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link to="/finances">
-                    <Button variant="outline" className="border-amber-300 text-amber-900 hover:bg-amber-100">
-                      Voir mes relevés
+                  <div className="mt-3 flex items-center gap-2">
+                    <Link to="/finances">
+                      <Button variant="outline" className="border-amber-300 text-amber-900 hover:bg-amber-100">
+                        Voir mes relevés
+                      </Button>
+                    </Link>
+                    <Button variant="outline" onClick={handleOpenBilanPopup} className="border-amber-300 text-amber-900 hover:bg-amber-100">
+                      Plus d'infos
                     </Button>
-                  </Link>
-                  <Button variant="outline" onClick={handleOpenBilanPopup} className="border-amber-300 text-amber-900 hover:bg-amber-100">
-                    Plus d'infos
-                  </Button>
-                  <Button variant="ghost" onClick={handleDismissBilanNotice} className="text-amber-900">
-                    Masquer
-                  </Button>
-                </div>
+                    <Button variant="ghost" onClick={handleDismissBilanNotice} className="text-amber-900">
+                      Masquer
+                    </Button>
+                  </div>
+                </AlertDescription>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </Alert>
         )}
 
         {/* To-Do List Card */}

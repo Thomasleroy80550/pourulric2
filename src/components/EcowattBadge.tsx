@@ -114,8 +114,8 @@ const EcowattBadge: React.FC = () => {
 
   return (
     <Card className="flex items-center gap-3 px-3 py-2">
-      <Badge variant={variant} className="uppercase">
-        {levelName === "green" ? "Vert" : levelName === "orange" ? "Orange" : levelName === "red" ? "Rouge" : "N/A"}
+      <Badge variant={variant} className="uppercase" title={levelName === "green" ? "Prédiction du réseau électrique" : undefined}>
+        {levelName === "green" ? "PowerSense Predict" : levelName === "orange" ? "Orange" : levelName === "red" ? "Rouge" : "N/A"}
       </Badge>
       <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
         <CalendarDays className="h-4 w-4" />

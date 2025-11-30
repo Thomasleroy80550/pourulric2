@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import EcowattBadge from "@/components/EcowattBadge";
 
 const COOLDOWN_KEY = 'calendar_refresh_cooldown';
 const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds

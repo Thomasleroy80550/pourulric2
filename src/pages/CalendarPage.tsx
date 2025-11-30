@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import EcowattBadge from "@/components/EcowattBadge";
+import EcowattForecast from "@/components/EcowattForecast";
 
 const COOLDOWN_KEY = 'calendar_refresh_cooldown';
 const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
@@ -262,7 +262,7 @@ const CalendarPage: React.FC = () => {
       <MainLayout>
         <div className="container mx-auto py-6 px-2 sm:px-4 max-w-full overflow-hidden">
           <div className="mb-4">
-            <EcowattBadge />
+            <EcowattForecast />
           </div>
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
@@ -340,7 +340,7 @@ const CalendarPage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <div className="mb-4">
-          <EcowattBadge />
+          <EcowattForecast />
         </div>
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold">Calendrier</h1>

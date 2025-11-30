@@ -3,7 +3,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut, Minimize2, Maximize2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
@@ -51,6 +51,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
 
   const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
+  const [compactMode, setCompactMode] = useState(false);
   const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
 
   const loadHousekeepingTasks = async () => {
@@ -113,8 +114,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const dayCellWidth = isMobile ? 40 : 80;
-  const propertyColumnWidth = isMobile ? 100 : 250;
+  const dayCellWidth = useMemo(() => (isMobile ? (compactMode ? 28 : 40) : (compactMode ? 60 : 80)), [isMobile, compactMode]);
+  const propertyColumnWidth = useMemo(() => (isMobile ? (compactMode ? 80 : 100) : (compactMode ? 200 : 250)), [isMobile, compactMode]);
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -187,9 +188,13 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
           <Button variant="outline" size="icon" onClick={goToNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setCompactMode((v) => !v)} className="ml-1">
+            {compactMode ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">{compactMode ? 'Large' : 'Compact'}</span>
+          </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-4 overflow-x-auto">
+      <CardContent className="p-4 w-full max-w-full overflow-hidden">
         {(loadingTasks || loadingRoomTypes) && reservations.length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Skeleton className="h-48 w-full" />

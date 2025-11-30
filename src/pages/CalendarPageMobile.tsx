@@ -14,6 +14,7 @@ import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { getOverrides } from '@/lib/price-override-api';
 import { addDays, format, startOfDay, isAfter, isSameDay } from 'date-fns';
 import { useSession } from "@/components/SessionContextProvider";
+import EcowattBadge from "@/components/EcowattBadge";
 
 interface Reservation {
   id: string;
@@ -160,6 +161,9 @@ const CalendarPageMobile: React.FC = () => {
 
   return (
     <div className="container mx-auto p-2 space-y-4 max-w-full overflow-hidden">
+      <div className="mb-3">
+        <EcowattBadge />
+      </div>
       <Card>
         <CardHeader className="p-3">
           <div className="flex items-center justify-between">

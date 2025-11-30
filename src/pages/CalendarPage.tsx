@@ -261,6 +261,9 @@ const CalendarPage: React.FC = () => {
     return (
       <MainLayout>
         <div className="container mx-auto py-6 px-2 sm:px-4 max-w-full overflow-hidden">
+          <div className="mb-4">
+            <EcowattBadge />
+          </div>
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -336,6 +339,9 @@ const CalendarPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-6">
+        <div className="mb-4">
+          <EcowattBadge />
+        </div>
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold">Calendrier</h1>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">

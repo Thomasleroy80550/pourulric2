@@ -52,6 +52,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
   const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
   const [compactMode, setCompactMode] = useState(false);
+  const [slimMode, setSlimMode] = useState(false);
   const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
 
   const loadHousekeepingTasks = async () => {
@@ -114,8 +115,15 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const dayCellWidth = useMemo(() => (isMobile ? (compactMode ? 28 : 40) : (compactMode ? 60 : 80)), [isMobile, compactMode]);
-  const propertyColumnWidth = useMemo(() => (isMobile ? (compactMode ? 80 : 100) : (compactMode ? 200 : 250)), [isMobile, compactMode]);
+  const dayCellWidth = useMemo(() => {
+    if (slimMode) return isMobile ? 24 : 36; // Ultra compact
+    return isMobile ? (compactMode ? 28 : 40) : (compactMode ? 60 : 80);
+  }, [isMobile, compactMode, slimMode]);
+
+  const propertyColumnWidth = useMemo(() => {
+    if (slimMode) return isMobile ? 70 : 160; // Ultra compact
+    return isMobile ? (compactMode ? 80 : 100) : (compactMode ? 200 : 250);
+  }, [isMobile, compactMode, slimMode]);
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -192,6 +200,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
             {compactMode ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
             <span className="ml-2 hidden sm:inline">{compactMode ? 'Large' : 'Compact'}</span>
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setSlimMode((v) => !v)} className="ml-1">
+            {slimMode ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">{slimMode ? 'Standard' : 'Ultra'}</span>
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="p-4 w-full max-w-full overflow-hidden">
@@ -228,6 +240,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   key={index}
                   className={cn(
                     "grid-cell header-cell text-center font-semibold border-b border-r",
+                    slimMode && "text-[10px]",
                     isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
                   )}
                   style={{ width: `${dayCellWidth}px` }}
@@ -243,6 +256,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   key={`day-name-${index}`}
                   className={cn(
                     "grid-cell header-cell text-center text-xs text-gray-500 border-b border-r",
+                    slimMode && "text-[9px]",
                     isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
                   )}
                   style={{ width: `${dayCellWidth}px` }}

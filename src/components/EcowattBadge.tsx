@@ -12,28 +12,42 @@ import { cn } from "@/lib/utils";
 type LevelVariant = "success" | "warning" | "destructive" | "secondary";
 
 function normalizeLevel(item: any): { levelName: "green" | "orange" | "red" | "unknown"; variant: LevelVariant } {
-  const raw = item?.value ?? item?.level ?? item?.signal_level ?? item?.color ?? item?.couleur ?? "";
+  const candidates = [
+    item?.value,
+    item?.level,
+    item?.signal_level,
+    item?.dvalue,
+    item?.day_value,
+    item?.niveau,
+    item?.color,
+    item?.couleur,
+    item?.status,
+    item?.detail?.value,
+    item?.detail?.level,
+    item?.detail?.color,
+  ];
+  const raw: any = candidates.find((v) => v !== undefined && v !== null) ?? "";
   const asStr = String(raw).toLowerCase();
 
-  // Map texte
-  if (asStr.includes("vert") || asStr.includes("green") || raw === 1 || asStr === "1") {
+  // verts
+  if (asStr.includes("vert") || asStr.includes("green") || raw === 1 || asStr === "1" || asStr === "g" || asStr === "ok") {
     return { levelName: "green", variant: "success" };
   }
-  if (asStr.includes("orange") || raw === 2 || asStr === "2") {
+  // orange / jaune
+  if (asStr.includes("orange") || asStr.includes("yellow") || raw === 2 || asStr === "2" || asStr === "y") {
     return { levelName: "orange", variant: "warning" };
   }
-  if (asStr.includes("rouge") || asStr.includes("red") || raw === 3 || asStr === "3") {
+  // rouge (incl. niveau 3/4)
+  if (asStr.includes("rouge") || asStr.includes("red") || raw === 3 || asStr === "3" || raw === 4 || asStr === "4" || asStr === "r") {
     return { levelName: "red", variant: "destructive" };
   }
-  // Parfois Ecowatt a un niveau "très rouge" (4) – on l'assimile à rouge
-  if (raw === 4 || asStr === "4") {
-    return { levelName: "red", variant: "destructive" };
-  }
-  return { levelName: "unknown", variant: "secondary" };
+
+  // Par défaut: pas d'alerte => vert (PowerSense Predict)
+  return { levelName: "green", variant: "success" };
 }
 
 function getDateString(item: any): string | null {
-  const d = item?.date ?? item?.jour ?? item?.start_date ?? item?.startDate ?? null;
+  const d = item?.date ?? item?.jour ?? item?.day ?? item?.start_date ?? item?.startDate ?? null;
   if (typeof d === "string") return d;
   return null;
 }

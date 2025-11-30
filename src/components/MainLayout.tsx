@@ -63,7 +63,6 @@ import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new consta
 import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
-import EcowattBadge from './EcowattBadge';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -416,9 +415,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Button variant="ghost" size="icon" onClick={() => setIsWhatsNewOpen(true)}>
                 <Gift className="h-5 w-5" />
               </Button>
-              <div className="hidden md:block">
-                <EcowattBadge />
-              </div>
+              
+              {/* REMOVED: EcowattBadge dans le header (visible uniquement sur la page Calendrier désormais) */}
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -3,7 +3,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut, Minimize2, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
@@ -51,8 +51,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   const [bookingToEdit, setBookingToEdit] = useState<KrossbookingReservation | null>(null);
 
   const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
-  const [compactMode, setCompactMode] = useState(false);
-  const [slimMode, setSlimMode] = useState(true);
+  // Vue Ultra uniquement
+  const slimMode = true;
   const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
 
   const loadHousekeepingTasks = async () => {
@@ -115,15 +115,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
     setCurrentMonth(addMonths(currentMonth, 1));
   };
 
-  const dayCellWidth = useMemo(() => {
-    if (slimMode) return isMobile ? 24 : 36; // Ultra compact
-    return isMobile ? (compactMode ? 28 : 40) : (compactMode ? 60 : 80);
-  }, [isMobile, compactMode, slimMode]);
-
-  const propertyColumnWidth = useMemo(() => {
-    if (slimMode) return isMobile ? 70 : 160; // Ultra compact
-    return isMobile ? (compactMode ? 80 : 100) : (compactMode ? 200 : 250);
-  }, [isMobile, compactMode, slimMode]);
+  // Largeurs fixes de la vue Ultra
+  const dayCellWidth = useMemo(() => (isMobile ? 24 : 36), [isMobile]);
+  const propertyColumnWidth = useMemo(() => (isMobile ? 70 : 160), [isMobile]);
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -196,14 +190,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
           <Button variant="outline" size="icon" onClick={goToNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setCompactMode((v) => !v)} className="ml-1">
-            {compactMode ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-            <span className="ml-2 hidden sm:inline">{compactMode ? 'Large' : 'Compact'}</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setSlimMode((v) => !v)} className="ml-1">
-            {slimMode ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-            <span className="ml-2 hidden sm:inline">{slimMode ? 'Standard' : 'Ultra'}</span>
-          </Button>
+          {/* REMOVED: boutons de bascule Compact/Ultra (vue Ultra forcée) */}
         </div>
       </CardHeader>
       <CardContent className="p-4 w-full max-w-full overflow-hidden">

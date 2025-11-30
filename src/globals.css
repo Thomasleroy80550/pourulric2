@@ -881,3 +881,24 @@ body.noel::after {
   50%  { transform: translateX(12px); }
   100% { transform: translateX(0); }
 }
+
+/* Evite le scroll horizontal global */
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Empêche l'extension horizontale de l'app */
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Optionnel: limite l'élan de scroll horizontal pour une meilleure UX */
+html, body {
+  overscroll-behavior-x: contain;
+}
+
+/* REMARQUE:
+   Le calendrier conserve son scroll horizontal interne via CardContent (overflow-x-auto),
+   la vue Planning reste intacte, mais la page ne s'étend plus horizontalement. */

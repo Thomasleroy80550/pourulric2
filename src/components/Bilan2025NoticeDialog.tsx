@@ -27,6 +27,16 @@ const Bilan2025NoticeDialog: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const handler = () => {
+      if (isInNoticeWindow()) {
+        setOpen(true);
+      }
+    };
+    window.addEventListener('open-bilan-2025-notice', handler);
+    return () => window.removeEventListener('open-bilan-2025-notice', handler);
+  }, []);
+
   const handleClose = () => {
     setOpen(false);
     localStorage.setItem(STORAGE_KEY, "1");

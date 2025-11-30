@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle } from "lucide-react"; 
+import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays } from "lucide-react"; 
 import {
   ResponsiveContainer,
   PieChart,
@@ -64,10 +64,20 @@ const DONUT_CATEGORIES = [
   { name: 'Autre', color: '#6b7280' },
 ];
 
+// Fenêtre d'affichage pour la notif Bilan 2025
+const BILAN_2025_STORAGE_KEY = "bilan2025_notice_dismissed";
+const isInBilan2025Window = () => {
+  const now = new Date();
+  const start = new Date(2025, 0, 4); // 4 janvier 2025
+  const end = new Date(2025, 2, 1, 23, 59, 59); // 1er mars 2025 23:59:59
+  return now >= start && now <= end;
+};
+
 const DashboardPage = () => {
   const { profile } = useSession();
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+  const [showBilanNotice, setShowBilanNotice] = useState(false);
 
   const [activityData, setActivityData] = useState(
     DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))
@@ -117,6 +127,23 @@ const DashboardPage = () => {
   const [todoTasks, setTodoTasks] = useState<TodoTask[]>([]); // Type mis à jour
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(BILAN_2025_STORAGE_KEY);
+    if (!dismissed && isInBilan2025Window()) {
+      setShowBilanNotice(true);
+    }
+  }, []);
+
+  const handleDismissBilanNotice = () => {
+    setShowBilanNotice(false);
+    localStorage.setItem(BILAN_2025_STORAGE_KEY, "1");
+  };
+
+  const handleOpenBilanPopup = () => {
+    // Ouvre la popup globale
+    window.dispatchEvent(new Event('open-bilan-2025-notice'));
+  };
 
   const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
     setDialogChartData(data);
@@ -437,7 +464,45 @@ const DashboardPage = () => {
       <div className="container mx-auto px-2 sm:px-4 py-6 overflow-x-hidden">
         <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
-        {/* REMOVED: Centre de notifications (déplacé dans 'Mes actions requises') */}
+        
+        {/* Notif box BILAN 2025 */}
+        {showBilanNotice && (
+          <Card className="mb-6 border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-sm">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5 text-amber-600" />
+                BILAN 2025
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="text-sm sm:text-base">
+                  <span className="inline-flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-amber-700 dark:text-amber-200" />
+                    Disponible entre le 4 janvier et le 1er mars.
+                  </span>
+                  <p className="mt-1 text-xs sm:text-sm text-amber-900 dark:text-amber-200">
+                    Accédez à vos relevés dans la section Finances.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link to="/finances">
+                    <Button variant="outline" className="border-amber-300 text-amber-900 hover:bg-amber-100">
+                      Voir mes relevés
+                    </Button>
+                  </Link>
+                  <Button variant="outline" onClick={handleOpenBilanPopup} className="border-amber-300 text-amber-900 hover:bg-amber-100">
+                    Plus d'infos
+                  </Button>
+                  <Button variant="ghost" onClick={handleDismissBilanNotice} className="text-amber-900">
+                    Masquer
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* To-Do List Card */}
         <div className="mt-6">
           <Card id="tour-todo-list" className="shadow-md">

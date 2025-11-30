@@ -52,7 +52,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
 
   const [krossbookingRoomTypes, setKrossbookingRoomTypes] = useState<KrossbookingRoomType[]>([]);
   const [compactMode, setCompactMode] = useState(false);
-  const [slimMode, setSlimMode] = useState(false);
+  const [slimMode, setSlimMode] = useState(true);
   const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
 
   const loadHousekeepingTasks = async () => {
@@ -269,10 +269,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               {userRooms.map((room, roomIndex) => (
                 <React.Fragment key={room.id}>
                   {/* Property Name Cell */}
-                  <div className="grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2"
+                  <div className={cn("grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2", slimMode ? "text-xs" : "text-sm")}
                     style={{ gridRow: `${3 + roomIndex}` }}>
                     <Home className="h-4 w-4 mr-2 text-gray-500" />
-                    <span className="font-medium text-sm truncate">
+                    <span className={cn("font-medium truncate", slimMode ? "text-xs" : "text-sm")}>
                       {room.room_name}
                     </span>
                   </div>
@@ -382,6 +382,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                       const barClasses = cn(
                         `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm transition-opacity`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
+                        slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
                         {
                           'rounded-full': isSingleDayStay,
                           'rounded-l-full': isArrivalDayVisible && !isSingleDayStay,

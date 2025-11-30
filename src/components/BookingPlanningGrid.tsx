@@ -175,7 +175,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   };
 
   return (
-    <Card className="shadow-md">
+    <Card className="shadow-md max-w-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg font-semibold">Planning des Réservations</CardTitle>
         <div className="flex items-center space-x-2">

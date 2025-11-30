@@ -882,17 +882,23 @@ body.noel::after {
   100% { transform: translateX(0); }
 }
 
-/* Evite le scroll horizontal global */
+/* Empêche le scroll horizontal global et l'extension de la page */
 html, body {
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: contain;
+}
+
+/* Contient l'app à la largeur de l'écran */
+#root, #app {
+  max-width: 100vw;
   overflow-x: hidden;
 }
 
-/* Empêche l'extension horizontale de l'app */
-#root {
-  max-width: 100%;
-  overflow-x: hidden;
-}
+/* REMARQUE:
+   Le scroll horizontal reste disponible à l'intérieur du wrapper
+   overflow-x-auto du planning, la page elle-même ne s'étire plus. */
 
 /* Optionnel: limite l'élan de scroll horizontal pour une meilleure UX */
 html, body {

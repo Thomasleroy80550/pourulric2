@@ -216,8 +216,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
           <div className="w-full max-w-full overflow-x-auto">
             <div className="grid-container" style={{
-              gridTemplateColumns: `minmax(${propertyColumnWidth}px, 0.5fr) repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
-              minWidth: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
+              gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
+              width: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
               gridAutoRows: '40px',
               position: 'relative',
             }}>

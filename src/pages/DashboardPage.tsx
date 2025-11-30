@@ -44,7 +44,6 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
-import NewsFeedPublic from "@/components/NewsFeedPublic";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -490,10 +489,7 @@ const DashboardPage = () => {
           </Card>
         </div>
 
-        {/* Bloc Nouveautés (public) */}
-        <div className="mt-6">
-          <NewsFeedPublic />
-        </div>
+        {/* REMOVED: Bloc Nouveautés (public) qui affichait <NewsFeedPublic /> */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
           {/* Bilan Financier Card */}

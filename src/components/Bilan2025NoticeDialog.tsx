@@ -29,9 +29,7 @@ const Bilan2025NoticeDialog: React.FC = () => {
 
   useEffect(() => {
     const handler = () => {
-      if (isInNoticeWindow()) {
-        setOpen(true);
-      }
+      setOpen(true);
     };
     window.addEventListener('open-bilan-2025-notice', handler);
     return () => window.removeEventListener('open-bilan-2025-notice', handler);

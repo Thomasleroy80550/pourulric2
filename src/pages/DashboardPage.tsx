@@ -130,7 +130,7 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const dismissed = localStorage.getItem(BILAN_2025_STORAGE_KEY);
-    if (!dismissed && isInBilan2025Window()) {
+    if (!dismissed) {
       setShowBilanNotice(true);
     }
   }, []);

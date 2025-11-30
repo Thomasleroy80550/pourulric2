@@ -63,6 +63,7 @@ import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new consta
 import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
+import Bilan2025NoticeDialog from './Bilan2025NoticeDialog';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -584,6 +585,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       />
       <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
       <SnowfallOverlay />
+      <Bilan2025NoticeDialog />
     </div>
   );
 };

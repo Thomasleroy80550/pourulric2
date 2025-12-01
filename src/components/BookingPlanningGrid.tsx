@@ -266,8 +266,52 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               gridAutoRows: '40px',
               position: 'relative',
             }}>
+              {/* Today vertical highlight overlay (only when current month is displayed) */}
+              {
+                (() => {
+                  const now = new Date();
+                  if (now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear()) {
+                    const idx = daysInMonth.findIndex((d) => isSameDay(d, now));
+                    if (idx !== -1) {
+                      const left = propertyColumnWidth + idx * dayCellWidth;
+                      return (
+                        <div
+                          className="pointer-events-none absolute top-0 bottom-0 z-[4] border-x border-blue-400/40 bg-blue-200/10 dark:bg-blue-500/10"
+                          style={{ left: `${left}px`, width: `${dayCellWidth}px` }}
+                        />
+                      );
+                    }
+                  }
+                  return null;
+                })()
+              }
+              {/* Current week band highlight (only when current month is displayed) */}
+              {
+                (() => {
+                  const now = new Date();
+                  if (now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear()) {
+                    const dow = now.getDay(); // 0=Sun,1=Mon,...6=Sat
+                    const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+                    const mondayOfWeek = subDays(now, daysSinceMonday);
+                    const mondayIndex = daysInMonth.findIndex((d) => isSameDay(d, mondayOfWeek));
+                    if (mondayIndex !== -1) {
+                      const endIndex = Math.min(mondayIndex + 6, daysInMonth.length - 1);
+                      const left = propertyColumnWidth + mondayIndex * dayCellWidth;
+                      const width = (endIndex - mondayIndex + 1) * dayCellWidth;
+                      return (
+                        <div
+                          className="pointer-events-none absolute top-0 bottom-0 z-[3] bg-emerald-200/8 dark:bg-emerald-500/8 border-x border-emerald-400/30"
+                          style={{ left: `${left}px`, width: `${width}px` }}
+                        />
+                      );
+                    }
+                  }
+                  return null;
+                })()
+              }
+              
               {/* Header Row 0: Week numbers (shown on Mondays) */}
-              <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
+              <div className="grid-cell header-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-r col-span-1"></div>
               {daysInMonth.map((day, index) => (
                 <div
                   key={`week-${index}`}
@@ -284,7 +328,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               ))}
 
               {/* Header Row 1: Empty cell + Day numbers */}
-              <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
+              <div className="grid-cell header-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-r col-span-1"></div>
               {daysInMonth.map((day, index) => (
                 <div
                   key={index}
@@ -303,7 +347,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               ))}
 
               {/* Header Row 2: Empty cell + Day names */}
-              <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
+              <div className="grid-cell header-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-r col-span-1"></div>
               {daysInMonth.map((day, index) => (
                 <div
                   key={`day-name-${index}`}

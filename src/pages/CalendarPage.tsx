@@ -22,6 +22,7 @@ import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import { addDays, format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
+import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
@@ -366,9 +367,10 @@ const CalendarPage: React.FC = () => {
         </div>
         
         <Tabs defaultValue="monthly" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="monthly">Vue Mensuelle</TabsTrigger>
             <TabsTrigger value="yearly">Vue 12 Mois</TabsTrigger>
+            <TabsTrigger value="v2">Vue V2 (compact)</TabsTrigger>
           </TabsList>
           <TabsContent value="monthly" className="mt-6">
             <BookingPlanningGrid 
@@ -383,6 +385,15 @@ const CalendarPage: React.FC = () => {
             <TwelveMonthView 
               userRooms={userRooms}
               reservations={reservations}
+            />
+          </TabsContent>
+          <TabsContent value="v2" className="mt-6">
+            <BookingPlanningGridV2
+              userRooms={userRooms}
+              reservations={reservations}
+              onReservationChange={handleReservationChange}
+              profile={profile}
+              refreshTrigger={refreshTrigger}
             />
           </TabsContent>
         </Tabs>

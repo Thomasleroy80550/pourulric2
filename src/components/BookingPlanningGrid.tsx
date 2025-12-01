@@ -262,6 +262,26 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               gridAutoRows: '40px',
               position: 'relative',
             }}>
+              {/* Today vertical highlight overlay (only when current month is displayed) */}
+              {
+                (() => {
+                  const now = new Date();
+                  if (now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear()) {
+                    const idx = daysInMonth.findIndex((d) => isSameDay(d, now));
+                    if (idx !== -1) {
+                      const left = propertyColumnWidth + idx * dayCellWidth;
+                      return (
+                        <div
+                          className="pointer-events-none absolute top-0 bottom-0 z-[4] border-x border-blue-400/40 bg-blue-200/10 dark:bg-blue-500/10"
+                          style={{ left: `${left}px`, width: `${dayCellWidth}px` }}
+                        />
+                      );
+                    }
+                  }
+                  return null;
+                })()
+              }
+
               {/* Header Row 1: Empty cell + Day numbers */}
               <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
               {daysInMonth.map((day, index) => (
@@ -326,7 +346,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                             : isWeekendDay(day)
                               ? 'bg-slate-100 dark:bg-slate-900/60'
                               : 'bg-gray-50 dark:bg-gray-800',
-                          isMonday(day) && "border-l-2 border-slate-300"
+                          isMonday(day) && "border-l-2 border-slate-300",
+                          "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}
                         style={{ width: `${dayCellWidth}px`, gridRow: `${3 + roomIndex}` }}
                       >

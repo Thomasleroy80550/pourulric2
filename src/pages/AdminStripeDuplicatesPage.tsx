@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertTriangle } from "lucide-react";
@@ -20,6 +21,13 @@ type StripeTransfer = {
   destination?: string; // connected account id
   created?: number | string; // timestamp (s) ou ISO
   description?: string | null;
+};
+
+type StripeAccount = {
+  id: string;
+  email?: string;
+  business_profile?: { name?: string };
+  settings?: { dashboard?: { display_name?: string } };
 };
 
 type DuplicateGroup = {
@@ -37,27 +45,53 @@ const AdminStripeDuplicatesPage: React.FC = () => {
   const [data, setData] = useState<StripeTransfer[] | null>(null);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<StripeAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+  const [manualAccountId, setManualAccountId] = useState<string>("");
+
+  const effectiveAccountId = selectedAccountId || manualAccountId;
 
   const fetchTransfers = async () => {
     setFetching(true);
     setError(null);
-    const { data: resp, error } = await supabase.functions.invoke("list-stripe-transfers", {
-      body: { limit: 1000 },
-    });
-    if (error) {
-      setError(error.message ?? "Erreur d’invocation de list-stripe-transfers");
+    if (!effectiveAccountId) {
+      setError("Veuillez sélectionner ou saisir un compte Stripe (account_id).");
       setFetching(false);
       return;
     }
-    // Certaines fonctions renvoient data dans resp.data
-    const transfers: StripeTransfer[] = Array.isArray(resp?.data) ? resp.data : (Array.isArray(resp) ? resp : []);
+    const { data: resp, error } = await supabase.functions.invoke("list-stripe-transfers", {
+      body: { account_id: effectiveAccountId },
+    });
+    if (error) {
+      setError(error.message ?? "Erreur d'invocation de list-stripe-transfers");
+      setFetching(false);
+      return;
+    }
+    const transfers: StripeTransfer[] = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
     setData(transfers);
     setFetching(false);
   };
 
+  const fetchAccounts = async () => {
+    setError(null);
+    const { data: resp, error } = await supabase.functions.invoke("list-stripe-accounts", {
+      body: { limit: 100 },
+    });
+    if (error) {
+      // Ne bloque pas la page; laisse la saisie manuelle
+      console.warn("Erreur list-stripe-accounts:", error.message);
+      return;
+    }
+    const list: StripeAccount[] = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
+    setAccounts(list);
+    if (list.length > 0) {
+      setSelectedAccountId(list[0].id);
+    }
+  };
+
   useEffect(() => {
     if (!loading && profile?.role === "admin") {
-      fetchTransfers();
+      fetchAccounts();
     }
   }, [loading, profile?.role]);
 
@@ -131,7 +165,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
           for (let j = i + 1; j < sorted.length; j++) {
             const b = sorted[j];
             if (b.createdMs - a.createdMs <= msWindow) {
-              // Ajouter ces éléments s’ils ne sont pas déjà dans le bucket
+              // Ajouter ces éléments s'ils ne sont pas déjà dans le bucket
               if (!bucket.find(x => x.id === a.g.id)) bucket.push(a.g);
               if (!bucket.find(x => x.id === b.g.id)) bucket.push(b.g);
             } else {
@@ -151,7 +185,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
       }
     }
 
-    // Fusionner et dédupliquer les groupes par contenu (clé+ensemble d’ids)
+    // Fusionner et dédupliquer les groupes par contenu (clé+ensemble d'ids)
     const sig = (grp: DuplicateGroup) =>
       `${grp.key}|${grp.reason}|${grp.transfers.map(t => t.id).sort().join(",")}`;
     const uniqueMap = new Map<string, DuplicateGroup>();
@@ -181,6 +215,37 @@ const AdminStripeDuplicatesPage: React.FC = () => {
           <CardContent>
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col">
+                <label className="text-sm text-muted-foreground">Compte Stripe</label>
+                {accounts.length > 0 ? (
+                  <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="Sélectionner un compte" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((acc) => {
+                        const label =
+                          acc.settings?.dashboard?.display_name ||
+                          acc.business_profile?.name ||
+                          acc.email ||
+                          acc.id;
+                        return (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    placeholder="Saisir account_id (acct_...)"
+                    value={manualAccountId}
+                    onChange={(e) => setManualAccountId(e.target.value)}
+                    className="w-64"
+                  />
+                )}
+              </div>
+              <div className="flex flex-col">
                 <label className="text-sm text-muted-foreground">Fenêtre (jours)</label>
                 <Input
                   type="number"
@@ -205,6 +270,11 @@ const AdminStripeDuplicatesPage: React.FC = () => {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Actualiser
               </Button>
+              {accounts.length === 0 && (
+                <Button variant="ghost" onClick={fetchAccounts}>
+                  Charger les comptes
+                </Button>
+              )}
               {error && (
                 <div className="flex items-center text-destructive text-sm">
                   <AlertTriangle className="h-4 w-4 mr-1" />

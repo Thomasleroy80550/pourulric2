@@ -446,7 +446,9 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       return byId || byName;
                     })
                     .map((reservation) => {
-                      if (reservation.status === 'CANC') return null;
+                      // Filtre robuste: toute forme d'annulation contenant 'CANC'
+                      const status = (reservation.status || '').toString().toUpperCase();
+                      if (status.includes('CANC')) return null;
 
                       const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
                       const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
@@ -473,10 +475,10 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
                       if (isSingleDayStay) {
                         calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4);
-                        calculatedWidth = dayCellWidth / 2;
+                        calculatedWidth = Math.max(8, dayCellWidth / 2); // largeur mini pour rester visible
                       } else {
                         calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
-                        calculatedWidth = (endIndex - startIndex) * dayCellWidth;
+                        calculatedWidth = Math.max(8, (endIndex - startIndex) * dayCellWidth); // largeur mini
                       }
 
                       const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';

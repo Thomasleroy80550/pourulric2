@@ -198,13 +198,13 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   return (
     <Card className="shadow-md max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
-      <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-pink-600 text-white">
+      <CardHeader className="relative flex flex-row items-center justify-between bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-pink-600 text-white">
         <CardTitle className="text-lg font-semibold">Planning Studio 2026</CardTitle>
         <div className="flex items-center space-x-2">
           <Button variant="secondary" size="icon" onClick={goToPreviousMonth} className="bg-white/20 hover:bg-white/30 text-white">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-medium text-lg drop-shadow-sm">
+          <span className="font-extrabold text-lg drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-white to-fuchsia-200 tracking-tight">
             {format(currentMonth, 'MMMM yyyy', { locale: fr })}
           </span>
           <Button variant="secondary" size="icon" onClick={goToNextMonth} className="bg-white/20 hover:bg-white/30 text-white">
@@ -215,9 +215,11 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             <span className="ml-2 hidden sm:inline">Aujourd'hui</span>
           </Button>
         </div>
+        {/* Shine discret sur le header */}
+        <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 45%)' }} />
       </CardHeader>
 
-      <CardContent className="p-4 w-full max-w-full overflow-hidden bg-slate-50 dark:bg-gray-900">
+      <CardContent className="relative p-4 w-full max-w-full overflow-hidden bg-slate-50 dark:bg-gray-900">
         {/* Overlay de fond aurora (discret) */}
         <div className="absolute inset-0 aurora-background opacity-35 pointer-events-none -z-0" />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/25 via-transparent to-slate-900/10 pointer-events-none -z-0" />
@@ -242,12 +244,12 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
-          <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-lg">
+          <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-xl">
             {/* Scroll shadows */}
             <div className="pointer-events-none absolute inset-y-0 left-0 w-6 z-[6] bg-gradient-to-r from-black/10 to-transparent dark:from-white/10" />
             <div className="pointer-events-none absolute inset-y-0 right-0 w-6 z-[6] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10" />
 
-            <div className="grid-container relative" style={{
+            <div className="grid-container relative rounded-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm" style={{
               gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
               width: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
               gridAutoRows: '40px',
@@ -266,7 +268,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       return (
                         <div
                           className="pointer-events-none absolute top-0 bottom-0 z-[4] border-x border-blue-400/40 bg-blue-200/10 dark:bg-blue-500/10"
-                          style={{ left: `${left}px`, width: `${dayCellWidth}px`, animation: 'pulse-glow 2s ease-in-out infinite' }}
+                          style={{ left: `${left}px`, width: `${dayCellWidth}px`, animation: 'pulse-glow 3s ease-in-out infinite' }}
                         />
                       );
                     }
@@ -480,7 +482,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
-                        'border border-white/20 dark:border-black/20 shadow-sm hover:shadow-md hover:brightness-100 transition-transform hover:-translate-y-[1px]'
+                        'border border-white/20 dark:border-black/20 shadow-md hover:shadow-lg hover:brightness-105 transition-transform hover:-translate-y-[1px]'
                       );
 
                       return (
@@ -507,7 +509,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                               onClick={() => handleReservationClick(reservation)}
                             >
                               {/* Effet glossy léger */}
-                              <div className="absolute inset-0 pointer-events-none opacity-25" style={{ backgroundImage: 'linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.06))' }} />
+                              <div className="absolute inset-0 pointer-events-none opacity-25" style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%)' }} />
                               {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                               {isSingleDayStay && <Sparkles className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
 

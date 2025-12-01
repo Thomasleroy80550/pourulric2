@@ -84,6 +84,7 @@ import ElectricityConsumptionPage from "./pages/ElectricityConsumptionPage";
 import ElectricityServiceLanding from "./pages/ElectricityServiceLanding";
 import PowerSenseLandingFull from "./pages/PowerSenseLandingFull";
 import Marvel2026Landing from "./pages/Marvel2026Landing";
+import AdminStripeDuplicatesPage from "./pages/AdminStripeDuplicatesPage";
 
 const queryClient = new QueryClient();
 
@@ -131,6 +132,7 @@ function App() {
                   <Route path="/admin/stripe-match" element={<AdminStripeMatchPage />} /> {/* New route */}
                   <Route path="/admin/hello-keys-stats" element={<AdminHelloKeysStatsPage />} /> {/* New route */}
                   <Route path="/admin/stripe-transfers" element={<AdminStripeTransfersPage />} /> {/* New route */}
+                  <Route path="/admin/stripe-duplicates" element={<AdminStripeDuplicatesPage />} /> {/* New route */}
                   <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}
                   <Route path="/admin/manual-stats" element={<AdminManualStatsPage />} /> {/* New route */}
                   <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}

@@ -56,6 +56,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [hoveredColumnIndex, setHoveredColumnIndex] = useState<number | null>(null);
 
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
@@ -265,7 +266,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               width: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
               gridAutoRows: '40px',
               position: 'relative',
-            }}>
+            }}
+              onMouseLeave={() => setHoveredColumnIndex(null)}
+            >
               {/* Today vertical highlight overlay (only when current month is displayed) */}
               {
                 (() => {
@@ -310,6 +313,19 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 })()
               }
               
+              {/* Hovered column guideline */}
+              {
+                hoveredColumnIndex !== null ? (
+                  <div
+                    className="pointer-events-none absolute top-0 bottom-0 z-[2] bg-slate-200/10 dark:bg-slate-700/10 border-x border-slate-300/40"
+                    style={{
+                      left: `${propertyColumnWidth + hoveredColumnIndex * dayCellWidth}px`,
+                      width: `${dayCellWidth}px`,
+                    }}
+                  />
+                ) : null
+              }
+              
               {/* Header Row 0: Week numbers (shown on Mondays) */}
               <div className="grid-cell header-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-r col-span-1"></div>
               {daysInMonth.map((day, index) => (
@@ -319,9 +335,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     "grid-cell header-cell text-center text-[11px] sm:text-xs text-gray-500 border-b border-r",
                     isMonday(day) && "font-medium",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-300/80 dark:bg-blue-600/80 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
+                    isSameDay(day, new Date()) && "bg-blue-300/80 dark:bg-blue-600/80 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
+                    hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
                   )}
                   style={{ width: `${dayCellWidth}px` }}
+                  onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
                   {isMonday(day) ? `S ${getISOWeek(day)}` : ""}
                 </div>
@@ -338,9 +356,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300",
                     isMonday(day) && "border-l-2 border-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
+                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
+                    hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
                   )}
                   style={{ width: `${dayCellWidth}px` }}
+                  onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
                   {format(day, 'dd', { locale: fr })}
                 </div>
@@ -357,9 +377,11 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
                     isMonday(day) && "border-l-2 border-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
+                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
+                    hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
                   )}
                   style={{ width: `${dayCellWidth}px` }}
+                  onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
                   {format(day, 'EEE', { locale: fr })}
                 </div>
@@ -398,6 +420,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                           "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}
                         style={{ width: `${dayCellWidth}px`, gridRow: `${4 + roomIndex}` }}
+                        onMouseEnter={() => setHoveredColumnIndex(dayIndex)}
                       >
                         {/* Housekeeping Tasks Icon */}
                         {tasksForThisDay.length > 0 && (

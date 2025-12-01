@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut, CalendarDays } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
@@ -54,6 +54,8 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   // Vue Ultra uniquement
   const slimMode = true;
   const [loadingRoomTypes, setLoadingRoomTypes] = useState<boolean>(true);
+
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
@@ -118,6 +120,38 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   // Largeurs fixes de la vue Ultra
   const dayCellWidth = useMemo(() => (isMobile ? 24 : 36), [isMobile]);
   const propertyColumnWidth = useMemo(() => (isMobile ? 70 : 160), [isMobile]);
+
+  const scrollToToday = () => {
+    if (!wrapperRef.current) return;
+    const now = new Date();
+    // Ne recentre que si on affiche le mois courant
+    if (now.getMonth() !== currentMonth.getMonth() || now.getFullYear() !== currentMonth.getFullYear()) return;
+    const index = daysInMonth.findIndex((d) => isSameDay(d, now));
+    if (index === -1) return;
+    const targetLeft = propertyColumnWidth + index * dayCellWidth - (wrapperRef.current.clientWidth / 2);
+    wrapperRef.current.scrollLeft = Math.max(0, targetLeft);
+  };
+
+  const goToToday = () => {
+    setCurrentMonth(new Date());
+    // Le scroll se fera au prochain render via l'effet lié aux jours du mois
+  };
+
+  // Auto-scroll vers aujourd'hui quand le mois affiché change
+  useEffect(() => {
+    scrollToToday();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [daysInMonth, propertyColumnWidth, dayCellWidth]);
+
+  // Navigation clavier: flèches gauche/droite pour changer de mois
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') goToPreviousMonth();
+      if (e.key === 'ArrowRight') goToNextMonth();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [currentMonth]);
 
   const getTaskIcon = (status: string) => {
     switch (status.toLowerCase()) {
@@ -190,6 +224,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
           <Button variant="outline" size="icon" onClick={goToNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Button variant="outline" size="sm" onClick={goToToday} className="ml-1">
+            <CalendarDays className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Aujourd'hui</span>
+          </Button>
           {/* REMOVED: boutons de bascule Compact/Ultra (vue Ultra forcée) */}
         </div>
       </CardHeader>
@@ -213,7 +251,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
-          <div className="w-full max-w-full overflow-x-auto">
+          <div ref={wrapperRef} className="w-full max-w-full overflow-x-auto">
             <div className="grid-container" style={{
               gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
               width: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,

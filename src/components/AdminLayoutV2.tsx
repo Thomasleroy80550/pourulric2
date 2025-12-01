@@ -19,6 +19,7 @@ import {
   Settings,
   ArrowLeft,
   CircleUser,
+  AlertTriangle,
 } from "lucide-react";
 
 type NavItem = {
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { label: "Clients", icon: Users, to: "/admin-v2/users" },
   { label: "CRM", icon: Briefcase, to: "/admin/crm" },
   { label: "Relevés", icon: FileText, to: "/admin/statements" },
+  { label: "Doublons Stripe", icon: AlertTriangle, to: "/admin/stripe-duplicates" },
   { label: "Marketplace", icon: ShoppingBag, to: "/admin/marketplace" },
   { label: "Paramètres", icon: Settings, to: "/admin/settings" },
 ];

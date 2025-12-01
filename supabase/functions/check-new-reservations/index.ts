@@ -97,6 +97,21 @@ async function sendCancellationEmail(profile: UserProfile, reservation: Krossboo
   }
 }
 
+// Helper: insère une notification ciblée pour un utilisateur
+async function insertNotification(userId: string, message: string, link?: string) {
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .insert({
+      user_id: userId,
+      message,
+      link: link ?? '/bookings',
+    });
+
+  if (error) {
+    console.error('Erreur lors de la création de la notification:', error.message);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -189,6 +204,12 @@ serve(async (req) => {
             if (storedStatus !== 'CANC' && currentReservation.status === 'CANC' && profile.notify_cancellation_email) {
               console.log(`-> Condition d'annulation remplie. Envoi de l'email.`);
               await sendCancellationEmail(profile, currentReservation);
+              // Notification ciblée (annulation)
+              await insertNotification(
+                profile.id,
+                `Annulation de réservation: ${currentReservation.property_name} (${currentReservation.guest_name}, arrivée ${currentReservation.check_in_date})`,
+                '/bookings'
+              );
             }
           }
         } else {
@@ -196,6 +217,12 @@ serve(async (req) => {
           if (currentReservation.status !== 'CANC' && profile.notify_new_booking_email) {
             console.log(`-> Condition de nouvelle réservation remplie. Envoi de l'email.`);
             await sendNewBookingEmail(profile, currentReservation);
+            // Notification ciblée (nouvelle réservation)
+            await insertNotification(
+              profile.id,
+              `Nouvelle réservation: ${currentReservation.property_name} (${currentReservation.guest_name}, ${currentReservation.check_in_date} → ${currentReservation.check_out_date}, ${currentReservation.amount})`,
+              '/calendar'
+            );
           }
         }
 

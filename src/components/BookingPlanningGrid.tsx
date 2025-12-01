@@ -210,6 +210,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
     }
   };
 
+  // Helpers pour style des jours
+  const isWeekendDay = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
+  const isMonday = (d: Date) => d.getDay() === 1;
+
   return (
     <Card className="shadow-md max-w-full overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -266,7 +270,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   className={cn(
                     "grid-cell header-cell text-center font-semibold border-b border-r",
                     slimMode && "text-[10px]",
-                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
+                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300",
+                    isMonday(day) && "border-l-2 border-slate-300",
+                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
                   )}
                   style={{ width: `${dayCellWidth}px` }}
                 >
@@ -282,7 +288,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   className={cn(
                     "grid-cell header-cell text-center text-xs text-gray-500 border-b border-r",
                     slimMode && "text-[9px]",
-                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
+                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
+                    isMonday(day) && "border-l-2 border-slate-300",
+                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
                   )}
                   style={{ width: `${dayCellWidth}px` }}
                 >
@@ -294,7 +302,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
               {userRooms.map((room, roomIndex) => (
                 <React.Fragment key={room.id}>
                   {/* Property Name Cell */}
-                  <div className={cn("grid-cell property-name-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-r border-b flex items-center px-2", slimMode ? "text-xs" : "text-sm")}
+                  <div className={cn("grid-cell property-name-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-r border-b flex items-center px-2", slimMode ? "text-xs" : "text-sm")}
                     style={{ gridRow: `${3 + roomIndex}` }}>
                     <Home className="h-4 w-4 mr-2 text-gray-500" />
                     <span className={cn("font-medium truncate", slimMode ? "text-xs" : "text-sm")}>
@@ -313,7 +321,12 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                         key={`${room.id}-${format(day, 'yyyy-MM-dd')}-bg`}
                         className={cn(
                           `grid-cell border-b border-r relative flex flex-col justify-center items-center`,
-                          isSameDay(day, new Date()) ? 'bg-blue-200 dark:bg-blue-700 border-3 border-blue-600 dark:border-blue-300' : 'bg-gray-50 dark:bg-gray-800'
+                          isSameDay(day, new Date())
+                            ? 'bg-blue-200 dark:bg-blue-700 border-3 border-blue-600 dark:border-blue-300 ring-1 ring-blue-400'
+                            : isWeekendDay(day)
+                              ? 'bg-slate-100 dark:bg-slate-900/60'
+                              : 'bg-gray-50 dark:bg-gray-800',
+                          isMonday(day) && "border-l-2 border-slate-300"
                         )}
                         style={{ width: `${dayCellWidth}px`, gridRow: `${3 + roomIndex}` }}
                       >
@@ -408,6 +421,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                         `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} shadow-sm transition-opacity`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
+                        'border border-white/20 dark:border-black/20 hover:shadow-md hover:brightness-95 transition-transform hover:-translate-y-[1px]',
                         {
                           'rounded-full': isSingleDayStay,
                           'rounded-l-full': isArrivalDayVisible && !isSingleDayStay,
@@ -455,9 +469,9 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                             <p>Chambre: {reservation.property_name}</p>
                             <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
                             <p>{numberOfNights} nuit(s)</p>
-                            <p>Statut: {channelInfo.name}</p> {/* Display the descriptive name */}
+                            <p>Statut: {channelInfo.name}</p>
                             <p>Montant: {reservation.amount}</p>
-                            <p>Canal: {reservation.channel_identifier || 'N/A'}</p> {/* Show original channel if available */}
+                            <p>Canal: {reservation.channel_identifier || 'N/A'}</p>
                           </TooltipContent>
                         </Tooltip>
                       );

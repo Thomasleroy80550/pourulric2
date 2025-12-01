@@ -31,6 +31,21 @@ type StripeAccount = {
 const IGNORED_ACCOUNT_IDS = new Set<string>(['acct_1OSm0IQpTpGBiu0y'.trim().toLowerCase()]);
 const normalizeId = (id?: string) => (id ?? '').trim().toLowerCase();
 
+// Helper: extraire un tableau de transferts quel que soit le format retourné par l'Edge Function
+function unwrapTransfers(invokeData: any): StripeTransfer[] {
+  if (!invokeData) return [];
+  // Supabase invoke retourne { data, error }; on veut la partie data
+  const payload = invokeData;
+  // Cas 1: payload est déjà un array
+  if (Array.isArray(payload)) return payload;
+  // Cas 2: payload.data est un array
+  if (Array.isArray(payload?.data)) return payload.data;
+  // Cas 3: payload.data.data est un array (nested)
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  // Sinon, rien
+  return [];
+}
+
 // AJOUT: persistance locale
 const STORAGE_KEYS = {
   params: 'stripe_dup_params',
@@ -57,7 +72,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
     setAccountsLoaded(0);
     setTransfersLoaded(0);
 
-    // 1) Charger les comptes Stripe
+    // 1) Charger tous les comptes
     const { data: accResp, error: accErr } = await supabase.functions.invoke("list-stripe-accounts", {
       body: { limit: 200 },
     });
@@ -67,8 +82,6 @@ const AdminStripeDuplicatesPage: React.FC = () => {
       return;
     }
     const accList: StripeAccount[] = Array.isArray(accResp) ? accResp : (Array.isArray(accResp?.data) ? accResp.data : []);
-
-    // FILTRE: ignorer les comptes dans la liste spéciale
     const filteredAccList = accList.filter((acc) => !IGNORED_ACCOUNT_IDS.has(normalizeId(acc.id)));
 
     setAccounts(filteredAccList);
@@ -79,25 +92,23 @@ const AdminStripeDuplicatesPage: React.FC = () => {
       return;
     }
 
-    // 2) Pour chaque compte, charger ses transferts
+    // 2) Charger les transferts de chaque compte (unwrapping robuste)
     const allTransfers: StripeTransfer[] = [];
     const results = await Promise.allSettled(
-      filteredAccList.map((acc) =>
-        supabase.functions.invoke("list-stripe-transfers", { body: { account_id: acc.id } })
-      )
+      filteredAccList.map((acc) => supabase.functions.invoke("list-stripe-transfers", { body: { account_id: acc.id } }))
     );
 
     for (const r of results) {
       if (r.status === "fulfilled") {
-        const resp = r.value?.data;
-        const transfers: StripeTransfer[] = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
+        const transfers = unwrapTransfers(r.value?.data);
         if (Array.isArray(transfers) && transfers.length > 0) {
           allTransfers.push(...transfers);
         }
       }
+      // En cas d'échec pour un compte, on ignore (pas de blocage global)
     }
 
-    // FILTRE DE SÉCURITÉ: retirer tout transfert dont la destination est ignorée
+    // Filtre de sécurité: retirer tout transfert lié à un compte ignoré
     const filteredTransfers = allTransfers.filter((t) => !IGNORED_ACCOUNT_IDS.has(normalizeId(t.destination)));
 
     setTransfersLoaded(filteredTransfers.length);
@@ -105,14 +116,12 @@ const AdminStripeDuplicatesPage: React.FC = () => {
     const nowIso = new Date().toISOString();
     setLastAnalysisAt(nowIso);
 
-    // SAUVEGARDE: paramètres + résultats
+    // Persistance locale des résultats
     try {
       localStorage.setItem(STORAGE_KEYS.params, JSON.stringify({ daysWindow, minAmount }));
       localStorage.setItem(STORAGE_KEYS.results, JSON.stringify({ data: filteredTransfers, lastAnalysisAt: nowIso }));
       localStorage.setItem(STORAGE_KEYS.counts, JSON.stringify({ accountsLoaded: filteredAccList.length, transfersLoaded: filteredTransfers.length }));
-    } catch (_) {
-      // ignore quota errors
-    }
+    } catch {}
 
     setFetching(false);
   };
@@ -166,50 +175,45 @@ const AdminStripeDuplicatesPage: React.FC = () => {
     const minAmountCents = eurosToCents(minAmount);
     const createdToMs = (c?: number | string) => {
       if (!c) return 0;
-      if (typeof c === "number") {
-        // Stripe created est en secondes
-        return c * 1000;
-      }
+      if (typeof c === "number") return c * 1000; // seconds -> ms
       const d = new Date(c).getTime();
       return Number.isFinite(d) ? d : 0;
     };
     const msWindow = daysWindow * 24 * 60 * 60 * 1000;
 
-    // Filtrer et regrouper par destination + currency
-    const filtered = data.filter(t => {
-      const amt = typeof t.amount === "number" ? t.amount : 0;
-      return amt >= minAmountCents;
-    });
-
-    const byKey: Record<string, StripeTransfer[]> = {};
-    for (const t of filtered) {
-      const key = `${t.destination ?? "unknown"}|${(t.currency ?? "eur").toLowerCase()}`;
-      if (!byKey[key]) byKey[key] = [];
-      byKey[key].push(t);
-    }
+    // Filtrer par montant minimum
+    const filtered = data.filter(t => (typeof t.amount === "number" ? t.amount : 0) >= minAmountCents);
 
     const result: DuplicateGroup[] = [];
 
-    // Cas 1: doublons par même ID
-    for (const [key, list] of Object.entries(byKey)) {
-      const ids = new Map<string, StripeTransfer[]>();
-      for (const t of list) {
-        if (!ids.has(t.id)) ids.set(t.id, []);
-        ids.get(t.id)!.push(t);
-      }
-      const sameIdGroups = Array.from(ids.values()).filter(g => g.length > 1);
-      for (const g of sameIdGroups) {
+    // 1) Détection globale par même ID (ne dépend pas du compte)
+    const idMap = new Map<string, StripeTransfer[]>();
+    for (const t of filtered) {
+      const id = t.id;
+      if (!id) continue;
+      if (!idMap.has(id)) idMap.set(id, []);
+      idMap.get(id)!.push(t);
+    }
+    for (const group of idMap.values()) {
+      if (group.length > 1) {
         result.push({
-          key,
-          destination: g[0]?.destination,
-          currency: g[0]?.currency ?? "eur",
-          transfers: g,
+          key: "global",
+          destination: "Multiples",
+          currency: group[0]?.currency ?? "eur",
+          transfers: group,
           reason: "same_id",
         });
       }
     }
 
-    // Cas 2: doublons par même montant dans une fenêtre de temps
+    // 2) Détection par même montant dans la fenêtre, par destination+devise
+    const byKey: Record<string, StripeTransfer[]> = {};
+    for (const t of filtered) {
+      const key = `${normalizeId(t.destination)}|${(t.currency ?? "eur").toLowerCase()}`;
+      if (!byKey[key]) byKey[key] = [];
+      byKey[key].push(t);
+    }
+
     for (const [key, list] of Object.entries(byKey)) {
       // Grouper par montant
       const amounts = new Map<number, StripeTransfer[]>();
@@ -218,19 +222,19 @@ const AdminStripeDuplicatesPage: React.FC = () => {
         if (!amounts.has(amt)) amounts.set(amt, []);
         amounts.get(amt)!.push(t);
       }
+
       for (const group of amounts.values()) {
         if (group.length < 2) continue;
-        // Trier par date et repérer des paires proches
         const sorted = group
           .map(g => ({ g, createdMs: createdToMs(g.created) }))
           .sort((a, b) => a.createdMs - b.createdMs);
+
         const bucket: StripeTransfer[] = [];
         for (let i = 0; i < sorted.length; i++) {
           const a = sorted[i];
           for (let j = i + 1; j < sorted.length; j++) {
             const b = sorted[j];
             if (b.createdMs - a.createdMs <= msWindow) {
-              // Ajouter ces éléments s'ils ne sont pas déjà dans le bucket
               if (!bucket.find(x => x.id === a.g.id)) bucket.push(a.g);
               if (!bucket.find(x => x.id === b.g.id)) bucket.push(b.g);
             } else {
@@ -238,6 +242,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
             }
           }
         }
+
         if (bucket.length >= 2) {
           result.push({
             key,
@@ -250,7 +255,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
       }
     }
 
-    // Fusionner et dédupliquer les groupes par contenu (clé+ensemble d'ids)
+    // Dédupliquer les groupes (signature par contenu)
     const sig = (grp: DuplicateGroup) =>
       `${grp.key}|${grp.reason}|${grp.transfers.map(t => t.id).sort().join(",")}`;
     const uniqueMap = new Map<string, DuplicateGroup>();

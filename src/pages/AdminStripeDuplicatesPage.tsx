@@ -11,6 +11,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -78,14 +79,17 @@ const AdminStripeDuplicatesPage: React.FC = () => {
       body: { limit: 100 },
     });
     if (error) {
-      // Ne bloque pas la page; laisse la saisie manuelle
       console.warn("Erreur list-stripe-accounts:", error.message);
+      toast.error("Impossible de charger les comptes Stripe. Saisissez un account_id manuellement.");
       return;
     }
     const list: StripeAccount[] = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
     setAccounts(list);
     if (list.length > 0) {
       setSelectedAccountId(list[0].id);
+      toast.success(`Comptes chargés (${list.length}).`);
+    } else {
+      toast.warning("Aucun compte Stripe trouvé. Saisissez un account_id (acct_...) manuellement.");
     }
   };
 
@@ -237,14 +241,20 @@ const AdminStripeDuplicatesPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input
-                    placeholder="Saisir account_id (acct_...)"
-                    value={manualAccountId}
-                    onChange={(e) => setManualAccountId(e.target.value)}
-                    className="w-64"
-                  />
+                  <>
+                    <Input
+                      placeholder="Saisir account_id (acct_...)"
+                      value={manualAccountId}
+                      onChange={(e) => setManualAccountId(e.target.value)}
+                      className="w-64"
+                    />
+                    <span className="text-xs text-muted-foreground mt-1">
+                      Conseil: collez l'identifiant du compte Stripe (ex: acct_123…).
+                    </span>
+                  </>
                 )}
               </div>
+
               <div className="flex flex-col">
                 <label className="text-sm text-muted-foreground">Fenêtre (jours)</label>
                 <Input
@@ -266,15 +276,16 @@ const AdminStripeDuplicatesPage: React.FC = () => {
                   className="w-32"
                 />
               </div>
+
               <Button variant="outline" onClick={fetchTransfers} disabled={fetching}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Actualiser
               </Button>
-              {accounts.length === 0 && (
-                <Button variant="ghost" onClick={fetchAccounts}>
-                  Charger les comptes
-                </Button>
-              )}
+
+              <Button variant="secondary" onClick={fetchAccounts}>
+                Charger les comptes
+              </Button>
+
               {error && (
                 <div className="flex items-center text-destructive text-sm">
                   <AlertTriangle className="h-4 w-4 mr-1" />

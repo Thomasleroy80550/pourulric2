@@ -291,6 +291,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   className={cn(
                     "grid-cell header-cell text-center font-semibold border-b border-r",
                     slimMode && "text-[10px]",
+                    "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300",
                     isMonday(day) && "border-l-2 border-slate-300",
                     isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
@@ -309,6 +310,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                   className={cn(
                     "grid-cell header-cell text-center text-xs text-gray-500 border-b border-r",
                     slimMode && "text-[9px]",
+                    "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
                     isMonday(day) && "border-l-2 border-slate-300",
                     isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
@@ -336,17 +338,18 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                     const tasksForThisDay = housekeepingTasks.filter(task =>
                       isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && task.id_room.toString() === room.room_id
                     );
+                    const isStripe = roomIndex % 2 === 0;
 
                     return (
                       <div
                         key={`${room.id}-${format(day, 'yyyy-MM-dd')}-bg`}
                         className={cn(
-                          `grid-cell border-b border-r relative flex flex-col justify-center items-center`,
+                          "grid-cell border-b border-r relative flex flex-col justify-center items-center border-slate-200 dark:border-slate-700",
                           isSameDay(day, new Date())
-                            ? 'bg-blue-200 dark:bg-blue-700 border-3 border-blue-600 dark:border-blue-300 ring-1 ring-blue-400'
+                            ? "bg-blue-200 dark:bg-blue-700 border-3 border-blue-600 dark:border-blue-300 ring-1 ring-blue-400"
                             : isWeekendDay(day)
-                              ? 'bg-slate-100 dark:bg-slate-900/60'
-                              : 'bg-gray-50 dark:bg-gray-800',
+                              ? "bg-slate-100 dark:bg-slate-900/60"
+                              : (isStripe ? "bg-gray-50 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900/60"),
                           isMonday(day) && "border-l-2 border-slate-300",
                           "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}
@@ -477,7 +480,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                               {isSingleDayStay && <Sparkles className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
 
                               <span className="flex-grow text-center px-1 truncate">
-                                <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
+                                <span className="inline-flex items-center gap-1">
+                                  <span className={cn("inline-block w-2 h-2 rounded-full", channelInfo.bgColor)} />
+                                  <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
+                                </span>
                                 <span className="mr-1">{numberOfNights}n</span>
                                 <span className="mx-1">|</span>
                                 <span className="truncate">{reservation.guest_name}</span>
@@ -487,7 +493,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                             </div>
                           </TooltipTrigger>
                           <TooltipContent className="p-2 text-sm">
-                            <p className="font-bold">{reservation.guest_name}</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={cn("inline-block w-2 h-2 rounded-full", channelInfo.bgColor)} />
+                              <p className="font-bold">{reservation.guest_name}</p>
+                            </div>
                             <p>Chambre: {reservation.property_name}</p>
                             <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
                             <p>{numberOfNights} nuit(s)</p>

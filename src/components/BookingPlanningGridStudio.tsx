@@ -218,6 +218,10 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
       </CardHeader>
 
       <CardContent className="p-4 w-full max-w-full overflow-hidden bg-slate-50 dark:bg-gray-900">
+        {/* Overlay de fond aurora (discret) */}
+        <div className="absolute inset-0 aurora-background opacity-35 pointer-events-none -z-0" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/25 via-transparent to-slate-900/10 pointer-events-none -z-0" />
+        
         {(loadingTasks || loadingRoomTypes) && reservations.length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Skeleton className="h-48 w-full" />
@@ -262,7 +266,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       return (
                         <div
                           className="pointer-events-none absolute top-0 bottom-0 z-[4] border-x border-blue-400/40 bg-blue-200/10 dark:bg-blue-500/10"
-                          style={{ left: `${left}px`, width: `${dayCellWidth}px` }}
+                          style={{ left: `${left}px`, width: `${dayCellWidth}px`, animation: 'pulse-glow 2s ease-in-out infinite' }}
                         />
                       );
                     }
@@ -476,7 +480,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
-                        'border border-white/20 dark:border-black/20 shadow-sm hover:shadow-md hover:brightness-95 transition-transform hover:-translate-y-[1px]'
+                        'border border-white/20 dark:border-black/20 shadow-sm hover:shadow-md hover:brightness-100 transition-transform hover:-translate-y-[1px]'
                       );
 
                       return (
@@ -498,9 +502,12 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                                 borderRadius: isSingleDayStay
                                   ? 9999
                                   : undefined,
+                                position: 'relative'
                               }}
                               onClick={() => handleReservationClick(reservation)}
                             >
+                              {/* Effet glossy léger */}
+                              <div className="absolute inset-0 pointer-events-none opacity-25" style={{ backgroundImage: 'linear-gradient(to bottom, rgba(255,255,255,0.18), rgba(255,255,255,0.06))' }} />
                               {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                               {isSingleDayStay && <Sparkles className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
 
@@ -542,12 +549,15 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
         <div className="mt-8 p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
           <h3 className="text-md font-semibold mb-3">Légende des plateformes</h3>
           <div className="flex flex-wrap gap-3">
-            {Object.entries(channelColors).map(([key, value]) => (
-              <div key={key} className="flex items-center">
-                <span className={`w-4 h-4 rounded-full mr-2 ring-2 ring-white/10 ${value.bgColor}`}></span>
-                <span className="text-sm text-gray-700 dark:text-gray-300">{value.name}</span>
-              </div>
-            ))}
+            {Object.entries(channelColors).map(([key, value]) => {
+              const initial = value.name.charAt(0).toUpperCase();
+              return (
+                <div key={key} className="flex items-center">
+                  <span className={`legend-bubble mr-2 ${value.bgColor}`}>{initial}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{value.name}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </CardContent>

@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertTriangle } from "lucide-react";
@@ -26,9 +25,6 @@ type StripeTransfer = {
 
 type StripeAccount = {
   id: string;
-  email?: string;
-  business_profile?: { name?: string };
-  settings?: { dashboard?: { display_name?: string } };
 };
 
 type DuplicateGroup = {
@@ -47,55 +43,64 @@ const AdminStripeDuplicatesPage: React.FC = () => {
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<StripeAccount[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
-  const [manualAccountId, setManualAccountId] = useState<string>("");
+  const [accountsLoaded, setAccountsLoaded] = useState<number>(0);
+  const [transfersLoaded, setTransfersLoaded] = useState<number>(0);
 
-  const effectiveAccountId = selectedAccountId || manualAccountId;
-
-  const fetchTransfers = async () => {
+  // Récupère tous les comptes puis tous les transferts (tous comptes) et détecte les doublons globalement.
+  const fetchAllTransfers = async () => {
     setFetching(true);
     setError(null);
-    if (!effectiveAccountId) {
-      setError("Veuillez sélectionner ou saisir un compte Stripe (account_id).");
-      setFetching(false);
-      return;
-    }
-    const { data: resp, error } = await supabase.functions.invoke("list-stripe-transfers", {
-      body: { account_id: effectiveAccountId },
-    });
-    if (error) {
-      setError(error.message ?? "Erreur d'invocation de list-stripe-transfers");
-      setFetching(false);
-      return;
-    }
-    const transfers: StripeTransfer[] = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
-    setData(transfers);
-    setFetching(false);
-  };
+    setAccountsLoaded(0);
+    setTransfersLoaded(0);
 
-  const fetchAccounts = async () => {
-    setError(null);
-    const { data: resp, error } = await supabase.functions.invoke("list-stripe-accounts", {
-      body: { limit: 100 },
+    // 1) Charger les comptes Stripe
+    const { data: accResp, error: accErr } = await supabase.functions.invoke("list-stripe-accounts", {
+      body: { limit: 200 },
     });
-    if (error) {
-      console.warn("Erreur list-stripe-accounts:", error.message);
-      toast.error("Impossible de charger les comptes Stripe. Saisissez un account_id manuellement.");
+    if (accErr) {
+      setError(accErr.message ?? "Impossible de charger les comptes Stripe.");
+      setFetching(false);
       return;
     }
-    const list: StripeAccount[] = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
-    setAccounts(list);
-    if (list.length > 0) {
-      setSelectedAccountId(list[0].id);
-      toast.success(`Comptes chargés (${list.length}).`);
-    } else {
-      toast.warning("Aucun compte Stripe trouvé. Saisissez un account_id (acct_...) manuellement.");
+    const accList: StripeAccount[] = Array.isArray(accResp) ? accResp : (Array.isArray(accResp?.data) ? accResp.data : []);
+    setAccounts(accList);
+    setAccountsLoaded(accList.length);
+    if (accList.length === 0) {
+      setError("Aucun compte Stripe disponible.");
+      setFetching(false);
+      return;
     }
+
+    // 2) Pour chaque compte, charger ses transferts
+    const allTransfers: StripeTransfer[] = [];
+    const results = await Promise.allSettled(
+      accList.map((acc) =>
+        supabase.functions.invoke("list-stripe-transfers", { body: { account_id: acc.id } })
+      )
+    );
+
+    for (const r of results) {
+      if (r.status === "fulfilled") {
+        const resp = r.value?.data;
+        const transfers: StripeTransfer[] = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
+        if (Array.isArray(transfers) && transfers.length > 0) {
+          allTransfers.push(...transfers);
+        }
+      } else {
+        // On ignore les comptes en erreur, pour ne pas bloquer l'analyse globale
+        // Optionnel: collecter les erreurs si nécessaire
+      }
+    }
+
+    setTransfersLoaded(allTransfers.length);
+    setData(allTransfers);
+    setFetching(false);
   };
 
   useEffect(() => {
     if (!loading && profile?.role === "admin") {
-      fetchAccounts();
+      // Analyse automatique sur tous les comptes dès l'ouverture
+      fetchAllTransfers();
     }
   }, [loading, profile?.role]);
 
@@ -218,43 +223,15 @@ const AdminStripeDuplicatesPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap items-end gap-3">
-              <div className="flex flex-col">
-                <label className="text-sm text-muted-foreground">Compte Stripe</label>
-                {accounts.length > 0 ? (
-                  <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Sélectionner un compte" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.map((acc) => {
-                        const label =
-                          acc.settings?.dashboard?.display_name ||
-                          acc.business_profile?.name ||
-                          acc.email ||
-                          acc.id;
-                        return (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {label}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <>
-                    <Input
-                      placeholder="Saisir account_id (acct_...)"
-                      value={manualAccountId}
-                      onChange={(e) => setManualAccountId(e.target.value)}
-                      className="w-64"
-                    />
-                    <span className="text-xs text-muted-foreground mt-1">
-                      Conseil: collez l'identifiant du compte Stripe (ex: acct_123…).
-                    </span>
-                  </>
-                )}
+              {/* Infos de progression */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Comptes chargés:</span>
+                <Badge variant="secondary">{accountsLoaded}</Badge>
               </div>
-
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Transferts chargés:</span>
+                <Badge variant="outline">{transfersLoaded}</Badge>
+              </div>
               <div className="flex flex-col">
                 <label className="text-sm text-muted-foreground">Fenêtre (jours)</label>
                 <Input
@@ -276,16 +253,10 @@ const AdminStripeDuplicatesPage: React.FC = () => {
                   className="w-32"
                 />
               </div>
-
-              <Button variant="outline" onClick={fetchTransfers} disabled={fetching}>
+              <Button variant="outline" onClick={fetchAllTransfers} disabled={fetching}>
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Actualiser
+                Analyser tous les comptes
               </Button>
-
-              <Button variant="secondary" onClick={fetchAccounts}>
-                Charger les comptes
-              </Button>
-
               {error && (
                 <div className="flex items-center text-destructive text-sm">
                   <AlertTriangle className="h-4 w-4 mr-1" />

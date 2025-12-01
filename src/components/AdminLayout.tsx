@@ -35,7 +35,8 @@ import {
   PlugZap,
   CalendarDays,
   Snowflake,
-  Zap
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -99,6 +100,7 @@ const adminNavigationCategories = [
       { name: 'Transferts Stripe', href: '/admin/stripe-transfers', icon: ArrowRightLeft, description: 'Consulter les transferts Stripe.' },
       { name: 'Rapprochement Stripe', href: '/admin/stripe-match', icon: Link2, description: 'Lier les comptes Stripe aux utilisateurs.' },
       { name: 'Note de Relogement', href: '/admin/rehousing-note', icon: FileSymlink, description: 'Créer une note de relogement ou compensation.' },
+      { name: 'Doublons Stripe', href: '/admin/stripe-duplicates', icon: AlertTriangle, description: 'Détecter les virements potentiellement en double.' },
     ]
   },
   {

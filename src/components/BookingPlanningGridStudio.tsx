@@ -31,6 +31,9 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
   'UNKNOWN': { name: 'Autre', bgColor: 'bg-gray-600', textColor: 'text-white' },
 };
 
+// Helper: normaliser pour les comparaisons (évite les soucis de casse/espaces)
+const norm = (v?: string | number) => (v ?? '').toString().trim().toLowerCase();
+
 interface BookingPlanningGridStudioProps {
   refreshTrigger: number;
   userRooms: UserRoom[];
@@ -388,7 +391,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   {/* Background day cells */}
                   {daysInMonth.map((day, dayIndex) => {
                     const tasksForThisDay = housekeepingTasks.filter(task =>
-                      isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && task.id_room.toString() === room.room_id
+                      isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && norm(task.id_room) === norm(room.room_id)
                     );
                     const isStripe = roomIndex % 2 === 0;
 
@@ -436,7 +439,12 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
                   {/* Reservation Bars */}
                   {reservations
-                    .filter(res => res.property_name === room.room_name || res.krossbooking_room_id === room.room_id)
+                    .filter((res) => {
+                      // Correspondance robuste (évite les non-apparitions)
+                      const byId = norm(res.krossbooking_room_id) && norm(res.krossbooking_room_id) === norm(room.room_id);
+                      const byName = norm(res.property_name) && norm(res.property_name) === norm(room.room_name);
+                      return byId || byName;
+                    })
                     .map((reservation) => {
                       if (reservation.status === 'CANC') return null;
 
@@ -482,7 +490,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
-                        'border border-white/20 dark:border-black/20 shadow-md hover:shadow-lg hover:brightness-105 transition-transform hover:-translate-y-[1px]'
+                        'border border-white/20 dark:border-black/20 shadow-md hover:shadow-lg hover:brightness-105 transition-transform hover:-translate-y-[1px] rounded-md'
                       );
 
                       return (

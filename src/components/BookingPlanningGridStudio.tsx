@@ -224,8 +224,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
       <CardContent className="relative p-4 w-full max-w-full overflow-hidden bg-slate-50 dark:bg-gray-900">
         {/* Overlay de fond aurora (discret) */}
-        <div className="absolute inset-0 aurora-background opacity-35 pointer-events-none -z-0" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/25 via-transparent to-slate-900/10 pointer-events-none -z-0" />
+        <div className="absolute inset-0 aurora-background opacity-35 pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/25 via-transparent to-slate-900/10 pointer-events-none z-0" />
         
         {(loadingTasks || loadingRoomTypes) && reservations.length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -253,6 +253,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             <div className="pointer-events-none absolute inset-y-0 right-0 w-6 z-[6] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10" />
 
             <div className="grid-container relative rounded-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm" style={{
+              display: 'grid',
               gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
               width: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
               gridAutoRows: '40px',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min, getISOWeek } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -255,32 +255,33 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
-          <div ref={wrapperRef} className="w-full max-w-full overflow-x-auto">
+          <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto">
+            {/* Scroll shadows */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 z-[6] bg-gradient-to-r from-black/5 to-transparent dark:from-white/10" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 z-[6] bg-gradient-to-l from-black/5 to-transparent dark:from-white/10" />
+            
             <div className="grid-container" style={{
               gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
               width: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
               gridAutoRows: '40px',
               position: 'relative',
             }}>
-              {/* Today vertical highlight overlay (only when current month is displayed) */}
-              {
-                (() => {
-                  const now = new Date();
-                  if (now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear()) {
-                    const idx = daysInMonth.findIndex((d) => isSameDay(d, now));
-                    if (idx !== -1) {
-                      const left = propertyColumnWidth + idx * dayCellWidth;
-                      return (
-                        <div
-                          className="pointer-events-none absolute top-0 bottom-0 z-[4] border-x border-blue-400/40 bg-blue-200/10 dark:bg-blue-500/10"
-                          style={{ left: `${left}px`, width: `${dayCellWidth}px` }}
-                        />
-                      );
-                    }
-                  }
-                  return null;
-                })()
-              }
+              {/* Header Row 0: Week numbers (shown on Mondays) */}
+              <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
+              {daysInMonth.map((day, index) => (
+                <div
+                  key={`week-${index}`}
+                  className={cn(
+                    "grid-cell header-cell text-center text-[11px] sm:text-xs text-gray-500 border-b border-r",
+                    isMonday(day) && "font-medium",
+                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
+                    isSameDay(day, new Date()) && "bg-blue-300/80 dark:bg-blue-600/80 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500"
+                  )}
+                  style={{ width: `${dayCellWidth}px` }}
+                >
+                  {isMonday(day) ? `S ${getISOWeek(day)}` : ""}
+                </div>
+              ))}
 
               {/* Header Row 1: Empty cell + Day numbers */}
               <div className="grid-cell header-cell sticky left-0 z-10 bg-white dark:bg-gray-950 border-b border-r col-span-1"></div>
@@ -323,7 +324,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                 <React.Fragment key={room.id}>
                   {/* Property Name Cell */}
                   <div className={cn("grid-cell property-name-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-r border-b flex items-center px-2", slimMode ? "text-xs" : "text-sm")}
-                    style={{ gridRow: `${3 + roomIndex}` }}>
+                    style={{ gridRow: `${4 + roomIndex}` }}>
                     <Home className="h-4 w-4 mr-2 text-gray-500" />
                     <span className={cn("font-medium truncate", slimMode ? "text-xs" : "text-sm")}>
                       {room.room_name}
@@ -349,7 +350,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                           isMonday(day) && "border-l-2 border-slate-300",
                           "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}
-                        style={{ width: `${dayCellWidth}px`, gridRow: `${3 + roomIndex}` }}
+                        style={{ width: `${dayCellWidth}px`, gridRow: `${4 + roomIndex}` }}
                       >
                         {/* Housekeeping Tasks Icon */}
                         {tasksForThisDay.length > 0 && (
@@ -456,7 +457,7 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
                             <div
                               className={barClasses}
                               style={{
-                                gridRow: `${3 + roomIndex}`,
+                                gridRow: `${4 + roomIndex}`,
                                 left: `${calculatedLeft}px`,
                                 width: `${calculatedWidth}px`,
                                 height: '36px',

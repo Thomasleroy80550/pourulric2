@@ -27,13 +27,9 @@ type StripeAccount = {
   id: string;
 };
 
-type DuplicateGroup = {
-  key: string; // destination + currency
-  destination?: string;
-  currency?: string;
-  transfers: StripeTransfer[];
-  reason: "same_id" | "same_amount_window";
-};
+// AJOUT: liste d'IDs de comptes Stripe à ignorer (normalisés)
+const IGNORED_ACCOUNT_IDS = new Set<string>(['acct_1OSm0IQpTpGBiu0y'.trim().toLowerCase()]);
+const normalizeId = (id?: string) => (id ?? '').trim().toLowerCase();
 
 const AdminStripeDuplicatesPage: React.FC = () => {
   const { profile, loading } = useSession();
@@ -63,9 +59,13 @@ const AdminStripeDuplicatesPage: React.FC = () => {
       return;
     }
     const accList: StripeAccount[] = Array.isArray(accResp) ? accResp : (Array.isArray(accResp?.data) ? accResp.data : []);
-    setAccounts(accList);
-    setAccountsLoaded(accList.length);
-    if (accList.length === 0) {
+
+    // FILTRE: ignorer les comptes dans la liste spéciale
+    const filteredAccList = accList.filter((acc) => !IGNORED_ACCOUNT_IDS.has(normalizeId(acc.id)));
+
+    setAccounts(filteredAccList);
+    setAccountsLoaded(filteredAccList.length);
+    if (filteredAccList.length === 0) {
       setError("Aucun compte Stripe disponible.");
       setFetching(false);
       return;
@@ -74,7 +74,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
     // 2) Pour chaque compte, charger ses transferts
     const allTransfers: StripeTransfer[] = [];
     const results = await Promise.allSettled(
-      accList.map((acc) =>
+      filteredAccList.map((acc) =>
         supabase.functions.invoke("list-stripe-transfers", { body: { account_id: acc.id } })
       )
     );
@@ -86,14 +86,14 @@ const AdminStripeDuplicatesPage: React.FC = () => {
         if (Array.isArray(transfers) && transfers.length > 0) {
           allTransfers.push(...transfers);
         }
-      } else {
-        // On ignore les comptes en erreur, pour ne pas bloquer l'analyse globale
-        // Optionnel: collecter les erreurs si nécessaire
       }
     }
 
-    setTransfersLoaded(allTransfers.length);
-    setData(allTransfers);
+    // FILTRE DE SÉCURITÉ: retirer tout transfert dont la destination est ignorée
+    const filteredTransfers = allTransfers.filter((t) => !IGNORED_ACCOUNT_IDS.has(normalizeId(t.destination)));
+
+    setTransfersLoaded(filteredTransfers.length);
+    setData(filteredTransfers);
     setFetching(false);
   };
 

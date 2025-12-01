@@ -83,6 +83,7 @@ import AdminV2Users from "./pages/admin-v2/Users";
 import ElectricityConsumptionPage from "./pages/ElectricityConsumptionPage";
 import ElectricityServiceLanding from "./pages/ElectricityServiceLanding";
 import PowerSenseLandingFull from "./pages/PowerSenseLandingFull";
+import Marvel2026Landing from "./pages/Marvel2026Landing";
 
 const queryClient = new QueryClient();
 
@@ -151,6 +152,7 @@ function App() {
                   <Route path="/season-2026" element={<Season2026Page />} />
                   <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
                   <Route path="/powersense" element={<PowerSenseLandingFull />} />
+                  <Route path="/marvel-2026" element={<Marvel2026Landing />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

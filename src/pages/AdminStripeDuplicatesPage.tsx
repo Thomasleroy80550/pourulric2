@@ -31,6 +31,13 @@ type StripeAccount = {
 const IGNORED_ACCOUNT_IDS = new Set<string>(['acct_1OSm0IQpTpGBiu0y'.trim().toLowerCase()]);
 const normalizeId = (id?: string) => (id ?? '').trim().toLowerCase();
 
+// AJOUT: persistance locale
+const STORAGE_KEYS = {
+  params: 'stripe_dup_params',
+  results: 'stripe_dup_results',
+  counts: 'stripe_dup_counts',
+};
+
 const AdminStripeDuplicatesPage: React.FC = () => {
   const { profile, loading } = useSession();
   const [daysWindow, setDaysWindow] = useState<number>(7);
@@ -41,6 +48,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
   const [accounts, setAccounts] = useState<StripeAccount[]>([]);
   const [accountsLoaded, setAccountsLoaded] = useState<number>(0);
   const [transfersLoaded, setTransfersLoaded] = useState<number>(0);
+  const [lastAnalysisAt, setLastAnalysisAt] = useState<string | null>(null);
 
   // Récupère tous les comptes puis tous les transferts (tous comptes) et détecte les doublons globalement.
   const fetchAllTransfers = async () => {
@@ -94,13 +102,61 @@ const AdminStripeDuplicatesPage: React.FC = () => {
 
     setTransfersLoaded(filteredTransfers.length);
     setData(filteredTransfers);
+    const nowIso = new Date().toISOString();
+    setLastAnalysisAt(nowIso);
+
+    // SAUVEGARDE: paramètres + résultats
+    try {
+      localStorage.setItem(STORAGE_KEYS.params, JSON.stringify({ daysWindow, minAmount }));
+      localStorage.setItem(STORAGE_KEYS.results, JSON.stringify({ data: filteredTransfers, lastAnalysisAt: nowIso }));
+      localStorage.setItem(STORAGE_KEYS.counts, JSON.stringify({ accountsLoaded: filteredAccList.length, transfersLoaded: filteredTransfers.length }));
+    } catch (_) {
+      // ignore quota errors
+    }
+
     setFetching(false);
   };
 
+  // AU MONTAGE: charger depuis localStorage si disponible, sinon analyser
   useEffect(() => {
     if (!loading && profile?.role === "admin") {
-      // Analyse automatique sur tous les comptes dès l'ouverture
-      fetchAllTransfers();
+      const savedParams = localStorage.getItem(STORAGE_KEYS.params);
+      const savedResults = localStorage.getItem(STORAGE_KEYS.results);
+      const savedCounts = localStorage.getItem(STORAGE_KEYS.counts);
+
+      let hasCache = false;
+
+      if (savedParams) {
+        try {
+          const p = JSON.parse(savedParams);
+          if (typeof p?.daysWindow === 'number') setDaysWindow(p.daysWindow);
+          if (typeof p?.minAmount === 'number') setMinAmount(p.minAmount);
+        } catch {}
+      }
+      if (savedResults) {
+        try {
+          const r = JSON.parse(savedResults);
+          if (Array.isArray(r?.data)) {
+            setData(r.data);
+            hasCache = true;
+          }
+          if (typeof r?.lastAnalysisAt === 'string') {
+            setLastAnalysisAt(r.lastAnalysisAt);
+          }
+        } catch {}
+      }
+      if (savedCounts) {
+        try {
+          const c = JSON.parse(savedCounts);
+          if (typeof c?.accountsLoaded === 'number') setAccountsLoaded(c.accountsLoaded);
+          if (typeof c?.transfersLoaded === 'number') setTransfersLoaded(c.transfersLoaded);
+        } catch {}
+      }
+
+      if (!hasCache) {
+        // Pas de cache -> analyse automatique
+        fetchAllTransfers();
+      }
     }
   }, [loading, profile?.role]);
 
@@ -219,6 +275,11 @@ const AdminStripeDuplicatesPage: React.FC = () => {
             <CardTitle>Doublons de virements Stripe</CardTitle>
             <CardDescription>
               Détection des transferts potentiellement en double par compte connecté (ID identique, ou même montant dans une fenêtre de temps).
+              {lastAnalysisAt && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  Dernière analyse: {new Date(lastAnalysisAt).toLocaleString('fr-FR')}
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -232,6 +293,7 @@ const AdminStripeDuplicatesPage: React.FC = () => {
                 <span className="text-sm text-muted-foreground">Transferts chargés:</span>
                 <Badge variant="outline">{transfersLoaded}</Badge>
               </div>
+              {/* Paramètres conservés */}
               <div className="flex flex-col">
                 <label className="text-sm text-muted-foreground">Fenêtre (jours)</label>
                 <Input

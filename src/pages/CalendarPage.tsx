@@ -23,6 +23,7 @@ import { addDays, format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
+import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
@@ -367,10 +368,11 @@ const CalendarPage: React.FC = () => {
         </div>
         
         <Tabs defaultValue="monthly" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="monthly">Vue Mensuelle</TabsTrigger>
             <TabsTrigger value="yearly">Vue 12 Mois</TabsTrigger>
             <TabsTrigger value="v2">Vue V2 (compact)</TabsTrigger>
+            <TabsTrigger value="studio">Vue Studio (design)</TabsTrigger>
           </TabsList>
           <TabsContent value="monthly" className="mt-6">
             <BookingPlanningGrid 
@@ -394,6 +396,15 @@ const CalendarPage: React.FC = () => {
               onReservationChange={handleReservationChange}
               profile={profile}
               refreshTrigger={refreshTrigger}
+            />
+          </TabsContent>
+          <TabsContent value="studio" className="mt-6">
+            <BookingPlanningGridStudio 
+              refreshTrigger={refreshTrigger} 
+              userRooms={userRooms} 
+              reservations={reservations}
+              onReservationChange={handleReservationChange}
+              profile={profile}
             />
           </TabsContent>
         </Tabs>

@@ -125,83 +125,8 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
   };
 
   const handleFetchPrices = async () => {
-    if (activeRoomTypeIds.length === 0) {
-      setError("Aucune correspondance de type de chambre pour vos logements.");
-      return;
-    }
-
-    setLoadingPrices(true);
-    setError(null);
-    setPricesByType(new Map());
-
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-
-    // Helper: ne garder que les jours appartenant au mois courant
-    const isInCurrentMonth = (dateStr?: string) => {
-      if (!dateStr) return false;
-      const d = parseISO(dateStr);
-      if (Number.isNaN(d.getTime())) return false;
-      return d >= monthStart && d <= monthEnd;
-    };
-
-    // Découper le mois en segments de 10 jours pour couvrir 28/30/31 jours (limites d'API)
-    const segmentSize = 10;
-    const chunks: { from: Date; to: Date }[] = [];
-    let cur = monthStart;
-    while (cur <= monthEnd) {
-      const to = min([addDays(cur, segmentSize - 1), monthEnd]);
-      chunks.push({ from: cur, to });
-      cur = addDays(to, 1);
-    }
-
-    const entries: [number, Map<string, ChannelPriceItem>][] = [];
-
-    // Appeler l'edge function pour chaque type de chambre et chaque segment, puis fusionner
-    const results = await Promise.allSettled(
-      activeRoomTypeIds.map(async (typeId) => {
-        // Trouver id_rate pour ce type
-        const rid = ratesByType.get(typeId);
-        if (!rid) {
-          console.warn(`Aucun id_rate détecté pour type ${typeId}, on saute pour l'instant.`);
-          return { typeId, map: new Map<string, ChannelPriceItem>() };
-        }
-        const merged = new Map<string, ChannelPriceItem>();
-        for (const seg of chunks) {
-          const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
-            body: {
-              id_room_type: typeId,
-              id_rate: rid,
-              cod_channel: codChannel, // BE (fixé)
-              date_from: format(seg.from, "yyyy-MM-dd"),
-              date_to: format(seg.to, "yyyy-MM-dd"),
-              with_occupancies: false,
-            },
-          });
-          if (error) {
-            console.warn("Erreur krossbooking-get-prices:", error.message);
-            continue; // on poursuit avec les autres segments
-          }
-          // Unwrap robuste (data, data.data, tableaux)
-          const items = unwrapPrices(data);
-          items.forEach((it) => {
-            // Ne garder que les jours du mois courant et éviter les doublons
-            if (isInCurrentMonth(it.date) && !merged.has(it.date!)) {
-              merged.set(it.date!, it);
-            }
-          });
-        }
-        return { typeId, map: merged };
-      })
-    );
-
-    results.forEach((r) => {
-      if (r.status === "fulfilled") {
-        entries.push([r.value.typeId, r.value.map]);
-      }
-    });
-
-    setPricesByType(new Map(entries));
+    // Désactivation temporaire pour éviter tout effet de bord
+    setError("La vue des prix est temporairement en maintenance pour des raisons de sécurité.");
     setLoadingPrices(false);
   };
 

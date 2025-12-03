@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
+import PricePlanningGrid from '@/components/PricePlanningGrid';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
@@ -369,11 +370,12 @@ const CalendarPage: React.FC = () => {
         </div>
         
         <Tabs defaultValue="monthly" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="monthly">Vue Mensuelle</TabsTrigger>
             <TabsTrigger value="yearly">Vue 12 Mois</TabsTrigger>
             <TabsTrigger value="v2">Vue V2 (compact)</TabsTrigger>
             <TabsTrigger value="studio">Vue Studio (design)</TabsTrigger>
+            <TabsTrigger value="prices">Vue Prix</TabsTrigger>
           </TabsList>
           <TabsContent value="monthly" className="mt-6">
             <div className="flex items-center justify-end mb-3">
@@ -427,6 +429,9 @@ const CalendarPage: React.FC = () => {
               onReservationChange={handleReservationChange}
               profile={profile}
             />
+          </TabsContent>
+          <TabsContent value="prices" className="mt-6">
+            <PricePlanningGrid />
           </TabsContent>
         </Tabs>
       

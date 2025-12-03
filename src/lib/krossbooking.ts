@@ -103,6 +103,14 @@ export interface KrossbookingRoomType {
   }[];
 }
 
+export interface ChannelPriceAvailabilityItem {
+  date: string;              // yyyy-mm-dd
+  price?: number;            // prix du jour (si disponible)
+  closed?: boolean;          // fermé à la vente
+  restrictions?: Restrictions; // règles (min stay, closed on arrival, etc.)
+  occupancies?: { guests: number; price: number }[]; // prix par occupation si with_occupancies = true
+}
+
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 
 // Cache variables and durations
@@ -465,4 +473,54 @@ export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false):
     }
     throw error;
   }
+}
+
+export async function fetchChannelPricesAndAvailability(params: {
+  id_room_type: number;
+  id_rate: number;
+  cod_channel: string;
+  date_from: string; // yyyy-mm-dd
+  date_to: string;   // yyyy-mm-dd
+  id_property?: number;
+  with_occupancies?: boolean;
+}): Promise<ChannelPriceAvailabilityItem[]> {
+  const payload = {
+    id_room_type: params.id_room_type,
+    id_rate: params.id_rate,
+    cod_channel: params.cod_channel,
+    date_from: params.date_from,
+    date_to: params.date_to,
+    id_property: params.id_property,
+    with_occupancies: params.with_occupancies ?? false,
+  };
+
+  const data = await callKrossbookingProxy('channel_get_prices_and_availability', payload);
+
+  // La réponse peut varier; on normalise en une liste de jours
+  // Formats possibles observés: [{ date, price, closed, restrictions, occupancies }, ...]
+  if (Array.isArray(data)) {
+    return data.map((d: any) => ({
+      date: d.date || d.day || d.date_from || '',
+      price: typeof d.price === 'number' ? d.price : (d.price ? Number(d.price) : undefined),
+      closed: !!(d.closed ?? d.is_closed),
+      restrictions: d.restrictions,
+      occupancies: Array.isArray(d.occupancies) ? d.occupancies.map((o: any) => ({
+        guests: Number(o.guests ?? o.occupancy ?? 0),
+        price: Number(o.price ?? o.amount ?? 0),
+      })) : undefined,
+    })) as ChannelPriceAvailabilityItem[];
+  }
+
+  // En cas de structure différente (ex: data.days)
+  const days = Array.isArray(data?.days) ? data.days : [];
+  return days.map((d: any) => ({
+    date: d.date || '',
+    price: typeof d.price === 'number' ? d.price : (d.price ? Number(d.price) : undefined),
+    closed: !!(d.closed ?? d.is_closed),
+    restrictions: d.restrictions,
+    occupancies: Array.isArray(d.occupancies) ? d.occupancies.map((o: any) => ({
+      guests: Number(o.guests ?? o.occupancy ?? 0),
+      price: Number(o.price ?? o.amount ?? 0),
+    })) : undefined,
+  })) as ChannelPriceAvailabilityItem[];
 }

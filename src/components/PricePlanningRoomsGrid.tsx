@@ -21,8 +21,8 @@ type ChannelPriceItem = {
   occupancies?: { guests: number; price: number }[];
 };
 
-// Canal figé sur DIRECT (pas de mode OTA)
-const FIXED_CHANNEL = "DIRECT";
+// Canal figé sur BE
+const FIXED_CHANNEL = "BE";
 
 type Props = {
   userRooms: UserRoom[];
@@ -41,7 +41,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
   // id_rate auto-détecté et mémorisé
   const [defaultRateId, setDefaultRateId] = useState<number | null>(() => {
     const saved = localStorage.getItem("kb_default_rate_id");
-    return saved ? Number(saved) : null;
+    return saved ? Number(saved) : 1; // id_rate par défaut: 1
   });
 
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);

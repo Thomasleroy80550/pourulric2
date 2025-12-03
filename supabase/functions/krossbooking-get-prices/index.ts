@@ -147,7 +147,14 @@ serve(async (req) => {
     }
 
     const data = await response.json().catch(() => ({}))
-    // Retourner data brut, le client fait l'unwrapping
+    // LOG du corps de la réponse
+    console.log('[krossbooking-get-prices] Response body:', JSON.stringify(data))
+
+    // Normalisation et LOG nombre d'items
+    const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.days) ? data.days : []))
+    console.log('[krossbooking-get-prices] Items count:', Array.isArray(items) ? items.length : 0)
+
+    // Retour brut de l'API (le client s'occupe de l'unwrapping)
     return new Response(JSON.stringify({ data }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -60,7 +60,13 @@ async function callPrices(token: string, payload: any) {
       // Auth Bearer via get-token
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      // Ajout des identifiants dans le corps, comme attendu par certaines API Krossbooking
+      username: Deno.env.get('KROSSBOOKING_USERNAME'),
+      password: Deno.env.get('KROSSBOOKING_PASSWORD'),
+      id_hotel: Deno.env.get('KROSSBOOKING_HOTEL_ID'),
+    }),
   })
 
   console.log('[krossbooking-get-prices] HTTP status:', resp.status, resp.statusText)
@@ -141,7 +147,7 @@ serve(async (req) => {
     }
 
     const data = await response.json().catch(() => ({}))
-    // Retourner data brut, le client fait l’unwrapping
+    // Retourner data brut, le client fait l'unwrapping
     return new Response(JSON.stringify({ data }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

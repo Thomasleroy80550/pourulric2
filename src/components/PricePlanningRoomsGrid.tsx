@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, Tag, CircleSlash, Users, Info, Home, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addDays, min } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addDays, min, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { fetchKrossbookingRoomTypes, KrossbookingRoomType } from "@/lib/krossbooking";
 import { supabase } from "@/integrations/supabase/client";
@@ -128,6 +128,14 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
 
+    // Helper: ne garder que les jours appartenant au mois courant
+    const isInCurrentMonth = (dateStr?: string) => {
+      if (!dateStr) return false;
+      const d = parseISO(dateStr);
+      if (Number.isNaN(d.getTime())) return false;
+      return d >= monthStart && d <= monthEnd;
+    };
+
     // Découper le mois en segments de 10 jours pour couvrir 28/30/31 jours (limites d'API)
     const segmentSize = 10;
     const chunks: { from: Date; to: Date }[] = [];
@@ -162,8 +170,9 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
           // Unwrap robuste (data, data.data, tableaux)
           const items = unwrapPrices(data);
           items.forEach((it) => {
-            if (it.date && !merged.has(it.date)) {
-              merged.set(it.date, it);
+            // Ne garder que les jours du mois courant et éviter les doublons
+            if (isInCurrentMonth(it.date) && !merged.has(it.date!)) {
+              merged.set(it.date!, it);
             }
           });
         }

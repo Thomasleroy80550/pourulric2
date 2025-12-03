@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, Tag, CircleSlash, Users, Info, Home, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addDays, min } from "date-fns";
 import { fr } from "date-fns/locale";
 import { fetchKrossbookingRoomTypes, KrossbookingRoomType } from "@/lib/krossbooking";
 import { supabase } from "@/integrations/supabase/client";
@@ -125,33 +125,47 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     setError(null);
     setPricesByType(new Map());
 
-    const date_from = format(startOfMonth(currentMonth), "yyyy-MM-dd");
-    const date_to = format(endOfMonth(currentMonth), "yyyy-MM-dd");
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+
+    // Découper le mois en segments de 14 jours maximum pour couvrir tout le mois
+    const chunks: { from: Date; to: Date }[] = [];
+    let cur = monthStart;
+    while (cur <= monthEnd) {
+      const to = min([addDays(cur, 13), monthEnd]);
+      chunks.push({ from: cur, to });
+      cur = addDays(to, 1);
+    }
 
     const entries: [number, Map<string, ChannelPriceItem>][] = [];
 
+    // Appeler l'edge function pour chaque type de chambre et chaque segment, puis fusionner
     const results = await Promise.allSettled(
       activeRoomTypeIds.map(async (typeId) => {
-        const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
-          body: {
-            id_room_type: typeId,
-            id_rate: Number(defaultRateId),
-            cod_channel: codChannel,
-            date_from,
-            date_to,
-            with_occupancies: false,
-          },
-        });
-        if (error) {
-          console.warn("Erreur krossbooking-get-prices:", error.message);
-          return { typeId, map: new Map<string, ChannelPriceItem>() };
+        const merged = new Map<string, ChannelPriceItem>();
+        for (const seg of chunks) {
+          const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
+            body: {
+              id_room_type: typeId,
+              id_rate: Number(defaultRateId),
+              cod_channel: codChannel,
+              date_from: format(seg.from, "yyyy-MM-dd"),
+              date_to: format(seg.to, "yyyy-MM-dd"),
+              with_occupancies: false,
+            },
+          });
+          if (error) {
+            console.warn("Erreur krossbooking-get-prices:", error.message);
+            continue; // on poursuit avec les autres segments
+          }
+          const items = unwrapPrices(data);
+          items.forEach((it) => {
+            if (it.date && !merged.has(it.date)) {
+              merged.set(it.date, it);
+            }
+          });
         }
-        const items = unwrapPrices(data);
-        const map = new Map<string, ChannelPriceItem>();
-        items.forEach((it) => {
-          if (it.date) map.set(it.date, it);
-        });
-        return { typeId, map };
+        return { typeId, map: merged };
       })
     );
 

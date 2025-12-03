@@ -62,6 +62,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [hoveredColumnIndex, setHoveredColumnIndex] = useState<number | null>(null);
+  const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
   const [hasScrolledLeft, setHasScrolledLeft] = useState(false);
   const [hasScrolledRight, setHasScrolledRight] = useState(false);
 
@@ -298,8 +299,19 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
               gridAutoRows: '40px',
               position: 'relative',
             }}
-              onMouseLeave={() => setHoveredColumnIndex(null)}
+              onMouseLeave={() => { setHoveredColumnIndex(null); setHoveredRowIndex(null); }}
             >
+              {/* Row hover highlight (fluide) */}
+              {hoveredRowIndex !== null && (
+                <div
+                  className="pointer-events-none absolute left-0 right-0 z-[1] bg-slate-200/20 dark:bg-slate-700/15"
+                  style={{
+                    top: `${(3 + hoveredRowIndex) * 40}px`,
+                    height: `40px`,
+                  }}
+                />
+              )}
+
               {/* Today vertical highlight */}
               {
                 (() => {
@@ -420,12 +432,16 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
               {userRooms.map((room, roomIndex) => (
                 <React.Fragment key={room.id}>
                   {/* Property Name Cell */}
-                  <div className={cn(
-                    "grid-cell property-name-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-r border-b flex items-center px-2",
-                    slimMode ? "text-xs" : "text-sm",
-                    hasScrolledLeft && "shadow-[inset_-10px_0_12px_-10px_rgba(0,0,0,0.25)] dark:shadow-[inset_-10px_0_12px_-10px_rgba(255,255,255,0.2)]"
-                  )}
-                    style={{ gridRow: `${4 + roomIndex}` }}>
+                  <div
+                    className={cn(
+                      "grid-cell property-name-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-r border-b flex items-center px-2",
+                      slimMode ? "text-xs" : "text-sm",
+                      hasScrolledLeft && "shadow-[inset_-10px_0_12px_-10px_rgba(0,0,0,0.25)] dark:shadow-[inset_-10px_0_12px_-10px_rgba(255,255,255,0.2)]"
+                    )}
+                    style={{ gridRow: `${4 + roomIndex}` }}
+                    onMouseEnter={() => setHoveredRowIndex(roomIndex)}
+                    onMouseLeave={() => setHoveredRowIndex((prev) => (prev === roomIndex ? null : prev))}
+                  >
                     <Home className="h-4 w-4 mr-2 text-gray-500" />
                     <span className={cn("font-medium truncate", slimMode ? "text-xs" : "text-sm")}>
                       {room.room_name}
@@ -453,7 +469,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                           "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}
                         style={{ width: `${dayCellWidth}px`, gridRow: `${4 + roomIndex}` }}
-                        onMouseEnter={() => setHoveredColumnIndex(dayIndex)}
+                        onMouseEnter={() => { setHoveredColumnIndex(dayIndex); setHoveredRowIndex(roomIndex); }}
+                        onMouseLeave={() => setHoveredRowIndex((prev) => (prev === roomIndex ? null : prev))}
                       >
                         {tasksForThisDay.length > 0 && (
                           <Tooltip>

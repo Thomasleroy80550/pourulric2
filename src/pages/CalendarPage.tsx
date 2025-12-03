@@ -350,11 +350,38 @@ const CalendarPage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-8 px-4">
         <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Calendrier indisponible</AlertTitle>
-          <AlertDescription>
-            Un bug technique affecte l'affichage du planning. Nos équipes travaillent à un correctif.
-          </AlertDescription>
+          <div className="relative overflow-hidden rounded-xl border-0 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white shadow-lg p-5">
+            <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute -bottom-12 -right-10 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+
+            <div className="relative flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <AlertTitle className="text-xl font-semibold">Calendrier indisponible</AlertTitle>
+                <AlertDescription className="mt-1 text-white/90">
+                  Un bug technique affecte l'affichage du planning. Nos équipes travaillent à un correctif.
+                </AlertDescription>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    className="bg-white text-red-700 hover:bg-white/90"
+                    onClick={() => navigate("/")}
+                  >
+                    Retour à l'aperçu
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="bg-red-700/40 text-white border-white/20 hover:bg-red-700/50"
+                    onClick={() => navigate("/help")}
+                  >
+                    Centre d'aide
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </Alert>
 
         <Card className="p-6">

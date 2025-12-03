@@ -38,11 +38,8 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
   // Sélections
   // Canal figé
   const codChannel = FIXED_CHANNEL;
-  // id_rate auto-détecté et mémorisé
-  const [defaultRateId, setDefaultRateId] = useState<number | null>(() => {
-    const saved = localStorage.getItem("kb_default_rate_id");
-    return saved ? Number(saved) : 1; // id_rate par défaut: 1
-  });
+  // id_rate par type (détection auto + cache localStorage)
+  const [ratesByType, setRatesByType] = useState<Map<number, number>>(new Map());
 
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);
 
@@ -116,10 +113,6 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
       setError("Aucune correspondance de type de chambre pour vos logements.");
       return;
     }
-    if (!defaultRateId) {
-      setError("Impossible de déterminer le tarif (id_rate).");
-      return;
-    }
 
     setLoadingPrices(true);
     setError(null);
@@ -151,12 +144,18 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     // Appeler l'edge function pour chaque type de chambre et chaque segment, puis fusionner
     const results = await Promise.allSettled(
       activeRoomTypeIds.map(async (typeId) => {
+        // Trouver id_rate pour ce type
+        const rid = ratesByType.get(typeId);
+        if (!rid) {
+          console.warn(`Aucun id_rate détecté pour type ${typeId}, on saute pour l'instant.`);
+          return { typeId, map: new Map<string, ChannelPriceItem>() };
+        }
         const merged = new Map<string, ChannelPriceItem>();
         for (const seg of chunks) {
           const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
             body: {
               id_room_type: typeId,
-              id_rate: Number(defaultRateId),
+              id_rate: rid,
               cod_channel: codChannel, // BE (fixé)
               date_from: format(seg.from, "yyyy-MM-dd"),
               date_to: format(seg.to, "yyyy-MM-dd"),
@@ -190,54 +189,58 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     setLoadingPrices(false);
   };
 
-  // Détection automatique d'un id_rate utilisable (stocké en localStorage)
-  const detectDefaultRateId = async () => {
-    try {
-      // Essaye sur le premier type actif, avec une liste d'id_rate courants
-      const candidateTypeId = activeRoomTypeIds[0];
-      if (!candidateTypeId) return null;
-      const date_from = format(startOfMonth(currentMonth), "yyyy-MM-dd");
-      const date_to = format(endOfMonth(currentMonth), "yyyy-MM-dd");
-      const candidates = [1001, 1000, 1, 2, 3];
-      for (const rid of candidates) {
-        const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
-          body: {
-            id_room_type: candidateTypeId,
-            id_rate: rid,
-            cod_channel: codChannel,
-            date_from,
-            date_to,
-            with_occupancies: false,
-          },
-        });
-        if (!error) {
-          const items = unwrapPrices(data);
-          if (Array.isArray(items) && items.length > 0) {
-            setDefaultRateId(rid);
-            localStorage.setItem("kb_default_rate_id", String(rid));
-            return rid;
-          }
+  // Détection automatique d'un id_rate par type (cache localStorage par type)
+  const detectRateForType = async (typeId: number) => {
+    const cacheKey = `kb_rate_type_${typeId}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) return Number(cached);
+    
+    // tester une courte liste de candidats
+    const date_from = format(startOfMonth(currentMonth), "yyyy-MM-dd");
+    const date_to = format(addDays(startOfMonth(currentMonth), 6), "yyyy-MM-dd"); // petite fenêtre pour tester
+    const candidates = [1, 1001, 1000, 2, 3];
+    for (const rid of candidates) {
+      const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
+        body: {
+          id_room_type: typeId,
+          id_rate: rid,
+          cod_channel: codChannel,
+          date_from,
+          date_to,
+          with_occupancies: false,
+        },
+      });
+      if (!error) {
+        const items = unwrapPrices(data);
+        if (Array.isArray(items) && items.length > 0) {
+          localStorage.setItem(cacheKey, String(rid));
+          return rid;
         }
       }
-      return null;
-    } catch {
-      return null;
     }
+    return null;
   };
 
-  // Chargement auto: quand types chargés et rate détecté, récupère les prix; recharge à chaque changement de mois.
+  // Charger/mettre à jour ratesByType pour tous les types actifs, puis chercher les prix
   useEffect(() => {
     const run = async () => {
       if (activeRoomTypeIds.length === 0) return;
-      let rid = defaultRateId;
-      if (!rid) {
-        rid = await detectDefaultRateId();
+      const next = new Map(ratesByType);
+      let changed = false;
+      for (const typeId of activeRoomTypeIds) {
+        if (!next.get(typeId)) {
+          const rid = await detectRateForType(typeId);
+          if (rid) {
+            next.set(typeId, rid);
+            changed = true;
+          }
+        }
       }
-      if (rid) {
-        await handleFetchPrices();
-      } else {
-        setError("Veuillez configurer un id_rate par défaut (aucun tarif détecté).");
+      if (changed) {
+        setRatesByType(next);
       }
+      // Une fois les rates connus, charger les prix
+      await handleFetchPrices();
     };
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,12 +258,12 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        {/* Contrôles simplifiés: uniquement recharger si besoin */}
+        {/* Contrôles simplifiés: canal BE et tarifs auto par type */}
         <div className="flex items-center gap-2">
           <div className="text-xs text-muted-foreground px-2 py-1 border rounded">
-            Canal: DIRECT {defaultRateId ? `• Tarif: ${defaultRateId}` : ""}
+            Canal: BE • Tarifs auto
           </div>
-          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || !defaultRateId}>
+          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || activeRoomTypeIds.length === 0}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Recharger
           </Button>
@@ -392,7 +395,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
 
         {/* Action row */}
         <div className="mt-4 flex items-center gap-2">
-          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || !defaultRateId}>
+          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || activeRoomTypeIds.length === 0}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Recharger
           </Button>

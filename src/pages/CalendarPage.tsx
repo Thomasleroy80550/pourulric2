@@ -29,6 +29,9 @@ import PricePlanningRoomsGrid from '@/components/PricePlanningRoomsGrid';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const COOLDOWN_KEY = 'calendar_refresh_cooldown';
 const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
@@ -36,6 +39,7 @@ const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
 const CalendarPage: React.FC = () => {
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false);
   const [isAccessDeniedDialogOpen, setIsAccessDeniedDialogOpen] = useState(false);
@@ -341,134 +345,37 @@ const CalendarPage: React.FC = () => {
     );
   }
 
-  // Version desktop avec onglets
+  // Blocage technique du calendrier
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
-        <div className="mb-4">
-          <EcowattForecastBox />
-        </div>
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h1 className="text-3xl font-bold">Calendrier</h1>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center w-full sm:w-auto">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Réservation Propriétaire
-            </Button>
-            <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Configurer Prix & Restrictions
-            </Button>
-            <Button 
-              onClick={handleReservationChange} 
-              variant="outline" 
-              className="flex items-center w-full sm:w-auto"
-              disabled={Date.now() < cooldownEndTime}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {Date.now() < cooldownEndTime ? `Attendre ${remainingTime}` : 'Rafraîchir'}
-            </Button>
-          </div>
-        </div>
-        
-        <Tabs defaultValue="monthly" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="monthly">Vue Mensuelle</TabsTrigger>
-            <TabsTrigger value="yearly">Vue 12 Mois</TabsTrigger>
-            <TabsTrigger value="v2">Vue V2 (compact)</TabsTrigger>
-            <TabsTrigger value="studio">Vue Studio (design)</TabsTrigger>
-            <TabsTrigger value="prices">Vue Prix</TabsTrigger>
-          </TabsList>
-          <TabsContent value="monthly" className="mt-6">
-            <div className="flex items-center justify-end mb-3">
-              <Button
-                variant={monthlyDesignV2 ? "default" : "outline"}
-                onClick={() => setMonthlyDesignV2(v => !v)}
-                className="gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                {monthlyDesignV2 ? "Design V2 activé" : "Activer Design V2"}
+      <div className="container mx-auto py-8 px-4">
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Calendrier indisponible</AlertTitle>
+          <AlertDescription>
+            Un bug technique affecte l'affichage du planning. Nos équipes travaillent à un correctif.
+          </AlertDescription>
+        </Alert>
+
+        <Card className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg">Que puis-je faire ?</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Vous pouvez continuer à utiliser le reste de l'application en attendant la résolution.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => navigate("/")}>
+                Retour à l'aperçu
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/help")}>
+                Centre d'aide
               </Button>
             </div>
-            {monthlyDesignV2 ? (
-              <BookingPlanningGridStudio
-                refreshTrigger={refreshTrigger}
-                userRooms={userRooms}
-                reservations={reservations}
-                onReservationChange={handleReservationChange}
-                profile={profile}
-              />
-            ) : (
-              <BookingPlanningGrid
-                refreshTrigger={refreshTrigger}
-                userRooms={userRooms}
-                reservations={reservations}
-                onReservationChange={handleReservationChange}
-                profile={profile}
-              />
-            )}
-            {/* Planning prix DIRECT (affiché juste sous le planning standard) */}
-            <div className="mt-6">
-              <PricePlanningRoomsGrid userRooms={userRooms} />
-            </div>
-          </TabsContent>
-          <TabsContent value="yearly" className="mt-6">
-            <TwelveMonthView 
-              userRooms={userRooms}
-              reservations={reservations}
-            />
-          </TabsContent>
-          <TabsContent value="v2" className="mt-6">
-            <BookingPlanningGridV2
-              userRooms={userRooms}
-              reservations={reservations}
-              onReservationChange={handleReservationChange}
-              profile={profile}
-              refreshTrigger={refreshTrigger}
-            />
-          </TabsContent>
-          <TabsContent value="studio" className="mt-6">
-            <BookingPlanningGridStudio 
-              refreshTrigger={refreshTrigger} 
-              userRooms={userRooms} 
-              reservations={reservations}
-              onReservationChange={handleReservationChange}
-              profile={profile}
-            />
-          </TabsContent>
-          <TabsContent value="prices" className="mt-6">
-            <PricePlanningGrid />
-          </TabsContent>
-        </Tabs>
-      
+          </div>
+        </Card>
       </div>
-      <OwnerReservationDialog
-        isOpen={isOwnerReservationDialogOpen}
-        onOpenChange={setIsOwnerReservationDialogOpen}
-        userRooms={userRooms}
-        allReservations={reservations}
-        onReservationCreated={handleReservationChange}
-        profile={profile}
-      />
-      <PriceRestrictionDialog
-        isOpen={isPriceRestrictionDialogOpen}
-        onOpenChange={setIsPriceRestrictionDialogOpen}
-        userRooms={userRooms}
-        onSettingsSaved={handlePriceRestrictionSaved}
-      />
-      <AlertDialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Accès non autorisé</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vous n'avez pas la permission de configurer les prix et les restrictions. Veuillez contacter un administrateur pour demander l'accès à cette fonctionnalité.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setIsAccessDeniedDialogOpen(false)}>Compris</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </MainLayout>
   );
 };

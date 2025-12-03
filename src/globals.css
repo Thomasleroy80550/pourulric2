@@ -341,6 +341,35 @@ body.hell-effect {
   animation: hell-fire 2s ease infinite;
 }
 
+/* Animation douce de surbrillance pour la colonne du jour */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.65; }
+}
+
+/* Animation d'apparition vers le haut (utilisée sur les barres) */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 380ms ease-out both;
+}
+
+/* Bulle de légende (initiale du canal) */
+.legend-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;  /* 20px */
+  height: 1.25rem; /* 20px */
+  border-radius: 9999px;
+  color: #fff;
+  font-size: 0.625rem; /* 10px */
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18);
+}
+
 @keyframes pulse-glow {
   0%, 100% {
     filter: brightness(1) opacity(0.8);
@@ -803,17 +832,16 @@ body.noel::after {
 
 /* Custom style for legend bubbles */
 .legend-bubble {
-  display: grid; /* Changed from inline-flex to grid for more robust centering */
-  place-content: center; /* Centers content both horizontally and vertically */
-  width: 18px; /* Small size */
-  height: 18px; /* Small size */
-  border-radius: 50%;
-  background-color: hsl(var(--primary)); /* Use primary color for visibility */
-  color: hsl(var(--primary-foreground)); /* White text */
-  font-size: 0.75rem; /* text-xs */
-  font-weight: bold;
-  margin-left: 0.5rem; /* Space from the text */
-  flex-shrink: 0; /* Prevent shrinking */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;  /* 20px */
+  height: 1.25rem; /* 20px */
+  border-radius: 9999px;
+  color: #fff;
+  font-size: 0.625rem; /* 10px */
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18);
 }
 
 /* Print-specific styles */

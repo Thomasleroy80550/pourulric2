@@ -230,7 +230,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   return (
     <Card className="shadow-md max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
-      <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
+      <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <CardTitle className="text-lg font-semibold">Planning Studio 2026</CardTitle>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
@@ -301,6 +301,20 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             }}
               onMouseLeave={() => { setHoveredColumnIndex(null); setHoveredRowIndex(null); }}
             >
+              {/* Weekend full-height overlays (subtle) */}
+              {daysInMonth.map((day, idx) =>
+                isWeekendDay(day) ? (
+                  <div
+                    key={`wknd-${idx}`}
+                    className="pointer-events-none absolute top-0 bottom-0 z-[1] bg-slate-500/5 dark:bg-slate-100/5"
+                    style={{
+                      left: `${propertyColumnWidth + idx * dayCellWidth}px`,
+                      width: `${dayCellWidth}px`,
+                    }}
+                  />
+                ) : null
+              )}
+
               {/* Row hover highlight (fluide) */}
               {hoveredRowIndex !== null && (
                 <div

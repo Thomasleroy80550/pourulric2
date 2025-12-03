@@ -129,13 +129,9 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     const monthEnd = endOfMonth(currentMonth);
 
     // Découper le mois en segments de 14 jours maximum pour couvrir tout le mois
-    const chunks: { from: Date; to: Date }[] = [];
-    let cur = monthStart;
-    while (cur <= monthEnd) {
-      const to = min([addDays(cur, 13), monthEnd]);
-      chunks.push({ from: cur, to });
-      cur = addDays(to, 1);
-    }
+    // Segment unique de 31 jours (borné à la fin du mois) pour couvrir tous les jours
+    const segmentSize = 31;
+    const chunks: { from: Date; to: Date }[] = [{ from: monthStart, to: min([addDays(monthStart, segmentSize - 1), monthEnd]) }];
 
     const entries: [number, Map<string, ChannelPriceItem>][] = [];
 

@@ -494,8 +494,13 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
                       const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
 
+                      // Calcul vertical absolu: 3 lignes d'entête (Semaine/Jour/Libellé) => première ligne "chambre" = index 3
+                      const headerRows = 3;
+                      const rowHeight = 40; // comme gridAutoRows
+                      const topPx = (headerRows + roomIndex) * rowHeight + 2; // petit marging pour un rendu propre
+
                       const barClasses = cn(
-                        `h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
+                        `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
                         'border border-white/20 dark:border-black/20 shadow-md hover:shadow-lg hover:brightness-105 transition-transform hover:-translate-y-[1px] rounded-md'
@@ -507,18 +512,18 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                             <div
                               className={barClasses}
                               style={{
-                                gridRow: `${4 + roomIndex}`,
+                                position: 'absolute',
+                                top: `${topPx}px`,
                                 left: `${calculatedLeft}px`,
                                 width: `${calculatedWidth}px`,
                                 height: '36px',
-                                marginTop: '2px',
-                                marginBottom: '2px',
+                                marginTop: '0px',
+                                marginBottom: '0px',
                                 zIndex: 5,
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                                 borderRadius: isSingleDayStay ? 9999 : undefined,
-                                position: 'relative'
                               }}
                               onClick={() => handleReservationClick(reservation)}
                             >

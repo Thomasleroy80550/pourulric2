@@ -222,18 +222,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
         <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 45%)' }} />
       </CardHeader>
 
-      <CardContent className="relative p-4 w-full max-w-full overflow-hidden bg-slate-50 dark:bg-gray-900">
-        {/* Overlay de fond aurora (discret) */}
-        <div className="absolute inset-0 aurora-background opacity-35 pointer-events-none z-0" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/25 via-transparent to-slate-900/10 pointer-events-none z-0" />
-        
-        {(loadingTasks || loadingRoomTypes) && reservations.length === 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-48 w-full" />
-          </div>
-        )}
+      <CardContent className="relative p-4 w-full max-w-full overflow-hidden bg-white dark:bg-gray-950">
         {error && (
           <Alert variant="destructive" className="mb-4">
             <Terminal className="h-4 w-4" />

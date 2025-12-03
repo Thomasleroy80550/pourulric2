@@ -54,15 +54,31 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     return map;
   }, [roomTypes]);
 
+  // Fallback: associer le type aussi par label (nom du logement)
+  const byLabelToTypeId = useMemo(() => {
+    const map = new Map<string, number>();
+    roomTypes.forEach((type) => {
+      type.rooms.forEach((r) => {
+        const label = (r.label || "").toString().trim().toLowerCase();
+        if (label) map.set(label, type.id_room_type);
+      });
+    });
+    return map;
+  }, [roomTypes]);
+
   // Ids de room_type présents chez l'utilisateur
   const activeRoomTypeIds = useMemo(() => {
     const ids = new Set<number>();
     userRooms.forEach((room) => {
-      const typeId = roomIdToRoomTypeId.get(String(room.room_id));
-      if (typeof typeId === "number") ids.add(typeId);
+      const id1 = roomIdToRoomTypeId.get(String(room.room_id));
+      const id2 = room.room_id_2 ? roomIdToRoomTypeId.get(String(room.room_id_2)) : undefined;
+      const byLabel = byLabelToTypeId.get((room.room_name || "").toString().trim().toLowerCase());
+      [id1, id2, byLabel].forEach((t) => {
+        if (typeof t === "number") ids.add(t);
+      });
     });
     return Array.from(ids.values());
-  }, [userRooms, roomIdToRoomTypeId]);
+  }, [userRooms, roomIdToRoomTypeId, byLabelToTypeId]);
 
   // Stockage des prix: par room_type -> par date
   const [pricesByType, setPricesByType] = useState<Map<number, Map<string, ChannelPriceItem>>>(new Map());
@@ -198,7 +214,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     // tester une courte liste de candidats
     const date_from = format(startOfMonth(currentMonth), "yyyy-MM-dd");
     const date_to = format(addDays(startOfMonth(currentMonth), 6), "yyyy-MM-dd"); // petite fenêtre pour tester
-    const candidates = [1, 1001, 1000, 2, 3];
+    const candidates = [1, 2, 3, 4, 5, 10, 1000, 1001, 1002];
     for (const rid of candidates) {
       const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
         body: {

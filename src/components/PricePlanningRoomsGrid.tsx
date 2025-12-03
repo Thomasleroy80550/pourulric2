@@ -296,15 +296,23 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
                   const key = format(day, "yyyy-MM-dd");
                   const it = typeof typeId === "number" ? pricesByType.get(typeId)?.get(key) : undefined;
                   const closed = !!it?.closed;
+                  // Fallback: si le prix n'est pas renvoyé, prendre le min des occupancies s'il existe
+                  const occupancyMin = Array.isArray(it?.occupancies) && it!.occupancies!.length > 0
+                    ? Math.min(...it!.occupancies!.map(o => Number(o.price ?? 0)))
+                    : undefined;
+                  const displayPrice = typeof it?.price === "number"
+                    ? it!.price
+                    : (typeof occupancyMin === "number" && Number.isFinite(occupancyMin) ? occupancyMin : undefined);
                   return (
                     <Tooltip key={`${room.id}-${dIdx}`}>
                       <TooltipTrigger asChild>
                         <div
                           className={`border-b border-r py-2 text-center text-xs ${
-                            closed ? "bg-red-50 dark:bg-red-900/20 text-red-600" : "bg-gray-50 dark:bg-gray-800"
-                          }`}
+                            closed ? "bg-red-50 dark:bg-red-900/20 text-red-600"
+                            : "bg-gray-50 dark:bg-gray-800"
+                          } ${displayPrice === undefined ? "text-muted-foreground" : ""}`}
                         >
-                          {typeof it?.price === "number" ? `${it!.price}€` : "—"}
+                          {displayPrice !== undefined ? `${displayPrice}€` : "—"}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="p-2 text-xs">
@@ -313,7 +321,10 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
                           <Tag className="h-3 w-3" />
                           <span>Jour: {format(day, "dd/MM", { locale: fr })}</span>
                         </div>
-                        <div>Prix: {typeof it?.price === "number" ? `${it!.price}€` : "Non défini"}</div>
+                        <div>
+                          Prix: {typeof it?.price === "number" ? `${it!.price}€` :
+                            (displayPrice !== undefined ? `${displayPrice}€ (occup.)` : "Non défini")}
+                        </div>
                         <div className="mt-1 flex items-center gap-1">
                           {closed ? <CircleSlash className="h-3 w-3 text-red-600" /> : <Info className="h-3 w-3 text-emerald-600" />}
                           <span>{closed ? "Fermé à la vente" : "Ouvert"}</span>

@@ -330,7 +330,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
                             </div>
                           </div>
                         )}
-                        {withOccupancies && Array.isArray(it?.occupancies) && (
+                        {Array.isArray(it?.occupancies) && (
                           <div className="mt-1">
                             <span className="font-medium">Occupations:</span>
                             <div className="mt-1 space-y-1">

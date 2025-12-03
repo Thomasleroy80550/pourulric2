@@ -24,12 +24,8 @@ type ChannelPriceItem = {
   occupancies?: { guests: number; price: number }[];
 };
 
-const CHANNEL_OPTIONS = [
-  { value: "AIRBNB", label: "Airbnb" },
-  { value: "BOOKING", label: "Booking.com" },
-  { value: "ABRITEL", label: "Abritel/VRBO" },
-  { value: "DIRECT", label: "Direct" },
-];
+// Canal figé sur DIRECT (pas de mode OTA)
+const FIXED_CHANNEL = "DIRECT";
 
 type Props = {
   userRooms: UserRoom[];
@@ -44,7 +40,8 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
 
   // Sélections
   const [rateId, setRateId] = useState<string>("");
-  const [codChannel, setCodChannel] = useState<string>(CHANNEL_OPTIONS[0].value);
+  // Canal figé
+  const codChannel = FIXED_CHANNEL;
   const [withOccupancies, setWithOccupancies] = useState<boolean>(false);
 
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);
@@ -60,7 +57,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     return map;
   }, [roomTypes]);
 
-  // Ids de room_type présents chez l’utilisateur
+  // Ids de room_type présents chez l'utilisateur
   const activeRoomTypeIds = useMemo(() => {
     const ids = new Set<number>();
     userRooms.forEach((room) => {
@@ -192,21 +189,12 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
               inputMode="numeric"
             />
           </div>
-          {/* Channel */}
+          {/* Canal figé sur DIRECT */}
           <div className="flex flex-col">
             <label className="text-xs text-muted-foreground">Canal</label>
-            <Select value={codChannel} onValueChange={setCodChannel}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="Canal" />
-              </SelectTrigger>
-              <SelectContent>
-                {CHANNEL_OPTIONS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="px-3 py-2 border rounded-md text-sm bg-gray-50 dark:bg-gray-800">
+              DIRECT
+            </div>
           </div>
           {/* with_occupancies */}
           <div className="flex items-center gap-2">

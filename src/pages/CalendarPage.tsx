@@ -8,7 +8,7 @@ import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
 import BookingListMobile from '@/components/BookingListMobile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign, RefreshCw, Sparkles, Tag } from 'lucide-react';
+import { PlusCircle, DollarSign, RefreshCw, Sparkles } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -50,7 +50,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-  const [monthlyPriceMode, setMonthlyPriceMode] = useState(false);
+  // Retiré: pas de mode OTA; le planning prix s'affiche directement sous le planning
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -389,18 +389,8 @@ const CalendarPage: React.FC = () => {
                 <Sparkles className="h-4 w-4" />
                 {monthlyDesignV2 ? "Design V2 activé" : "Activer Design V2"}
               </Button>
-              <Button
-                variant={monthlyPriceMode ? "default" : "outline"}
-                onClick={() => setMonthlyPriceMode(v => !v)}
-                className="ml-2 gap-2"
-              >
-                <Tag className="h-4 w-4" />
-                {monthlyPriceMode ? "Mode Prix OTA" : "Activer Mode Prix OTA"}
-              </Button>
             </div>
-            {monthlyPriceMode ? (
-              <PricePlanningRoomsGrid userRooms={userRooms} />
-            ) : monthlyDesignV2 ? (
+            {monthlyDesignV2 ? (
               <BookingPlanningGridStudio
                 refreshTrigger={refreshTrigger}
                 userRooms={userRooms}
@@ -417,6 +407,10 @@ const CalendarPage: React.FC = () => {
                 profile={profile}
               />
             )}
+            {/* Planning prix DIRECT (affiché juste sous le planning standard) */}
+            <div className="mt-6">
+              <PricePlanningRoomsGrid userRooms={userRooms} />
+            </div>
           </TabsContent>
           <TabsContent value="yearly" className="mt-6">
             <TwelveMonthView 

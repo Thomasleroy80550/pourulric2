@@ -47,6 +47,7 @@ const CalendarPage: React.FC = () => {
     return savedTime ? parseInt(savedTime, 10) : 0;
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
+  const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 

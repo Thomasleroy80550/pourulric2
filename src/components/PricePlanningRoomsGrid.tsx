@@ -128,10 +128,15 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
 
-    // Découper le mois en segments de 14 jours maximum pour couvrir tout le mois
-    // Segment unique de 31 jours (borné à la fin du mois) pour couvrir tous les jours
-    const segmentSize = 31;
-    const chunks: { from: Date; to: Date }[] = [{ from: monthStart, to: min([addDays(monthStart, segmentSize - 1), monthEnd]) }];
+    // Découper le mois en segments de 10 jours pour couvrir 28/30/31 jours (limites d'API)
+    const segmentSize = 10;
+    const chunks: { from: Date; to: Date }[] = [];
+    let cur = monthStart;
+    while (cur <= monthEnd) {
+      const to = min([addDays(cur, segmentSize - 1), monthEnd]);
+      chunks.push({ from: cur, to });
+      cur = addDays(to, 1);
+    }
 
     const entries: [number, Map<string, ChannelPriceItem>][] = [];
 
@@ -144,7 +149,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
             body: {
               id_room_type: typeId,
               id_rate: Number(defaultRateId),
-              cod_channel: codChannel,
+              cod_channel: codChannel, // BE (fixé)
               date_from: format(seg.from, "yyyy-MM-dd"),
               date_to: format(seg.to, "yyyy-MM-dd"),
               with_occupancies: false,
@@ -154,6 +159,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
             console.warn("Erreur krossbooking-get-prices:", error.message);
             continue; // on poursuit avec les autres segments
           }
+          // Unwrap robuste (data, data.data, tableaux)
           const items = unwrapPrices(data);
           items.forEach((it) => {
             if (it.date && !merged.has(it.date)) {

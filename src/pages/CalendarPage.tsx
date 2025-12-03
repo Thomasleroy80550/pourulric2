@@ -8,7 +8,7 @@ import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
 import BookingListMobile from '@/components/BookingListMobile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign, RefreshCw, Sparkles } from 'lucide-react';
+import { PlusCircle, DollarSign, RefreshCw, Sparkles, Tag } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -25,6 +25,7 @@ import TwelveMonthView from '@/components/TwelveMonthView';
 import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
 import PricePlanningGrid from '@/components/PricePlanningGrid';
+import PricePlanningRoomsGrid from '@/components/PricePlanningRoomsGrid';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
@@ -49,6 +50,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
+  const [monthlyPriceMode, setMonthlyPriceMode] = useState(false);
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -387,8 +389,18 @@ const CalendarPage: React.FC = () => {
                 <Sparkles className="h-4 w-4" />
                 {monthlyDesignV2 ? "Design V2 activé" : "Activer Design V2"}
               </Button>
+              <Button
+                variant={monthlyPriceMode ? "default" : "outline"}
+                onClick={() => setMonthlyPriceMode(v => !v)}
+                className="ml-2 gap-2"
+              >
+                <Tag className="h-4 w-4" />
+                {monthlyPriceMode ? "Mode Prix OTA" : "Activer Mode Prix OTA"}
+              </Button>
             </div>
-            {monthlyDesignV2 ? (
+            {monthlyPriceMode ? (
+              <PricePlanningRoomsGrid userRooms={userRooms} />
+            ) : monthlyDesignV2 ? (
               <BookingPlanningGridStudio
                 refreshTrigger={refreshTrigger}
                 userRooms={userRooms}

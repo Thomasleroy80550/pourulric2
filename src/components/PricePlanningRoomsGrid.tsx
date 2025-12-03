@@ -3,9 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,10 +36,13 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
   const [error, setError] = useState<string | null>(null);
 
   // Sélections
-  const [rateId, setRateId] = useState<string>("");
   // Canal figé
   const codChannel = FIXED_CHANNEL;
-  const [withOccupancies, setWithOccupancies] = useState<boolean>(false);
+  // id_rate auto-détecté et mémorisé
+  const [defaultRateId, setDefaultRateId] = useState<number | null>(() => {
+    const saved = localStorage.getItem("kb_default_rate_id");
+    return saved ? Number(saved) : null;
+  });
 
   const [loadingPrices, setLoadingPrices] = useState<boolean>(false);
 
@@ -116,8 +116,8 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
       setError("Aucune correspondance de type de chambre pour vos logements.");
       return;
     }
-    if (!rateId || !codChannel) {
-      setError("Saisissez un id_rate et choisissez un canal.");
+    if (!defaultRateId) {
+      setError("Impossible de déterminer le tarif (id_rate).");
       return;
     }
 
@@ -135,11 +135,11 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
         const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
           body: {
             id_room_type: typeId,
-            id_rate: Number(rateId),
+            id_rate: Number(defaultRateId),
             cod_channel: codChannel,
             date_from,
             date_to,
-            with_occupancies: withOccupancies,
+            with_occupancies: false,
           },
         });
         if (error) {
@@ -165,6 +165,59 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
     setLoadingPrices(false);
   };
 
+  // Détection automatique d'un id_rate utilisable (stocké en localStorage)
+  const detectDefaultRateId = async () => {
+    try {
+      // Essaye sur le premier type actif, avec une liste d'id_rate courants
+      const candidateTypeId = activeRoomTypeIds[0];
+      if (!candidateTypeId) return null;
+      const date_from = format(startOfMonth(currentMonth), "yyyy-MM-dd");
+      const date_to = format(endOfMonth(currentMonth), "yyyy-MM-dd");
+      const candidates = [1001, 1000, 1, 2, 3];
+      for (const rid of candidates) {
+        const { data, error } = await supabase.functions.invoke("krossbooking-get-prices", {
+          body: {
+            id_room_type: candidateTypeId,
+            id_rate: rid,
+            cod_channel: codChannel,
+            date_from,
+            date_to,
+            with_occupancies: false,
+          },
+        });
+        if (!error) {
+          const items = unwrapPrices(data);
+          if (Array.isArray(items) && items.length > 0) {
+            setDefaultRateId(rid);
+            localStorage.setItem("kb_default_rate_id", String(rid));
+            return rid;
+          }
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Chargement auto: quand types chargés et rate détecté, récupère les prix; recharge à chaque changement de mois.
+  useEffect(() => {
+    const run = async () => {
+      if (activeRoomTypeIds.length === 0) return;
+      let rid = defaultRateId;
+      if (!rid) {
+        rid = await detectDefaultRateId();
+      }
+      if (rid) {
+        await handleFetchPrices();
+      } else {
+        setError("Veuillez configurer un id_rate par défaut (aucun tarif détecté).");
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth, activeRoomTypeIds.length]);
+
   return (
     <Card className="shadow-md max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -177,34 +230,14 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          {/* Rate ID */}
-          <div className="flex flex-col">
-            <label className="text-xs text-muted-foreground">ID Tarif (id_rate)</label>
-            <Input
-              placeholder="ex: 1001"
-              value={rateId}
-              onChange={(e) => setRateId(e.target.value)}
-              className="w-32"
-              inputMode="numeric"
-            />
+        {/* Contrôles simplifiés: uniquement recharger si besoin */}
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-muted-foreground px-2 py-1 border rounded">
+            Canal: DIRECT {defaultRateId ? `• Tarif: ${defaultRateId}` : ""}
           </div>
-          {/* Canal figé sur DIRECT */}
-          <div className="flex flex-col">
-            <label className="text-xs text-muted-foreground">Canal</label>
-            <div className="px-3 py-2 border rounded-md text-sm bg-gray-50 dark:bg-gray-800">
-              DIRECT
-            </div>
-          </div>
-          {/* with_occupancies */}
-          <div className="flex items-center gap-2">
-            <Switch checked={withOccupancies} onCheckedChange={setWithOccupancies} />
-            <span className="text-xs text-muted-foreground">Prix par occupation</span>
-          </div>
-          {/* Fetch button */}
-          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || !rateId}>
+          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || !defaultRateId}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Charger prix
+            Recharger
           </Button>
         </div>
       </CardHeader>
@@ -323,7 +356,7 @@ const PricePlanningRoomsGrid: React.FC<Props> = ({ userRooms }) => {
 
         {/* Action row */}
         <div className="mt-4 flex items-center gap-2">
-          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || !rateId}>
+          <Button variant="outline" onClick={handleFetchPrices} disabled={loadingPrices || !defaultRateId}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Recharger
           </Button>

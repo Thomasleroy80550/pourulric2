@@ -201,19 +201,19 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   return (
     <Card className="shadow-md max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
-      <CardHeader className="relative flex flex-row items-center justify-between bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-pink-600 text-white">
+      <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
         <CardTitle className="text-lg font-semibold">Planning Studio 2026</CardTitle>
         <div className="flex items-center space-x-2">
-          <Button variant="secondary" size="icon" onClick={goToPreviousMonth} className="bg-white/20 hover:bg-white/30 text-white">
+          <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-extrabold text-lg drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-white to-fuchsia-200 tracking-tight">
+          <span className="font-semibold text-lg tracking-tight text-slate-900 dark:text-white">
             {format(currentMonth, 'MMMM yyyy', { locale: fr })}
           </span>
-          <Button variant="secondary" size="icon" onClick={goToNextMonth} className="bg-white/20 hover:bg-white/30 text-white">
+          <Button variant="outline" size="icon" onClick={goToNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="secondary" size="sm" onClick={goToToday} className="ml-1 bg-white/20 hover:bg-white/30 text-white">
+          <Button variant="outline" size="sm" onClick={goToToday} className="ml-1">
             <CalendarDays className="h-4 w-4" />
             <span className="ml-2 hidden sm:inline">Aujourd'hui</span>
           </Button>

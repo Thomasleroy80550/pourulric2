@@ -441,9 +441,14 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   {/* Reservation Bars */}
                   {reservations
                     .filter((res) => {
-                      // Correspondance robuste (évite les non-apparitions)
-                      const byId = norm(res.krossbooking_room_id) && norm(res.krossbooking_room_id) === norm(room.room_id);
-                      const byName = norm(res.property_name) && norm(res.property_name) === norm(room.room_name);
+                      // Correspondance robuste: par id principal, id secondaire, OU nom exact normalisé
+                      const resId = norm(res.krossbooking_room_id);
+                      const resName = norm(res.property_name);
+                      const roomId1 = norm(room.room_id);
+                      const roomId2 = norm((room as any).room_id_2);
+                      const roomName = norm(room.room_name);
+                      const byId = !!resId && (resId === roomId1 || (!!roomId2 && resId === roomId2));
+                      const byName = !!resName && resName === roomName;
                       return byId || byName;
                     })
                     .map((reservation) => {
@@ -490,7 +495,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
 
                       const barClasses = cn(
-                        `absolute h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
+                        `h-9 flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
                         'border border-white/20 dark:border-black/20 shadow-md hover:shadow-lg hover:brightness-105 transition-transform hover:-translate-y-[1px] rounded-md'
@@ -512,9 +517,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                borderRadius: isSingleDayStay
-                                  ? 9999
-                                  : undefined,
+                                borderRadius: isSingleDayStay ? 9999 : undefined,
                                 position: 'relative'
                               }}
                               onClick={() => handleReservationClick(reservation)}

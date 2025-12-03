@@ -8,7 +8,7 @@ import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
 import BookingListMobile from '@/components/BookingListMobile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
+import { PlusCircle, DollarSign, RefreshCw, Sparkles } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -375,13 +375,33 @@ const CalendarPage: React.FC = () => {
             <TabsTrigger value="studio">Vue Studio (design)</TabsTrigger>
           </TabsList>
           <TabsContent value="monthly" className="mt-6">
-            <BookingPlanningGrid 
-              refreshTrigger={refreshTrigger} 
-              userRooms={userRooms} 
-              reservations={reservations}
-              onReservationChange={handleReservationChange}
-              profile={profile}
-            />
+            <div className="flex items-center justify-end mb-3">
+              <Button
+                variant={monthlyDesignV2 ? "default" : "outline"}
+                onClick={() => setMonthlyDesignV2(v => !v)}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                {monthlyDesignV2 ? "Design V2 activé" : "Activer Design V2"}
+              </Button>
+            </div>
+            {monthlyDesignV2 ? (
+              <BookingPlanningGridStudio
+                refreshTrigger={refreshTrigger}
+                userRooms={userRooms}
+                reservations={reservations}
+                onReservationChange={handleReservationChange}
+                profile={profile}
+              />
+            ) : (
+              <BookingPlanningGrid
+                refreshTrigger={refreshTrigger}
+                userRooms={userRooms}
+                reservations={reservations}
+                onReservationChange={handleReservationChange}
+                profile={profile}
+              />
+            )}
           </TabsContent>
           <TabsContent value="yearly" className="mt-6">
             <TwelveMonthView 

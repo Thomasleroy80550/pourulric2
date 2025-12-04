@@ -24,8 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
-import PricePlanningGrid from '@/components/PricePlanningGrid';
-import PricePlanningRoomsGrid from '@/components/PricePlanningRoomsGrid';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
@@ -345,64 +343,93 @@ const CalendarPage: React.FC = () => {
     );
   }
 
-  // Blocage technique du calendrier
   return (
     <MainLayout>
-      <div className="container mx-auto py-8 px-4">
-        <Alert variant="destructive" className="mb-6">
-          <div className="relative overflow-hidden rounded-xl border-0 bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 text-white shadow-lg p-5">
-            <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-            <div className="absolute -bottom-12 -right-10 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+      <div className="container mx-auto py-6 px-4">
+        <div className="mb-4">
+          <EcowattForecastBox />
+        </div>
 
-            <div className="relative flex flex-col sm:flex-row sm:items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-                <AlertTriangle className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <AlertTitle className="text-xl font-semibold">Calendrier indisponible</AlertTitle>
-                <AlertDescription className="mt-1 text-white/90">
-                  Un bug technique affecte l'affichage du planning. Nos équipes travaillent à un correctif.
-                </AlertDescription>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button
-                    className="bg-white text-red-700 hover:bg-white/90"
-                    onClick={() => navigate("/")}
-                  >
-                    Retour à l'aperçu
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="bg-red-700/40 text-white border-white/20 hover:bg-red-700/50"
-                    onClick={() => navigate("/help")}
-                  >
-                    Centre d'aide
-                  </Button>
-                </div>
-              </div>
-            </div>
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center">
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Réservation Propriétaire
+            </Button>
+            <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Configurer Prix
+            </Button>
+            <Button
+              onClick={handleReservationChange}
+              variant="outline"
+              className="flex items-center"
+              disabled={Date.now() < cooldownEndTime}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {Date.now() < cooldownEndTime ? `Attendre ${remainingTime}` : 'Rafraîchir'}
+            </Button>
           </div>
-        </Alert>
+        </div>
 
-        <Card className="p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle className="text-lg">Que puis-je faire ?</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Vous pouvez continuer à utiliser le reste de l'application en attendant la résolution.
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Planning des Réservations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingData ? (
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-[400px] w-full" />
+              </div>
+            ) : userRooms.length === 0 ? (
+              <p className="text-muted-foreground">
+                Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
               </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => navigate("/")}>
-                Retour à l'aperçu
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/help")}>
-                Centre d'aide
-              </Button>
-            </div>
-          </div>
+            ) : (
+              <div className="w-full max-w-full overflow-x-hidden">
+                <BookingPlanningGridStudio
+                  refreshTrigger={refreshTrigger}
+                  userRooms={userRooms}
+                  reservations={reservations}
+                  onReservationChange={handleReservationChange}
+                  profile={profile}
+                />
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
+
+      {/* Dialogs */}
+      <OwnerReservationDialog
+        isOpen={isOwnerReservationDialogOpen}
+        onOpenChange={setIsOwnerReservationDialogOpen}
+        userRooms={userRooms}
+        allReservations={reservations}
+        onReservationCreated={handleReservationChange}
+        profile={profile}
+      />
+      <PriceRestrictionDialog
+        isOpen={isPriceRestrictionDialogOpen}
+        onOpenChange={setIsPriceRestrictionDialogOpen}
+        userRooms={userRooms}
+        onSettingsSaved={handlePriceRestrictionSaved}
+      />
+      <AlertDialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Accès non autorisé</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vous n'avez pas la permission de configurer les prix et les restrictions. Veuillez contacter un administrateur pour demander l'accès à cette fonctionnalité.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsAccessDeniedDialogOpen(false)}>Compris</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

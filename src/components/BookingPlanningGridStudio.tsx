@@ -138,21 +138,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     return measuredDayCellWidth > 0 ? measuredDayCellWidth : dayCellWidth;
   }, [measuredDayCellWidth, dayCellWidth]);
 
-  const scrollToToday = () => {
-    if (!wrapperRef.current) return;
-    const now = new Date();
-    if (now.getMonth() !== currentMonth.getMonth() || now.getFullYear() !== currentMonth.getFullYear()) return;
-    const index = daysInMonth.findIndex((d) => isSameDay(d, now));
-    if (index === -1) return;
-    const targetLeft = propertyColumnWidth + index * effectiveDayCellWidth - (wrapperRef.current.clientWidth / 2);
-    wrapperRef.current.scrollLeft = Math.max(0, targetLeft);
-  };
-
   const goToToday = () => setCurrentMonth(new Date());
-
-  useEffect(() => {
-    scrollToToday();
-  }, [daysInMonth, propertyColumnWidth, effectiveDayCellWidth]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -524,19 +510,26 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
                       const monthStart = startOfMonth(currentMonth);
                       const monthEnd = endOfMonth(currentMonth);
-                      const numberOfNights = differenceInDays(checkOut, checkIn);
+
+                      // TRAITEMENT CORRECT: le jour de départ est exclusif (la nuit ne couvre pas le jour de départ)
+                      const checkOutExclusive = subDays(checkOut, 1);
 
                       const barStartDate = checkIn;
-                      const barEndDate = checkOut;
+                      const barEndExclusiveDate = checkOutExclusive;
+
                       const visibleBarStart = max([barStartDate, monthStart]);
-                      const visibleBarEnd = min([barEndDate, monthEnd]);
-                      if (visibleBarStart > visibleBarEnd) return null;
+                      const visibleBarEndExclusive = min([barEndExclusiveDate, monthEnd]);
+
+                      // Si la période visible ne croise pas le mois, on ne rend pas
+                      if (visibleBarStart > visibleBarEndExclusive) return null;
 
                       const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarStart));
-                      const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEnd));
-                      if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return null;
+                      const endExclusiveIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEndExclusive));
+                      if (startIndex === -1 || endExclusiveIndex === -1 || startIndex > endExclusiveIndex) return null;
 
-                      const spanDays = Math.max(1, endIndex - startIndex); // exclusif du jour de départ
+                      // Le span doit couvrir toutes les nuits: +1 car endExclusiveIndex est inclus
+                      const spanDays = Math.max(1, endExclusiveIndex - startIndex + 1);
+                      const numberOfNights = differenceInDays(checkOut, checkIn);
                       const isSingleDayStay = numberOfNights === 0;
 
                       const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';
@@ -544,7 +537,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const channelInfo = channelColors[effectiveChannelKey] || channelColors['UNKNOWN'];
 
                       const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
-                      const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
+                      const isDepartureDayVisible = isSameDay(checkOutExclusive, visibleBarEndExclusive);
 
                       const barClasses = cn(
                         `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,

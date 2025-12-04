@@ -272,6 +272,14 @@ const CalendarPage: React.FC = () => {
           <div className="mb-4">
             <EcowattForecastBox />
           </div>
+          <Alert className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Information importante</AlertTitle>
+            <AlertDescription>
+              Un bug connu peut afficher certaines réservations au mauvais jour après le chargement.
+              Pour les voir au bon endroit, changez de mois puis revenez au mois actuel.
+            </AlertDescription>
+          </Alert>
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -349,6 +357,14 @@ const CalendarPage: React.FC = () => {
         <div className="mb-4">
           <EcowattForecastBox />
         </div>
+        <Alert className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Information importante</AlertTitle>
+          <AlertDescription>
+            Un bug connu peut afficher certaines réservations au mauvais jour après le chargement.
+            Pour les voir au bon endroit, changez de mois puis revenez au mois actuel.
+          </AlertDescription>
+        </Alert>
 
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>

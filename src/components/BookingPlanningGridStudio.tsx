@@ -72,6 +72,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const firstDayCellRef = useRef<HTMLDivElement | null>(null);
   const [measuredDayCellWidth, setMeasuredDayCellWidth] = useState<number>(0);
 
+  const hasForcedMonthRefresh = useRef(false);
+
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
     setError(null);
@@ -295,6 +297,14 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!hasForcedMonthRefresh.current && measuredDayCellWidth > 0) {
+      hasForcedMonthRefresh.current = true;
+      // Force a re-render of the same month (new Date reference) to realign bars
+      setCurrentMonth(prev => new Date(prev));
+    }
+  }, [measuredDayCellWidth]);
 
   return (
     <Card className="max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">

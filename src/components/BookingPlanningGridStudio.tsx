@@ -66,6 +66,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const [hasScrolledLeft, setHasScrolledLeft] = useState(false);
   const [hasScrolledRight, setHasScrolledRight] = useState(false);
 
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
     setError(null);
@@ -118,7 +120,14 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
   // Largeurs ultra
-  const dayCellWidth = useMemo(() => (isMobile ? 24 : 36), [isMobile]);
+  const dayCellWidth = useMemo(() => {
+    const minCell = isMobile ? 24 : 32;
+    if (!containerWidth) return minCell;
+    const available = Math.max(0, containerWidth - propertyColumnWidth);
+    const calculated = Math.floor(available / daysInMonth.length);
+    return Math.max(minCell, calculated);
+  }, [isMobile, containerWidth, propertyColumnWidth, daysInMonth]);
+
   const propertyColumnWidth = useMemo(() => (isMobile ? 70 : 160), [isMobile]);
 
   const scrollToToday = () => {
@@ -228,6 +237,23 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const isWeekendDay = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
   const isMonday = (d: Date) => d.getDay() === 1;
 
+  useEffect(() => {
+    const updateContainerWidth = () => {
+      if (wrapperRef.current) {
+        setContainerWidth(wrapperRef.current.clientWidth);
+      }
+    };
+    updateContainerWidth();
+    window.addEventListener('resize', updateContainerWidth);
+    return () => window.removeEventListener('resize', updateContainerWidth);
+  }, []);
+
+  useEffect(() => {
+    if (wrapperRef.current) {
+      setContainerWidth(wrapperRef.current.clientWidth);
+    }
+  }, [daysInMonth, propertyColumnWidth]);
+
   return (
     <Card className="max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
       <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
@@ -291,7 +317,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             <div className="grid-container relative rounded-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm" style={{
               display: 'grid',
               gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
-              width: `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
+              width: containerWidth ? `${containerWidth}px` : `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
               gridAutoRows: '40px',
               position: 'relative',
             }}

@@ -120,6 +120,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
   // Largeurs ultra
+  const propertyColumnWidth = useMemo(() => (isMobile ? 70 : 160), [isMobile]);
+
   const dayCellWidth = useMemo(() => {
     const minCell = isMobile ? 24 : 32;
     if (!containerWidth) return minCell;
@@ -127,8 +129,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     const calculated = Math.floor(available / daysInMonth.length);
     return Math.max(minCell, calculated);
   }, [isMobile, containerWidth, propertyColumnWidth, daysInMonth]);
-
-  const propertyColumnWidth = useMemo(() => (isMobile ? 70 : 160), [isMobile]);
 
   const scrollToToday = () => {
     if (!wrapperRef.current) return;

@@ -238,7 +238,7 @@ const CalendarPage: React.FC = () => {
   if (loadingData) {
     return (
       <MainLayout>
-        <div className="container mx-auto py-6">
+        <div className="w-full py-6 px-2 sm:px-4">
           <div className="flex justify-between items-center mb-6">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-10 w-48" />
@@ -247,7 +247,7 @@ const CalendarPage: React.FC = () => {
             <CardHeader>
               <Skeleton className="h-6 w-64" />
             </CardHeader>
-            <CardContent className="p-4">
+            <CardContent className="w-full p-2 sm:p-4">
               <Skeleton className="h-[400px] w-full" />
             </CardContent>
           </Card>
@@ -345,7 +345,7 @@ const CalendarPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6 px-4">
+      <div className="w-full py-6 px-2 sm:px-4">
         <div className="mb-4">
           <EcowattForecastBox />
         </div>
@@ -395,7 +395,7 @@ const CalendarPage: React.FC = () => {
                     Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
                   </p>
                 ) : (
-                  <div className="w-full max-w-full overflow-x-hidden">
+                  <div className="w-full min-w-0 overflow-x-visible">
                     <BookingPlanningGridStudio
                       refreshTrigger={refreshTrigger}
                       userRooms={userRooms}

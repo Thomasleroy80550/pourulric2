@@ -229,8 +229,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const isMonday = (d: Date) => d.getDay() === 1;
 
   return (
-    <Card className="shadow-md max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
-      <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800 shadow-sm">
+    <Card className="max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
+      <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
         <CardTitle className="text-lg font-semibold">Planning Studio 2026</CardTitle>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
@@ -266,17 +266,13 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
           <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-xl" onScroll={handleScroll}>
-            {/* Scroll shadows */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 z-[6] bg-gradient-to-r from-black/10 to-transparent dark:from-white/10" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 z-[6] bg-gradient-to-l from-black/10 to-transparent dark:from-white/10" />
-
             {/* Boutons flottants de navigation horizontale */}
             {hasScrolledLeft && (
               <Button
                 variant="secondary"
                 size="icon"
                 onClick={() => scrollByAmount('left')}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-[7] rounded-full bg-white/80 dark:bg-gray-900/70 hover:bg-white/90 dark:hover:bg-gray-900 shadow"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-[7] rounded-full bg-white/80 dark:bg-gray-900/70 hover:bg-white/90 dark:hover:bg-gray-900"
               >
                 <ChevronLeft className="h-5 w-5 text-slate-700 dark:text-slate-200" />
               </Button>
@@ -286,7 +282,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                 variant="secondary"
                 size="icon"
                 onClick={() => scrollByAmount('right')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-[7] rounded-full bg-white/80 dark:bg-gray-900/70 hover:bg-white/90 dark:hover:bg-gray-900 shadow"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-[7] rounded-full bg-white/80 dark:bg-gray-900/70 hover:bg-white/90 dark:hover:bg-gray-900"
               >
                 <ChevronRight className="h-5 w-5 text-slate-700 dark:text-slate-200" />
               </Button>
@@ -449,8 +445,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   <div
                     className={cn(
                       "grid-cell property-name-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-r border-b flex items-center px-2",
-                      slimMode ? "text-xs" : "text-sm",
-                      hasScrolledLeft && "shadow-[inset_-10px_0_12px_-10px_rgba(0,0,0,0.25)] dark:shadow-[inset_-10px_0_12px_-10px_rgba(255,255,255,0.2)]"
+                      slimMode ? "text-xs" : "text-sm"
                     )}
                     style={{ gridRow: `${4 + roomIndex}` }}
                     onMouseEnter={() => setHoveredRowIndex(roomIndex)}
@@ -571,7 +566,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} animate-fade-in-up`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
-                        'border border-white/20 dark:border-black/20 shadow-md hover:shadow-lg hover:brightness-105 transition-transform hover:-translate-y-[1px] hover:scale-[1.01] rounded-md'
+                        'border border-white/20 dark:border-black/20 hover:brightness-105 transition-transform hover:-translate-y-[1px] hover:scale-[1.01] rounded-md'
                       );
 
                       // Animation décalée pour un effet fluide

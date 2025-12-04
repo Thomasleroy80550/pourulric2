@@ -73,6 +73,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const [measuredDayCellWidth, setMeasuredDayCellWidth] = useState<number>(0);
 
   const hasForcedMonthRefresh = useRef(false);
+  const [isRecalibrating, setIsRecalibrating] = useState(false);
 
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
@@ -301,8 +302,16 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   useEffect(() => {
     if (!hasForcedMonthRefresh.current && measuredDayCellWidth > 0) {
       hasForcedMonthRefresh.current = true;
-      // Force a re-render of the same month (new Date reference) to realign bars
-      setCurrentMonth(prev => new Date(prev));
+      setIsRecalibrating(true);
+      // Aller un mois en arrière
+      setCurrentMonth(prev => subMonths(prev, 1));
+      // Puis revenir au mois initial après un court délai
+      setTimeout(() => {
+        setCurrentMonth(prev => addMonths(prev, 1));
+        setTimeout(() => {
+          setIsRecalibrating(false);
+        }, 50);
+      }, 50);
     }
   }, [measuredDayCellWidth]);
 
@@ -344,6 +353,11 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
           <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-xl" onScroll={handleScroll}>
+            {isRecalibrating && (
+              <div className="absolute inset-0 z-[9] flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+              </div>
+            )}
             {/* Boutons flottants de navigation horizontale */}
             {hasScrolledLeft && (
               <Button

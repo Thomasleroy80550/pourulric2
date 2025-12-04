@@ -359,31 +359,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       return (
                         <div
                           className="pointer-events-none absolute top-0 bottom-0 z-[4] border-x border-blue-400/40 bg-blue-200/10 dark:bg-blue-500/10"
-                          style={{ left: `${left}px`, width: `${dayCellWidth}px`, animation: 'pulse-glow 3s ease-in-out infinite' }}
-                        />
-                      );
-                    }
-                  }
-                  return null;
-                })()
-              }
-              {/* Current week band highlight */}
-              {
-                (() => {
-                  const now = new Date();
-                  if (now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear()) {
-                    const dow = now.getDay();
-                    const daysSinceMonday = dow === 0 ? 6 : dow - 1;
-                    const mondayOfWeek = subDays(now, daysSinceMonday);
-                    const mondayIndex = daysInMonth.findIndex((d) => isSameDay(d, mondayOfWeek));
-                    if (mondayIndex !== -1) {
-                      const endIndex = Math.min(mondayIndex + 6, daysInMonth.length - 1);
-                      const left = propertyColumnWidth + mondayIndex * dayCellWidth;
-                      const width = (endIndex - mondayIndex + 1) * dayCellWidth;
-                      return (
-                        <div
-                          className="pointer-events-none absolute top-0 bottom-0 z-[3] bg-fuchsia-200/8 dark:bg-fuchsia-500/8 border-x border-fuchsia-400/30"
-                          style={{ left: `${left}px`, width: `${width}px` }}
+                          style={{ left: `${left}px`, width: `${dayCellWidth}px` }}
                         />
                       );
                     }
@@ -412,8 +388,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     "grid-cell header-cell text-center text-[11px] sm:text-xs text-gray-500 border-b border-r",
                     isMonday(day) && "font-medium",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-300/80 dark:bg-blue-600/80 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
-                    hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
+                    isSameDay(day, new Date()) && "bg-blue-200/50 dark:bg-blue-600/50 border-blue-600 dark:border-blue-300"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -432,8 +407,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300",
                     isMonday(day) && "border-l-2 border-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
-                    hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
+                    isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -452,8 +426,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
                     isMonday(day) && "border-l-2 border-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
-                    hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
+                    isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -493,7 +466,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         className={cn(
                           "grid-cell border-b border-r relative flex flex-col justify-center items-center border-slate-200 dark:border-slate-700",
                           isSameDay(day, new Date())
-                            ? "bg-blue-200 dark:bg-blue-700 border-3 border-blue-600 dark:border-blue-300 ring-1 ring-blue-400"
+                            ? "bg-blue-100 dark:bg-blue-700 border-blue-600 dark:border-blue-300"
                             : isWeekendDay(day)
                               ? "bg-slate-100 dark:bg-slate-900/60"
                               : (isStripe ? "bg-gray-50 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900/60"),
@@ -586,13 +559,12 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
 
                       const barClasses = cn(
-                        `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} animate-fade-in-up`,
+                        `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
                         'border border-white/20 dark:border-black/20 hover:brightness-105 transition-transform hover:-translate-y-[1px] hover:scale-[1.01] rounded-full'
                       );
 
-                      // Animation décalée pour un effet fluide
                       return (
                         <Tooltip key={reservation.id}>
                           <TooltipTrigger asChild>
@@ -610,12 +582,9 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                animationDelay: `${(roomIndex * 40 + idx * 12)}ms`,
                               }}
                               onClick={() => handleReservationClick(reservation)}
                             >
-                              {/* Effet glossy léger */}
-                              <div className="absolute inset-0 pointer-events-none opacity-25" style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%)' }} />
                               {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
                               {isSingleDayStay && <Sparkles className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
 
@@ -628,7 +597,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                                 <span className="mx-1">|</span>
                                 <span className="truncate">{reservation.guest_name}</span>
                               </span>
-                              {/* Initiales invité à droite pour style badge */}
                               <span className="ml-1 mr-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white/90 text-[10px] font-semibold">
                                 {getInitials(reservation.guest_name)}
                               </span>

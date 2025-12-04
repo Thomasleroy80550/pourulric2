@@ -536,8 +536,17 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEnd));
                       if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return null;
 
-                      const spanDays = Math.max(1, endIndex - startIndex); // exclusif du jour de départ
+                      let calculatedLeft: number;
+                      let calculatedWidth: number;
                       const isSingleDayStay = numberOfNights === 0;
+
+                      if (isSingleDayStay) {
+                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 4);
+                        calculatedWidth = Math.max(8, effectiveDayCellWidth / 2);
+                      } else {
+                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 2);
+                        calculatedWidth = Math.max(8, (endIndex - startIndex) * effectiveDayCellWidth);
+                      }
 
                       const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';
                       const effectiveChannelKey = isOwnerBlock ? reservation.status : (reservation.channel_identifier || 'UNKNOWN');
@@ -559,11 +568,13 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                             <div
                               className={barClasses}
                               style={{
-                                // Positionnement exact sur la grille
-                                gridRow: `${4 + roomIndex}`,
-                                gridColumn: `${2 + startIndex} / span ${spanDays}`,
+                                position: 'absolute',
+                                top: `${(3 + roomIndex) * 40 + 6}px`,
+                                left: `${calculatedLeft}px`,
+                                width: `${calculatedWidth}px`,
                                 height: '28px',
-                                marginTop: '6px',
+                                marginTop: '0px',
+                                marginBottom: '0px',
                                 zIndex: 5,
                                 display: 'flex',
                                 justifyContent: 'space-between',

@@ -566,7 +566,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor} animate-fade-in-up`,
                         isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
                         slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
-                        'border border-white/20 dark:border-black/20 hover:brightness-105 transition-transform hover:-translate-y-[1px] hover:scale-[1.01] rounded-md'
+                        'border border-white/20 dark:border-black/20 hover:brightness-105 transition-transform hover:-translate-y-[1px] hover:scale-[1.01] rounded-full'
                       );
 
                       // Animation décalée pour un effet fluide
@@ -577,17 +577,16 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                               className={barClasses}
                               style={{
                                 position: 'absolute',
-                                top: `${(3 + roomIndex) * 40 + 2}px`,
+                                top: `${(3 + roomIndex) * 40 + 6}px`,
                                 left: `${calculatedLeft}px`,
                                 width: `${calculatedWidth}px`,
-                                height: '36px',
+                                height: '28px',
                                 marginTop: '0px',
                                 marginBottom: '0px',
                                 zIndex: 5,
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                borderRadius: isSingleDayStay ? 9999 : undefined,
                                 animationDelay: `${(roomIndex * 40 + idx * 12)}ms`,
                               }}
                               onClick={() => handleReservationClick(reservation)}

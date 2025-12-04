@@ -316,8 +316,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
             <div className="grid-container relative rounded-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm" style={{
               display: 'grid',
-              gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${dayCellWidth}px)`,
-              width: containerWidth ? `${containerWidth}px` : `${propertyColumnWidth + daysInMonth.length * dayCellWidth}px`,
+              gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, minmax(0, 1fr))`,
+              width: '100%',
               gridAutoRows: '40px',
               position: 'relative',
             }}
@@ -415,7 +415,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     isSameDay(day, new Date()) && "bg-blue-300/80 dark:bg-blue-600/80 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
                     hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
                   )}
-                  style={{ width: `${dayCellWidth}px` }}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
                   {isMonday(day) ? `S ${getISOWeek(day)}` : ""}
@@ -436,7 +435,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
                     hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
                   )}
-                  style={{ width: `${dayCellWidth}px` }}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
                   {format(day, 'dd', { locale: fr })}
@@ -457,7 +455,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     isSameDay(day, new Date()) && "bg-blue-300 dark:bg-blue-600 border-blue-600 dark:border-blue-300 ring-1 ring-blue-500",
                     hoveredColumnIndex === index && !isSameDay(day, new Date()) && "ring-1 ring-slate-400/50"
                   )}
-                  style={{ width: `${dayCellWidth}px` }}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
                   {format(day, 'EEE', { locale: fr })}
@@ -503,7 +500,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                           isMonday(day) && "border-l-2 border-slate-300",
                           "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}
-                        style={{ width: `${dayCellWidth}px`, gridRow: `${4 + roomIndex}` }}
+                        style={{ gridRow: `${4 + roomIndex}` }}
                         onMouseEnter={() => { setHoveredColumnIndex(dayIndex); setHoveredRowIndex(roomIndex); }}
                         onMouseLeave={() => setHoveredRowIndex((prev) => (prev === roomIndex ? null : prev))}
                       >

@@ -348,26 +348,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                 />
               )}
 
-              {/* Today vertical highlight */}
-              {
-                (() => {
-                  const now = new Date();
-                  if (now.getMonth() === currentMonth.getMonth() && now.getFullYear() === currentMonth.getFullYear()) {
-                    const idx = daysInMonth.findIndex((d) => isSameDay(d, now));
-                    if (idx !== -1) {
-                      const left = propertyColumnWidth + idx * dayCellWidth;
-                      return (
-                        <div
-                          className="pointer-events-none absolute top-0 bottom-0 z-[4] border-x border-blue-400/40 bg-blue-200/10 dark:bg-blue-500/10"
-                          style={{ left: `${left}px`, width: `${dayCellWidth}px` }}
-                        />
-                      );
-                    }
-                  }
-                  return null;
-                })()
-              }
-
               {/* Hovered column guideline */}
               {hoveredColumnIndex !== null && (
                 <div
@@ -387,8 +367,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   className={cn(
                     "grid-cell header-cell text-center text-[11px] sm:text-xs text-gray-500 border-b border-r",
                     isMonday(day) && "font-medium",
-                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-200/50 dark:bg-blue-600/50 border-blue-600 dark:border-blue-300"
+                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -406,8 +385,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     slimMode && "text-[10px]",
                     "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300",
-                    isMonday(day) && "border-l-2 border-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
+                    isMonday(day) && "border-l-2 border-slate-300"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -425,8 +403,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     slimMode && "text-[9px]",
                     "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
                     isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
-                    isMonday(day) && "border-l-2 border-slate-300",
-                    isSameDay(day, new Date()) && "bg-blue-200 dark:bg-blue-600 border-blue-600 dark:border-blue-300"
+                    isMonday(day) && "border-l-2 border-slate-300"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -465,11 +442,9 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         key={`${room.id}-${format(day, 'yyyy-MM-dd')}-bg`}
                         className={cn(
                           "grid-cell border-b border-r relative flex flex-col justify-center items-center border-slate-200 dark:border-slate-700",
-                          isSameDay(day, new Date())
-                            ? "bg-blue-100 dark:bg-blue-700 border-blue-600 dark:border-blue-300"
-                            : isWeekendDay(day)
-                              ? "bg-slate-100 dark:bg-slate-900/60"
-                              : (isStripe ? "bg-gray-50 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900/60"),
+                          isWeekendDay(day)
+                            ? "bg-slate-100 dark:bg-slate-900/60"
+                            : (isStripe ? "bg-gray-50 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900/60"),
                           isMonday(day) && "border-l-2 border-slate-300",
                           "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}

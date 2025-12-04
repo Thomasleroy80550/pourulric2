@@ -68,6 +68,10 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   const [containerWidth, setContainerWidth] = useState<number>(0);
 
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const firstDayCellRef = useRef<HTMLDivElement | null>(null);
+  const [measuredDayCellWidth, setMeasuredDayCellWidth] = useState<number>(0);
+
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
     setError(null);
@@ -130,13 +134,17 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     return Math.max(minCell, calculated);
   }, [isMobile, containerWidth, propertyColumnWidth, daysInMonth]);
 
+  const effectiveDayCellWidth = useMemo(() => {
+    return measuredDayCellWidth > 0 ? measuredDayCellWidth : dayCellWidth;
+  }, [measuredDayCellWidth, dayCellWidth]);
+
   const scrollToToday = () => {
     if (!wrapperRef.current) return;
     const now = new Date();
     if (now.getMonth() !== currentMonth.getMonth() || now.getFullYear() !== currentMonth.getFullYear()) return;
     const index = daysInMonth.findIndex((d) => isSameDay(d, now));
     if (index === -1) return;
-    const targetLeft = propertyColumnWidth + index * dayCellWidth - (wrapperRef.current.clientWidth / 2);
+    const targetLeft = propertyColumnWidth + index * effectiveDayCellWidth - (wrapperRef.current.clientWidth / 2);
     wrapperRef.current.scrollLeft = Math.max(0, targetLeft);
   };
 
@@ -144,7 +152,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   useEffect(() => {
     scrollToToday();
-  }, [daysInMonth, propertyColumnWidth, dayCellWidth]);
+  }, [daysInMonth, propertyColumnWidth, effectiveDayCellWidth]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -254,6 +262,40 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     }
   }, [daysInMonth, propertyColumnWidth]);
 
+  useEffect(() => {
+    const measureCellWidth = () => {
+      if (firstDayCellRef.current) {
+        const w = Math.round(firstDayCellRef.current.getBoundingClientRect().width);
+        if (w > 0) setMeasuredDayCellWidth(w);
+        return;
+      }
+      if (gridRef.current) {
+        const total = gridRef.current.getBoundingClientRect().width - propertyColumnWidth;
+        const w = Math.floor(total / daysInMonth.length);
+        if (w > 0) setMeasuredDayCellWidth(w);
+      }
+    };
+
+    measureCellWidth();
+  }, [daysInMonth, propertyColumnWidth, containerWidth]);
+
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      if (firstDayCellRef.current) {
+        const w = Math.round(firstDayCellRef.current.getBoundingClientRect().width);
+        if (w > 0) setMeasuredDayCellWidth(w);
+      } else {
+        const total = el.getBoundingClientRect().width - propertyColumnWidth;
+        const w = Math.floor(total / daysInMonth.length);
+        if (w > 0) setMeasuredDayCellWidth(w);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <Card className="max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
       <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
@@ -321,6 +363,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
               gridAutoRows: '40px',
               position: 'relative',
             }}
+              ref={gridRef}
               onMouseLeave={() => { setHoveredColumnIndex(null); setHoveredRowIndex(null); }}
             >
               {/* Row hover highlight (fluide) */}
@@ -339,8 +382,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                 <div
                   className="pointer-events-none absolute top-0 bottom-0 z-[2] bg-slate-200/10 dark:bg-slate-700/10 border-x border-slate-300/40"
                   style={{
-                    left: `${propertyColumnWidth + hoveredColumnIndex * dayCellWidth}px`,
-                    width: `${dayCellWidth}px`,
+                    left: `${propertyColumnWidth + hoveredColumnIndex * effectiveDayCellWidth}px`,
+                    width: `${effectiveDayCellWidth}px`,
                   }}
                 />
               )}
@@ -365,6 +408,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
               {daysInMonth.map((day, index) => (
                 <div
                   key={index}
+                  ref={index === 0 ? firstDayCellRef : undefined}
                   className={cn(
                     "grid-cell header-cell text-center font-semibold border-b border-r",
                     slimMode && "text-[10px]",
@@ -497,11 +541,11 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const isSingleDayStay = numberOfNights === 0;
 
                       if (isSingleDayStay) {
-                        calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 4);
-                        calculatedWidth = Math.max(8, dayCellWidth / 2);
+                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 4);
+                        calculatedWidth = Math.max(8, effectiveDayCellWidth / 2);
                       } else {
-                        calculatedLeft = propertyColumnWidth + (startIndex * dayCellWidth) + (dayCellWidth / 2);
-                        calculatedWidth = Math.max(8, (endIndex - startIndex) * dayCellWidth);
+                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 2);
+                        calculatedWidth = Math.max(8, (endIndex - startIndex) * effectiveDayCellWidth);
                       }
 
                       const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';

@@ -73,7 +73,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const [measuredDayCellWidth, setMeasuredDayCellWidth] = useState<number>(0);
 
   const hasForcedMonthRefresh = useRef(false);
-  const [isRecalibrating, setIsRecalibrating] = useState(false);
 
   const loadHousekeepingTasks = async () => {
     setLoadingTasks(true);
@@ -302,16 +301,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   useEffect(() => {
     if (!hasForcedMonthRefresh.current && measuredDayCellWidth > 0) {
       hasForcedMonthRefresh.current = true;
-      setIsRecalibrating(true);
-      // Aller un mois en arrière
-      setCurrentMonth(prev => subMonths(prev, 1));
-      // Puis revenir au mois initial après un court délai
-      setTimeout(() => {
-        setCurrentMonth(prev => addMonths(prev, 1));
-        setTimeout(() => {
-          setIsRecalibrating(false);
-        }, 50);
-      }, 50);
+      // Force a re-render of the same month (new Date reference) to realign bars
+      setCurrentMonth(prev => new Date(prev));
     }
   }, [measuredDayCellWidth]);
 
@@ -353,11 +344,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
           <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-xl" onScroll={handleScroll}>
-            {isRecalibrating && (
-              <div className="absolute inset-0 z-[9] flex items-center justify-center bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
-              </div>
-            )}
             {/* Boutons flottants de navigation horizontale */}
             {hasScrolledLeft && (
               <Button
@@ -527,6 +513,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   {/* Reservation Bars */}
                   {reservations
                     .filter((res) => {
+                      // Correspondance robuste: par id principal, id secondaire, OU nom exact normalisé
                       const resId = norm(res.krossbooking_room_id);
                       const resName = norm(res.property_name);
                       const roomId1 = norm(room.room_id);
@@ -537,6 +524,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       return byId || byName;
                     })
                     .map((reservation, idx) => {
+                      // Filtre robuste annulation
                       const status = (reservation.status || '').toString().toUpperCase();
                       if (status.includes('CANC')) return null;
 
@@ -558,7 +546,17 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEnd));
                       if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return null;
 
+                      let calculatedLeft: number;
+                      let calculatedWidth: number;
                       const isSingleDayStay = numberOfNights === 0;
+
+                      if (isSingleDayStay) {
+                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 4);
+                        calculatedWidth = Math.max(8, effectiveDayCellWidth / 2);
+                      } else {
+                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 2);
+                        calculatedWidth = Math.max(8, (endIndex - startIndex) * effectiveDayCellWidth);
+                      }
 
                       const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';
                       const effectiveChannelKey = isOwnerBlock ? reservation.status : (reservation.channel_identifier || 'UNKNOWN');
@@ -566,12 +564,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
                       const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
                       const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
-
-                      // Nouveau: placer via CSS Grid
-                      const gridColumnStart = 2 + startIndex;         // colonne 1 = propriété, donc jour 0 démarre à 2
-                      const gridColumnEnd = isSingleDayStay
-                        ? gridColumnStart + 1                         // une seule colonne pour un séjour d'un jour
-                        : 2 + endIndex;                               // exclusif: s'arrête à la ligne de fin
 
                       const barClasses = cn(
                         `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
@@ -586,17 +578,17 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                             <div
                               className={barClasses}
                               style={{
-                                position: 'relative',            // permet z-index
-                                zIndex: 5,
-                                gridRow: `${4 + roomIndex}`,
-                                gridColumn: `${gridColumnStart} / ${gridColumnEnd}`,
+                                position: 'absolute',
+                                top: `${(3 + roomIndex) * 40 + 6}px`,
+                                left: `${calculatedLeft}px`,
+                                width: `${calculatedWidth}px`,
                                 height: '28px',
-                                alignSelf: 'center',
-                                // Pour un séjour d'un jour: bulle plus petite centrée
-                                ...(isSingleDayStay ? {
-                                  justifySelf: 'center',
-                                  width: '50%',
-                                } : {})
+                                marginTop: '0px',
+                                marginBottom: '0px',
+                                zIndex: 5,
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
                               }}
                               onClick={() => handleReservationClick(reservation)}
                             >

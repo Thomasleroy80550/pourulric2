@@ -513,7 +513,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   {/* Reservation Bars */}
                   {reservations
                     .filter((res) => {
-                      // Correspondance robuste: par id principal, id secondaire, OU nom exact normalisé
                       const resId = norm(res.krossbooking_room_id);
                       const resName = norm(res.property_name);
                       const roomId1 = norm(room.room_id);
@@ -524,7 +523,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       return byId || byName;
                     })
                     .map((reservation, idx) => {
-                      // Filtre robuste annulation
                       const status = (reservation.status || '').toString().toUpperCase();
                       if (status.includes('CANC')) return null;
 
@@ -546,17 +544,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                       const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEnd));
                       if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return null;
 
-                      let calculatedLeft: number;
-                      let calculatedWidth: number;
                       const isSingleDayStay = numberOfNights === 0;
-
-                      if (isSingleDayStay) {
-                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 4);
-                        calculatedWidth = Math.max(8, effectiveDayCellWidth / 2);
-                      } else {
-                        calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 2);
-                        calculatedWidth = Math.max(8, (endIndex - startIndex) * effectiveDayCellWidth);
-                      }
 
                       const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';
                       const effectiveChannelKey = isOwnerBlock ? reservation.status : (reservation.channel_identifier || 'UNKNOWN');
@@ -564,6 +552,12 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
                       const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
                       const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
+
+                      // Nouveau: placer via CSS Grid
+                      const gridColumnStart = 2 + startIndex;         // colonne 1 = propriété, donc jour 0 démarre à 2
+                      const gridColumnEnd = isSingleDayStay
+                        ? gridColumnStart + 1                         // une seule colonne pour un séjour d'un jour
+                        : 2 + endIndex;                               // exclusif: s'arrête à la ligne de fin
 
                       const barClasses = cn(
                         `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
@@ -578,17 +572,17 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                             <div
                               className={barClasses}
                               style={{
-                                position: 'absolute',
-                                top: `${(3 + roomIndex) * 40 + 6}px`,
-                                left: `${calculatedLeft}px`,
-                                width: `${calculatedWidth}px`,
-                                height: '28px',
-                                marginTop: '0px',
-                                marginBottom: '0px',
+                                position: 'relative',            // permet z-index
                                 zIndex: 5,
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
+                                gridRow: `${4 + roomIndex}`,
+                                gridColumn: `${gridColumnStart} / ${gridColumnEnd}`,
+                                height: '28px',
+                                alignSelf: 'center',
+                                // Pour un séjour d'un jour: bulle plus petite centrée
+                                ...(isSingleDayStay ? {
+                                  justifySelf: 'center',
+                                  width: '50%',
+                                } : {})
                               }}
                               onClick={() => handleReservationClick(reservation)}
                             >

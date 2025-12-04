@@ -52,7 +52,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-  // Retiré: pas de mode OTA; le planning prix s'affiche directement sous le planning
+  const [activeTab, setActiveTab] = useState<'planning' | 'twelve'>('planning');
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -375,29 +375,55 @@ const CalendarPage: React.FC = () => {
 
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Planning des Réservations</CardTitle>
+            <CardTitle className="text-lg font-semibold">Calendrier</CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingData ? (
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-[400px] w-full" />
-              </div>
-            ) : userRooms.length === 0 ? (
-              <p className="text-muted-foreground">
-                Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
-              </p>
-            ) : (
-              <div className="w-full max-w-full overflow-x-hidden">
-                <BookingPlanningGridStudio
-                  refreshTrigger={refreshTrigger}
-                  userRooms={userRooms}
-                  reservations={reservations}
-                  onReservationChange={handleReservationChange}
-                  profile={profile}
-                />
-              </div>
-            )}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve')} className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
+                <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="planning">
+                {loadingData ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-[400px] w-full" />
+                  </div>
+                ) : userRooms.length === 0 ? (
+                  <p className="text-muted-foreground">
+                    Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
+                  </p>
+                ) : (
+                  <div className="w-full max-w-full overflow-x-hidden">
+                    <BookingPlanningGridStudio
+                      refreshTrigger={refreshTrigger}
+                      userRooms={userRooms}
+                      reservations={reservations}
+                      onReservationChange={handleReservationChange}
+                      profile={profile}
+                    />
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="twelve">
+                {loadingData ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-[400px] w-full" />
+                  </div>
+                ) : userRooms.length === 0 ? (
+                  <p className="text-muted-foreground">
+                    Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir la vue annuelle ici.
+                  </p>
+                ) : (
+                  <div className="w-full">
+                    <TwelveMonthView userRooms={userRooms} reservations={reservations} />
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>

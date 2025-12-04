@@ -323,20 +323,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             }}
               onMouseLeave={() => { setHoveredColumnIndex(null); setHoveredRowIndex(null); }}
             >
-              {/* Weekend full-height overlays (subtle) */}
-              {daysInMonth.map((day, idx) =>
-                isWeekendDay(day) ? (
-                  <div
-                    key={`wknd-${idx}`}
-                    className="pointer-events-none absolute top-0 bottom-0 z-[1] bg-slate-500/5 dark:bg-slate-100/5"
-                    style={{
-                      left: `${propertyColumnWidth + idx * dayCellWidth}px`,
-                      width: `${dayCellWidth}px`,
-                    }}
-                  />
-                ) : null
-              )}
-
               {/* Row hover highlight (fluide) */}
               {hoveredRowIndex !== null && (
                 <div
@@ -366,8 +352,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   key={`week-${index}`}
                   className={cn(
                     "grid-cell header-cell text-center text-[11px] sm:text-xs text-gray-500 border-b border-r",
-                    isMonday(day) && "font-medium",
-                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300"
+                    isMonday(day) && ""
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -383,9 +368,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   className={cn(
                     "grid-cell header-cell text-center font-semibold border-b border-r",
                     slimMode && "text-[10px]",
-                    "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
-                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300",
-                    isMonday(day) && "border-l-2 border-slate-300"
+                    "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -401,9 +384,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   className={cn(
                     "grid-cell header-cell text-center text-xs text-gray-500 border-b border-r",
                     slimMode && "text-[9px]",
-                    "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors",
-                    isWeekendDay(day) && "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300",
-                    isMonday(day) && "border-l-2 border-slate-300"
+                    "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
                   )}
                   onMouseEnter={() => setHoveredColumnIndex(index)}
                 >
@@ -442,10 +423,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                         key={`${room.id}-${format(day, 'yyyy-MM-dd')}-bg`}
                         className={cn(
                           "grid-cell border-b border-r relative flex flex-col justify-center items-center border-slate-200 dark:border-slate-700",
-                          isWeekendDay(day)
-                            ? "bg-slate-100 dark:bg-slate-900/60"
-                            : (isStripe ? "bg-gray-50 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900/60"),
-                          isMonday(day) && "border-l-2 border-slate-300",
+                          (isStripe ? "bg-gray-50 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900/60"),
                           "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                         )}
                         style={{ gridRow: `${4 + roomIndex}` }}

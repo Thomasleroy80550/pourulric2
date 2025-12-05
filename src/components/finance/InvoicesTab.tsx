@@ -50,6 +50,23 @@ const InvoicesTab: React.FC = () => {
   const renderError = () => {
     if (!error) return null;
 
+    const errLower = error.toLowerCase();
+
+    if (errLower.includes('access token is invalid')) {
+      return (
+        <Alert variant="destructive">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Clé API Pennylane invalide</AlertTitle>
+          <AlertDescription>
+            <p>La clé API utilisée pour contacter Pennylane est invalide ou expirée.</p>
+            <p className="mt-2 text-sm">
+              Un administrateur doit mettre à jour le secret PENNYLANE_API_KEY (ou PENNYLANE_API_KEYV1) dans Supabase.
+            </p>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
     if (error.includes('error sending request')) {
       return (
         <Alert variant="destructive">

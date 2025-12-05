@@ -23,6 +23,17 @@ async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: st
   return data?.pennylane_customer_id ? parseInt(data.pennylane_customer_id) : null;
 }
 
+function getPennylaneApiKey(): { key: string | null; source: string } {
+  const candidates = ['PENNYLANE_API_KEY', 'PENNYLANE_API_KEYV1', 'PENNYLANE_API_KEYV1_BERCK'];
+  for (const name of candidates) {
+    const val = Deno.env.get(name);
+    if (val && val.trim().length > 0) {
+      return { key: val.trim(), source: name };
+    }
+  }
+  return { key: null, source: 'none' };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -72,16 +83,13 @@ serve(async (req) => {
     if (isAdmin) {
       const requestedCustomerId = body.customer_id;
       if (requestedCustomerId) {
-        // Admin is requesting a specific customer's invoices
         pennylaneCustomerId = parseInt(requestedCustomerId);
         console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${pennylaneCustomerId}`);
       } else {
-        // Admin is viewing their own finance page, so fetch their own ID
         pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
         console.log(`Admin user ${caller.id} is requesting their own invoices.`);
       }
     } else {
-      // Standard user can only ever get their own invoices
       pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
       console.log(`Standard user ${caller.id} is requesting their own invoices.`);
     }
@@ -90,11 +98,12 @@ serve(async (req) => {
       throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré ou est vide.");
     }
     
-    const PENNYLANE_API_KEY = Deno.env.get('PENNYLANE_API_KEY');
+    const { key: PENNYLANE_API_KEY, source: keySource } = getPennylaneApiKey();
     if (!PENNYLANE_API_KEY) {
-      console.error("PENNYLANE_API_KEY environment variable is not set.");
+      console.error("No valid Pennylane API key found in environment.");
       throw new Error("Erreur de configuration : Clé API Pennylane manquante sur le serveur.");
     }
+    console.log(`Using Pennylane API key from secret: ${keySource}`);
 
     const { action, ...payload } = body;
 
@@ -111,15 +120,13 @@ serve(async (req) => {
             'content-type': 'application/json',
             'X-Api-Key': PENNYLANE_API_KEY,
           },
-          body: JSON.stringify(payload.payload), // The actual payload is nested
+          body: JSON.stringify(payload.payload),
         };
         break;
       case 'list_invoices':
         console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);
-        
         const params = new URLSearchParams();
         params.append('q[s]', `customer_id eq ${pennylaneCustomerId}`);
-        
         if (payload.limit) {
           params.append('limit', payload.limit.toString());
         }
@@ -133,15 +140,22 @@ serve(async (req) => {
         };
         break;
       default:
-        return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ error: "Invalid action" }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
     }
 
     const response = await fetch(url, options);
-    const responseData = await response.json();
+    const responseData = await response.json().catch(() => ({}));
 
     if (!response.ok) {
       console.error("Pennylane API Error:", responseData);
-      const errorMessage = responseData?.errors?.[0]?.detail || responseData?.message || "An unknown error occurred with Pennylane API.";
+      const errorMessage =
+        (Array.isArray(responseData?.errors) && responseData.errors[0]?.detail) ||
+        responseData?.error ||
+        responseData?.message ||
+        `Pennylane API error (status ${response.status})`;
       throw new Error(errorMessage);
     }
 

@@ -49,7 +49,7 @@ import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
-const ADMIN_BLOCKED = true;
+const ADMIN_BLOCKED = false;
 
 interface AdminLayoutProps {
   children: React.ReactNode;

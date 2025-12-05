@@ -23,7 +23,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-const ADMIN_BLOCKED = true;
+const ADMIN_BLOCKED = false;
 
 type NavItem = {
   label: string;

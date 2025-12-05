@@ -467,7 +467,7 @@ const DashboardPage = () => {
         
         {/* Notif box BILAN 2025 */}
         {showBilanNotice && (
-          <Alert className="mb-6 max-w-full overflow-hidden border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-sm p-3 sm:p-4 rounded-md">
+          <Alert className="mb-6 w-full overflow-hidden rounded-lg md:rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 shadow-sm p-2 sm:p-3 md:p-5 md:max-w-3xl md:mx-auto">
             <div className="flex flex-wrap items-start gap-2 max-w-full">
               <FileText className="h-4 w-4 text-amber-600" />
               <div className="flex-1 min-w-0">

@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,8 @@ import {
   CircleUser,
   AlertTriangle,
 } from "lucide-react";
+
+const ADMIN_BLOCKED = true;
 
 type NavItem = {
   label: string;
@@ -81,6 +84,28 @@ const AdminLayoutV2: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 
   if (profile?.role !== "admin") return null;
+
+  if (ADMIN_BLOCKED) {
+    return (
+      <div className="flex items-center justify-center h-screen p-6">
+        <div className="max-w-md w-full">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Espace admin indisponible</AlertTitle>
+            <AlertDescription>
+              L'administration est temporairement bloquée. Merci de réessayer plus tard.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => navigate("/")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au site
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isActive = (href: string) => location.pathname === href;
 

@@ -41,12 +41,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useSession } from './SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+
+const ADMIN_BLOCKED = true;
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -156,6 +159,28 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   if (profile?.role !== 'admin') {
     return null;
+  }
+
+  if (ADMIN_BLOCKED) {
+    return (
+      <div className="flex items-center justify-center h-screen p-6">
+        <div className="max-w-md w-full">
+          <Alert variant="destructive">
+            <Shield className="h-4 w-4" />
+            <AlertTitle>Espace admin indisponible</AlertTitle>
+            <AlertDescription>
+              L'accès à l'administration est temporairement bloqué. Merci de réessayer plus tard.
+            </AlertDescription>
+          </Alert>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => navigate('/')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au site
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const isActive = (href: string) =>

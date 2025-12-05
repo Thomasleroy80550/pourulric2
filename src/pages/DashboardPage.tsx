@@ -467,8 +467,8 @@ const DashboardPage = () => {
         
         {/* Notif box BILAN 2025 */}
         {showBilanNotice && (
-          <Alert className="mb-6 w-full overflow-hidden rounded-lg md:rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 shadow-sm p-2 sm:p-3 md:p-5 md:max-w-3xl md:mx-auto">
-            <div className="flex flex-wrap items-start gap-2 max-w-full">
+          <Alert className="relative mb-6 w-full overflow-hidden rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-gradient-to-br from-amber-50/90 to-amber-100/70 dark:from-amber-900/30 dark:to-amber-800/20 shadow-lg ring-1 ring-amber-100/60 dark:ring-amber-900/30 backdrop-blur-sm p-3 sm:p-4 md:p-6 max-w-[95vw] md:max-w-4xl mx-auto">
+            <div className="flex flex-wrap items-start gap-3 max-w-full">
               <FileText className="h-4 w-4 text-amber-600" />
               <div className="flex-1 min-w-0">
                 <AlertTitle className="text-sm sm:text-base font-semibold break-words hyphens-auto">BILAN 2025</AlertTitle>

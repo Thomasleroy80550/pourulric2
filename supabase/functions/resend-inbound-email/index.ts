@@ -19,7 +19,6 @@ serve(async (req) => {
   }
 
   try {
-    // Simple secret check (configure RESEND_INBOUND_WEBHOOK_SECRET; set same in Resend webhook)
     const providedSecret = req.headers.get('x-resend-webhook-secret');
     const expectedSecret = Deno.env.get('RESEND_INBOUND_WEBHOOK_SECRET');
     if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
@@ -30,8 +29,6 @@ serve(async (req) => {
     }
 
     const payload = await req.json();
-    // Expected minimal fields from Resend inbound: to, from, subject, text, html
-    // See Resend docs for exact shape; we handle common fields with fallbacks
     const subject: string = payload?.subject ?? '(sans sujet)';
     const fromEmail: string | undefined =
       payload?.from?.address ??
@@ -45,7 +42,6 @@ serve(async (req) => {
     const textBody: string | undefined = payload?.text ?? undefined;
     const htmlBody: string | undefined = payload?.html ?? undefined;
 
-    // Forward all incoming emails to contact@hellokeys.fr
     let contactEmail = 'contact@hellokeys.fr';
     const admin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -55,14 +51,13 @@ serve(async (req) => {
       .from('app_settings')
       .select('value')
       .eq('key', 'contact_email')
-      .single()
-      .catch(() => ({ data: null as any }));
+      .maybeSingle();
+
     if (contactSetting?.value) {
       const maybe = typeof contactSetting.value === 'string' ? contactSetting.value : contactSetting.value?.email;
       if (maybe && typeof maybe === 'string') contactEmail = maybe;
     }
 
-    // Compose forward
     const fwdSubject = `FWD: ${subject}`;
     const fwdHtml = `
       <div>
@@ -80,17 +75,14 @@ serve(async (req) => {
       html: fwdHtml,
     });
 
-    // Archive into conversations/messages if we can map sender to a profile
     if (fromEmail) {
       const { data: profile } = await admin
         .from('profiles')
         .select('id')
         .eq('email', fromEmail)
-        .single()
-        .catch(() => ({ data: null as any }));
+        .maybeSingle();
 
       if (profile?.id) {
-        // Find or create conversation
         const { data: existingConv } = await admin
           .from('conversations')
           .select('id')
@@ -113,7 +105,7 @@ serve(async (req) => {
           const content = (textBody ?? htmlBody?.replace(/<[^>]*>/g, ' ') ?? '').replace(/\s+/g, ' ').trim();
           await admin.from('messages').insert({
             conversation_id: conversationId,
-            sender_id: profile.id, // user is the sender of inbound email
+            sender_id: profile.id,
             content: content || '(email reçu)',
           });
         }

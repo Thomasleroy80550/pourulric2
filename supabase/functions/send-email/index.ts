@@ -49,8 +49,8 @@ serve(async (req) => {
       .from('app_settings')
       .select('value')
       .eq('key', 'contact_email')
-      .single()
-      .catch(() => ({ data: null as any }));
+      .maybeSingle();
+
     if (contactSetting?.value) {
       const maybe = typeof contactSetting.value === 'string' ? contactSetting.value : contactSetting.value?.email;
       if (maybe && typeof maybe === 'string') contactEmail = maybe;
@@ -74,7 +74,6 @@ serve(async (req) => {
     }
 
     // Log to conversations/messages
-    // We need the recipient user_id to associate conversation
     const admin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -84,7 +83,7 @@ serve(async (req) => {
       .from('profiles')
       .select('id')
       .eq('email', to)
-      .single();
+      .maybeSingle();
 
     if (recipientProfile?.id) {
       // Find or create conversation by user + subject
@@ -107,11 +106,10 @@ serve(async (req) => {
       }
 
       if (conversationId) {
-        // Keep text-only content in messages table
         const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
         await admin.from('messages').insert({
           conversation_id: conversationId,
-          sender_id: user.id, // admin/operator who initiated send
+          sender_id: user.id,
           content: text || `(email envoyé)`,
         });
       }

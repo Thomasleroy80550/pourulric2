@@ -23,15 +23,67 @@ async function getPennylaneCustomerId(supabaseClient: SupabaseClient, userId: st
   return data?.pennylane_customer_id ? parseInt(data.pennylane_customer_id) : null;
 }
 
-function getPennylaneApiKey(): { key: string | null; source: string } {
+function getPennylaneApiKeys(): string[] {
+  // Try in order; first valid key wins
   const candidates = ['PENNYLANE_API_KEY', 'PENNYLANE_API_KEYV1', 'PENNYLANE_API_KEYV1_BERCK'];
+  const keys: string[] = [];
   for (const name of candidates) {
     const val = Deno.env.get(name);
     if (val && val.trim().length > 0) {
-      return { key: val.trim(), source: name };
+      keys.push(val.trim());
     }
   }
-  return { key: null, source: 'none' };
+  return keys;
+}
+
+type ProxyAction = 'create_customer_invoice' | 'list_invoices';
+
+async function fetchWithKeyFallback(url: string, baseOptions: RequestInit, keys: string[]) {
+  if (keys.length === 0) {
+    throw new Error("Erreur de configuration : aucune clé API Pennylane n'est définie sur le serveur.");
+  }
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const options: RequestInit = {
+      ...baseOptions,
+      headers: {
+        ...(baseOptions.headers || {}),
+        'X-Api-Key': key,
+      },
+    };
+
+    const response = await fetch(url, options);
+    const responseData = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+      return { data: responseData, keyUsed: key };
+    }
+
+    // If unauthorized due to invalid token, try next key
+    const message =
+      (Array.isArray(responseData?.errors) && responseData.errors[0]?.detail) ||
+      responseData?.error ||
+      responseData?.message ||
+      `Pennylane API error (status ${response.status})`;
+
+    console.error("Pennylane API Error:", responseData);
+
+    const isInvalidToken =
+      response.status === 401 ||
+      String(message).toLowerCase().includes('access token is invalid');
+
+    if (isInvalidToken && i < keys.length - 1) {
+      console.warn("Invalid token for current key; trying next available Pennylane API key…");
+      continue; // try next key
+    }
+
+    // Other errors or last key: stop and raise
+    throw new Error(message);
+  }
+
+  // Should not reach here
+  throw new Error("Aucune clé API Pennylane valide n'a fonctionné.");
 }
 
 serve(async (req) => {
@@ -77,68 +129,62 @@ serve(async (req) => {
       throw new Error("Erreur lors de la vérification des permissions de l'utilisateur.");
     }
 
-    let pennylaneCustomerId: number | null = null;
     const body = await req.json().catch(() => ({}));
+    const action: ProxyAction = body.action;
 
-    if (isAdmin) {
-      const requestedCustomerId = body.customer_id;
-      if (requestedCustomerId) {
-        pennylaneCustomerId = parseInt(requestedCustomerId);
+    let pennylaneCustomerId: number | null = null;
+    if (action === 'list_invoices') {
+      if (isAdmin && body.payload?.customer_id) {
+        pennylaneCustomerId = parseInt(body.payload.customer_id);
         console.log(`Admin user ${caller.id} is requesting invoices for specific customer: ${pennylaneCustomerId}`);
       } else {
         pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
-        console.log(`Admin user ${caller.id} is requesting their own invoices.`);
+        console.log(`${isAdmin ? 'Admin' : 'Standard'} user ${caller.id} is requesting their own invoices.`);
       }
-    } else {
-      pennylaneCustomerId = await getPennylaneCustomerId(supabaseAdmin, caller.id);
-      console.log(`Standard user ${caller.id} is requesting their own invoices.`);
+
+      if (!pennylaneCustomerId) {
+        throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré ou est vide.");
+      }
+      console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);
     }
 
-    if (!pennylaneCustomerId) {
-      throw new Error("L'ID client Pennylane de l'utilisateur n'est pas configuré ou est vide.");
-    }
-    
-    const { key: PENNYLANE_API_KEY, source: keySource } = getPennylaneApiKey();
-    if (!PENNYLANE_API_KEY) {
+    const keys = getPennylaneApiKeys();
+    if (keys.length === 0) {
       console.error("No valid Pennylane API key found in environment.");
       throw new Error("Erreur de configuration : Clé API Pennylane manquante sur le serveur.");
     }
-    console.log(`Using Pennylane API key from secret: ${keySource}`);
-
-    const { action, ...payload } = body;
 
     let url: string;
-    let options: RequestInit;
+    let baseOptions: RequestInit;
 
     switch (action) {
-      case 'create_customer_invoice':
+      case 'create_customer_invoice': {
         url = `${PENNYLANE_API_URL}/customer_invoices`;
-        options = {
+        baseOptions = {
           method: 'POST',
           headers: {
             'accept': 'application/json',
             'content-type': 'application/json',
-            'X-Api-Key': PENNYLANE_API_KEY,
           },
-          body: JSON.stringify(payload.payload),
+          body: JSON.stringify(body.payload),
         };
         break;
-      case 'list_invoices':
-        console.log(`Using Pennylane Customer ID: '${pennylaneCustomerId}' for the API call.`);
+      }
+      case 'list_invoices': {
         const params = new URLSearchParams();
         params.append('q[s]', `customer_id eq ${pennylaneCustomerId}`);
-        if (payload.limit) {
-          params.append('limit', payload.limit.toString());
+        if (body.payload?.limit) {
+          params.append('limit', String(body.payload.limit));
         }
         url = `${PENNYLANE_API_URL}/customer_invoices?${params.toString()}`;
-        options = {
+        baseOptions = {
           method: 'GET',
           headers: {
             'accept': 'application/json',
-            'X-Api-Key': PENNYLANE_API_KEY,
           },
         };
         break;
+      }
       default:
         return new Response(JSON.stringify({ error: "Invalid action" }), {
           status: 400,
@@ -146,20 +192,10 @@ serve(async (req) => {
         });
     }
 
-    const response = await fetch(url, options);
-    const responseData = await response.json().catch(() => ({}));
+    const { data, keyUsed } = await fetchWithKeyFallback(url, baseOptions, keys);
+    console.log(`Pennylane request succeeded using a configured API key.`);
 
-    if (!response.ok) {
-      console.error("Pennylane API Error:", responseData);
-      const errorMessage =
-        (Array.isArray(responseData?.errors) && responseData.errors[0]?.detail) ||
-        responseData?.error ||
-        responseData?.message ||
-        `Pennylane API error (status ${response.status})`;
-      throw new Error(errorMessage);
-    }
-
-    const dataToReturn = action === 'list_invoices' ? { invoices: responseData.items } : responseData;
+    const dataToReturn = action === 'list_invoices' ? { invoices: data.items } : data;
 
     return new Response(JSON.stringify(dataToReturn), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

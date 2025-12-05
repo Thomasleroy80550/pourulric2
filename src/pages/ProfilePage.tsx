@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy, Lock } from 'lucide-react';
+import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy, Lock, ShieldCheck } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -26,6 +26,7 @@ import PasswordChangeForm from '@/components/PasswordChangeForm';
 import DocumentsTab from '@/components/DocumentsTab';
 import DelegatedAccessPanel from '@/components/DelegatedAccessPanel';
 import AttestationFormDialog from '@/components/AttestationFormDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 const ProfilePage: React.FC = () => {
   const { session, profile: userProfile } = useSession();
@@ -39,6 +40,7 @@ const ProfilePage: React.FC = () => {
   const [isVerificationDialogOpen, setIsVerificationDialogOpen] = useState(false);
   const [phoneToVerify, setPhoneToVerify] = useState('');
   const [isAttestationDialogOpen, setIsAttestationDialogOpen] = useState(false);
+  const [insuranceLoading, setInsuranceLoading] = useState(false);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -159,6 +161,43 @@ const ProfilePage: React.FC = () => {
 
   const handleOpenAttestationDialog = () => {
     setIsAttestationDialogOpen(true);
+  };
+
+  const handleRequestInsuranceAttestation = async () => {
+    if (!profile) {
+      toast.error("Profil introuvable.");
+      return;
+    }
+    setInsuranceLoading(true);
+    try {
+      const displayName = `${firstName || profile.first_name || ''} ${lastName || profile.last_name || ''}`.trim() || 'Client';
+      const subject = `Demande d'attestation d'assurance – ${displayName}`;
+      const html = `
+        <p>Bonjour l'équipe Hello Keys,</p>
+        <p>Je souhaite recevoir mon attestation d'assurance Hello Keys.</p>
+        <p>Informations utiles :</p>
+        <ul>
+          <li>Nom : <strong>${displayName}</strong></li>
+          <li>Email : <strong>${session?.user?.email ?? profile.email ?? ''}</strong></li>
+          <li>Téléphone : <strong>${phoneNumber || profile.phone_number || 'N/A'}</strong></li>
+          <li>Logement : <strong>${propertyAddress || 'Adresse non renseignée'}</strong>, ${propertyZipCode || ''} ${propertyCity || ''}</li>
+          <li>ID utilisateur : <strong>${profile.id}</strong></li>
+        </ul>
+        <p>Merci d'avance.</p>
+      `;
+      const { error } = await supabase.functions.invoke('send-email', {
+        body: { to: 'contact@hellokeys.fr', subject, html },
+      });
+      if (error) {
+        toast.error(`Erreur lors de l'envoi de la demande : ${error.message}`);
+      } else {
+        toast.success("Votre demande d'attestation a été envoyée à notre équipe.");
+      }
+    } catch (err: any) {
+      toast.error(`Erreur lors de l'envoi de la demande : ${err.message}`);
+    } finally {
+      setInsuranceLoading(false);
+    }
   };
 
   const getClientSinceDays = () => {
@@ -381,6 +420,18 @@ const ProfilePage: React.FC = () => {
                       <Download className="mr-2 h-4 w-4" />
                     )}
                     {isDownloading ? 'Téléchargement...' : 'Télécharger une attestation'}
+                  </Button>
+                  <Button 
+                    onClick={handleRequestInsuranceAttestation} 
+                    disabled={!profile || insuranceLoading || userProfile?.is_banned}
+                    className="inline-flex items-center"
+                  >
+                    {insuranceLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                    )}
+                    {insuranceLoading ? 'Envoi en cours...' : "Demander l'attestation d'assurance"}
                   </Button>
                 </div>
               </CardContent>

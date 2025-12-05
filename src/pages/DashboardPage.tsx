@@ -467,47 +467,51 @@ const DashboardPage = () => {
         
         {/* Notif box BILAN 2025 */}
         {showBilanNotice && (
-          <Alert className="relative mb-6 w-full overflow-hidden rounded-2xl border border-amber-200/70 dark:border-amber-800/60 bg-gradient-to-br from-amber-50/90 to-amber-100/70 dark:from-amber-900/30 dark:to-amber-800/20 shadow-lg ring-1 ring-amber-100/60 dark:ring-amber-900/30 backdrop-blur-sm p-3 sm:p-4 md:p-6">
-            <div className="flex flex-wrap items-start gap-3 max-w-full">
-              <FileText className="h-4 w-4 text-amber-600" />
-              <div className="flex-1 min-w-0">
-                <AlertTitle className="text-sm sm:text-base font-semibold break-words hyphens-auto">BILAN 2025</AlertTitle>
-                <AlertDescription className="break-words hyphens-auto">
-                  <div className="inline-flex items-center gap-2 text-xs sm:text-sm">
-                    <CalendarDays className="h-3 w-3 text-amber-700 dark:text-amber-200" />
-                    Disponible entre le 4 janvier et le 1er mars.
-                  </div>
-                  <p className="mt-1 text-xs sm:text-sm text-amber-900 dark:text-amber-200 break-words hyphens-auto">
-                    Accédez à vos relevés dans la section Finances.
-                  </p>
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
-                    <Link to="/finances" className="min-w-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full sm:w-auto border-amber-300 text-amber-900 hover:bg-amber-100 text-xs sm:text-sm px-2 py-1"
-                      >
-                        Voir mes relevés
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleOpenBilanPopup}
-                      className="w-full sm:w-auto border-amber-300 text-amber-900 hover:bg-amber-100 text-xs sm:text-sm px-2 py-1 min-w-0"
-                    >
-                      Plus d'infos
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDismissBilanNotice}
-                      className="w-full sm:w-auto text-amber-900 text-xs sm:text-sm px-2 py-1 min-w-0"
-                    >
-                      Masquer
-                    </Button>
-                  </div>
-                </AlertDescription>
+          <Alert className="mb-6 w-full overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-white dark:bg-amber-900/10 shadow-sm p-0 border-l-4 border-l-amber-500">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-800/40">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <AlertTitle className="text-sm sm:text-base font-semibold">BILAN 2025</AlertTitle>
+                  <AlertDescription className="mt-0.5">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-700 dark:text-amber-200">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      Disponible du 4 janvier au 1er mars
+                      <Badge variant="secondary" className="ml-2 bg-amber-100 text-amber-800 dark:bg-amber-800/40 dark:text-amber-100">Période limitée</Badge>
+                    </div>
+                    <p className="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                      Retrouvez vos relevés dans la section Finances.
+                    </p>
+                  </AlertDescription>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full sm:w-auto">
+                <Link to="/finances" className="min-w-0">
+                  <Button
+                    size="sm"
+                    className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white px-2 py-1"
+                  >
+                    Voir mes relevés
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenBilanPopup}
+                  className="w-full sm:w-auto border-amber-300 text-amber-900 hover:bg-amber-50 dark:text-amber-100 px-2 py-1"
+                >
+                  Plus d'infos
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDismissBilanNotice}
+                  className="w-full sm:w-auto text-amber-900 dark:text-amber-100 px-2 py-1"
+                >
+                  Masquer
+                </Button>
               </div>
             </div>
           </Alert>

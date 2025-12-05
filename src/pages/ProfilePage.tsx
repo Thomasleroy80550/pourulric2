@@ -170,31 +170,40 @@ const ProfilePage: React.FC = () => {
     }
     setInsuranceLoading(true);
     try {
+      const recipient = session?.user?.email ?? profile.email ?? '';
+      if (!recipient) {
+        toast.error("Aucune adresse e-mail trouvée pour envoyer l'attestation.");
+        setInsuranceLoading(false);
+        return;
+      }
+
       const displayName = `${firstName || profile.first_name || ''} ${lastName || profile.last_name || ''}`.trim() || 'Client';
-      const subject = `Demande d'attestation d'assurance – ${displayName}`;
+      const subject = "Attestation de Responsabilité Civile Professionnelle – Hello Keys";
       const html = `
-        <p>Bonjour l'équipe Hello Keys,</p>
-        <p>Je souhaite recevoir mon attestation d'assurance Hello Keys.</p>
-        <p>Informations utiles :</p>
+        <p>Bonjour ${displayName},</p>
+        <p>Nous vous confirmons que <strong>Hello Keys</strong> détient une <strong>assurance Responsabilité Civile Professionnelle</strong> en vigueur, couvrant ses activités de conciergerie et de gestion locative saisonnière.</p>
+        <p>Cette attestation vaut justificatif de la couverture RC de Hello Keys.</p>
+        <p>Coordonnées utiles :</p>
         <ul>
-          <li>Nom : <strong>${displayName}</strong></li>
-          <li>Email : <strong>${session?.user?.email ?? profile.email ?? ''}</strong></li>
-          <li>Téléphone : <strong>${phoneNumber || profile.phone_number || 'N/A'}</strong></li>
-          <li>Logement : <strong>${propertyAddress || 'Adresse non renseignée'}</strong>, ${propertyZipCode || ''} ${propertyCity || ''}</li>
-          <li>ID utilisateur : <strong>${profile.id}</strong></li>
+          <li><strong>Hello Keys</strong> – SARL – 1 Rue Carnot – 80550 Le Crotoy</li>
+          <li>HKCD Hello Keys Côte d'Opale – SARL – 21 Rte de Waben – 62600 Groffliers</li>
+          <li>E-mail de contact : <a href="mailto:contact@hellokeys.fr">contact@hellokeys.fr</a></li>
         </ul>
-        <p>Merci d'avance.</p>
+        <p>Si vous avez besoin d'un document officiel supplémentaire (format PDF signé), répondez à cet e-mail et nous vous l'enverrons sans délai.</p>
+        <p>Cordialement,<br/>L'équipe Hello Keys</p>
       `;
+
       const { error } = await supabase.functions.invoke('send-email', {
-        body: { to: 'contact@hellokeys.fr', subject, html },
+        body: { to: recipient, subject, html },
       });
+
       if (error) {
-        toast.error(`Erreur lors de l'envoi de la demande : ${error.message}`);
+        toast.error(`Erreur lors de l'envoi de l'attestation : ${error.message}`);
       } else {
-        toast.success("Votre demande d'attestation a été envoyée à notre équipe.");
+        toast.success("Attestation envoyée à votre adresse e‑mail.");
       }
     } catch (err: any) {
-      toast.error(`Erreur lors de l'envoi de la demande : ${err.message}`);
+      toast.error(`Erreur lors de l'envoi de l'attestation : ${err.message}`);
     } finally {
       setInsuranceLoading(false);
     }

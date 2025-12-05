@@ -8,7 +8,7 @@ import { addDays, format, parseISO } from 'date-fns';
 import { getProfileById } from "./profile-api"; // Import getProfileById
 
 const MAKE_WEBHOOK_URL_CROTOY = "https://hook.eu1.make.com/jnnkji5edohpm7i8mstnq1vwqka0iqj9";
-const MAKE_WEBHOOK_URL_BERCK = "https://hook.eu1.make.com/zuncswymvgd5ixlpio47ffn25de8v6lu";
+const MAKE_WEBHOOK_URL_BERCK = "https://hook.eu1.make.com/icdzsajwij1c8r6aubje49pqq29hxwbr";
 
 export interface AppSetting {
   key: string;

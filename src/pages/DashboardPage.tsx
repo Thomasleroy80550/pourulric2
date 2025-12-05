@@ -461,9 +461,9 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-2 sm:px-4 py-6 overflow-x-hidden">
-        <h1 className="text-3xl font-bold mb-2">Bonjour 👋</h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+      <div className="mx-auto w-full max-w-full px-3 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
         
         {/* Notif box BILAN 2025 */}
         {showBilanNotice && (

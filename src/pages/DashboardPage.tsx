@@ -467,36 +467,42 @@ const DashboardPage = () => {
         
         {/* Notif box BILAN 2025 */}
         {showBilanNotice && (
-          <Alert className="mb-6 max-w-full overflow-hidden border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-sm">
+          <Alert className="mb-6 max-w-full overflow-hidden border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-sm p-3 sm:p-4 rounded-md">
             <div className="flex flex-wrap items-start gap-2 max-w-full">
-              <FileText className="h-5 w-5 text-amber-600" />
+              <FileText className="h-4 w-4 text-amber-600" />
               <div className="flex-1 min-w-0">
-                <AlertTitle className="text-base sm:text-lg font-semibold break-words hyphens-auto">BILAN 2025</AlertTitle>
+                <AlertTitle className="text-sm sm:text-base font-semibold break-words hyphens-auto">BILAN 2025</AlertTitle>
                 <AlertDescription className="break-words hyphens-auto">
                   <div className="inline-flex items-center gap-2 text-xs sm:text-sm">
-                    <CalendarDays className="h-4 w-4 text-amber-700 dark:text-amber-200" />
+                    <CalendarDays className="h-3 w-3 text-amber-700 dark:text-amber-200" />
                     Disponible entre le 4 janvier et le 1er mars.
                   </div>
                   <p className="mt-1 text-xs sm:text-sm text-amber-900 dark:text-amber-200 break-words hyphens-auto">
                     Accédez à vos relevés dans la section Finances.
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3 w-full">
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 w-full">
                     <Link to="/finances" className="min-w-0">
-                      <Button variant="outline" className="w-full sm:w-auto border-amber-300 text-amber-900 hover:bg-amber-100 text-sm px-3 py-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto border-amber-300 text-amber-900 hover:bg-amber-100 text-xs sm:text-sm px-2 py-1"
+                      >
                         Voir mes relevés
                       </Button>
                     </Link>
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={handleOpenBilanPopup}
-                      className="w-full sm:w-auto border-amber-300 text-amber-900 hover:bg-amber-100 text-sm px-3 py-1 min-w-0"
+                      className="w-full sm:w-auto border-amber-300 text-amber-900 hover:bg-amber-100 text-xs sm:text-sm px-2 py-1 min-w-0"
                     >
                       Plus d'infos
                     </Button>
                     <Button
                       variant="ghost"
+                      size="sm"
                       onClick={handleDismissBilanNotice}
-                      className="w-full sm:w-auto text-amber-900 text-sm px-3 py-1 min-w-0"
+                      className="w-full sm:w-auto text-amber-900 text-xs sm:text-sm px-2 py-1 min-w-0"
                     >
                       Masquer
                     </Button>

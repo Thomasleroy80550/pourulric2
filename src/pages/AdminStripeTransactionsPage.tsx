@@ -18,7 +18,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [commissionDelta, setCommissionDelta] = useState<number>(0.25); // Delta en monnaie (ex: EUR)
+  const [commissionDelta, setCommissionDelta] = useState<number>(0.55); // Delta en monnaie (ex: EUR)
 
   useDebounce(
     () => {
@@ -101,7 +101,7 @@ const AdminStripeTransactionsPage: React.FC = () => {
                 <Search className="h-4 w-4" />
               </Button>
               <div className="flex items-center gap-2 ml-auto">
-                <label htmlFor="commission-delta" className="text-sm text-muted-foreground">Δ commission</label>
+                <label htmlFor="commission-delta" className="text-sm text-muted-foreground">Δ commission (défaut 0,55)</label>
                 <Input
                   id="commission-delta"
                   type="number"

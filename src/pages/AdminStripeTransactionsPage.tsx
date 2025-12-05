@@ -180,7 +180,13 @@ const AdminStripeTransactionsPage: React.FC = () => {
                           </TableCell>
                           <TableCell>{pi.status}</TableCell>
                           <TableCell>{new Date(pi.created * 1000).toLocaleString()}</TableCell>
-                          <TableCell>{pi.receipt_email || pi.customer || 'N/A'}</TableCell>
+                          <TableCell>
+                            {pi.receipt_email
+                              || (typeof pi.customer === 'string'
+                                ? pi.customer
+                                : (pi.customer?.email || pi.customer?.name || pi.customer?.id))
+                              || 'N/A'}
+                          </TableCell>
                           <TableCell className="text-xs max-w-[200px] truncate">{pi.description || 'N/A'}</TableCell>
                         </TableRow>
                       );

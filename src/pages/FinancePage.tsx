@@ -91,7 +91,7 @@ const FinancePage: React.FC = () => {
               <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0 justify-center">Factures</TabsTrigger>
             </TabsList>
           ) : (
-            <TabsList className={`w-full flex overflow-x-auto gap-2 whitespace-nowrap md:grid ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center`}>
+            <TabsList className={`w-full flex flex-nowrap overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory gap-2 whitespace-nowrap md:grid ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center -mx-3 px-3`}>
               <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relevés</TabsTrigger>
               <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0">Factures</TabsTrigger>
               <TabsTrigger value="rehousing" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relogements</TabsTrigger>

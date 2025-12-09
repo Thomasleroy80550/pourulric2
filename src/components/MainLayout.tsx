@@ -64,6 +64,7 @@ import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
 import Bilan2025NoticeDialog from './Bilan2025NoticeDialog';
+import SupportPolicyDialog from './SupportPolicyDialog';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -268,6 +269,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null);
   const { theme } = useTheme();
+  const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
 
   useEffect(() => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');
@@ -586,7 +588,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
                     Plus aucun support ne sera géré via WhatsApp. Utilisez uniquement le canal de communication par email.
                   </p>
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <Button
                       variant="outline"
                       className="border-amber-300 text-amber-700 hover:bg-amber-100"
@@ -597,6 +599,15 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     >
                       <Mail className="h-4 w-4 mr-2" />
                       Contacter le support par email
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-amber-700 hover:bg-amber-100"
+                      onClick={() => setIsSupportDialogOpen(true)}
+                      title="Pourquoi ce changement ?"
+                    >
+                      <HelpCircle className="h-4 w-4 mr-2" />
+                      Pourquoi ce changement ?
                     </Button>
                   </div>
                 </div>
@@ -618,6 +629,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
       <SnowfallOverlay />
       <Bilan2025NoticeDialog />
+      <SupportPolicyDialog isOpen={isSupportDialogOpen} onOpenChange={setIsSupportDialogOpen} />
     </div>
   );
 };

@@ -85,6 +85,8 @@ import ElectricityServiceLanding from "./pages/ElectricityServiceLanding";
 import PowerSenseLandingFull from "./pages/PowerSenseLandingFull";
 import Marvel2026Landing from "./pages/Marvel2026Landing";
 import AdminStripeDuplicatesPage from "./pages/AdminStripeDuplicatesPage";
+import AdminStatusPage from "./pages/AdminStatusPage";
+import StatusPage from "./pages/StatusPage";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +144,8 @@ function App() {
                   <Route path="/admin/crm" element={<AdminCRMPage />} />
                   <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                   <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
+                  <Route path="/admin/status" element={<AdminStatusPage />} />
+                  <Route path="/status" element={<StatusPage />} />
                   <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
                   <Route path="/pages/:slug" element={<ContentPage />} />
                   <Route path="/profile" element={<ProfilePage />} />

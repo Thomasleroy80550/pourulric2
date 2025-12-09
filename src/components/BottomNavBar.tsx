@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, CalendarDays, Bookmark, Wrench, Banknote, Building, User, LayoutDashboard, TrendingUp, Star, MessageSquare } from 'lucide-react';
+import { Home, CalendarDays, Bookmark, Wrench, Banknote, Building, User, LayoutDashboard, TrendingUp, Star, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession } from './SessionContextProvider';
 
@@ -16,7 +16,7 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ isPaymentSuspended }) => {
     { name: 'Aperçu', href: '/', icon: Home },
     { name: 'Calendrier', href: '/calendar', icon: CalendarDays, disabled: isPaymentSuspended },
     { name: 'Réservations', href: '/bookings', icon: Bookmark, disabled: isPaymentSuspended },
-    { name: 'Tickets', href: '/tickets', icon: MessageSquare },
+    { name: 'Notifications', href: '/notifications', icon: Bell },
     { name: 'Finances', href: '/finances', icon: Banknote, disabled: isPaymentSuspended },
     { name: 'Performances', href: '/performance', icon: TrendingUp },
     { name: 'Mes Avis', href: '/reviews', icon: Star },

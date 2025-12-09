@@ -23,6 +23,7 @@ const FinancePage: React.FC = () => {
   const [showTutorial, setShowTutorial] = useState(false);
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<string>('statements');
+  const [showMoreAlert, setShowMoreAlert] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -73,13 +74,31 @@ const FinancePage: React.FC = () => {
                 Notre fournisseur de logiciel Pennylane a réalisé une mise à jour sur son outil, notre connexion est donc perturbée,
                 d&apos;où le fait de ne pas voir vos factures.
               </p>
-              <p className="mt-2">
-                Pour payer votre dernière facture, c&apos;est simple&nbsp;: il suffit de payer le montant total de votre relevé,
-                soit <span className="font-semibold">Total Facture Hello Keys</span>.
-              </p>
-              <p className="mt-2">
-                Nous contrôlons chaque jour la réception des virements, hormis le lundi.
-              </p>
+
+              {(!isMobile || showMoreAlert) && (
+                <>
+                  <p className="mt-2">
+                    Pour payer votre dernière facture, c&apos;est simple&nbsp;: il suffit de payer le montant total de votre relevé,
+                    soit <span className="font-semibold">Total Facture Hello Keys</span>.
+                  </p>
+                  <p className="mt-2">
+                    Nous contrôlons chaque jour la réception des virements, hormis le lundi.
+                  </p>
+                </>
+              )}
+
+              {isMobile && (
+                <div className="mt-3">
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setShowMoreAlert((v) => !v)}
+                    className="p-0 h-auto"
+                  >
+                    {showMoreAlert ? 'Voir moins' : 'Voir plus'}
+                  </Button>
+                </div>
+              )}
             </AlertDescription>
           </Alert>
         </div>

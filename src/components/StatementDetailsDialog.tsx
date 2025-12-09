@@ -14,6 +14,7 @@ import { Download, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
+import { HELLO_KEYS_IBAN, HELLO_KEYS_BIC } from '@/lib/constants';
 
 interface StatementDetailsDialogProps {
   isOpen: boolean;
@@ -89,6 +90,20 @@ const StatementDetailsDialog: React.FC<StatementDetailsDialogProps> = ({ isOpen,
             Voici un aperçu du relevé pour {statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client inconnu'}. Vous pouvez le télécharger en PDF.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Infos de paiement Hello Keys */}
+        <div className="no-print mb-3 rounded-md border bg-muted/40 p-3">
+          <p className="text-sm font-medium">Paiement de la facture Hello Keys</p>
+          <p className="text-sm mt-1">
+            Veuillez effectuer le virement du <span className="font-semibold">Total Facture Hello Keys</span> vers&nbsp;
+            <span className="font-semibold">IBAN:</span> {HELLO_KEYS_IBAN}
+            {HELLO_KEYS_BIC ? <> &nbsp;•&nbsp; <span className="font-semibold">BIC:</span> {HELLO_KEYS_BIC}</> : null}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Si votre relevé indique une déduction automatique, aucun paiement n'est requis.
+          </p>
+        </div>
+
         <div className="flex-grow rounded-md bg-gray-200 overflow-auto">
           <StatementPrintLayout statement={statement} />
         </div>

@@ -6,8 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil } from 'lucide-react';
-import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles, sendPaymentReminder } from '@/lib/admin-api';
+import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil, CheckCircle2, XCircle } from 'lucide-react';
+import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles, sendPaymentReminder, setInvoicePaidStatus } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -190,6 +190,24 @@ const AdminStatementsPage: React.FC = () => {
     }
   };
 
+  const handleMarkPaid = async (statementId: string) => {
+    const confirm = window.confirm("Confirmer que ce relevé est payé ?");
+    if (!confirm) return;
+    const toastId = toast.loading("Mise à jour du statut de paiement...");
+    await setInvoicePaidStatus(statementId, true);
+    toast.success("Relevé marqué comme payé.", { id: toastId });
+    loadStatements();
+  };
+
+  const handleMarkUnpaid = async (statementId: string) => {
+    const confirm = window.confirm("Marquer ce relevé comme non payé ?");
+    if (!confirm) return;
+    const toastId = toast.loading("Mise à jour du statut de paiement...");
+    await setInvoicePaidStatus(statementId, false);
+    toast.success("Relevé marqué comme non payé.", { id: toastId });
+    loadStatements();
+  };
+
   const filteredStatements = statements.filter(statement => {
     const term = searchTerm.toLowerCase();
     const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}`.toLowerCase() : 'client supprimé';
@@ -276,6 +294,8 @@ const AdminStatementsPage: React.FC = () => {
                       <TableHead>Statut Pennylane</TableHead>
                       <TableHead>Commentaire</TableHead>
                       <TableHead className="text-right">Montant Facturé</TableHead>
+                      <TableHead className="text-right">Total à payer</TableHead>
+                      <TableHead>Paiement</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -295,6 +315,18 @@ const AdminStatementsPage: React.FC = () => {
                           </TableCell>
                           <TableCell>{statement.admin_comment ? 'Oui' : 'Non'}</TableCell>
                           <TableCell className="text-right font-bold">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
+                          <TableCell className="text-right">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
+                          <TableCell>
+                            {statement.is_paid ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-green-100 text-green-700 px-2 py-1 text-xs">
+                                <CheckCircle2 className="h-3 w-3" /> Payé
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-red-100 text-red-700 px-2 py-1 text-xs">
+                                <XCircle className="h-3 w-3" /> Non payé
+                              </span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right space-x-1">
                             <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)} title="Voir les détails"><Eye className="h-4 w-4" /></Button>
                             <Button variant="outline" size="icon" onClick={() => handleEdit(statement.id)} title="Modifier le relevé"><Pencil className="h-4 w-4" /></Button>
@@ -325,6 +357,16 @@ const AdminStatementsPage: React.FC = () => {
                             <Button variant="outline" size="icon" onClick={() => handleResendToPennylane(statement.id)} disabled={retriggeringPennylaneId === statement.id} title="Relancer la création Pennylane">
                               {retriggeringPennylaneId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
+                            {/* Actions Paiement */}
+                            {statement.is_paid ? (
+                              <Button variant="outline" size="icon" onClick={() => handleMarkUnpaid(statement.id)} title="Marquer non payé">
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="icon" onClick={() => handleMarkPaid(statement.id)} title="Marquer payé">
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button variant="destructive" size="icon" onClick={() => handleDelete(statement.id)} title="Supprimer le relevé"><Trash2 className="h-4 w-4" /></Button>
                           </TableCell>
                         </TableRow>

@@ -27,12 +27,15 @@ export interface SavedInvoice {
     first_name: string;
     last_name: string;
   };
-  pennylane_status?: string; // Ajout du statut Pennylane
-  pennylane_invoice_url?: string | null; // Nouveau champ pour l'URL de la facture Pennylane
-  krossbooking_property_id?: number | null; // Assurez-vous que ce champ est présent
-  transfer_statuses?: { [key: string]: boolean } | null; // Remplacement de transfer_completed
-  source_type?: 'generated' | 'manual'; // Ajout du type de source
-  created_by?: string | null; // Nouvel attribut: admin créateur
+  pennylane_status?: string;
+  pennylane_invoice_url?: string | null;
+  krossbooking_property_id?: number | null;
+  transfer_statuses?: { [key: string]: boolean } | null;
+  source_type?: 'generated' | 'manual';
+  created_by?: string | null;
+  // --- AJOUT : champs de paiement ---
+  is_paid?: boolean;
+  paid_at?: string | null;
 }
 
 export interface InvoiceTotals {
@@ -1494,6 +1497,24 @@ export async function updateInvoiceSourceTransferStatus(invoiceId: string, sourc
   if (error) {
     console.error("Error updating source transfer status:", error);
     throw new Error(`Erreur lors de la mise à jour du statut du virement pour la source ${source} : ${error.message}`);
+  }
+}
+
+/**
+ * Met à jour le statut de paiement d'un relevé (admin).
+ */
+export async function setInvoicePaidStatus(invoiceId: string, paid: boolean): Promise<void> {
+  const payload: Record<string, any> = { is_paid: paid };
+  payload.paid_at = paid ? new Date().toISOString() : null;
+
+  const { error } = await supabase
+    .from('invoices')
+    .update(payload)
+    .eq('id', invoiceId);
+
+  if (error) {
+    console.error("Error updating invoice paid status:", error);
+    throw new Error(`Erreur lors de la mise à jour du statut de paiement : ${error.message}`);
   }
 }
 

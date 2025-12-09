@@ -31,6 +31,7 @@ const NotificationsPage: React.FC = () => {
   const { session } = useSession();
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const hasImportant = true; // Support email + éventuelle fenêtre Bilan = informations importantes
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -99,6 +100,24 @@ const NotificationsPage: React.FC = () => {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Bell className="h-6 w-6" />
             Notifications
+            {unreadCount > 0 && (
+              <span
+                className="ml-2 inline-flex items-center justify-center h-6 min-w-6 rounded-full bg-blue-600 text-white text-xs px-2 font-bold"
+                aria-label={`${unreadCount} notifications non lues`}
+                title={`${unreadCount} notifications non lues`}
+              >
+                {unreadCount}
+              </span>
+            )}
+            {hasImportant && (
+              <span
+                className="ml-2 inline-flex items-center justify-center h-6 w-6 rounded-full bg-amber-500 text-white text-xs font-extrabold"
+                aria-label="Informations importantes"
+                title="Informations importantes"
+              >
+                !
+              </span>
+            )}
           </h1>
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllAsRead} className="flex items-center gap-2">

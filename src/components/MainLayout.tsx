@@ -124,7 +124,7 @@ const accountNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
 ];
 
-const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: boolean }> = ({ onLinkClick, isPaymentSuspended }) => {
+const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: boolean; unreadCount?: number; hasImportant?: boolean }> = ({ onLinkClick, isPaymentSuspended, unreadCount = 0, hasImportant = true }) => {
   const location = useLocation();
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
@@ -205,6 +205,24 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
                         title="Nouveau"
                       />
                     )}
+                    {item.href === '/notifications' && unreadCount > 0 && (
+                      <span
+                        className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-blue-600 text-white text-[10px] px-1.5 font-bold"
+                        aria-label={`${unreadCount} notifications non lues`}
+                        title={`${unreadCount} notifications non lues`}
+                      >
+                        {unreadCount}
+                      </span>
+                    )}
+                    {item.href === '/notifications' && hasImportant && (
+                      <span
+                        className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-extrabold"
+                        aria-label="Informations importantes"
+                        title="Informations importantes"
+                      >
+                        !
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}
@@ -263,6 +281,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null);
+  const hasImportant = true; // Support email + période Bilan = infos importantes
 
   useEffect(() => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');
@@ -364,7 +383,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="flex min-h-screen overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {!isMobile && (
         <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
-          <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} />
+          <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} />
         </aside>
       )}
 
@@ -380,7 +399,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
-                    <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} />
+                    <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} />
                   </SheetContent>
                 </Sheet>
               )}

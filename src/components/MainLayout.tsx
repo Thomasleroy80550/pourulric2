@@ -63,12 +63,6 @@ import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new consta
 import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
-import Bilan2025NoticeDialog from './Bilan2025NoticeDialog';
-import SupportPolicyDialog from './SupportPolicyDialog';
-
-interface MainLayoutProps {
-  children: React.ReactNode;
-}
 
 const housekeepingSidebarSections = [
   {
@@ -87,6 +81,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
       { name: 'Calendrier', href: '/calendar', icon: Calendar, disabled: isPaymentSuspended },
       { name: 'Réservations', href: '/bookings', icon: Book, disabled: isPaymentSuspended },
       { name: 'Incidents', href: '/reports', icon: Wrench },
+      { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
       { name: 'Saison 2026', href: '/season-2026', icon: CalendarDays },
     ],
@@ -268,8 +263,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null);
-  const { theme } = useTheme();
-  const [isSupportDialogOpen, setIsSupportDialogOpen] = useState(false);
 
   useEffect(() => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');
@@ -573,47 +566,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <div className="h-1 w-full bg-gradient-to-r from-red-400 via-red-500 to-red-600" />
               </div>
             )}
-            {/* AJOUT: Bannière d'information importante sur l'arrêt du support WhatsApp */}
-            <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 shadow-sm">
-              <div className="p-4 md:p-5 flex items-start gap-3">
-                <div className="mt-0.5 shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center ring-2 ring-amber-200">
-                    <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg md:text-xl font-bold text-amber-900 dark:text-amber-100">
-                    Information importante
-                  </h3>
-                  <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
-                    Plus aucun support ne sera géré via WhatsApp. Utilisez uniquement le canal de communication par email.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      className="border-amber-300 text-amber-700 hover:bg-amber-100"
-                      onClick={() => {
-                        window.location.href = 'mailto:contact@hellokeys.fr?subject=Support%20par%20email';
-                      }}
-                      title="Contacter le support par email"
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      Contacter le support par email
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="text-amber-700 hover:bg-amber-100"
-                      onClick={() => setIsSupportDialogOpen(true)}
-                      title="Pourquoi ce changement ?"
-                    >
-                      <HelpCircle className="h-4 w-4 mr-2" />
-                      Pourquoi ce changement ?
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="h-1 w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600" />
-            </div>
             {children}
           </main>
         </div>
@@ -628,8 +580,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       />
       <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
       <SnowfallOverlay />
-      <Bilan2025NoticeDialog />
-      <SupportPolicyDialog isOpen={isSupportDialogOpen} onOpenChange={setIsSupportDialogOpen} />
     </div>
   );
 };

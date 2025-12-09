@@ -87,6 +87,7 @@ import Marvel2026Landing from "./pages/Marvel2026Landing";
 import AdminStripeDuplicatesPage from "./pages/AdminStripeDuplicatesPage";
 import AdminStatusPage from "./pages/AdminStatusPage";
 import StatusPage from "./pages/StatusPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 const queryClient = new QueryClient();
 
@@ -183,6 +184,7 @@ function App() {
                   <Route path="/messages" element={<MessagesPage />} />
                   <Route path="/electricity-start" element={<ElectricityServiceLanding />} />
                   <Route path="/electricity" element={<ElectricityConsumptionPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </SessionContextProvider>

@@ -11,7 +11,8 @@ import { useSession } from '@/components/SessionContextProvider';
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import FinanceTutorial from '@/components/finance/FinanceTutorial';
-import { HelpCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { HelpCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const FinancePage: React.FC = () => {
@@ -56,6 +57,27 @@ const FinancePage: React.FC = () => {
             <HelpCircle className="h-4 w-4" />
             <span>Aide</span>
           </Button>
+        </div>
+
+        {/* Message d'information Pennylane */}
+        <div className="mb-6">
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Information concernant les factures Pennylane</AlertTitle>
+            <AlertDescription>
+              <p>
+                Notre fournisseur de logiciel Pennylane a réalisé une mise à jour sur son outil, notre connexion est donc perturbée,
+                d&apos;où le fait de ne pas voir vos factures.
+              </p>
+              <p className="mt-2">
+                Pour payer votre dernière facture, c&apos;est simple&nbsp;: il suffit de payer le montant total de votre relevé,
+                soit <span className="font-semibold">Total Facture Hello Keys</span>.
+              </p>
+              <p className="mt-2">
+                Nous contrôlons chaque jour la réception des virements, hormis le lundi.
+              </p>
+            </AlertDescription>
+          </Alert>
         </div>
         
         {showTutorial && <FinanceTutorial onClose={() => setShowTutorial(false)} />}

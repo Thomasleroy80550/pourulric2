@@ -14,11 +14,13 @@ import FinanceTutorial from '@/components/finance/FinanceTutorial';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { HelpCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const FinancePage: React.FC = () => {
   const { profile } = useSession();
   const [showExpensesTab, setShowExpensesTab] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (profile) {
@@ -45,14 +47,14 @@ const FinancePage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="container mx-auto px-3 md:px-6 py-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <h1 className="text-3xl font-bold">Finances</h1>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowTutorial(true)}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 w-full md:w-auto"
           >
             <HelpCircle className="h-4 w-4" />
             <span>Aide</span>
@@ -84,19 +86,18 @@ const FinancePage: React.FC = () => {
         
         <Tabs defaultValue="statements" className="w-full">
           {profile?.role === 'accountant' ? (
-<TabsList className="grid w-full grid-cols-2 max-w-md mx-auto text-center justify-items-center">
-  <TabsTrigger value="statements" className="w-full justify-center">Relevés</TabsTrigger>
-  <TabsTrigger value="invoices" className="w-full justify-center">Factures</TabsTrigger>
-</TabsList>
-
+            <TabsList className="w-full flex overflow-x-auto gap-2 whitespace-nowrap md:grid md:grid-cols-2 max-w-full mx-auto">
+              <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0 justify-center">Relevés</TabsTrigger>
+              <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0 justify-center">Factures</TabsTrigger>
+            </TabsList>
           ) : (
-            <TabsList className={`grid w-full grid-cols-3 sm:grid-cols-3 ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center`}>
-              <TabsTrigger value="statements" className="text-center">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices" className="text-center">Factures</TabsTrigger>
-              <TabsTrigger value="rehousing" className="text-center">Relogements</TabsTrigger>
-              <TabsTrigger value="balances" disabled className="text-center">Bilans (En développement)</TabsTrigger>
-              <TabsTrigger value="reports" disabled className="w-full justify-center">Rapports (En développement)</TabsTrigger>
-              {showExpensesTab && <TabsTrigger value="expenses" className="text-center">Dépenses</TabsTrigger>}
+            <TabsList className={`w-full flex overflow-x-auto gap-2 whitespace-nowrap md:grid ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center`}>
+              <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relevés</TabsTrigger>
+              <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0">Factures</TabsTrigger>
+              <TabsTrigger value="rehousing" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relogements</TabsTrigger>
+              <TabsTrigger value="balances" disabled className="flex-shrink-0 min-w-[180px] md:min-w-0">Bilans (En développement)</TabsTrigger>
+              <TabsTrigger value="reports" disabled className="flex-shrink-0 min-w-[200px] md:min-w-0">Rapports (En développement)</TabsTrigger>
+              {showExpensesTab && <TabsTrigger value="expenses" className="flex-shrink-0 min-w-[140px] md:min-w-0">Dépenses</TabsTrigger>}
             </TabsList>
           )}
           <TabsContent value="statements">

@@ -95,9 +95,9 @@ const NotificationsPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="container mx-auto px-3 sm:px-6 py-4 space-y-4 overflow-x-hidden">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
             <Bell className="h-6 w-6" />
             Notifications
             {unreadCount > 0 && (
@@ -135,10 +135,10 @@ const NotificationsPage: React.FC = () => {
           <CardContent className="space-y-4">
             {/* Arrêt du support WhatsApp */}
             <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4">
-              <h3 className="text-base md:text-lg font-semibold text-amber-900 dark:text-amber-100">
+              <h3 className="text-base md:text-lg font-semibold text-amber-900 dark:text-amber-100 break-words">
                 Arrêt du support via WhatsApp
               </h3>
-              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
+              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200 break-words">
                 Plus aucun support ne sera géré via WhatsApp. Utilisez uniquement le canal de communication par email.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -173,14 +173,14 @@ const NotificationsPage: React.FC = () => {
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-base md:text-lg font-semibold text-amber-900 dark:text-amber-100">
+                    <h3 className="text-base md:text-lg font-semibold text-amber-900 dark:text-amber-100 break-words">
                       BILAN 2025
                     </h3>
                     <div className="mt-1 text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
                       <CalendarDays className="h-4 w-4" />
                       Disponible du 4 janvier au 1er mars
                     </div>
-                    <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                    <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 break-words">
                       Retrouvez vos relevés dans la section Finances.
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -214,7 +214,7 @@ const NotificationsPage: React.FC = () => {
               </Button>
             )}
           </CardHeader>
-          <CardContent className="max-h-[50vh] overflow-y-auto">
+          <CardContent className="max-h-[60vh] sm:max-h-[50vh] overflow-y-auto overflow-x-hidden">
             {loading ? (
               <div className="space-y-3">
                 <Skeleton className="h-12 w-full" />
@@ -227,9 +227,9 @@ const NotificationsPage: React.FC = () => {
                   <button
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`w-full text-left p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${!notification.is_read ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                    className={`w-full text-left p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer ${!notification.is_read ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
                   >
-                    <p className="text-sm">{notification.message}</p>
+                    <p className="text-sm sm:text-base break-words leading-relaxed">{notification.message}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })}
                     </p>

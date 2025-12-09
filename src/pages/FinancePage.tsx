@@ -15,12 +15,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { HelpCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 const FinancePage: React.FC = () => {
   const { profile } = useSession();
   const [showExpensesTab, setShowExpensesTab] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState<string>('statements');
 
   useEffect(() => {
     if (profile) {
@@ -84,21 +86,53 @@ const FinancePage: React.FC = () => {
         
         {showTutorial && <FinanceTutorial onClose={() => setShowTutorial(false)} />}
         
-        <Tabs defaultValue="statements" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {profile?.role === 'accountant' ? (
-            <TabsList className="w-full flex overflow-x-auto gap-2 whitespace-nowrap md:grid md:grid-cols-2 max-w-full mx-auto">
-              <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0 justify-center">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0 justify-center">Factures</TabsTrigger>
-            </TabsList>
+            isMobile ? (
+              <div className="mb-4">
+                <Select value={activeTab} onValueChange={setActiveTab}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choisir une section" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="w-full">
+                    <SelectItem value="statements">Relevés</SelectItem>
+                    <SelectItem value="invoices">Factures</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <TabsList className="w-full flex overflow-x-auto gap-2 whitespace-nowrap md:grid md:grid-cols-2 max-w-full mx-auto">
+                <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0 justify-center">Relevés</TabsTrigger>
+                <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0 justify-center">Factures</TabsTrigger>
+              </TabsList>
+            )
           ) : (
-            <TabsList className={`w-full flex flex-nowrap overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory gap-2 whitespace-nowrap md:grid ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center -mx-3 px-3`}>
-              <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relevés</TabsTrigger>
-              <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0">Factures</TabsTrigger>
-              <TabsTrigger value="rehousing" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relogements</TabsTrigger>
-              <TabsTrigger value="balances" disabled className="flex-shrink-0 min-w-[180px] md:min-w-0">Bilans (En développement)</TabsTrigger>
-              <TabsTrigger value="reports" disabled className="flex-shrink-0 min-w-[200px] md:min-w-0">Rapports (En développement)</TabsTrigger>
-              {showExpensesTab && <TabsTrigger value="expenses" className="flex-shrink-0 min-w-[140px] md:min-w-0">Dépenses</TabsTrigger>}
-            </TabsList>
+            isMobile ? (
+              <div className="mb-4">
+                <Select value={activeTab} onValueChange={setActiveTab}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choisir une section" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="w-full">
+                    <SelectItem value="statements">Relevés</SelectItem>
+                    <SelectItem value="invoices">Factures</SelectItem>
+                    <SelectItem value="rehousing">Relogements</SelectItem>
+                    <SelectItem value="balances" disabled>Bilans (En développement)</SelectItem>
+                    <SelectItem value="reports" disabled>Rapports (En développement)</SelectItem>
+                    {showExpensesTab && <SelectItem value="expenses">Dépenses</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <TabsList className={`w-full flex flex-nowrap overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory gap-2 whitespace-nowrap md:grid ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center -mx-3 px-3`}>
+                <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relevés</TabsTrigger>
+                <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0">Factures</TabsTrigger>
+                <TabsTrigger value="rehousing" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relogements</TabsTrigger>
+                <TabsTrigger value="balances" disabled className="flex-shrink-0 min-w-[180px] md:min-w-0">Bilans (En développement)</TabsTrigger>
+                <TabsTrigger value="reports" disabled className="flex-shrink-0 min-w-[200px] md:min-w-0">Rapports (En développement)</TabsTrigger>
+                {showExpensesTab && <TabsTrigger value="expenses" className="flex-shrink-0 min-w-[140px] md:min-w-0">Dépenses</TabsTrigger>}
+              </TabsList>
+            )
           )}
           <TabsContent value="statements">
             <StatementsTab />

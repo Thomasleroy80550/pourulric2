@@ -78,9 +78,8 @@ const LoginV2: React.FC = () => {
       {/* Barre fine avec logo et menu */}
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-semibold text-xl">f</span>
-          </div>
+          <img src="/logo.png" alt="Hello Keys" className="h-9 w-auto" />
+          <span className="font-semibold text-[#0A2540]">Hello Keys</span>
         </div>
         <button
           className="p-2 rounded-full hover:bg-gray-100 transition"
@@ -96,11 +95,11 @@ const LoginV2: React.FC = () => {
         <div className="flex flex-col justify-center py-8">
           <div className="max-w-xl">
             <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">
-              Explorez les sujets que
-              <span className="block text-blue-600">vous aimez.</span>
+              Gérez vos locations
+              <span className="block text-[#1E90FF]">avec Hello Keys.</span>
             </h1>
             <p className="mt-6 text-gray-600 text-lg">
-              Connectez-vous pour retrouver vos contenus, vos conversations et les services dont vous avez besoin.
+              Connectez-vous pour accéder à vos réservations, tâches de ménage, finances et notifications.
             </p>
           </div>
 
@@ -130,11 +129,11 @@ const LoginV2: React.FC = () => {
               <span>Autres langues…</span>
             </div>
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-              <span>S’inscrire</span>
-              <span>Se connecter</span>
-              <span>Politique de confidentialité</span>
-              <span>Conditions générales</span>
-              <span>Aide</span>
+              <span>Propriétaires</span>
+              <span>Personnel de ménage</span>
+              <span>Centre d'aide</span>
+              <span>Conditions</span>
+              <span>Confidentialité</span>
             </div>
           </div>
         </div>
@@ -168,7 +167,7 @@ const LoginV2: React.FC = () => {
 
                 <div className="mt-6 w-full space-y-3">
                   <Button
-                    className="w-full h-11 rounded-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full h-11 rounded-full bg-[#1E90FF] hover:bg-[#1572D8]"
                     onClick={handleContinue}
                   >
                     Continuer
@@ -182,7 +181,7 @@ const LoginV2: React.FC = () => {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full h-11 rounded-full text-blue-600 border-blue-200 hover:border-blue-300"
+                    className="w-full h-11 rounded-full text-[#1E90FF] border-[#B3D7FF] hover:border-[#91C7FF]"
                     onClick={handleCreateAccount}
                   >
                     Créer un nouveau compte
@@ -191,7 +190,7 @@ const LoginV2: React.FC = () => {
 
                 <Separator className="my-8" />
 
-                {/* Module Auth Supabase (masqué tant qu’on ne demande pas) */}
+                {/* Module Auth Supabase (masqué tant qu'on ne demande pas) */}
                 {showAuth && (
                   <div className="w-full">
                     <Auth
@@ -205,11 +204,11 @@ const LoginV2: React.FC = () => {
                 )}
 
                 <div className="mt-6 text-xs text-gray-500">
-                  <span>© Meta style — version personnalisée pour votre application</span>
+                  <span>© Hello Keys — page de connexion V2</span>
                 </div>
 
                 <div className="mt-2 text-xs text-gray-400">
-                  <Link to="/" className="hover:underline">Retour à l’accueil</Link>
+                  <Link to="/" className="hover:underline">Retour à l'accueil</Link>
                 </div>
               </div>
             </CardContent>

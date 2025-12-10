@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { UserCircle2, Settings } from "lucide-react";
+import { UserCircle2, Settings, Calendar, Sparkles, Wallet, Bell, BarChart3 } from "lucide-react";
 
 type ProfilePreview = {
   email?: string | null;
@@ -105,17 +105,100 @@ const LoginV2: React.FC = () => {
 
           {/* Composition visuelle simplifiée (cartes et badges) */}
           <div className="mt-10 relative h-80">
-            <div className="absolute left-4 top-2 w-40 h-56 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden flex items-center justify-center">
-              <div className="w-16 h-16 rounded-xl bg-gray-200" />
+            {/* Carte Réservations */}
+            <div className="absolute left-4 top-2 w-40 h-56 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-[#1E90FF]" />
+                  <span className="text-sm font-medium text-gray-800">Réservations</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <div className="h-2 w-full bg-gray-100 rounded">
+                    <div className="h-2 w-2/3 bg-[#1E90FF] rounded" />
+                  </div>
+                  <div className="h-2 w-full bg-gray-100 rounded">
+                    <div className="h-2 w-1/2 bg-[#1E90FF] rounded" />
+                  </div>
+                  <div className="h-2 w-full bg-gray-100 rounded">
+                    <div className="h-2 w-3/4 bg-[#1E90FF] rounded" />
+                  </div>
+                </div>
+                <div className="mt-4 text-xs text-gray-500">Taux d'occupation hebdo</div>
+              </div>
             </div>
-            <div className="absolute left-40 top-16 w-48 h-64 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden flex items-center justify-center">
-              <div className="w-20 h-20 rounded-full bg-gray-200" />
+
+            {/* Carte Ménage */}
+            <div className="absolute left-40 top-16 w-48 h-64 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-[#1E90FF]" />
+                  <span className="text-sm font-medium text-gray-800">Ménage</span>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Studio #12</span>
+                    <span className="text-xs font-medium text-green-600">Fait</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">T2 Rivage</span>
+                    <span className="text-xs font-medium text-yellow-600">En cours</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Villa Mer</span>
+                    <span className="text-xs font-medium text-red-600">À faire</span>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="h-2 w-full bg-gray-100 rounded">
+                    <div className="h-2 w-2/5 bg-[#1E90FF] rounded" />
+                  </div>
+                  <div className="mt-1 text-[10px] text-gray-500">Progression du jour</div>
+                </div>
+              </div>
             </div>
-            <div className="absolute right-8 top-0 w-56 h-72 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden flex items-center justify-center">
-              <div className="w-24 h-24 rounded-xl bg-gray-200" />
+
+            {/* Carte Finances */}
+            <div className="absolute right-8 top-0 w-56 h-72 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-[#1E90FF]" />
+                  <span className="text-sm font-medium text-gray-800">Finances</span>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="col-span-1">
+                    <div className="text-[10px] text-gray-500">Revenus</div>
+                    <div className="text-xs font-semibold text-gray-800">€3 240</div>
+                  </div>
+                  <div className="col-span-1">
+                    <div className="text-[10px] text-gray-500">Dépenses</div>
+                    <div className="text-xs font-semibold text-gray-800">€820</div>
+                  </div>
+                  <div className="col-span-1">
+                    <div className="text-[10px] text-gray-500">Solde</div>
+                    <div className="text-xs font-semibold text-green-600">€2 420</div>
+                  </div>
+                </div>
+                {/* Mini sparkline */}
+                <div className="mt-4 flex items-end gap-1 h-16">
+                  <div className="w-2 bg-[#1E90FF] h-6 rounded-sm" />
+                  <div className="w-2 bg-[#1E90FF] h-10 rounded-sm" />
+                  <div className="w-2 bg-[#1E90FF] h-8 rounded-sm" />
+                  <div className="w-2 bg-[#1E90FF] h-14 rounded-sm" />
+                  <div className="w-2 bg-[#1E90FF] h-5 rounded-sm" />
+                  <div className="w-2 bg-[#1E90FF] h-12 rounded-sm" />
+                  <div className="w-2 bg-[#1E90FF] h-9 rounded-sm" />
+                </div>
+                <div className="mt-1 text-[10px] text-gray-500">Évolution 7 jours</div>
+              </div>
             </div>
-            <div className="absolute right-24 bottom-[-10px] w-40 h-40 bg-pink-100 rounded-full flex items-center justify-center shadow">
-              <span className="text-pink-500 text-2xl">❤</span>
+
+            {/* Pastille Notifications (conserver la forme circulaire) */}
+            <div className="absolute right-24 bottom-[-10px] w-40 h-40 bg-[#EAF4FF] rounded-full flex items-center justify-center shadow">
+              <div className="flex flex-col items-center">
+                <Bell className="h-8 w-8 text-[#1E90FF]" />
+                <span className="mt-1 text-xs font-medium text-[#0A2540]">Notifications</span>
+                <span className="text-[10px] text-gray-600">3 nouvelles</span>
+              </div>
             </div>
           </div>
 

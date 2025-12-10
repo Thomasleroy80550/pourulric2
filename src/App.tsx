@@ -14,6 +14,7 @@ import RoadmapPage from "./pages/RoadmapPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import LoginV2 from "./pages/LoginV2";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import PageCreator from "./components/PageCreator";
 import ContentPage from "./pages/ContentPage";
@@ -106,6 +107,7 @@ function App() {
                 {/* The SessionContextProvider handles its own loading state and redirects */}
                 <Routes>
                   <Route path="/login" element={<Login />} />
+                  <Route path="/login-v2" element={<LoginV2 />} />
                   <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
                   <Route path="/admin" element={<AdminDashboardPage />} />
                   <Route path="/admin/pages" element={<PageCreator />} />

@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { UserCircle2, Settings, Calendar, Sparkles, Wallet, Bell, BarChart3 } from "lucide-react";
+import { UserCircle2, Settings, Calendar, Sparkles, BarChart3, Bell } from "lucide-react";
 
 type ProfilePreview = {
   email?: string | null;
@@ -225,7 +225,16 @@ const LoginV2: React.FC = () => {
         <div className="flex items-center justify-center py-8">
           <Card className="w-full max-w-md border-0 shadow-none">
             <CardContent className="pt-6">
-              <div className="flex flex-col items-center">
+              {/* En-tête branding dans la carte */}
+              <div className="w-full flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <img src="/logo.png" alt="Hello Keys" className="h-6 w-auto" />
+                  <span className="font-semibold text-[#0A2540]">Hello Keys</span>
+                </div>
+                <span className="text-xs text-gray-500">Connexion</span>
+              </div>
+
+              <div className="mt-6 flex flex-col items-center">
                 <div className="relative">
                   {profilePreview?.avatarUrl ? (
                     <img
@@ -234,7 +243,7 @@ const LoginV2: React.FC = () => {
                       className="h-28 w-28 rounded-full object-cover border"
                     />
                   ) : (
-                    <div className="h-28 w-28 rounded-full bg-gray-200 flex items-center justify-center border">
+                    <div className="h-28 w-28 rounded-full bg-gray-200 flex items-center justify-center border ring-4 ring-[#EAF4FF]">
                       <UserCircle2 className="h-16 w-16 text-gray-500" />
                     </div>
                   )}
@@ -248,6 +257,27 @@ const LoginV2: React.FC = () => {
 
                 <div className="mt-4 text-lg font-medium">{displayName}</div>
 
+                {/* Chips de fonctionnalités (mini-illustrations du dashboard) */}
+                <div className="mt-5 grid grid-cols-2 gap-2 w-full">
+                  <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
+                    <Calendar className="h-4 w-4 text-[#1E90FF]" />
+                    <span className="text-xs font-medium text-gray-800">Réservations</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
+                    <Sparkles className="h-4 w-4 text-[#1E90FF]" />
+                    <span className="text-xs font-medium text-gray-800">Ménage</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
+                    <BarChart3 className="h-4 w-4 text-[#1E90FF]" />
+                    <span className="text-xs font-medium text-gray-800">Finances</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
+                    <Bell className="h-4 w-4 text-[#1E90FF]" />
+                    <span className="text-xs font-medium text-gray-800">Notifications</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
                 <div className="mt-6 w-full space-y-3">
                   <Button
                     className="w-full h-11 rounded-full bg-[#1E90FF] hover:bg-[#1572D8]"
@@ -273,7 +303,7 @@ const LoginV2: React.FC = () => {
 
                 <Separator className="my-8" />
 
-                {/* Module Auth Supabase (masqué tant qu'on ne demande pas) */}
+                {/* Module Auth Supabase */}
                 {showAuth && (
                   <div className="w-full">
                     <Auth
@@ -286,8 +316,9 @@ const LoginV2: React.FC = () => {
                   </div>
                 )}
 
-                <div className="mt-6 text-xs text-gray-500">
-                  <span>© Hello Keys — page de connexion V2</span>
+                {/* Note de sécurité */}
+                <div className="mt-4 text-[11px] text-gray-500">
+                  Vos informations sont protégées et utilisées uniquement pour vous connecter à Hello Keys.
                 </div>
 
                 <div className="mt-2 text-xs text-gray-400">

@@ -5,11 +5,23 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { UserCircle2, Settings, Calendar, Sparkles, BarChart3, Bell } from "lucide-react";
+import {
+  UserCircle2,
+  Settings,
+  Building2,
+  CalendarRange,
+  BarChart3,
+  Sparkles,
+  Coins,
+  Bell,
+  MapPin,
+  KeyRound,
+} from "lucide-react";
 
 type ProfilePreview = {
   email?: string | null;
@@ -19,10 +31,6 @@ type ProfilePreview = {
 
 const LoginV2: React.FC = () => {
   const { toast } = useToast();
-
-  // On essaie de récupérer des infos minimales depuis localStorage ou session (si déjà connecté)
-  // Note: Cette page reste entièrement fonctionnelle même sans session existante.
-  const [session] = React.useState(() => supabase.auth.getSession());
   const [profilePreview, setProfilePreview] = React.useState<ProfilePreview | null>(null);
   const [showAuth, setShowAuth] = React.useState(false);
   const [showSignup, setShowSignup] = React.useState(false);
@@ -52,19 +60,18 @@ const LoginV2: React.FC = () => {
   }, [profilePreview]);
 
   const handleContinue = async () => {
-    // Si déjà authentifié, on redirige vers le tableau de bord
     const { data } = await supabase.auth.getSession();
     if (data.session) {
-      toast({ title: "Connexion", description: "Vous êtes déjà connecté.", duration: 2500 });
-      window.location.href = "/"; // redirection simple vers la page principale
+      toast({ title: "Bienvenue", description: "Connexion réussie.", duration: 2500 });
+      window.location.href = "/";
       return;
     }
-    // Sinon on affiche le module Auth
     setShowAuth(true);
     toast({ title: "Connexion requise", description: "Veuillez vous connecter pour continuer." });
   };
 
   const handleUseAnotherProfile = () => {
+    setShowSignup(false);
     setShowAuth(true);
   };
 
@@ -74,8 +81,8 @@ const LoginV2: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-[#F7FBFF] to-white">
-      {/* Barre fine avec logo et menu */}
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#F7FBFF] via-white to-[#F0F7FF]">
+      {/* Top bar brand */}
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Hello Keys" className="h-8 w-auto" />
@@ -89,27 +96,34 @@ const LoginV2: React.FC = () => {
         </button>
       </div>
 
-      {/* Contenu principal en deux colonnes */}
+      {/* Deux colonnes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 lg:px-12">
-        {/* Colonne gauche: slogan et composition visuelle */}
+        {/* Colonne gauche: hero + mosaïque fonctionnalités */}
         <div className="flex flex-col justify-center py-8">
           <div className="max-w-xl">
-            <h1 className="text-4xl md:text-6xl font-semibold tracking-tight">
-              Gérez vos locations
-              <span className="block text-[#1E90FF]">avec Hello Keys.</span>
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#EAF4FF] px-3 py-1">
+              <Building2 className="h-4 w-4 text-[#1E90FF]" />
+              <span className="text-xs font-medium text-[#0A2540]">Plateforme immobilière 2.0</span>
+            </div>
+            <h1 className="mt-4 text-4xl md:text-6xl font-semibold tracking-tight">
+              Gérez vos biens
+              <span className="block bg-clip-text text-transparent bg-gradient-to-r from-[#1E90FF] to-[#7C3AED]">
+                avec Hello Keys.
+              </span>
             </h1>
             <p className="mt-6 text-gray-600 text-lg">
-              Accédez à vos réservations, tâches de ménage, finances et notifications en un clic.
+              Centralisez réservations, ménage, finances et check-in dans une interface moderne,
+              pensée pour les propriétaires et équipes terrain.
             </p>
           </div>
 
-          {/* Composition visuelle: mini-illustrations du dashboard */}
-          <div className="mt-10 relative h-80">
-            {/* Carte Réservations */}
-            <div className="absolute left-4 top-2 w-40 h-56 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+          {/* Mosaïque d’illustrations du dashboard */}
+          <div className="mt-10 relative h-[22rem]">
+            {/* Réservations */}
+            <div className="absolute left-2 top-0 w-44 h-60 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-[#1E90FF]" />
+                  <CalendarRange className="h-5 w-5 text-[#1E90FF]" />
                   <span className="text-sm font-medium text-gray-800">Réservations</span>
                 </div>
                 <div className="mt-3 space-y-2">
@@ -123,12 +137,12 @@ const LoginV2: React.FC = () => {
                     <div className="h-2 w-3/4 bg-[#1E90FF] rounded" />
                   </div>
                 </div>
-                <div className="mt-4 text-xs text-gray-500">Taux d'occupation hebdo</div>
+                <div className="mt-4 text-xs text-gray-500">Taux d’occupation hebdo</div>
               </div>
             </div>
 
-            {/* Carte Ménage */}
-            <div className="absolute left-40 top-16 w-48 h-64 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+            {/* Ménage */}
+            <div className="absolute left-40 top-14 w-52 h-64 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-[#1E90FF]" />
@@ -157,8 +171,8 @@ const LoginV2: React.FC = () => {
               </div>
             </div>
 
-            {/* Carte Finances */}
-            <div className="absolute right-8 top-0 w-56 h-72 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+            {/* Finances */}
+            <div className="absolute right-8 top-0 w-60 h-72 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-[#1E90FF]" />
@@ -191,17 +205,20 @@ const LoginV2: React.FC = () => {
               </div>
             </div>
 
-            {/* Pastille Notifications */}
-            <div className="absolute right-24 bottom-[-10px] w-40 h-40 bg-[#EAF4FF] rounded-full flex items-center justify-center shadow">
+            {/* Check-in / Clés */}
+            <div className="absolute right-24 bottom-[-12px] w-44 h-44 bg-gradient-to-br from-[#EAF4FF] to-white rounded-2xl flex items-center justify-center shadow border border-gray-100">
               <div className="flex flex-col items-center">
-                <Bell className="h-8 w-8 text-[#1E90FF]" />
-                <span className="mt-1 text-xs font-medium text-[#0A2540]">Notifications</span>
-                <span className="text-[10px] text-gray-600">3 nouvelles</span>
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-6 w-6 text-[#1E90FF]" />
+                  <MapPin className="h-6 w-6 text-[#1E90FF]" />
+                </div>
+                <span className="mt-2 text-xs font-medium text-[#0A2540]">Check-in & accès</span>
+                <span className="text-[10px] text-gray-600">Codes, badges, consignes</span>
               </div>
             </div>
           </div>
 
-          {/* Footer liens */}
+          {/* Footer liens orientés immobilier */}
           <div className="mt-8 text-sm text-gray-500">
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               <span>Français (France)</span>
@@ -212,25 +229,25 @@ const LoginV2: React.FC = () => {
             </div>
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
               <span>Propriétaires</span>
-              <span>Personnel de ménage</span>
-              <span>Centre d'aide</span>
+              <span>Équipes ménage</span>
+              <span>Centre d’aide</span>
               <span>Conditions</span>
               <span>Confidentialité</span>
             </div>
           </div>
         </div>
 
-        {/* Colonne droite: panneau de profil + actions */}
+        {/* Colonne droite: panneau de connexion moderne */}
         <div className="flex items-center justify-center py-8">
-          <Card className="w-full max-w-md border-0 shadow-none">
+          <Card className="w-full max-w-md border border-gray-100 bg-white/80 backdrop-blur-md shadow-lg">
             <CardContent className="pt-6">
-              {/* En-tête branding */}
+              {/* Branding en-tête */}
               <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img src="/logo.png" alt="Hello Keys" className="h-6 w-auto" />
                   <span className="font-semibold text-[#0A2540]">Hello Keys</span>
                 </div>
-                <span className="text-xs text-gray-500">Connexion</span>
+                <Badge variant="outline" className="text-xs">Connexion</Badge>
               </div>
 
               <div className="mt-6 flex flex-col items-center">
@@ -259,7 +276,7 @@ const LoginV2: React.FC = () => {
                 {/* Chips de fonctionnalités */}
                 <div className="mt-5 grid grid-cols-2 gap-2 w-full">
                   <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
-                    <Calendar className="h-4 w-4 text-[#1E90FF]" />
+                    <CalendarRange className="h-4 w-4 text-[#1E90FF]" />
                     <span className="text-xs font-medium text-gray-800">Réservations</span>
                   </div>
                   <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
@@ -276,6 +293,7 @@ const LoginV2: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Actions */}
                 <div className="mt-6 w-full space-y-3">
                   <Button
                     className="w-full h-11 rounded-full bg-[#1E90FF] hover:bg-[#1572D8]"
@@ -288,19 +306,20 @@ const LoginV2: React.FC = () => {
                     className="w-full h-11 rounded-full"
                     onClick={handleUseAnotherProfile}
                   >
-                    Utiliser un autre profil
+                    Se connecter
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full h-11 rounded-full text-[#1E90FF] border-[#B3D7FF] hover:border-[#91C7FF]"
                     onClick={handleCreateAccount}
                   >
-                    Créer un nouveau compte
+                    Créer un compte
                   </Button>
                 </div>
 
                 <Separator className="my-8" />
 
+                {/* Module Auth Supabase */}
                 {showAuth && (
                   <div className="w-full">
                     <Auth
@@ -318,7 +337,7 @@ const LoginV2: React.FC = () => {
                 </div>
 
                 <div className="mt-2 text-xs text-gray-400">
-                  <Link to="/" className="hover:underline">Retour à l'accueil</Link>
+                  <Link to="/" className="hover:underline">Retour à l’accueil</Link>
                 </div>
               </div>
             </CardContent>
@@ -326,8 +345,9 @@ const LoginV2: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-6 text-xs text-gray-500">
-        <span>© Hello Keys — page de connexion V2</span>
+      {/* Petit footer marque */}
+      <div className="px-6 lg:px-12 py-6 text-xs text-gray-500">
+        © Hello Keys — plateforme de gestion immobilière 2.0
       </div>
     </div>
   );

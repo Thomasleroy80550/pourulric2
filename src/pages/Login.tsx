@@ -130,29 +130,29 @@ const Login = () => {
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
                     <div className="absolute inset-0 pointer-events-none select-none" />
-                    <div className="absolute inset-0 p-6 md:p-10 flex flex-col items-start text-left text-white">
-                      <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
+                    <div className="absolute inset-0 p-8 md:p-14 flex flex-col items-start justify-center text-left text-white gap-3">
+                      <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
                         Simplifiez la gestion
                         <br /><span className="text-white">avec notre dashboard.</span>
                       </h2>
-                      {/* Surlignage blanc épais style feutre */}
-                      <div className="mt-3">
-                        <svg className="w-56 md:w-72" viewBox="0 0 220 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                          <path d="M4 12 C 40 24, 80 0, 120 12 S 184 24, 216 12"
-                                stroke="rgba(255,255,255,0.35)"
-                                strokeWidth="18"
+                      {/* Surlignage blanc, plus gras, style feutre */}
+                      <div className="mt-2 -ml-1 rotate-[-2deg]">
+                        <svg className="w-64 md:w-80" viewBox="0 0 260 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M6 15 C 50 32, 100 -2, 150 15 S 210 32, 254 15"
+                                stroke="rgba(255,255,255,0.28)"
+                                strokeWidth="24"
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeLinejoin="round" />
-                          <path d="M4 12 C 40 24, 80 0, 120 12 S 184 24, 216 12"
+                          <path d="M6 15 C 50 32, 100 -2, 150 15 S 210 32, 254 15"
                                 stroke="#ffffff"
-                                strokeWidth="12"
+                                strokeWidth="16"
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeLinejoin="round" />
                         </svg>
                       </div>
-                      <p className="mt-4 text-white/90 max-w-md">
+                      <p className="mt-4 text-white/90 max-w-lg">
                         Gérez vos locations via une interface moderne et intuitive.
                       </p>
                     </div>

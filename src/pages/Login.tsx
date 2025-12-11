@@ -138,15 +138,15 @@ const Login = () => {
                       {/* Surlignage blanc, plus gras, style feutre */}
                       <div className="mt-2 -ml-1 rotate-[-2deg]">
                         <svg className="w-64 md:w-80" viewBox="0 0 260 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                          <path d="M6 15 C 50 32, 100 -2, 150 15 S 210 32, 254 15"
+                          <path d="M8 16 C 44 26, 98 10, 152 16 S 218 26, 252 16"
                                 stroke="rgba(255,255,255,0.28)"
                                 strokeWidth="24"
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeLinejoin="round" />
-                          <path d="M6 15 C 50 32, 100 -2, 150 15 S 210 32, 254 15"
+                          <path d="M8 16 C 44 26, 98 10, 152 16 S 218 26, 252 16"
                                 stroke="#ffffff"
-                                strokeWidth="16"
+                                strokeWidth="14"
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeLinejoin="round" />

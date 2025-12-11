@@ -251,7 +251,7 @@ const Login = () => {
           <div className="flex flex-wrap justify-center gap-3">
             {(statusesLoading ? [] : serviceStatuses).map((s) => {
               const labelMap: Record<ServiceStatusValue, string> = {
-                operational: "OK",
+                operational: "Actif",
                 degraded: "Dégradé",
                 outage: "Panne",
                 maintenance: "Maintenance",
@@ -282,7 +282,7 @@ const Login = () => {
               <>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
                   <span className="h-3 w-3 rounded-full bg-green-500" />
-                  <span className="text-xs font-medium text-gray-900">Vert — OK</span>
+                  <span className="text-xs font-medium text-gray-900">Vert — Actif</span>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
                   <span className="h-3 w-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />

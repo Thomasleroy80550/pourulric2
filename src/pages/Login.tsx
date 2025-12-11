@@ -216,34 +216,7 @@ const Login = () => {
                 <div className="py-2">
                   <Separator />
                 </div>
-                <div className="text-xs text-center text-gray-500 -mt-2">Ou se connecter avec</div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => handleOAuth('google')}
-                    disabled={loading}
-                  >
-                    <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white border">
-                      <span className="text-xs font-bold text-[#EA4335]">G</span>
-                    </span>
-                    Google
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => handleOAuth('facebook')}
-                    disabled={loading}
-                  >
-                    <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#1877F2] text-white text-sm font-bold">
-                      f
-                    </span>
-                    Facebook
-                  </Button>
-                </div>
+                {/* REMOVED: social login text and buttons (Google/Facebook) */}
 
                 <Button
                   type="button"

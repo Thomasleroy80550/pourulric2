@@ -74,12 +74,12 @@ const LoginV2: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-white">
+    <div className="min-h-screen w-full bg-gradient-to-b from-[#F7FBFF] to-white">
       {/* Barre fine avec logo et menu */}
       <div className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="Hello Keys" className="h-9 w-auto" />
-          <span className="font-semibold text-[#0A2540]">Hello Keys</span>
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="Hello Keys" className="h-8 w-auto" />
+          <span className="hidden sm:block font-semibold text-[#0A2540]">Hello Keys</span>
         </div>
         <button
           className="p-2 rounded-full hover:bg-gray-100 transition"
@@ -99,11 +99,11 @@ const LoginV2: React.FC = () => {
               <span className="block text-[#1E90FF]">avec Hello Keys.</span>
             </h1>
             <p className="mt-6 text-gray-600 text-lg">
-              Connectez-vous pour accéder à vos réservations, tâches de ménage, finances et notifications.
+              Accédez à vos réservations, tâches de ménage, finances et notifications en un clic.
             </p>
           </div>
 
-          {/* Composition visuelle simplifiée (cartes et badges) */}
+          {/* Composition visuelle: mini-illustrations du dashboard */}
           <div className="mt-10 relative h-80">
             {/* Carte Réservations */}
             <div className="absolute left-4 top-2 w-40 h-56 bg-white shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
@@ -165,20 +165,19 @@ const LoginV2: React.FC = () => {
                   <span className="text-sm font-medium text-gray-800">Finances</span>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2">
-                  <div className="col-span-1">
+                  <div>
                     <div className="text-[10px] text-gray-500">Revenus</div>
                     <div className="text-xs font-semibold text-gray-800">€3 240</div>
                   </div>
-                  <div className="col-span-1">
+                  <div>
                     <div className="text-[10px] text-gray-500">Dépenses</div>
                     <div className="text-xs font-semibold text-gray-800">€820</div>
                   </div>
-                  <div className="col-span-1">
+                  <div>
                     <div className="text-[10px] text-gray-500">Solde</div>
                     <div className="text-xs font-semibold text-green-600">€2 420</div>
                   </div>
                 </div>
-                {/* Mini sparkline */}
                 <div className="mt-4 flex items-end gap-1 h-16">
                   <div className="w-2 bg-[#1E90FF] h-6 rounded-sm" />
                   <div className="w-2 bg-[#1E90FF] h-10 rounded-sm" />
@@ -192,7 +191,7 @@ const LoginV2: React.FC = () => {
               </div>
             </div>
 
-            {/* Pastille Notifications (conserver la forme circulaire) */}
+            {/* Pastille Notifications */}
             <div className="absolute right-24 bottom-[-10px] w-40 h-40 bg-[#EAF4FF] rounded-full flex items-center justify-center shadow">
               <div className="flex flex-col items-center">
                 <Bell className="h-8 w-8 text-[#1E90FF]" />
@@ -225,7 +224,7 @@ const LoginV2: React.FC = () => {
         <div className="flex items-center justify-center py-8">
           <Card className="w-full max-w-md border-0 shadow-none">
             <CardContent className="pt-6">
-              {/* En-tête branding dans la carte */}
+              {/* En-tête branding */}
               <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img src="/logo.png" alt="Hello Keys" className="h-6 w-auto" />
@@ -257,7 +256,7 @@ const LoginV2: React.FC = () => {
 
                 <div className="mt-4 text-lg font-medium">{displayName}</div>
 
-                {/* Chips de fonctionnalités (mini-illustrations du dashboard) */}
+                {/* Chips de fonctionnalités */}
                 <div className="mt-5 grid grid-cols-2 gap-2 w-full">
                   <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
                     <Calendar className="h-4 w-4 text-[#1E90FF]" />
@@ -277,7 +276,6 @@ const LoginV2: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="mt-6 w-full space-y-3">
                   <Button
                     className="w-full h-11 rounded-full bg-[#1E90FF] hover:bg-[#1572D8]"
@@ -303,7 +301,6 @@ const LoginV2: React.FC = () => {
 
                 <Separator className="my-8" />
 
-                {/* Module Auth Supabase */}
                 {showAuth && (
                   <div className="w-full">
                     <Auth
@@ -316,7 +313,6 @@ const LoginV2: React.FC = () => {
                   </div>
                 )}
 
-                {/* Note de sécurité */}
                 <div className="mt-4 text-[11px] text-gray-500">
                   Vos informations sont protégées et utilisées uniquement pour vous connecter à Hello Keys.
                 </div>
@@ -328,6 +324,10 @@ const LoginV2: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="mt-6 text-xs text-gray-500">
+        <span>© Hello Keys — page de connexion V2</span>
       </div>
     </div>
   );

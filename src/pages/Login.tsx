@@ -170,7 +170,7 @@ const Login = () => {
                           placeholder="votre.email@example.com"
                           {...field}
                           disabled={loading}
-                          className="h-14 md:h-16 rounded-md bg-[#175e821a] px-4 text-[#0A2540] placeholder:text-[#175e82b3] shadow-inner border border-transparent focus:bg-white focus:border-[#175e82e6]"
+                          className="h-14 md:h-16 rounded-lg bg-[#175e821a] px-4 text-[#0A2540] placeholder:text-[#175e82b3] shadow-inner border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-white"
                         />
                       </FormControl>
                       <FormMessage />
@@ -199,7 +199,7 @@ const Login = () => {
                           placeholder="********"
                           {...field}
                           disabled={loading}
-                          className="h-14 md:h-16 rounded-md bg-[#175e821a] px-4 text-[#0A2540] placeholder:text-[#175e82b3] shadow-inner border border-transparent focus:bg-white focus:border-[#175e82e6]"
+                          className="h-14 md:h-16 rounded-lg bg-[#175e821a] px-4 text-[#0A2540] placeholder:text-[#175e82b3] shadow-inner border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-white"
                         />
                       </FormControl>
                       <FormMessage />

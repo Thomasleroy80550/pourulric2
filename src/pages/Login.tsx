@@ -159,7 +159,7 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center p-8 relative overflow-hidden aurora-background">
+      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center p-8 relative overflow-hidden aurora-background rounded-3xl border-4 border-white shadow-xl">
         {/* Blob bleu avec contour blanc */}
         <div className="absolute -top-1/2 -right-1/2">
           <div className="relative w-[800px] h-[800px] rounded-full ring-8 ring-white/80">

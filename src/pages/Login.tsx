@@ -128,12 +128,12 @@ const Login = () => {
             <div className="w-full">
               <div className="rounded-[40px] bg-white p-6 md:p-8 shadow-sm">
                 <div className="rounded-[32px] overflow-hidden">
-                  <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-orange-500 to-orange-300">
+                  <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#1E90FF] to-[#60A5FA]">
                     <div className="absolute inset-0 pointer-events-none select-none" />
                     <div className="absolute inset-0 p-6 md:p-10 flex flex-col text-white">
                       <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
                         Simplifiez la gestion
-                        <br />avec notre dashboard.
+                        <br /><span className="text-[#0A2540] bg-white/0">avec notre dashboard.</span>
                       </h2>
                       <p className="mt-4 text-white/90 max-w-sm">
                         Gérez vos locations via une interface moderne et intuitive.

@@ -126,7 +126,7 @@ const Login = () => {
           {/* Colonne gauche: cadre photo avec padding blanc interne */}
           <div className="p-10 md:p-14 bg-gray-50 flex items-center">
             <div className="w-full">
-              <div className="rounded-[40px] bg-white p-6 md:p-8 shadow-sm">
+              <div className="rounded-[40px] bg-transparent p-0 shadow-none">
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
                     <div className="absolute inset-0 pointer-events-none select-none" />

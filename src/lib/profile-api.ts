@@ -79,3 +79,30 @@ export async function getProfile(userId?: string): Promise<Profile> {
   }
   return data;
 }
+
+export type CredentialUpdatePayload = {
+  email?: string;
+  password?: string;
+};
+
+// Mettre à jour les identifiants (email/mot de passe) de l'utilisateur connecté
+export async function updateProfile(credentials: CredentialUpdatePayload) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+  if (!userId) {
+    throw new Error("Utilisateur non authentifié.");
+  }
+
+  const { email, password } = credentials;
+
+  const { error } = await supabase.auth.updateUser({
+    // Ne passer que les champs fournis
+    ...(email ? { email } : {}),
+    ...(password ? { password } : {}),
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return true;
+}

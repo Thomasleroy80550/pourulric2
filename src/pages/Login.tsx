@@ -130,15 +130,20 @@ const Login = () => {
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
                     <div className="absolute inset-0 pointer-events-none select-none" />
-                    <div className="absolute inset-0 p-6 md:p-10 flex flex-col text-white">
+                    <div className="absolute inset-0 p-6 md:p-10 flex flex-col items-center text-center text-white">
                       <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
                         Simplifiez la gestion
                         <br /><span className="text-white">avec notre dashboard.</span>
                       </h2>
-                      <p className="mt-4 text-white/90 max-w-sm">
+                      {/* Surlignage illustratif sous le titre */}
+                      <div className="mt-3">
+                        <svg className="w-48 md:w-64" viewBox="0 0 200 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                          <path d="M2 10 C 30 20, 60 0, 100 10 S 170 20, 198 10" stroke="#175e82e6" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <p className="mt-4 text-white/90 max-w-md mx-auto">
                         Gérez vos locations via une interface moderne et intuitive.
                       </p>
-                      {/* REMOVED: illustration placeholder image */}
                     </div>
                   </div>
                 </div>

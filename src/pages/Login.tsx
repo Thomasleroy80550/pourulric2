@@ -235,6 +235,18 @@ const Login = () => {
         </div>
       </div>
 
+      {/* Petites bulles colorées en bas de page */}
+      <div className="fixed bottom-4 left-0 w-full z-10 pointer-events-none">
+        <div className="mx-auto flex justify-center items-center gap-3">
+          <span className="h-3 w-3 rounded-full bg-[#175e82e6]" />
+          <span className="h-4 w-4 rounded-full bg-[#175e82b3]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#60A5FA]" />
+          <span className="h-3.5 w-3.5 rounded-full bg-white/80" />
+          <span className="h-2 w-2 rounded-full bg-[#0A2540]" />
+          <span className="h-3 w-3 rounded-full bg-[#175e821a]" />
+        </div>
+      </div>
+
       <MigrationHelpDialog
         isOpen={isMigrationHelpDialogOpen}
         onOpenChange={setIsMigrationHelpDialogOpen}

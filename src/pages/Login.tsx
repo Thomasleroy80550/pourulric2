@@ -207,7 +207,7 @@ const Login = () => {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600"
+                  className="w-full h-12 rounded-2xl bg-[#175e82e6] hover:bg-[#175e82b3] text-white"
                   disabled={loading}
                 >
                   {loading ? 'Connexion en cours...' : 'Login'}

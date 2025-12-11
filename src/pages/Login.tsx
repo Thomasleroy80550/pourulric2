@@ -120,15 +120,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-6xl bg-white rounded-[40px] shadow-2xl overflow-hidden">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-6 py-10">
+      <div className="w-full md:w-[92vw] lg:w-[88vw] max-w-7xl bg-white rounded-[48px] shadow-2xl overflow-hidden min-h-[720px]">
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Colonne gauche: cadre photo avec padding blanc interne */}
-          <div className="p-6 md:p-8 bg-gray-50 flex items-center">
+          <div className="p-10 md:p-14 bg-gray-50 flex items-center">
             <div className="w-full">
-              <div className="rounded-[36px] bg-white p-4 md:p-6 shadow-sm">
-                <div className="rounded-[28px] overflow-hidden">
-                  <div className="relative h-[360px] md:h-[480px] w-full bg-gradient-to-br from-orange-500 to-orange-300">
+              <div className="rounded-[40px] bg-white p-6 md:p-8 shadow-sm">
+                <div className="rounded-[32px] overflow-hidden">
+                  <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-orange-500 to-orange-300">
                     <div className="absolute inset-0 pointer-events-none select-none" />
                     <div className="absolute inset-0 p-6 md:p-10 flex flex-col text-white">
                       <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
@@ -142,7 +142,7 @@ const Login = () => {
                       <img
                         src="/placeholder.svg"
                         alt="Aperçu"
-                        className="absolute bottom-0 right-0 h-40 md:h-56 w-auto object-cover"
+                        className="absolute bottom-0 right-0 h-56 md:h-72 w-auto object-cover"
                       />
                     </div>
                   </div>
@@ -152,14 +152,14 @@ const Login = () => {
           </div>
 
           {/* Colonne droite: formulaire modernisé */}
-          <div className="p-6 md:p-10">
+          <div className="p-10 md:p-14">
             <div className="flex items-center gap-3 mb-6">
               <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <img src="/logo.png" alt="Hello Keys" className="h-6 w-6 object-contain" />
               </div>
               <div className="text-xl font-semibold text-gray-900">Hello Keys</div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Bienvenue</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Bienvenue</h1>
             <p className="text-sm text-gray-500 mb-6">Veuillez vous connecter à votre compte</p>
 
             <Form {...form}>

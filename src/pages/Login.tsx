@@ -160,17 +160,17 @@ const Login = () => {
       </div>
 
       <div className="hidden md:flex w-full md:w-1/2 items-center justify-center p-8 relative overflow-hidden aurora-background rounded-3xl border-4 border-white shadow-xl">
-        {/* Blob bleu avec marges égales et bord blanc */}
-        <div className="absolute top-6 right-6">
-          <div className="relative w-[520px] h-[520px] rounded-full ring-8 ring-white">
-            <div className="absolute inset-10 rounded-full bg-blue-600/20 blur-3xl animate-pulse"></div>
+        {/* Blob bleu avec contour blanc */}
+        <div className="absolute -top-1/2 -right-1/2">
+          <div className="relative w-[800px] h-[800px] rounded-full ring-8 ring-white/80">
+            <div className="absolute inset-6 rounded-full bg-blue-600/20 filter blur-3xl animate-pulse"></div>
           </div>
         </div>
 
-        {/* Blob violet avec marges égales et bord blanc */}
-        <div className="absolute bottom-6 left-6">
-          <div className="relative w-[420px] h-[420px] rounded-full ring-8 ring-white">
-            <div className="absolute inset-10 rounded-full bg-purple-600/20 blur-3xl animate-pulse delay-1000"></div>
+        {/* Blob violet avec contour blanc */}
+        <div className="absolute -bottom-1/2 -left-1/2">
+          <div className="relative w-[600px] h-[600px] rounded-full ring-8 ring-white/80">
+            <div className="absolute inset-5 rounded-full bg-purple-600/20 filter blur-3xl animate-pulse delay-1000"></div>
           </div>
         </div>
 

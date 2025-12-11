@@ -133,7 +133,7 @@ const Login = () => {
                     <div className="absolute inset-0 p-6 md:p-10 flex flex-col text-white">
                       <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
                         Simplifiez la gestion
-                        <br /><span className="text-[#175e82e6]">avec notre dashboard.</span>
+                        <br /><span className="text-white">avec notre dashboard.</span>
                       </h2>
                       <p className="mt-4 text-white/90 max-w-sm">
                         Gérez vos locations via une interface moderne et intuitive.

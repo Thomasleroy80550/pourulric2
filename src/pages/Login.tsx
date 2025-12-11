@@ -170,7 +170,7 @@ const Login = () => {
                           placeholder="votre.email@example.com"
                           {...field}
                           disabled={loading}
-                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-white leading-[56px] md:leading-[64px]"
+                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
                         />
                       </FormControl>
                       <FormMessage />
@@ -199,7 +199,7 @@ const Login = () => {
                           placeholder="********"
                           {...field}
                           disabled={loading}
-                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-white leading-[56px] md:leading-[64px]"
+                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
                         />
                       </FormControl>
                       <FormMessage />

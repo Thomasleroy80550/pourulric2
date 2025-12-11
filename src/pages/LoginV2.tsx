@@ -6,21 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import {
-  UserCircle2,
-  Settings,
   Building2,
   CalendarRange,
   BarChart3,
   Sparkles,
-  Coins,
   Bell,
   MapPin,
   KeyRound,
+  ShieldCheck,
+  Settings,
+  UserCircle2,
 } from "lucide-react";
 
 type ProfilePreview = {
@@ -32,8 +33,8 @@ type ProfilePreview = {
 const LoginV2: React.FC = () => {
   const { toast } = useToast();
   const [profilePreview, setProfilePreview] = React.useState<ProfilePreview | null>(null);
-  const [showAuth, setShowAuth] = React.useState(false);
-  const [showSignup, setShowSignup] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<"sign_in" | "sign_up">("sign_in");
+  const [authVisible, setAuthVisible] = React.useState(true);
 
   React.useEffect(() => {
     let mounted = true;
@@ -66,40 +67,36 @@ const LoginV2: React.FC = () => {
       window.location.href = "/";
       return;
     }
-    setShowAuth(true);
+    setActiveTab("sign_in");
+    setAuthVisible(true);
     toast({ title: "Connexion requise", description: "Veuillez vous connecter pour continuer." });
-  };
-
-  const handleUseAnotherProfile = () => {
-    setShowSignup(false);
-    setShowAuth(true);
-  };
-
-  const handleCreateAccount = () => {
-    setShowSignup(true);
-    setShowAuth(true);
   };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#F7FBFF] via-white to-[#F0F7FF]">
-      {/* Top bar brand */}
-      <div className="flex items-center justify-between px-6 py-4">
+      {/* Header brand */}
+      <header className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Hello Keys" className="h-8 w-auto" />
           <span className="hidden sm:block font-semibold text-[#0A2540]">Hello Keys</span>
         </div>
+        <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">
+          <Link to="/marketplace" className="hover:text-[#0A2540]">Solutions</Link>
+          <Link to="/help" className="hover:text-[#0A2540]">Aide</Link>
+          <Link to="/faq" className="hover:text-[#0A2540]">FAQ</Link>
+        </nav>
         <button
           className="p-2 rounded-full hover:bg-gray-100 transition"
           aria-label="Paramètres"
         >
           <Settings className="h-5 w-5 text-gray-600" />
         </button>
-      </div>
+      </header>
 
-      {/* Deux colonnes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 px-6 lg:px-12">
-        {/* Colonne gauche: hero + mosaïque fonctionnalités */}
-        <div className="flex flex-col justify-center py-8">
+      {/* Main grid */}
+      <main className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 lg:px-12 py-6">
+        {/* Left: Hero + Feature mosaic */}
+        <section className="flex flex-col justify-center">
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-[#EAF4FF] px-3 py-1">
               <Building2 className="h-4 w-4 text-[#1E90FF]" />
@@ -115,12 +112,20 @@ const LoginV2: React.FC = () => {
               Centralisez réservations, ménage, finances et check-in dans une interface moderne,
               pensée pour les propriétaires et équipes terrain.
             </p>
+            <div className="mt-4 flex items-center gap-3">
+              <Badge variant="outline" className="gap-1">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#1E90FF]" />
+                Sécurisé
+              </Badge>
+              <Badge variant="outline">RGPD-ready</Badge>
+              <Badge variant="outline">Multi-propriétés</Badge>
+            </div>
           </div>
 
-          {/* Mosaïque d’illustrations du dashboard */}
-          <div className="mt-10 relative h-[22rem]">
+          {/* Feature mosaic */}
+          <div className="mt-10 relative h-[24rem]">
             {/* Réservations */}
-            <div className="absolute left-2 top-0 w-44 h-60 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="absolute left-0 top-0 w-48 h-64 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center gap-2">
                   <CalendarRange className="h-5 w-5 text-[#1E90FF]" />
@@ -142,7 +147,7 @@ const LoginV2: React.FC = () => {
             </div>
 
             {/* Ménage */}
-            <div className="absolute left-40 top-14 w-52 h-64 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="absolute left-44 top-12 w-56 h-68 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-[#1E90FF]" />
@@ -172,7 +177,7 @@ const LoginV2: React.FC = () => {
             </div>
 
             {/* Finances */}
-            <div className="absolute right-8 top-0 w-60 h-72 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="absolute right-6 top-0 w-64 h-72 bg-white/80 backdrop-blur-md shadow-lg rounded-2xl border border-gray-100 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-[#1E90FF]" />
@@ -205,8 +210,8 @@ const LoginV2: React.FC = () => {
               </div>
             </div>
 
-            {/* Check-in / Clés */}
-            <div className="absolute right-24 bottom-[-12px] w-44 h-44 bg-gradient-to-br from-[#EAF4FF] to-white rounded-2xl flex items-center justify-center shadow border border-gray-100">
+            {/* Check-in / Accès */}
+            <div className="absolute right-20 bottom-[-12px] w-48 h-48 bg-gradient-to-br from-[#EAF4FF] to-white rounded-2xl flex items-center justify-center shadow border border-gray-100">
               <div className="flex flex-col items-center">
                 <div className="flex items-center gap-2">
                   <KeyRound className="h-6 w-6 text-[#1E90FF]" />
@@ -218,7 +223,7 @@ const LoginV2: React.FC = () => {
             </div>
           </div>
 
-          {/* Footer liens orientés immobilier */}
+          {/* Footer links */}
           <div className="mt-8 text-sm text-gray-500">
             <div className="flex flex-wrap gap-x-4 gap-y-2">
               <span>Français (France)</span>
@@ -235,13 +240,13 @@ const LoginV2: React.FC = () => {
               <span>Confidentialité</span>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Colonne droite: panneau de connexion moderne */}
-        <div className="flex items-center justify-center py-8">
+        {/* Right: Auth panel */}
+        <section className="flex items-center justify-center">
           <Card className="w-full max-w-md border border-gray-100 bg-white/80 backdrop-blur-md shadow-lg">
             <CardContent className="pt-6">
-              {/* Branding en-tête */}
+              {/* Branding header */}
               <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img src="/logo.png" alt="Hello Keys" className="h-6 w-auto" />
@@ -250,6 +255,7 @@ const LoginV2: React.FC = () => {
                 <Badge variant="outline" className="text-xs">Connexion</Badge>
               </div>
 
+              {/* Profile preview */}
               <div className="mt-6 flex flex-col items-center">
                 <div className="relative">
                   {profilePreview?.avatarUrl ? (
@@ -265,15 +271,14 @@ const LoginV2: React.FC = () => {
                   )}
                   <button
                     className="absolute right-0 bottom-0 h-9 w-9 rounded-full bg-gray-100 border flex items-center justify-center hover:bg-gray-200"
-                    aria-label="Changer les paramètres du profil"
+                    aria-label="Paramètres du profil"
                   >
                     <Settings className="h-5 w-5 text-gray-600" />
                   </button>
                 </div>
-
                 <div className="mt-4 text-lg font-medium">{displayName}</div>
 
-                {/* Chips de fonctionnalités */}
+                {/* Feature chips */}
                 <div className="mt-5 grid grid-cols-2 gap-2 w-full">
                   <div className="flex items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm">
                     <CalendarRange className="h-4 w-4 text-[#1E90FF]" />
@@ -301,36 +306,43 @@ const LoginV2: React.FC = () => {
                   >
                     Continuer
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full h-11 rounded-full"
-                    onClick={handleUseAnotherProfile}
-                  >
-                    Se connecter
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full h-11 rounded-full text-[#1E90FF] border-[#B3D7FF] hover:border-[#91C7FF]"
-                    onClick={handleCreateAccount}
-                  >
-                    Créer un compte
-                  </Button>
                 </div>
 
-                <Separator className="my-8" />
+                <Separator className="my-6" />
 
-                {/* Module Auth Supabase */}
-                {showAuth && (
-                  <div className="w-full">
-                    <Auth
-                      supabaseClient={supabase}
-                      providers={[]}
-                      appearance={{ theme: ThemeSupa }}
-                      view={showSignup ? "sign_up" : "sign_in"}
-                      theme="light"
-                    />
-                  </div>
-                )}
+                {/* Auth Tabs */}
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(v) => setActiveTab(v as "sign_in" | "sign_up")}
+                  className="w-full"
+                >
+                  <TabsList className="grid grid-cols-2 w-full">
+                    <TabsTrigger value="sign_in">Se connecter</TabsTrigger>
+                    <TabsTrigger value="sign_up">Créer un compte</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="sign_in" className="mt-4">
+                    {authVisible && (
+                      <Auth
+                        supabaseClient={supabase}
+                        providers={[]}
+                        appearance={{ theme: ThemeSupa }}
+                        view="sign_in"
+                        theme="light"
+                      />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="sign_up" className="mt-4">
+                    {authVisible && (
+                      <Auth
+                        supabaseClient={supabase}
+                        providers={[]}
+                        appearance={{ theme: ThemeSupa }}
+                        view="sign_up"
+                        theme="light"
+                      />
+                    )}
+                  </TabsContent>
+                </Tabs>
 
                 <div className="mt-4 text-[11px] text-gray-500">
                   Vos informations sont protégées et utilisées uniquement pour vous connecter à Hello Keys.
@@ -342,13 +354,13 @@ const LoginV2: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </section>
+      </main>
 
-      {/* Petit footer marque */}
-      <div className="px-6 lg:px-12 py-6 text-xs text-gray-500">
+      {/* Footer brand */}
+      <footer className="px-6 lg:px-12 py-6 text-xs text-gray-500">
         © Hello Keys — plateforme de gestion immobilière 2.0
-      </div>
+      </footer>
     </div>
   );
 };

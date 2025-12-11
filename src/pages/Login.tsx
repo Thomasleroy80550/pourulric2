@@ -170,7 +170,6 @@ const Login = () => {
                           placeholder="votre.email@example.com"
                           {...field}
                           disabled={loading}
-                          className="h-12 rounded-2xl"
                         />
                       </FormControl>
                       <FormMessage />
@@ -199,7 +198,7 @@ const Login = () => {
                           placeholder="********"
                           {...field}
                           disabled={loading}
-                          className="h-12 rounded-2xl"
+                          className="h-12 rounded-md"
                         />
                       </FormControl>
                       <FormMessage />

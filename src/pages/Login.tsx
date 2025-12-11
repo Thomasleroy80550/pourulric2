@@ -159,29 +159,28 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center relative overflow-hidden aurora-background rounded-3xl border-4 border-white shadow-xl px-8 md:px-12 pt-20 pb-20 md:pt-28 md:pb-28 md:pl-20">
-        {/* Blob bleu avec contour blanc (plus éloigné du haut) */}
-        <div className="absolute -top-[60%] -right-1/2">
-          <div className="relative w-[800px] h-[800px] rounded-full ring-8 ring-white/80">
-            <div className="absolute inset-6 rounded-full bg-blue-600/20 filter blur-3xl animate-pulse"></div>
+      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center relative rounded-[36px] shadow-2xl px-8 md:px-14 py-16 md:py-24">
+        {/* Cadre photo à bords arrondis avec padding blanc interne */}
+        <div className="w-full max-w-[720px]">
+          <div className="rounded-[36px] bg-white p-4 md:p-6">
+            <div className="rounded-[28px] overflow-hidden">
+              <img
+                src="/placeholder.svg"
+                alt="Aperçu du dashboard Hello Keys"
+                className="w-full h-[360px] md:h-[420px] object-cover"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Blob violet avec contour blanc (plus éloigné du bas et davantage à gauche) */}
-        <div className="absolute -bottom-[60%] -left-[65%]">
-          <div className="relative w-[600px] h-[600px] rounded-full ring-8 ring-white/80">
-            <div className="absolute inset-5 rounded-full bg-purple-600/20 filter blur-3xl animate-pulse delay-1000"></div>
+          {/* Légende sous le cadre (hors de l'image pour l'effet hiérarchique) */}
+          <div className="mt-6 text-center px-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#0A2540]">
+              La gestion locative, réinventée.
+            </h2>
+            <p className="mt-3 text-slate-600 md:text-lg">
+              Une carte visuelle claire pour vos biens, réservations et finances.
+            </p>
           </div>
-        </div>
-
-        <div className="text-center text-white space-y-6 relative z-10">
-          <Home size={80} className="mx-auto mb-4 text-white animate-float" />
-          <h2 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-300 drop-shadow-lg">
-            La gestion locative, réinventée.
-          </h2>
-          <p className="text-lg text-slate-300 max-w-md mx-auto">
-            Centralisez vos réservations, suivez vos finances et optimisez vos revenus avec une simplicité inégalée.
-          </p>
         </div>
       </div>
 

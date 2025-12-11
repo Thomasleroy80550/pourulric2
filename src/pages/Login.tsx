@@ -232,12 +232,7 @@ const Login = () => {
               </form>
             </Form>
 
-            <div className="mt-4 text-center text-sm text-gray-500">
-              Pas de compte ?{' '}
-              <span className="font-medium text-orange-600 hover:underline cursor-pointer">
-                Inscription
-              </span>
-            </div>
+            {/* REMOVED: lien d'inscription sous le formulaire */}
           </div>
         </div>
       </div>

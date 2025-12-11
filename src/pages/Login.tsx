@@ -160,8 +160,20 @@ const Login = () => {
       </div>
 
       <div className="hidden md:flex w-full md:w-1/2 items-center justify-center p-8 relative overflow-hidden aurora-background">
-        <div className="absolute -top-1/2 -right-1/2 w-[800px] h-[800px] bg-blue-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-1/2 -left-1/2 w-[600px] h-[600px] bg-purple-600/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
+        {/* Blob bleu avec contour blanc */}
+        <div className="absolute -top-1/2 -right-1/2">
+          <div className="relative w-[800px] h-[800px] rounded-full ring-8 ring-white/80">
+            <div className="absolute inset-6 rounded-full bg-blue-600/20 filter blur-3xl animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Blob violet avec contour blanc */}
+        <div className="absolute -bottom-1/2 -left-1/2">
+          <div className="relative w-[600px] h-[600px] rounded-full ring-8 ring-white/80">
+            <div className="absolute inset-5 rounded-full bg-purple-600/20 filter blur-3xl animate-pulse delay-1000"></div>
+          </div>
+        </div>
+
         <div className="text-center text-white space-y-6 relative z-10">
           <Home size={80} className="mx-auto mb-4 text-white animate-float" />
           <h2 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-300 drop-shadow-lg">

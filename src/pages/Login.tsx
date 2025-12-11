@@ -153,11 +153,9 @@ const Login = () => {
 
           {/* Colonne droite: formulaire modernisé */}
           <div className="p-10 md:p-14">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center">
-                <img src="/logo.png" alt="Hello Keys" className="h-6 w-6 object-contain" />
-              </div>
-              <div className="text-xl font-semibold text-gray-900">Hello Keys</div>
+            {/* Logo Hello Keys en haut */}
+            <div className="mb-8">
+              <img src="/logo.png" alt="Hello Keys" className="h-12 w-auto" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Bienvenue</h1>
             <p className="text-sm text-gray-500 mb-6">Veuillez vous connecter à votre compte</p>

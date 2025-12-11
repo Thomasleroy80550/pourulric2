@@ -159,15 +159,15 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center relative rounded-[36px] overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-blue-600/25 via-blue-500/15 to-purple-600/25 px-8 md:px-14 py-16 md:py-24">
-        {/* Cadre photo à bords arrondis avec padding blanc interne */}
+      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center relative rounded-[48px] overflow-hidden shadow-2xl bg-gradient-to-br from-blue-600/30 via-blue-500/20 to-purple-600/30 px-10 md:px-16 py-20 md:py-28">
+        {/* Cadre photo à bords fortement arrondis + padding blanc interne */}
         <div className="w-full max-w-[720px]">
-          <div className="rounded-[36px] bg-white p-4 md:p-6">
-            <div className="rounded-[28px] overflow-hidden">
+          <div className="rounded-[40px] bg-white p-3 md:p-4 shadow-md">
+            <div className="rounded-[32px] overflow-hidden">
               <img
                 src="/placeholder.svg"
                 alt="Aperçu du dashboard Hello Keys"
-                className="w-full h-[360px] md:h-[420px] object-cover"
+                className="w-full h-[360px] md:h-[460px] object-cover"
               />
             </div>
           </div>

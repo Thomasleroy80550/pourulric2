@@ -210,7 +210,7 @@ const Login = () => {
                   className="w-full h-12 rounded-2xl bg-[#175e82e6] hover:bg-[#175e82b3] text-white"
                   disabled={loading}
                 >
-                  {loading ? 'Connexion en cours...' : 'Login'}
+                  {loading ? 'Connexion en cours...' : 'Se connecter'}
                 </Button>
 
                 <div className="py-2">

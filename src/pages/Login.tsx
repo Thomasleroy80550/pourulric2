@@ -124,7 +124,7 @@ const Login = () => {
       <div className="w-full max-w-6xl bg-white rounded-[40px] shadow-2xl overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Colonne gauche: cadre photo avec padding blanc interne */}
-          <div className="p-6 md:p-8 bg-gray-50 flex items-center">
+          <div className="w-full md:w-1/3 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
             <div className="w-full">
               <div className="rounded-[36px] bg-white p-4 md:p-6 shadow-sm">
                 <div className="rounded-[28px] overflow-hidden">
@@ -152,123 +152,125 @@ const Login = () => {
           </div>
 
           {/* Colonne droite: formulaire modernisé */}
-          <div className="p-6 md:p-10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center">
-                <img src="/logo.png" alt="Hello Keys" className="h-6 w-6 object-contain" />
+          <div className="hidden md:flex w-full md:w-2/3 items-center justify-center relative overflow-hidden aurora-background rounded-[48px] border-4 border-white shadow-2xl px-12 md:px-20 pt-24 pb-24 md:pt-32 md:pb-32 md:pl-24">
+            <div className="p-6 md:p-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center">
+                  <img src="/logo.png" alt="Hello Keys" className="h-6 w-6 object-contain" />
+                </div>
+                <div className="text-xl font-semibold text-gray-900">Hello Keys</div>
               </div>
-              <div className="text-xl font-semibold text-gray-900">Hello Keys</div>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">Bienvenue</h1>
-            <p className="text-sm text-gray-500 mb-6">Veuillez vous connecter à votre compte</p>
+              <h1 className="text-3xl font-bold text-gray-900">Bienvenue</h1>
+              <p className="text-sm text-gray-500 mb-6">Veuillez vous connecter à votre compte</p>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email address</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="votre.email@example.com"
-                          {...field}
-                          disabled={loading}
-                          className="h-12 rounded-2xl"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Password</FormLabel>
-                        <button
-                          type="button"
-                          onClick={handleForgotPassword}
-                          className="text-xs text-gray-500 hover:text-gray-700"
-                          disabled={loading}
-                        >
-                          Mot de passe oublié ?
-                        </button>
-                      </div>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="********"
-                          {...field}
-                          disabled={loading}
-                          className="h-12 rounded-2xl"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email address</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="votre.email@example.com"
+                            {...field}
+                            disabled={loading}
+                            className="h-12 rounded-2xl"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Password</FormLabel>
+                          <button
+                            type="button"
+                            onClick={handleForgotPassword}
+                            className="text-xs text-gray-500 hover:text-gray-700"
+                            disabled={loading}
+                          >
+                            Mot de passe oublié ?
+                          </button>
+                        </div>
+                        <FormControl>
+                          <Input
+                            type="password"
+                            placeholder="********"
+                            {...field}
+                            disabled={loading}
+                            className="h-12 rounded-2xl"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600"
-                  disabled={loading}
-                >
-                  {loading ? 'Connexion en cours...' : 'Login'}
-                </Button>
-
-                <div className="py-2">
-                  <Separator />
-                </div>
-                <div className="text-xs text-center text-gray-500 -mt-2">Ou se connecter avec</div>
-
-                <div className="grid grid-cols-2 gap-3">
                   <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => handleOAuth('google')}
+                    type="submit"
+                    className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600"
                     disabled={loading}
                   >
-                    <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white border">
-                      <span className="text-xs font-bold text-[#EA4335]">G</span>
-                    </span>
-                    Google
+                    {loading ? 'Connexion en cours...' : 'Login'}
                   </Button>
+
+                  <div className="py-2">
+                    <Separator />
+                  </div>
+                  <div className="text-xs text-center text-gray-500 -mt-2">Ou se connecter avec</div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-xl"
+                      onClick={() => handleOAuth('google')}
+                      disabled={loading}
+                    >
+                      <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white border">
+                        <span className="text-xs font-bold text-[#EA4335]">G</span>
+                      </span>
+                      Google
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-xl"
+                      onClick={() => handleOAuth('facebook')}
+                      disabled={loading}
+                    >
+                      <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#1877F2] text-white text-sm font-bold">
+                        f
+                      </span>
+                      Facebook
+                    </Button>
+                  </div>
+
                   <Button
                     type="button"
-                    variant="outline"
-                    className="h-11 rounded-xl"
-                    onClick={() => handleOAuth('facebook')}
+                    variant="link"
+                    className="w-full text-sm text-gray-600 mt-2"
+                    onClick={handleMagicLink}
                     disabled={loading}
                   >
-                    <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#1877F2] text-white text-sm font-bold">
-                      f
-                    </span>
-                    Facebook
+                    Ou utilisez un lien magique
                   </Button>
-                </div>
+                </form>
+              </Form>
 
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full text-sm text-gray-600 mt-2"
-                  onClick={handleMagicLink}
-                  disabled={loading}
-                >
-                  Ou utilisez un lien magique
-                </Button>
-              </form>
-            </Form>
-
-            <div className="mt-4 text-center text-sm text-gray-500">
-              Pas de compte ?{' '}
-              <span className="font-medium text-orange-600 hover:underline cursor-pointer">
-                Inscription
-              </span>
+              <div className="mt-4 text-center text-sm text-gray-500">
+                Pas de compte ?{' '}
+                <span className="font-medium text-orange-600 hover:underline cursor-pointer">
+                  Inscription
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -135,22 +135,8 @@ const Login = () => {
                         Simplifiez la gestion
                         <br /><span className="text-white">avec notre dashboard.</span>
                       </h2>
-                      {/* Surlignage blanc, plus gras, style feutre */}
-                      <div className="mt-2 -ml-1 rotate-[-2deg]">
-                        <svg className="w-64 md:w-80" viewBox="0 0 260 30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                          <path d="M8 16 C 44 26, 98 10, 152 16 S 218 26, 252 16"
-                                stroke="rgba(255,255,255,0.28)"
-                                strokeWidth="24"
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round" />
-                          <path d="M8 16 C 44 26, 98 10, 152 16 S 218 26, 252 16"
-                                stroke="#ffffff"
-                                strokeWidth="14"
-                                fill="none"
-                                strokeLinecap="round"
-                                strokeLinejoin="round" />
-                        </svg>
+                      <div className="mt-3">
+                        <div className="h-2 w-52 md:w-72 rounded-full bg-gradient-to-r from-white/80 to-white/30 shadow-[0_6px_24px_rgba(255,255,255,0.25)]"></div>
                       </div>
                       <p className="mt-4 text-white/90 max-w-lg">
                         Gérez vos locations via une interface moderne et intuitive.

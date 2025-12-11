@@ -138,12 +138,7 @@ const Login = () => {
                       <p className="mt-4 text-white/90 max-w-sm">
                         Gérez vos locations via une interface moderne et intuitive.
                       </p>
-                      {/* Illustration en bas */}
-                      <img
-                        src="/placeholder.svg"
-                        alt="Aperçu"
-                        className="absolute bottom-0 right-0 h-56 md:h-72 w-auto object-cover"
-                      />
+                      {/* REMOVED: illustration placeholder image */}
                     </div>
                   </div>
                 </div>

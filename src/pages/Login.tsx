@@ -159,7 +159,7 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center relative rounded-[36px] shadow-2xl px-8 md:px-14 py-16 md:py-24">
+      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center relative rounded-[36px] overflow-hidden border-4 border-white shadow-2xl bg-gradient-to-br from-blue-600/25 via-blue-500/15 to-purple-600/25 px-8 md:px-14 py-16 md:py-24">
         {/* Cadre photo à bords arrondis avec padding blanc interne */}
         <div className="w-full max-w-[720px]">
           <div className="rounded-[36px] bg-white p-4 md:p-6">
@@ -172,7 +172,7 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Légende sous le cadre (hors de l'image pour l'effet hiérarchique) */}
+          {/* Légende sous le cadre */}
           <div className="mt-6 text-center px-4">
             <h2 className="text-3xl md:text-4xl font-bold text-[#0A2540]">
               La gestion locative, réinventée.

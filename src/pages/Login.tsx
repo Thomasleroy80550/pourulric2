@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Home } from 'lucide-react';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
+import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
 
 const emailSchema = zod.object({
   email: zod.string().email({ message: 'Email invalide.' }),
@@ -28,6 +29,8 @@ type EmailFormValues = zod.infer<typeof emailSchema>;
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [isMigrationHelpDialogOpen, setIsMigrationHelpDialogOpen] = useState(false);
+  const [serviceStatuses, setServiceStatuses] = useState<ServiceStatus[]>([]);
+  const [statusesLoading, setStatusesLoading] = useState<boolean>(false);
 
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
@@ -36,6 +39,13 @@ const Login = () => {
       password: '',
     },
   });
+
+  useEffect(() => {
+    setStatusesLoading(true);
+    getServiceStatuses()
+      .then((data) => setServiceStatuses(data))
+      .finally(() => setStatusesLoading(false));
+  }, []);
 
   const handleEmailSubmit = async (values: EmailFormValues) => {
     setLoading(true);
@@ -235,15 +245,56 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Petites bulles colorées en bas de page */}
-      <div className="fixed bottom-4 left-0 w-full z-10 pointer-events-none">
-        <div className="mx-auto flex justify-center items-center gap-3">
-          <span className="h-3 w-3 rounded-full bg-[#175e82e6]" />
-          <span className="h-4 w-4 rounded-full bg-[#175e82b3]" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#60A5FA]" />
-          <span className="h-3.5 w-3.5 rounded-full bg-white/80" />
-          <span className="h-2 w-2 rounded-full bg-[#0A2540]" />
-          <span className="h-3 w-3 rounded-full bg-[#175e821a]" />
+      {/* Statuts des services en bas de page (avec libellés et état) */}
+      <div className="fixed bottom-4 left-0 w-full z-10">
+        <div className="mx-auto max-w-6xl px-3">
+          <div className="flex flex-wrap justify-center gap-3">
+            {(statusesLoading ? [] : serviceStatuses).map((s) => {
+              const labelMap: Record<ServiceStatusValue, string> = {
+                operational: "OK",
+                degraded: "Dégradé",
+                outage: "Panne",
+                maintenance: "Maintenance",
+              };
+              const dotClass =
+                s.status === "operational"
+                  ? "bg-green-500"
+                  : s.status === "outage"
+                  ? "bg-red-500"
+                  : s.status === "degraded"
+                  ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                  : "bg-blue-500"; // maintenance
+              return (
+                <div
+                  key={s.id}
+                  className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm"
+                >
+                  <span className={`h-3 w-3 rounded-full ${dotClass}`} />
+                  <span className="text-xs font-medium text-gray-900">
+                    {s.name} — {labelMap[s.status]}
+                  </span>
+                </div>
+              );
+            })}
+
+            {/* Légende par défaut si aucun service */}
+            {(!statusesLoading && serviceStatuses.length === 0) && (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
+                  <span className="h-3 w-3 rounded-full bg-green-500" />
+                  <span className="text-xs font-medium text-gray-900">Vert — OK</span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
+                  <span className="h-3 w-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                  <span className="text-xs font-medium text-gray-900">Orange — Dégradé</span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
+                  <span className="h-3 w-3 rounded-full bg-red-500" />
+                  <span className="text-xs font-medium text-gray-900">Rouge — Panne</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

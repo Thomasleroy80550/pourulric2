@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BadgeCheck, AlertTriangle, Wrench, CloudOff } from "lucide-react";
+import MainLayout from "@/components/MainLayout";
 
 function StatusBadge({ status }: { status: ServiceStatusValue }) {
   const base = "inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium";
@@ -39,60 +40,66 @@ const StatusPage: React.FC = () => {
     load();
   }, []);
 
-  if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <Alert variant="destructive">
-          <AlertTitle>Erreur</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Statut des services</h1>
-        <p className="text-muted-foreground mt-1">Sur cette page, vous pouvez consulter l’état en temps réel de nos intégrations et services.</p>
-      </div>
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Chargement...</p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {statuses.map((s) => (
-            <Card key={s.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg font-semibold">{s.name}</CardTitle>
-                <StatusBadge status={s.status} />
-              </CardHeader>
-              <CardContent>
-                {s.message ? (
-                  <p className="text-sm">{s.message}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Aucune information supplémentaire.</p>
-                )}
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Dernière mise à jour: {new Date(s.updated_at).toLocaleString("fr-FR")}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-
-          {statuses.length === 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Aucun service</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Aucun service n’est configuré pour le moment.</p>
-              </CardContent>
-            </Card>
-          )}
+    <MainLayout>
+      <div className="container mx-auto px-3 md:px-6 py-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Statut des services</h1>
+          <p className="text-muted-foreground mt-1">
+            Sur cette page, vous pouvez consulter l'état en temps réel de nos intégrations et services.
+          </p>
         </div>
-      )}
-    </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {!error && (
+          <>
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Chargement...</p>
+            ) : (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {statuses.map((s) => (
+                  <Card key={s.id} className="shadow-md">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="text-lg font-semibold">{s.name}</CardTitle>
+                      <StatusBadge status={s.status} />
+                    </CardHeader>
+                    <CardContent>
+                      {s.message ? (
+                        <p className="text-sm">{s.message}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Aucune information supplémentaire.</p>
+                      )}
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Dernière mise à jour: {new Date(s.updated_at).toLocaleString("fr-FR")}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {statuses.length === 0 && (
+                  <Card className="shadow-md">
+                    <CardHeader>
+                      <CardTitle>Aucun service</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Aucun service n'est configuré pour le moment.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </MainLayout>
   );
 };
 

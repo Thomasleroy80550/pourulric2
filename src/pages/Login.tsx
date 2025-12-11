@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Home } from 'lucide-react';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
@@ -79,107 +80,196 @@ const Login = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const email = form.getValues('email') as string;
+    if (!email) {
+      toast.error("Saisissez votre email pour réinitialiser le mot de passe.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) throw error;
+      toast.success('Email de réinitialisation envoyé.');
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuth = async (provider: 'google' | 'facebook') => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onSubmit = (values: EmailFormValues) => {
     handleEmailSubmit(values);
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
-        <div className="w-full max-w-sm space-y-8">
-          <div className="flex flex-col items-start mb-6">
-            <img src="/logo.png" alt="Hello Keys Logo" className="w-48 h-auto mb-6" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50 mb-2">
-              Connectez-vous à votre compte
-            </h1>
-            <p className="text-md text-gray-600 dark:text-gray-400">
-              Accédez à votre espace personnel en toute simplicité.
-            </p>
-          </div>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="votre.email@example.com" {...field} disabled={loading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mot de passe</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="********" {...field} disabled={loading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Connexion en cours...' : 'Se connecter'}
-              </Button>
-              <div className="flex items-center my-2">
-                <div className="flex-1 h-px bg-muted"></div>
-                <span className="mx-3 text-xs text-muted-foreground">ou</span>
-                <div className="flex-1 h-px bg-muted"></div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-6xl bg-white rounded-[40px] shadow-2xl overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          {/* Colonne gauche: cadre photo avec padding blanc interne */}
+          <div className="p-6 md:p-8 bg-gray-50 flex items-center">
+            <div className="w-full">
+              <div className="rounded-[36px] bg-white p-4 md:p-6 shadow-sm">
+                <div className="rounded-[28px] overflow-hidden">
+                  <div className="relative h-[360px] md:h-[480px] w-full bg-gradient-to-br from-orange-500 to-orange-300">
+                    <div className="absolute inset-0 pointer-events-none select-none" />
+                    <div className="absolute inset-0 p-6 md:p-10 flex flex-col text-white">
+                      <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
+                        Simplifiez la gestion
+                        <br />avec notre dashboard.
+                      </h2>
+                      <p className="mt-4 text-white/90 max-w-sm">
+                        Gérez vos locations via une interface moderne et intuitive.
+                      </p>
+                      {/* Illustration en bas */}
+                      <img
+                        src="/placeholder.svg"
+                        alt="Aperçu"
+                        className="absolute bottom-0 right-0 h-40 md:h-56 w-auto object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleMagicLink}
-                disabled={loading}
-              >
-                Se connecter avec un lien magique
-              </Button>
-              <p className="text-xs text-muted-foreground mt-1">
-                Nous vous envoyons un lien par email pour vous connecter sans mot de passe.
-              </p>
-            </form>
-          </Form>
-
-          <Button
-            variant="link"
-            className="w-full text-sm text-gray-600 dark:text-gray-400 mt-4"
-            onClick={() => setIsMigrationHelpDialogOpen(true)}
-            disabled={loading}
-          >
-            Besoin d'aide pour la migration ?
-          </Button>
-        </div>
-      </div>
-
-      <div className="hidden md:flex w-full md:w-1/2 items-center justify-center relative rounded-[48px] overflow-hidden shadow-2xl bg-gradient-to-br from-blue-600/30 via-blue-500/20 to-purple-600/30 px-10 md:px-16 py-20 md:py-28">
-        {/* Cadre photo à bords fortement arrondis + padding blanc interne */}
-        <div className="w-full max-w-[720px]">
-          <div className="rounded-[40px] bg-white p-3 md:p-4 shadow-md">
-            <div className="rounded-[32px] overflow-hidden">
-              <img
-                src="/placeholder.svg"
-                alt="Aperçu du dashboard Hello Keys"
-                className="w-full h-[360px] md:h-[460px] object-cover"
-              />
             </div>
           </div>
 
-          {/* Légende sous le cadre */}
-          <div className="mt-6 text-center px-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#0A2540]">
-              La gestion locative, réinventée.
-            </h2>
-            <p className="mt-3 text-slate-600 md:text-lg">
-              Une carte visuelle claire pour vos biens, réservations et finances.
-            </p>
+          {/* Colonne droite: formulaire modernisé */}
+          <div className="p-6 md:p-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center">
+                <img src="/logo.png" alt="Hello Keys" className="h-6 w-6 object-contain" />
+              </div>
+              <div className="text-xl font-semibold text-gray-900">Hello Keys</div>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">Bienvenue</h1>
+            <p className="text-sm text-gray-500 mb-6">Veuillez vous connecter à votre compte</p>
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email address</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="votre.email@example.com"
+                          {...field}
+                          disabled={loading}
+                          className="h-12 rounded-2xl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Password</FormLabel>
+                        <button
+                          type="button"
+                          onClick={handleForgotPassword}
+                          className="text-xs text-gray-500 hover:text-gray-700"
+                          disabled={loading}
+                        >
+                          Mot de passe oublié ?
+                        </button>
+                      </div>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="********"
+                          {...field}
+                          disabled={loading}
+                          className="h-12 rounded-2xl"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600"
+                  disabled={loading}
+                >
+                  {loading ? 'Connexion en cours...' : 'Login'}
+                </Button>
+
+                <div className="py-2">
+                  <Separator />
+                </div>
+                <div className="text-xs text-center text-gray-500 -mt-2">Ou se connecter avec</div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-xl"
+                    onClick={() => handleOAuth('google')}
+                    disabled={loading}
+                  >
+                    <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white border">
+                      <span className="text-xs font-bold text-[#EA4335]">G</span>
+                    </span>
+                    Google
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 rounded-xl"
+                    onClick={() => handleOAuth('facebook')}
+                    disabled={loading}
+                  >
+                    <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#1877F2] text-white text-sm font-bold">
+                      f
+                    </span>
+                    Facebook
+                  </Button>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full text-sm text-gray-600 mt-2"
+                  onClick={handleMagicLink}
+                  disabled={loading}
+                >
+                  Ou utilisez un lien magique
+                </Button>
+              </form>
+            </Form>
+
+            <div className="mt-4 text-center text-sm text-gray-500">
+              Pas de compte ?{' '}
+              <span className="font-medium text-orange-600 hover:underline cursor-pointer">
+                Inscription
+              </span>
+            </div>
           </div>
         </div>
       </div>

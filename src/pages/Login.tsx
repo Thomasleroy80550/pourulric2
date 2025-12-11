@@ -164,13 +164,12 @@ const Login = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Adresse e-mail</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="votre.email@example.com"
+                          placeholder="Adresse e-mail"
                           {...field}
                           disabled={loading}
-                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-none focus:bg-[#175e821a]"
+                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
                         />
                       </FormControl>
                       <FormMessage />
@@ -182,7 +181,6 @@ const Login = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mot de passe</FormLabel>
                       <div className="flex items-center justify-between">
                         <button
                           type="button"
@@ -196,10 +194,10 @@ const Login = () => {
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="********"
+                          placeholder="Mot de passe"
                           {...field}
                           disabled={loading}
-                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-none focus:bg-[#175e821a]"
+                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 focus:border-none focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
                         />
                       </FormControl>
                       <FormMessage />

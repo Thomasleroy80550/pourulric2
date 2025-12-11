@@ -54,3 +54,28 @@ export function useSaveProfile() {
 
   return { saving, save: runSave };
 }
+
+// Récupérer le profil (utilisateur courant par défaut)
+export type Profile = Record<string, any>;
+
+export async function getProfile(userId?: string): Promise<Profile> {
+  let uid = userId;
+  if (!uid) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    uid = sessionData.session?.user?.id || undefined;
+  }
+  if (!uid) {
+    throw new Error("Utilisateur non authentifié.");
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", uid)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  return data;
+}

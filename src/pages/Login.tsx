@@ -182,8 +182,8 @@ const Login = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel>Mot de passe</FormLabel>
                       <div className="flex items-center justify-between">
-                        <FormLabel>Password</FormLabel>
                         <button
                           type="button"
                           onClick={handleForgotPassword}

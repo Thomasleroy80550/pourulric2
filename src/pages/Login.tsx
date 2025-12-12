@@ -226,7 +226,6 @@ const Login = () => {
                 <div className="py-2">
                   <Separator />
                 </div>
-                {/* REMOVED: social login text and buttons (Google/Facebook) */}
 
                 <Button
                   type="button"
@@ -240,58 +239,57 @@ const Login = () => {
               </form>
             </Form>
 
-            {/* REMOVED: lien d'inscription sous le formulaire */}
-          </div>
-        </div>
-      </div>
-
-      {/* Zone minimaliste de statuts des services (sous le contenu) */}
-      <div className="mt-6 w-full">
-        <div className="mx-auto max-w-6xl px-3">
-          <div className="flex flex-wrap justify-center gap-2 rounded-lg border border-gray-200 bg-white/60 backdrop-blur p-2">
-            {statusesLoading ? (
-              <span className="text-xs text-gray-500">Chargement des statuts…</span>
-            ) : serviceStatuses.length > 0 ? (
-              serviceStatuses.map((s) => {
-                const labelMap: Record<ServiceStatusValue, string> = {
-                  operational: "Actif",
-                  degraded: "Dégradé",
-                  outage: "Panne",
-                  maintenance: "Maintenance",
-                };
-                const dotClass =
-                  s.status === "operational"
-                    ? "bg-green-500"
-                    : s.status === "outage"
-                    ? "bg-red-500"
-                    : s.status === "degraded"
-                    ? "bg-gradient-to-r from-amber-400 to-orange-500"
-                    : "bg-blue-500";
-                return (
-                  <span key={s.id} className="inline-flex items-center gap-2 px-2 py-1">
-                    <span className={`h-2.5 w-2.5 rounded-full ${dotClass}`} />
-                    <span className="text-xs text-gray-800">
-                      {s.name} — {labelMap[s.status]}
-                    </span>
-                  </span>
-                );
-              })
-            ) : (
-              <>
-                <span className="inline-flex items-center gap-2 px-2 py-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                  <span className="text-xs text-gray-800">Vert — Actif</span>
-                </span>
-                <span className="inline-flex items-center gap-2 px-2 py-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
-                  <span className="text-xs text-gray-800">Orange — Dégradé</span>
-                </span>
-                <span className="inline-flex items-center gap-2 px-2 py-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                  <span className="text-xs text-gray-800">Rouge — Panne</span>
-                </span>
-              </>
-            )}
+            {/* Nouvel encart statuts sous la zone de connexion */}
+            <div className="mt-10">
+              <div className="rounded-2xl border border-gray-200 bg-white/70 backdrop-blur p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Statuts des services</h3>
+                <div className="flex flex-wrap gap-3">
+                  {statusesLoading ? (
+                    <span className="text-xs text-gray-500">Chargement…</span>
+                  ) : serviceStatuses.length > 0 ? (
+                    serviceStatuses.map((s) => {
+                      const labelMap: Record<ServiceStatusValue, string> = {
+                        operational: "Actif",
+                        degraded: "Dégradé",
+                        outage: "Panne",
+                        maintenance: "Maintenance",
+                      };
+                      const dotClass =
+                        s.status === "operational"
+                          ? "bg-green-500"
+                          : s.status === "outage"
+                          ? "bg-red-500"
+                          : s.status === "degraded"
+                          ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                          : "bg-blue-500";
+                      return (
+                        <span key={s.id} className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-gray-50">
+                          <span className={`h-3 w-3 rounded-full ${dotClass}`} />
+                          <span className="text-sm font-medium text-gray-800">
+                            {s.name} — {labelMap[s.status]}
+                          </span>
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-gray-50">
+                        <span className="h-3 w-3 rounded-full bg-green-500" />
+                        <span className="text-sm font-medium text-gray-800">Vert — Actif</span>
+                      </span>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-gray-50">
+                        <span className="h-3 w-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                        <span className="text-sm font-medium text-gray-800">Orange — Dégradé</span>
+                      </span>
+                      <span className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-gray-50">
+                        <span className="h-3 w-3 rounded-full bg-red-500" />
+                        <span className="text-sm font-medium text-gray-800">Rouge — Panne</span>
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -184,6 +184,16 @@ const BookingsPage: React.FC = () => {
     }
   };
 
+  // Ajout: badge de canal (classes utilitaires)
+  const getChannelBadgeClasses = (channel?: string) => {
+    const key = (channel || 'UNKNOWN').toUpperCase();
+    if (key.includes('AIRBNB')) return 'bg-red-50 text-red-700 border-red-200';
+    if (key.includes('BOOKING')) return 'bg-blue-50 text-blue-700 border-blue-200';
+    if (key.includes('ABRITEL') || key.includes('VRBO')) return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    if (key.includes('DIRECT') || key.includes('HELLOKEYS')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    return 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
   const handleOpenDetails = (booking: Booking) => {
     console.log("Attempting to open dialog for booking:", booking);
     setSelectedBooking(booking);
@@ -210,6 +220,12 @@ const BookingsPage: React.FC = () => {
   };
 
   const currentYear = new Date().getFullYear();
+
+  // Ajout: calcul du total montant pour le résumé
+  const totalAmount = filteredBookings.reduce((sum, b) => {
+    const num = parseFloat((b.amount || '0').replace(',', '.').replace(/[^\d.-]/g, ''));
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
 
   if (profile?.is_banned) {
     return (
@@ -362,49 +378,78 @@ const BookingsPage: React.FC = () => {
                   <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear} avec les filtres actuels.</p>
                 ) : (
                   <>
+                    {/* Bandeau résumé V2 */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-sm text-gray-600">
+                        {filteredBookings.length} réservations trouvées
+                        {filterStartDate && filterEndDate && (
+                          <>
+                            {' '}• Arrivées du {format(parseISO(filterStartDate), 'dd/MM/yyyy', { locale: fr })} au {format(parseISO(filterEndDate), 'dd/MM/yyyy', { locale: fr })}
+                          </>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium">
+                        Total: {totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                      </div>
+                    </div>
+
                     {/* Desktop Table View */}
                     {!isMobile && (
                       <div className="overflow-x-auto">
-                        <Table>
+                        <Table className="min-w-full">
                           <TableHeader>
-                            <TableRow>
-                              <TableHead>ID Réservation</TableHead>
-                              <TableHead>Client</TableHead>
-                              <TableHead>Propriété</TableHead>
-                              <TableHead>Canal</TableHead>
-                              <TableHead>Arrivée</TableHead>
-                              <TableHead>Départ</TableHead>
-                              <TableHead>Statut</TableHead>
-                              <TableHead className="text-right">Montant</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
+                            <TableRow className="bg-gray-50 sticky top-0 z-10">
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">ID Réservation</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">Client</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">Propriété</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">Canal</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">Arrivée</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">Départ</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">Statut</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500 text-right">Montant</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500 text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {filteredBookings.map((booking) => (
-                              <TableRow key={booking.id} onClick={() => handleOpenDetails(booking)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <TableCell className="font-medium">{booking.id}</TableCell>
-                                <TableCell>{booking.guest_name}</TableCell>
-                                <TableCell>{booking.property_name}</TableCell>
-                                <TableCell>{booking.cod_channel || 'N/A'}</TableCell>
-                                <TableCell>{format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                                <TableCell>{format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                              <TableRow
+                                key={booking.id}
+                                onClick={() => handleOpenDetails(booking)}
+                                className="group cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                              >
+                                <TableCell className="font-medium text-sm">#{booking.id}</TableCell>
+                                <TableCell className="text-sm">{booking.guest_name}</TableCell>
+                                <TableCell className="text-sm">{booking.property_name}</TableCell>
+                                <TableCell>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getChannelBadgeClasses(booking.cod_channel)}`}>
+                                    {booking.cod_channel || 'N/A'}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-sm whitespace-nowrap">
+                                  {format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })}
+                                </TableCell>
+                                <TableCell className="text-sm whitespace-nowrap">
+                                  {format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}
+                                </TableCell>
                                 <TableCell>
                                   <Badge variant={getStatusVariant(booking.status)}>
                                     {booking.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200">
+                                <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200 whitespace-nowrap">
                                   {booking.amount}
                                 </TableCell>
-                                <TableCell className="text-right flex justify-end space-x-2">
-                                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
-                                    <Flag className="h-4 w-4" />
-                                    <span className="ml-2 hidden md:inline-block">Signaler</span>
-                                  </Button>
-                                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
-                                    <MessageSquare className="h-4 w-4" />
-                                    <span className="ml-2 hidden md:inline-block">Messages</span>
-                                  </Button>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end space-x-2">
+                                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
+                                      <Flag className="h-4 w-4" />
+                                      <span className="ml-2 hidden md:inline-block">Signaler</span>
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
+                                      <MessageSquare className="h-4 w-4" />
+                                      <span className="ml-2 hidden md:inline-block">Messages</span>
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}

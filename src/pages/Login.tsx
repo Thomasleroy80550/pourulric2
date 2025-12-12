@@ -140,7 +140,7 @@ const Login = () => {
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
                     <div className="absolute inset-0 pointer-events-none select-none" />
-                    <div className="absolute inset-0 p-8 md:p-14 flex flex-col items-start justify-center text-left text-white gap-3 relative">
+                    <div className="absolute inset-0 p-8 md:p-14 pb-20 flex flex-col items-start justify-center text-left text-white gap-3 relative z-[2]">
                       <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
                         Simplifiez la gestion
                         <br /><span className="text-white">avec notre dashboard.</span>
@@ -152,13 +152,13 @@ const Login = () => {
                         </span>
                         <div className="h-1 w-24 md:w-32 rounded-full bg-white/40" />
                       </div>
-                      {/* Vague ancrée tout en bas du bloc dégradé */}
-                      <div className="absolute bottom-0 left-0 right-0 z-0 pointer-events-none select-none">
-                        <svg className="w-full h-16 md:h-24" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
-                          <path d="M0,120 C240,160 480,80 720,120 C960,160 1200,80 1440,120 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.15)"/>
-                          <path d="M0,100 C240,140 480,60 720,100 C960,140 1200,60 1440,100 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.25)"/>
-                        </svg>
-                      </div>
+                    </div>
+                    {/* Vague ancrée tout en bas du bloc dégradé, sous le contenu */}
+                    <div className="absolute bottom-0 left-0 right-0 z-[1] pointer-events-none select-none">
+                      <svg className="w-full h-16 md:h-24" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
+                        <path d="M0,120 C240,160 480,80 720,120 C960,160 1200,80 1440,120 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.18)"/>
+                        <path d="M0,100 C240,140 480,60 720,100 C960,140 1200,60 1440,100 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.28)"/>
+                      </svg>
                     </div>
                   </div>
                 </div>

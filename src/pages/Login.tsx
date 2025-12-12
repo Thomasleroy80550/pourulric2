@@ -266,22 +266,22 @@ const Login = () => {
                     })
                   ) : null}
                 </div>
-                <div className="mt-2 flex flex-nowrap gap-3 overflow-x-auto items-center">
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
-                    <span className="text-[11px] text-gray-800">Actif</span>
+                <div className="mt-1 flex flex-nowrap gap-2 overflow-x-auto items-center">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 flex-shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                    <span className="text-[10px] text-gray-800">Actif</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
-                    <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
-                    <span className="text-[11px] text-gray-800">Dégradé</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 flex-shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                    <span className="text-[10px] text-gray-800">Dégradé</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
-                    <span className="text-[11px] text-gray-800">Panne</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 flex-shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    <span className="text-[10px] text-gray-800">Panne</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
-                    <span className="h-2 w-2 rounded-full bg-blue-500" />
-                    <span className="text-[11px] text-gray-800">Maintenance</span>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 flex-shrink-0">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    <span className="text-[10px] text-gray-800">Maintenance</span>
                   </span>
                 </div>
               </div>

@@ -131,7 +131,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-6 py-10">
-      <div className="w-full md:w-[92vw] lg:w-[88vw] max-w-7xl bg-white rounded-[48px] shadow-2xl overflow-hidden min-h-[720px]">
+      <div className="w-full md:w-[92vw] lg:w-[88vw] max-w-7xl bg-white rounded-[48px] shadow-none overflow-hidden min-h-[720px]">
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Colonne gauche: cadre photo avec padding blanc interne */}
           <div className="p-10 md:p-14 bg-gray-50 flex items-center">

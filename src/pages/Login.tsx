@@ -242,7 +242,7 @@ const Login = () => {
             <div className="mt-6">
               <div className="rounded-lg border border-gray-200/60 bg-white/50 backdrop-blur p-2">
                 <h3 className="text-xs font-semibold text-gray-700 mb-2">Statuts des services</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-nowrap gap-2 overflow-x-auto">
                   {statusesLoading ? (
                     <span className="text-[11px] text-gray-500">Chargement…</span>
                   ) : serviceStatuses.length > 0 ? (
@@ -256,7 +256,7 @@ const Login = () => {
                           ? "bg-gradient-to-r from-amber-400 to-orange-500"
                           : "bg-blue-500";
                       return (
-                        <span key={s.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/60">
+                        <span key={s.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/60 flex-shrink-0">
                           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
                           <span className="text-[11px] font-medium text-gray-800">
                             {s.name}
@@ -266,21 +266,20 @@ const Login = () => {
                     })
                   ) : null}
                 </div>
-                {/* Légende en bas avec bulles et libellés */}
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                <div className="mt-2 flex flex-nowrap gap-3 overflow-x-auto items-center">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
                     <span className="h-2 w-2 rounded-full bg-green-500" />
                     <span className="text-[11px] text-gray-800">Actif</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
                     <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
                     <span className="text-[11px] text-gray-800">Dégradé</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
                     <span className="h-2 w-2 rounded-full bg-red-500" />
                     <span className="text-[11px] text-gray-800">Panne</span>
                   </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
                     <span className="h-2 w-2 rounded-full bg-blue-500" />
                     <span className="text-[11px] text-gray-800">Maintenance</span>
                   </span>

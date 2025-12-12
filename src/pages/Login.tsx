@@ -247,12 +247,6 @@ const Login = () => {
                     <span className="text-[11px] text-gray-500">Chargement…</span>
                   ) : serviceStatuses.length > 0 ? (
                     serviceStatuses.map((s) => {
-                      const labelMap: Record<ServiceStatusValue, string> = {
-                        operational: "Actif",
-                        degraded: "Dégradé",
-                        outage: "Panne",
-                        maintenance: "Maintenance",
-                      };
                       const dotClass =
                         s.status === "operational"
                           ? "bg-green-500"
@@ -265,27 +259,31 @@ const Login = () => {
                         <span key={s.id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/60">
                           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
                           <span className="text-[11px] font-medium text-gray-800">
-                            {s.name} — {labelMap[s.status]}
+                            {s.name}
                           </span>
                         </span>
                       );
                     })
-                  ) : (
-                    <>
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/60">
-                        <span className="h-2 w-2 rounded-full bg-green-500" />
-                        <span className="text-[11px] font-medium text-gray-800">Vert — Actif</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/60">
-                        <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
-                        <span className="text-[11px] font-medium text-gray-800">Orange — Dégradé</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/60">
-                        <span className="h-2 w-2 rounded-full bg-red-500" />
-                        <span className="text-[11px] font-medium text-gray-800">Rouge — Panne</span>
-                      </span>
-                    </>
-                  )}
+                  ) : null}
+                </div>
+                {/* Légende en bas avec bulles et libellés */}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                    <span className="text-[11px] text-gray-800">Actif</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                    <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                    <span className="text-[11px] text-gray-800">Dégradé</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    <span className="text-[11px] text-gray-800">Panne</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1">
+                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="text-[11px] text-gray-800">Maintenance</span>
+                  </span>
                 </div>
               </div>
             </div>

@@ -145,15 +145,27 @@ const Login = () => {
                         Simplifiez la gestion
                         <br /><span className="text-white">avec notre dashboard.</span>
                       </h2>
+                      {/* Illustration maison (immobilier), minimaliste */}
                       <div className="mt-4 flex items-center gap-3">
                         <span className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white/20">
                           <Home className="h-7 w-7 text-white" />
                         </span>
                         <div className="h-1 w-24 md:w-32 rounded-full bg-white/40" />
                       </div>
-                      <p className="mt-4 text-white/90 max-w-lg">
-                        Gérez vos locations via une interface moderne et intuitive.
-                      </p>
+                      {/* Silhouette immobilière en bas pour remplir l'espace */}
+                      <div className="absolute bottom-0 left-0 right-0 z-10 px-8 md:px-14 pb-6">
+                        <div className="flex items-end gap-2 h-14 md:h-20">
+                          <div className="w-6 md:w-8 h-[56%] bg-white/20 rounded-t-md" />
+                          <div className="w-5 md:w-7 h-[72%] bg-white/15 rounded-t-md" />
+                          <div className="w-8 md:w-10 h-[42%] bg-white/10 rounded-t-md" />
+                          <div className="w-4 md:w-6 h-[68%] bg-white/20 rounded-t-md" />
+                          <div className="w-7 md:w-9 h-[54%] bg-white/15 rounded-t-md" />
+                          <div className="w-5 md:w-7 h-[38%] bg-white/10 rounded-t-md" />
+                        </div>
+                        <div className="mt-2 text-[12px] md:text-sm text-white/90">
+                          Gestion immobilière — Hello Keys
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

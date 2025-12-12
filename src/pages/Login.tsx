@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Home } from 'lucide-react';
-import { CalendarRange, Sparkles, BarChart3 } from 'lucide-react';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
 import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
 
@@ -141,44 +140,24 @@ const Login = () => {
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
                     <div className="absolute inset-0 pointer-events-none select-none" />
-                    <div className="absolute inset-0 p-8 md:p-14 pb-24 flex flex-col items-start justify-center text-left text-white gap-5 relative z-[2]">
-                      {/* Panel verre (glass) pour le titre */}
-                      <div className="rounded-xl border border-white/15 bg-white/10 backdrop-blur-md px-5 py-4">
-                        <h2 className="text-3xl md:text-5xl font-extrabold leading-tight tracking-tight">
-                          Simplifiez la gestion
-                          <br /><span className="text-white">avec notre dashboard.</span>
-                        </h2>
-                        <p className="mt-2 text-sm md:text-base text-white/85">
-                          Gérez vos biens, vos réservations et vos équipes en toute clarté.
-                        </p>
+                    <div className="absolute inset-0 p-8 md:p-14 pb-20 flex flex-col items-start justify-center text-left text-white gap-3 relative z-[2]">
+                      <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
+                        Simplifiez la gestion
+                        <br /><span className="text-white">avec notre dashboard.</span>
+                      </h2>
+                      {/* Illustration maison (immobilier), minimaliste */}
+                      <div className="mt-4 flex items-center gap-3">
+                        <span className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white/20">
+                          <Home className="h-7 w-7 text-white" />
+                        </span>
+                        <div className="h-1 w-24 md:w-32 rounded-full bg-white/40" />
                       </div>
-                      {/* Chips minimalistes des fonctionnalités */}
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs">
-                          <CalendarRange className="h-3.5 w-3.5" /> Réservations
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs">
-                          <Sparkles className="h-3.5 w-3.5" /> Ménage
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs">
-                          <BarChart3 className="h-3.5 w-3.5" /> Finances
-                        </span>
-                      </div>
-                      {/* Motif de points subtil en arrière-plan */}
-                      <div
-                        className="absolute inset-0 opacity-25"
-                        style={{
-                          backgroundImage:
-                            'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.18) 1px, transparent 1px)',
-                          backgroundSize: '12px 12px',
-                        }}
-                      />
                     </div>
-                    {/* Vague douce tout en bas */}
+                    {/* Vague ancrée tout en bas du bloc dégradé, sous le contenu */}
                     <div className="absolute bottom-0 left-0 right-0 z-[1] pointer-events-none select-none">
                       <svg className="w-full h-16 md:h-24" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
-                        <path d="M0,115 C240,155 480,75 720,115 C960,155 1200,75 1440,115 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.18)"/>
-                        <path d="M0,100 C240,140 480,60 720,100 C960,140 1200,60 1440,100 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.26)"/>
+                        <path d="M0,120 C240,160 480,80 720,120 C960,160 1200,80 1440,120 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.18)"/>
+                        <path d="M0,100 C240,140 480,60 720,100 C960,140 1200,60 1440,100 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.28)"/>
                       </svg>
                     </div>
                   </div>

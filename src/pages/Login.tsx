@@ -245,53 +245,51 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Statuts des services en bas de page (avec libellés et état) */}
-      <div className="fixed bottom-4 left-0 w-full z-10">
+      {/* Zone minimaliste de statuts des services (sous le contenu) */}
+      <div className="mt-6 w-full">
         <div className="mx-auto max-w-6xl px-3">
-          <div className="flex flex-wrap justify-center gap-3">
-            {(statusesLoading ? [] : serviceStatuses).map((s) => {
-              const labelMap: Record<ServiceStatusValue, string> = {
-                operational: "Actif",
-                degraded: "Dégradé",
-                outage: "Panne",
-                maintenance: "Maintenance",
-              };
-              const dotClass =
-                s.status === "operational"
-                  ? "bg-green-500"
-                  : s.status === "outage"
-                  ? "bg-red-500"
-                  : s.status === "degraded"
-                  ? "bg-gradient-to-r from-amber-400 to-orange-500"
-                  : "bg-blue-500"; // maintenance
-              return (
-                <div
-                  key={s.id}
-                  className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm"
-                >
-                  <span className={`h-3 w-3 rounded-full ${dotClass}`} />
-                  <span className="text-xs font-medium text-gray-900">
-                    {s.name} — {labelMap[s.status]}
+          <div className="flex flex-wrap justify-center gap-2 rounded-lg border border-gray-200 bg-white/60 backdrop-blur p-2">
+            {statusesLoading ? (
+              <span className="text-xs text-gray-500">Chargement des statuts…</span>
+            ) : serviceStatuses.length > 0 ? (
+              serviceStatuses.map((s) => {
+                const labelMap: Record<ServiceStatusValue, string> = {
+                  operational: "Actif",
+                  degraded: "Dégradé",
+                  outage: "Panne",
+                  maintenance: "Maintenance",
+                };
+                const dotClass =
+                  s.status === "operational"
+                    ? "bg-green-500"
+                    : s.status === "outage"
+                    ? "bg-red-500"
+                    : s.status === "degraded"
+                    ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                    : "bg-blue-500";
+                return (
+                  <span key={s.id} className="inline-flex items-center gap-2 px-2 py-1">
+                    <span className={`h-2.5 w-2.5 rounded-full ${dotClass}`} />
+                    <span className="text-xs text-gray-800">
+                      {s.name} — {labelMap[s.status]}
+                    </span>
                   </span>
-                </div>
-              );
-            })}
-
-            {/* Légende par défaut si aucun service */}
-            {(!statusesLoading && serviceStatuses.length === 0) && (
+                );
+              })
+            ) : (
               <>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
-                  <span className="h-3 w-3 rounded-full bg-green-500" />
-                  <span className="text-xs font-medium text-gray-900">Vert — Actif</span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
-                  <span className="h-3 w-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
-                  <span className="text-xs font-medium text-gray-900">Orange — Dégradé</span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/70 backdrop-blur-sm px-3 py-1 shadow-sm">
-                  <span className="h-3 w-3 rounded-full bg-red-500" />
-                  <span className="text-xs font-medium text-gray-900">Rouge — Panne</span>
-                </div>
+                <span className="inline-flex items-center gap-2 px-2 py-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                  <span className="text-xs text-gray-800">Vert — Actif</span>
+                </span>
+                <span className="inline-flex items-center gap-2 px-2 py-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                  <span className="text-xs text-gray-800">Orange — Dégradé</span>
+                </span>
+                <span className="inline-flex items-center gap-2 px-2 py-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                  <span className="text-xs text-gray-800">Rouge — Panne</span>
+                </span>
               </>
             )}
           </div>

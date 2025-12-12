@@ -153,17 +153,13 @@ const Login = () => {
                         <div className="h-1 w-24 md:w-32 rounded-full bg-white/40" />
                       </div>
                       {/* Silhouette immobilière en bas pour remplir l'espace */}
-                      <div className="absolute bottom-0 left-0 right-0 z-10 px-8 md:px-14 pb-6">
-                        <div className="flex items-end gap-2 h-14 md:h-20">
-                          <div className="w-6 md:w-8 h-[56%] bg-white/20 rounded-t-md" />
-                          <div className="w-5 md:w-7 h-[72%] bg-white/15 rounded-t-md" />
-                          <div className="w-8 md:w-10 h-[42%] bg-white/10 rounded-t-md" />
-                          <div className="w-4 md:w-6 h-[68%] bg-white/20 rounded-t-md" />
-                          <div className="w-7 md:w-9 h-[54%] bg-white/15 rounded-t-md" />
-                          <div className="w-5 md:w-7 h-[38%] bg-white/10 rounded-t-md" />
-                        </div>
-                        <div className="mt-2 text-[12px] md:text-sm text-white/90">
-                          Gestion immobilière — Hello Keys
+                      <div className="absolute bottom-0 left-0 right-0 z-10">
+                        {/* Wave minimaliste pour un rendu plus classe */}
+                        <div className="pointer-events-none select-none">
+                          <svg className="w-full h-20 md:h-28" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
+                            <path d="M0,120 C240,160 480,80 720,120 C960,160 1200,80 1440,120 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.15)"/>
+                            <path d="M0,100 C240,140 480,60 720,100 C960,140 1200,60 1440,100 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.25)"/>
+                          </svg>
                         </div>
                       </div>
                     </div>

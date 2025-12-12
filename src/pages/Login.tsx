@@ -145,24 +145,11 @@ const Login = () => {
                         Simplifiez la gestion
                         <br /><span className="text-white">avec notre dashboard.</span>
                       </h2>
-                      <div className="mt-2 h-1.5 w-44 md:w-64 rounded-full bg-gradient-to-r from-white/80 via-white/40 to-transparent animate-pulse" />
-                      
-                      <div className="pointer-events-none select-none">
-                        <span
-                          className="absolute -right-6 md:-right-8 top-8 h-2 w-2 rounded-full bg-white/70 animate-bounce"
-                          style={{ animationDelay: '0.2s' }}
-                        />
-                        <span
-                          className="absolute -right-10 md:-right-12 top-14 h-2.5 w-2.5 rounded-full bg-white/50 animate-bounce"
-                          style={{ animationDelay: '0.5s' }}
-                        />
-                        <span
-                          className="absolute -right-16 md:-right-20 top-20 h-1.5 w-1.5 rounded-full bg-white/60 animate-bounce"
-                          style={{ animationDelay: '0.8s' }}
-                        />
-                      </div>
-                      <div className="mt-3">
-                        <div className="h-2 w-52 md:w-72 rounded-full bg-gradient-to-r from-white/80 to-white/30 shadow-[0_6px_24px_rgba(255,255,255,0.25)]"></div>
+                      <div className="mt-4 flex items-center gap-3">
+                        <span className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white/20">
+                          <Home className="h-7 w-7 text-white" />
+                        </span>
+                        <div className="h-1 w-24 md:w-32 rounded-full bg-white/40" />
                       </div>
                       <p className="mt-4 text-white/90 max-w-lg">
                         Gérez vos locations via une interface moderne et intuitive.

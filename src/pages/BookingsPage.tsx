@@ -29,7 +29,6 @@ import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 
 interface Booking {
   id: string;
@@ -252,7 +251,6 @@ const BookingsPage: React.FC = () => {
         <Tabs defaultValue="list" className="space-y-4">
           <TabsList className="w-full justify-start">
             <TabsTrigger value="list" className="text-sm">Liste (V1)</TabsTrigger>
-            <TabsTrigger value="planning" className="text-sm">Planning (V2)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="list" className="space-y-4">
@@ -511,21 +509,6 @@ const BookingsPage: React.FC = () => {
                     )}
                   </>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="planning" className="space-y-4">
-            {/* Planning V2 compact, utilisant les mêmes filtres actifs */}
-            <Card className="border border-gray-200 rounded-lg shadow-none">
-              <CardHeader className="py-2 px-2">
-                <CardTitle className="text-sm font-semibold">Planning des réservations (V2)</CardTitle>
-              </CardHeader>
-              <CardContent className="p-2">
-                <BookingPlanningGridV2
-                  userRooms={userRooms}
-                  reservations={filteredBookings as unknown as any}
-                />
               </CardContent>
             </Card>
           </TabsContent>

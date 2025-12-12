@@ -225,22 +225,22 @@ const BookingsPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
         
-        <Card className="shadow-md mb-6">
-          <CardHeader className="py-2 px-3">
-            <CardTitle className="text-sm font-semibold flex items-center">
-              <Filter className="h-4 w-4 mr-1" />
-              Filtres de Réservations
+        <Card className="border border-gray-200 rounded-lg shadow-none mb-3">
+          <CardHeader className="py-1 px-2">
+            <CardTitle className="text-xs md:text-sm font-semibold flex items-center">
+              <Filter className="h-3.5 w-3.5 mr-1" />
+              Filtres de réservations
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2 p-3">
+          <CardContent className="p-2 grid grid-cols-2 md:grid-cols-4 gap-1 auto-rows-min">
             {loading ? (
               <>
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-48 col-span-full justify-self-end" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-48 col-span-full justify-self-end" />
               </>
             ) : (
               <>

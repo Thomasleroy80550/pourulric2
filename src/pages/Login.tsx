@@ -140,11 +140,27 @@ const Login = () => {
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
                     <div className="absolute inset-0 pointer-events-none select-none" />
-                    <div className="absolute inset-0 p-8 md:p-14 flex flex-col items-start justify-center text-left text-white gap-3">
+                    <div className="absolute inset-0 p-8 md:p-14 flex flex-col items-start justify-center text-left text-white gap-3 relative">
                       <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
                         Simplifiez la gestion
                         <br /><span className="text-white">avec notre dashboard.</span>
                       </h2>
+                      <div className="mt-2 h-1.5 w-44 md:w-64 rounded-full bg-gradient-to-r from-white/80 via-white/40 to-transparent animate-pulse" />
+                      
+                      <div className="pointer-events-none select-none">
+                        <span
+                          className="absolute -right-6 md:-right-8 top-8 h-2 w-2 rounded-full bg-white/70 animate-bounce"
+                          style={{ animationDelay: '0.2s' }}
+                        />
+                        <span
+                          className="absolute -right-10 md:-right-12 top-14 h-2.5 w-2.5 rounded-full bg-white/50 animate-bounce"
+                          style={{ animationDelay: '0.5s' }}
+                        />
+                        <span
+                          className="absolute -right-16 md:-right-20 top-20 h-1.5 w-1.5 rounded-full bg-white/60 animate-bounce"
+                          style={{ animationDelay: '0.8s' }}
+                        />
+                      </div>
                       <div className="mt-3">
                         <div className="h-2 w-52 md:w-72 rounded-full bg-gradient-to-r from-white/80 to-white/30 shadow-[0_6px_24px_rgba(255,255,255,0.25)]"></div>
                       </div>

@@ -28,6 +28,8 @@ import MessagesDialog from '@/components/MessagesDialog';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 
 interface Booking {
   id: string;
@@ -40,6 +42,11 @@ interface Booking {
   cod_channel?: string;
   email?: string;
   phone?: string;
+  // V2 fields (optionnels) pour compatibilité avec BookingPlanningGridV2
+  krossbooking_room_id?: string;
+  channel_identifier?: string;
+  property_id?: number;
+  id_room_type?: string;
 }
 
 const BookingsPage: React.FC = () => {
@@ -225,233 +232,259 @@ const BookingsPage: React.FC = () => {
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
         
-        <Card className="border border-gray-200 rounded-lg shadow-none mb-3">
-          <CardHeader className="py-1 px-2">
-            <CardTitle className="text-xs md:text-sm font-semibold flex items-center">
-              <Filter className="h-3.5 w-3.5 mr-1" />
-              Filtres de réservations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 grid grid-cols-2 md:grid-cols-4 gap-1 auto-rows-min">
-            {loading ? (
-              <>
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-48 col-span-full justify-self-end" />
-              </>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="filterRoom">Chambre</Label>
-                  <Select value={filterRoomId} onValueChange={setFilterRoomId}>
-                    <SelectTrigger id="filterRoom">
-                      <SelectValue placeholder="Toutes les chambres" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Toutes les chambres</SelectItem>
-                      {userRooms.map(room => (
-                        <SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Nouveaux onglets pour basculer entre V1 (Liste) et V2 (Planning) */}
+        <Tabs defaultValue="list" className="space-y-4">
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="list" className="text-sm">Liste (V1)</TabsTrigger>
+            <TabsTrigger value="planning" className="text-sm">Planning (V2)</TabsTrigger>
+          </TabsList>
 
-                <div className="space-y-2">
-                  <Label htmlFor="filterStatus">Statut</Label>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger id="filterStatus">
-                      <SelectValue placeholder="Tous les statuts" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous les statuts</SelectItem>
-                      {commonStatuses.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <TabsContent value="list" className="space-y-4">
+            {/* Filtres + Liste existants (V1) */}
+            <Card className="border border-gray-200 rounded-lg shadow-none mb-3">
+              <CardHeader className="py-1 px-2">
+                <CardTitle className="text-xs md:text-sm font-semibold flex items-center">
+                  <Filter className="h-3.5 w-3.5 mr-1" />
+                  Filtres de réservations
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-2 grid grid-cols-2 md:grid-cols-4 gap-1 auto-rows-min">
+                {loading ? (
+                  <>
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-48 col-span-full justify-self-end" />
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterRoom">Chambre</Label>
+                      <Select value={filterRoomId} onValueChange={setFilterRoomId}>
+                        <SelectTrigger id="filterRoom">
+                          <SelectValue placeholder="Toutes les chambres" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes les chambres</SelectItem>
+                          {userRooms.map(room => (
+                            <SelectItem key={room.id} value={room.room_id}>{room.room_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="filterChannel">Canal</Label>
-                  <Select value={filterChannel} onValueChange={setFilterChannel}>
-                    <SelectTrigger id="filterChannel">
-                      <SelectValue placeholder="Tous les canaux" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous les canaux</SelectItem>
-                      {commonChannels.map(channel => (
-                        <SelectItem key={channel} value={channel}>{channel}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterStatus">Statut</Label>
+                      <Select value={filterStatus} onValueChange={setFilterStatus}>
+                        <SelectTrigger id="filterStatus">
+                          <SelectValue placeholder="Tous les statuts" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous les statuts</SelectItem>
+                          {commonStatuses.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="filterStartDate">Date d'arrivée (début)</Label>
-                  <Input
-                    id="filterStartDate"
-                    type="date"
-                    value={filterStartDate}
-                    onChange={(e) => setFilterStartDate(e.target.value)}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterChannel">Canal</Label>
+                      <Select value={filterChannel} onValueChange={setFilterChannel}>
+                        <SelectTrigger id="filterChannel">
+                          <SelectValue placeholder="Tous les canaux" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous les canaux</SelectItem>
+                          {commonChannels.map(channel => (
+                            <SelectItem key={channel} value={channel}>{channel}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="filterEndDate">Date d'arrivée (fin)</Label>
-                  <Input
-                    id="filterEndDate"
-                    type="date"
-                    value={filterEndDate}
-                    onChange={(e) => setFilterEndDate(e.target.value)}
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-2 lg:col-span-4 flex justify-end">
-                  <Button variant="outline" onClick={handleResetFilters} className="flex items-center">
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Réinitialiser les filtres
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterStartDate">Date d'arrivée (début)</Label>
+                      <Input
+                        id="filterStartDate"
+                        type="date"
+                        value={filterStartDate}
+                        onChange={(e) => setFilterStartDate(e.target.value)}
+                      />
+                    </div>
 
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Liste de vos réservations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : error ? (
-              <Alert variant="destructive" className="mb-4">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Erreur</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : userRooms.length === 0 ? (
-              <p className="text-gray-500">
-                Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
-              </p>
-            ) : filteredBookings.length === 0 ? (
-              <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear} avec les filtres actuels.</p>
-            ) : (
-              <>
-                {/* Desktop Table View */}
-                {!isMobile && (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID Réservation</TableHead>
-                          <TableHead>Client</TableHead>
-                          <TableHead>Propriété</TableHead>
-                          <TableHead>Canal</TableHead>
-                          <TableHead>Arrivée</TableHead>
-                          <TableHead>Départ</TableHead>
-                          <TableHead>Statut</TableHead>
-                          <TableHead className="text-right">Montant</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                    <div className="space-y-2">
+                      <Label htmlFor="filterEndDate">Date d'arrivée (fin)</Label>
+                      <Input
+                        id="filterEndDate"
+                        type="date"
+                        value={filterEndDate}
+                        onChange={(e) => setFilterEndDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-1 md:col-span-2 lg:col-span-4 flex justify-end">
+                      <Button variant="outline" onClick={handleResetFilters} className="flex items-center">
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Réinitialiser les filtres
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Liste de vos réservations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : error ? (
+                  <Alert variant="destructive" className="mb-4">
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Erreur</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                ) : userRooms.length === 0 ? (
+                  <p className="text-gray-500">
+                    Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
+                  </p>
+                ) : filteredBookings.length === 0 ? (
+                  <p className="text-gray-500">Aucune réservation trouvée pour vos chambres en {currentYear} avec les filtres actuels.</p>
+                ) : (
+                  <>
+                    {/* Desktop Table View */}
+                    {!isMobile && (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>ID Réservation</TableHead>
+                              <TableHead>Client</TableHead>
+                              <TableHead>Propriété</TableHead>
+                              <TableHead>Canal</TableHead>
+                              <TableHead>Arrivée</TableHead>
+                              <TableHead>Départ</TableHead>
+                              <TableHead>Statut</TableHead>
+                              <TableHead className="text-right">Montant</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredBookings.map((booking) => (
+                              <TableRow key={booking.id} onClick={() => handleOpenDetails(booking)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <TableCell className="font-medium">{booking.id}</TableCell>
+                                <TableCell>{booking.guest_name}</TableCell>
+                                <TableCell>{booking.property_name}</TableCell>
+                                <TableCell>{booking.cod_channel || 'N/A'}</TableCell>
+                                <TableCell>{format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                                <TableCell>{format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                                <TableCell>
+                                  <Badge variant={getStatusVariant(booking.status)}>
+                                    {booking.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200">
+                                  {booking.amount}
+                                </TableCell>
+                                <TableCell className="text-right flex justify-end space-x-2">
+                                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
+                                    <Flag className="h-4 w-4" />
+                                    <span className="ml-2 hidden md:inline-block">Signaler</span>
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
+                                    <MessageSquare className="h-4 w-4" />
+                                    <span className="ml-2 hidden md:inline-block">Messages</span>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
+                    {/* Mobile Card View */}
+                    {isMobile && (
+                      <div className="grid grid-cols-1 gap-4">
                         {filteredBookings.map((booking) => (
-                          <TableRow key={booking.id} onClick={() => handleOpenDetails(booking)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700">
-                            <TableCell className="font-medium">{booking.id}</TableCell>
-                            <TableCell>{booking.guest_name}</TableCell>
-                            <TableCell>{booking.property_name}</TableCell>
-                            <TableCell>{booking.cod_channel || 'N/A'}</TableCell>
-                            <TableCell>{format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                            <TableCell>{format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                            <TableCell>
-                              <Badge variant={getStatusVariant(booking.status)}>
-                                {booking.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-bold text-gray-800 dark:text-gray-200">
-                              {booking.amount}
-                            </TableCell>
-                            <TableCell className="text-right flex justify-end space-x-2">
-                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
-                                <Flag className="h-4 w-4" />
-                                <span className="ml-2 hidden md:inline-block">Signaler</span>
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
-                                <MessageSquare className="h-4 w-4" />
-                                <span className="ml-2 hidden md:inline-block">Messages</span>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
+                          <Card key={booking.id} className="shadow-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => handleOpenDetails(booking)}>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-base font-semibold flex items-center">
+                                <Tag className="h-4 w-4 mr-2 text-gray-500" />
+                                Réservation #{booking.id}
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="text-sm space-y-1">
+                              <p className="flex items-center">
+                                <User className="h-4 w-4 mr-2 text-gray-500" />
+                                <span className="font-medium">{booking.guest_name}</span>
+                              </p>
+                              <p className="flex items-center">
+                                <Home className="h-4 w-4 mr-2 text-gray-500" />
+                                {booking.property_name}
+                              </p>
+                              <p className="flex items-center">
+                                <CalendarDays className="h-4 w-4 mr-2 text-gray-500" />
+                                {format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })} - {format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}
+                              </p>
+                              <p className="flex items-center">
+                                <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
+                                <span className="font-bold text-gray-800 dark:text-gray-200">
+                                  {booking.amount}
+                                </span>
+                              </p>
+                              <div className="flex items-center justify-between pt-2">
+                                <Badge variant={getStatusVariant(booking.status)}>
+                                  {booking.status}
+                                </Badge>
+                                <span className="text-xs text-gray-500">Canal: {booking.cod_channel || 'N/A'}</span>
+                              </div>
+                              <div className="pt-2 flex flex-col gap-2">
+                                <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
+                                  <Flag className="h-4 w-4 mr-2" />
+                                  Signaler un problème
+                                </Button>
+                                <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
+                                  <MessageSquare className="h-4 w-4 mr-2" />
+                                  Messages
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                      </div>
+                    )}
+                  </>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                {/* Mobile Card View */}
-                {isMobile && (
-                  <div className="grid grid-cols-1 gap-4">
-                    {filteredBookings.map((booking) => (
-                      <Card key={booking.id} className="shadow-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => handleOpenDetails(booking)}>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base font-semibold flex items-center">
-                            <Tag className="h-4 w-4 mr-2 text-gray-500" />
-                            Réservation #{booking.id}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-1">
-                          <p className="flex items-center">
-                            <User className="h-4 w-4 mr-2 text-gray-500" />
-                            <span className="font-medium">{booking.guest_name}</span>
-                          </p>
-                          <p className="flex items-center">
-                            <Home className="h-4 w-4 mr-2 text-gray-500" />
-                            {booking.property_name}
-                          </p>
-                          <p className="flex items-center">
-                            <CalendarDays className="h-4 w-4 mr-2 text-gray-500" />
-                            {format(parseISO(booking.check_in_date), 'dd/MM/yyyy', { locale: fr })} - {format(parseISO(booking.check_out_date), 'dd/MM/yyyy', { locale: fr })}
-                          </p>
-                          <p className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-2 text-gray-500" />
-                            <span className="font-bold text-gray-800 dark:text-gray-200">
-                              {booking.amount}
-                            </span>
-                          </p>
-                          <div className="flex items-center justify-between pt-2">
-                            <Badge variant={getStatusVariant(booking.status)}>
-                              {booking.status}
-                            </Badge>
-                            <span className="text-xs text-gray-500">Canal: {booking.cod_channel || 'N/A'}</span>
-                          </div>
-                          <div className="pt-2 flex flex-col gap-2">
-                            <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleReportProblem(booking); }}>
-                              <Flag className="h-4 w-4 mr-2" />
-                              Signaler un problème
-                            </Button>
-                            <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Messages
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+          <TabsContent value="planning" className="space-y-4">
+            {/* Planning V2 compact, utilisant les mêmes filtres actifs */}
+            <Card className="border border-gray-200 rounded-lg shadow-none">
+              <CardHeader className="py-2 px-2">
+                <CardTitle className="text-sm font-semibold">Planning des réservations (V2)</CardTitle>
+              </CardHeader>
+              <CardContent className="p-2">
+                <BookingPlanningGridV2
+                  userRooms={userRooms}
+                  reservations={filteredBookings as unknown as any}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={isDetailDialogOpen} onOpenChange={(open) => {

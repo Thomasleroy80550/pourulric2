@@ -176,7 +176,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
     // Récupération de l'email depuis le profil
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("email, first_name, last_name")
+      .select("email")
       .eq("id", req.user_id)
       .single();
 
@@ -185,16 +185,11 @@ const AdminSeasonRequestsPage: React.FC = () => {
       return;
     }
 
-    const userName =
-      `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "Bonjour";
-    const subject = "Smart Pricing – Gestion automatique de vos tarifs";
+    const subject = `Smart Pricing – Validation automatique saison ${req.season_year}`;
 
     const bodyHtml = `
-      <p>${userName},</p>
-      <p>Le Smart Pricing est désormais actif pour votre logement. Vos tarifs sont ajustés automatiquement en fonction de la demande, de la saisonnalité et du positionnement concurrentiel afin d'optimiser vos revenus.</p>
-      <p>Vous pouvez consulter les prix appliqués et, si nécessaire, ajuster vos préférences à tout moment depuis votre espace Hello Keys.</p>
-      <p><a data-btn href="https://beta.proprietaire.hellokeys.fr">Accéder à mon espace</a></p>
-      <p>Cordialement,<br/>L'équipe Hello Keys</p>
+      <p>Vos tarifs sont ajustés automatiquement grâce à la solution Smart Pricing, en fonction de la demande, de la saisonnalité et du positionnement concurrentiel, afin d'optimiser vos revenus.</p>
+      <p>Votre demande de tarifs pour ${req.season_year} est automatiquement validée. Étant déjà utilisateur du Smart Pricing, votre calendrier s'ouvre donc automatiquement.</p>
     `;
 
     const themedHtml = buildNewsletterHtml({

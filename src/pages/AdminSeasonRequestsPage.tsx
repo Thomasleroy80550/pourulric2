@@ -28,6 +28,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { sendEmail } from "@/lib/notifications-api";
+import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
+import DOMPurify from "dompurify";
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -169,7 +172,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
 
   const sendSmartPricingEmail = async (req: SeasonPricingRequest) => {
     const loadingId = toast.loading("Envoi de l'email Smart Pricing...");
-    // fetch recipient email from profiles
+
+    // Récupération de l'email depuis le profil
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("email, first_name, last_name")
@@ -181,18 +185,24 @@ const AdminSeasonRequestsPage: React.FC = () => {
       return;
     }
 
-    const subject = "Smart Pricing";
-    const html =
-      "Bonjour<br/><br/>en temp qu(utilisateur du smart pricing vos pruix sont gérer automatiquement";
+    const userName =
+      `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "Bonjour";
+    const subject = "Smart Pricing – Gestion automatique de vos tarifs";
 
-    const { error } = await supabase.functions.invoke("send-email", {
-      body: { to: profile.email, subject, html },
+    const bodyHtml = `
+      <p>${userName},</p>
+      <p>Le Smart Pricing est désormais actif pour votre logement. Vos tarifs sont ajustés automatiquement en fonction de la demande, de la saisonnalité et du positionnement concurrentiel afin d'optimiser vos revenus.</p>
+      <p>Vous pouvez consulter les prix appliqués et, si nécessaire, ajuster vos préférences à tout moment depuis votre espace Hello Keys.</p>
+      <p><a data-btn href="https://beta.proprietaire.hellokeys.fr">Accéder à mon espace</a></p>
+      <p>Cordialement,<br/>L'équipe Hello Keys</p>
+    `;
+
+    const themedHtml = buildNewsletterHtml({
+      subject,
+      bodyHtml: DOMPurify.sanitize(bodyHtml),
     });
 
-    if (error) {
-      toast.error("Impossible d'envoyer l'email Smart Pricing.", { id: loadingId });
-      return;
-    }
+    await sendEmail(profile.email, subject, themedHtml);
 
     toast.success("L'email Smart Pricing a été envoyé.", { id: loadingId });
   };

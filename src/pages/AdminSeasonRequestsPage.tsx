@@ -42,6 +42,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [pendingApply, setPendingApply] = useState<SeasonPricingRequest | null>(null);
   const [allUserRooms, setAllUserRooms] = useState<AdminUserRoom[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState<boolean>(true);
+  const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null }>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,14 +63,48 @@ const AdminSeasonRequestsPage: React.FC = () => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
+        setRoomsLoading(true);
         const rooms = await getAllUserRooms();
         setAllUserRooms(rooms);
       } catch (err: any) {
         console.error("Erreur chargement des logements admin:", err);
+      } finally {
+        setRoomsLoading(false);
       }
     };
     fetchRooms();
   }, []);
+
+  // NOUVEL effet: charger les profils (nom, email) pour les propriétaires des logements
+  useEffect(() => {
+    const loadProfiles = async () => {
+      try {
+        const userIds = Array.from(new Set(allUserRooms.map(r => r.user_id).filter(Boolean)));
+        if (userIds.length === 0) {
+          setProfilesById({});
+          return;
+        }
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', userIds);
+
+        if (error) {
+          console.error("Erreur chargement des profils:", error);
+          return;
+        }
+
+        const map: Record<string, { first_name: string | null; last_name: string | null; email: string | null }> = {};
+        (data || []).forEach((p: any) => {
+          map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null, email: p.email ?? null };
+        });
+        setProfilesById(map);
+      } catch (err) {
+        console.error("Erreur inattendue chargement profils:", err);
+      }
+    };
+    loadProfiles();
+  }, [allUserRooms]);
 
   const filtered = useMemo(() => requests.filter(r => r.status === tab), [requests, tab]);
 
@@ -201,6 +237,23 @@ const AdminSeasonRequestsPage: React.FC = () => {
 
     toast.success("L'email Smart Pricing a été envoyé.", { id: loadingId });
   };
+
+  // NOUVEL calcul: liste des logements sans demande saison 2026 (hors demandes annulées)
+  const missingRooms = useMemo(() => {
+    const targetYear = 2026;
+    const activeRequests = requests.filter(r => r.season_year === targetYear && r.status !== 'cancelled');
+
+    return allUserRooms.filter(room => {
+      const hasRequest = activeRequests.some(r =>
+        r.user_id === room.user_id &&
+        (
+          (r.room_id && r.room_id === room.room_id) ||
+          (!r.room_id && r.room_name && r.room_name === room.room_name)
+        )
+      );
+      return !hasRequest;
+    });
+  }, [allUserRooms, requests]);
 
   const renderTable = () => (
     <Table>
@@ -365,6 +418,48 @@ const AdminSeasonRequestsPage: React.FC = () => {
                 <TabsContent value="done" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
                 <TabsContent value="cancelled" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
               </Tabs>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* NOUVELLE CARTE: logements sans demande saison 2026 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Logements sans demande Saison 2026</CardTitle>
+            <CardDescription>Suivi des logements dont le formulaire 2026 n'a pas été rempli.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(roomsLoading || loading) ? (
+              <Skeleton className="h-32 w-full" />
+            ) : (
+              missingRooms.length === 0 ? (
+                <p className="text-muted-foreground">Tous les logements ont une demande pour 2026.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Propriétaire</TableHead>
+                      <TableHead>Logement</TableHead>
+                      <TableHead>Identifiant</TableHead>
+                      <TableHead>Email</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {missingRooms.map((room) => {
+                      const profile = profilesById[room.user_id];
+                      const ownerName = profile ? (`${profile.first_name ?? ''} ${profile.last_name ?? ''}`).trim() || '—' : '—';
+                      return (
+                        <TableRow key={room.id}>
+                          <TableCell className="font-medium">{ownerName}</TableCell>
+                          <TableCell>{room.room_name || '—'}</TableCell>
+                          <TableCell>{room.room_id || '—'}</TableCell>
+                          <TableCell>{profile?.email ?? '—'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )
             )}
           </CardContent>
         </Card>

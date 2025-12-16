@@ -27,6 +27,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  "https://dkjaejzwmmwwzhokpbgs.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRramFlanp3bW13d3pob2twYmdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0MTQwMjAsImV4cCI6MjA2NDk5MDAyMH0.aTOtiL49-BYCyO4K3Bek37i5XQD3fWzim59j9fEMtJs"
+);
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -38,6 +45,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [pendingApply, setPendingApply] = useState<SeasonPricingRequest | null>(null);
   const [allUserRooms, setAllUserRooms] = useState<AdminUserRoom[]>([]);
+
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -166,6 +175,30 @@ const AdminSeasonRequestsPage: React.FC = () => {
     }
   };
 
+  const sendSmartPricingEmail = async (recipientEmail: string) => {
+    const subject = "Smart Pricing";
+    const html =
+      "Bonjour<br/><br/>en temp qu(utilisateur du smart pricing vos pruix sont gérer automatiquement";
+
+    const { data, error } = await supabase.functions.invoke("send-email", {
+      body: { to: recipientEmail, subject, html },
+    });
+
+    if (error) {
+      toast({
+        title: "Échec de l'envoi",
+        description: "Impossible d'envoyer l'email Smart Pricing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Email envoyé",
+      description: "L'email Smart Pricing a été envoyé.",
+    });
+  };
+
   const renderTable = () => (
     <Table>
       <TableHeader>
@@ -221,6 +254,35 @@ const AdminSeasonRequestsPage: React.FC = () => {
                   </Button>
                 )}
                 <SingleRequestExportMenu request={req} />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExpandedId(expandedId === req.id ? null : req.id)}
+                >
+                  <Eye className="h-4 w-4 mr-2" /> Détails
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={async () => {
+                    const recipient =
+                      (req as any).user_email ??
+                      (req as any).email ??
+                      (req as any).profile_email;
+                    if (!recipient) {
+                      toast({
+                        title: "Email introuvable",
+                        description:
+                          "Aucune adresse email liée à la demande. Veuillez vérifier le profil de l'utilisateur.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    await sendSmartPricingEmail(recipient);
+                  }}
+                >
+                  Smart Pricing
+                </Button>
               </TableCell>
             </TableRow>
 

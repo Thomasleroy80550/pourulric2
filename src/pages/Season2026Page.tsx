@@ -16,6 +16,7 @@ import { createSeasonPricingRequest, SeasonPricingItem } from "@/lib/season-pric
 import { hasExistingSeasonPricingRequest } from "@/lib/season-pricing-api";
 import { getExistingSeasonPricingRoomIds } from "@/lib/season-pricing-api";
 import SeasonTutorial from "@/components/season/SeasonTutorial";
+import { useNavigate } from "react-router-dom";
 
 type CsvRow = {
   start: string; // dd/MM/yyyy
@@ -221,6 +222,7 @@ const Season2026Page: React.FC = () => {
   const isSmartPricingUser = useMemo(() => !profile?.can_manage_prices, [profile]);
 
   const [showTutorial, setShowTutorial] = useState(false);
+  const navigate = useNavigate();
 
   // Ouvrir automatiquement une seule fois (première visite)
   useEffect(() => {
@@ -387,6 +389,14 @@ const Season2026Page: React.FC = () => {
             >
               <HelpCircle className="h-4 w-4" />
               <span>Aide</span>
+            </Button>
+            {/* AJOUT: Accès à la page Mes tarifs 2026 validés */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/season-2026/prices")}
+            >
+              Mes tarifs 2026 validés
             </Button>
             {!isSmartPricingUser && (
               <Button onClick={handleSubmit} disabled={isApplyingSuggestions || loadingCsv || rows.length === 0}>

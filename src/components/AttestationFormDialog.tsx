@@ -44,7 +44,6 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     if (!profile) return;
     setGenerating(true);
 
-    // Capture directement le composant rendu (aperçu caché)
     const el = printRef.current;
     if (!el) {
       setGenerating(false);
@@ -54,19 +53,38 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     const canvas = await html2canvas(el as HTMLElement, {
       scale: 2,
       useCORS: true,
+      backgroundColor: '#ffffff',
+      width: (el as HTMLElement).scrollWidth,
+      height: (el as HTMLElement).scrollHeight,
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
     const pdf = new jsPDF({
-      orientation: 'portrait',
+      orientation: 'p',
       unit: 'mm',
       format: 'a4',
     });
 
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10; // marges pour une meilleure lisibilité
+    const targetWidth = pdfWidth - margin * 2;
+    const imgHeight = (canvas.height * targetWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
 
-    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+    // Première page
+    pdf.addImage(imgData, 'JPEG', margin, margin + position, targetWidth, imgHeight);
+    heightLeft -= (pdfHeight - margin * 2);
+
+    // Pages suivantes
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', margin, margin + position, targetWidth, imgHeight);
+      heightLeft -= (pdfHeight - margin * 2);
+    }
+
     const fileName = `attestation-hellokeys-${(lastName || profile.last_name || 'client').toLowerCase()}.pdf`;
     pdf.save(fileName);
 
@@ -86,7 +104,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
         </DialogHeader>
 
         {/* Aperçu caché de l'attestation pour la capture PDF */}
-        <div className="fixed -left-[9999px] top-0">
+        <div className="fixed -left-[9999px] top-0 w-[1024px] bg-white">
           <AttestationContent
             ref={printRef}
             profile={{ ...profile!, first_name: firstName, last_name: lastName }}

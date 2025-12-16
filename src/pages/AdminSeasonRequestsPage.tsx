@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarDays, Eye, CheckCircle, Ban, Wrench } from "lucide-react";
+import { CalendarDays, Eye, CheckCircle, Ban, Wrench, XCircle } from "lucide-react";
 import { getAllSeasonPricingRequests, updateSeasonPricingRequestStatus, SeasonPricingRequest, SeasonPricingStatus } from "@/lib/season-pricing-api";
 import ExportRequestsMenu from "@/components/admin/ExportRequestsMenu";
 import SingleRequestExportMenu from "@/components/admin/SingleRequestExportMenu";
@@ -255,6 +255,54 @@ const AdminSeasonRequestsPage: React.FC = () => {
     });
   }, [allUserRooms, requests]);
 
+  // NOUVEL calcul: logements ayant une demande 2026, avec statut agrégé (done = vert, sinon rouge)
+  const submittedRooms = useMemo(() => {
+    const targetYear = 2026;
+    const list = requests.filter(r => r.season_year === targetYear);
+    const grouped: Record<string, { user_id: string; room_name: string | null; room_id: string | null; status: SeasonPricingStatus }> = {};
+    list.forEach(r => {
+      const key = `${r.user_id}:${r.room_id ?? r.room_name ?? 'unknown'}`;
+      const current = grouped[key];
+      if (!current) {
+        grouped[key] = { user_id: r.user_id, room_name: r.room_name ?? null, room_id: r.room_id ?? null, status: r.status };
+      } else {
+        // Priorité au 'done'
+        if (r.status === 'done') {
+          grouped[key].status = 'done';
+        } else if (grouped[key].status !== 'done') {
+          grouped[key].status = r.status;
+        }
+      }
+    });
+    return Object.values(grouped);
+  }, [requests]);
+
+  // NOUVEL calcul: bouton de relance par logement (email pro avec thème)
+  const sendSeasonReminderEmail = async (room: AdminUserRoom) => {
+    const loadingId = toast.loading("Envoi de la relance...");
+    const profile = profilesById[room.user_id];
+    const email = profile?.email;
+    if (!email) {
+      toast.error("Email du propriétaire introuvable.", { id: loadingId });
+      return;
+    }
+    const name = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() || "Bonjour";
+    const subject = "Relance – Formulaire Saison 2026 à compléter";
+    const bodyHtml = `
+      <p>${name},</p>
+      <p>Nous vous invitons à compléter le formulaire Saison 2026 pour votre logement ${room.room_name ?? ""} afin de finaliser vos tarifs et restrictions.</p>
+      <p>Cela nous permettra d'ouvrir votre calendrier à temps et d'optimiser vos revenus pour la saison à venir.</p>
+      <p><a data-btn href="https://beta.proprietaire.hellokeys.fr">Compléter le formulaire 2026</a></p>
+      <p>Cordialement,<br/>L'équipe Hello Keys</p>
+    `;
+    const themedHtml = buildNewsletterHtml({
+      subject,
+      bodyHtml: DOMPurify.sanitize(bodyHtml),
+    });
+    await sendEmail(email, subject, themedHtml);
+    toast.success("Relance envoyée.", { id: loadingId });
+  };
+
   const renderTable = () => (
     <Table>
       <TableHeader>
@@ -460,6 +508,103 @@ const AdminSeasonRequestsPage: React.FC = () => {
                   </TableBody>
                 </Table>
               )
+            )}
+          </CardContent>
+        </Card>
+
+        {/* NEW CARD: logements sans demande 2026 avec bouton de relance */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Logements sans demande Saison 2026</CardTitle>
+            <CardDescription>Suivi des logements dont le formulaire 2026 n'a pas été rempli (relance possible).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(roomsLoading || loading) ? (
+              <Skeleton className="h-32 w-full" />
+            ) : (
+              missingRooms.length === 0 ? (
+                <p className="text-muted-foreground">Tous les logements ont une demande pour 2026.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Propriétaire</TableHead>
+                      <TableHead>Logement</TableHead>
+                      <TableHead>Identifiant</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {missingRooms.map((room) => {
+                      const profile = profilesById[room.user_id];
+                      const ownerName = profile ? (`${profile.first_name ?? ""} ${profile.last_name ?? ""}`).trim() || "—" : "—";
+                      return (
+                        <TableRow key={room.id}>
+                          <TableCell className="font-medium">{ownerName}</TableCell>
+                          <TableCell>{room.room_name || "—"}</TableCell>
+                          <TableCell>{room.room_id || "—"}</TableCell>
+                          <TableCell>{profile?.email ?? "—"}</TableCell>
+                          <TableCell className="text-right">
+                            <Button size="sm" onClick={() => sendSeasonReminderEmail(room)}>Relancer</Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )
+            )}
+          </CardContent>
+        </Card>
+
+        {/* NEW CARD: logements avec demande 2026 + statut avec icône */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Logements avec demande Saison 2026</CardTitle>
+            <CardDescription>Statut des demandes par logement (vert = terminé, rouge = non terminé).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : submittedRooms.length === 0 ? (
+              <p className="text-muted-foreground">Aucun logement n'a encore de demande enregistrée pour 2026.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Propriétaire</TableHead>
+                    <TableHead>Logement</TableHead>
+                    <TableHead>Identifiant</TableHead>
+                    <TableHead>Statut</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submittedRooms.map((item) => {
+                    const profile = profilesById[item.user_id];
+                    const ownerName = profile ? (`${profile.first_name ?? ""} ${profile.last_name ?? ""}`).trim() || "—" : "—";
+                    const isDone = item.status === "done";
+                    return (
+                      <TableRow key={`${item.user_id}:${item.room_id ?? item.room_name ?? "unknown"}`}>
+                        <TableCell className="font-medium">{ownerName}</TableCell>
+                        <TableCell>{item.room_name ?? "—"}</TableCell>
+                        <TableCell>{item.room_id ?? "—"}</TableCell>
+                        <TableCell>
+                          {isDone ? (
+                            <span className="inline-flex items-center gap-2 text-green-600">
+                              <CheckCircle className="h-4 w-4" /> Terminé
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 text-red-600">
+                              <XCircle className="h-4 w-4" /> Non terminé
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>

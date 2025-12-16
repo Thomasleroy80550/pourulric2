@@ -89,6 +89,7 @@ import AdminStripeDuplicatesPage from "./pages/AdminStripeDuplicatesPage";
 import AdminStatusPage from "./pages/AdminStatusPage";
 import StatusPage from "./pages/StatusPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import MySeasonPricesPage from "./pages/MySeasonPricesPage";
 
 const queryClient = new QueryClient();
 
@@ -159,6 +160,7 @@ function App() {
                   <Route path="/new-version" element={<NewVersionPage />} />
                   <Route path="/redeem-invite" element={<RedeemInvitePage />} />
                   <Route path="/season-2026" element={<Season2026Page />} />
+                  <Route path="/season-2026/prices" element={<MySeasonPricesPage />} />
                   <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
                   <Route path="/powersense" element={<PowerSenseLandingFull />} />
                   <Route path="/marvel-2026" element={<Marvel2026Landing />} />

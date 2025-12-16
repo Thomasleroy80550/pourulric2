@@ -27,13 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/components/ui/use-toast";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  "https://dkjaejzwmmwwzhokpbgs.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRramFlanp3bW13d3pob2twYmdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0MTQwMjAsImV4cCI6MjA2NDk5MDAyMH0.aTOtiL49-BYCyO4K3Bek37i5XQD3fWzim59j9fEMtJs"
-);
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -45,8 +39,6 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [pendingApply, setPendingApply] = useState<SeasonPricingRequest | null>(null);
   const [allUserRooms, setAllUserRooms] = useState<AdminUserRoom[]>([]);
-
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -175,28 +167,34 @@ const AdminSeasonRequestsPage: React.FC = () => {
     }
   };
 
-  const sendSmartPricingEmail = async (recipientEmail: string) => {
+  const sendSmartPricingEmail = async (req: SeasonPricingRequest) => {
+    const loadingId = toast.loading("Envoi de l'email Smart Pricing...");
+    // fetch recipient email from profiles
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("email, first_name, last_name")
+      .eq("id", req.user_id)
+      .single();
+
+    if (profileError || !profile?.email) {
+      toast.error("Email du propriétaire introuvable.", { id: loadingId });
+      return;
+    }
+
     const subject = "Smart Pricing";
     const html =
       "Bonjour<br/><br/>en temp qu(utilisateur du smart pricing vos pruix sont gérer automatiquement";
 
-    const { data, error } = await supabase.functions.invoke("send-email", {
-      body: { to: recipientEmail, subject, html },
+    const { error } = await supabase.functions.invoke("send-email", {
+      body: { to: profile.email, subject, html },
     });
 
     if (error) {
-      toast({
-        title: "Échec de l'envoi",
-        description: "Impossible d'envoyer l'email Smart Pricing.",
-        variant: "destructive",
-      });
+      toast.error("Impossible d'envoyer l'email Smart Pricing.", { id: loadingId });
       return;
     }
 
-    toast({
-      title: "Email envoyé",
-      description: "L'email Smart Pricing a été envoyé.",
-    });
+    toast.success("L'email Smart Pricing a été envoyé.", { id: loadingId });
   };
 
   const renderTable = () => (
@@ -264,22 +262,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={async () => {
-                    const recipient =
-                      (req as any).user_email ??
-                      (req as any).email ??
-                      (req as any).profile_email;
-                    if (!recipient) {
-                      toast({
-                        title: "Email introuvable",
-                        description:
-                          "Aucune adresse email liée à la demande. Veuillez vérifier le profil de l'utilisateur.",
-                        variant: "destructive",
-                      });
-                      return;
-                    }
-                    await sendSmartPricingEmail(recipient);
-                  }}
+                  onClick={() => sendSmartPricingEmail(req)}
                 >
                   Smart Pricing
                 </Button>

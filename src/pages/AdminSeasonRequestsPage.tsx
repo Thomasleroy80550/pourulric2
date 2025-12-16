@@ -122,6 +122,9 @@ const AdminSeasonRequestsPage: React.FC = () => {
     });
   }, [allUserRooms, requests]);
 
+  // ADD: liste filtrée en fonction de l'onglet courant
+  const filtered = useMemo(() => requests.filter(r => r.status === tab), [requests, tab]);
+
   // Appliquer une demande au logement (Krossbooking + overrides)
   const applyRequestToRoom = async (req: SeasonPricingRequest) => {
     const toastId = toast.loading("Application des prix & restrictions...");
@@ -305,6 +308,108 @@ const AdminSeasonRequestsPage: React.FC = () => {
     toast.success("L'email Smart Pricing a été envoyé.", { id: loadingId });
   };
 
+  // ADD: tableau des demandes par onglet (avec détails et actions)
+  const renderTable = () => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Utilisateur</TableHead>
+          <TableHead>Logement</TableHead>
+          <TableHead>Année</TableHead>
+          <TableHead>Périodes</TableHead>
+          <TableHead>Statut</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filtered.map(req => (
+          <React.Fragment key={req.id}>
+            <TableRow>
+              <TableCell className="font-medium">
+                {req.profiles ? `${req.profiles.first_name || ''} ${req.profiles.last_name || ''}`.trim() : '—'}
+              </TableCell>
+              <TableCell>{req.room_name || req.room_id || '—'}</TableCell>
+              <TableCell>{req.season_year}</TableCell>
+              <TableCell>{Array.isArray(req.items) ? req.items.length : 0}</TableCell>
+              <TableCell>
+                <span className="text-xs rounded bg-muted px-2 py-1 capitalize">{req.status}</span>
+              </TableCell>
+              <TableCell>{format(new Date(req.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+              <TableCell className="text-right space-x-2">
+                <Button variant="outline" size="sm" onClick={() => setExpandedId(expandedId === req.id ? null : req.id)}>
+                  <Eye className="h-4 w-4 mr-2" /> Détails
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPendingApply(req)}
+                  disabled={applyingId === req.id}
+                >
+                  <Wrench className="h-4 w-4 mr-2" /> Appliquer au logement
+                </Button>
+                {req.status !== "processing" && (
+                  <Button variant="outline" size="sm" onClick={() => updateStatus(req.id, "processing")}>
+                    <CalendarDays className="h-4 w-4 mr-2" /> En cours
+                  </Button>
+                )}
+                {req.status !== "done" && (
+                  <Button size="sm" onClick={() => updateStatus(req.id, "done")}>
+                    <CheckCircle className="h-4 w-4 mr-2" /> Terminer
+                  </Button>
+                )}
+                {req.status !== "cancelled" && (
+                  <Button variant="destructive" size="sm" onClick={() => updateStatus(req.id, "cancelled")}>
+                    <Ban className="h-4 w-4 mr-2" /> Annuler
+                  </Button>
+                )}
+                <SingleRequestExportMenu request={req} />
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => sendSmartPricingEmail(req)}
+                >
+                  Smart Pricing
+                </Button>
+              </TableCell>
+            </TableRow>
+
+            {expandedId === req.id && (
+              <TableRow>
+                <TableCell colSpan={7}>
+                  <Card className="mt-2">
+                    <CardHeader>
+                      <CardTitle>Détails des périodes ({Array.isArray(req.items) ? req.items.length : 0})</CardTitle>
+                      <CardDescription>Prix et restrictions soumis par l'utilisateur.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-2">
+                        {Array.isArray(req.items) && req.items.length > 0 ? req.items.map((it, idx) => (
+                          <div key={idx} className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm p-2 rounded bg-muted">
+                            <div><span className="font-semibold">Du:</span> {safeFormat(it.start_date, 'dd/MM/yyyy')}</div>
+                            <div><span className="font-semibold">Au:</span> {safeFormat(it.end_date, 'dd/MM/yyyy')}</div>
+                            <div className="hidden md:block"><span className="font-semibold">Type:</span> {it.period_type || '—'}</div>
+                            <div className="hidden md:block"><span className="font-semibold">Saison:</span> {it.season || '—'}</div>
+                            <div><span className="font-semibold">Prix:</span> {typeof it.price === "number" ? `${it.price} €` : '—'}</div>
+                            <div><span className="font-semibold">Min séjour:</span> {typeof it.min_stay === "number" ? it.min_stay : '—'}</div>
+                            <div><span className="font-semibold">Fermé:</span> {it.closed ? 'Oui' : 'Non'}</div>
+                            <div><span className="font-semibold">Arrivée fermée:</span> {it.closed_on_arrival ? 'Oui' : 'Non'}</div>
+                            <div><span className="font-semibold">Départ fermé:</span> {it.closed_on_departure ? 'Oui' : 'Non'}</div>
+                            {it.comment && <div className="md:col-span-6"><span className="font-semibold">Commentaire:</span> {it.comment}</div>}
+                          </div>
+                        )) : <p className="text-muted-foreground">Aucun détail fourni.</p>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TableCell>
+              </TableRow>
+            )}
+          </React.Fragment>
+        ))}
+      </TableBody>
+    </Table>
+  );
+
   if (error) {
     return (
       <AdminLayout>
@@ -335,10 +440,37 @@ const AdminSeasonRequestsPage: React.FC = () => {
                 Total: {requests.length}
               </span>
             )}
-            <ExportRequestsMenu data={requests} tableRef={tableRef} currentStatus={tab} />
+            <ExportRequestsMenu data={filtered} tableRef={tableRef} currentStatus={tab} />
           </div>
         </div>
 
+        {/* RESTORED: Carte avec onglets pour gérer les demandes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Suivi des demandes</CardTitle>
+            <CardDescription>Filtrez par statut et mettez à jour l'état des demandes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-48 w-full" />
+            ) : (
+              <Tabs value={tab} onValueChange={(v) => setTab(v as SeasonPricingStatus)}>
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="pending">En attente ({requests.filter(r => r.status === 'pending').length})</TabsTrigger>
+                  <TabsTrigger value="processing">En cours ({requests.filter(r => r.status === 'processing').length})</TabsTrigger>
+                  <TabsTrigger value="done">Terminées ({requests.filter(r => r.status === 'done').length})</TabsTrigger>
+                  <TabsTrigger value="cancelled">Annulées ({requests.filter(r => r.status === 'cancelled').length})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="pending" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
+                <TabsContent value="processing" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
+                <TabsContent value="done" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
+                <TabsContent value="cancelled" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
+              </Tabs>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* KEPT: Tableau unique de suivi des logements */}
         <Card>
           <CardHeader>
             <CardTitle>Suivi des logements Saison 2026</CardTitle>
@@ -384,13 +516,11 @@ const AdminSeasonRequestsPage: React.FC = () => {
                             )}
                           </TableCell>
                           <TableCell className="text-right space-x-2">
-                            {/* Bouton Relancer uniquement si aucune demande */}
                             {status === 'none' && (
                               <Button size="sm" onClick={() => sendSeasonReminderEmail(room)}>
                                 Relancer
                               </Button>
                             )}
-                            {/* Bouton Smart Pricing accessible pour tous */}
                             <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
                               Smart Pricing
                             </Button>

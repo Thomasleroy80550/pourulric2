@@ -8,9 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { getSetting } from "@/lib/admin-api";
+import { supabase } from "@/integrations/supabase/client";
 
-const NETATMO_CLIENT_ID_KEY = "netatmo_client_id";
 const DEFAULT_SCOPE = "read_station";
 
 const NetatmoConnectPage: React.FC = () => {
@@ -21,12 +20,13 @@ const NetatmoConnectPage: React.FC = () => {
   React.useEffect(() => {
     (async () => {
       try {
-        const setting = await getSetting(NETATMO_CLIENT_ID_KEY);
-        if (setting?.value) {
-          setClientId(String(setting.value));
-        } else {
+        const { data, error } = await supabase.functions.invoke("netatmo-config", { body: {} });
+        if (error) {
+          toast.error(error.message || "Impossible de charger la configuration Netatmo.");
           setClientId(null);
+          return;
         }
+        setClientId(data?.client_id || null);
       } catch {
         setClientId(null);
       }
@@ -74,7 +74,7 @@ const NetatmoConnectPage: React.FC = () => {
               <Alert>
                 <AlertTitle>Comment ça marche ?</AlertTitle>
                 <AlertDescription>
-                  Vous serez redirigé vers Netatmo pour autoriser l’accès à vos stations météo. De retour ici, nous finaliserons la connexion et stockerons vos identifiants de façon sécurisée.
+                  Vous serez redirigé vers Netatmo pour autoriser l'accès à vos stations météo. De retour ici, nous finaliserons la connexion et stockerons vos identifiants de façon sécurisée.
                 </AlertDescription>
               </Alert>
               <div className="flex gap-2">
@@ -82,12 +82,12 @@ const NetatmoConnectPage: React.FC = () => {
                   {loading ? "Redirection vers Netatmo…" : "Connecter Netatmo"}
                 </Button>
                 <Button variant="secondary" className="w-full" onClick={() => navigate("/integrations/netatmo/callback")}>
-                  J’ai déjà autorisé
+                  J'ai déjà autorisé
                 </Button>
               </div>
               {!clientId && (
                 <p className="text-sm text-muted-foreground">
-                  Paramètre manquant: netatmo_client_id. Un admin doit le définir dans les paramètres de l’app.
+                  Client ID Netatmo introuvable. Vérifiez que les secrets NETATMO_CLIENT_ID et NETATMO_CLIENT_SECRET sont bien configurés dans Supabase.
                 </p>
               )}
             </CardContent>

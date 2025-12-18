@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -22,6 +22,16 @@ import StripeAccountDetailsDialog from '@/components/admin/StripeAccountDetailsD
 import { createStripeAccountLink } from '@/lib/admin-api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction
+} from '@/components/ui/alert-dialog';
 import OnboardingVisualProgress from '@/components/OnboardingVisualProgress';
 import OnboardingConfettiDialog from '@/components/OnboardingConfettiDialog';
 
@@ -96,6 +106,8 @@ const AdminUsersPage: React.FC = () => {
   const AGENCIES = ["Côte d'opal", "Baie de somme"];
   const [isConfettiOpen, setIsConfettiOpen] = useState(false);
   const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const navigate = useNavigate();
 
   const ONBOARDING_STAGES: OnboardingStatus[] = [
@@ -339,6 +351,97 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  // Suppression douce d'un client (contrat résilié) avec mise à jour optimiste
+  const confirmDeleteOnboardingClient = (user: UserProfile) => {
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const performDeleteOnboardingClient = async () => {
+    if (!userToDelete) return;
+    const target = userToDelete;
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
+
+    // Optimistic: retirer le client de la vue tout de suite
+    const prevUsers = users;
+    setUsers(curr => curr.filter(u => u.id !== target.id));
+
+    try {
+      await updateUser({ user_id: target.id, is_contract_terminated: true });
+      toast.success('Client supprimé (contrat résilié).');
+    } catch (error: any) {
+      setUsers(prevUsers);
+      toast.error(`Erreur lors de la suppression : ${error.message}`);
+    }
+  };
+
+  // Drag & drop façon HubSpot CRM sur l'onboarding
+  const onboardingClients = users
+    .filter(user => (user.onboarding_status ?? 'estimation_sent') !== 'live')
+    .filter(user => {
+      const term = (searchTerm || '').toLowerCase();
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+      const email = (user.email || '').toLowerCase();
+      return fullName.includes(term) || email.includes(term);
+    });
+
+  const STAGES_FOR_PIPELINE: OnboardingStatus[] = [
+    'estimation_sent',
+    'estimation_validated',
+    'cguv_accepted',
+    'keys_pending_reception',
+    'keys_retrieved',
+    'photoshoot_done',
+  ];
+
+  const onboardingColumns: Record<OnboardingStatus, UserProfile[]> = STAGES_FOR_PIPELINE.reduce((acc, st) => {
+    acc[st] = onboardingClients.filter(u => (u.onboarding_status ?? 'estimation_sent') === st);
+    return acc;
+  }, {} as Record<OnboardingStatus, UserProfile[]>);
+
+  const onOnboardingCardDragStart = (ev: React.DragEvent, userId: string) => {
+    ev.dataTransfer.setData('text/userId', userId);
+  };
+
+  const findUserLocationInKanban = (id: string): { status: OnboardingStatus; index: number } | null => {
+    for (const st of STAGES_FOR_PIPELINE) {
+      const idx = onboardingColumns[st].findIndex((u) => u.id === id);
+      if (idx !== -1) return { status: st, index: idx };
+    }
+    return null;
+  };
+
+  const onOnboardingColumnDragOver = (ev: React.DragEvent) => {
+    ev.preventDefault();
+  };
+
+  const onOnboardingColumnDrop = async (ev: React.DragEvent, targetStatus: OnboardingStatus) => {
+    ev.preventDefault();
+    const id = ev.dataTransfer.getData('text/userId');
+    if (!id) return;
+
+    const loc = findUserLocationInKanban(id);
+    if (!loc) return;
+
+    const sourceStatus = loc.status;
+    if (sourceStatus === targetStatus) return;
+
+    // Optimistic UI: déplacer dans l'état local
+    const prev = users;
+    setUsers(curr =>
+      curr.map(u => (u.id === id ? { ...u, onboarding_status: targetStatus } : u))
+    );
+
+    try {
+      await updateUser({ user_id: id, onboarding_status: targetStatus });
+      toast.success(`Client déplacé: ${onboardingStatusText[targetStatus]}`);
+    } catch (e: any) {
+      toast.error(`Échec du déplacement: ${e?.message || e}`);
+      setUsers(prev);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const term = searchTerm.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
@@ -351,7 +454,6 @@ const AdminUsersPage: React.FC = () => {
   const allClients = filteredUsers;
   const smartPricingClients = filteredUsers.filter(user => !user.can_manage_prices);
   const noAgencyClients = filteredUsers.filter(user => !user.agency || user.agency.trim() === '');
-  const onboardingClients = filteredUsers.filter(user => (user.onboarding_status ?? 'estimation_sent') !== 'live');
   const onboardingFilteredClients = onboardingFilter === 'all'
     ? onboardingClients
     : onboardingClients.filter(u => (u.onboarding_status ?? 'estimation_sent') === onboardingFilter);
@@ -670,108 +772,142 @@ const AdminUsersPage: React.FC = () => {
           </TabsContent>
           <TabsContent value="onboarding" className="mt-4">
             <Card className="shadow-md">
-              <CardHeader className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle>Clients en onboarding (non en ligne)</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Rechercher par nom ou email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8 w-[240px]"
-                      />
-                    </div>
-                    <Select value={onboardingFilter} onValueChange={setOnboardingFilter}>
-                      <SelectTrigger className="w-[220px]">
-                        <SelectValue placeholder="Filtrer par étape" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toutes les étapes</SelectItem>
-                        <SelectItem value="estimation_sent">{onboardingStatusText.estimation_sent}</SelectItem>
-                        <SelectItem value="estimation_validated">{onboardingStatusText.estimation_validated}</SelectItem>
-                        <SelectItem value="cguv_accepted">{onboardingStatusText.cguv_accepted}</SelectItem>
-                        <SelectItem value="keys_pending_reception">{onboardingStatusText.keys_pending_reception}</SelectItem>
-                        <SelectItem value="keys_retrieved">{onboardingStatusText.keys_retrieved}</SelectItem>
-                        <SelectItem value="photoshoot_done">{onboardingStatusText.photoshoot_done}</SelectItem>
-                      </SelectContent>
-                    </Select>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Onboarding – pipeline (style CRM)</CardTitle>
+                  <p className="text-sm text-muted-foreground">Glissez les cartes entre les colonnes pour changer d'étape.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher par nom ou email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8 w-[260px]"
+                    />
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Skeleton className="h-48 w-full" />
-                    <Skeleton className="h-48 w-full" />
-                    <Skeleton className="h-48 w-full" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-64 w-full" />
                   </div>
-                ) : onboardingFilteredClients.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Aucun client en cours d'onboarding.</div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {onboardingFilteredClients.map((user) => {
-                      const idx = getStatusIndex(user.onboarding_status);
-                      return (
-                        <div
-                          key={user.id}
-                          className="rounded-xl border p-4 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-semibold">{user.first_name} {user.last_name}</div>
-                              <div className="text-xs text-muted-foreground">{user.email ?? '—'}</div>
-                            </div>
-                            <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
-                              {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
-                            </Badge>
-                          </div>
-
-                          <div className="mt-3">
-                            <OnboardingVisualProgress currentStatusIndex={idx} />
-                          </div>
-
-                          <div className="mt-2 text-xs text-muted-foreground">
-                            Étape {idx} / {ONBOARDING_STAGES.length - 1}
-                          </div>
-
-                          <div className="mt-3 flex items-center gap-2">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => handleAdvanceOnboarding(user)}
-                              disabled={(user.onboarding_status ?? 'estimation_sent') === 'live'}
-                            >
-                              Étape suivante
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleMarkLive(user)}
-                              variant="default"
-                            >
-                              Marquer "En ligne"
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditClick(user)}
-                            >
-                              Modifier
-                            </Button>
-                          </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    {STAGES_FOR_PIPELINE.map((st) => (
+                      <div
+                        key={st}
+                        className="rounded-lg border bg-background/60 backdrop-blur-sm"
+                        onDragOver={onOnboardingColumnDragOver}
+                        onDrop={(e) => onOnboardingColumnDrop(e, st)}
+                      >
+                        <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30">
+                          <div className="font-medium">{onboardingStatusText[st]}</div>
+                          <Badge variant="secondary">{onboardingColumns[st].length}</Badge>
                         </div>
-                      );
-                    })}
+                        <div className="p-3 space-y-3 min-h-[220px]">
+                          {onboardingColumns[st].map((user) => {
+                            const idx = getStatusIndex(user.onboarding_status);
+                            return (
+                              <div
+                                key={user.id}
+                                draggable
+                                onDragStart={(e) => onOnboardingCardDragStart(e, user.id)}
+                                className="rounded-md border p-3 bg-card hover:shadow-sm transition cursor-grab active:cursor-grabbing"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <div className="font-semibold truncate">
+                                      {user.first_name} {user.last_name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                      {user.email ?? '—'}
+                                    </div>
+                                  </div>
+                                  <Badge variant="secondary" className="shrink-0 ml-2">
+                                    Étape {idx}/{ONBOARDING_STAGES.length - 1}
+                                  </Badge>
+                                </div>
+
+                                <div className="mt-2">
+                                  <OnboardingVisualProgress currentStatusIndex={idx} />
+                                </div>
+
+                                <div className="mt-2 grid grid-cols-3 gap-2">
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleAdvanceOnboarding(user)}
+                                    disabled={(user.onboarding_status ?? 'estimation_sent') === 'live'}
+                                  >
+                                    Suivant
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleMarkLive(user)}
+                                  >
+                                    En ligne
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => confirmDeleteOnboardingClient(user)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Supprimer
+                                  </Button>
+                                </div>
+
+                                <div className="mt-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditClick(user)}
+                                  >
+                                    Modifier
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {onboardingColumns[st].length === 0 && (
+                            <div className="text-xs text-muted-foreground italic">Aucun client à cette étape.</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
             </Card>
 
+            {/* Confetti quand on passe en ligne */}
             <OnboardingConfettiDialog
               isOpen={isConfettiOpen}
               onClose={() => setIsConfettiOpen(false)}
             />
+
+            {/* Confirmation de suppression */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer ce client en onboarding ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action marque le contrat comme résilié et retire le client de la vue. Vous pourrez le restaurer manuellement si nécessaire.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={performDeleteOnboardingClient}>
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </TabsContent>
           <TabsContent value="requests" className="mt-4">
             <Card className="shadow-md">

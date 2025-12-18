@@ -15,8 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Home, CalendarRange, Sparkles, BarChart3, KeyRound, ShieldCheck, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Home, Mail, Lock, Eye, EyeOff, Loader2, CalendarRange, Sparkles, BarChart3, KeyRound, ShieldCheck } from 'lucide-react';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
 
 const emailSchema = zod.object({

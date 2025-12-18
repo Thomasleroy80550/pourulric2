@@ -14,6 +14,7 @@ import { CalendarDays, Eye, CheckCircle, Ban, Wrench, XCircle } from "lucide-rea
 import { getAllSeasonPricingRequests, updateSeasonPricingRequestStatus, SeasonPricingRequest, SeasonPricingStatus } from "@/lib/season-pricing-api";
 import ExportRequestsMenu from "@/components/admin/ExportRequestsMenu";
 import SingleRequestExportMenu from "@/components/admin/SingleRequestExportMenu";
+import AdminSeasonPriceEditor from "@/components/admin/AdminSeasonPriceEditor";
 import { safeFormat } from "@/lib/date-utils";
 import { saveChannelManagerSettings } from "@/lib/krossbooking";
 import { addOverrides, NewPriceOverride } from "@/lib/price-override-api";
@@ -44,6 +45,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [allUserRooms, setAllUserRooms] = useState<AdminUserRoom[]>([]);
   const [roomsLoading, setRoomsLoading] = useState<boolean>(true);
   const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null }>>({});
+  const [editingRoom, setEditingRoom] = useState<AdminUserRoom | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -124,6 +126,12 @@ const AdminSeasonRequestsPage: React.FC = () => {
 
   // ADD: liste filtrée en fonction de l'onglet courant
   const filtered = useMemo(() => requests.filter(r => r.status === tab), [requests, tab]);
+
+  // ADD: handler pour mise à jour locale après création
+  const handleAdminCreatedRequest = (req: SeasonPricingRequest) => {
+    setRequests(prev => [req, ...prev]);
+    toast.success("Demande validée créée par l'admin.");
+  };
 
   // Appliquer une demande au logement (Krossbooking + overrides)
   const applyRequestToRoom = async (req: SeasonPricingRequest) => {
@@ -517,9 +525,18 @@ const AdminSeasonRequestsPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-right space-x-2">
                             {status === 'none' && (
-                              <Button size="sm" onClick={() => sendSeasonReminderEmail(room)}>
-                                Relancer
-                              </Button>
+                              <>
+                                <Button size="sm" onClick={() => sendSeasonReminderEmail(room)}>
+                                  Relancer
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setEditingRoom(room)}
+                                >
+                                  Définir les prix
+                                </Button>
+                              </>
                             )}
                             <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
                               Smart Pricing
@@ -554,6 +571,16 @@ const AdminSeasonRequestsPage: React.FC = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* RENDU: afficher l'éditeur seulement si un logement est sélectionné */}
+        {editingRoom && (
+          <AdminSeasonPriceEditor
+            open={true}
+            onOpenChange={(open) => setEditingRoom(open ? editingRoom : null)}
+            room={editingRoom}
+            onCreated={handleAdminCreatedRequest}
+          />
+        )}
       </div>
     </AdminLayout>
   );

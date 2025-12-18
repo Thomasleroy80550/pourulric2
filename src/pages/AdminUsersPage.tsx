@@ -263,12 +263,21 @@ const AdminUsersPage: React.FC = () => {
 
   const handleUpdateAgency = async (user: UserProfile, agencyValue: string) => {
     setUpdatingAgencyFor(user.id);
+    const newAgency = agencyValue === '__none__' ? null : agencyValue;
+
+    // Optimistic UI: update local state immediately
+    const previousUsers = users;
+    setUsers((curr) =>
+      curr.map((u) => (u.id === user.id ? { ...u, agency: newAgency ?? undefined } : u))
+    );
+
     try {
-      const newAgency = agencyValue === '__none__' ? null : agencyValue;
       await updateUser({ user_id: user.id, agency: newAgency as any });
       toast.success('Agence mise à jour.');
-      fetchUsers();
+      // IMPORTANT: ne plus rappeler fetchUsers() ici pour éviter le rechargement global
     } catch (error: any) {
+      // Revert on error
+      setUsers(previousUsers);
       toast.error(`Erreur lors de l'attribution de l'agence : ${error.message}`);
     } finally {
       setUpdatingAgencyFor(null);

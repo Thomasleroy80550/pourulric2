@@ -91,6 +91,8 @@ import StatusPage from "./pages/StatusPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import MySeasonPricesPage from "./pages/MySeasonPricesPage";
 import AdminRecoveryPage from "./pages/AdminRecoveryPage";
+import NetatmoConnectPage from "./pages/NetatmoConnectPage";
+import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +168,8 @@ function App() {
                   <Route path="/powersense" element={<PowerSenseLandingFull />} />
                   <Route path="/marvel-2026" element={<Marvel2026Landing />} />
                   <Route path="/admin/recovery" element={<AdminRecoveryPage />} />
+                  <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />
+                  <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

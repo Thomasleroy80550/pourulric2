@@ -22,6 +22,8 @@ import StripeAccountDetailsDialog from '@/components/admin/StripeAccountDetailsD
 import { createStripeAccountLink } from '@/lib/admin-api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import OnboardingVisualProgress from '@/components/OnboardingVisualProgress';
+import OnboardingConfettiDialog from '@/components/OnboardingConfettiDialog';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -92,7 +94,25 @@ const AdminUsersPage: React.FC = () => {
   const [bulkUpdatingSmartPricing, setBulkUpdatingSmartPricing] = useState(false);
   const [updatingAgencyFor, setUpdatingAgencyFor] = useState<string | null>(null);
   const AGENCIES = ["Côte d'opal", "Baie de somme"];
+  const [isConfettiOpen, setIsConfettiOpen] = useState(false);
+  const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
   const navigate = useNavigate();
+
+  const ONBOARDING_STAGES: OnboardingStatus[] = [
+    'estimation_sent',
+    'estimation_validated',
+    'cguv_accepted',
+    'keys_pending_reception',
+    'keys_retrieved',
+    'photoshoot_done',
+    'live',
+  ];
+
+  const getStatusIndex = (status?: OnboardingStatus) => {
+    const s = status ?? 'estimation_sent';
+    const idx = ONBOARDING_STAGES.indexOf(s);
+    return idx === -1 ? 0 : idx;
+  };
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -284,6 +304,41 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleAdvanceOnboarding = async (user: UserProfile) => {
+    const currentIdx = getStatusIndex(user.onboarding_status);
+    const nextIdx = Math.min(currentIdx + 1, ONBOARDING_STAGES.length - 1);
+    const nextStatus = ONBOARDING_STAGES[nextIdx];
+
+    // Optimistic UI
+    const prev = users;
+    setUsers(curr => curr.map(u => u.id === user.id ? { ...u, onboarding_status: nextStatus } : u));
+
+    try {
+      await updateUser({ user_id: user.id, onboarding_status: nextStatus });
+      toast.success("Étape d'onboarding avancée.");
+      if (nextStatus === 'live') {
+        setIsConfettiOpen(true);
+      }
+    } catch (error: any) {
+      setUsers(prev);
+      toast.error(`Erreur lors de l'avancement: ${error.message}`);
+    }
+  };
+
+  const handleMarkLive = async (user: UserProfile) => {
+    if ((user.onboarding_status ?? 'estimation_sent') === 'live') return;
+    const prev = users;
+    setUsers(curr => curr.map(u => u.id === user.id ? { ...u, onboarding_status: 'live' } : u));
+    try {
+      await updateUser({ user_id: user.id, onboarding_status: 'live' });
+      toast.success("Client marqué comme 'En ligne'.");
+      setIsConfettiOpen(true);
+    } catch (error: any) {
+      setUsers(prev);
+      toast.error(`Erreur lors du passage en ligne: ${error.message}`);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const term = searchTerm.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
@@ -297,6 +352,9 @@ const AdminUsersPage: React.FC = () => {
   const smartPricingClients = filteredUsers.filter(user => !user.can_manage_prices);
   const noAgencyClients = filteredUsers.filter(user => !user.agency || user.agency.trim() === '');
   const onboardingClients = filteredUsers.filter(user => (user.onboarding_status ?? 'estimation_sent') !== 'live');
+  const onboardingFilteredClients = onboardingFilter === 'all'
+    ? onboardingClients
+    : onboardingClients.filter(u => (u.onboarding_status ?? 'estimation_sent') === onboardingFilter);
 
   const renderUserTable = (clientList: UserProfile[]) => (
     <Table>
@@ -612,28 +670,108 @@ const AdminUsersPage: React.FC = () => {
           </TabsContent>
           <TabsContent value="onboarding" className="mt-4">
             <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle>Clients en onboarding (non en ligne)</CardTitle>
-                <div className="relative mt-2">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher par nom ou email..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 w-full md:w-1/3"
-                  />
+              <CardHeader className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle>Clients en onboarding (non en ligne)</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Rechercher par nom ou email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8 w-[240px]"
+                      />
+                    </div>
+                    <Select value={onboardingFilter} onValueChange={setOnboardingFilter}>
+                      <SelectTrigger className="w-[220px]">
+                        <SelectValue placeholder="Filtrer par étape" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Toutes les étapes</SelectItem>
+                        <SelectItem value="estimation_sent">{onboardingStatusText.estimation_sent}</SelectItem>
+                        <SelectItem value="estimation_validated">{onboardingStatusText.estimation_validated}</SelectItem>
+                        <SelectItem value="cguv_accepted">{onboardingStatusText.cguv_accepted}</SelectItem>
+                        <SelectItem value="keys_pending_reception">{onboardingStatusText.keys_pending_reception}</SelectItem>
+                        <SelectItem value="keys_retrieved">{onboardingStatusText.keys_retrieved}</SelectItem>
+                        <SelectItem value="photoshoot_done">{onboardingStatusText.photoshoot_done}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-48 w-full" />
                   </div>
+                ) : onboardingFilteredClients.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">Aucun client en cours d'onboarding.</div>
                 ) : (
-                  renderUserTable(onboardingClients)
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {onboardingFilteredClients.map((user) => {
+                      const idx = getStatusIndex(user.onboarding_status);
+                      return (
+                        <div
+                          key={user.id}
+                          className="rounded-xl border p-4 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold">{user.first_name} {user.last_name}</div>
+                              <div className="text-xs text-muted-foreground">{user.email ?? '—'}</div>
+                            </div>
+                            <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
+                              {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
+                            </Badge>
+                          </div>
+
+                          <div className="mt-3">
+                            <OnboardingVisualProgress currentStatusIndex={idx} />
+                          </div>
+
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            Étape {idx} / {ONBOARDING_STAGES.length - 1}
+                          </div>
+
+                          <div className="mt-3 flex items-center gap-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleAdvanceOnboarding(user)}
+                              disabled={(user.onboarding_status ?? 'estimation_sent') === 'live'}
+                            >
+                              Étape suivante
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleMarkLive(user)}
+                              variant="default"
+                            >
+                              Marquer "En ligne"
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditClick(user)}
+                            >
+                              Modifier
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>
+
+            <OnboardingConfettiDialog
+              isOpen={isConfettiOpen}
+              onClose={() => setIsConfettiOpen(false)}
+            />
           </TabsContent>
           <TabsContent value="requests" className="mt-4">
             <Card className="shadow-md">

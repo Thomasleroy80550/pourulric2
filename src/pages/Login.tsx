@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Home } from 'lucide-react';
+import { Home, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
 import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
 
@@ -31,6 +31,7 @@ const Login = () => {
   const [isMigrationHelpDialogOpen, setIsMigrationHelpDialogOpen] = useState(false);
   const [serviceStatuses, setServiceStatuses] = useState<ServiceStatus[]>([]);
   const [statusesLoading, setStatusesLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
@@ -140,6 +141,9 @@ const Login = () => {
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
                     <div className="absolute inset-0 pointer-events-none select-none" />
+                    {/* Effet brume léger pour cohérence (déjà défini dans globals.css) */}
+                    <div className="fog-layer"></div>
+                    <div className="fog-layer fog-layer-2"></div>
                     <div className="absolute inset-0 p-8 md:p-14 pb-20 flex flex-col items-start justify-center text-left text-white gap-3 relative z-[2]">
                       <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
                         Simplifiez la gestion
@@ -169,8 +173,15 @@ const Login = () => {
           {/* Colonne droite: formulaire modernisé */}
           <div className="p-10 md:p-14">
             {/* Logo Hello Keys en haut */}
-            <div className="mb-8">
+            <div className="mb-8 flex items-center justify-between">
               <img src="/logo.png" alt="Hello Keys" className="h-12 w-auto" />
+              <button
+                type="button"
+                onClick={() => setIsMigrationHelpDialogOpen(true)}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Besoin d'aide pour migrer ?
+              </button>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Bienvenue</h1>
             <p className="text-sm text-gray-500 mb-6">Veuillez vous connecter à votre compte</p>
@@ -182,13 +193,19 @@ const Login = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="text-sm text-gray-700">Adresse e-mail</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Adresse e-mail"
-                          {...field}
-                          disabled={loading}
-                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
-                        />
+                        <div className="relative">
+                          <span className="absolute inset-y-0 left-4 flex items-center">
+                            <Mail className="h-5 w-5 text-[#175e82b3]" />
+                          </span>
+                          <Input
+                            placeholder="vous@exemple.com"
+                            {...field}
+                            disabled={loading}
+                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-4 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -199,14 +216,29 @@ const Login = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel className="text-sm text-gray-700">Mot de passe</FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Mot de passe"
-                          {...field}
-                          disabled={loading}
-                          className="h-14 md:h-16 rounded-2xl bg-[#175e821a] px-5 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
-                        />
+                        <div className="relative">
+                          <span className="absolute inset-y-0 left-4 flex items-center">
+                            <Lock className="h-5 w-5 text-[#175e82b3]" />
+                          </span>
+                          <Input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Votre mot de passe"
+                            {...field}
+                            disabled={loading}
+                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-12 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((v) => !v)}
+                            className="absolute inset-y-0 right-3 flex items-center text-[#175e82b3] hover:text-[#175e82] transition"
+                            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                            disabled={loading}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                       </FormControl>
                       <div className="mt-2 flex justify-end">
                         <button
@@ -225,10 +257,17 @@ const Login = () => {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-2xl bg-[#175e82e6] hover:bg-[#175e82b3] text-white"
+                  className="w-full h-12 rounded-2xl bg-[#175e82e6] hover:bg-[#175e82b3] text-white flex items-center justify-center gap-2"
                   disabled={loading}
                 >
-                  {loading ? 'Connexion en cours...' : 'Se connecter'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Connexion en cours...
+                    </>
+                  ) : (
+                    'Se connecter'
+                  )}
                 </Button>
 
                 <div className="py-2">

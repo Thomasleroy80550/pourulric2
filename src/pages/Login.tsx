@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Home, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Home, CalendarRange, Sparkles, BarChart3, KeyRound, ShieldCheck, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
 import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
 
@@ -140,10 +140,10 @@ const Login = () => {
               <div className="rounded-[40px] bg-transparent p-0 shadow-none">
                 <div className="rounded-[32px] overflow-hidden">
                   <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
-                    <div className="absolute inset-0 pointer-events-none select-none" />
-                    {/* Effet brume léger pour cohérence (déjà défini dans globals.css) */}
+                    {/* Effet brume pour donner de la profondeur (classes déjà définies dans globals.css) */}
                     <div className="fog-layer"></div>
                     <div className="fog-layer fog-layer-2"></div>
+
                     <div className="absolute inset-0 p-8 md:p-14 pb-20 flex flex-col items-start justify-center text-left text-white gap-3 relative z-[2]">
                       <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
                         Simplifiez la gestion
@@ -156,7 +156,64 @@ const Login = () => {
                         </span>
                         <div className="h-1 w-24 md:w-32 rounded-full bg-white/40" />
                       </div>
+
+                      {/* Chips de fonctionnalités pour remplir l'espace de manière utile */}
+                      <div className="mt-6 grid grid-cols-2 gap-3 w-full max-w-md">
+                        <div className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 px-3 py-2">
+                          <CalendarRange className="h-4 w-4 text-white/90" />
+                          <span className="text-xs font-medium text-white/95">Réservations</span>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 px-3 py-2">
+                          <Sparkles className="h-4 w-4 text-white/90" />
+                          <span className="text-xs font-medium text-white/95">Ménage</span>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 px-3 py-2">
+                          <BarChart3 className="h-4 w-4 text-white/90" />
+                          <span className="text-xs font-medium text-white/95">Finances</span>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/30 px-3 py-2">
+                          <KeyRound className="h-4 w-4 text-white/90" />
+                          <span className="text-xs font-medium text-white/95">Accès</span>
+                        </div>
+                      </div>
+
+                      {/* Petit bandeau de confiance */}
+                      <div className="mt-4 inline-flex items-center gap-2">
+                        <Badge variant="outline" className="bg-white/10 border-white/30 text-white/90">
+                          <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                          Sécurisé et RGPD
+                        </Badge>
+                      </div>
                     </div>
+
+                    {/* Mini carte stats en bas à gauche pour occuper la zone basse */}
+                    <div className="absolute bottom-6 left-6 z-[2] w-64">
+                      <Card className="bg-white/15 backdrop-blur-md border border-white/30 text-white shadow-lg">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-[11px] text-white/80">Taux d'occupation</div>
+                              <div className="text-lg font-semibold">82%</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-[11px] text-white/80">Ménage du jour</div>
+                              <div className="text-lg font-semibold">5 tâches</div>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center gap-1 h-12">
+                            <div className="w-2 bg-white/80 h-5 rounded-sm" />
+                            <div className="w-2 bg-white/80 h-8 rounded-sm" />
+                            <div className="w-2 bg-white/80 h-6 rounded-sm" />
+                            <div className="w-2 bg-white/80 h-10 rounded-sm" />
+                            <div className="w-2 bg-white/80 h-4 rounded-sm" />
+                            <div className="w-2 bg-white/80 h-9 rounded-sm" />
+                            <div className="w-2 bg-white/80 h-7 rounded-sm" />
+                          </div>
+                          <div className="mt-1 text-[10px] text-white/70">Derniers 7 jours</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
                     {/* Vague ancrée tout en bas du bloc dégradé, sous le contenu */}
                     <div className="absolute bottom-0 left-0 right-0 z-[1] pointer-events-none select-none">
                       <svg className="w-full h-16 md:h-24" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">

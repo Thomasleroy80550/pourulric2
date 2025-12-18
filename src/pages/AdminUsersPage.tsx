@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import StripeAccountDetailsDialog from '@/components/admin/StripeAccountDetailsDialog';
 import { createStripeAccountLink } from '@/lib/admin-api';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -89,6 +90,8 @@ const AdminUsersPage: React.FC = () => {
   const [creatingStripeAccountFor, setCreatingStripeAccountFor] = useState<string | null>(null);
   const [updatingPricingFor, setUpdatingPricingFor] = useState<string | null>(null);
   const [bulkUpdatingSmartPricing, setBulkUpdatingSmartPricing] = useState(false);
+  const [updatingAgencyFor, setUpdatingAgencyFor] = useState<string | null>(null);
+  const AGENCIES = ["Côte d'opal", "Baie de somme"];
   const navigate = useNavigate();
 
   const fetchUsers = useCallback(async () => {
@@ -258,6 +261,20 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleUpdateAgency = async (user: UserProfile, agencyValue: string) => {
+    setUpdatingAgencyFor(user.id);
+    try {
+      const newAgency = agencyValue === '__none__' ? null : agencyValue;
+      await updateUser({ user_id: user.id, agency: newAgency as any });
+      toast.success('Agence mise à jour.');
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(`Erreur lors de l'attribution de l'agence : ${error.message}`);
+    } finally {
+      setUpdatingAgencyFor(null);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const term = searchTerm.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
@@ -269,6 +286,7 @@ const AdminUsersPage: React.FC = () => {
   const berckClients = filteredUsers.filter(user => user.krossbooking_property_id === 2);
   const allClients = filteredUsers;
   const smartPricingClients = filteredUsers.filter(user => !user.can_manage_prices);
+  const noAgencyClients = filteredUsers.filter(user => !user.agency || user.agency.trim() === '');
 
   const renderUserTable = (clientList: UserProfile[]) => (
     <Table>
@@ -277,6 +295,7 @@ const AdminUsersPage: React.FC = () => {
           <TableHead>Nom</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Rôle</TableHead>
+          <TableHead>Agence</TableHead>
           <TableHead>Statut Intégration</TableHead>
           <TableHead>Statut KYC</TableHead>
           <TableHead>Smart Pricing</TableHead>
@@ -300,6 +319,25 @@ const AdminUsersPage: React.FC = () => {
               </TableCell>
               <TableCell>{user.email || 'N/A'}</TableCell>
               <TableCell>{user.role}</TableCell>
+              <TableCell>
+                <div className="min-w-[180px]">
+                  <Select
+                    value={user.agency ?? ''}
+                    onValueChange={(val) => handleUpdateAgency(user, val)}
+                    disabled={updatingAgencyFor === user.id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sans agence" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Aucune</SelectItem>
+                      {AGENCIES.map((a) => (
+                        <SelectItem key={a} value={a}>{a}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TableCell>
               <TableCell>
                 <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
                   {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
@@ -418,6 +456,12 @@ const AdminUsersPage: React.FC = () => {
                 <Badge className="ml-2">{smartPricingClients.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="noAgency">
+              Sans agence
+              {noAgencyClients.length > 0 && (
+                <Badge className="ml-2">{noAgencyClients.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="requests">
               Demandes Comptable
               {requests.filter(r => r.status === 'pending').length > 0 && (
@@ -521,6 +565,31 @@ const AdminUsersPage: React.FC = () => {
                   </div>
                 ) : (
                   renderUserTable(smartPricingClients)
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="noAgency" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Clients sans agence</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full md:w-1/3"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  renderUserTable(noAgencyClients)
                 )}
               </CardContent>
             </Card>

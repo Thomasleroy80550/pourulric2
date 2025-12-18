@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -37,6 +37,7 @@ import OnboardingConfettiDialog from '@/components/OnboardingConfettiDialog';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import OnboardingMiniProgress from '@/components/OnboardingMiniProgress';
+import { sendEmail, createNotification } from '@/lib/notifications-api';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -123,6 +124,45 @@ const AdminUsersPage: React.FC = () => {
     'photoshoot_done',
     'live',
   ];
+
+  // Styles de couleur par étape (header, accent carte, badge)
+  const STAGE_STYLES: Record<OnboardingStatus, { headerBg: string; accent: string; badge: string }> = {
+    estimation_sent: {
+      headerBg: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-900/20',
+      accent: 'border-l-indigo-500',
+      badge: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-200',
+    },
+    estimation_validated: {
+      headerBg: 'from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-900/20',
+      accent: 'border-l-violet-500',
+      badge: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-200',
+    },
+    cguv_accepted: {
+      headerBg: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-900/20',
+      accent: 'border-l-emerald-500',
+      badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200',
+    },
+    keys_pending_reception: {
+      headerBg: 'from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-900/20',
+      accent: 'border-l-amber-500',
+      badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200',
+    },
+    keys_retrieved: {
+      headerBg: 'from-teal-50 to-teal-100 dark:from-teal-900/30 dark:to-teal-900/20',
+      accent: 'border-l-teal-500',
+      badge: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-200',
+    },
+    photoshoot_done: {
+      headerBg: 'from-sky-50 to-sky-100 dark:from-sky-900/30 dark:to-sky-900/20',
+      accent: 'border-l-sky-500',
+      badge: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200',
+    },
+    live: {
+      headerBg: 'from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-900/20',
+      accent: 'border-l-green-500',
+      badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200',
+    },
+  };
 
   const getStatusIndex = (status?: OnboardingStatus) => {
     const s = status ?? 'estimation_sent';
@@ -352,6 +392,93 @@ const AdminUsersPage: React.FC = () => {
     } catch (error: any) {
       setUsers(prev);
       toast.error(`Erreur lors du passage en ligne: ${error.message}`);
+    }
+  };
+
+  // Bouton de relance: envoie un email adapté à l'étape
+  const handleSendReminder = async (user: UserProfile) => {
+    const stage = (user.onboarding_status ?? 'estimation_sent') as OnboardingStatus;
+    const email = user.email;
+    if (!email) {
+      toast.error("Ce client n'a pas d'email.");
+      return;
+    }
+
+    const fullName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || 'Bonjour';
+    let subject = '';
+    let html = '';
+
+    switch (stage) {
+      case 'estimation_sent':
+        subject = "Votre estimation Hello Keys – prochaine étape";
+        html = `
+          <p>${fullName},</p>
+          <p>Nous avons partagé votre estimation. Pour avancer, merci de nous confirmer votre accord ou de planifier un appel de démarrage.</p>
+          <p>Répondez directement à cet email ou connectez-vous pour continuer votre onboarding.</p>
+          <p>Cordialement,<br/>L'équipe Hello Keys</p>
+        `;
+        break;
+      case 'estimation_validated':
+        subject = "Signature des CGUV – action requise";
+        html = `
+          <p>${fullName},</p>
+          <p>Votre estimation a été validée. Il vous reste à signer les CGUV afin de finaliser votre inscription.</p>
+          <p>Rendez-vous dans votre espace pour signer, ou répondez à cet email pour recevoir le PDF à signer en agence.</p>
+          <p>Cordialement,<br/>L'équipe Hello Keys</p>
+        `;
+        break;
+      case 'cguv_accepted':
+        subject = "Livraison des clés – prochaine étape";
+        html = `
+          <p>${fullName},</p>
+          <p>Les CGUV sont signées. Merci de nous transmettre les clés selon la méthode choisie (dépôt en agence ou envoi).</p>
+          <p>Indiquez-nous la date et le mode de remise pour planifier la suite.</p>
+          <p>Cordialement,<br/>L'équipe Hello Keys</p>
+        `;
+        break;
+      case 'keys_pending_reception':
+        subject = "Rappel: remise des clés";
+        html = `
+          <p>${fullName},</p>
+          <p>Nous sommes en attente de la remise des clés pour avancer votre onboarding.</p>
+          <p>Merci de nous préciser la date et le mode de remise.</p>
+          <p>Cordialement,<br/>L'équipe Hello Keys</p>
+        `;
+        break;
+      case 'keys_retrieved':
+        subject = "Planification du shooting photo";
+        html = `
+          <p>${fullName},</p>
+          <p>Nous avons récupéré les clés. Prochaine étape: le shooting photo.</p>
+          <p>Merci de nous proposer des créneaux pour programmer la séance.</p>
+          <p>Cordialement,<br/>L'équipe Hello Keys</p>
+        `;
+        break;
+      case 'photoshoot_done':
+        subject = "Mise en ligne – dernières vérifications";
+        html = `
+          <p>${fullName},</p>
+          <p>Le shooting est terminé. Nous finalisons la mise en ligne (textes, tarifs, disponibilité).</p>
+          <p>Merci de vérifier les derniers détails dans votre espace et valider.</p>
+          <p>Cordialement,<br/>L'équipe Hello Keys</p>
+        `;
+        break;
+      default:
+        subject = "Relance Onboarding";
+        html = `
+          <p>${fullName},</p>
+          <p>Petit rappel pour finaliser votre onboarding. Connectez-vous pour voir les prochaines étapes.</p>
+          <p>Cordialement,<br/>L'équipe Hello Keys</p>
+        `;
+        break;
+    }
+
+    try {
+      await sendEmail(email, subject, html);
+      await createNotification(user.id, `Relance envoyée: ${subject}`, '/onboarding-status');
+      toast.success("Relance envoyée par email.");
+    } catch (e: any) {
+      toast.error(e?.message || "Échec de l'envoi de la relance.");
     }
   };
 
@@ -807,116 +934,134 @@ const AdminUsersPage: React.FC = () => {
                 ) : (
                   <TooltipProvider>
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                      {STAGES_FOR_PIPELINE.map((st) => (
-                        <div
-                          key={st}
-                          className="rounded-lg border bg-background/60 backdrop-blur-sm max-h-[70vh] flex flex-col"
-                          onDragOver={onOnboardingColumnDragOver}
-                          onDrop={(e) => onOnboardingColumnDrop(e, st)}
-                        >
-                          <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 sticky top-0">
-                            <div className="font-medium text-sm">{onboardingStatusText[st]}</div>
-                            <Badge variant="secondary">{onboardingColumns[st].length}</Badge>
-                          </div>
-                          <div className="p-3 space-y-3 overflow-y-auto">
-                            {onboardingColumns[st].map((user) => {
-                              const idx = getStatusIndex(user.onboarding_status);
-                              return (
-                                <div
-                                  key={user.id}
-                                  draggable
-                                  onDragStart={(e) => onOnboardingCardDragStart(e, user.id)}
-                                  className={`rounded-md border ${compactMode ? 'p-3' : 'p-4'} bg-card hover:shadow-sm transition cursor-grab active:cursor-grabbing`}
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div className="min-w-0">
-                                      <div className="font-semibold truncate text-sm">
-                                        {user.first_name} {user.last_name}
+                      {STAGES_FOR_PIPELINE.map((st) => {
+                        const styles = STAGE_STYLES[st];
+                        return (
+                          <div
+                            key={st}
+                            className="rounded-lg border bg-background/60 backdrop-blur-sm max-h-[70vh] flex flex-col"
+                            onDragOver={onOnboardingColumnDragOver}
+                            onDrop={(e) => onOnboardingColumnDrop(e, st)}
+                          >
+                            <div className={`flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r ${styles.headerBg} sticky top-0`}>
+                              <div className="font-medium text-sm">{onboardingStatusText[st]}</div>
+                              <Badge variant="secondary" className={styles.badge}>{onboardingColumns[st].length}</Badge>
+                            </div>
+                            <div className="p-3 space-y-3 overflow-y-auto">
+                              {onboardingColumns[st].map((user) => {
+                                const idx = getStatusIndex(user.onboarding_status);
+                                const cardStyles = STAGE_STYLES[(user.onboarding_status ?? 'estimation_sent') as OnboardingStatus];
+                                return (
+                                  <div
+                                    key={user.id}
+                                    draggable
+                                    onDragStart={(e) => onOnboardingCardDragStart(e, user.id)}
+                                    className={`rounded-md border ${compactMode ? 'p-3' : 'p-4'} bg-card hover:shadow-sm transition cursor-grab active:cursor-grabbing ${cardStyles.accent} border-l-4`}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="min-w-0">
+                                        <div className="font-semibold truncate text-sm">
+                                          {user.first_name} {user.last_name}
+                                        </div>
+                                        <div className="text-[11px] text-muted-foreground truncate">
+                                          {user.email ?? '—'}
+                                        </div>
                                       </div>
-                                      <div className="text-[11px] text-muted-foreground truncate">
-                                        {user.email ?? '—'}
-                                      </div>
+                                      <Badge variant="secondary" className={`${cardStyles.badge} shrink-0 ml-2`}>
+                                        {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
+                                      </Badge>
                                     </div>
-                                    <Badge variant="secondary" className="shrink-0 ml-2">
-                                      {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
-                                    </Badge>
+
+                                    <div className={`mt-2 ${compactMode ? '' : 'mt-3'}`}>
+                                      {compactMode ? (
+                                        <OnboardingMiniProgress currentIndex={idx} totalSteps={ONBOARDING_STAGES.length} />
+                                      ) : (
+                                        <OnboardingVisualProgress currentStatusIndex={idx} />
+                                      )}
+                                    </div>
+
+                                    <div className={`mt-2 flex items-center ${compactMode ? 'gap-1' : 'gap-2'}`}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleAdvanceOnboarding(user)}
+                                            disabled={(user.onboarding_status ?? 'estimation_sent') === 'live'}
+                                            title="Étape suivante"
+                                          >
+                                            <ArrowRight className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Étape suivante</TooltipContent>
+                                      </Tooltip>
+
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleMarkLive(user)}
+                                            title="Marquer en ligne"
+                                          >
+                                            <CheckCircle className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Marquer "En ligne"</TooltipContent>
+                                      </Tooltip>
+
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleSendReminder(user)}
+                                            title="Relancer par email"
+                                          >
+                                            <Mail className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Relancer par email</TooltipContent>
+                                      </Tooltip>
+
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleEditClick(user)}
+                                            title="Modifier"
+                                          >
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Modifier le client</TooltipContent>
+                                      </Tooltip>
+
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => confirmDeleteOnboardingClient(user)}
+                                            title="Supprimer (résiliation douce)"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Supprimer le client</TooltipContent>
+                                      </Tooltip>
+                                    </div>
                                   </div>
-
-                                  <div className={`mt-2 ${compactMode ? '' : 'mt-3'}`}>
-                                    {compactMode ? (
-                                      <OnboardingMiniProgress currentIndex={idx} totalSteps={ONBOARDING_STAGES.length} />
-                                    ) : (
-                                      <OnboardingVisualProgress currentStatusIndex={idx} />
-                                    )}
-                                  </div>
-
-                                  <div className={`mt-2 flex items-center ${compactMode ? 'gap-1' : 'gap-2'}`}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => handleAdvanceOnboarding(user)}
-                                          disabled={(user.onboarding_status ?? 'estimation_sent') === 'live'}
-                                          title="Étape suivante"
-                                        >
-                                          <ArrowRight className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Étape suivante</TooltipContent>
-                                    </Tooltip>
-
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => handleMarkLive(user)}
-                                          title="Marquer en ligne"
-                                        >
-                                          <CheckCircle className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Marquer "En ligne"</TooltipContent>
-                                    </Tooltip>
-
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => handleEditClick(user)}
-                                          title="Modifier"
-                                        >
-                                          <Edit className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Modifier le client</TooltipContent>
-                                    </Tooltip>
-
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => confirmDeleteOnboardingClient(user)}
-                                          title="Supprimer (résiliation douce)"
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Supprimer le client</TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                            {onboardingColumns[st].length === 0 && (
-                              <div className="text-xs text-muted-foreground italic">Aucun client à cette étape.</div>
-                            )}
+                                );
+                              })}
+                              {onboardingColumns[st].length === 0 && (
+                                <div className="text-xs text-muted-foreground italic">Aucun client à cette étape.</div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </TooltipProvider>
                 )}

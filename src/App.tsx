@@ -90,6 +90,7 @@ import AdminStatusPage from "./pages/AdminStatusPage";
 import StatusPage from "./pages/StatusPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import MySeasonPricesPage from "./pages/MySeasonPricesPage";
+import AdminRecoveryPage from "./pages/AdminRecoveryPage";
 
 const queryClient = new QueryClient();
 
@@ -164,6 +165,7 @@ function App() {
                   <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
                   <Route path="/powersense" element={<PowerSenseLandingFull />} />
                   <Route path="/marvel-2026" element={<Marvel2026Landing />} />
+                  <Route path="/admin/recovery" element={<AdminRecoveryPage />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

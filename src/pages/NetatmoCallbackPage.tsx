@@ -8,10 +8,36 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
 
 type StationsResponse = any;
 type HomesDataResponse = any;
 type HomeStatusResponse = any;
+
+// Helper: calculer endtime local en secondes (durée en minutes)
+function computeEndtime(minutes: number): number {
+  const nowMs = Date.now();
+  const endMs = nowMs + Math.max(1, minutes) * 60_000;
+  return Math.floor(endMs / 1000);
+}
+
+// NEW: appliquer setroomthermpoint
+async function setRoomThermPoint(opts: { homeId: string; roomId: string; mode: "manual" | "max" | "home"; temp?: number; minutes?: number }, onDone?: () => void) {
+  const { homeId, roomId, mode, temp, minutes = 60 } = opts;
+  const payload: any = { endpoint: "setroomthermpoint", home_id: homeId, room_id: roomId, mode };
+  if (mode === "manual") payload.temp = temp;
+  const endtime = computeEndtime(minutes);
+  // Envoyer endtime pour manual/max; pour home ce n'est pas obligatoire, on peut ne pas l'envoyer
+  if (mode !== "home") payload.endtime = endtime;
+
+  const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
+  if (error) {
+    toast.error(error.message || "Échec de la mise à jour du thermostat.");
+    return;
+  }
+  toast.success("Thermostat mis à jour.");
+  if (typeof onDone === "function") onDone();
+}
 
 const NetatmoCallbackPage: React.FC = () => {
   const [exchanged, setExchanged] = React.useState(false);
@@ -173,10 +199,70 @@ const NetatmoCallbackPage: React.FC = () => {
                                 <CardTitle>Pièces</CardTitle>
                               </CardHeader>
                               <CardContent>
-                                <ul className="text-sm list-disc pl-5 space-y-1">
+                                <ul className="text-sm space-y-3">
                                   {(home.rooms || []).map((r: any) => (
-                                    <li key={r.id}>
-                                      {r.name} · type: {r.type} · id: {r.id}
+                                    <li key={r.id} className="flex flex-col gap-2">
+                                      <div className="text-muted-foreground">
+                                        {r.name} · type: {r.type} · id: {r.id}
+                                      </div>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        {/* Temp pour manual */}
+                                        <Input
+                                          type="number"
+                                          min={5}
+                                          max={30}
+                                          step={0.5}
+                                          placeholder="Temp °C (manual)"
+                                          className="w-32"
+                                          id={`temp-${r.id}`}
+                                        />
+                                        {/* Durée en minutes */}
+                                        <Input
+                                          type="number"
+                                          min={5}
+                                          max={360}
+                                          step={5}
+                                          defaultValue={60}
+                                          placeholder="Durée (min)"
+                                          className="w-32"
+                                          id={`mins-${r.id}`}
+                                        />
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          onClick={() => {
+                                            const tempInput = (document.getElementById(`temp-${r.id}`) as HTMLInputElement | null)?.value;
+                                            const minsInput = (document.getElementById(`mins-${r.id}`) as HTMLInputElement | null)?.value;
+                                            const tempVal = tempInput ? Number(tempInput) : NaN;
+                                            const minsVal = minsInput ? Number(minsInput) : 60;
+                                            if (isNaN(tempVal)) {
+                                              toast.error("Veuillez saisir une température valide pour le mode manual.");
+                                              return;
+                                            }
+                                            setRoomThermPoint({ homeId: home.id, roomId: r.id, mode: "manual", temp: tempVal, minutes: minsVal }, () => loadHomestatus());
+                                          }}
+                                        >
+                                          Appliquer (manual)
+                                        </Button>
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          onClick={() => {
+                                            const minsInput = (document.getElementById(`mins-${r.id}`) as HTMLInputElement | null)?.value;
+                                            const minsVal = minsInput ? Number(minsInput) : 60;
+                                            setRoomThermPoint({ homeId: home.id, roomId: r.id, mode: "max", minutes: minsVal }, () => loadHomestatus());
+                                          }}
+                                        >
+                                          Max
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setRoomThermPoint({ homeId: home.id, roomId: r.id, mode: "home" }, () => loadHomestatus())}
+                                        >
+                                          Home (suivre maison)
+                                        </Button>
+                                      </div>
                                     </li>
                                   ))}
                                 </ul>

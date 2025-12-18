@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-const DEFAULT_SCOPE = "read_thermostat";
+const DEFAULT_SCOPE = "read_thermostat write_thermostat";
 
 const NetatmoConnectPage: React.FC = () => {
   const navigate = useNavigate();

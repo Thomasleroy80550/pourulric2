@@ -106,6 +106,10 @@ serve(async (req) => {
   const action: string = payload?.endpoint ?? "homesdata";
   const home_id: string | undefined = payload?.home_id;
   const device_id: string | undefined = payload?.device_id; // rétrocompat éventuelle
+  const room_id: string | undefined = payload?.room_id;
+  const mode: string | undefined = payload?.mode;
+  const temp: number | undefined = payload?.temp;
+  const endtime: string | number | undefined = payload?.endtime;
 
   // Vérifier l'utilisateur via JWT
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
@@ -142,17 +146,63 @@ serve(async (req) => {
 
   // Proxifier l'appel Netatmo
   let url = "";
+  let upstream: Response;
+
   if (action === "homesdata") {
     url = "https://api.netatmo.com/api/homesdata";
     if (home_id) {
       const p = new URLSearchParams({ home_id });
       url += `?${p.toString()}`;
     }
+    upstream = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+      },
+    });
   } else if (action === "homestatus") {
     if (!home_id) {
       return new Response(JSON.stringify({ error: "Missing home_id for homestatus" }), { status: 400, headers: corsHeaders });
     }
     url = `https://api.netatmo.com/api/homestatus?home_id=${encodeURIComponent(home_id)}`;
+    upstream = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+      },
+    });
+  } else if (action === "setroomthermpoint") {
+    // NEW: contrôle du chauffage d'une pièce
+    if (!home_id || !room_id || !mode) {
+      return new Response(JSON.stringify({ error: "Missing required fields: home_id, room_id, mode" }), { status: 400, headers: corsHeaders });
+    }
+    if (mode === "manual" && (typeof temp !== "number" || isNaN(temp))) {
+      return new Response(JSON.stringify({ error: "Temp is required and must be a number for manual mode" }), { status: 400, headers: corsHeaders });
+    }
+
+    url = "https://api.netatmo.com/api/setroomthermpoint";
+    const form = new URLSearchParams();
+    form.set("home_id", home_id);
+    form.set("room_id", room_id);
+    form.set("mode", mode);
+    if (mode === "manual") {
+      form.set("temp", String(temp));
+    }
+    if (endtime !== undefined && endtime !== null && String(endtime).trim() !== "") {
+      form.set("endtime", String(endtime));
+    }
+
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
+    });
   } else if (action === "getstationsdata") {
     // rétrocompat: météo (stations)
     url = "https://api.netatmo.com/api/getstationsdata";
@@ -160,17 +210,16 @@ serve(async (req) => {
       const p = new URLSearchParams({ device_id });
       url += `?${p.toString()}`;
     }
+    upstream = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+      },
+    });
   } else {
     return new Response(JSON.stringify({ error: "Unsupported endpoint", endpoint: action }), { status: 400, headers: corsHeaders });
   }
-
-  const upstream = await fetch(url, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${usable.access_token}`,
-      "Accept": "application/json",
-    },
-  });
 
   const text = await upstream.text();
   const contentType = upstream.headers.get("content-type") || "application/json";

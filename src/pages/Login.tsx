@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Home, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import LoadingOverlay from '@/components/LoadingOverlay';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
 import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
 
@@ -132,6 +133,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-6 py-10">
+      {loading && <LoadingOverlay message="Connexion en cours..." />}
       <div className="w-full md:w-[92vw] lg:w-[88vw] max-w-7xl bg-white rounded-[48px] shadow-none overflow-hidden min-h-[720px]">
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Colonne gauche: cadre photo avec padding blanc interne */}

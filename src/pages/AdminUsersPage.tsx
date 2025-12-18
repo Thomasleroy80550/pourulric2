@@ -296,6 +296,7 @@ const AdminUsersPage: React.FC = () => {
   const allClients = filteredUsers;
   const smartPricingClients = filteredUsers.filter(user => !user.can_manage_prices);
   const noAgencyClients = filteredUsers.filter(user => !user.agency || user.agency.trim() === '');
+  const onboardingClients = filteredUsers.filter(user => (user.onboarding_status ?? 'estimation_sent') !== 'live');
 
   const renderUserTable = (clientList: UserProfile[]) => (
     <Table>
@@ -471,6 +472,12 @@ const AdminUsersPage: React.FC = () => {
                 <Badge className="ml-2">{noAgencyClients.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="onboarding">
+              Onboarding
+              {onboardingClients.length > 0 && (
+                <Badge className="ml-2">{onboardingClients.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="requests">
               Demandes Comptable
               {requests.filter(r => r.status === 'pending').length > 0 && (
@@ -599,6 +606,31 @@ const AdminUsersPage: React.FC = () => {
                   </div>
                 ) : (
                   renderUserTable(noAgencyClients)
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="onboarding" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Clients en onboarding (non en ligne)</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full md:w-1/3"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  renderUserTable(onboardingClients)
                 )}
               </CardContent>
             </Card>

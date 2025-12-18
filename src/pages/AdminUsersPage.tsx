@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2 } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -34,6 +34,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import OnboardingVisualProgress from '@/components/OnboardingVisualProgress';
 import OnboardingConfettiDialog from '@/components/OnboardingConfettiDialog';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import OnboardingMiniProgress from '@/components/OnboardingMiniProgress';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -108,6 +111,7 @@ const AdminUsersPage: React.FC = () => {
   const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [compactMode, setCompactMode] = useState(true);
   const navigate = useNavigate();
 
   const ONBOARDING_STAGES: OnboardingStatus[] = [
@@ -773,114 +777,148 @@ const AdminUsersPage: React.FC = () => {
           <TabsContent value="onboarding" className="mt-4">
             <Card className="shadow-md">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle>Onboarding – pipeline (style CRM)</CardTitle>
-                  <p className="text-sm text-muted-foreground">Glissez les cartes entre les colonnes pour changer d'étape.</p>
-                </div>
                 <div className="flex items-center gap-2">
+                  <CardTitle>Onboarding – pipeline (style CRM)</CardTitle>
+                  <p className="text-sm text-muted-foreground hidden sm:block">Glissez les cartes entre les colonnes pour changer d'étape.</p>
+                </div>
+                <div className="flex items-center gap-3">
                   <div className="relative">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Rechercher par nom ou email..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 w-[260px]"
+                      className="pl-8 w-[240px]"
                     />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Compact</span>
+                    <Switch checked={compactMode} onCheckedChange={setCompactMode} />
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Skeleton className="h-64 w-full" />
-                    <Skeleton className="h-64 w-full" />
-                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-56 w-full" />
+                    <Skeleton className="h-56 w-full" />
+                    <Skeleton className="h-56 w-full" />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {STAGES_FOR_PIPELINE.map((st) => (
-                      <div
-                        key={st}
-                        className="rounded-lg border bg-background/60 backdrop-blur-sm"
-                        onDragOver={onOnboardingColumnDragOver}
-                        onDrop={(e) => onOnboardingColumnDrop(e, st)}
-                      >
-                        <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30">
-                          <div className="font-medium">{onboardingStatusText[st]}</div>
-                          <Badge variant="secondary">{onboardingColumns[st].length}</Badge>
-                        </div>
-                        <div className="p-3 space-y-3 min-h-[220px]">
-                          {onboardingColumns[st].map((user) => {
-                            const idx = getStatusIndex(user.onboarding_status);
-                            return (
-                              <div
-                                key={user.id}
-                                draggable
-                                onDragStart={(e) => onOnboardingCardDragStart(e, user.id)}
-                                className="rounded-md border p-3 bg-card hover:shadow-sm transition cursor-grab active:cursor-grabbing"
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div>
-                                    <div className="font-semibold truncate">
-                                      {user.first_name} {user.last_name}
+                  <TooltipProvider>
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                      {STAGES_FOR_PIPELINE.map((st) => (
+                        <div
+                          key={st}
+                          className="rounded-lg border bg-background/60 backdrop-blur-sm max-h-[70vh] flex flex-col"
+                          onDragOver={onOnboardingColumnDragOver}
+                          onDrop={(e) => onOnboardingColumnDrop(e, st)}
+                        >
+                          <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 sticky top-0">
+                            <div className="font-medium text-sm">{onboardingStatusText[st]}</div>
+                            <Badge variant="secondary">{onboardingColumns[st].length}</Badge>
+                          </div>
+                          <div className="p-3 space-y-3 overflow-y-auto">
+                            {onboardingColumns[st].map((user) => {
+                              const idx = getStatusIndex(user.onboarding_status);
+                              return (
+                                <div
+                                  key={user.id}
+                                  draggable
+                                  onDragStart={(e) => onOnboardingCardDragStart(e, user.id)}
+                                  className={`rounded-md border ${compactMode ? 'p-3' : 'p-4'} bg-card hover:shadow-sm transition cursor-grab active:cursor-grabbing`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="min-w-0">
+                                      <div className="font-semibold truncate text-sm">
+                                        {user.first_name} {user.last_name}
+                                      </div>
+                                      <div className="text-[11px] text-muted-foreground truncate">
+                                        {user.email ?? '—'}
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground truncate">
-                                      {user.email ?? '—'}
-                                    </div>
+                                    <Badge variant="secondary" className="shrink-0 ml-2">
+                                      {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
+                                    </Badge>
                                   </div>
-                                  <Badge variant="secondary" className="shrink-0 ml-2">
-                                    Étape {idx}/{ONBOARDING_STAGES.length - 1}
-                                  </Badge>
-                                </div>
 
-                                <div className="mt-2">
-                                  <OnboardingVisualProgress currentStatusIndex={idx} />
-                                </div>
+                                  <div className={`mt-2 ${compactMode ? '' : 'mt-3'}`}>
+                                    {compactMode ? (
+                                      <OnboardingMiniProgress currentIndex={idx} totalSteps={ONBOARDING_STAGES.length} />
+                                    ) : (
+                                      <OnboardingVisualProgress currentStatusIndex={idx} />
+                                    )}
+                                  </div>
 
-                                <div className="mt-2 grid grid-cols-3 gap-2">
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => handleAdvanceOnboarding(user)}
-                                    disabled={(user.onboarding_status ?? 'estimation_sent') === 'live'}
-                                  >
-                                    Suivant
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleMarkLive(user)}
-                                  >
-                                    En ligne
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => confirmDeleteOnboardingClient(user)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    Supprimer
-                                  </Button>
-                                </div>
+                                  <div className={`mt-2 flex items-center ${compactMode ? 'gap-1' : 'gap-2'}`}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleAdvanceOnboarding(user)}
+                                          disabled={(user.onboarding_status ?? 'estimation_sent') === 'live'}
+                                          title="Étape suivante"
+                                        >
+                                          <ArrowRight className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Étape suivante</TooltipContent>
+                                    </Tooltip>
 
-                                <div className="mt-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditClick(user)}
-                                  >
-                                    Modifier
-                                  </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleMarkLive(user)}
+                                          title="Marquer en ligne"
+                                        >
+                                          <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Marquer "En ligne"</TooltipContent>
+                                    </Tooltip>
+
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleEditClick(user)}
+                                          title="Modifier"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Modifier le client</TooltipContent>
+                                    </Tooltip>
+
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => confirmDeleteOnboardingClient(user)}
+                                          title="Supprimer (résiliation douce)"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Supprimer le client</TooltipContent>
+                                    </Tooltip>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
-                          {onboardingColumns[st].length === 0 && (
-                            <div className="text-xs text-muted-foreground italic">Aucun client à cette étape.</div>
-                          )}
+                              );
+                            })}
+                            {onboardingColumns[st].length === 0 && (
+                              <div className="text-xs text-muted-foreground italic">Aucun client à cette étape.</div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </TooltipProvider>
                 )}
               </CardContent>
             </Card>

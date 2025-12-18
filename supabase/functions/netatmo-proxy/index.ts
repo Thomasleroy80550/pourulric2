@@ -102,8 +102,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: corsHeaders });
   }
 
-  const action: string = payload?.endpoint ?? "getstationsdata";
-  const device_id: string | undefined = payload?.device_id;
+  // CHANGED: utiliser Energy API par défaut
+  const action: string = payload?.endpoint ?? "homesdata";
+  const home_id: string | undefined = payload?.home_id;
+  const device_id: string | undefined = payload?.device_id; // rétrocompat éventuelle
 
   // Vérifier l'utilisateur via JWT
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
@@ -140,7 +142,19 @@ serve(async (req) => {
 
   // Proxifier l'appel Netatmo
   let url = "";
-  if (action === "getstationsdata") {
+  if (action === "homesdata") {
+    url = "https://api.netatmo.com/api/homesdata";
+    if (home_id) {
+      const p = new URLSearchParams({ home_id });
+      url += `?${p.toString()}`;
+    }
+  } else if (action === "homestatus") {
+    if (!home_id) {
+      return new Response(JSON.stringify({ error: "Missing home_id for homestatus" }), { status: 400, headers: corsHeaders });
+    }
+    url = `https://api.netatmo.com/api/homestatus?home_id=${encodeURIComponent(home_id)}`;
+  } else if (action === "getstationsdata") {
+    // rétrocompat: météo (stations)
     url = "https://api.netatmo.com/api/getstationsdata";
     if (device_id) {
       const p = new URLSearchParams({ device_id });

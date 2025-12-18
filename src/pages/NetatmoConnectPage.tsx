@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
-const DEFAULT_SCOPE = "read_station";
+const DEFAULT_SCOPE = "read_thermostat";
 
 const NetatmoConnectPage: React.FC = () => {
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ const NetatmoConnectPage: React.FC = () => {
               <Alert>
                 <AlertTitle>Comment ça marche ?</AlertTitle>
                 <AlertDescription>
-                  Vous serez redirigé vers Netatmo pour autoriser l'accès à vos stations météo. De retour ici, nous finaliserons la connexion et stockerons vos identifiants de façon sécurisée.
+                  Vous serez redirigé vers Netatmo pour autoriser l'accès à vos thermostats (Energy). De retour ici, nous finaliserons la connexion et stockerons vos identifiants de façon sécurisée.
                 </AlertDescription>
               </Alert>
               <div className="flex gap-2">

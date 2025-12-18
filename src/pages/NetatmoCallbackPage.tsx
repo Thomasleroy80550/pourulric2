@@ -25,11 +25,11 @@ const NetatmoCallbackPage: React.FC = () => {
     const savedState = localStorage.getItem("netatmo_oauth_state");
 
     if (!code) {
-      toast.error("Code OAuth manquant dans l’URL.");
+      toast.error("Code OAuth manquant dans l'URL.");
       return;
     }
     if (!state || !savedState || state !== savedState) {
-      toast.error("Échec de vérification de l’état OAuth. Veuillez recommencer.");
+      toast.error("Échec de vérification de l'état OAuth. Veuillez recommencer.");
       return;
     }
 
@@ -40,7 +40,7 @@ const NetatmoCallbackPage: React.FC = () => {
     setLoading(false);
 
     if (error) {
-      toast.error(error.message || "Erreur lors de l’échange du code.");
+      toast.error(error.message || "Erreur lors de l'échange du code.");
       return;
     }
 
@@ -52,12 +52,12 @@ const NetatmoCallbackPage: React.FC = () => {
   const loadStations = async () => {
     setLoading(true);
     const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-      body: { endpoint: "getstationsdata" },
+      body: { endpoint: "homesdata" },
     });
     setLoading(false);
 
     if (error) {
-      toast.error(error.message || "Erreur de récupération des stations.");
+      toast.error(error.message || "Erreur de récupération des thermostats (homesdata).");
       return;
     }
 
@@ -65,7 +65,7 @@ const NetatmoCallbackPage: React.FC = () => {
   };
 
   React.useEffect(() => {
-    // Si on revient avec ?code=..., tenter l’échange automatiquement
+    // Si on revient avec ?code=..., tenter l'échange automatiquement
     const params = new URLSearchParams(window.location.search);
     if (params.get("code")) {
       exchangeCode();
@@ -90,29 +90,29 @@ const NetatmoCallbackPage: React.FC = () => {
                   <Alert>
                     <AlertTitle>Étape 2</AlertTitle>
                     <AlertDescription>
-                      Cliquez sur “Finaliser” pour échanger le code contre les identifiants et les stocker en sécurité.
+                      Cliquez sur "Finaliser" pour échanger le code contre les identifiants et les stocker en sécurité.
                     </AlertDescription>
                   </Alert>
                   <Button onClick={exchangeCode} disabled={loading}>
-                    {loading ? "Traitement en cours…" : "Finaliser"}
+                    {loading ? "Traitement en cours..." : "Finaliser"}
                   </Button>
                 </>
               ) : (
                 <>
                   <Alert>
                     <AlertTitle>Connexion réussie</AlertTitle>
-                    <AlertDescription>Vous pouvez maintenant charger vos stations Netatmo.</AlertDescription>
+                    <AlertDescription>Vous pouvez maintenant charger vos données Thermostat (homesdata).</AlertDescription>
                   </Alert>
                   <div className="flex gap-2">
                     <Button onClick={loadStations} disabled={loading}>
-                      {loading ? "Chargement…" : "Charger mes stations"}
+                      {loading ? "Chargement..." : "Charger mes stations"}
                     </Button>
                   </div>
                   {stations && (
                     <div className="mt-4">
                       <Card>
                         <CardHeader>
-                          <CardTitle>Réponse Netatmo</CardTitle>
+                          <CardTitle>Réponse Netatmo (Energy / homesdata)</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <pre className="text-xs whitespace-pre-wrap break-words bg-muted p-3 rounded">

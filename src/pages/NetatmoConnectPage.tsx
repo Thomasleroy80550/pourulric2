@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { getSetting } from "@/lib/admin-api";
 
 const DEFAULT_SCOPE = "read_thermostat write_thermostat";
 
@@ -19,14 +20,22 @@ const NetatmoConnectPage: React.FC = () => {
 
   React.useEffect(() => {
     (async () => {
+      // Si tokens déjà présents, rediriger directement vers le dashboard
+      const { data } = await supabase.from("netatmo_tokens").select("user_id").limit(1);
+      if (data && data.length > 0) {
+        toast.success("Accès Netatmo déjà activé, ouverture du tableau de bord…");
+        navigate("/integrations/netatmo/dashboard");
+        return;
+      }
+      // Sinon, charger le client_id depuis l'edge function
       try {
-        const { data, error } = await supabase.functions.invoke("netatmo-config", { body: {} });
+        const { data: cfg, error } = await supabase.functions.invoke("netatmo-config", { body: {} });
         if (error) {
           toast.error(error.message || "Impossible de charger la configuration Netatmo.");
           setClientId(null);
           return;
         }
-        setClientId(data?.client_id || null);
+        setClientId(cfg?.client_id || null);
       } catch {
         setClientId(null);
       }
@@ -81,8 +90,8 @@ const NetatmoConnectPage: React.FC = () => {
                 <Button onClick={connect} disabled={loading || !clientId} className="w-full">
                   {loading ? "Redirection vers Netatmo…" : "Connecter Netatmo"}
                 </Button>
-                <Button variant="secondary" className="w-full" onClick={() => navigate("/integrations/netatmo/callback")}>
-                  J'ai déjà autorisé
+                <Button variant="secondary" className="w-full" onClick={() => navigate("/integrations/netatmo/dashboard")}>
+                  Ouvrir le tableau de bord
                 </Button>
               </div>
               {!clientId && (

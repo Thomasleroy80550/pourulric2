@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
 
 // Helper: calculer endtime local en secondes (durée en minutes)
 function computeEndtime(minutes: number): number {
@@ -39,6 +40,7 @@ async function setRoomThermPoint(opts: { homeId: string; roomId: string; mode: "
 const LS_KEY = "netatmo_selection_v1";
 
 const NetatmoCallbackPage: React.FC = () => {
+  const navigate = useNavigate();
   const [exchanged, setExchanged] = React.useState(false);
   const [stations, setStations] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -88,6 +90,8 @@ const NetatmoCallbackPage: React.FC = () => {
     toast.success("Connexion Netatmo réussie !");
     setExchanged(true);
     localStorage.removeItem("netatmo_oauth_state");
+    // NEW: ouvrir directement le tableau de bord
+    navigate("/integrations/netatmo/dashboard");
   };
 
   const persistSelection = () => {

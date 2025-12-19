@@ -93,6 +93,7 @@ import MySeasonPricesPage from "./pages/MySeasonPricesPage";
 import AdminRecoveryPage from "./pages/AdminRecoveryPage";
 import NetatmoConnectPage from "./pages/NetatmoConnectPage";
 import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
+import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
 
 const queryClient = new QueryClient();
 
@@ -170,6 +171,7 @@ function App() {
                   <Route path="/admin/recovery" element={<AdminRecoveryPage />} />
                   <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />
                   <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />
+                  <Route path="/integrations/netatmo/dashboard" element={<NetatmoDashboardPage />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

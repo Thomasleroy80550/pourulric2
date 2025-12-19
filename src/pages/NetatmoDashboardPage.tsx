@@ -694,6 +694,19 @@ const NetatmoDashboardPage: React.FC = () => {
     await loadHomestatus();
   };
 
+  // Lancer le planner auto (mes réservations)
+  const runAutoPlannerForUser = async () => {
+    const { error, data } = await supabase.functions.invoke("thermobnb-auto-planner", { body: {} });
+    if (error) {
+      toast.error(error.message || "Erreur lors du planner auto.");
+      return;
+    }
+    const total = Object.values(data?.processedForUsers || {}).reduce((a: number, b: any) => a + Number(b || 0), 0);
+    toast.success(`Planner auto: ${total} programmation(s) ajoutée(s).`);
+    // Recharger la liste des programmations
+    await loadSchedules();
+  };
+
   // Trigger initial: restore selection and check tokens ONCE
   React.useEffect(() => {
     restoreSelection();
@@ -1090,9 +1103,14 @@ const NetatmoDashboardPage: React.FC = () => {
             <Card className="mb-6 shadow-sm">
               <CardHeader className="flex items-center justify-between">
                 <CardTitle>Programmation arrivée / départ</CardTitle>
-                <Button variant="secondary" size="sm" onClick={runSchedulerNow}>
-                  Lancer maintenant
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={runSchedulerNow}>
+                    Lancer maintenant
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={runAutoPlannerForUser} title="Créer les programmations pour toutes mes réservations à venir">
+                    Générer programmations (auto)
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">

@@ -49,60 +49,99 @@ const NetatmoDashboardPage: React.FC = () => {
   // Helper: build chart points from getroommeasure response (robuste)
   // Ajout d'un paramètre scale pour fallback du step_time si absent
   function buildChartPoints(data: any, scaleForFallback?: string) {
+    const mapStep: Record<string, number> = {
+      "30min": 1800,
+      "1hour": 3600,
+      "3hours": 10800,
+      "1day": 86400,
+      "1week": 604800,
+      "1month": 2592000, // approx.
+    };
+
     const homeBlock = data?.body?.home ?? data?.body;
-    let beg = homeBlock?.beg_time;
-    let step = homeBlock?.step_time;
 
-    // Fallback step_time si absent (format optimisé)
-    if (typeof step !== "number" && typeof scaleForFallback === "string") {
-      const map: Record<string, number> = {
-        "30min": 1800,
-        "1hour": 3600,
-        "3hours": 10800,
-        "1day": 86400,
-        "1week": 604800,
-        "1month": 2592000, // approx.
-      };
-      step = map[scaleForFallback] ?? 3600;
-    }
-
-    let values = homeBlock?.values;
-
-    // Si body est un tableau (format optimisé), reconstituer values
-    if (!Array.isArray(values) && Array.isArray(data?.body)) {
-      const first = data.body[0];
-      beg = typeof beg === "number" ? beg : first?.beg_time;
-      const v = first?.value;
-      if (Array.isArray(v)) {
-        // v peut être [[19.3, ...]] ou [19.3, ...]
-        const arr = Array.isArray(v[0]) ? v[0] : v;
-        values = arr.map((n: any) => ({ value: n }));
-      } else if (typeof v === "number") {
-        values = [{ value: v }];
+    // Cas 1: schéma standard { home: { beg_time, step_time, values: [...] } }
+    if (homeBlock && typeof homeBlock === "object" && "beg_time" in homeBlock && "values" in homeBlock) {
+      let beg = (homeBlock as any)?.beg_time;
+      let step = (homeBlock as any)?.step_time;
+      if (typeof step !== "number" && typeof scaleForFallback === "string") {
+        step = mapStep[scaleForFallback] ?? 3600;
       }
+      const values = (homeBlock as any)?.values;
+      if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
+
+      const points = values
+        .map((item: any, idx: number) => {
+          let raw: any = item;
+          if (Array.isArray(raw)) raw = raw[0];
+          else if (raw && typeof raw === "object") raw = Array.isArray(raw.value) ? raw.value[0] : raw.value;
+          const val = Number(raw);
+          const ts = beg + idx * step;
+          if (Number.isNaN(val)) return null;
+          return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
+        })
+        .filter(Boolean) as { ts: number; label: string; value: number }[];
+
+      if (points.length === 1) {
+        const only = points[0]!;
+        points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
+      }
+      return points;
     }
 
-    if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
-
-    const points = values
-      .map((item: any, idx: number) => {
-        let raw: any = item;
-        if (Array.isArray(raw)) raw = raw[0];
-        else if (raw && typeof raw === "object") raw = Array.isArray(raw.value) ? raw.value[0] : raw.value;
-        const val = Number(raw);
+    // Cas 2: format optimisé en tableau: body: [{ beg_time, value: [[...]] }]
+    if (Array.isArray(data?.body)) {
+      const first = data.body[0];
+      const beg = first?.beg_time;
+      const v = first?.value;
+      let step = typeof scaleForFallback === "string" ? mapStep[scaleForFallback] ?? 3600 : 3600;
+      if (typeof beg !== "number") return [];
+      const arr = Array.isArray(v)
+        ? (Array.isArray(v[0]) ? v[0] : v)
+        : (typeof v === "number" ? [v] : []);
+      const points = arr.map((n: any, idx: number) => {
+        const val = Number(n);
         const ts = beg + idx * step;
         if (Number.isNaN(val)) return null;
         return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
-      })
-      .filter((p) => p !== null) as { ts: number; label: string; value: number }[];
-
-    // NEW: si une seule mesure, dupliquer en fin de période pour tracer une ligne plate
-    if (points.length === 1) {
-      const only = points[0]!;
-      points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
+      }).filter(Boolean) as { ts: number; label: string; value: number }[];
+      if (points.length === 1) {
+        const only = points[0]!;
+        points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
+      }
+      return points;
     }
 
-    return points;
+    // Cas 3: objet mapping timestamps -> tableau de valeurs (ex: { "1765753200": [19.3] })
+    if (homeBlock && typeof homeBlock === "object") {
+      const entries = Object.entries(homeBlock).filter(([k]) => /^\d+$/.test(String(k)));
+      if (entries.length === 0) return [];
+      const sorted = entries
+        .map(([k, v]) => ({ ts: Number(k), raw: v }))
+        .sort((a, b) => a.ts - b.ts);
+
+      let step = typeof scaleForFallback === "string" ? mapStep[scaleForFallback] ?? 3600 : 3600;
+      if (sorted.length > 1) {
+        const delta = sorted[1].ts - sorted[0].ts;
+        if (delta > 0) step = delta;
+      }
+
+      const points = sorted.map(({ ts, raw }) => {
+        let val: any = raw;
+        if (Array.isArray(val)) val = val[0];
+        val = Number(val);
+        if (Number.isNaN(val)) return null;
+        return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
+      }).filter(Boolean) as { ts: number; label: string; value: number }[];
+
+      if (points.length === 1) {
+        const only = points[0]!;
+        points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
+      }
+      return points;
+    }
+
+    return [];
   }
 
   const LS_KEY = "netatmo_selection_v1";

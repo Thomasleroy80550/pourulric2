@@ -767,7 +767,6 @@ const NetatmoDashboardPage: React.FC = () => {
           {/* Header ThermoBnB */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="ThermoBnB" className="h-8 w-8 rounded-md shadow-sm" />
               <div>
                 <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">ThermoBnB</h1>
                 <p className="text-sm text-muted-foreground">Suivi simple et en direct de vos thermostats Netatmo</p>

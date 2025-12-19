@@ -1036,6 +1036,155 @@ const NetatmoDashboardPage: React.FC = () => {
   // Derive the current home object from homesData (used throughout the JSX)
   const home = homesData?.body?.homes?.[0] ?? null;
 
+  // Créer des plannings Netatmo pour chaque réservation (nom = client + séjour)
+  const createNetatmoSchedulesForReservations = async () => {
+    if (!homeId || !homesData) {
+      toast.error("Maison Netatmo introuvable.");
+      return;
+    }
+    // Préparer la liste des rooms avec thermostat
+    const homeObj = homesData?.body?.homes?.[0];
+    if (!homeObj) {
+      toast.error("Données Netatmo non chargées.");
+      return;
+    }
+    const modules = Array.isArray(homeObj.modules) ? homeObj.modules : [];
+    const rooms = Array.isArray(homeObj.rooms) ? homeObj.rooms : [];
+    const thermRoomIds: string[] = modules
+      .filter((m: any) => m.type === "NATherm1" && m.room_id)
+      .map((m: any) => String(m.room_id));
+
+    if (thermRoomIds.length === 0) {
+      toast.error("Aucun thermostat détecté pour créer les plannings.");
+      return;
+    }
+
+    // Températures (ajustez si besoin)
+    const ecoTemp = 16;
+    const nightTemp = 17;
+    const defaultConfortOthers = 19;
+
+    // Parcourir les réservations à venir
+    if (!upcomingReservations || upcomingReservations.length === 0) {
+      toast.message("Aucune réservation à venir à programmer.");
+      return;
+    }
+
+    let created = 0;
+
+    for (const resa of upcomingReservations) {
+      try {
+        const arrivalDate = new Date(resa.check_in_date);
+        const departureDate = new Date(resa.check_out_date);
+
+        // Confort: 4h avant arrivée
+        const startHeatDate = new Date(arrivalDate.getTime() - 4 * 3600 * 1000);
+        // Eco: 11h00 le jour du départ
+        const stopEcoDate = new Date(departureDate.getFullYear(), departureDate.getMonth(), departureDate.getDate(), 11, 0, 0, 0);
+
+        const startOffset = minutesOffsetFromWeekStart(startHeatDate);
+        const stopOffset = minutesOffsetFromWeekStart(stopEcoDate);
+
+        // Définir la température confort pour la pièce liée si connue, sinon par défaut
+        // On essaie de retrouver l'id de la pièce Netatmo liée à la chambre mappée
+        let confortTempSelected = arrivalTemp; // valeur UI sélectionnée
+        const resaRoom = rooms.find((r: any) => r.name === resa.property_name);
+        // Si la pièce de la résa est trouvée, on la met à la température d'arrivée choisie
+        const zoneConfortRooms = thermRoomIds.map((rid) => ({
+          id: rid,
+          therm_setpoint_temperature: (resaRoom && String(resaRoom.id) === rid) ? confortTempSelected : defaultConfortOthers,
+        }));
+
+        // Zones requises
+        const zoneConfort = { id: 0, type: 0, rooms: zoneConfortRooms };
+        const zoneNight = { id: 1, type: 1, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: nightTemp })) };
+        const zoneEco = { id: 4, type: 5, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: ecoTemp })) };
+
+        // Timetable minimal
+        const timetable = [
+          { zone_id: 4, m_offset: 0 },           // Eco au début de semaine
+          { zone_id: 0, m_offset: startOffset }, // Confort 4h avant arrivée
+          { zone_id: 4, m_offset: stopOffset },  // Eco à 11h jour du départ
+        ];
+
+        // Nom du planning: "Client — dd/MM au dd/MM"
+        const name = `${resa.guest_name || "Client"} — ${arrivalDate.toLocaleDateString('fr-FR')} au ${departureDate.toLocaleDateString('fr-FR')}`;
+
+        // 1) Créer le planning
+        const createRes = await supabase.functions.invoke("netatmo-proxy", {
+          body: {
+            endpoint: "createnewhomeschedule",
+            home_id: homeId,
+            name,
+            hg_temp: 7,
+            away_temp: 12,
+            zones: [zoneConfort, zoneNight, zoneEco],
+            timetable,
+          },
+        });
+
+        if (createRes.error) {
+          toast.error(createRes.error.message || `Échec de création du planning pour ${resa.guest_name}`);
+          continue;
+        }
+
+        const createdPayload = createRes.data;
+        const scheduleId =
+          createdPayload?.body?.schedule_id ??
+          createdPayload?.schedule_id ??
+          createdPayload?.body?.id ??
+          createdPayload?.id ??
+          null;
+
+        // 2) Activer le planning (switchhomeschedule)
+        if (scheduleId) {
+          const switchRes = await supabase.functions.invoke("netatmo-proxy", {
+            body: {
+              endpoint: "switchhomeschedule",
+              home_id: homeId,
+              schedule_id: String(scheduleId),
+            },
+          });
+          if (switchRes.error) {
+            toast.error(switchRes.error.message || `Planning créé mais non activé pour ${resa.guest_name}`);
+            continue;
+          }
+        } else {
+          toast.message(`Planning créé pour ${resa.guest_name} — ID introuvable pour activation.`);
+        }
+
+        // 3) Mettre la maison en mode schedule
+        const modeRes = await supabase.functions.invoke("netatmo-proxy", {
+          body: { endpoint: "setthermmode", home_id: homeId, mode: "schedule" },
+        });
+        if (modeRes.error) {
+          toast.error(modeRes.error.message || "Impossible de mettre la maison en mode schedule.");
+        }
+
+        // 4) Annuler les overrides manuels: remettre la pièce de la résa en mode home
+        if (resaRoom) {
+          const backHomeRes = await supabase.functions.invoke("netatmo-proxy", {
+            body: { endpoint: "setroomthermpoint", home_id: homeId, room_id: String(resaRoom.id), mode: "home" },
+          });
+          if (backHomeRes.error) {
+            // non bloquant
+          }
+        }
+
+        created++;
+      } catch (e: any) {
+        toast.error(e?.message || "Erreur pendant la création du planning.");
+      }
+    }
+
+    if (created > 0) {
+      toast.success(`${created} planning(s) Netatmo créés et activés.`);
+      await loadHomestatus();
+    } else {
+      toast.message("Aucun planning créé (vérifiez les réservations à venir et le mapping des thermostats).");
+    }
+  };
+
   return (
     <MainLayout>
       <section className="container mx-auto py-10 md:py-16 relative">

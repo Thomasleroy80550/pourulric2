@@ -12,9 +12,10 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
-// REPLACED: ajouter AreaChart/Area pour le rendu dégradé
 import { ResponsiveContainer as RC2 } from "recharts";
 import { AreaChart, Area } from "recharts";
+// NEW: icons
+import { Thermometer, Gauge, Flame, Home as HomeIcon, Clock, Wifi } from "lucide-react";
 
 function computeEndtime(minutes: number): number {
   const nowMs = Date.now();
@@ -508,13 +509,112 @@ const NetatmoDashboardPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <section className="container mx-auto py-10 md:py-16">
+      <section className="container mx-auto py-10 md:py-16 relative">
+        {/* HERO background */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-indigo-600/15 via-sky-500/10 to-transparent" />
+
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-2 mb-4">
-            <Badge variant="secondary">ThermoBnB</Badge>
-            <Badge variant="outline">Netatmo</Badge>
+          {/* Brand header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="ThermoBnB"
+                className="h-8 w-8 rounded-md shadow-sm"
+              />
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+                  ThermoBnB
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Suivi intelligent des thermostats Netatmo · clair, simple et en direct
+                </p>
+              </div>
+            </div>
+            {/* Live badge */}
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+              </span>
+              <span className="text-xs font-medium">En direct</span>
+            </div>
           </div>
 
+          {/* Metrics cards (live) */}
+          {home && (
+            <div className="grid gap-4 md:grid-cols-4 mb-6">
+              {(() => {
+                const roomsLive = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
+                const activeRoom = roomsLive.find((r: any) => r.id === selectedRoomId) || roomsLive[0];
+                const currentTemp = typeof activeRoom?.therm_measured_temperature === "number" ? activeRoom.therm_measured_temperature : null;
+                const currentSetpoint = typeof activeRoom?.therm_setpoint_temperature === "number" ? activeRoom.therm_setpoint_temperature : null;
+                const modeLabel = home?.therm_mode;
+                const relayCount = (home.modules || []).filter((m: any) => m.type === "NAPlug").length;
+                const lastRefreshLabel = new Date().toLocaleTimeString();
+
+                return (
+                  <>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-md bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                          <Thermometer className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Température</p>
+                          <p className="text-lg font-semibold">
+                            {currentTemp !== null ? `${currentTemp.toFixed(1)}°C` : "n/a"}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                          <Gauge className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Consigne</p>
+                          <p className="text-lg font-semibold">
+                            {currentSetpoint !== null ? `${currentSetpoint.toFixed(1)}°C` : "n/a"}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-md bg-amber-100 text-amber-600 flex items-center justify-center">
+                          <HomeIcon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Mode</p>
+                          <p className="text-lg font-semibold capitalize">{modeLabel || "n/a"}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-md bg-sky-100 text-sky-600 flex items-center justify-center">
+                          <Wifi className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Connexion</p>
+                          <p className="text-lg font-semibold">
+                            {relayCount > 0 ? `${relayCount} relais` : "Aucun relais"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {lastRefreshLabel}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Maison */}
           <Card>
             <CardHeader><CardTitle>Maison</CardTitle></CardHeader>
             <CardContent>
@@ -542,7 +642,7 @@ const NetatmoDashboardPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* NEW: Statut en temps réel, affiché automatiquement */}
+          {/* Statut en temps réel */}
           {home && (
             <Card className="mt-4">
               <CardHeader className="flex items-center justify-between">
@@ -586,10 +686,13 @@ const NetatmoDashboardPage: React.FC = () => {
             </Card>
           )}
 
+          {/* Contrôles par pièce */}
           {home && (
             <>
               <Card className="mt-4">
-                <CardHeader><CardTitle>Contrôles par pièce</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle>Contrôles par pièce</CardTitle>
+                </CardHeader>
                 <CardContent>
                   <ul className="text-sm space-y-3">
                     {(home.rooms || []).map((r: any) => (

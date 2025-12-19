@@ -28,7 +28,7 @@ const ThermoBnBLandingPage: React.FC = () => {
               Chauffage simple, automatique, et fiable
             </h1>
             <p className="mt-3 text-gray-600 max-w-2xl mx-auto">
-              Préchauffage avant l’arrivée, maintien pendant le séjour, passage en éco au départ. 
+              Préchauffage avant l'arrivée, maintien pendant le séjour, passage en éco au départ. 
               Tout est géré pour vous, sans prise de tête.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -56,7 +56,7 @@ const ThermoBnBLandingPage: React.FC = () => {
                 <p className="font-medium">Préchauffage intelligent</p>
               </div>
               <p className="mt-2 text-sm text-gray-600">
-                Lance la chauffe avant l’arrivée selon votre scénario.
+                Lance la chauffe avant l'arrivée selon votre scénario.
               </p>
             </CardContent>
           </Card>
@@ -80,7 +80,7 @@ const ThermoBnBLandingPage: React.FC = () => {
                 <p className="font-medium">Éco au départ</p>
               </div>
               <p className="mt-2 text-sm text-gray-600">
-                Passage automatique à la température éco à l’heure de départ.
+                Passage automatique à la température éco à l'heure de départ.
               </p>
             </CardContent>
           </Card>
@@ -113,9 +113,6 @@ const ThermoBnBLandingPage: React.FC = () => {
                 Se connecter
               </Button>
             </div>
-            <p className="mt-3 text-xs text-gray-500">
-              Mot de passe actuel: Yolo80550 (modifiable par l’admin dans les paramètres).
-            </p>
           </div>
         </div>
       </div>

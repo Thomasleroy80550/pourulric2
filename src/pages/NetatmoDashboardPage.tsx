@@ -46,102 +46,136 @@ const NetatmoDashboardPage: React.FC = () => {
   // NEW: logs state & loader
   const [logs, setLogs] = React.useState<any[]>([]);
 
-  // Helper: build chart points from getroommeasure response (robuste)
-  // Ajout d'un paramètre scale pour fallback du step_time si absent
-  function buildChartPoints(data: any, scaleForFallback?: string) {
+  // Helper: build chart points (robuste) + resampling pour day/hour et week/day
+  function buildChartPoints(data: any, scaleForFallback?: string, range?: { startSec?: number; endSec?: number }) {
     const mapStep: Record<string, number> = {
       "30min": 1800,
       "1hour": 3600,
       "3hours": 10800,
       "1day": 86400,
       "1week": 604800,
-      "1month": 2592000, // approx.
+      "1month": 2592000, // approx
     };
 
     const homeBlock = data?.body?.home ?? data?.body;
 
-    // Cas 1: schéma standard { home: { beg_time, step_time, values: [...] } }
-    if (homeBlock && typeof homeBlock === "object" && "beg_time" in homeBlock && "values" in homeBlock) {
-      let beg = (homeBlock as any)?.beg_time;
-      let step = (homeBlock as any)?.step_time;
-      if (typeof step !== "number" && typeof scaleForFallback === "string") {
-        step = mapStep[scaleForFallback] ?? 3600;
+    const collectRawPoints = (): { ts: number; value: number }[] => {
+      // Schéma standard
+      if (homeBlock && typeof homeBlock === "object" && "beg_time" in homeBlock && "values" in homeBlock) {
+        let beg = (homeBlock as any)?.beg_time;
+        let step = (homeBlock as any)?.step_time;
+        if (typeof step !== "number" && typeof scaleForFallback === "string") step = mapStep[scaleForFallback] ?? 3600;
+        const values = (homeBlock as any)?.values;
+        if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
+        return values
+          .map((item: any, idx: number) => {
+            let raw: any = item;
+            if (Array.isArray(raw)) raw = raw[0];
+            else if (raw && typeof raw === "object") raw = Array.isArray(raw.value) ? raw.value[0] : raw.value;
+            const val = Number(raw);
+            const ts = beg + idx * step;
+            if (Number.isNaN(val)) return null;
+            return { ts, value: val };
+          })
+          .filter(Boolean) as { ts: number; value: number }[];
       }
-      const values = (homeBlock as any)?.values;
-      if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
 
-      const points = values
-        .map((item: any, idx: number) => {
-          let raw: any = item;
-          if (Array.isArray(raw)) raw = raw[0];
-          else if (raw && typeof raw === "object") raw = Array.isArray(raw.value) ? raw.value[0] : raw.value;
-          const val = Number(raw);
-          const ts = beg + idx * step;
-          if (Number.isNaN(val)) return null;
-          return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
-        })
-        .filter(Boolean) as { ts: number; label: string; value: number }[];
+      // Format optimisé en tableau [{ beg_time, value: [[...]] }]
+      if (Array.isArray(data?.body)) {
+        const first = data.body[0];
+        let beg = first?.beg_time;
+        let step = mapStep[scaleForFallback ?? "1hour"] ?? 3600;
+        const v = first?.value;
+        if (typeof beg !== "number") return [];
+        const arr = Array.isArray(v) ? (Array.isArray(v[0]) ? v[0] : v) : (typeof v === "number" ? [v] : []);
+        return arr
+          .map((n: any, idx: number) => {
+            const val = Number(n);
+            const ts = beg + idx * step;
+            if (Number.isNaN(val)) return null;
+            return { ts, value: val };
+          })
+          .filter(Boolean) as { ts: number; value: number }[];
+      }
 
-      if (points.length === 1) {
-        const only = points[0]!;
-        points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
+      // Objet mapping { "timestamp": [value] }
+      if (homeBlock && typeof homeBlock === "object") {
+        const entries = Object.entries(homeBlock).filter(([k]) => /^\d+$/.test(String(k)));
+        if (entries.length === 0) return [];
+        const sorted = entries
+          .map(([k, v]) => ({ ts: Number(k), raw: v }))
+          .sort((a, b) => a.ts - b.ts);
+        return sorted
+          .map(({ ts, raw }) => {
+            let val: any = raw;
+            if (Array.isArray(val)) val = val[0];
+            val = Number(val);
+            if (Number.isNaN(val)) return null;
+            return { ts, value: val };
+          })
+          .filter(Boolean) as { ts: number; value: number }[];
+      }
+
+      return [];
+    };
+
+    const raw = collectRawPoints();
+
+    // Resampling: day/hour -> 24 points; week/day -> 7 points
+    if (scaleForFallback === "1hour") {
+      const startSec =
+        range?.startSec ??
+        Math.floor(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 0, 0, 0).getTime() / 1000);
+      const points: { ts: number; label: string; value: number | null }[] = [];
+      for (let h = 0; h < 24; h++) {
+        const ts = startSec + h * 3600;
+        // Cherche une mesure à l'heure exacte
+        const p = raw.find((r) => Math.abs(r.ts - ts) < 1800); // tolérance 30 min
+        points.push({
+          ts,
+          label: new Date(ts * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+          value: p ? p.value : null,
+        });
+      }
+      // Si seulement une mesure sur la journée, duplique pour rendre visible
+      const countVals = points.filter((p) => typeof p.value === "number").length;
+      if (countVals === 1) {
+        const idx = points.findIndex((p) => typeof p.value === "number");
+        if (idx >= 0 && idx + 1 < points.length) points[idx + 1].value = points[idx].value as number;
       }
       return points;
     }
 
-    // Cas 2: format optimisé en tableau: body: [{ beg_time, value: [[...]] }]
-    if (Array.isArray(data?.body)) {
-      const first = data.body[0];
-      const beg = first?.beg_time;
-      const v = first?.value;
-      let step = typeof scaleForFallback === "string" ? mapStep[scaleForFallback] ?? 3600 : 3600;
-      if (typeof beg !== "number") return [];
-      const arr = Array.isArray(v)
-        ? (Array.isArray(v[0]) ? v[0] : v)
-        : (typeof v === "number" ? [v] : []);
-      const points = arr.map((n: any, idx: number) => {
-        const val = Number(n);
-        const ts = beg + idx * step;
-        if (Number.isNaN(val)) return null;
-        return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
-      }).filter(Boolean) as { ts: number; label: string; value: number }[];
-      if (points.length === 1) {
-        const only = points[0]!;
-        points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
+    if (scaleForFallback === "1day") {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6, 0, 0, 0);
+      const startSec = range?.startSec ?? Math.floor(start.getTime() / 1000);
+      const points: { ts: number; label: string; value: number | null }[] = [];
+      for (let d = 0; d < 7; d++) {
+        const ts = startSec + d * 86400;
+        // Tolérance: +/- 6h autour de minuit (selon real_time)
+        const p = raw.find((r) => Math.abs(r.ts - ts) < 21600);
+        points.push({
+          ts,
+          label: new Date(ts * 1000).toLocaleDateString(undefined, { day: "2-digit", month: "2-digit" }),
+          value: p ? p.value : null,
+        });
+      }
+      // Dupliquer une valeur si une seule pour visibilité
+      const countVals = points.filter((p) => typeof p.value === "number").length;
+      if (countVals === 1) {
+        const idx = points.findIndex((p) => typeof p.value === "number");
+        if (idx >= 0 && idx + 1 < points.length) points[idx + 1].value = points[idx].value as number;
       }
       return points;
     }
 
-    // Cas 3: objet mapping timestamps -> tableau de valeurs (ex: { "1765753200": [19.3] })
-    if (homeBlock && typeof homeBlock === "object") {
-      const entries = Object.entries(homeBlock).filter(([k]) => /^\d+$/.test(String(k)));
-      if (entries.length === 0) return [];
-      const sorted = entries
-        .map(([k, v]) => ({ ts: Number(k), raw: v }))
-        .sort((a, b) => a.ts - b.ts);
-
-      let step = typeof scaleForFallback === "string" ? mapStep[scaleForFallback] ?? 3600 : 3600;
-      if (sorted.length > 1) {
-        const delta = sorted[1].ts - sorted[0].ts;
-        if (delta > 0) step = delta;
-      }
-
-      const points = sorted.map(({ ts, raw }) => {
-        let val: any = raw;
-        if (Array.isArray(val)) val = val[0];
-        val = Number(val);
-        if (Number.isNaN(val)) return null;
-        return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
-      }).filter(Boolean) as { ts: number; label: string; value: number }[];
-
-      if (points.length === 1) {
-        const only = points[0]!;
-        points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
-      }
-      return points;
-    }
-
-    return [];
+    // Par défaut: labels complets
+    return raw.map(({ ts, value }) => ({
+      ts,
+      label: new Date(ts * 1000).toLocaleString(),
+      value,
+    }));
   }
 
   const LS_KEY = "netatmo_selection_v1";
@@ -221,9 +255,18 @@ const NetatmoDashboardPage: React.FC = () => {
   async function loadRoomCharts() {
     if (!homeId || !selectedRoomId) return;
 
-    const nowSec = Math.floor(Date.now() / 1000);
-    const dayBegin = nowSec - 24 * 60 * 60;
-    const weekBegin = nowSec - 7 * 24 * 60 * 60;
+    // Jours & heures exacts (locale)
+    const now = new Date();
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
+    const weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+
+    const dayBegin = Math.floor(dayStart.getTime() / 1000);
+    const dayEndSec = Math.floor(dayEnd.getTime() / 1000);
+    const weekBegin = Math.floor(weekStart.getTime() / 1000);
+    const weekEndSec = Math.floor(weekEnd.getTime() / 1000);
 
     setLoading(true);
     const [dayRes, weekRes] = await Promise.all([
@@ -232,12 +275,12 @@ const NetatmoDashboardPage: React.FC = () => {
           endpoint: "getroommeasure",
           home_id: homeId,
           room_id: selectedRoomId,
-          scale: "1day",
+          scale: "1hour",
           type: "temperature",
           date_begin: dayBegin,
-          date_end: nowSec,
+          date_end: dayEndSec,
           real_time: true,
-          optimize: false, // CHANGED: format facile à parser (inclut step_time)
+          optimize: false,
         },
       }),
       supabase.functions.invoke("netatmo-proxy", {
@@ -245,12 +288,12 @@ const NetatmoDashboardPage: React.FC = () => {
           endpoint: "getroommeasure",
           home_id: homeId,
           room_id: selectedRoomId,
-          scale: "1week",
+          scale: "1day",
           type: "temperature",
           date_begin: weekBegin,
-          date_end: nowSec,
+          date_end: weekEndSec,
           real_time: true,
-          optimize: false, // CHANGED
+          optimize: false,
         },
       }),
     ]);
@@ -262,7 +305,7 @@ const NetatmoDashboardPage: React.FC = () => {
       setDayRaw(dayRes.error);
     } else {
       setDayRaw(dayRes.data);
-      setDayChartData(buildChartPoints(dayRes.data, "1day"));
+      setDayChartData(buildChartPoints(dayRes.data, "1hour", { startSec: dayBegin }));
     }
 
     if (weekRes.error) {
@@ -271,7 +314,7 @@ const NetatmoDashboardPage: React.FC = () => {
       setWeekRaw(weekRes.error);
     } else {
       setWeekRaw(weekRes.data);
-      setWeekChartData(buildChartPoints(weekRes.data, "1week"));
+      setWeekChartData(buildChartPoints(weekRes.data, "1day", { startSec: weekBegin }));
     }
   }
 

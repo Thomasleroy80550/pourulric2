@@ -9,6 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+// NEW: import accordion for collapsible logs
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -637,6 +639,89 @@ const NetatmoDashboardPage: React.FC = () => {
             </div>
           )}
 
+          {/* Action bar: sélection de pièce + consigne rapide */}
+          {home && (
+            <Card className="mb-6 shadow-sm">
+              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <CardTitle>Actions rapides</CardTitle>
+                <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-3">
+                  {/* Sélecteur de pièce */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Pièce</span>
+                    <Select value={selectedRoomId ?? ""} onValueChange={(v) => setSelectedRoomId(v)}>
+                      <SelectTrigger className="w-40"><SelectValue placeholder="Choisir" /></SelectTrigger>
+                      <SelectContent>
+                        {(home.rooms || []).map((r: any) => (
+                          <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Mode */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Mode</span>
+                    <Select value={quickMode} onValueChange={(v) => setQuickMode(v as any)}>
+                      <SelectTrigger className="w-32"><SelectValue placeholder="Mode" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="manual">Manual</SelectItem>
+                        <SelectItem value="max">Max</SelectItem>
+                        <SelectItem value="home">Home</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Température (manual) */}
+                  {quickMode === "manual" && (
+                    <div className="flex-1 min-w-[220px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Température</span>
+                        <span className="text-xs font-medium">{quickTemp.toFixed(1)}°C</span>
+                      </div>
+                      <Slider
+                        value={[quickTemp]}
+                        min={7}
+                        max={30}
+                        step={0.5}
+                        onValueChange={(vals) => setQuickTemp(vals[0] as number)}
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
+
+                  {/* Durée (manual/max) */}
+                  {quickMode !== "home" && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Durée</span>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={360}
+                        step={5}
+                        value={quickMinutes}
+                        onChange={(e) => setQuickMinutes(Number(e.target.value))}
+                        className="w-24"
+                      />
+                      <span className="text-xs text-muted-foreground">min</span>
+                    </div>
+                  )}
+
+                  {/* Appliquer */}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={applyQuickSetpoint}
+                    disabled={!homeId || !selectedRoomId}
+                    className="md:ml-2"
+                    title="Appliquer la consigne sur la pièce sélectionnée"
+                  >
+                    Appliquer
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+          )}
+
           {/* Maison */}
           <Card>
             <CardHeader><CardTitle>Maison</CardTitle></CardHeader>
@@ -961,31 +1046,13 @@ const NetatmoDashboardPage: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* NEW: Graphiques auto jour & semaine */}
+              {/* Graphiques auto jour & semaine */}
               {home && (
-                <Card className="mt-4">
-                  <CardHeader><CardTitle>Historique de pièce</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <p className="font-medium mb-1">Pièce</p>
-                        <Select value={selectedRoomId ?? ""} onValueChange={(v) => setSelectedRoomId(v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir une pièce" /></SelectTrigger>
-                          <SelectContent>
-                            {(home.rooms || []).map((r: any) => (
-                              <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="md:col-span-2 text-muted-foreground flex items-end">
-                        <span className="text-xs">Les courbes se chargent automatiquement (température).</span>
-                      </div>
-                    </div>
-
-                    {/* Courbe quotidienne */}
-                    <div className="mt-4">
-                      <p className="text-sm font-medium mb-2">Quotidien (1 jour) – Température</p>
+                <div className="grid gap-6 md:grid-cols-2 mt-4">
+                  {/* Quotidien */}
+                  <Card>
+                    <CardHeader><CardTitle>Quotidien (1 jour) – Température</CardTitle></CardHeader>
+                    <CardContent>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={dayChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
@@ -997,68 +1064,24 @@ const NetatmoDashboardPage: React.FC = () => {
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
-                            <XAxis
-                              dataKey="label"
-                              tick={{ fontSize: 11, fill: "#6b7280" }}
-                              minTickGap={18}
-                            />
-                            <YAxis
-                              tick={{ fontSize: 11, fill: "#6b7280" }}
-                              tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`}
-                              domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                            />
-                            <Tooltip
-                              wrapperStyle={{ outline: "none" }}
-                              contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }}
-                              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                              itemStyle={{ color: "#e5e7eb" }}
-                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "Température"]}
-                            />
+                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
+                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+                            <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
                             <Legend />
-                            <Area
-                              name="Température"
-                              type="monotone"
-                              dataKey="value"
-                              stroke="#1d4ed8"
-                              fill="url(#dayGrad)"
-                              strokeWidth={2.5}
-                              connectNulls
-                              animationDuration={450}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="value"
-                              stroke="#1d4ed8"
-                              strokeWidth={2.5}
-                              dot={{ r: 2 }}
-                              activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }}
-                              connectNulls
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              animationDuration={450}
-                            />
+                            <Area name="Température" type="monotone" dataKey="value" stroke="#1d4ed8" fill="url(#dayGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
+                            <Line type="monotone" dataKey="value" stroke="#1d4ed8" strokeWidth={2.5} dot={{ r: 2 }} activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={450} />
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>
                       {dayChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour ce jour.</p>}
-                      {/* NEW: logs sous le graphique jour */}
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Points: {dayChartData.length} • beg_time: {dayRaw?.body?.home?.beg_time ?? dayRaw?.body?.beg_time ?? "n/a"} • step_time: {dayRaw?.body?.home?.step_time ?? dayRaw?.body?.step_time ?? "n/a"}
-                      </div>
-                      {dayRaw && (
-                        <pre className="mt-1 text-[10px] whitespace-pre-wrap break-words bg-muted p-2 rounded">
-                          {(() => {
-                            const vals = dayRaw?.body?.home?.values ?? dayRaw?.body?.values ?? [];
-                            const preview = Array.isArray(vals) ? vals.slice(0, 10) : vals;
-                            return `Aperçu valeurs (10): ${JSON.stringify(preview)}`;
-                          })()}
-                        </pre>
-                      )}
-                    </div>
+                      <div className="mt-2 text-xs text-muted-foreground">Points: {dayChartData.length} • beg_time: {dayRaw?.body?.home?.beg_time ?? dayRaw?.body?.beg_time ?? "n/a"} • step_time: {dayRaw?.body?.home?.step_time ?? dayRaw?.body?.step_time ?? "n/a"}</div>
+                    </CardContent>
+                  </Card>
 
-                    {/* Courbe hebdomadaire */}
-                    <div className="mt-6">
-                      <p className="text-sm font-medium mb-2">Hebdomadaire (1 semaine) – Température</p>
+                  {/* Hebdomadaire */}
+                  <Card>
+                    <CardHeader><CardTitle>Hebdomadaire (7 jours, horaire) – Température</CardTitle></CardHeader>
+                    <CardContent>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart data={weekChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
@@ -1070,100 +1093,61 @@ const NetatmoDashboardPage: React.FC = () => {
                               </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
-                            <XAxis
-                              dataKey="label"
-                              tick={{ fontSize: 11, fill: "#6b7280" }}
-                              minTickGap={18}
-                            />
-                            <YAxis
-                              tick={{ fontSize: 11, fill: "#6b7280" }}
-                              tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`}
-                              domain={['dataMin - 0.5', 'dataMax + 0.5']}
-                            />
-                            <Tooltip
-                              wrapperStyle={{ outline: "none" }}
-                              contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }}
-                              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                              itemStyle={{ color: "#e5e7eb" }}
-                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "Température"]}
-                            />
+                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
+                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+                            <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
                             <Legend />
-                            <Area
-                              name="Température"
-                              type="monotone"
-                              dataKey="value"
-                              stroke="#10b981"
-                              fill="url(#weekGrad)"
-                              strokeWidth={2.5}
-                              connectNulls
-                              animationDuration={450}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="value"
-                              stroke="#10b981"
-                              strokeWidth={2.5}
-                              dot={false}  // 168 points: dots cachés pour lisibilité
-                              activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }}
-                              connectNulls
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              animationDuration={450}
-                            />
+                            <Area name="Température" type="monotone" dataKey="value" stroke="#10b981" fill="url(#weekGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
+                            <Line name="Température" type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={300} />
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>
                       {weekChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour cette semaine.</p>}
-                      {/* NEW: logs sous le graphique semaine */}
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Points: {weekChartData.length} • beg_time: {weekRaw?.body?.home?.beg_time ?? weekRaw?.body?.beg_time ?? "n/a"} • step_time: {weekRaw?.body?.home?.step_time ?? weekRaw?.body?.step_time ?? "n/a"}
-                      </div>
-                      {weekRaw && (
-                        <pre className="mt-1 text-[10px] whitespace-pre-wrap break-words bg-muted p-2 rounded">
-                          {(() => {
-                            const vals = weekRaw?.body?.home?.values ?? weekRaw?.body?.values ?? [];
-                            const preview = Array.isArray(vals) ? vals.slice(0, 10) : vals;
-                            return `Aperçu valeurs (10): ${JSON.stringify(preview)}`;
-                          })()}
-                        </pre>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="mt-2 text-xs text-muted-foreground">Points: {weekChartData.length} • beg_time: {weekRaw?.body?.home?.beg_time ?? weekRaw?.body?.beg_time ?? "n/a"} • step_time: {weekRaw?.body?.home?.step_time ?? weekRaw?.body?.step_time ?? "n/a"}</div>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
 
               {/* NEW: Logs Netatmo (diagnostic) */}
               <Card className="mt-6">
-                <CardHeader><CardTitle>Logs Netatmo (derniers 10)</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Diagnostics</CardTitle></CardHeader>
                 <CardContent>
-                  {logs.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Aucun log enregistré pour l'instant.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {logs.map((l) => (
-                        <div key={l.id} className="border rounded p-2">
-                          <div className="text-xs">
-                            <span className="font-medium">{l.endpoint}</span> · status {l.response_status} · points {l.count_points ?? "n/a"} · {new Date(l.created_at).toLocaleString()}
+                  <Accordion type="single" collapsible>
+                    <AccordionItem value="logs">
+                      <AccordionTrigger>Logs Netatmo (derniers 10)</AccordionTrigger>
+                      <AccordionContent>
+                        {logs.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Aucun log enregistré pour l'instant.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {logs.map((l) => (
+                              <div key={l.id} className="border rounded p-2">
+                                <div className="text-xs">
+                                  <span className="font-medium">{l.endpoint}</span> · status {l.response_status} · points {l.count_points ?? "n/a"} · {new Date(l.created_at).toLocaleString()}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground break-words mt-1">
+                                  params: {JSON.stringify(l.params)}
+                                </div>
+                                {l.error ? (
+                                  <div className="text-[10px] text-red-600 break-words mt-1">
+                                    error: {l.error}
+                                  </div>
+                                ) : (
+                                  <div className="text-[10px] break-words mt-1">
+                                    preview: {l.body_preview}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                          <div className="text-[10px] text-muted-foreground break-words mt-1">
-                            params: {JSON.stringify(l.params)}
-                          </div>
-                          {l.error ? (
-                            <div className="text-[10px] text-red-600 break-words mt-1">
-                              error: {l.error}
-                            </div>
-                          ) : (
-                            <div className="text-[10px] break-words mt-1">
-                              preview: {l.body_preview}
-                            </div>
-                          )}
+                        )}
+                        <div className="mt-3">
+                          <Button variant="secondary" size="sm" onClick={loadLogs}>Rafraîchir les logs</Button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-2">
-                    <Button variant="secondary" size="sm" onClick={loadLogs}>Rafraîchir les logs</Button>
-                  </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </CardContent>
               </Card>
             </>

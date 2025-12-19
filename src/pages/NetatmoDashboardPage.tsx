@@ -1132,6 +1132,69 @@ const NetatmoDashboardPage: React.FC = () => {
   // Derive the current home object from homesData (used throughout the JSX)
   const home = homesData?.body?.homes?.[0] ?? null;
 
+  // Liste des plannings Netatmo de la maison
+  const [homeSchedules, setHomeSchedules] = React.useState<Array<{ id: string; name: string; selected?: boolean }>>([]);
+
+  // Charger les plannings Netatmo
+  async function loadHomeSchedules() {
+    if (!homeId) return;
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+      body: { endpoint: "gethomeschedule", home_id: homeId },
+    });
+    if (error) {
+      toast.error(error.message || "Erreur de récupération des plannings Netatmo.");
+      return;
+    }
+    // Normaliser
+    const schedules = Array.isArray(data?.body?.schedules)
+      ? data.body.schedules
+      : Array.isArray(data?.schedules)
+      ? data.schedules
+      : [];
+    const activeId =
+      data?.body?.active_schedule_id ??
+      data?.active_schedule_id ??
+      null;
+
+    setHomeSchedules(
+      schedules.map((s: any) => ({
+        id: String(s.id ?? s.schedule_id ?? s.name ?? Math.random()),
+        name: String(s.name ?? `Planning ${s.id ?? ""}`),
+        selected: activeId ? String(s.id ?? s.schedule_id) === String(activeId) : false,
+      }))
+    );
+  }
+
+  // Activer un planning Netatmo
+  async function activateHomeSchedule(scheduleId: string) {
+    if (!homeId) return;
+    const { error } = await supabase.functions.invoke("netatmo-proxy", {
+      body: { endpoint: "switchhomeschedule", home_id: homeId, schedule_id: String(scheduleId) },
+    });
+    if (error) {
+      toast.error(error.message || "Impossible d'activer le planning.");
+      return;
+    }
+    toast.success("Planning activé.");
+    await loadHomeSchedules();
+    // Remettre la pièce en mode 'home' pour laisser le planning s'appliquer
+    if (selectedRoomId) {
+      const backHomeRes = await supabase.functions.invoke("netatmo-proxy", {
+        body: { endpoint: "setroomthermpoint", home_id: homeId, room_id: selectedRoomId, mode: "home" },
+      });
+      if (!backHomeRes.error) {
+        toast.message("Pièce remise en mode 'home'.");
+      }
+    }
+    // Rafraîchir le statut pour refléter l'activation
+    await loadHomestatus();
+  }
+
+  // Charger les plannings quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadHomeSchedules();
+  }, [homeId]);
+
   if (hasTokens === null) {
     return (
       <MainLayout>
@@ -1437,10 +1500,38 @@ const NetatmoDashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <Card>
             <CardHeader>
-              <CardTitle>Plannings hebdomadaires</CardTitle>
+              <CardTitle>Plannings Netatmo</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+              {homeSchedules.length === 0 ? (
+                <p className="text-gray-600">Aucun planning Netatmo trouvé.</p>
+              ) : (
+                <div className="space-y-3">
+                  {homeSchedules.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between rounded border p-3"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{s.name}</p>
+                        {s.selected ? (
+                          <Badge className="mt-1" variant="default">Actif</Badge>
+                        ) : (
+                          <Badge className="mt-1" variant="secondary">Inactif</Badge>
+                        )}
+                      </div>
+                      {!s.selected && (
+                        <Button
+                          variant="outline"
+                          onClick={() => activateHomeSchedule(s.id)}
+                        >
+                          Activer
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1449,7 +1540,9 @@ const NetatmoDashboardPage: React.FC = () => {
               <CardTitle>Plannings pour réservations</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">
+                Créer des plannings pour réservations
+              </Button>
             </CardContent>
           </Card>
 

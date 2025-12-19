@@ -381,7 +381,7 @@ const NetatmoDashboardPage: React.FC = () => {
   };
   const loadHomestatus = async () => {
     if (!homeId) {
-      toast.error("home_id introuvable.");
+      toast.error("home_id ThermoBnB introuvable.");
       return;
     }
     setLoading(true);
@@ -448,7 +448,7 @@ const NetatmoDashboardPage: React.FC = () => {
       .eq("home_id", homeId)
       .limit(50);
     if (error) {
-      toast.error(error.message || "Erreur de chargement des liens thermostats.");
+      toast.error(error.message || "Erreur de chargement des liens thermostats ThermoBnB.");
       return;
     }
     if (Array.isArray(therms) && therms.length > 0) {
@@ -801,14 +801,14 @@ const NetatmoDashboardPage: React.FC = () => {
   // Forcer consigne arrivée maintenant
   async function forceArrivalSetpoint(resa: { property_name: string; check_in_date: string; check_out_date: string }) {
     if (!homeId) {
-      toast.error("Maison Netatmo introuvable.");
+      toast.error("Maison ThermoBnB introuvable.");
       return;
     }
     const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
     const match = netatmoRooms.find((r: any) => r?.name === resa.property_name);
     const roomId = match ? String(match.id) : selectedRoomId || null;
     if (!roomId) {
-      toast.error("Aucune pièce Netatmo mappée.");
+      toast.error("Aucune pièce ThermoBnB mappée.");
       return;
     }
     const departureDay = new Date(resa.check_out_date);
@@ -820,17 +820,17 @@ const NetatmoDashboardPage: React.FC = () => {
     const payload: any = { endpoint: "setroomthermpoint", home_id: homeId, room_id: roomId, mode: "manual", temp: scenarioArrivalTemp, endtime: endtimeSec };
     const { error } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
     if (error) {
-      toast.error(error.message || "Échec du forçage de la consigne.");
+      toast.error(error.message || "Échec du forçage de la consigne ThermoBnB.");
       return;
     }
-    toast.success("Consigne d'arrivée forcée.");
+    toast.success("Consigne d'arrivée forcée (ThermoBnB).");
     await loadHomestatus();
   }
 
   // Mode test avancé: inputs -> 2 programmations
   async function createManualTestSchedules() {
     if (!homeId) {
-      toast.error("Maison Netatmo introuvable.");
+      toast.error("Maison ThermoBnB introuvable.");
       return;
     }
     if (!testPropertyName || !testArrivalAt || !testDepartureAt) {
@@ -847,7 +847,7 @@ const NetatmoDashboardPage: React.FC = () => {
     const match = netatmoRooms.find((r: any) => r?.name === testPropertyName);
     const targetRoomId = match ? String(match.id) : selectedRoomId || null;
     if (!targetRoomId) {
-      toast.error("Aucune pièce Netatmo correspondante.");
+      toast.error("Aucune pièce ThermoBnB correspondante.");
       return;
     }
     const arrivalDT = new Date(testArrivalAt);
@@ -891,10 +891,10 @@ const NetatmoDashboardPage: React.FC = () => {
     ];
     const { error } = await supabase.from("thermostat_schedules").insert(rows);
     if (error) {
-      toast.error(error.message || "Erreur lors de la création des programmations (test).");
+      toast.error(error.message || "Erreur lors de la création des programmations (test ThermoBnB).");
       return;
     }
-    toast.success("Programmations test créées (préchauffage puis éco aux heures choisies).");
+    toast.success("Programmations test créées (ThermoBnB).");
     await loadSchedules();
   }
 
@@ -925,7 +925,7 @@ const NetatmoDashboardPage: React.FC = () => {
     return (
       <MainLayout>
         <div className="p-6">
-          <h1 className="text-2xl font-bold mb-4">Netatmo Dashboard</h1>
+          <h1 className="text-2xl font-bold mb-4">ThermoBnB — Mode guidé pas-à-pas</h1>
           <p className="text-gray-600 mb-6">Veuillez vous connecter.</p>
           <Button onClick={() => navigate("/login")}>Se connecter</Button>
         </div>
@@ -936,18 +936,18 @@ const NetatmoDashboardPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold">Netatmo — Mode guidé pas-à-pas</h1>
+        <h1 className="text-2xl font-bold">ThermoBnB — Mode guidé pas-à-pas</h1>
         <p className="text-gray-600">Suivez les étapes simples ci-dessous. Chaque étape a un bouton clair.</p>
 
-        {/* Étape 1 — Connexion Netatmo */}
+        {/* Étape 1 — Connexion ThermoBnB */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><HomeIcon className="w-5 h-5" /> Étape 1 — Connexion Netatmo</CardTitle>
+            <CardTitle className="flex items-center gap-2"><HomeIcon className="w-5 h-5" /> Étape 1 — Connexion ThermoBnB</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-gray-700">Statut: {hasTokens ? <Badge>Connecté</Badge> : <Badge variant="secondary">Non connecté</Badge>}</p>
             {!hasTokens && (
-              <Button onClick={() => navigate("/netatmo-connect")} className="w-full">Se connecter à Netatmo</Button>
+              <Button onClick={() => navigate("/netatmo-connect")} className="w-full">Se connecter à ThermoBnB</Button>
             )}
             {hasTokens && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -978,7 +978,7 @@ const NetatmoDashboardPage: React.FC = () => {
         {/* Étape 2 — Scénario global (simple) */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><SettingsIcon className="w-5 h-5" /> Étape 2 — Mon scénario</CardTitle>
+            <CardTitle className="flex items-center gap-2"><SettingsIcon className="w-5 h-5" /> Étape 2 — Mon scénario (ThermoBnB)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -1047,7 +1047,7 @@ const NetatmoDashboardPage: React.FC = () => {
         {/* Étape 3 — Réservations (créer programmations très simple) */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><CalendarIcon className="w-5 h-5" /> Étape 3 — Réservations à venir</CardTitle>
+            <CardTitle className="flex items-center gap-2"><CalendarIcon className="w-5 h-5" /> Étape 3 — Réservations à venir (ThermoBnB)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button variant="outline" className="w-full" onClick={() => loadUserRooms()}>Recharger les réservations</Button>
@@ -1079,7 +1079,7 @@ const NetatmoDashboardPage: React.FC = () => {
                           <Button size="sm" variant="outline" onClick={() => forceArrivalSetpoint(resa)}>Forcer consigne maintenant</Button>
                         </div>
                       </div>
-                      <p className="mt-1 text-xs text-gray-500">Action simple: crée deux programmations (chauffe avant l'arrivée, éco au départ).</p>
+                      <p className="mt-1 text-xs text-gray-500">Action simple: crée deux programmations (chauffe avant l'arrivée, éco au départ) sur ThermoBnB.</p>
                     </div>
                   );
                 })}
@@ -1091,7 +1091,7 @@ const NetatmoDashboardPage: React.FC = () => {
         {/* Étape 4 — Programmations (voir / modifier / supprimer / appliquer) */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><ListChecks className="w-5 h-5" /> Étape 4 — Mes programmations (cron)</CardTitle>
+            <CardTitle className="flex items-center gap-2"><ListChecks className="w-5 h-5" /> Étape 4 — Mes programmations (cron) ThermoBnB</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1143,7 +1143,7 @@ const NetatmoDashboardPage: React.FC = () => {
         {/* Étape 5 — Test avancé (ignorer le scénario) */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5" /> Étape 5 — Test avancé (heures choisies)</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5" /> Étape 5 — Test avancé (heures choisies) ThermoBnB</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1187,7 +1187,7 @@ const NetatmoDashboardPage: React.FC = () => {
         {/* Étape 6 — Mes graphiques */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Thermometer className="w-5 h-5" /> Étape 6 — Graphiques de température</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Thermometer className="w-5 h-5" /> Étape 6 — Graphiques de température (ThermoBnB)</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -1226,7 +1226,7 @@ const NetatmoDashboardPage: React.FC = () => {
         {/* Étape 7 — Logs utiles */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Flame className="w-5 h-5" /> Étape 7 — Derniers logs</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Flame className="w-5 h-5" /> Étape 7 — Derniers logs (ThermoBnB)</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-700">Entrées: {logs.length}</p>

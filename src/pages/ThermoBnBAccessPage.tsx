@@ -13,7 +13,7 @@ const ACCESS_KEY = "thermobnb_access_granted";
 
 const ThermoBnBAccessPage: React.FC = () => {
   const navigate = useNavigate();
-  const [expectedPwd, setExpectedPwd] = React.useState<string>("THERMOBNB");
+  const [expectedPwd, setExpectedPwd] = React.useState<string>("Yolo80550");
   const [pwd, setPwd] = React.useState<string>("");
   const [loading, setLoading] = React.useState(false);
 
@@ -88,7 +88,7 @@ const ThermoBnBAccessPage: React.FC = () => {
             </div>
 
             <p className="text-xs text-gray-500 mt-3">
-              Astuce: le mot de passe peut être défini dans les paramètres (app_settings → key “thermobnb_access_password”).
+              Astuce: le mot de passe peut être défini dans les paramètres (app_settings → key "thermobnb_access_password").
             </p>
           </CardContent>
         </Card>

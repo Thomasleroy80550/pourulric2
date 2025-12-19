@@ -555,7 +555,35 @@ const NetatmoDashboardPage: React.FC = () => {
     return Math.floor((target.getTime() - monday.getTime()) / 60000);
   }
 
-  // Créer un planning hebdo Netatmo: Confort 4h avant arrivée, Eco à 11:00 le jour du départ
+  // NEW: scénario: degré Eco après départ
+  const [scenarioAfterDepartureTemp, setScenarioAfterDepartureTemp] = React.useState<number>(16);
+
+  // Charger le scénario existant (ajout lecture facultative si la colonne existe)
+  React.useEffect(() => { loadScenario(); }, []);
+
+  // Sauvegarde du scénario (on ne stocke pas scenarioAfterDepartureTemp en BDD pour éviter une erreur si colonne absente)
+  const saveScenario = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) { toast.error("Non authentifié."); return; }
+    const payload: any = {
+      user_id: uid,
+      arrival_preheat_mode: scenarioMode,
+      arrival_preheat_minutes: scenarioMinutes,
+      heat_start_time: scenarioHeatStart,
+      arrival_temp: scenarioArrivalTemp,
+      stop_time: scenarioStopTime,
+      apply_to_all: true,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from("thermostat_scenarios")
+      .upsert(payload, { onConflict: "user_id" });
+    if (error) { toast.error(error.message || "Erreur sauvegarde scénario"); return; }
+    toast.success("Scénario global sauvegardé — il s'appliquera à toutes vos réservations.");
+  };
+
+  // Créer un planning hebdo Netatmo: Confort selon scénario, Eco à l'heure d'arrêt
   const createArrivalDepartureSchedule = async () => {
     if (!homeId || !selectedRoomId) {
       toast.error("Maison/pièce Netatmo introuvable.");
@@ -584,6 +612,7 @@ const NetatmoDashboardPage: React.FC = () => {
     const modules = Array.isArray(home.modules) ? home.modules : [];
     const rooms = Array.isArray(home.rooms) ? home.rooms : [];
 
+    // Pièces thermostatées
     const thermRoomIds: string[] = modules
       .filter((m: any) => m.type === "NATherm1" && m.room_id)
       .map((m: any) => String(m.room_id));
@@ -593,11 +622,13 @@ const NetatmoDashboardPage: React.FC = () => {
       return;
     }
 
-    const ecoTemp = 16;
+    // Températures
+    const ecoTemp = scenarioAfterDepartureTemp; // temp Eco configurable
     const nightTemp = 17;
     const confortTempSelected = arrivalTemp;
     const confortTempOthers = 19;
 
+    // Zones requises
     const zoneEco = { id: 4, type: 5, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: ecoTemp })) };
     const zoneNight = { id: 1, type: 1, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: nightTemp })) };
     const zoneConfort = { id: 0, type: 0, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: rid === selectedRoomId ? confortTempSelected : confortTempOthers })) };
@@ -605,17 +636,32 @@ const NetatmoDashboardPage: React.FC = () => {
     const arrivalDate = new Date(arrivalAt);
     const departureDate = new Date(departureAt);
 
-    const startHeatDate = new Date(arrivalDate.getTime() - 4 * 3600 * 1000);
-    const stopEcoDate = new Date(departureDate.getFullYear(), departureDate.getMonth(), departureDate.getDate(), 11, 0, 0, 0);
+    // Calcul heure de lancement (scénario: relative ou absolute)
+    let startHeatDate: Date;
+    if (preheatMode === "absolute" && heatStartAt) {
+      const [hh, mm] = heatStartAt.split(":").map((n) => Number(n));
+      startHeatDate = new Date(arrivalDate);
+      startHeatDate.setHours(hh || 0, mm || 0, 0, 0);
+    } else {
+      startHeatDate = new Date(arrivalDate.getTime() - Math.max(5, preheatMinutes) * 60 * 1000);
+    }
+
+    // Calcul heure d’arrêt Eco à scenarioStopTime
+    const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+    const stopEcoDate = new Date(departureDate);
+    stopEcoDate.setHours(sh || 11, sm || 0, 0, 0);
 
     const startOffset = minutesOffsetFromWeekStart(startHeatDate);
     const stopOffset = minutesOffsetFromWeekStart(stopEcoDate);
 
-    const timetable = [
+    // Timetable: Eco au début de semaine, Confort au startOffset, Eco à stopOffset (sauf si égal à startOffset)
+    const timetable: Array<{ zone_id: number; m_offset: number }> = [
       { zone_id: 4, m_offset: 0 },
       { zone_id: 0, m_offset: startOffset },
-      { zone_id: 4, m_offset: stopOffset },
     ];
+    if (stopOffset !== startOffset) {
+      timetable.push({ zone_id: 4, m_offset: stopOffset });
+    }
 
     // 1) Créer le planning
     const createRes = await supabase.functions.invoke("netatmo-proxy", {
@@ -624,7 +670,7 @@ const NetatmoDashboardPage: React.FC = () => {
         home_id: homeId,
         name: "ThermoBnB — Arrivée & Départ",
         hg_temp: 7,
-        away_temp: 12,
+        away_temp: ecoTemp, // temp Eco (après départ)
         zones: [zoneConfort, zoneNight, zoneEco],
         timetable,
       },
@@ -643,14 +689,10 @@ const NetatmoDashboardPage: React.FC = () => {
       createdPayload?.id ??
       null;
 
-    // 2) Activer le planning (switchhomeschedule)
+    // 2) Activer le planning
     if (scheduleId) {
       const switchRes = await supabase.functions.invoke("netatmo-proxy", {
-        body: {
-          endpoint: "switchhomeschedule",
-          home_id: homeId,
-          schedule_id: String(scheduleId),
-        },
+        body: { endpoint: "switchhomeschedule", home_id: homeId, schedule_id: String(scheduleId) },
       });
       if (switchRes.error) {
         toast.error(switchRes.error.message || "Planning créé mais non activé.");
@@ -661,183 +703,168 @@ const NetatmoDashboardPage: React.FC = () => {
       toast.message("Planning créé — impossible de récupérer l'ID pour l'activer automatiquement.");
     }
 
-    // 3) Mettre en mode schedule
-    const modeRes = await supabase.functions.invoke("netatmo-proxy", {
-      body: {
-        endpoint: "setthermmode",
-        home_id: homeId,
-        mode: "schedule",
-      },
-    });
+    // 3) Mettre en mode schedule + remettre la pièce sélectionnée en 'home'
+    const modeRes = await supabase.functions.invoke("netatmo-proxy", { body: { endpoint: "setthermmode", home_id: homeId, mode: "schedule" } });
     if (modeRes.error) {
       toast.error(modeRes.error.message || "Impossible de mettre la maison en mode schedule.");
       return;
     }
-
-    // 4) Annuler les overrides manuels: remettre la pièce en mode home (suivre le planning)
-    const backHomeRes = await supabase.functions.invoke("netatmo-proxy", {
-      body: {
-        endpoint: "setroomthermpoint",
-        home_id: homeId,
-        room_id: selectedRoomId!,
-        mode: "home",
-      },
-    });
+    const backHomeRes = await supabase.functions.invoke("netatmo-proxy", { body: { endpoint: "setroomthermpoint", home_id: homeId, room_id: selectedRoomId!, mode: "home" } });
     if (backHomeRes.error) {
       toast.error(backHomeRes.error.message || "Planning activé, mais la pièce reste en override.");
     } else {
-      toast.success("Pièce remise en mode 'home' — le planning s'applique dès maintenant.");
+      toast.success("Pièce en mode 'home' — le planning s'applique.");
     }
 
     // Rafraîchir le statut
     await loadHomestatus();
   };
 
-  // Lancer le planner auto (mes réservations)
-  const runAutoPlannerForUser = async () => {
-    const { error, data } = await supabase.functions.invoke("thermobnb-auto-planner", { body: {} });
-    if (error) {
-      toast.error(error.message || "Erreur lors du planner auto.");
+  // Créer des plannings Netatmo pour chaque réservation à venir (nom = client + séjour), avec règles de degrés & heures
+  const createNetatmoSchedulesForReservations = async () => {
+    if (!homeId || !homesData) {
+      toast.error("Maison Netatmo introuvable.");
       return;
     }
-    const total = Object.values(data?.processedForUsers || {}).reduce((a: number, b: any) => a + Number(b || 0), 0);
-    toast.success(`Planner auto: ${total} programmation(s) ajoutée(s).`);
-    // Recharger la liste des programmations
-    await loadSchedules();
-  };
-
-  // Charger le scénario existant
-  const loadScenario = async () => {
-    const { data: auth } = await supabase.auth.getUser();
-    const uid = auth?.user?.id;
-    if (!uid) return;
-    const { data } = await supabase
-      .from("thermostat_scenarios")
-      .select("*")
-      .eq("user_id", uid)
-      .maybeSingle();
-    if (data) {
-      setScenarioMode((data.arrival_preheat_mode as any) || "relative");
-      setScenarioMinutes(typeof data.arrival_preheat_minutes === "number" ? data.arrival_preheat_minutes : 240);
-      setScenarioHeatStart(data.heat_start_time || "14:00");
-      setScenarioStopTime(data.stop_time || "11:00");
-      setScenarioArrivalTemp(typeof data.arrival_temp === "number" ? Number(data.arrival_temp) : 20);
-    }
-  };
-
-  React.useEffect(() => { loadScenario(); }, []);
-
-  // Sauvegarder le scénario
-  const saveScenario = async () => {
-    const { data: auth } = await supabase.auth.getUser();
-    const uid = auth?.user?.id;
-    if (!uid) { toast.error("Non authentifié."); return; }
-    const payload: any = {
-      user_id: uid,
-      arrival_preheat_mode: scenarioMode,
-      arrival_preheat_minutes: scenarioMinutes,
-      heat_start_time: scenarioHeatStart,
-      arrival_temp: scenarioArrivalTemp,
-      stop_time: scenarioStopTime,
-      apply_to_all: true,
-      updated_at: new Date().toISOString(),
-    };
-    const { error } = await supabase
-      .from("thermostat_scenarios")
-      .upsert(payload, { onConflict: "user_id" });
-    if (error) { toast.error(error.message || "Erreur sauvegarde scénario"); return; }
-    toast.success("Scénario global sauvegardé — il s'appliquera à toutes vos réservations.");
-  };
-
-  // NEW: états pour scénario global
-  const [scenarioMode, setScenarioMode] = React.useState<"relative" | "absolute">("relative");
-  const [scenarioMinutes, setScenarioMinutes] = React.useState<number>(240);
-  const [scenarioHeatStart, setScenarioHeatStart] = React.useState<string>("14:00"); // heure de lancement
-  const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
-  const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
-
-  // NEW: états et helpers pour liaison Thermostat → chambre (netatmo_thermostats)
-  const [assignments, setAssignments] = React.useState<any[]>([]);
-  const [selectedThermId, setSelectedThermId] = React.useState<string | null>(null);
-  const [selectedBridgeForTherm, setSelectedBridgeForTherm] = React.useState<string | null>(null);
-
-  const loadAssignments = async () => {
-    const { data: auth } = await supabase.auth.getUser();
-    const userId = auth?.user?.id;
-    if (!userId) {
-      setAssignments([]);
-      return;
-    }
-    const { data } = await supabase
-      .from("netatmo_thermostats")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-    setAssignments(data || []);
-  };
-
-  const assignThermostatToRoom = async () => {
-    const { data: auth } = await supabase.auth.getUser();
-    const userId = auth?.user?.id;
-    if (!userId) {
-      toast.error("Non authentifié.");
-      return;
-    }
-    if (!homeId || !selectedUserRoomId || !selectedThermId) {
-      toast.error("Sélectionnez la maison, le thermostat et le logement.");
-      return;
-    }
-
-    // Trouver la pièce Netatmo du thermostat (via homesData)
     const homeObj = homesData?.body?.homes?.[0];
-    const modules = Array.isArray(homeObj?.modules) ? homeObj.modules : [];
-    const thermostats = modules.filter((m: any) => m.type === "NATherm1");
-    const relays = modules.filter((m: any) => m.type === "NAPlug");
-    const therm = thermostats.find((t: any) => t.id === selectedThermId);
-    if (!therm) {
-      toast.error("Thermostat introuvable.");
+    if (!homeObj) {
+      toast.error("Données Netatmo non chargées.");
       return;
     }
-    const bridgeId = selectedBridgeForTherm || therm.bridge;
-    const netRoomId = String(therm.room_id || "");
-    const netRoomName = (homeObj?.rooms || []).find((r: any) => String(r.id) === netRoomId)?.name || null;
+    const modules = Array.isArray(homeObj.modules) ? homeObj.modules : [];
+    const rooms = Array.isArray(homeObj.rooms) ? homeObj.rooms : [];
+    const thermRoomIds: string[] = modules.filter((m: any) => m.type === "NATherm1" && m.room_id).map((m: any) => String(m.room_id));
+    if (thermRoomIds.length === 0) {
+      toast.error("Aucun thermostat détecté pour créer les plannings.");
+      return;
+    }
 
-    // Insérer en base le lien unique
-    const { error } = await supabase
-      .from("netatmo_thermostats")
-      .insert({
-        user_id: userId,
-        user_room_id: selectedUserRoomId,
-        home_id: homeId,
-        device_id: bridgeId,
-        module_id: selectedThermId,
-        netatmo_room_id: netRoomId || null,
-        netatmo_room_name: netRoomName,
-      });
+    const ecoTemp = scenarioAfterDepartureTemp;
+    const nightTemp = 17;
+    const confortTempSelected = scenarioArrivalTemp;
+    const confortTempOthers = 19;
 
-    if (error) {
-      if (error.code === '23505') {
-        toast.error("Ce thermostat est déjà lié à un logement (un seul lien autorisé).");
-      } else {
-        toast.error(error.message || "Erreur lors de la liaison.");
+    let created = 0;
+
+    if (!upcomingReservations || upcomingReservations.length === 0) {
+      toast.message("Aucune réservation à venir à programmer.");
+      return;
+    }
+
+    for (const resa of upcomingReservations) {
+      try {
+        const arrivalDate = new Date(resa.check_in_date);
+        const departureDate = new Date(resa.check_out_date);
+
+        // Heure de lancement: scénario
+        let startHeatDate: Date;
+        if (scenarioMode === "absolute" && scenarioHeatStart) {
+          const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
+          startHeatDate = new Date(arrivalDate);
+          startHeatDate.setHours(hh || 0, mm || 0, 0, 0);
+        } else {
+          startHeatDate = new Date(arrivalDate.getTime() - Math.max(5, scenarioMinutes) * 60 * 1000);
+        }
+
+        // Heure d’arrêt Eco: scénarioStopTime
+        const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+        const stopEcoDate = new Date(departureDate);
+        stopEcoDate.setHours(sh || 11, sm || 0, 0, 0);
+
+        const startOffset = minutesOffsetFromWeekStart(startHeatDate);
+        const stopOffset = minutesOffsetFromWeekStart(stopEcoDate);
+
+        // Choix de la pièce réservée (si trouvée), sinon confort par défaut
+        const resaRoom = rooms.find((r: any) => r.name === resa.property_name);
+
+        const zoneConfortRooms = thermRoomIds.map((rid) => ({
+          id: rid,
+          therm_setpoint_temperature: (resaRoom && String(resaRoom.id) === rid) ? confortTempSelected : confortTempOthers,
+        }));
+
+        const zoneConfort = { id: 0, type: 0, rooms: zoneConfortRooms };
+        const zoneNight = { id: 1, type: 1, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: nightTemp })) };
+        const zoneEco = { id: 4, type: 5, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: ecoTemp })) };
+
+        // Timetable avec règle: si arrivée et départ même heure -> ne pas couper
+        const timetable: Array<{ zone_id: number; m_offset: number }> = [
+          { zone_id: 4, m_offset: 0 },
+          { zone_id: 0, m_offset: startOffset },
+        ];
+        if (stopOffset !== startOffset) {
+          timetable.push({ zone_id: 4, m_offset: stopOffset });
+        }
+
+        const name = `${resa.guest_name || "Client"} — ${arrivalDate.toLocaleDateString('fr-FR')} au ${departureDate.toLocaleDateString('fr-FR')}`;
+
+        // 1) Création
+        const createRes = await supabase.functions.invoke("netatmo-proxy", {
+          body: {
+            endpoint: "createnewhomeschedule",
+            home_id: homeId,
+            name,
+            hg_temp: 7,
+            away_temp: ecoTemp,
+            zones: [zoneConfort, zoneNight, zoneEco],
+            timetable,
+          },
+        });
+
+        if (createRes.error) {
+          toast.error(createRes.error.message || `Échec création planning pour ${resa.guest_name}`);
+          continue;
+        }
+
+        const createdPayload = createRes.data;
+        const scheduleId =
+          createdPayload?.body?.schedule_id ??
+          createdPayload?.schedule_id ??
+          createdPayload?.body?.id ??
+          createdPayload?.id ??
+          null;
+
+        // 2) Activation + mode schedule
+        if (scheduleId) {
+          const switchRes = await supabase.functions.invoke("netatmo-proxy", {
+            body: { endpoint: "switchhomeschedule", home_id: homeId, schedule_id: String(scheduleId) },
+          });
+          if (switchRes.error) {
+            toast.error(switchRes.error.message || `Planning non activé pour ${resa.guest_name}`);
+            continue;
+          }
+        } else {
+          toast.message(`Planning créé pour ${resa.guest_name} — ID introuvable pour activation.`);
+        }
+
+        const modeRes = await supabase.functions.invoke("netatmo-proxy", {
+          body: { endpoint: "setthermmode", home_id: homeId, mode: "schedule" },
+        });
+        if (modeRes.error) {
+          toast.error(modeRes.error.message || "Impossible de mettre la maison en mode schedule.");
+        }
+
+        // 3) Sortir de l’override manuel si nécessaire (pièce de la résa)
+        if (resaRoom) {
+          const backHomeRes = await supabase.functions.invoke("netatmo-proxy", {
+            body: { endpoint: "setroomthermpoint", home_id: homeId, room_id: String(resaRoom.id), mode: "home" },
+          });
+          if (backHomeRes.error) {
+            // non bloquant
+          }
+        }
+
+        created++;
+      } catch (e: any) {
+        toast.error(e?.message || "Erreur pendant la création du planning.");
       }
-      return;
     }
-    toast.success("Thermostat lié au logement.");
-    await loadAssignments();
-  };
 
-  const unassignThermostat = async (recordId: string) => {
-    const { error } = await supabase
-      .from("netatmo_thermostats")
-      .delete()
-      .eq("id", recordId);
-    if (error) {
-      toast.error(error.message || "Erreur lors de la suppression du lien.");
-      return;
+    if (created > 0) {
+      toast.success(`${created} planning(s) Netatmo créés et activés.`);
+      await loadHomestatus();
+    } else {
+      toast.message("Aucun planning créé (vérifiez les réservations et le mapping thermostat↔chambre).");
     }
-    toast.success("Lien thermostat → logement supprimé.");
-    await loadAssignments();
   };
 
   // Charger les liens quand la maison est connue
@@ -1036,684 +1063,3000 @@ const NetatmoDashboardPage: React.FC = () => {
   // Derive the current home object from homesData (used throughout the JSX)
   const home = homesData?.body?.homes?.[0] ?? null;
 
-  // Créer des plannings Netatmo pour chaque réservation (nom = client + séjour)
-  const createNetatmoSchedulesForReservations = async () => {
-    if (!homeId || !homesData) {
-      toast.error("Maison Netatmo introuvable.");
-      return;
-    }
-    // Préparer la liste des rooms avec thermostat
-    const homeObj = homesData?.body?.homes?.[0];
-    if (!homeObj) {
-      toast.error("Données Netatmo non chargées.");
-      return;
-    }
-    const modules = Array.isArray(homeObj.modules) ? homeObj.modules : [];
-    const rooms = Array.isArray(homeObj.rooms) ? homeObj.rooms : [];
-    const thermRoomIds: string[] = modules
-      .filter((m: any) => m.type === "NATherm1" && m.room_id)
-      .map((m: any) => String(m.room_id));
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-    if (thermRoomIds.length === 0) {
-      toast.error("Aucun thermostat détecté pour créer les plannings.");
-      return;
-    }
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-    // Températures (ajustez si besoin)
-    const ecoTemp = 16;
-    const nightTemp = 17;
-    const defaultConfortOthers = 19;
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-    // Parcourir les réservations à venir
-    if (!upcomingReservations || upcomingReservations.length === 0) {
-      toast.message("Aucune réservation à venir à programmer.");
-      return;
-    }
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-    let created = 0;
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-    for (const resa of upcomingReservations) {
-      try {
-        const arrivalDate = new Date(resa.check_in_date);
-        const departureDate = new Date(resa.check_out_date);
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // Confort: 4h avant arrivée
-        const startHeatDate = new Date(arrivalDate.getTime() - 4 * 3600 * 1000);
-        // Eco: 11h00 le jour du départ
-        const stopEcoDate = new Date(departureDate.getFullYear(), departureDate.getMonth(), departureDate.getDate(), 11, 0, 0, 0);
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        const startOffset = minutesOffsetFromWeekStart(startHeatDate);
-        const stopOffset = minutesOffsetFromWeekStart(stopEcoDate);
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // Définir la température confort pour la pièce liée si connue, sinon par défaut
-        // On essaie de retrouver l'id de la pièce Netatmo liée à la chambre mappée
-        let confortTempSelected = arrivalTemp; // valeur UI sélectionnée
-        const resaRoom = rooms.find((r: any) => r.name === resa.property_name);
-        // Si la pièce de la résa est trouvée, on la met à la température d'arrivée choisie
-        const zoneConfortRooms = thermRoomIds.map((rid) => ({
-          id: rid,
-          therm_setpoint_temperature: (resaRoom && String(resaRoom.id) === rid) ? confortTempSelected : defaultConfortOthers,
-        }));
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // Zones requises
-        const zoneConfort = { id: 0, type: 0, rooms: zoneConfortRooms };
-        const zoneNight = { id: 1, type: 1, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: nightTemp })) };
-        const zoneEco = { id: 4, type: 5, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: ecoTemp })) };
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // Timetable minimal
-        const timetable = [
-          { zone_id: 4, m_offset: 0 },           // Eco au début de semaine
-          { zone_id: 0, m_offset: startOffset }, // Confort 4h avant arrivée
-          { zone_id: 4, m_offset: stopOffset },  // Eco à 11h jour du départ
-        ];
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // Nom du planning: "Client — dd/MM au dd/MM"
-        const name = `${resa.guest_name || "Client"} — ${arrivalDate.toLocaleDateString('fr-FR')} au ${departureDate.toLocaleDateString('fr-FR')}`;
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // 1) Créer le planning
-        const createRes = await supabase.functions.invoke("netatmo-proxy", {
-          body: {
-            endpoint: "createnewhomeschedule",
-            home_id: homeId,
-            name,
-            hg_temp: 7,
-            away_temp: 12,
-            zones: [zoneConfort, zoneNight, zoneEco],
-            timetable,
-          },
-        });
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        if (createRes.error) {
-          toast.error(createRes.error.message || `Échec de création du planning pour ${resa.guest_name}`);
-          continue;
-        }
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        const createdPayload = createRes.data;
-        const scheduleId =
-          createdPayload?.body?.schedule_id ??
-          createdPayload?.schedule_id ??
-          createdPayload?.body?.id ??
-          createdPayload?.id ??
-          null;
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // 2) Activer le planning (switchhomeschedule)
-        if (scheduleId) {
-          const switchRes = await supabase.functions.invoke("netatmo-proxy", {
-            body: {
-              endpoint: "switchhomeschedule",
-              home_id: homeId,
-              schedule_id: String(scheduleId),
-            },
-          });
-          if (switchRes.error) {
-            toast.error(switchRes.error.message || `Planning créé mais non activé pour ${resa.guest_name}`);
-            continue;
-          }
-        } else {
-          toast.message(`Planning créé pour ${resa.guest_name} — ID introuvable pour activation.`);
-        }
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // 3) Mettre la maison en mode schedule
-        const modeRes = await supabase.functions.invoke("netatmo-proxy", {
-          body: { endpoint: "setthermmode", home_id: homeId, mode: "schedule" },
-        });
-        if (modeRes.error) {
-          toast.error(modeRes.error.message || "Impossible de mettre la maison en mode schedule.");
-        }
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        // 4) Annuler les overrides manuels: remettre la pièce de la résa en mode home
-        if (resaRoom) {
-          const backHomeRes = await supabase.functions.invoke("netatmo-proxy", {
-            body: { endpoint: "setroomthermpoint", home_id: homeId, room_id: String(resaRoom.id), mode: "home" },
-          });
-          if (backHomeRes.error) {
-            // non bloquant
-          }
-        }
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        created++;
-      } catch (e: any) {
-        toast.error(e?.message || "Erreur pendant la création du planning.");
-      }
-    }
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-    if (created > 0) {
-      toast.success(`${created} planning(s) Netatmo créés et activés.`);
-      await loadHomestatus();
-    } else {
-      toast.message("Aucun planning créé (vérifiez les réservations à venir et le mapping des thermostats).");
-    }
-  };
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-  return (
-    <MainLayout>
-      <section className="container mx-auto py-10 md:py-16 relative">
-        {/* HERO background */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-indigo-600/15 via-sky-500/10 to-transparent" />
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-        <div className="max-w-5xl mx-auto">
-          {/* Header ThermoBnB */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">ThermoBnB</h1>
-                <p className="text-sm text-muted-foreground">Suivi simple et en direct de vos thermostats Netatmo</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-              </span>
-              <span className="text-xs font-medium">En direct</span>
-            </div>
-          </div>
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* Barre d'actions rapides */}
-          {home && (
-            <Card className="mb-6 shadow-sm">
-              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <CardTitle>Actions rapides</CardTitle>
-                <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-3">
-                  {/* Pièce */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Pièce</span>
-                    <Select value={selectedRoomId ?? ""} onValueChange={(v) => setSelectedRoomId(v)}>
-                      <SelectTrigger className="w-40"><SelectValue placeholder="Choisir" /></SelectTrigger>
-                      <SelectContent>
-                        {(home.rooms || []).map((r: any) => (
-                          <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Mode */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Mode</span>
-                    <Select value={quickMode} onValueChange={(v) => setQuickMode(v as any)}>
-                      <SelectTrigger className="w-32"><SelectValue placeholder="Mode" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="manual">Manual</SelectItem>
-                        <SelectItem value="max">Max</SelectItem>
-                        <SelectItem value="home">Home</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {/* Température (manual) */}
-                  {quickMode === "manual" && (
-                    <div className="flex-1 min-w-[220px]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Température</span>
-                        <span className="text-xs font-medium">{quickTemp.toFixed(1)}°C</span>
-                      </div>
-                      <Slider
-                        value={[quickTemp]} // valeur contrôlée = consigne actuelle par défaut
-                        min={7}
-                        max={30}
-                        step={0.5}
-                        onValueChange={(vals) => setQuickTemp(vals[0] as number)}
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-                  {/* Durée (manual/max) */}
-                  {quickMode !== "home" && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Durée</span>
-                      <Input type="number" min={5} max={360} step={5} value={quickMinutes} onChange={(e) => setQuickMinutes(Number(e.target.value))} className="w-24" />
-                      <span className="text-xs text-muted-foreground">min</span>
-                    </div>
-                  )}
-                  {/* Appliquer */}
-                  <Button variant="secondary" size="sm" onClick={applyQuickSetpoint} disabled={!homeId || !selectedRoomId} className="md:ml-2">
-                    Appliquer
-                  </Button>
-                </div>
-              </CardHeader>
-            </Card>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* NEW: Lier thermostat à un logement */}
-          {home && (
-            <Card className="mb-6 shadow-sm">
-              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <CardTitle>Lier un thermostat à un logement</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  const homeObj = homesData?.body?.homes?.[0];
-                  const modules = Array.isArray(homeObj?.modules) ? homeObj.modules : [];
-                  const thermostats = modules.filter((m: any) => m.type === "NATherm1");
-                  const relays = modules.filter((m: any) => m.type === "NAPlug");
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-                  return (
-                    <div className="grid md:grid-cols-3 gap-3 text-sm">
-                      <div>
-                        <p className="font-medium mb-1">Thermostat (NATherm1)</p>
-                        <Select value={selectedThermId ?? ""} onValueChange={(v) => setSelectedThermId(v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir le thermostat" /></SelectTrigger>
-                          <SelectContent>
-                            {thermostats.map((t: any) => (
-                              <SelectItem key={t.id} value={t.id}>{t.name || t.id}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <p className="font-medium mb-1">Relais (NAPlug)</p>
-                        <Select value={selectedBridgeForTherm ?? ""} onValueChange={(v) => setSelectedBridgeForTherm(v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir le relais" /></SelectTrigger>
-                          <SelectContent>
-                            {relays.map((r: any) => (
-                              <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <p className="font-medium mb-1">Logement</p>
-                        <Select value={selectedUserRoomId ?? ""} onValueChange={(v) => setSelectedUserRoomId(v)}>
-                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
-                          <SelectContent>
-                            {userRooms.map((ur) => (
-                              <SelectItem key={ur.id} value={ur.id}>{ur.room_name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  );
-                })()}
-                <div className="mt-3 flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={assignThermostatToRoom} disabled={!homeId || !selectedThermId || !selectedUserRoomId}>
-                    Lier thermostat à la chambre
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={loadAssignments}>
-                    Rafraîchir les liens
-                  </Button>
-                </div>
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-                {/* Liens existants */}
-                <div className="mt-4">
-                  <p className="font-medium">Liens existants</p>
-                  {assignments.length === 0 ? (
-                    <p className="text-xs text-muted-foreground mt-1">Aucun lien enregistré.</p>
-                  ) : (
-                    <ul className="text-sm space-y-1 mt-1">
-                      {assignments.map((a) => (
-                        <li key={a.id} className="flex items-center justify-between">
-                          <span>
-                            Thermostat {a.module_id} → Logement {userRooms.find((r) => r.id === a.user_room_id)?.room_name || a.user_room_id}
-                            {a.netatmo_room_name ? ` · pièce ${a.netatmo_room_name}` : ""}
-                          </span>
-                          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => unassignThermostat(a.id)}>Supprimer</Button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-                <p className="text-xs text-muted-foreground mt-2">
-                  Règle: un thermostat ne peut être lié qu'à une seule chambre. Si un lien existe déjà, vous devez d'abord le supprimer.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* Bloc Arrivées à venir */}
-          {home && (
-            <Card className="mb-6 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle>Arrivées à venir</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {upcomingReservations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucune arrivée à venir détectée sur les 60 prochains jours.</p>
-                ) : (
-                  <div className="divide-y rounded-md border">
-                    {upcomingReservations.map((res) => (
-                      <div key={res.id} className="flex flex-col md:flex-row md:items-center md:justify-between p-3">
-                        <div className="space-y-0.5">
-                          <p className="text-sm font-medium">{res.guest_name} — {res.property_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Arrivée: {new Date(res.check_in_date).toLocaleDateString()} · Départ: {new Date(res.check_out_date).toLocaleDateString()}
-                            {res.cod_channel ? ` · Canal: ${res.cod_channel}` : ""}
-                          </p>
-                        </div>
-                        <div className="mt-2 md:mt-0 flex gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setArrivalAt(new Date(res.check_in_date).toISOString().slice(0,16)); // YYYY-MM-DDTHH:mm
-                              setDepartureAt(new Date(res.check_out_date).toISOString().slice(0,16));
-                              // Tenter de sélectionner le logement correspondant
-                              // (par nom de propriété si disponible)
-                              const found = userRooms.find(ur => ur.room_name === res.property_name);
-                              if (found) setSelectedUserRoomId(found.id);
-                              toast.success("Programmation pré-remplie à partir de la réservation.");
-                            }}
-                          >
-                            Programmer
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* KPI simplifiés */}
-          {home && (
-            <div className="grid gap-4 md:grid-cols-3 mb-6">
-              {(() => {
-                const roomsLive = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
-                const activeRoom = roomsLive.find((r: any) => r.id === selectedRoomId) || roomsLive[0];
-                const currentTemp = typeof activeRoom?.therm_measured_temperature === "number" ? activeRoom.therm_measured_temperature : null;
-                const currentSetpoint = typeof activeRoom?.therm_setpoint_temperature === "number" ? activeRoom.therm_setpoint_temperature : null;
-                const lastRefreshLabel = new Date().toLocaleTimeString();
-                return (
-                  <>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-md bg-indigo-100 text-indigo-600 flex items-center justify-center"><Thermometer className="h-5 w-5" /></div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Température</p>
-                          <p className="text-lg font-semibold">{currentTemp !== null ? `${currentTemp.toFixed(1)}°C` : "n/a"}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center"><Gauge className="h-5 w-5" /></div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Consigne</p>
-                          <p className="text-lg font-semibold">{currentSetpoint !== null ? `${currentSetpoint.toFixed(1)}°C` : "n/a"}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4">
-                        <p className="text-xs text-muted-foreground">Dernière mise à jour</p>
-                        <p className="text-lg font-semibold">{lastRefreshLabel}</p>
-                        <div className="mt-2"><Button variant="secondary" size="sm" onClick={loadHomestatus} disabled={loading}>{loading ? "…" : "Actualiser"}</Button></div>
-                      </CardContent>
-                    </Card>
-                  </>
-                );
-              })()}
-            </div>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* Scénario global (toutes réservations) */}
-          {home && (
-            <Card className="mb-6 shadow-sm">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle>Scénario global (toutes réservations)</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={saveScenario}>Sauvegarder</Button>
-                  <Button variant="outline" size="sm" onClick={runAutoPlannerForUser} title="Créer les programmations pour mes résas à venir">
-                    Appliquer aux résas (auto)
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-3">
-                    <p className="text-xs text-muted-foreground mb-1">Mode de préchauffage</p>
-                    <RadioGroup value={scenarioMode} onValueChange={(v) => setScenarioMode(v as any)} className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="relative" id="sc-mode-rel" />
-                        <label htmlFor="sc-mode-rel" className="text-xs">Minutes avant l'arrivée</label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="absolute" id="sc-mode-abs" />
-                        <label htmlFor="sc-mode-abs" className="text-xs">Heure précise de lancement</label>
-                      </div>
-                    </RadioGroup>
-                    {scenarioMode === "relative" ? (
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground">Préchauffage</p>
-                          <span className="text-xs font-medium">{scenarioMinutes} min</span>
-                        </div>
-                        <Slider min={5} max={480} step={5} value={[scenarioMinutes]} onValueChange={(vals) => setScenarioMinutes(vals[0] as number)} />
-                      </div>
-                    ) : (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Heure de lancement (HH:MM)</p>
-                        <Input type="time" value={scenarioHeatStart} onChange={(e) => setScenarioHeatStart(e.target.value)} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">Température à l'arrivée</p>
-                        <span className="text-xs font-medium">{scenarioArrivalTemp.toFixed(1)}°C</span>
-                      </div>
-                      <Slider min={7} max={30} step={0.5} value={[scenarioArrivalTemp]} onValueChange={(vals) => setScenarioArrivalTemp(vals[0] as number)} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Heure d'arrêt (départ)</p>
-                      <Input type="time" value={scenarioStopTime} onChange={(e) => setScenarioStopTime(e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  Ce scénario s'applique à toutes vos chambres mappées à un thermostat Netatmo (1 thermostat = 1 chambre).
-                </p>
-              </CardContent>
-            </Card>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* Programation arrivée / départ */}
-          {home && (
-            <Card className="mb-6 shadow-sm">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle>Programmation arrivée / départ</CardTitle>
-                <div className="flex gap-2">
-                  <Button variant="secondary" size="sm" onClick={runSchedulerNow}>
-                    Lancer maintenant
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={runAutoPlannerForUser} title="Créer les programmations pour toutes mes réservations à venir">
-                    Générer programmations (auto)
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Logement</p>
-                      <Select value={selectedUserRoomId ?? ""} onValueChange={(v) => setSelectedUserRoomId(v)}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
-                        <SelectContent>
-                          {userRooms.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>{r.room_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Arrivée</p>
-                      <Input type="datetime-local" value={arrivalAt} onChange={(e) => setArrivalAt(e.target.value)} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Départ</p>
-                      <Input type="datetime-local" value={departureAt} onChange={(e) => setDepartureAt(e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {/* NEW: choix du mode de lancement */}
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Mode de lancement de la chauffe</p>
-                      <RadioGroup value={preheatMode} onValueChange={(v) => setPreheatMode(v as "relative" | "absolute")} className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="relative" id="mode-relative" />
-                          <label htmlFor="mode-relative" className="text-xs">Minutes avant l'arrivée</label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="absolute" id="mode-absolute" />
-                          <label htmlFor="mode-absolute" className="text-xs">Heure précise de lancement</label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    {/* Affichage conditionnel: minutes vs datetime */}
-                    {preheatMode === "relative" ? (
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground">Préchauffage avant arrivée</p>
-                          <span className="text-xs font-medium">{preheatMinutes} min</span>
-                        </div>
-                        <Slider min={5} max={240} step={5} value={[preheatMinutes]} onValueChange={(vals) => setPreheatMinutes(vals[0] as number)} />
-                      </div>
-                    ) : (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Heure de lancement (datetime)</p>
-                        <Input type="datetime-local" value={heatStartAt} onChange={(e) => setHeatStartAt(e.target.value)} />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">Température à l'arrivée</p>
-                        <span className="text-xs font-medium">{arrivalTemp.toFixed(1)}°C</span>
-                      </div>
-                      <Slider min={7} max={30} step={0.5} value={[arrivalTemp]} onValueChange={(vals) => setArrivalTemp(vals[0] as number)} />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button className="w-full" onClick={saveSchedule} disabled={!selectedUserRoomId || !selectedRoomId}>Enregistrer</Button>
-                      <Button variant="secondary" className="w-full" onClick={runSchedulerNow}>Lancer maintenant</Button>
-                      <Button variant="outline" className="w-full" onClick={createArrivalDepartureSchedule} disabled={!homeId || !selectedRoomId || !arrivalAt || !departureAt}>
-                        Créer planning Netatmo (4h avant / stop 11h)
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  Astuce: choisissez "Heure précise de lancement" pour vos tests, ou "Minutes avant l'arrivée" pour un démarrage automatique.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* Liste des prochaines programmations */}
-          {home && (
-            <div className="mt-4">
-              <p className="text-sm font-medium mb-2">Mes programmations (prochaine exécution)</p>
-              {schedules.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Aucune programmation pour cette pièce.</p>
-              ) : (
-                <ul className="text-sm divide-y border rounded">
-                  {schedules.map((s) => (
-                    <li key={s.id} className="p-2 flex items-center justify-between">
-                      <div className="max-w-[60%]">
-                        <span className="font-medium">{s.type === 'heat' ? 'Préchauffage' : 'Arrêt'}</span>
-                        <span className="text-muted-foreground ml-2">
-                          {new Date(s.start_time).toLocaleString()}
-                          {s.type === 'heat' && s.end_time ? ` → fin ${new Date(s.end_time).toLocaleTimeString()}` : ''}
-                        </span>
-                        {s.error && (
-                          <div className="mt-1 text-[11px] text-red-600 break-words">Erreur: {s.error}</div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs px-2 py-0.5 rounded border ${
-                          s.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                          s.status === 'applied' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          'bg-red-50 text-red-700 border-red-200'
-                        }`}>
-                          {s.status}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {s.status === 'pending' ? `dans ${timeUntil(s.start_time)}` : ''}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => applyScheduleNow(s)}
-                          title="Appliquer immédiatement la programmation"
-                        >
-                          Appliquer maintenant
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-xs text-muted-foreground mt-2">
-                Le scheduler applique automatiquement les programmations dues. Utilisez "Appliquer maintenant" pour tester immédiatement.
-              </p>
-            </div>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* Graphiques (jour/semaine) */}
-          {home && (
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Quotidien */}
-              <Card>
-                <CardHeader><CardTitle>Quotidien (Heure par heure)</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={dayChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="dayGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.35} />
-                            <stop offset="70%" stopColor="#1d4ed8" stopOpacity={0.1} />
-                            <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
-                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
-                        <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
-                        <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
-                        <Area name="Température" type="monotone" dataKey="value" stroke="#1d4ed8" fill="url(#dayGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
-                        <Line type="monotone" dataKey="value" stroke="#1d4ed8" strokeWidth={2.5} dot={{ r: 2 }} activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={450} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {dayChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour ce jour.</p>}
-                </CardContent>
-              </Card>
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-              {/* Hebdomadaire */}
-              <Card>
-                <CardHeader><CardTitle>Hebdomadaire (Heure par heure)</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={weekChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="weekGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
-                            <stop offset="70%" stopColor="#10b981" stopOpacity={0.1} />
-                            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
-                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
-                        <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
-                        <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
-                        <Area name="Température" type="monotone" dataKey="value" stroke="#10b981" fill="url(#weekGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
-                        <Line name="Température" type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={300} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {weekChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour cette semaine.</p>}
-                </CardContent>
-              </Card>
-            </div>
-          )}
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-          {/* Diagnostics (optionnel, replié) */}
-          {/* Vous pouvez garder les logs dans un accordéon si nécessaire, sinon retirez complètement */}
-        </div>
-      </section>
-    </MainLayout>
-  );
-};
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
 
-export default NetatmoDashboardPage;
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
+  // Charger les liens quand la maison est connue
+  React.useEffect

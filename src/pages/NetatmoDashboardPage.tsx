@@ -921,6 +921,14 @@ const NetatmoDashboardPage: React.FC = () => {
     if (typeof setpoint === "number") setQuickTemp(setpoint);
   }, [homeStatus, selectedRoomId, quickMode]);
 
+  // Garde d'accès ThermoBnB via mot de passe enregistré en local
+  React.useEffect(() => {
+    const allowed = localStorage.getItem("thermobnb_access_granted");
+    if (!allowed) {
+      navigate("/thermobnb");
+    }
+  }, [navigate]);
+
   if (hasTokens === null) {
     return (
       <MainLayout>

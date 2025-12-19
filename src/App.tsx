@@ -85,6 +85,8 @@ import ElectricityConsumptionPage from "./pages/ElectricityConsumptionPage";
 import ElectricityServiceLanding from "./pages/ElectricityServiceLanding";
 import PowerSenseLandingFull from "./pages/PowerSenseLandingFull";
 import Marvel2026Landing from "./pages/Marvel2026Landing";
+import ThermoBnBLandingPage from "./pages/ThermoBnBLandingPage";
+import ThermoBnBAccessPage from "./pages/ThermoBnBAccessPage";
 import AdminStripeDuplicatesPage from "./pages/AdminStripeDuplicatesPage";
 import AdminStatusPage from "./pages/AdminStatusPage";
 import StatusPage from "./pages/StatusPage";
@@ -168,6 +170,8 @@ function App() {
                   <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
                   <Route path="/powersense" element={<PowerSenseLandingFull />} />
                   <Route path="/marvel-2026" element={<Marvel2026Landing />} />
+                  <Route path="/thermobnb" element={<ThermoBnBLandingPage />} />
+                  <Route path="/thermobnb-access" element={<ThermoBnBAccessPage />} />
                   <Route path="/admin/recovery" element={<AdminRecoveryPage />} />
                   <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />
                   <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />

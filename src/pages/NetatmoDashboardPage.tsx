@@ -646,7 +646,7 @@ const NetatmoDashboardPage: React.FC = () => {
       startHeatDate = new Date(arrivalDate.getTime() - Math.max(5, preheatMinutes) * 60 * 1000);
     }
 
-    // Calcul heure d’arrêt Eco à scenarioStopTime
+    // Calcul heure d'arrêt Eco à scenarioStopTime
     const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
     const stopEcoDate = new Date(departureDate);
     stopEcoDate.setHours(sh || 11, sm || 0, 0, 0);
@@ -766,7 +766,7 @@ const NetatmoDashboardPage: React.FC = () => {
           startHeatDate = new Date(arrivalDate.getTime() - Math.max(5, scenarioMinutes) * 60 * 1000);
         }
 
-        // Heure d’arrêt Eco: scénarioStopTime
+        // Heure d'arrêt Eco: scénarioStopTime
         const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
         const stopEcoDate = new Date(departureDate);
         stopEcoDate.setHours(sh || 11, sm || 0, 0, 0);
@@ -843,7 +843,7 @@ const NetatmoDashboardPage: React.FC = () => {
           toast.error(modeRes.error.message || "Impossible de mettre la maison en mode schedule.");
         }
 
-        // 3) Sortir de l’override manuel si nécessaire (pièce de la résa)
+        // 3) Sortir de l'override manuel si nécessaire (pièce de la résa)
         if (resaRoom) {
           const backHomeRes = await supabase.functions.invoke("netatmo-proxy", {
             body: { endpoint: "setroomthermpoint", home_id: homeId, room_id: String(resaRoom.id), mode: "home" },
@@ -1063,2977 +1063,2291 @@ const NetatmoDashboardPage: React.FC = () => {
   // Derive the current home object from homesData (used throughout the JSX)
   const home = homesData?.body?.homes?.[0] ?? null;
 
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Trigger initial: restore selection and check tokens ONCE
-  React.useEffect(() => {
-    restoreSelection();
-    checkTokens();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // When tokens are known, load homes data
-  React.useEffect(() => {
-    if (hasTokens) {
-      loadHomesData();
-    }
-  }, [hasTokens]);
-
-  // Auto-load status + charts when homeId/room ready
-  React.useEffect(() => {
-    if (homeId) {
-      // Charger le statut en direct automatiquement
-      loadHomestatus();
-    }
-    if (homeId && selectedRoomId) {
-      loadRoomCharts();
-      loadLogs();
-    }
-  }, [homeId, selectedRoomId]);
-
-  const loadHomestatus = async () => {
-    if (!homeId) {
-      toast.error("home_id introuvable.");
-      return;
-    }
-    setLoading(true);
-    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-      body: { endpoint: "homestatus", home_id: homeId },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message || "Erreur de récupération du statut (homestatus).");
-      return;
-    }
-    setHomeStatus(data);
-    persistSelection();
-  };
-
-  const loadBoilerHistory = async () => {
-    if (!selectedBridgeId || !selectedModuleId) {
-      toast.error("Sélectionnez un thermostat.");
-      return;
-    }
-    setLoading(true);
-    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-      body: {
-        endpoint: "getmeasure",
-        device_id: selectedBridgeId,
-        module_id: selectedModuleId,
-        scale: selectedScale,
-        type: selectedTypes,
-        optimize: true,
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message || "Erreur de récupération de l'historique chaudière.");
-      return;
-    }
-    setBoilerHistory(data);
-    persistSelection();
-  };
-
-  // NEW: load room history via getroommeasure
-  const loadRoomMeasure = async () => {
-    if (!homeId || !selectedRoomId) {
-      toast.error("Sélectionnez une maison et une pièce.");
-      return;
-    }
-    setLoading(true);
-    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-      body: {
-        endpoint: "getroommeasure",
-        home_id: homeId,
-        room_id: selectedRoomId,
-        scale: roomHistoryScale,
-        type: roomHistoryType,
-        optimize: true,
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message || "Erreur de récupération de l'historique de pièce.");
-      return;
-    }
-    setRoomHistory(data);
-
-    // Build chart data from response
-    const beg = data?.body?.home?.beg_time;
-    const step = data?.body?.home?.step_time;
-    const values = data?.body?.home?.values;
-    if (typeof beg === "number" && typeof step === "number" && Array.isArray(values)) {
-      const points: { ts: number; label: string; value: number }[] = values.map((item: any, idx: number) => {
-        let val: number;
-        if (Array.isArray(item?.value)) {
-          val = Number(item.value[0]);
-        } else {
-          val = Number(item?.value);
-        }
-        const ts = beg + idx * step;
-        return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
-      }).filter((p) => !Number.isNaN(p.value));
-      setRoomChartData(points);
-    } else {
-      setRoomChartData([]);
-    }
-  };
-
-  const setRoomThermPoint = async (opts: { roomId: string; mode: "manual" | "max" | "home"; temp?: number; minutes?: number }) => {
-    if (!homeId) {
-      toast.error("home_id introuvable.");
-      return;
-    }
-    const payload: any = {
-      endpoint: "setroomthermpoint",
-      home_id: homeId,
-      room_id: opts.roomId,
-      mode: opts.mode,
-    };
-    if (opts.mode === "manual") payload.temp = opts.temp;
-    if (opts.mode !== "home") payload.endtime = computeEndtime(opts.minutes ?? 60);
-
-    const { error } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
-    if (error) {
-      toast.error(error.message || "Échec de la mise à jour du thermostat.");
-      return;
-    }
-    toast.success("Thermostat mis à jour.");
-    loadHomestatus();
-  };
-
-  const applyQuickSetpoint = async () => {
-    if (!homeId || !selectedRoomId) {
-      toast.error("Sélectionnez une maison et une pièce.");
-      return;
-    }
-    if (quickMode === "manual" && (typeof quickTemp !== "number" || Number.isNaN(quickTemp))) {
-      toast.error("Température invalide.");
-      return;
-    }
-    await setRoomThermPoint({
-      roomId: selectedRoomId,
-      mode: quickMode,
-      temp: quickMode === "manual" ? quickTemp : undefined,
-      minutes: quickMode !== "home" ? quickMinutes : undefined,
-    });
-  };
-
-  // Lancer une programmation immédiatement (sans attendre le cron)
-  const applyScheduleNow = async (s: any) => {
-    const isHeat = s.type === 'heat';
-    const payload: any = {
-      endpoint: 'setroomthermpoint',
-      home_id: s.home_id,
-      room_id: s.netatmo_room_id,
-      mode: isHeat ? 'manual' : 'home',
-    };
-    if (isHeat) {
-      payload.temp = Number(s.temp);
-      // Utiliser end_time si elle existe, sinon 1h
-      const end = s.end_time ? Math.floor(new Date(s.end_time).getTime() / 1000) : (Math.floor(Date.now() / 1000) + 3600);
-      payload.endtime = end;
-    }
-
-    const { error } = await supabase.functions.invoke('netatmo-proxy', { body: payload });
-    if (error) {
-      toast.error(error.message || "Échec de l'application de la programmation.");
-      await supabase.from('thermostat_schedules')
-        .update({ status: 'failed', error: error.message || 'unknown error' })
-        .eq('id', s.id);
-    } else {
-      toast.success('Programmation appliquée.');
-      await supabase.from('thermostat_schedules')
-        .update({ status: 'applied', updated_at: new Date().toISOString() })
-        .eq('id', s.id);
-      // Rafraîchir statut live
-      await loadHomestatus();
-    }
-    // Recharger la liste des programmations
-    await loadSchedules();
-  };
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens
+  if (hasTokens === null) {
+    return (
+      <MainLayout>
+        <div className="p-6">
+          <h1 className="text-2xl font-bold mb-4">Netatmo Dashboard</h1>
+          <p className="text-gray-600 mb-6">Veuillez vous connecter pour accéder à votre dashboard.</p>
+          <Button onClick={() => navigate("/login")}>Se connecter</Button>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Netatmo Dashboard</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Statut de la maison</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Maison: {home?.name || "Non chargée"}</p>
+              <p className="text-gray-600">Pièce: {selectedRoomId ? home?.rooms?.find(r => r.id === selectedRoomId)?.name : "Sélectionnez une pièce"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Thermostat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Module: {selectedModuleId || "Sélectionnez un thermostat"}</p>
+              <p className="text-gray-600">Pont: {selectedBridgeId || "Sélectionnez un pont"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Mode</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {quickMode === "manual" ? "Manuel" : quickMode === "max" ? "Max" : "Home"}</p>
+              <p className="text-gray-600">Température: {quickTemp}°C</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Programmation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+              <p className="text-gray-600">Préchauffage: {preheatMinutes} minutes</p>
+              <p className="text-gray-600">Température: {arrivalTemp}°C</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Degré Eco: {scenarioAfterDepartureTemp}°C</p>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Logs</CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Derniers logs: {logs.length} entrées</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Logements: {userRooms.length}</p>
+              <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Préchauffage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
+              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Arrivée/Départ</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
+              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique de la pièce</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Chaudière</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Échelle: {selectedScale}</p>
+              <p className="text-gray-600">Type: {selectedTypes}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveSchedule} className="w-full">Enregistrer la programmation</Button>
+              <Button onClick={runSchedulerNow} className="w-full mt-2">Lancer le scheduler</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings hebdomadaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createArrivalDepartureSchedule} className="w-full">Créer un planning hebdo</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings pour réservations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={createNetatmoSchedulesForReservations} className="w-full">Créer des plannings pour réservations</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Chargement des logements</CardTitle>
+            </CardHeader>
+            <CardContent

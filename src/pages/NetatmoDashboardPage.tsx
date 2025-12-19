@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 // NEW: import accordion for collapsible logs
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -1709,6 +1710,69 @@ const NetatmoDashboardPage: React.FC = () => {
     await refreshSchedulerStats?.();
   }
 
+  // Edition de programmation (cron)
+  const [editingSchedule, setEditingSchedule] = React.useState<any | null>(null);
+  const [editType, setEditType] = React.useState<"heat" | "stop">("heat");
+  const [editTemp, setEditTemp] = React.useState<number>(20);
+  const [editStartTime, setEditStartTime] = React.useState<string>("");
+  const [editEndTime, setEditEndTime] = React.useState<string>("");
+
+  function openEditSchedule(s: any) {
+    setEditingSchedule(s);
+    setEditType(s.type === "stop" ? "stop" : "heat");
+    setEditTemp(typeof s.temp === "number" ? Number(s.temp) : scenarioArrivalTemp);
+    // Format datetime-local (UTC ISO slice 0..16)
+    const startIso = new Date(s.start_time).toISOString().slice(0, 16);
+    const endIso = s.end_time ? new Date(s.end_time).toISOString().slice(0, 16) : "";
+    setEditStartTime(startIso);
+    setEditEndTime(endIso);
+  }
+
+  async function saveEditedSchedule() {
+    if (!editingSchedule) return;
+    const id = editingSchedule.id;
+
+    // Construire payload conforme aux contraintes: heat => mode manual + temp requis; stop => mode home + temp null
+    const payload: any = {
+      type: editType,
+      mode: editType === "heat" ? "manual" : "home",
+      temp: editType === "heat" ? Number(editTemp) : null,
+      start_time: new Date(editStartTime).toISOString(),
+      end_time: editType === "heat" ? (editEndTime ? new Date(editEndTime).toISOString() : null) : null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from("thermostat_schedules")
+      .update(payload)
+      .eq("id", id);
+
+    if (error) {
+      toast.error(error.message || "Erreur lors de la modification de la programmation.");
+      return;
+    }
+    toast.success("Programmation mise à jour.");
+    setEditingSchedule(null);
+    await loadSchedules();
+    await refreshSchedulerStats?.();
+  }
+
+  async function deleteScheduleById(s: any) {
+    const ok = window.confirm("Supprimer cette programmation ?");
+    if (!ok) return;
+    const { error } = await supabase
+      .from("thermostat_schedules")
+      .delete()
+      .eq("id", s.id);
+    if (error) {
+      toast.error(error.message || "Suppression impossible.");
+      return;
+    }
+    toast.success("Programmation supprimée.");
+    await loadSchedules();
+    await refreshSchedulerStats?.();
+  }
+
   if (hasTokens === null) {
     return (
       <MainLayout>
@@ -2316,11 +2380,10 @@ const NetatmoDashboardPage: React.FC = () => {
                 ) : (
                   <div className="space-y-2">
                     {schedules.map((s) => (
-                      <div key={s.id} className="flex items-center justify-between border rounded p-2">
+                      <div key={s.id} className="flex flex-col md:flex-row md:items-center md:justify-between border rounded p-2 gap-2">
                         <div>
                           <p className="font-medium">
-                            {/* Affichage: distinguer chauffe d'arrivée vs ECO par la temp et l'heure */}
-                            {s.end_time ? "Chauffer (arrivée)" : "Éco (manuel)"} — {new Date(s.start_time).toLocaleString()}
+                            {s.type === "heat" ? (s.end_time ? "Chauffer (arrivée)" : "Consigne manuelle") : "Arrêt (home)"} — {new Date(s.start_time).toLocaleString()}
                           </p>
                           <p className="text-sm text-gray-600">
                             Pièce: {home?.rooms?.find((r: any) => String(r.id) === String(s.netatmo_room_id))?.name || s.netatmo_room_id}
@@ -2328,9 +2391,17 @@ const NetatmoDashboardPage: React.FC = () => {
                             {s.status ? ` • statut: ${s.status}` : ""}
                           </p>
                         </div>
-                        <Button size="sm" variant="secondary" onClick={() => applyScheduleNow(s)}>
-                          Appliquer maintenant
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => applyScheduleNow(s)}>
+                            Appliquer maintenant
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openEditSchedule(s)}>
+                            Modifier
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => deleteScheduleById(s)}>
+                            Supprimer
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2353,6 +2424,66 @@ const NetatmoDashboardPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Dialog d'édition de programmation */}
+        <Dialog open={!!editingSchedule} onOpenChange={(open) => !open && setEditingSchedule(null)}>
+          <DialogContent className="sm:max-w-[520px]">
+            <DialogHeader>
+              <DialogTitle>Modifier la programmation</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Type</label>
+                <Select value={editType} onValueChange={(val) => setEditType(val as "heat" | "stop")}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Choisir un type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="heat">Chauffer (manuel)</SelectItem>
+                    <SelectItem value="stop">Arrêt (home)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Heat = mode manuel (température requise) • Stop = mode home (température ignorée)
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Début</label>
+                  <Input type="datetime-local" value={editStartTime} onChange={(e) => setEditStartTime(e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Fin</label>
+                  <Input
+                    type="datetime-local"
+                    value={editEndTime}
+                    onChange={(e) => setEditEndTime(e.target.value)}
+                    className="mt-1"
+                    disabled={editType === "stop"}
+                  />
+                  {editType === "stop" && (
+                    <p className="mt-1 text-xs text-gray-500">Pour stop, la fin est ignorée (mode home).</p>
+                  )}
+                </div>
+              </div>
+
+              {editType === "heat" && (
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Température</label>
+                    <span className="text-sm text-gray-600">{editTemp}°C</span>
+                  </div>
+                  <Slider value={[editTemp]} onValueChange={(vals) => setEditTemp(vals[0])} min={10} max={25} step={0.5} className="mt-2" />
+                </div>
+              )}
+            </div>
+            <DialogFooter className="mt-4 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingSchedule(null)}>Annuler</Button>
+              <Button onClick={saveEditedSchedule}>Enregistrer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </MainLayout>

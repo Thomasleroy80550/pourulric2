@@ -937,68 +937,6 @@ const NetatmoDashboardPage: React.FC = () => {
     await loadSchedules();
   };
 
-  React.useEffect(() => {
-    restoreSelection();
-    checkTokens();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (hasTokens === null) {
-    return (
-      <MainLayout>
-        <section className="container mx-auto py-10 md:py-16">
-          <div className="max-w-2xl mx-auto">
-            <Card><CardContent className="p-6">Chargement…</CardContent></Card>
-          </div>
-        </section>
-      </MainLayout>
-    );
-  }
-
-  if (!hasTokens) {
-    return (
-      <MainLayout>
-        <section className="container mx-auto py-10 md:py-16">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-2 mb-4">
-              <Badge variant="secondary">Intégration</Badge>
-              <Badge variant="outline">Netatmo</Badge>
-            </div>
-            <Card className="shadow-sm">
-              <CardHeader><CardTitle>Connecter Netatmo</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <Alert>
-                  <AlertTitle>Autorisation requise</AlertTitle>
-                  <AlertDescription>Connectez une fois votre compte Netatmo pour activer l'accès aux thermostats.</AlertDescription>
-                </Alert>
-                <Button onClick={() => navigate("/integrations/netatmo")}>
-                  Connecter Netatmo
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-      </MainLayout>
-    );
-  }
-
-  const home = homesData?.body?.homes?.[0];
-  const schedule = home ? (home.schedules || []).find((s: any) => s.selected) || home.schedules?.[0] : null;
-  const relays = home ? (home.modules || []).filter((m: any) => m.type === "NAPlug") : [];
-  const therms = home ? (home.modules || []).filter((m: any) => m.type === "NATherm1") : [];
-
-  // NEW: états pour planning hebdo
-  // const [scheduleName, setScheduleName] = React.useState<string>("ThermoBnB Auto");
-  // const [scheduleHgTemp, setScheduleHgTemp] = React.useState<number>(7);
-  // const [scheduleAwayTemp, setScheduleAwayTemp] = React.useState<number>(12);
-  // const [scheduleZones, setScheduleZones] = React.useState<any[] | null>(null);
-  // const [scheduleTimetable, setScheduleTimetable] = React.useState<any[] | null>(null);
-
-  // Utilitaire: charger le planning actuel du home (zones + timetable) et le compléter pour toutes les pièces
-  // const buildScheduleFromHome = React.useCallback(() => { /* ... */ }, [homesData]);
-
-  // const createHomeSchedule = React.useCallback(async () => { /* ... */ }, [homeId, scheduleName, scheduleHgTemp, scheduleAwayTemp, scheduleZones, scheduleTimetable]);
-
   // NEW: états pour scénario global
   const [scenarioMode, setScenarioMode] = React.useState<"relative" | "absolute">("relative");
   const [scenarioMinutes, setScenarioMinutes] = React.useState<number>(240);

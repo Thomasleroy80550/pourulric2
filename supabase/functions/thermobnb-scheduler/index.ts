@@ -20,8 +20,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  const cronSecret = Deno.env.get("CRON_SECRET");
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const cronSecretEnv = (Deno.env.get("CRON_SECRET") ?? "").trim();
 
   // Lire le body pour fallback d'auth cron si nécessaire
   let body: any = {};
@@ -31,11 +31,14 @@ serve(async (req) => {
     body = {};
   }
 
-  const hasHeaderCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
-  const hasBodyCron = !!cronSecret && body?.cron_secret === cronSecret;
+  // Tolérant: extraire le token du header "Bearer ...", insensible à la casse, trim
+  const headerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+
+  const hasHeaderCron = !!headerToken && !!cronSecretEnv && headerToken === cronSecretEnv;
+  const hasBodyCron = !!cronSecretEnv && typeof body?.cron_secret === "string" && body.cron_secret.trim() === cronSecretEnv;
   const isCron = hasHeaderCron || hasBodyCron;
 
-  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader ?? "" } } });
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
 
   let userId: string | null = null;
   if (!isCron) {
@@ -94,10 +97,10 @@ serve(async (req) => {
       }
 
       // Auth vers le proxy:
-      // - Cron: utiliser CRON_SECRET et transmettre user_id
+      // - Cron: utiliser CRON_SECRET et transmettre user_id + cron_secret en body
       // - Utilisateur: relayer le JWT reçu en Authorization
-      const proxyAuth = isCron ? `Bearer ${cronSecret}` : (authHeader ?? "");
-      const proxyBody = isCron ? { ...payload, user_id: sched.user_id, cron_secret: cronSecret } : payload;
+      const proxyAuth = isCron ? `Bearer ${cronSecretEnv}` : authHeader;
+      const proxyBody = isCron ? { ...payload, user_id: sched.user_id, cron_secret: cronSecretEnv } : payload;
 
       const upstream = await fetch(`${supabaseUrl}/functions/v1/netatmo-proxy`, {
         method: "POST",

@@ -90,8 +90,8 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  const cronSecret = Deno.env.get("CRON_SECRET");
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const cronSecretEnv = (Deno.env.get("CRON_SECRET") ?? "").trim();
 
   let payload: any = {};
   try {
@@ -100,8 +100,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: corsHeaders });
   }
 
-  const hasHeaderCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
-  const hasBodyCron = !!cronSecret && payload?.cron_secret === cronSecret;
+  const headerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const hasHeaderCron = !!headerToken && !!cronSecretEnv && headerToken === cronSecretEnv;
+  const hasBodyCron = !!cronSecretEnv && typeof payload?.cron_secret === "string" && payload.cron_secret.trim() === cronSecretEnv;
   const isCron = hasHeaderCron || hasBodyCron;
 
   const action: string = payload?.endpoint ?? "homesdata";
@@ -121,7 +122,7 @@ serve(async (req) => {
   const optimize: boolean | undefined = payload?.optimize;
   const real_time: boolean | undefined = payload?.real_time;
 
-  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader ?? "" } } });
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
   let userId: string | null = null;
 
   if (isCron) {

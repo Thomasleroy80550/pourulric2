@@ -321,6 +321,44 @@ serve(async (req) => {
       },
       body: JSON.stringify(bodyPayload),
     });
+  } else if (action === "switchhomeschedule") {
+    // NEW: activer un planning pour la maison
+    const schedule_id: string | undefined = payload?.schedule_id;
+    if (!home_id || !schedule_id) {
+      return new Response(JSON.stringify({ error: "Missing required fields: home_id, schedule_id" }), { status: 400, headers: corsHeaders });
+    }
+    url = "https://api.netatmo.com/api/switchhomeschedule";
+    const form = new URLSearchParams();
+    form.set("home_id", home_id);
+    form.set("schedule_id", schedule_id);
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
+    });
+  } else if (action === "setthermmode") {
+    // NEW: basculer le mode de la maison (schedule, away, hg)
+    const therm_mode: string | undefined = payload?.mode;
+    if (!home_id || !therm_mode) {
+      return new Response(JSON.stringify({ error: "Missing required fields: home_id, mode" }), { status: 400, headers: corsHeaders });
+    }
+    url = "https://api.netatmo.com/api/setthermmode";
+    const form = new URLSearchParams();
+    form.set("home_id", home_id);
+    form.set("mode", therm_mode);
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
+    });
   } else if (action === "getstationsdata") {
     // rétrocompat météo
     url = "https://api.netatmo.com/api/getstationsdata";

@@ -567,7 +567,7 @@ const NetatmoDashboardPage: React.FC = () => {
       return;
     }
 
-    // Vérifier homesData pour récupérer toutes les pièces (avec thermostat)
+    // Charger home si nécessaire
     let home = homesData?.body?.homes?.[0];
     if (!home) {
       const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: { endpoint: "homesdata", home_id: homeId } });
@@ -585,7 +585,6 @@ const NetatmoDashboardPage: React.FC = () => {
     const modules = Array.isArray(home.modules) ? home.modules : [];
     const rooms = Array.isArray(home.rooms) ? home.rooms : [];
 
-    // Liste des room_ids ayant un thermostat
     const thermRoomIds: string[] = modules
       .filter((m: any) => m.type === "NATherm1" && m.room_id)
       .map((m: any) => String(m.room_id));
@@ -595,39 +594,15 @@ const NetatmoDashboardPage: React.FC = () => {
       return;
     }
 
-    // Températures (tu peux ajuster ces valeurs si besoin)
     const ecoTemp = 16;
     const nightTemp = 17;
-    const confortTempSelected = arrivalTemp; // consigne choisie pour la pièce sélectionnée
-    const confortTempOthers = 19; // confort par défaut pour les autres pièces
+    const confortTempSelected = arrivalTemp;
+    const confortTempOthers = 19;
 
-    // Construire les zones requises pour toutes les pièces thermostatées
-    const zoneEco = {
-      id: 4,
-      type: 5, // type 'Eco'
-      rooms: thermRoomIds.map((rid) => ({
-        id: rid,
-        therm_setpoint_temperature: ecoTemp,
-      })),
-    };
-    const zoneNight = {
-      id: 1,
-      type: 1, // type 'Night'
-      rooms: thermRoomIds.map((rid) => ({
-        id: rid,
-        therm_setpoint_temperature: nightTemp,
-      })),
-    };
-    const zoneConfort = {
-      id: 0,
-      type: 0, // type 'Confort'
-      rooms: thermRoomIds.map((rid) => ({
-        id: rid,
-        therm_setpoint_temperature: rid === selectedRoomId ? confortTempSelected : confortTempOthers,
-      })),
-    };
+    const zoneEco = { id: 4, type: 5, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: ecoTemp })) };
+    const zoneNight = { id: 1, type: 1, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: nightTemp })) };
+    const zoneConfort = { id: 0, type: 0, rooms: thermRoomIds.map((rid) => ({ id: rid, therm_setpoint_temperature: rid === selectedRoomId ? confortTempSelected : confortTempOthers })) };
 
-    // Calcul des offsets: 4h avant arrivée et 11h00 départ
     const arrivalDate = new Date(arrivalAt);
     const departureDate = new Date(departureAt);
 
@@ -637,29 +612,86 @@ const NetatmoDashboardPage: React.FC = () => {
     const startOffset = minutesOffsetFromWeekStart(startHeatDate);
     const stopOffset = minutesOffsetFromWeekStart(stopEcoDate);
 
-    // Timetable minimal: Eco au début de semaine, Confort à startOffset, Eco à stopOffset
     const timetable = [
       { zone_id: 4, m_offset: 0 },
       { zone_id: 0, m_offset: startOffset },
       { zone_id: 4, m_offset: stopOffset },
     ];
 
-    const payload = {
-      endpoint: "createnewhomeschedule",
-      home_id: homeId,
-      name: "ThermoBnB — Arrivée & Départ",
-      hg_temp: 7,
-      away_temp: 12,
-      zones: [zoneConfort, zoneNight, zoneEco],
-      timetable,
-    };
+    // 1) Créer le planning
+    const createRes = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "createnewhomeschedule",
+        home_id: homeId,
+        name: "ThermoBnB — Arrivée & Départ",
+        hg_temp: 7,
+        away_temp: 12,
+        zones: [zoneConfort, zoneNight, zoneEco],
+        timetable,
+      },
+    });
 
-    const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
-    if (error) {
-      toast.error(error.message || "Échec de création du planning Netatmo.");
+    if (createRes.error) {
+      toast.error(createRes.error.message || "Échec de création du planning Netatmo.");
       return;
     }
-    toast.success("Planning Netatmo créé avec succès (Confort 4h avant / Eco à 11h départ).");
+
+    const createdPayload = createRes.data;
+    const scheduleId =
+      createdPayload?.body?.schedule_id ??
+      createdPayload?.schedule_id ??
+      createdPayload?.body?.id ??
+      createdPayload?.id ??
+      null;
+
+    // 2) Activer le planning (switchhomeschedule)
+    if (scheduleId) {
+      const switchRes = await supabase.functions.invoke("netatmo-proxy", {
+        body: {
+          endpoint: "switchhomeschedule",
+          home_id: homeId,
+          schedule_id: String(scheduleId),
+        },
+      });
+      if (switchRes.error) {
+        toast.error(switchRes.error.message || "Planning créé mais non activé.");
+      } else {
+        toast.success("Planning activé.");
+      }
+    } else {
+      toast.message("Planning créé — impossible de récupérer l'ID pour l'activer automatiquement.");
+    }
+
+    // 3) Mettre en mode schedule
+    const modeRes = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "setthermmode",
+        home_id: homeId,
+        mode: "schedule",
+      },
+    });
+    if (modeRes.error) {
+      toast.error(modeRes.error.message || "Impossible de mettre la maison en mode schedule.");
+      return;
+    }
+
+    // 4) Annuler les overrides manuels: remettre la pièce en mode home (suivre le planning)
+    const backHomeRes = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "setroomthermpoint",
+        home_id: homeId,
+        room_id: selectedRoomId!,
+        mode: "home",
+      },
+    });
+    if (backHomeRes.error) {
+      toast.error(backHomeRes.error.message || "Planning activé, mais la pièce reste en override.");
+    } else {
+      toast.success("Pièce remise en mode 'home' — le planning s'applique dès maintenant.");
+    }
+
+    // Rafraîchir le statut
+    await loadHomestatus();
   };
 
   // Trigger initial: restore selection and check tokens ONCE

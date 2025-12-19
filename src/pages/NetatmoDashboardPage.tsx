@@ -58,6 +58,34 @@ const NetatmoDashboardPage: React.FC = () => {
   const [quickTemp, setQuickTemp] = React.useState<number>(19);
   const [quickMinutes, setQuickMinutes] = React.useState<number>(60);
 
+  // États pour la programmation
+  const [userRooms, setUserRooms] = React.useState<{ id: string; room_name: string }[]>([]);
+  const [selectedUserRoomId, setSelectedUserRoomId] = React.useState<string | null>(null);
+  const [arrivalAt, setArrivalAt] = React.useState<string>(""); // datetime-local
+  const [departureAt, setDepartureAt] = React.useState<string>("");
+  const [preheatMinutes, setPreheatMinutes] = React.useState<number>(90);
+  const [arrivalTemp, setArrivalTemp] = React.useState<number>(20);
+
+  // Charger les logements de l'utilisateur
+  const loadUserRooms = React.useCallback(async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId) return;
+    const { data } = await supabase
+      .from("user_rooms")
+      .select("id, room_name")
+      .eq("user_id", userId)
+      .order("room_name", { ascending: true });
+    setUserRooms(data || []);
+    if ((data || []).length > 0 && !selectedUserRoomId) {
+      setSelectedUserRoomId(data![0].id);
+    }
+  }, [selectedUserRoomId]);
+
+  React.useEffect(() => {
+    loadUserRooms();
+  }, [loadUserRooms]);
+
   // Synchroniser la valeur par défaut du slider avec la consigne actuelle (si disponible)
   React.useEffect(() => {
     if (!homeStatus || !selectedRoomId || quickMode !== "manual") return;
@@ -339,6 +367,84 @@ const NetatmoDashboardPage: React.FC = () => {
       .order("created_at", { ascending: false })
       .limit(10);
     setLogs(data || []);
+  };
+
+  // Enregistrer la programmation: 2 entrées (heat + stop)
+  const saveSchedule = async () => {
+    if (!homeId || !selectedRoomId) {
+      toast.error("Maison/pièce Netatmo introuvable.");
+      return;
+    }
+    if (!selectedUserRoomId) {
+      toast.error("Choisissez un logement.");
+      return;
+    }
+    if (!arrivalAt || !departureAt) {
+      toast.error("Renseignez l'arrivée et le départ.");
+      return;
+    }
+
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId) {
+      toast.error("Non authentifié.");
+      return;
+    }
+
+    const arrivalSec = Math.floor(new Date(arrivalAt).getTime() / 1000);
+    const departureSec = Math.floor(new Date(departureAt).getTime() / 1000);
+    if (departureSec <= arrivalSec) {
+      toast.error("Le départ doit être après l'arrivée.");
+      return;
+    }
+    const startHeatSec = arrivalSec - Math.max(5, preheatMinutes) * 60;
+
+    // Construire les 2 lignes
+    const rows = [
+      {
+        user_id: userId,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId!,
+        netatmo_room_id: selectedRoomId!,
+        module_id: selectedModuleId, // optionnel
+        type: "heat" as const,
+        mode: "manual",
+        temp: arrivalTemp,
+        start_time: new Date(startHeatSec * 1000).toISOString(),
+        end_time: new Date(departureSec * 1000).toISOString(),
+        status: "pending",
+      },
+      {
+        user_id: userId,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId!,
+        netatmo_room_id: selectedRoomId!,
+        module_id: selectedModuleId,
+        type: "stop" as const,
+        mode: "home",
+        temp: null,
+        start_time: new Date(departureSec * 1000).toISOString(),
+        end_time: null,
+        status: "pending",
+      },
+    ];
+
+    const { error } = await supabase.from("thermostat_schedules").insert(rows);
+    if (error) {
+      toast.error(error.message || "Erreur d'enregistrement de la programmation.");
+      return;
+    }
+    toast.success("Programmation enregistrée: préchauffage et arrêt au départ.");
+  };
+
+  // Lancer le scheduler maintenant
+  const runSchedulerNow = async () => {
+    const { error, data } = await supabase.functions.invoke("thermobnb-scheduler", { body: {} });
+    if (error) {
+      toast.error(error.message || "Erreur lors de l'exécution du scheduler.");
+      return;
+    }
+    toast.success(`Scheduler exécuté (${data?.processed ?? 0} programmation(s) traitée(s)).`);
   };
 
   // Trigger initial: restore selection and check tokens ONCE
@@ -674,6 +780,61 @@ const NetatmoDashboardPage: React.FC = () => {
                 );
               })()}
             </div>
+          )}
+
+          {/* Programation arrivée / départ */}
+          {home && (
+            <Card className="mb-6 shadow-sm">
+              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <CardTitle>Programmation arrivée / départ</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Logement</p>
+                      <Select value={selectedUserRoomId ?? ""} onValueChange={(v) => setSelectedUserRoomId(v)}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
+                        <SelectContent>
+                          {userRooms.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>{r.room_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Arrivée</p>
+                      <Input type="datetime-local" value={arrivalAt} onChange={(e) => setArrivalAt(e.target.value)} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Départ</p>
+                      <Input type="datetime-local" value={departureAt} onChange={(e) => setDepartureAt(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">Préchauffage avant arrivée</p>
+                        <span className="text-xs font-medium">{preheatMinutes} min</span>
+                      </div>
+                      <Slider min={5} max={240} step={5} value={[preheatMinutes]} onValueChange={(vals) => setPreheatMinutes(vals[0] as number)} />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">Température à l'arrivée</p>
+                        <span className="text-xs font-medium">{arrivalTemp.toFixed(1)}°C</span>
+                      </div>
+                      <Slider min={7} max={30} step={0.5} value={[arrivalTemp]} onValueChange={(vals) => setArrivalTemp(vals[0] as number)} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button className="w-full" onClick={saveSchedule} disabled={!selectedUserRoomId || !selectedRoomId}>Enregistrer</Button>
+                      <Button variant="secondary" className="w-full" onClick={runSchedulerNow}>Lancer maintenant</Button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">Astuce: la chauffe démarre automatiquement avant l'arrivée pour atteindre la consigne, et se coupe au départ.</p>
+              </CardContent>
+            </Card>
           )}
 
           {/* Graphiques (jour/semaine) */}

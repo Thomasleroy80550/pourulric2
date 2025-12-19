@@ -38,17 +38,6 @@ async function setRoomThermPoint(opts: { homeId: string; roomId: string; mode: "
 // Persistance locale pour éviter la perte au reload
 const LS_KEY = "netatmo_selection_v1";
 
-// NEW: états pour affectations et user rooms
-const [userRooms, setUserRooms] = React.useState<{ id: string; room_name: string }[]>([]);
-const [assignments, setAssignments] = React.useState<any[]>([]);
-
-// NEW: états pour getmeasure
-const [selectedModuleId, setSelectedModuleId] = React.useState<string | null>(null);
-const [selectedBridgeId, setSelectedBridgeId] = React.useState<string | null>(null);
-const [selectedScale, setSelectedScale] = React.useState<string>("1day");
-const [selectedTypes, setSelectedTypes] = React.useState<string>("sum_boiler_on");
-const [boilerHistory, setBoilerHistory] = React.useState<any | null>(null);
-
 const NetatmoCallbackPage: React.FC = () => {
   const [exchanged, setExchanged] = React.useState(false);
   const [stations, setStations] = React.useState<any | null>(null);
@@ -58,6 +47,15 @@ const NetatmoCallbackPage: React.FC = () => {
   const [homesData, setHomesData] = React.useState<any | null>(null);
   const [homeId, setHomeId] = React.useState<string | null>(null);
   const [homeStatus, setHomeStatus] = React.useState<any | null>(null);
+
+  // ADDED: move these states inside the component
+  const [userRooms, setUserRooms] = React.useState<{ id: string; room_name: string }[]>([]);
+  const [assignments, setAssignments] = React.useState<any[]>([]);
+  const [selectedModuleId, setSelectedModuleId] = React.useState<string | null>(null);
+  const [selectedBridgeId, setSelectedBridgeId] = React.useState<string | null>(null);
+  const [selectedScale, setSelectedScale] = React.useState<string>("1day");
+  const [selectedTypes, setSelectedTypes] = React.useState<string>("sum_boiler_on");
+  const [boilerHistory, setBoilerHistory] = React.useState<any | null>(null);
 
   const redirectUri = React.useMemo(() => `${window.location.origin}/integrations/netatmo/callback`, []);
 

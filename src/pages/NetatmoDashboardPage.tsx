@@ -46,7 +46,7 @@ const NetatmoDashboardPage: React.FC = () => {
   // NEW: logs state & loader
   const [logs, setLogs] = React.useState<any[]>([]);
 
-  // Helper: build chart points (robuste) + resampling pour day/hour et week/day
+  // Helper: build chart points (robuste) + resampling pour day/hour et week/hour
   function buildChartPoints(data: any, scaleForFallback?: string, range?: { startSec?: number; endSec?: number }) {
     const mapStep: Record<string, number> = {
       "30min": 1800,
@@ -121,49 +121,27 @@ const NetatmoDashboardPage: React.FC = () => {
 
     const raw = collectRawPoints();
 
-    // Resampling: day/hour -> 24 points; week/day -> 7 points
+    // Resampling: jour → toutes les heures; semaine → toutes les heures sur 7 jours
     if (scaleForFallback === "1hour") {
       const startSec =
         range?.startSec ??
         Math.floor(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 0, 0, 0).getTime() / 1000);
+      const endSec = range?.endSec ?? (startSec + 24 * 3600);
+      const hoursCount = Math.max(1, Math.floor((endSec - startSec) / 3600)); // 24 pour un jour, 168 pour une semaine
       const points: { ts: number; label: string; value: number | null }[] = [];
-      for (let h = 0; h < 24; h++) {
+      for (let h = 0; h < hoursCount; h++) {
         const ts = startSec + h * 3600;
-        // Cherche une mesure à l'heure exacte
-        const p = raw.find((r) => Math.abs(r.ts - ts) < 1800); // tolérance 30 min
+        // Tolérance 30 min autour de l'heure cible
+        const p = raw.find((r) => Math.abs(r.ts - ts) < 1800);
         points.push({
           ts,
-          label: new Date(ts * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+          label: new Date(ts * 1000).toLocaleString(undefined, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
           value: p ? p.value : null,
         });
       }
-      // Si seulement une mesure sur la journée, duplique pour rendre visible
+      // Si une seule mesure sur l'intervalle, dupliquer pour visibilité
       const countVals = points.filter((p) => typeof p.value === "number").length;
-      if (countVals === 1) {
-        const idx = points.findIndex((p) => typeof p.value === "number");
-        if (idx >= 0 && idx + 1 < points.length) points[idx + 1].value = points[idx].value as number;
-      }
-      return points;
-    }
-
-    if (scaleForFallback === "1day") {
-      const today = new Date();
-      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6, 0, 0, 0);
-      const startSec = range?.startSec ?? Math.floor(start.getTime() / 1000);
-      const points: { ts: number; label: string; value: number | null }[] = [];
-      for (let d = 0; d < 7; d++) {
-        const ts = startSec + d * 86400;
-        // Tolérance: +/- 6h autour de minuit (selon real_time)
-        const p = raw.find((r) => Math.abs(r.ts - ts) < 21600);
-        points.push({
-          ts,
-          label: new Date(ts * 1000).toLocaleDateString(undefined, { day: "2-digit", month: "2-digit" }),
-          value: p ? p.value : null,
-        });
-      }
-      // Dupliquer une valeur si une seule pour visibilité
-      const countVals = points.filter((p) => typeof p.value === "number").length;
-      if (countVals === 1) {
+      if (countVals === 1 && points.length > 1) {
         const idx = points.findIndex((p) => typeof p.value === "number");
         if (idx >= 0 && idx + 1 < points.length) points[idx + 1].value = points[idx].value as number;
       }
@@ -255,7 +233,7 @@ const NetatmoDashboardPage: React.FC = () => {
   async function loadRoomCharts() {
     if (!homeId || !selectedRoomId) return;
 
-    // Jours & heures exacts (locale)
+    // Intervalle exact (locale)
     const now = new Date();
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
     const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
@@ -288,7 +266,7 @@ const NetatmoDashboardPage: React.FC = () => {
           endpoint: "getroommeasure",
           home_id: homeId,
           room_id: selectedRoomId,
-          scale: "1day",
+          scale: "1hour", // CHANGED: horaire sur toute la semaine
           type: "temperature",
           date_begin: weekBegin,
           date_end: weekEndSec,
@@ -305,7 +283,7 @@ const NetatmoDashboardPage: React.FC = () => {
       setDayRaw(dayRes.error);
     } else {
       setDayRaw(dayRes.data);
-      setDayChartData(buildChartPoints(dayRes.data, "1hour", { startSec: dayBegin }));
+      setDayChartData(buildChartPoints(dayRes.data, "1hour", { startSec: dayBegin, endSec: dayEndSec }));
     }
 
     if (weekRes.error) {
@@ -314,7 +292,7 @@ const NetatmoDashboardPage: React.FC = () => {
       setWeekRaw(weekRes.error);
     } else {
       setWeekRaw(weekRes.data);
-      setWeekChartData(buildChartPoints(weekRes.data, "1day", { startSec: weekBegin }));
+      setWeekChartData(buildChartPoints(weekRes.data, "1hour", { startSec: weekBegin, endSec: weekEndSec }));
     }
   }
 
@@ -834,10 +812,10 @@ const NetatmoDashboardPage: React.FC = () => {
                               type="monotone"
                               dataKey="value"
                               stroke="#10b981"
-                              strokeWidth={2.5}
-                              dot
-                              activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
-                              animationDuration={400}
+                              strokeWidth={2}
+                              dot={false}
+                              activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }}
+                              animationDuration={300}
                             />
                           </LineChart>
                         </ResponsiveContainer>

@@ -507,20 +507,19 @@ const NetatmoDashboardPage: React.FC = () => {
   const loadSchedules = async () => {
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth?.user?.id;
-    if (!userId || !selectedRoomId) {
+    if (!userId) {
       setSchedules([]);
       return;
     }
-    // N'afficher que les programmations à venir (évite celles d'hier)
+    // CHANGED: récupérer toutes les programmations à venir de l'utilisateur (pas uniquement la pièce sélectionnée)
     const nowIso = new Date().toISOString();
     const { data } = await supabase
       .from("thermostat_schedules")
       .select("*")
       .eq("user_id", userId)
-      .eq("netatmo_room_id", selectedRoomId)
       .gte("start_time", nowIso)
       .order("start_time", { ascending: true })
-      .limit(20);
+      .limit(100);
     setSchedules(data || []);
   };
 
@@ -567,6 +566,39 @@ const NetatmoDashboardPage: React.FC = () => {
   const [scenarioHeatStart, setScenarioHeatStart] = React.useState<string>("");
   const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
   const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
+
+  // Helper: trouver la pièce Netatmo pour une réservation
+  function findRoomIdForReservation(resa: { property_name: string }) {
+    const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
+    const match = netatmoRooms.find((r: any) => r?.name === resa.property_name);
+    return match ? String(match.id) : selectedRoomId || null;
+  }
+
+  // Helper: heure de préchauffage et heure ECO pour une réservation (selon scénario global)
+  function getPlanTimesForReservation(resa: { check_in_date: string; check_out_date: string }) {
+    const ARRIVAL_HOUR = 15;
+    const ARRIVAL_MINUTE = 0;
+
+    const arrivalDay = new Date(resa.check_in_date);
+    arrivalDay.setHours(ARRIVAL_HOUR, ARRIVAL_MINUTE, 0, 0);
+
+    let startHeatDate: Date;
+    if (scenarioMode === "absolute" && scenarioHeatStart) {
+      const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
+      startHeatDate = new Date(arrivalDay);
+      startHeatDate.setHours(hh || 0, mm || 0, 0, 0);
+    } else {
+      const minutes = Math.max(5, scenarioMinutes);
+      startHeatDate = new Date(arrivalDay.getTime() - minutes * 60 * 1000);
+    }
+
+    const departureDay = new Date(resa.check_out_date);
+    const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+    const ecoAt = new Date(departureDay);
+    ecoAt.setHours(sh || 11, sm || 0, 0, 0);
+
+    return { startHeatDate, ecoAt };
+  }
 
   // Load scenario from DB for current user
   async function loadScenario() {
@@ -1791,8 +1823,8 @@ const NetatmoDashboardPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Bloc: Réservations à venir et scénarios */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        {/* Bloc: Réservations à venir (liste simplifiée) */}
+        <div className="grid grid-cols-1 gap-6 mb-6">
           <Card>
             <CardHeader>
               <CardTitle>Réservations à venir</CardTitle>
@@ -1806,32 +1838,85 @@ const NetatmoDashboardPage: React.FC = () => {
                   <p className="text-gray-600 mt-2">Aucune réservation à venir.</p>
                 ) : (
                   <div className="space-y-3">
-                    {upcomingReservations.map((resa) => (
-                      <div key={resa.id} className="border rounded p-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">{resa.guest_name || "Client"} — {resa.property_name}</p>
-                            <p className="text-sm text-gray-600">
-                              Arrivée: {new Date(resa.check_in_date).toLocaleDateString()} • Départ: {new Date(resa.check_out_date).toLocaleDateString()}
-                            </p>
+                    {upcomingReservations.map((resa) => {
+                      const roomId = findRoomIdForReservation(resa);
+                      const { startHeatDate, ecoAt } = getPlanTimesForReservation(resa);
+
+                      // Vérifier si les programmations existent déjà
+                      const hasHeat = schedules.some(
+                        (s) =>
+                          String(s.netatmo_room_id) === String(roomId) &&
+                          s.type === "heat" &&
+                          new Date(s.start_time).getTime() === startHeatDate.getTime() &&
+                          typeof s.temp === "number" &&
+                          Number(s.temp) === Number(scenarioArrivalTemp)
+                      );
+                      const hasEco = schedules.some(
+                        (s) =>
+                          String(s.netatmo_room_id) === String(roomId) &&
+                          s.type === "heat" && // éco stocké comme 'heat' manuel à temp éco
+                          new Date(s.start_time).getTime() === ecoAt.getTime() &&
+                          typeof s.temp === "number" &&
+                          Number(s.temp) === Number(scenarioAfterDepartureTemp)
+                      );
+
+                      return (
+                        <div key={resa.id} className="rounded border p-3">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                            <div>
+                              <p className="font-medium">
+                                {resa.guest_name || "Client"} — {resa.property_name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Arrivée: {new Date(resa.check_in_date).toLocaleDateString()} • Départ: {new Date(resa.check_out_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {hasHeat && <Badge variant="default">Préchauffage créé</Badge>}
+                              {!hasHeat && <Badge variant="secondary">Préchauffage manquant</Badge>}
+                              {hasEco && <Badge variant="default">Éco créé</Badge>}
+                              {!hasEco && <Badge variant="secondary">Éco manquant</Badge>}
+                            </div>
                           </div>
-                          <Button size="sm" onClick={() => createSchedulesForReservation(resa)}>
-                            Créer programmations
-                          </Button>
+
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                            <div className="rounded bg-gray-50 p-2">
+                              <p className="font-medium">Préchauffage</p>
+                              <p>{scenarioMode === "absolute" && scenarioHeatStart ? `à ${scenarioHeatStart}` : `${scenarioMinutes} min avant 15:00`}</p>
+                              <p>{startHeatDate.toLocaleString()}</p>
+                              <p>Consigne: {scenarioArrivalTemp}°C</p>
+                            </div>
+                            <div className="rounded bg-gray-50 p-2">
+                              <p className="font-medium">Maintien pendant le séjour</p>
+                              <p>Consigne maintenue jusqu'au passage en éco</p>
+                            </div>
+                            <div className="rounded bg-gray-50 p-2">
+                              <p className="font-medium">Éco au départ</p>
+                              <p>{(scenarioStopTime || "11:00")}</p>
+                              <p>{ecoAt.toLocaleString()}</p>
+                              <p>Consigne: {scenarioAfterDepartureTemp}°C</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-col md:flex-row gap-2">
+                            <Button size="sm" onClick={() => createSchedulesForReservation(resa)}>
+                              Créer programmations
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={runSchedulerNow}>
+                              Lancer le scheduler
+                            </Button>
+                          </div>
                         </div>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Préchauffage: {scenarioMode === "absolute" && scenarioHeatStart ? `à ${scenarioHeatStart}` : `${scenarioMinutes} min avant 15:00`} •
-                          Consigne arrivée: {scenarioArrivalTemp}°C •
-                          Éco le départ à {scenarioStopTime || "11:00"}: {scenarioAfterDepartureTemp}°C
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <Card>
             <CardHeader>
               <CardTitle>Programmations (Cron)</CardTitle>

@@ -541,6 +541,127 @@ const NetatmoDashboardPage: React.FC = () => {
     return `${mins}m`;
   }
 
+  // Helper: début de semaine (lundi 00:00) et m_offset en minutes
+  function getWeekStart(date: Date) {
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Dimanche, 1=Lundi...
+    const diffToMonday = (day + 6) % 7; // distance vers lundi
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  }
+  function minutesOffsetFromWeekStart(target: Date) {
+    const monday = getWeekStart(target);
+    return Math.floor((target.getTime() - monday.getTime()) / 60000);
+  }
+
+  // Créer un planning hebdo Netatmo: Confort 4h avant arrivée, Eco à 11:00 le jour du départ
+  const createArrivalDepartureSchedule = async () => {
+    if (!homeId || !selectedRoomId) {
+      toast.error("Maison/pièce Netatmo introuvable.");
+      return;
+    }
+    if (!arrivalAt || !departureAt) {
+      toast.error("Renseignez l'arrivée et le départ.");
+      return;
+    }
+
+    // Vérifier homesData pour récupérer toutes les pièces (avec thermostat)
+    let home = homesData?.body?.homes?.[0];
+    if (!home) {
+      const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: { endpoint: "homesdata", home_id: homeId } });
+      if (error) {
+        toast.error(error.message || "Impossible de charger les données de la maison.");
+        return;
+      }
+      home = data?.body?.homes?.[0];
+      if (!home) {
+        toast.error("Maison introuvable dans homesdata.");
+        return;
+      }
+    }
+
+    const modules = Array.isArray(home.modules) ? home.modules : [];
+    const rooms = Array.isArray(home.rooms) ? home.rooms : [];
+
+    // Liste des room_ids ayant un thermostat
+    const thermRoomIds: string[] = modules
+      .filter((m: any) => m.type === "NATherm1" && m.room_id)
+      .map((m: any) => String(m.room_id));
+
+    if (thermRoomIds.length === 0) {
+      toast.error("Aucun thermostat détecté pour créer un planning.");
+      return;
+    }
+
+    // Températures (tu peux ajuster ces valeurs si besoin)
+    const ecoTemp = 16;
+    const nightTemp = 17;
+    const confortTempSelected = arrivalTemp; // consigne choisie pour la pièce sélectionnée
+    const confortTempOthers = 19; // confort par défaut pour les autres pièces
+
+    // Construire les zones requises pour toutes les pièces thermostatées
+    const zoneEco = {
+      id: 4,
+      type: 5, // type 'Eco'
+      rooms: thermRoomIds.map((rid) => ({
+        id: rid,
+        therm_setpoint_temperature: ecoTemp,
+      })),
+    };
+    const zoneNight = {
+      id: 1,
+      type: 1, // type 'Night'
+      rooms: thermRoomIds.map((rid) => ({
+        id: rid,
+        therm_setpoint_temperature: nightTemp,
+      })),
+    };
+    const zoneConfort = {
+      id: 0,
+      type: 0, // type 'Confort'
+      rooms: thermRoomIds.map((rid) => ({
+        id: rid,
+        therm_setpoint_temperature: rid === selectedRoomId ? confortTempSelected : confortTempOthers,
+      })),
+    };
+
+    // Calcul des offsets: 4h avant arrivée et 11h00 départ
+    const arrivalDate = new Date(arrivalAt);
+    const departureDate = new Date(departureAt);
+
+    const startHeatDate = new Date(arrivalDate.getTime() - 4 * 3600 * 1000);
+    const stopEcoDate = new Date(departureDate.getFullYear(), departureDate.getMonth(), departureDate.getDate(), 11, 0, 0, 0);
+
+    const startOffset = minutesOffsetFromWeekStart(startHeatDate);
+    const stopOffset = minutesOffsetFromWeekStart(stopEcoDate);
+
+    // Timetable minimal: Eco au début de semaine, Confort à startOffset, Eco à stopOffset
+    const timetable = [
+      { zone_id: 4, m_offset: 0 },
+      { zone_id: 0, m_offset: startOffset },
+      { zone_id: 4, m_offset: stopOffset },
+    ];
+
+    const payload = {
+      endpoint: "createnewhomeschedule",
+      home_id: homeId,
+      name: "ThermoBnB — Arrivée & Départ",
+      hg_temp: 7,
+      away_temp: 12,
+      zones: [zoneConfort, zoneNight, zoneEco],
+      timetable,
+    };
+
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
+    if (error) {
+      toast.error(error.message || "Échec de création du planning Netatmo.");
+      return;
+    }
+    toast.success("Planning Netatmo créé avec succès (Confort 4h avant / Eco à 11h départ).");
+  };
+
   // Trigger initial: restore selection and check tokens ONCE
   React.useEffect(() => {
     restoreSelection();
@@ -1004,6 +1125,9 @@ const NetatmoDashboardPage: React.FC = () => {
                     <div className="flex gap-2">
                       <Button className="w-full" onClick={saveSchedule} disabled={!selectedUserRoomId || !selectedRoomId}>Enregistrer</Button>
                       <Button variant="secondary" className="w-full" onClick={runSchedulerNow}>Lancer maintenant</Button>
+                      <Button variant="outline" className="w-full" onClick={createArrivalDepartureSchedule} disabled={!homeId || !selectedRoomId || !arrivalAt || !departureAt}>
+                        Créer planning Netatmo (4h avant / stop 11h)
+                      </Button>
                     </div>
                   </div>
                 </div>

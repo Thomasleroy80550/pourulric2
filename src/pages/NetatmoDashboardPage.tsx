@@ -154,7 +154,8 @@ const NetatmoDashboardPage: React.FC = () => {
   const [scenarioMinutes, setScenarioMinutes] = React.useState<number>(240);
   const [scenarioHeatStart, setScenarioHeatStart] = React.useState<string>("");
   const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
-  const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
+  // CHANGED: départ par défaut à 10:00 au lieu de 11:00
+  const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("10:00");
   const [scenarioAfterDepartureTemp, setScenarioAfterDepartureTemp] = React.useState<number>(16);
   const scenarioSaveTimer = React.useRef<number | null>(null);
   // NEW: heure d'arrivée de base (ex: 15:00)
@@ -340,7 +341,7 @@ const NetatmoDashboardPage: React.FC = () => {
       setScenarioMinutes(typeof s.arrival_preheat_minutes === "number" ? s.arrival_preheat_minutes : 240);
       setScenarioHeatStart(s.heat_start_time || "");
       setScenarioArrivalTemp(typeof s.arrival_temp === "number" ? s.arrival_temp : 20);
-      setScenarioStopTime(s.stop_time || "11:00");
+      setScenarioStopTime(s.stop_time || "10:00");
     }
   }
 
@@ -671,9 +672,9 @@ const NetatmoDashboardPage: React.FC = () => {
       }
       if (startHeatDate.getTime() < now.getTime()) continue;
       const departureDay = new Date(resa.check_out_date);
-      const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+      const [sh, sm] = (scenarioStopTime || "10:00").split(":").map((n) => Number(n));
       const ecoAt = new Date(departureDay);
-      ecoAt.setHours(sh || 11, sm || 0, 0, 0);
+      ecoAt.setHours(sh || 10, sm || 0, 0, 0);
       let targetRoomId = selectedRoomId || null;
       if (!targetRoomId) {
         const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
@@ -747,9 +748,9 @@ const NetatmoDashboardPage: React.FC = () => {
       startHeatDate = new Date(arrivalDay.getTime() - minutes * 60 * 1000);
     }
     const departureDay = new Date(resa.check_out_date);
-    const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+    const [sh, sm] = (scenarioStopTime || "10:00").split(":").map((n) => Number(n));
     const ecoAt = new Date(departureDay);
-    ecoAt.setHours(sh || 11, sm || 0, 0, 0);
+    ecoAt.setHours(sh || 10, sm || 0, 0, 0);
     let targetRoomId = selectedRoomId || null;
     if (!targetRoomId) {
       const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
@@ -811,9 +812,9 @@ const NetatmoDashboardPage: React.FC = () => {
       return;
     }
     const departureDay = new Date(resa.check_out_date);
-    const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+    const [sh, sm] = (scenarioStopTime || "10:00").split(":").map((n) => Number(n));
     const ecoAt = new Date(departureDay);
-    ecoAt.setHours(sh || 11, sm || 0, 0, 0);
+    ecoAt.setHours(sh || 10, sm || 0, 0, 0);
     const nowSec = Math.floor(Date.now() / 1000);
     const endtimeSec = ecoAt.getTime() > Date.now() ? Math.floor(ecoAt.getTime() / 1000) : nowSec + 3 * 3600;
     const payload: any = { endpoint: "setroomthermpoint", home_id: homeId, room_id: roomId, mode: "manual", temp: scenarioArrivalTemp, endtime: endtimeSec };
@@ -1054,21 +1055,34 @@ const NetatmoDashboardPage: React.FC = () => {
               <p className="text-gray-600">Aucune réservation à venir.</p>
             ) : (
               <div className="space-y-3">
-                {upcomingReservations.map((resa) => (
-                  <div key={resa.id} className="rounded border p-3">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{resa.guest_name || "Client"} — {resa.property_name}</p>
-                        <p className="text-sm text-gray-600">Arrivée: {new Date(resa.check_in_date).toLocaleString()} • Départ: {new Date(resa.check_out_date).toLocaleString()}</p>
+                {upcomingReservations.map((resa) => {
+                  // CHANGED: Afficher les horaires de base (arrivée 15:00, départ 10:00) au lieu des timestamps bruts
+                  const arrivalDisplay = new Date(resa.check_in_date);
+                  const [ah, am] = (scenarioArrivalTime || "15:00").split(":").map((n) => Number(n));
+                  arrivalDisplay.setHours(ah || 15, am || 0, 0, 0);
+
+                  const departureDisplay = new Date(resa.check_out_date);
+                  const [dh, dm] = (scenarioStopTime || "10:00").split(":").map((n) => Number(n));
+                  departureDisplay.setHours(dh || 10, dm || 0, 0, 0);
+
+                  return (
+                    <div key={resa.id} className="rounded border p-3">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <p className="font-medium">{resa.guest_name || "Client"} — {resa.property_name}</p>
+                          <p className="text-sm text-gray-600">
+                            Arrivée: {arrivalDisplay.toLocaleString()} • Départ: {departureDisplay.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" onClick={() => createSchedulesForReservation(resa)}>Créer programmations</Button>
+                          <Button size="sm" variant="outline" onClick={() => forceArrivalSetpoint(resa)}>Forcer consigne maintenant</Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" onClick={() => createSchedulesForReservation(resa)}>Créer programmations</Button>
-                        <Button size="sm" variant="outline" onClick={() => forceArrivalSetpoint(resa)}>Forcer consigne maintenant</Button>
-                      </div>
+                      <p className="mt-1 text-xs text-gray-500">Action simple: crée deux programmations (chauffe avant l'arrivée, éco au départ).</p>
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">Action simple: crée deux programmations (chauffe avant l'arrivée, éco au départ).</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

@@ -14,6 +14,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchKrossbookingReservations } from "@/lib/krossbooking";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ResponsiveContainer as RC2 } from "recharts";
 import { AreaChart, Area } from "recharts";
@@ -61,10 +62,20 @@ const NetatmoDashboardPage: React.FC = () => {
   // États pour la programmation
   const [userRooms, setUserRooms] = React.useState<{ id: string; room_name: string }[]>([]);
   const [selectedUserRoomId, setSelectedUserRoomId] = React.useState<string | null>(null);
-  const [arrivalAt, setArrivalAt] = React.useState<string>(""); // datetime-local
+  const [arrivalAt, setArrivalAt] = React.useState<string>("");
   const [departureAt, setDepartureAt] = React.useState<string>("");
   const [preheatMinutes, setPreheatMinutes] = React.useState<number>(90);
   const [arrivalTemp, setArrivalTemp] = React.useState<number>(20);
+  // NEW: réservations (arrivées à venir)
+  const [upcomingReservations, setUpcomingReservations] = React.useState<Array<{
+    id: string;
+    guest_name: string;
+    property_name: string;
+    krossbooking_room_id?: string;
+    check_in_date: string;
+    check_out_date: string;
+    cod_channel?: string;
+  }>>([]);
 
   // Charger les logements de l'utilisateur
   const loadUserRooms = React.useCallback(async () => {
@@ -73,12 +84,37 @@ const NetatmoDashboardPage: React.FC = () => {
     if (!userId) return;
     const { data } = await supabase
       .from("user_rooms")
-      .select("id, room_name")
+      .select("id, room_name, room_id")
       .eq("user_id", userId)
       .order("room_name", { ascending: true });
-    setUserRooms(data || []);
+    setUserRooms((data || []).map(r => ({ id: r.id, room_name: r.room_name })));
     if ((data || []).length > 0 && !selectedUserRoomId) {
       setSelectedUserRoomId(data![0].id);
+    }
+    // Charger les réservations pour ces logements
+    try {
+      const reservations = await fetchKrossbookingReservations(data || []);
+      // Filtrer prochaines arrivées: aujourd'hui -> +60 jours
+      const now = new Date();
+      const end = new Date(now.getTime() + 60 * 24 * 3600 * 1000);
+      const upcoming = (reservations || [])
+        .filter(r => {
+          const ci = new Date(r.check_in_date);
+          return ci >= new Date(now.getFullYear(), now.getMonth(), now.getDate()) && ci <= end;
+        })
+        .sort((a, b) => new Date(a.check_in_date).getTime() - new Date(b.check_in_date).getTime())
+        .slice(0, 20);
+      setUpcomingReservations(upcoming.map(r => ({
+        id: r.id,
+        guest_name: r.guest_name,
+        property_name: r.property_name,
+        krossbooking_room_id: r.krossbooking_room_id,
+        check_in_date: r.check_in_date,
+        check_out_date: r.check_out_date,
+        cod_channel: r.cod_channel
+      })));
+    } catch {
+      setUpcomingReservations([]);
     }
   }, [selectedUserRoomId]);
 
@@ -737,6 +773,51 @@ const NetatmoDashboardPage: React.FC = () => {
                   </Button>
                 </div>
               </CardHeader>
+            </Card>
+          )}
+
+          {/* Bloc Arrivées à venir */}
+          {home && (
+            <Card className="mb-6 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle>Arrivées à venir</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {upcomingReservations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucune arrivée à venir détectée sur les 60 prochains jours.</p>
+                ) : (
+                  <div className="divide-y rounded-md border">
+                    {upcomingReservations.map((res) => (
+                      <div key={res.id} className="flex flex-col md:flex-row md:items-center md:justify-between p-3">
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-medium">{res.guest_name} — {res.property_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Arrivée: {new Date(res.check_in_date).toLocaleDateString()} · Départ: {new Date(res.check_out_date).toLocaleDateString()}
+                            {res.cod_channel ? ` · Canal: ${res.cod_channel}` : ""}
+                          </p>
+                        </div>
+                        <div className="mt-2 md:mt-0 flex gap-2">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setArrivalAt(new Date(res.check_in_date).toISOString().slice(0,16)); // YYYY-MM-DDTHH:mm
+                              setDepartureAt(new Date(res.check_out_date).toISOString().slice(0,16));
+                              // Tenter de sélectionner le logement correspondant
+                              // (par nom de propriété si disponible)
+                              const found = userRooms.find(ur => ur.room_name === res.property_name);
+                              if (found) setSelectedUserRoomId(found.id);
+                              toast.success("Programmation pré-remplie à partir de la réservation.");
+                            }}
+                          >
+                            Programmer
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
             </Card>
           )}
 

@@ -86,6 +86,19 @@ serve(async (req) => {
 
   for (const uid of userIds) {
     try {
+      // Charger le scénario global de l'utilisateur
+      const { data: scenario } = await supabaseAdmin
+        .from("thermostat_scenarios")
+        .select("*")
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      const preheatMode: "relative" | "absolute" = (scenario?.arrival_preheat_mode as any) || "relative";
+      const preheatMinutes: number = typeof scenario?.arrival_preheat_minutes === "number" ? scenario.arrival_preheat_minutes : 240;
+      const heatStartTime: string | null = scenario?.heat_start_time || null; // ex: '14:00'
+      const arrivalTemp: number = typeof scenario?.arrival_temp === "number" ? Number(scenario.arrival_temp) : 20;
+      const stopTime: string = scenario?.stop_time || "11:00"; // ex: '11:00'
+
       // Récupérer les logements de l'utilisateur
       const { data: rooms } = await supabaseAdmin
         .from("user_rooms")
@@ -93,40 +106,20 @@ serve(async (req) => {
         .eq("user_id", uid);
       const userRooms: UserRoom[] = (rooms || []) as any[];
 
-      if (!userRooms.length) {
-        processedForUsers[uid] = 0;
-        continue;
-      }
-
-      // Mappings Netatmo pour cet utilisateur (user_room_id -> netatmo_room_id)
+      // Mappings Netatmo
       const { data: ntMaps } = await supabaseAdmin
         .from("netatmo_thermostats")
         .select("*")
         .eq("user_id", uid);
       const thermostats: NetatmoThermostatMap[] = (ntMaps || []) as any[];
 
-      const mapByUserRoomId = new Map<string, NetatmoThermostatMap>();
-      thermostats.forEach((m) => mapByUserRoomId.set(m.user_room_id, m));
-
-      // Charger le profil pour récupérer krossbooking_property_id (si utile)
-      const { data: profile } = await supabaseAdmin
-        .from("profiles")
-        .select("krossbooking_property_id")
-        .eq("id", uid)
-        .maybeSingle();
-      const krossPropId = profile?.krossbooking_property_id;
-
       let countInserted = 0;
 
-      // Parcourir chaque logement: récupérer les réservations
       for (const room of userRooms) {
         const mapping = thermostats.find((m) => m.user_room_id === room.id);
-        if (!mapping || !mapping.netatmo_room_id) {
-          // Pas de thermostat mappé pour ce logement: ignorer
-          continue;
-        }
+        if (!mapping || !mapping.netatmo_room_id) continue;
 
-        // Appeler le proxy Krossbooking pour récupérer les réservations de ce room_id
+        // Récupérer les réservations (fenêtre 7 jours à partir d'aujourd'hui)
         const kbRes = await fetch(`${SUPABASE_URL}/functions/v1/krossbooking-proxy`, {
           method: "POST",
           headers: {
@@ -136,7 +129,6 @@ serve(async (req) => {
           body: JSON.stringify({
             action: "get_reservations_for_room",
             id_room: room.room_id,
-            id_property: krossPropId,
           }),
         });
 
@@ -157,23 +149,33 @@ serve(async (req) => {
           cod_channel: res.cod_channel,
         }));
 
-        // Filtrer fenêtre
         const filtered = reservations.filter((r) => {
           const ci = new Date(r.check_in_date);
           return ci >= startDay && ci <= endWindow;
         });
 
-        // Pour chaque réservation: créer heat+stop si non déjà présents
         for (const r of filtered) {
           const arrivalDate = new Date(r.check_in_date);
           const departureDate = new Date(r.check_out_date);
 
-          // Heure de lancement: 4h avant l'arrivée
-          const startHeatDate = new Date(arrivalDate.getTime() - 4 * 3600 * 1000);
+          // Calcul heure de lancement (selon scénario)
+          let startHeatDate: Date;
+          if (preheatMode === "absolute" && heatStartTime) {
+            const [hh, mm] = heatStartTime.split(":").map((n) => Number(n));
+            startHeatDate = new Date(arrivalDate);
+            startHeatDate.setHours(hh || 0, mm || 0, 0, 0);
+          } else {
+            startHeatDate = new Date(arrivalDate.getTime() - Math.max(5, preheatMinutes) * 60 * 1000);
+          }
           const startHeatIso = startHeatDate.toISOString();
-          const departureIso = departureDate.toISOString();
 
-          // Eviter les doublons: existe déjà ?
+          // Heure d'arrêt à stopTime le jour du départ
+          const [sh, sm] = (stopTime || "11:00").split(":").map((n) => Number(n));
+          const stopDate = new Date(departureDate);
+          stopDate.setHours(sh || 11, sm || 0, 0, 0);
+          const stopIso = stopDate.toISOString();
+
+          // Vérifier doublons
           const { data: existingHeat } = await supabaseAdmin
             .from("thermostat_schedules")
             .select("id")
@@ -189,14 +191,10 @@ serve(async (req) => {
             .eq("user_id", uid)
             .eq("netatmo_room_id", mapping.netatmo_room_id)
             .eq("type", "stop")
-            .eq("start_time", departureIso)
+            .eq("start_time", stopIso)
             .limit(1);
 
-          // Paramètres par défaut du scénario
-          const arrivalTemp = 20; // °C
-          const modeHeat = "manual"; // setroomthermpoint manual
-          const modeStop = "home"; // suivre planning/retour état normal
-
+          // Insérer programmations si absentes
           if (!existingHeat || existingHeat.length === 0) {
             const { error: insErr1 } = await supabaseAdmin
               .from("thermostat_schedules")
@@ -207,10 +205,10 @@ serve(async (req) => {
                 netatmo_room_id: mapping.netatmo_room_id,
                 module_id: mapping.module_id,
                 type: "heat",
-                mode: modeHeat,
+                mode: "manual",
                 temp: arrivalTemp,
                 start_time: startHeatIso,
-                end_time: departureIso, // chauffer jusqu'au départ
+                end_time: stopIso,
                 status: "pending",
               });
             if (!insErr1) countInserted++;
@@ -226,9 +224,9 @@ serve(async (req) => {
                 netatmo_room_id: mapping.netatmo_room_id,
                 module_id: mapping.module_id,
                 type: "stop",
-                mode: modeStop,
+                mode: "home",
                 temp: null,
-                start_time: departureIso,
+                start_time: stopIso,
                 end_time: null,
                 status: "pending",
               });

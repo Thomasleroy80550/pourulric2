@@ -707,6 +707,49 @@ const NetatmoDashboardPage: React.FC = () => {
     await loadSchedules();
   };
 
+  // Charger le scénario existant
+  const loadScenario = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) return;
+    const { data } = await supabase
+      .from("thermostat_scenarios")
+      .select("*")
+      .eq("user_id", uid)
+      .maybeSingle();
+    if (data) {
+      setScenarioMode((data.arrival_preheat_mode as any) || "relative");
+      setScenarioMinutes(typeof data.arrival_preheat_minutes === "number" ? data.arrival_preheat_minutes : 240);
+      setScenarioHeatStart(data.heat_start_time || "14:00");
+      setScenarioStopTime(data.stop_time || "11:00");
+      setScenarioArrivalTemp(typeof data.arrival_temp === "number" ? Number(data.arrival_temp) : 20);
+    }
+  };
+
+  React.useEffect(() => { loadScenario(); }, []);
+
+  // Sauvegarder le scénario
+  const saveScenario = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) { toast.error("Non authentifié."); return; }
+    const payload: any = {
+      user_id: uid,
+      arrival_preheat_mode: scenarioMode,
+      arrival_preheat_minutes: scenarioMinutes,
+      heat_start_time: scenarioHeatStart,
+      arrival_temp: scenarioArrivalTemp,
+      stop_time: scenarioStopTime,
+      apply_to_all: true,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from("thermostat_scenarios")
+      .upsert(payload, { onConflict: "user_id" });
+    if (error) { toast.error(error.message || "Erreur sauvegarde scénario"); return; }
+    toast.success("Scénario global sauvegardé — il s'appliquera à toutes vos réservations.");
+  };
+
   // Trigger initial: restore selection and check tokens ONCE
   React.useEffect(() => {
     restoreSelection();
@@ -957,6 +1000,13 @@ const NetatmoDashboardPage: React.FC = () => {
 
   // const createHomeSchedule = React.useCallback(async () => { /* ... */ }, [homeId, scheduleName, scheduleHgTemp, scheduleAwayTemp, scheduleZones, scheduleTimetable]);
 
+  // NEW: états pour scénario global
+  const [scenarioMode, setScenarioMode] = React.useState<"relative" | "absolute">("relative");
+  const [scenarioMinutes, setScenarioMinutes] = React.useState<number>(240);
+  const [scenarioHeatStart, setScenarioHeatStart] = React.useState<string>("14:00"); // heure de lancement
+  const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
+  const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
+
   return (
     <MainLayout>
       <section className="container mx-auto py-10 md:py-16 relative">
@@ -1130,6 +1180,68 @@ const NetatmoDashboardPage: React.FC = () => {
                 );
               })()}
             </div>
+          )}
+
+          {/* Scénario global (toutes réservations) */}
+          {home && (
+            <Card className="mb-6 shadow-sm">
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle>Scénario global (toutes réservations)</CardTitle>
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={saveScenario}>Sauvegarder</Button>
+                  <Button variant="outline" size="sm" onClick={runAutoPlannerForUser} title="Créer les programmations pour mes résas à venir">
+                    Appliquer aux résas (auto)
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground mb-1">Mode de préchauffage</p>
+                    <RadioGroup value={scenarioMode} onValueChange={(v) => setScenarioMode(v as any)} className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="relative" id="sc-mode-rel" />
+                        <label htmlFor="sc-mode-rel" className="text-xs">Minutes avant l'arrivée</label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="absolute" id="sc-mode-abs" />
+                        <label htmlFor="sc-mode-abs" className="text-xs">Heure précise de lancement</label>
+                      </div>
+                    </RadioGroup>
+                    {scenarioMode === "relative" ? (
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Préchauffage</p>
+                          <span className="text-xs font-medium">{scenarioMinutes} min</span>
+                        </div>
+                        <Slider min={5} max={480} step={5} value={[scenarioMinutes]} onValueChange={(vals) => setScenarioMinutes(vals[0] as number)} />
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Heure de lancement (HH:MM)</p>
+                        <Input type="time" value={scenarioHeatStart} onChange={(e) => setScenarioHeatStart(e.target.value)} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">Température à l'arrivée</p>
+                        <span className="text-xs font-medium">{scenarioArrivalTemp.toFixed(1)}°C</span>
+                      </div>
+                      <Slider min={7} max={30} step={0.5} value={[scenarioArrivalTemp]} onValueChange={(vals) => setScenarioArrivalTemp(vals[0] as number)} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Heure d'arrêt (départ)</p>
+                      <Input type="time" value={scenarioStopTime} onChange={(e) => setScenarioStopTime(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Ce scénario s'applique à toutes vos chambres mappées à un thermostat Netatmo (1 thermostat = 1 chambre).
+                </p>
+              </CardContent>
+            </Card>
           )}
 
           {/* Programation arrivée / départ */}

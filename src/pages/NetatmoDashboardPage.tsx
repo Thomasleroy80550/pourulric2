@@ -899,9 +899,47 @@ const NetatmoDashboardPage: React.FC = () => {
   };
 
   // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
+  async function loadAssignments() {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid || !homeId) return;
+
+    // Try existing assignments from netatmo_thermostats
+    const { data: therms, error } = await supabase
+      .from("netatmo_thermostats")
+      .select("id, user_room_id, user_id, home_id, netatmo_room_id, netatmo_room_name")
+      .eq("user_id", uid)
+      .eq("home_id", homeId)
+      .limit(50);
+
+    if (error) {
+      toast.error(error.message || "Erreur de chargement des liens thermostats.");
+      return;
+    }
+
+    if (Array.isArray(therms) && therms.length > 0) {
+      const first = therms.find((t: any) => t.netatmo_room_id) || therms[0];
+
+      if (!selectedRoomId && first?.netatmo_room_id) {
+        setSelectedRoomId(String(first.netatmo_room_id));
+      }
+      if (!selectedUserRoomId && first?.user_room_id) {
+        setSelectedUserRoomId(String(first.user_room_id));
+      }
+      return;
+    }
+
+    // Fallback: match Netatmo room names with user_rooms.room_name
+    const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
+    if (Array.isArray(netatmoRooms) && netatmoRooms.length && userRooms.length) {
+      const match = netatmoRooms.find((r: any) => userRooms.some((ur) => ur.room_name === r.name));
+      if (match) {
+        setSelectedRoomId(String(match.id));
+        const ur = userRooms.find((ur) => ur.room_name === match.name);
+        if (ur) setSelectedUserRoomId(ur.id);
+      }
+    }
+  }
 
   // Trigger initial: restore selection and check tokens ONCE
   React.useEffect(() => {

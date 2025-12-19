@@ -47,16 +47,46 @@ const NetatmoDashboardPage: React.FC = () => {
   const [logs, setLogs] = React.useState<any[]>([]);
 
   // Helper: build chart points from getroommeasure response (robuste)
-  function buildChartPoints(data: any) {
-    const homeBlock = data?.body?.home ?? data?.body; // fallback si API retourne body.home ou body direct
-    const beg = homeBlock?.beg_time;
-    const step = homeBlock?.step_time;
-    const values = homeBlock?.values;
+  // Ajout d'un paramètre scale pour fallback du step_time si absent
+  function buildChartPoints(data: any, scaleForFallback?: string) {
+    const homeBlock = data?.body?.home ?? data?.body;
+    let beg = homeBlock?.beg_time;
+    let step = homeBlock?.step_time;
+
+    // Fallback step_time si absent (format optimisé)
+    if (typeof step !== "number" && typeof scaleForFallback === "string") {
+      const map: Record<string, number> = {
+        "30min": 1800,
+        "1hour": 3600,
+        "3hours": 10800,
+        "1day": 86400,
+        "1week": 604800,
+        "1month": 2592000, // approx.
+      };
+      step = map[scaleForFallback] ?? 3600;
+    }
+
+    let values = homeBlock?.values;
+
+    // Si body est un tableau (format optimisé), reconstituer values
+    if (!Array.isArray(values) && Array.isArray(data?.body)) {
+      const first = data.body[0];
+      beg = typeof beg === "number" ? beg : first?.beg_time;
+      const v = first?.value;
+      if (Array.isArray(v)) {
+        // v peut être [[19.3, ...]] ou [19.3, ...]
+        const arr = Array.isArray(v[0]) ? v[0] : v;
+        values = arr.map((n: any) => ({ value: n }));
+      } else if (typeof v === "number") {
+        values = [{ value: v }];
+      }
+    }
+
     if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
+
     return values
       .map((item: any, idx: number) => {
         let raw: any = item;
-        // Les formats possibles: nombre, tableau [val], objet { value: number | [val] }
         if (Array.isArray(raw)) raw = raw[0];
         else if (raw && typeof raw === "object") raw = Array.isArray(raw.value) ? raw.value[0] : raw.value;
         const val = Number(raw);
@@ -144,7 +174,6 @@ const NetatmoDashboardPage: React.FC = () => {
   async function loadRoomCharts() {
     if (!homeId || !selectedRoomId) return;
 
-    // NEW: plage de dates locale (Unix sec)
     const nowSec = Math.floor(Date.now() / 1000);
     const dayBegin = nowSec - 24 * 60 * 60;
     const weekBegin = nowSec - 7 * 24 * 60 * 60;
@@ -161,7 +190,7 @@ const NetatmoDashboardPage: React.FC = () => {
           date_begin: dayBegin,
           date_end: nowSec,
           real_time: true,
-          optimize: true,
+          optimize: false, // CHANGED: format facile à parser (inclut step_time)
         },
       }),
       supabase.functions.invoke("netatmo-proxy", {
@@ -174,7 +203,7 @@ const NetatmoDashboardPage: React.FC = () => {
           date_begin: weekBegin,
           date_end: nowSec,
           real_time: true,
-          optimize: true,
+          optimize: false, // CHANGED
         },
       }),
     ]);
@@ -186,7 +215,7 @@ const NetatmoDashboardPage: React.FC = () => {
       setDayRaw(dayRes.error);
     } else {
       setDayRaw(dayRes.data);
-      setDayChartData(buildChartPoints(dayRes.data));
+      setDayChartData(buildChartPoints(dayRes.data, "1day"));
     }
 
     if (weekRes.error) {
@@ -195,7 +224,7 @@ const NetatmoDashboardPage: React.FC = () => {
       setWeekRaw(weekRes.error);
     } else {
       setWeekRaw(weekRes.data);
-      setWeekChartData(buildChartPoints(weekRes.data));
+      setWeekChartData(buildChartPoints(weekRes.data, "1week"));
     }
   }
 

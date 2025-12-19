@@ -310,7 +310,18 @@ serve(async (req) => {
     const parsed = JSON.parse(text);
     if (action === "getroommeasure") {
       const values = parsed?.body?.home?.values ?? parsed?.body?.values;
-      if (Array.isArray(values)) countPoints = values.length;
+      if (Array.isArray(values)) {
+        countPoints = values.length;
+      } else if (Array.isArray(parsed?.body)) {
+        const first = parsed.body[0];
+        const v = first?.value;
+        if (Array.isArray(v)) {
+          // format optimisé: tableau de tableaux
+          countPoints = Array.isArray(v[0]) ? v[0].length : v.length;
+        } else {
+          countPoints = 1;
+        }
+      }
     } else if (action === "getmeasure") {
       const items = parsed?.body?.items;
       countPoints = Array.isArray(items) ? items.length : (items ? 1 : 0);

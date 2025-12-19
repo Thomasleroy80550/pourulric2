@@ -483,6 +483,44 @@ const NetatmoDashboardPage: React.FC = () => {
     toast.success(`Scheduler exécuté (${data?.processed ?? 0} programmation(s) traitée(s)).`);
   };
 
+  // Charger listes quand pièce changée
+  const [schedules, setSchedules] = React.useState<any[]>([]);
+  const loadSchedules = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId || !selectedRoomId) {
+      setSchedules([]);
+      return;
+    }
+    const { data } = await supabase
+      .from("thermostat_schedules")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("netatmo_room_id", selectedRoomId)
+      .order("start_time", { ascending: true })
+      .limit(10);
+    setSchedules(data || []);
+  };
+
+  React.useEffect(() => {
+    if (selectedRoomId) {
+      loadSchedules();
+    }
+  }, [selectedRoomId]);
+
+  // Helper compte à rebours
+  function timeUntil(tsIso: string) {
+    const now = Date.now();
+    const target = new Date(tsIso).getTime();
+    const diff = target - now;
+    if (diff <= 0) return "dû maintenant";
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    if (hrs > 0) return `${hrs}h ${remMins}m`;
+    return `${mins}m`;
+  }
+
   // Trigger initial: restore selection and check tokens ONCE
   React.useEffect(() => {
     restoreSelection();
@@ -866,8 +904,11 @@ const NetatmoDashboardPage: React.FC = () => {
           {/* Programation arrivée / départ */}
           {home && (
             <Card className="mb-6 shadow-sm">
-              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <CardTitle>Programmation arrivée / départ</CardTitle>
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle>Programmations arrivée / départ</CardTitle>
+                <Button variant="secondary" size="sm" onClick={runSchedulerNow}>
+                  Lancer maintenant
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -916,6 +957,45 @@ const NetatmoDashboardPage: React.FC = () => {
                 <p className="text-xs text-muted-foreground mt-3">Astuce: la chauffe démarre automatiquement avant l'arrivée pour atteindre la consigne, et se coupe au départ.</p>
               </CardContent>
             </Card>
+          )}
+
+          {/* Liste des prochaines programmations */}
+          {home && (
+            <div className="mt-4">
+              <p className="text-sm font-medium mb-2">Mes programmations (prochaine exécution)</p>
+              {schedules.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Aucune programmation pour cette pièce.</p>
+              ) : (
+                <ul className="text-sm divide-y border rounded">
+                  {schedules.map((s) => (
+                    <li key={s.id} className="p-2 flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{s.type === 'heat' ? 'Préchauffage' : 'Arrêt'}</span>
+                        <span className="text-muted-foreground ml-2">
+                          {new Date(s.start_time).toLocaleString()}
+                          {s.type === 'heat' && s.end_time ? ` → fin ${new Date(s.end_time).toLocaleTimeString()}` : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs px-2 py-0.5 rounded border ${
+                          s.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          s.status === 'applied' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          'bg-red-50 text-red-700 border-red-200'
+                        }`}>
+                          {s.status}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {s.status === 'pending' ? `dans ${timeUntil(s.start_time)}` : ''}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Le scheduler applique automatiquement les programmations dues. Vous pouvez utiliser "Lancer maintenant" pour vérifier immédiatement.
+              </p>
+            </div>
           )}
 
           {/* Graphiques (jour/semaine) */}

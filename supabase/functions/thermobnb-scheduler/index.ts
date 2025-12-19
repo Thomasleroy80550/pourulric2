@@ -21,29 +21,38 @@ serve(async (req) => {
   }
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-  }
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const isCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
 
-  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
-  const { data: userData, error: userErr } = await supabaseUser.auth.getUser();
-  if (userErr || !userData?.user?.id) {
-    return new Response(JSON.stringify({ error: "Unauthorized user" }), { status: 401, headers: corsHeaders });
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader ?? "" } } });
+
+  let userId: string | null = null;
+  if (!isCron) {
+    const { data: userData, error: userErr } = await supabaseUser.auth.getUser();
+    if (userErr || !userData?.user?.id) {
+      return new Response(JSON.stringify({ error: "Unauthorized user" }), { status: 401, headers: corsHeaders });
+    }
+    userId = userData.user.id;
   }
-  const userId = userData.user.id;
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  const nowSec = Math.floor(Date.now() / 1000);
   const nowIso = new Date().toISOString();
 
-  // Charger les programmations dues pour l’utilisateur
-  const { data: schedules, error: selErr } = await supabaseAdmin
+  // Charger les programmations dues:
+  // - Mode cron: toutes les programmations pending dont start_time <= maintenant
+  // - Mode utilisateur: seulement celles de l'utilisateur connecté
+  let selQuery = supabaseAdmin
     .from("thermostat_schedules")
     .select("*")
-    .eq("user_id", userId)
     .eq("status", "pending")
     .lte("start_time", nowIso);
+
+  if (!isCron && userId) {
+    selQuery = selQuery.eq("user_id", userId);
+  }
+
+  const { data: schedules, error: selErr } = await selQuery;
 
   if (selErr) {
     return new Response(JSON.stringify({ error: "Failed to read schedules", details: selErr.message }), { status: 500, headers: corsHeaders });
@@ -60,51 +69,58 @@ serve(async (req) => {
 
     let payload: any;
 
-    if (type === "heat") {
-      // Appliquer chauffe en mode manual avec endtime (jusqu'au départ)
-      if (mode !== "manual" || typeof temp !== "number") {
+    try {
+      if (type === "heat") {
+        if (mode !== "manual" || typeof temp !== "number") {
+          await supabaseAdmin
+            .from("thermostat_schedules")
+            .update({ status: "failed", error: "Invalid heat schedule: requires mode=manual and temp number" })
+            .eq("id", sched.id);
+          results.push({ id: sched.id, status: "failed", reason: "invalid heat schedule" });
+          continue;
+        }
+        const endSec = sched.end_time ? Math.floor(new Date(sched.end_time).getTime() / 1000) : Math.floor(Date.now() / 1000) + 3600;
+        payload = { endpoint: "setroomthermpoint", home_id, room_id, mode: "manual", temp, endtime: endSec };
+      } else {
+        payload = { endpoint: "setroomthermpoint", home_id, room_id, mode: "home" };
+      }
+
+      const upstream = await fetch(`${supabaseUrl}/functions/v1/netatmo-proxy`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${supabaseAnonKey}`, // Appelle le proxy avec la clé publique; le proxy vérifie le token utilisateur côté DB
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await upstream.text();
+      if (!upstream.ok) {
         await supabaseAdmin
           .from("thermostat_schedules")
-          .update({ status: "failed", error: "Invalid heat schedule: requires mode=manual and temp number" })
+          .update({ status: "failed", error: `Upstream ${upstream.status}: ${text.slice(0, 300)}` })
           .eq("id", sched.id);
-        results.push({ id: sched.id, status: "failed", reason: "invalid heat schedule" });
+        results.push({ id: sched.id, status: "failed", upstream_status: upstream.status });
         continue;
       }
-      const endtime = sched.end_time ? Math.floor(new Date(sched.end_time).getTime() / 1000) : nowSec + 3600;
-      payload = { endpoint: "setroomthermpoint", home_id, room_id, mode: "manual", temp, endtime };
-    } else {
-      // Arrêt au départ: mode home
-      payload = { endpoint: "setroomthermpoint", home_id, room_id, mode: "home" };
-    }
 
-    const upstream = await fetch(`${supabaseUrl}/functions/v1/netatmo-proxy`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${supabaseAnonKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const text = await upstream.text();
-    if (!upstream.ok) {
       await supabaseAdmin
         .from("thermostat_schedules")
-        .update({ status: "failed", error: `Upstream ${upstream.status}: ${text.slice(0, 300)}` })
+        .update({ status: "applied", updated_at: nowIso })
         .eq("id", sched.id);
-      results.push({ id: sched.id, status: "failed", upstream_status: upstream.status });
-      continue;
+
+      results.push({ id: sched.id, status: "applied" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await supabaseAdmin
+        .from("thermostat_schedules")
+        .update({ status: "failed", error: msg })
+        .eq("id", sched.id);
+      results.push({ id: sched.id, status: "failed", error: msg });
     }
-
-    await supabaseAdmin
-      .from("thermostat_schedules")
-      .update({ status: "applied", updated_at: nowIso })
-      .eq("id", sched.id);
-
-    results.push({ id: sched.id, status: "applied" });
   }
 
-  return new Response(JSON.stringify({ ok: true, processed: results.length, results }), {
+  return new Response(JSON.stringify({ ok: true, mode: isCron ? "cron" : "user", processed: results.length, results }), {
     status: 200,
     headers: corsHeaders,
   });

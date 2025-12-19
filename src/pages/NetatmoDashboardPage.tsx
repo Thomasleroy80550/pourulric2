@@ -539,24 +539,15 @@ const NetatmoDashboardPage: React.FC = () => {
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-indigo-600/15 via-sky-500/10 to-transparent" />
 
         <div className="max-w-5xl mx-auto">
-          {/* Brand header */}
+          {/* Header ThermoBnB */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <img
-                src="/logo.png"
-                alt="ThermoBnB"
-                className="h-8 w-8 rounded-md shadow-sm"
-              />
+              <img src="/logo.png" alt="ThermoBnB" className="h-8 w-8 rounded-md shadow-sm" />
               <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                  ThermoBnB
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Suivi intelligent des thermostats Netatmo · clair, simple et en direct
-                </p>
+                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">ThermoBnB</h1>
+                <p className="text-sm text-muted-foreground">Suivi simple et en direct de vos thermostats Netatmo</p>
               </div>
             </div>
-            {/* Live badge */}
             <div className="flex items-center gap-2">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -566,86 +557,13 @@ const NetatmoDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Metrics cards (live) */}
-          {home && (
-            <div className="grid gap-4 md:grid-cols-4 mb-6">
-              {(() => {
-                const roomsLive = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
-                const activeRoom = roomsLive.find((r: any) => r.id === selectedRoomId) || roomsLive[0];
-                const currentTemp = typeof activeRoom?.therm_measured_temperature === "number" ? activeRoom.therm_measured_temperature : null;
-                const currentSetpoint = typeof activeRoom?.therm_setpoint_temperature === "number" ? activeRoom.therm_setpoint_temperature : null;
-                const modeLabel = home?.therm_mode;
-                const relayCount = (home.modules || []).filter((m: any) => m.type === "NAPlug").length;
-                const lastRefreshLabel = new Date().toLocaleTimeString();
-
-                return (
-                  <>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-md bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                          <Thermometer className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Température</p>
-                          <p className="text-lg font-semibold">
-                            {currentTemp !== null ? `${currentTemp.toFixed(1)}°C` : "n/a"}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                          <Gauge className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Consigne</p>
-                          <p className="text-lg font-semibold">
-                            {currentSetpoint !== null ? `${currentSetpoint.toFixed(1)}°C` : "n/a"}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-md bg-amber-100 text-amber-600 flex items-center justify-center">
-                          <HomeIcon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Mode</p>
-                          <p className="text-lg font-semibold capitalize">{modeLabel || "n/a"}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-md bg-sky-100 text-sky-600 flex items-center justify-center">
-                          <Wifi className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Connexion</p>
-                          <p className="text-lg font-semibold">
-                            {relayCount > 0 ? `${relayCount} relais` : "Aucun relais"}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> {lastRefreshLabel}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </>
-                );
-              })()}
-            </div>
-          )}
-
-          {/* Action bar: sélection de pièce + consigne rapide */}
+          {/* Barre d'actions rapides */}
           {home && (
             <Card className="mb-6 shadow-sm">
               <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <CardTitle>Actions rapides</CardTitle>
                 <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-3">
-                  {/* Sélecteur de pièce */}
+                  {/* Pièce */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Pièce</span>
                     <Select value={selectedRoomId ?? ""} onValueChange={(v) => setSelectedRoomId(v)}>
@@ -657,7 +575,6 @@ const NetatmoDashboardPage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
                   {/* Mode */}
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Mode</span>
@@ -670,7 +587,6 @@ const NetatmoDashboardPage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-
                   {/* Température (manual) */}
                   {quickMode === "manual" && (
                     <div className="flex-1 min-w-[220px]">
@@ -678,43 +594,19 @@ const NetatmoDashboardPage: React.FC = () => {
                         <span className="text-xs text-muted-foreground">Température</span>
                         <span className="text-xs font-medium">{quickTemp.toFixed(1)}°C</span>
                       </div>
-                      <Slider
-                        value={[quickTemp]}
-                        min={7}
-                        max={30}
-                        step={0.5}
-                        onValueChange={(vals) => setQuickTemp(vals[0] as number)}
-                        className="mt-1"
-                      />
+                      <Slider value={[quickTemp]} min={7} max={30} step={0.5} onValueChange={(vals) => setQuickTemp(vals[0] as number)} className="mt-1" />
                     </div>
                   )}
-
                   {/* Durée (manual/max) */}
                   {quickMode !== "home" && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Durée</span>
-                      <Input
-                        type="number"
-                        min={5}
-                        max={360}
-                        step={5}
-                        value={quickMinutes}
-                        onChange={(e) => setQuickMinutes(Number(e.target.value))}
-                        className="w-24"
-                      />
+                      <Input type="number" min={5} max={360} step={5} value={quickMinutes} onChange={(e) => setQuickMinutes(Number(e.target.value))} className="w-24" />
                       <span className="text-xs text-muted-foreground">min</span>
                     </div>
                   )}
-
                   {/* Appliquer */}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={applyQuickSetpoint}
-                    disabled={!homeId || !selectedRoomId}
-                    className="md:ml-2"
-                    title="Appliquer la consigne sur la pièce sélectionnée"
-                  >
+                  <Button variant="secondary" size="sm" onClick={applyQuickSetpoint} disabled={!homeId || !selectedRoomId} className="md:ml-2">
                     Appliquer
                   </Button>
                 </div>
@@ -722,436 +614,109 @@ const NetatmoDashboardPage: React.FC = () => {
             </Card>
           )}
 
-          {/* Maison */}
-          <Card>
-            <CardHeader><CardTitle>Maison</CardTitle></CardHeader>
-            <CardContent>
-              {home ? (
-                <div className="grid md:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <p className="font-medium">{home.name || "Sans nom"}</p>
-                    <p className="text-muted-foreground">{home.country} · {home.timezone}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium">Mode</p>
-                    <p className="text-muted-foreground">therm_mode: {home.therm_mode}</p>
-                    <p className="text-muted-foreground">temperature_control_mode: {home.temperature_control_mode}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium">Position</p>
-                    <p className="text-muted-foreground">
-                      alt: {home.altitude} · coords: {Array.isArray(home.coordinates) ? home.coordinates.join(", ") : "n/a"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Aucune maison détectée.</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Statut en temps réel */}
+          {/* KPI simplifiés */}
           {home && (
-            <Card className="mt-4">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle>Statut en temps réel</CardTitle>
-                <Button variant="secondary" size="sm" onClick={loadHomestatus} disabled={loading}>
-                  {loading ? "…" : "Actualiser"}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {homeStatus ? (
-                  <div className="text-sm space-y-3">
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <div>
-                        <p className="font-medium">Pièces</p>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {(() => {
-                            const rooms = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
-                            if (!rooms.length) {
-                              return [<li key="empty" className="text-muted-foreground">Aucune donnée détaillée de pièce disponible.</li>];
-                            }
-                            return rooms.map((room: any) => (
-                              <li key={room.id}>
-                                {room.name || room.id}: mesurée {room.therm_measured_temperature ?? "n/a"}°C · consigne {room.therm_setpoint_temperature ?? "n/a"}°C
-                              </li>
-                            ));
-                          })()}
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="font-medium">Infos</p>
-                        <div className="text-muted-foreground">
-                          Dernier rafraîchissement: {new Date().toLocaleTimeString()}
+            <div className="grid gap-4 md:grid-cols-3 mb-6">
+              {(() => {
+                const roomsLive = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
+                const activeRoom = roomsLive.find((r: any) => r.id === selectedRoomId) || roomsLive[0];
+                const currentTemp = typeof activeRoom?.therm_measured_temperature === "number" ? activeRoom.therm_measured_temperature : null;
+                const currentSetpoint = typeof activeRoom?.therm_setpoint_temperature === "number" ? activeRoom.therm_setpoint_temperature : null;
+                const lastRefreshLabel = new Date().toLocaleTimeString();
+                return (
+                  <>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-md bg-indigo-100 text-indigo-600 flex items-center justify-center"><Thermometer className="h-5 w-5" /></div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Température</p>
+                          <p className="text-lg font-semibold">{currentTemp !== null ? `${currentTemp.toFixed(1)}°C` : "n/a"}</p>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Chargement du statut…</p>
-                )}
-              </CardContent>
-            </Card>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center"><Gauge className="h-5 w-5" /></div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Consigne</p>
+                          <p className="text-lg font-semibold">{currentSetpoint !== null ? `${currentSetpoint.toFixed(1)}°C` : "n/a"}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4">
+                        <p className="text-xs text-muted-foreground">Dernière mise à jour</p>
+                        <p className="text-lg font-semibold">{lastRefreshLabel}</p>
+                        <div className="mt-2"><Button variant="secondary" size="sm" onClick={loadHomestatus} disabled={loading}>{loading ? "…" : "Actualiser"}</Button></div>
+                      </CardContent>
+                    </Card>
+                  </>
+                );
+              })()}
+            </div>
           )}
 
-          {/* Contrôles par pièce */}
+          {/* Graphiques (jour/semaine) */}
           {home && (
-            <>
-              <Card className="mt-4">
-                <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <CardTitle>Contrôles par pièce</CardTitle>
-                  {/* Barre d'action rapide pour changer la consigne */}
-                  <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-3">
-                    {/* Sélecteur de mode */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">Mode</span>
-                      <Select value={quickMode} onValueChange={(v) => setQuickMode(v as any)}>
-                        <SelectTrigger className="w-32"><SelectValue placeholder="Mode" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="manual">Manual</SelectItem>
-                          <SelectItem value="max">Max</SelectItem>
-                          <SelectItem value="home">Home</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Slider température (visible uniquement en manual) */}
-                    {quickMode === "manual" && (
-                      <div className="flex-1 min-w-[220px]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Température</span>
-                          <span className="text-xs font-medium">{quickTemp.toFixed(1)}°C</span>
-                        </div>
-                        <Slider
-                          value={[quickTemp]}
-                          min={7}
-                          max={30}
-                          step={0.5}
-                          onValueChange={(vals) => setQuickTemp(vals[0] as number)}
-                          className="mt-1"
-                        />
-                      </div>
-                    )}
-
-                    {/* Durée (minutes) pour manual/max */}
-                    {quickMode !== "home" && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Durée</span>
-                        <Input
-                          type="number"
-                          min={5}
-                          max={360}
-                          step={5}
-                          value={quickMinutes}
-                          onChange={(e) => setQuickMinutes(Number(e.target.value))}
-                          className="w-24"
-                        />
-                        <span className="text-xs text-muted-foreground">min</span>
-                      </div>
-                    )}
-
-                    {/* Bouton appliquer */}
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={applyQuickSetpoint}
-                      disabled={!homeId || !selectedRoomId}
-                      className="md:ml-2"
-                      title="Appliquer la consigne sur la pièce sélectionnée"
-                    >
-                      Appliquer
-                    </Button>
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Quotidien */}
+              <Card>
+                <CardHeader><CardTitle>Quotidien (Heure par heure)</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={dayChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="dayGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.35} />
+                            <stop offset="70%" stopColor="#1d4ed8" stopOpacity={0.1} />
+                            <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
+                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
+                        <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+                        <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
+                        <Area name="Température" type="monotone" dataKey="value" stroke="#1d4ed8" fill="url(#dayGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
+                        <Line type="monotone" dataKey="value" stroke="#1d4ed8" strokeWidth={2.5} dot={{ r: 2 }} activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={450} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="text-sm space-y-3">
-                    {(home.rooms || []).map((r: any) => (
-                      <li key={r.id} className="flex flex-col gap-2">
-                        <div className="text-muted-foreground">{r.name} · type: {r.type} · id: {r.id}</div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Input type="number" min={5} max={30} step={0.5} placeholder="Temp °C (manual)" className="w-32" id={`temp-${r.id}`} />
-                          <Input type="number" min={5} max={360} step={5} defaultValue={60} placeholder="Durée (min)" className="w-32" id={`mins-${r.id}`} />
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              const tempInput = (document.getElementById(`temp-${r.id}`) as HTMLInputElement | null)?.value;
-                              const minsInput = (document.getElementById(`mins-${r.id}`) as HTMLInputElement | null)?.value;
-                              const tempVal = tempInput ? Number(tempInput) : NaN;
-                              const minsVal = minsInput ? Number(minsInput) : 60;
-                              if (isNaN(tempVal)) {
-                                toast.error("Température invalide pour le mode manual.");
-                                return;
-                              }
-                              setRoomThermPoint({ roomId: r.id, mode: "manual", temp: tempVal, minutes: minsVal });
-                            }}
-                          >
-                            Appliquer (manual)
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              const minsInput = (document.getElementById(`mins-${r.id}`) as HTMLInputElement | null)?.value;
-                              const minsVal = minsInput ? Number(minsInput) : 60;
-                              setRoomThermPoint({ roomId: r.id, mode: "max", minutes: minsVal });
-                            }}
-                          >
-                            Max
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => setRoomThermPoint({ roomId: r.id, mode: "home" })}>
-                            Home (suivre maison)
-                          </Button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {dayChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour ce jour.</p>}
                 </CardContent>
               </Card>
 
-              <Card className="mt-4">
-                <CardHeader><CardTitle>Thermostats & passerelles</CardTitle></CardHeader>
+              {/* Hebdomadaire */}
+              <Card>
+                <CardHeader><CardTitle>Hebdomadaire (Heure par heure)</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <p className="font-medium mb-1">Thermostat</p>
-                      <Select value={selectedModuleId ?? ""} onValueChange={(v) => { setSelectedModuleId(v); persistSelection(); }}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Choisir" /></SelectTrigger>
-                        <SelectContent>
-                          {therms.map((m: any) => (
-                            <SelectItem key={m.id} value={m.id}>{m.name || m.id}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <p className="font-medium mb-1">Passerelle (relay)</p>
-                      <Select value={selectedBridgeId ?? ""} onValueChange={(v) => { setSelectedBridgeId(v); persistSelection(); }}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Choisir" /></SelectTrigger>
-                        <SelectContent>
-                          {relays.map((r: any) => (
-                            <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end">
-                      <Button className="w-full" onClick={loadHomestatus} disabled={loading || !homeId}>
-                        {loading ? "Chargement…" : "Statut en temps réel"}
-                      </Button>
-                    </div>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={weekChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="weekGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
+                            <stop offset="70%" stopColor="#10b981" stopOpacity={0.1} />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
+                        <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
+                        <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+                        <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
+                        <Area name="Température" type="monotone" dataKey="value" stroke="#10b981" fill="url(#weekGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
+                        <Line name="Température" type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={300} />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-
-                  {homeStatus && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium">Pièces (homestatus)</p>
-                      <ul className="list-disc pl-5 text-sm space-y-1">
-                        {(() => {
-                          const rooms = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
-                          return rooms.map((room: any) => (
-                            <li key={room.id}>
-                              {room.name || room.id}: mesurée {room.therm_measured_temperature ?? "n/a"}°C · consigne {room.therm_setpoint_temperature ?? "n/a"}°C
-                            </li>
-                          ));
-                        })()}
-                      </ul>
-                    </div>
-                  )}
+                  {weekChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour cette semaine.</p>}
                 </CardContent>
               </Card>
-
-              <Card className="mt-4">
-                <CardHeader><CardTitle>Programme sélectionné</CardTitle></CardHeader>
-                <CardContent>
-                  {schedule ? (
-                    <div className="text-sm">
-                      <p className="font-medium">{schedule.name || "__DEFAULT_SCHEDULE"}</p>
-                      <p className="text-muted-foreground">
-                        away_temp: {schedule.away_temp}°C · hors gel (hg_temp): {schedule.hg_temp}°C
-                      </p>
-                      <p className="text-muted-foreground">type: {schedule.type}</p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Aucun programme trouvé.</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="mt-4">
-                <CardHeader><CardTitle>Historique chaudière</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-3 gap-3 text-sm">
-                    <div>
-                      <p className="font-medium mb-1">Échelle</p>
-                      <Select value={selectedScale} onValueChange={(v) => { setSelectedScale(v); persistSelection(); }}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="30min">30min</SelectItem>
-                          <SelectItem value="1hour">1hour</SelectItem>
-                          <SelectItem value="3hours">3hours</SelectItem>
-                          <SelectItem value="1day">1day</SelectItem>
-                          <SelectItem value="1week">1week</SelectItem>
-                          <SelectItem value="1month">1month</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <p className="font-medium mb-1">Type</p>
-                      <Select value={selectedTypes} onValueChange={(v) => { setSelectedTypes(v); persistSelection(); }}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="boileron">boileron</SelectItem>
-                          <SelectItem value="boileroff">boileroff</SelectItem>
-                          <SelectItem value="sum_boiler_on">sum_boiler_on</SelectItem>
-                          <SelectItem value="sum_boiler_off">sum_boiler_off</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end">
-                      <Button className="w-full" onClick={loadBoilerHistory} disabled={loading || !selectedModuleId || !selectedBridgeId}>
-                        {loading ? "Chargement…" : "Charger l'historique"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {boilerHistory && (
-                    <div className="mt-3">
-                      <p className="text-sm font-medium">Mesures</p>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs border border-muted rounded">
-                          <thead>
-                            <tr className="bg-muted">
-                              <th className="p-2 text-left">beg_time</th>
-                              <th className="p-2 text-left">step_time</th>
-                              <th className="p-2 text-left">value</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(() => {
-                              const items = boilerHistory?.body?.items;
-                              const rows = Array.isArray(items) ? items : (items ? [items] : []);
-                              return rows.map((it: any, idx: number) => (
-                                <tr key={idx} className="border-t">
-                                  <td className="p-2">{it.beg_time}</td>
-                                  <td className="p-2">{it.step_time}</td>
-                                  <td className="p-2">{Array.isArray(it.value) ? it.value.join(", ") : String(it.value)}</td>
-                                </tr>
-                              ));
-                            })()}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Graphiques auto jour & semaine */}
-              {home && (
-                <div className="grid gap-6 md:grid-cols-2 mt-4">
-                  {/* Quotidien */}
-                  <Card>
-                    <CardHeader><CardTitle>Quotidien (1 jour) – Température</CardTitle></CardHeader>
-                    <CardContent>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={dayChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="dayGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.35} />
-                                <stop offset="70%" stopColor="#1d4ed8" stopOpacity={0.10} />
-                                <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.00} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
-                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
-                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
-                            <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
-                            <Legend />
-                            <Area name="Température" type="monotone" dataKey="value" stroke="#1d4ed8" fill="url(#dayGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
-                            <Line type="monotone" dataKey="value" stroke="#1d4ed8" strokeWidth={2.5} dot={{ r: 2 }} activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={450} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                      {dayChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour ce jour.</p>}
-                      <div className="mt-2 text-xs text-muted-foreground">Points: {dayChartData.length} • beg_time: {dayRaw?.body?.home?.beg_time ?? dayRaw?.body?.beg_time ?? "n/a"} • step_time: {dayRaw?.body?.home?.step_time ?? dayRaw?.body?.step_time ?? "n/a"}</div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Hebdomadaire */}
-                  <Card>
-                    <CardHeader><CardTitle>Hebdomadaire (7 jours, horaire) – Température</CardTitle></CardHeader>
-                    <CardContent>
-                      <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={weekChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                            <defs>
-                              <linearGradient id="weekGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
-                                <stop offset="70%" stopColor="#10b981" stopOpacity={0.10} />
-                                <stop offset="100%" stopColor="#10b981" stopOpacity={0.00} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
-                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={18} />
-                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toFixed(1)}°C`} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
-                            <Tooltip wrapperStyle={{ outline: "none" }} contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }} labelStyle={{ color: "#e5e7eb", fontWeight: 600 }} itemStyle={{ color: "#e5e7eb" }} formatter={(val: any) => [`${Number(val).toFixed(1)}°C`, "Température"]} />
-                            <Legend />
-                            <Area name="Température" type="monotone" dataKey="value" stroke="#10b981" fill="url(#weekGrad)" strokeWidth={2.5} connectNulls animationDuration={450} />
-                            <Line name="Température" type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }} connectNulls strokeLinecap="round" strokeLinejoin="round" animationDuration={300} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                      {weekChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour cette semaine.</p>}
-                      <div className="mt-2 text-xs text-muted-foreground">Points: {weekChartData.length} • beg_time: {weekRaw?.body?.home?.beg_time ?? weekRaw?.body?.beg_time ?? "n/a"} • step_time: {weekRaw?.body?.home?.step_time ?? weekRaw?.body?.step_time ?? "n/a"}</div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {/* NEW: Logs Netatmo (diagnostic) */}
-              <Card className="mt-6">
-                <CardHeader><CardTitle>Diagnostics</CardTitle></CardHeader>
-                <CardContent>
-                  <Accordion type="single" collapsible>
-                    <AccordionItem value="logs">
-                      <AccordionTrigger>Logs Netatmo (derniers 10)</AccordionTrigger>
-                      <AccordionContent>
-                        {logs.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">Aucun log enregistré pour l'instant.</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {logs.map((l) => (
-                              <div key={l.id} className="border rounded p-2">
-                                <div className="text-xs">
-                                  <span className="font-medium">{l.endpoint}</span> · status {l.response_status} · points {l.count_points ?? "n/a"} · {new Date(l.created_at).toLocaleString()}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground break-words mt-1">
-                                  params: {JSON.stringify(l.params)}
-                                </div>
-                                {l.error ? (
-                                  <div className="text-[10px] text-red-600 break-words mt-1">
-                                    error: {l.error}
-                                  </div>
-                                ) : (
-                                  <div className="text-[10px] break-words mt-1">
-                                    preview: {l.body_preview}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <div className="mt-3">
-                          <Button variant="secondary" size="sm" onClick={loadLogs}>Rafraîchir les logs</Button>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </CardContent>
-              </Card>
-            </>
+            </div>
           )}
+
+          {/* Diagnostics (optionnel, replié) */}
+          {/* Vous pouvez garder les logs dans un accordéon si nécessaire, sinon retirez complètement */}
         </div>
       </section>
     </MainLayout>

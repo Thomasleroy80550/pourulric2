@@ -76,6 +76,7 @@ const NetatmoDashboardPage: React.FC = () => {
           bridgeId: selectedBridgeId,
           scale: selectedScale,
           types: selectedTypes,
+          roomId: selectedRoomId, // NEW: mémoriser la pièce
         })
       );
     } catch {}
@@ -91,6 +92,7 @@ const NetatmoDashboardPage: React.FC = () => {
         setSelectedBridgeId(parsed.bridgeId ?? null);
         setSelectedScale(parsed.scale ?? "1day");
         setSelectedTypes(parsed.types ?? "sum_boiler_on");
+        setSelectedRoomId(parsed.roomId ?? null); // NEW: restaurer la pièce
       }
     } catch {}
   };
@@ -138,13 +140,39 @@ const NetatmoDashboardPage: React.FC = () => {
   // Auto-load room charts (1 day + 1 week) when homeId and selectedRoomId are ready
   async function loadRoomCharts() {
     if (!homeId || !selectedRoomId) return;
+
+    // NEW: plage de dates locale (Unix sec)
+    const nowSec = Math.floor(Date.now() / 1000);
+    const dayBegin = nowSec - 24 * 60 * 60;
+    const weekBegin = nowSec - 7 * 24 * 60 * 60;
+
     setLoading(true);
     const [dayRes, weekRes] = await Promise.all([
       supabase.functions.invoke("netatmo-proxy", {
-        body: { endpoint: "getroommeasure", home_id: homeId, room_id: selectedRoomId, scale: "1day", type: "temperature", optimize: true },
+        body: {
+          endpoint: "getroommeasure",
+          home_id: homeId,
+          room_id: selectedRoomId,
+          scale: "1day",
+          type: "temperature",
+          date_begin: dayBegin,
+          date_end: nowSec,
+          real_time: true,
+          optimize: true,
+        },
       }),
       supabase.functions.invoke("netatmo-proxy", {
-        body: { endpoint: "getroommeasure", home_id: homeId, room_id: selectedRoomId, scale: "1week", type: "temperature", optimize: true },
+        body: {
+          endpoint: "getroommeasure",
+          home_id: homeId,
+          room_id: selectedRoomId,
+          scale: "1week",
+          type: "temperature",
+          date_begin: weekBegin,
+          date_end: nowSec,
+          real_time: true,
+          optimize: true,
+        },
       }),
     ]);
     setLoading(false);

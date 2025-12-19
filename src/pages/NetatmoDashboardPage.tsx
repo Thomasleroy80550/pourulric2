@@ -9,6 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 // NEW: import accordion for collapsible logs
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { toast } from "sonner";
@@ -66,6 +68,10 @@ const NetatmoDashboardPage: React.FC = () => {
   const [departureAt, setDepartureAt] = React.useState<string>("");
   const [preheatMinutes, setPreheatMinutes] = React.useState<number>(90);
   const [arrivalTemp, setArrivalTemp] = React.useState<number>(20);
+  // NEW: choisir le mode de lancement (relatif vs heure précise) + datetime de démarrage
+  const [preheatMode, setPreheatMode] = React.useState<"relative" | "absolute">("relative");
+  const [heatStartAt, setHeatStartAt] = React.useState<string>("");
+
   // NEW: réservations (arrivées à venir)
   const [upcomingReservations, setUpcomingReservations] = React.useState<Array<{
     id: string;
@@ -433,7 +439,21 @@ const NetatmoDashboardPage: React.FC = () => {
       toast.error("Le départ doit être après l'arrivée.");
       return;
     }
-    const startHeatSec = arrivalSec - Math.max(5, preheatMinutes) * 60;
+    // NEW: calcul du démarrage de chauffe selon le mode sélectionné
+    let startHeatSec: number;
+    if (preheatMode === "absolute") {
+      if (!heatStartAt) {
+        toast.error("Choisissez l'heure de lancement de la chauffe.");
+        return;
+      }
+      startHeatSec = Math.floor(new Date(heatStartAt).getTime() / 1000);
+      if (startHeatSec >= departureSec) {
+        toast.error("L'heure de lancement doit être avant l'heure de départ.");
+        return;
+      }
+    } else {
+      startHeatSec = arrivalSec - Math.max(5, preheatMinutes) * 60;
+    }
 
     // Construire les 2 lignes
     const rows = [
@@ -905,7 +925,7 @@ const NetatmoDashboardPage: React.FC = () => {
           {home && (
             <Card className="mb-6 shadow-sm">
               <CardHeader className="flex items-center justify-between">
-                <CardTitle>Programmations arrivée / départ</CardTitle>
+                <CardTitle>Programmation arrivée / départ</CardTitle>
                 <Button variant="secondary" size="sm" onClick={runSchedulerNow}>
                   Lancer maintenant
                 </Button>
@@ -934,13 +954,35 @@ const NetatmoDashboardPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="space-y-3">
+                    {/* NEW: choix du mode de lancement */}
                     <div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">Préchauffage avant arrivée</p>
-                        <span className="text-xs font-medium">{preheatMinutes} min</span>
-                      </div>
-                      <Slider min={5} max={240} step={5} value={[preheatMinutes]} onValueChange={(vals) => setPreheatMinutes(vals[0] as number)} />
+                      <p className="text-xs text-muted-foreground mb-1">Mode de lancement de la chauffe</p>
+                      <RadioGroup value={preheatMode} onValueChange={(v) => setPreheatMode(v as "relative" | "absolute")} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="relative" id="mode-relative" />
+                          <label htmlFor="mode-relative" className="text-xs">Minutes avant l'arrivée</label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="absolute" id="mode-absolute" />
+                          <label htmlFor="mode-absolute" className="text-xs">Heure précise de lancement</label>
+                        </div>
+                      </RadioGroup>
                     </div>
+                    {/* Affichage conditionnel: minutes vs datetime */}
+                    {preheatMode === "relative" ? (
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">Préchauffage avant arrivée</p>
+                          <span className="text-xs font-medium">{preheatMinutes} min</span>
+                        </div>
+                        <Slider min={5} max={240} step={5} value={[preheatMinutes]} onValueChange={(vals) => setPreheatMinutes(vals[0] as number)} />
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Heure de lancement (datetime)</p>
+                        <Input type="datetime-local" value={heatStartAt} onChange={(e) => setHeatStartAt(e.target.value)} />
+                      </div>
+                    )}
                     <div>
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-muted-foreground">Température à l'arrivée</p>
@@ -954,7 +996,9 @@ const NetatmoDashboardPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">Astuce: la chauffe démarre automatiquement avant l'arrivée pour atteindre la consigne, et se coupe au départ.</p>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Astuce: choisissez "Heure précise de lancement" pour vos tests, ou "Minutes avant l'arrivée" pour un démarrage automatique.
+                </p>
               </CardContent>
             </Card>
           )}

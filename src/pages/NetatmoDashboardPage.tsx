@@ -1187,10 +1187,88 @@ const NetatmoDashboardPage: React.FC = () => {
               <CardTitle>Programmation</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">Arrivée: {arrivalAt || "Sélectionnez l'arrivée"}</p>
-              <p className="text-gray-600">Départ: {departureAt || "Sélectionnez le départ"}</p>
-              <p className="text-gray-600">Préchauffage: {preheatMinutes} minutes</p>
-              <p className="text-gray-600">Température: {arrivalTemp}°C</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Arrivée</label>
+                    <Input
+                      type="datetime-local"
+                      value={arrivalAt}
+                      onChange={(e) => setArrivalAt(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Départ</label>
+                    <Input
+                      type="datetime-local"
+                      value={departureAt}
+                      onChange={(e) => setDepartureAt(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Mode de préchauffage</label>
+                  <RadioGroup
+                    value={preheatMode}
+                    onValueChange={(val) => setPreheatMode(val as "relative" | "absolute")}
+                    className="mt-1 flex gap-6"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="relative" id="preheat-relative" />
+                      <label htmlFor="preheat-relative">Relatif</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="absolute" id="preheat-absolute" />
+                      <label htmlFor="preheat-absolute">Heure précise</label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {preheatMode === "relative" ? (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Préchauffer (minutes avant)</label>
+                      <span className="text-sm text-gray-600">{preheatMinutes} min</span>
+                    </div>
+                    <Slider
+                      value={[preheatMinutes]}
+                      onValueChange={(vals) => setPreheatMinutes(vals[0])}
+                      min={5}
+                      max={600}
+                      step={5}
+                      className="mt-2"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium">Heure de lancement de la chauffe</label>
+                    <Input
+                      type="time"
+                      value={heatStartAt}
+                      onChange={(e) => setHeatStartAt(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Température à l'arrivée</label>
+                    <span className="text-sm text-gray-600">{arrivalTemp} °C</span>
+                  </div>
+                  <Slider
+                    value={[arrivalTemp]}
+                    onValueChange={(vals) => setArrivalTemp(vals[0])}
+                    min={10}
+                    max={25}
+                    step={0.5}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -1199,9 +1277,92 @@ const NetatmoDashboardPage: React.FC = () => {
               <CardTitle>Scénario</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">Degré Eco: {scenarioAfterDepartureTemp}°C</p>
-              <p className="text-gray-600">Mode: {preheatMode === "absolute" ? "Heure précise" : "Relatif"}</p>
-              <p className="text-gray-600">Heure de départ: {heatStartAt || "Sélectionnez l'heure"}</p>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Degré Eco (après départ)</label>
+                    <span className="text-sm text-gray-600">{scenarioAfterDepartureTemp} °C</span>
+                  </div>
+                  <Slider
+                    value={[scenarioAfterDepartureTemp]}
+                    onValueChange={(vals) => setScenarioAfterDepartureTemp(vals[0])}
+                    min={10}
+                    max={22}
+                    step={0.5}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Mode de préchauffage global</label>
+                  <RadioGroup
+                    value={scenarioMode}
+                    onValueChange={(val) => setScenarioMode(val as "relative" | "absolute")}
+                    className="mt-1 flex gap-6"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="relative" id="scenario-relative" />
+                      <label htmlFor="scenario-relative">Relatif</label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="absolute" id="scenario-absolute" />
+                      <label htmlFor="scenario-absolute">Heure précise</label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {scenarioMode === "relative" ? (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Préchauffer (minutes avant)</label>
+                      <span className="text-sm text-gray-600">{scenarioMinutes} min</span>
+                    </div>
+                    <Slider
+                      value={[scenarioMinutes]}
+                      onValueChange={(vals) => setScenarioMinutes(vals[0])}
+                      min={5}
+                      max={600}
+                      step={5}
+                      className="mt-2"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-sm font-medium">Heure de lancement (global)</label>
+                    <Input
+                      type="time"
+                      value={scenarioHeatStart}
+                      onChange={(e) => setScenarioHeatStart(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Température d'arrivée (global)</label>
+                    <span className="text-sm text-gray-600">{scenarioArrivalTemp} °C</span>
+                  </div>
+                  <Slider
+                    value={[scenarioArrivalTemp]}
+                    onValueChange={(vals) => setScenarioArrivalTemp(vals[0])}
+                    min={10}
+                    max={25}
+                    step={0.5}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Heure d'arrêt (appliquer Eco)</label>
+                  <Input
+                    type="time"
+                    value={scenarioStopTime}
+                    onChange={(e) => setScenarioStopTime(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -1221,8 +1382,21 @@ const NetatmoDashboardPage: React.FC = () => {
               <CardTitle>Historique de la pièce</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">Échelle: {selectedScale}</p>
-              <p className="text-gray-600">Type: {selectedTypes}</p>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">Température — Aujourd'hui</p>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dayChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="value" stroke="#2563eb" dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -1231,8 +1405,21 @@ const NetatmoDashboardPage: React.FC = () => {
               <CardTitle>Chaudière</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">Échelle: {selectedScale}</p>
-              <p className="text-gray-600">Type: {selectedTypes}</p>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">Température — 7 derniers jours</p>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={weekChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="value" stroke="#10b981" dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

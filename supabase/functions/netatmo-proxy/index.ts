@@ -90,8 +90,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const cronSecretEnv = (Deno.env.get("CRON_SECRET") ?? "").trim();
+  const authHeader = req.headers.get("Authorization");
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const isCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
 
   let payload: any = {};
   try {
@@ -100,11 +101,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: corsHeaders });
   }
 
-  const headerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
-  const hasHeaderCron = !!headerToken && !!cronSecretEnv && headerToken === cronSecretEnv;
-  const hasBodyCron = !!cronSecretEnv && typeof payload?.cron_secret === "string" && payload.cron_secret.trim() === cronSecretEnv;
-  const isCron = hasHeaderCron || hasBodyCron;
-
+  // CHANGED: utiliser Energy API par défaut
   const action: string = payload?.endpoint ?? "homesdata";
   const home_id: string | undefined = payload?.home_id;
   const device_id: string | undefined = payload?.device_id;
@@ -114,6 +111,7 @@ serve(async (req) => {
   const temp: number | undefined = payload?.temp;
   const endtime: string | number | undefined = payload?.endtime;
 
+  // NEW: getmeasure/getroommeasure params
   const scale: string | undefined = payload?.scale;
   const typeParam: string[] | string | undefined = payload?.type;
   const date_begin: number | undefined = payload?.date_begin;
@@ -122,14 +120,8 @@ serve(async (req) => {
   const optimize: boolean | undefined = payload?.optimize;
   const real_time: boolean | undefined = payload?.real_time;
 
-  // NEW: createnewhomeschedule params
-  const schedule_name: string | undefined = payload?.name;
-  const hg_temp: number | undefined = payload?.hg_temp;
-  const away_temp: number | undefined = payload?.away_temp;
-  const zones: any[] | undefined = payload?.zones;
-  const timetable: any[] | undefined = payload?.timetable;
-
-  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
+  // Déterminer l'utilisateur
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader ?? "" } } });
   let userId: string | null = null;
 
   if (isCron) {
@@ -145,6 +137,7 @@ serve(async (req) => {
     userId = userData.user.id;
   }
 
+  // Charger le token de l'utilisateur
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
   const { data: rows, error: selErr } = await supabaseAdmin
     .from("netatmo_tokens")
@@ -160,6 +153,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Not connected to Netatmo" }), { status: 404, headers: corsHeaders });
   }
 
+  // Rafraîchir si nécessaire
   let usable = record;
   try {
     usable = await ensureFreshToken(record);
@@ -168,6 +162,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Refresh failed", details: msg }), { status: 502, headers: corsHeaders });
   }
 
+  // Helper: enregistrer un log
   async function logEvent(params: Record<string, any>, responseStatus: number, bodyPreview: string, errorMsg?: string, countPoints?: number | null) {
     try {
       await supabaseAdmin.from("netatmo_logs").insert({
@@ -295,32 +290,6 @@ serve(async (req) => {
         "Accept": "application/json",
       },
     });
-  } else if (action === "createnewhomeschedule") {
-    // NEW: créer un planning hebdo
-    if (!home_id || !Array.isArray(zones) || !Array.isArray(timetable) || typeof hg_temp !== "number" || typeof away_temp !== "number") {
-      return new Response(JSON.stringify({ error: "Missing required fields: home_id, zones[], timetable[], hg_temp, away_temp" }), { status: 400, headers: corsHeaders });
-    }
-    const bodyPayload: Record<string, any> = {
-      home_id,
-      zones,
-      timetable,
-      hg_temp,
-      away_temp,
-    };
-    if (typeof schedule_name === "string" && schedule_name.trim().length > 0) {
-      bodyPayload.name = schedule_name.trim();
-    }
-
-    url = "https://api.netatmo.com/api/createnewhomeschedule";
-    upstream = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${usable.access_token}`,
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(bodyPayload),
-    });
   } else if (action === "getstationsdata") {
     // rétrocompat météo
     url = "https://api.netatmo.com/api/getstationsdata";
@@ -342,7 +311,7 @@ serve(async (req) => {
   const text = await upstream.text();
   const contentType = upstream.headers.get("content-type") || "application/json";
 
-  // Calculer countPoints si possible
+  // Calculer count_points si possible
   let countPoints: number | null = null;
   try {
     const parsed = JSON.parse(text);
@@ -363,9 +332,6 @@ serve(async (req) => {
     } else if (action === "getmeasure") {
       const items = parsed?.body?.items;
       countPoints = Array.isArray(items) ? items.length : (items ? 1 : 0);
-    } else if (action === "createnewhomeschedule") {
-      // Le retour contient souvent status ok; pas de points à compter
-      countPoints = null;
     }
   } catch {
     // ignore
@@ -374,10 +340,7 @@ serve(async (req) => {
   // Enregistrer log
   const paramsLog = {
     home_id, room_id, device_id, module_id, scale, type: typeParam, date_begin, date_end, real_time, optimize,
-    mode, temp, endtime, url,
-    name: schedule_name, hg_temp, away_temp,
-    zones_len: Array.isArray(zones) ? zones.length : null,
-    timetable_len: Array.isArray(timetable) ? timetable.length : null,
+    mode, temp, endtime, url
   };
   const preview = text ? text.slice(0, 500) : "";
 

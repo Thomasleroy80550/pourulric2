@@ -84,7 +84,7 @@ const NetatmoDashboardPage: React.FC = () => {
 
     if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
 
-    return values
+    const points = values
       .map((item: any, idx: number) => {
         let raw: any = item;
         if (Array.isArray(raw)) raw = raw[0];
@@ -95,6 +95,14 @@ const NetatmoDashboardPage: React.FC = () => {
         return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
       })
       .filter((p) => p !== null) as { ts: number; label: string; value: number }[];
+
+    // NEW: si une seule mesure, dupliquer en fin de période pour tracer une ligne plate
+    if (points.length === 1) {
+      const only = points[0]!;
+      points.push({ ts: only.ts + step, label: new Date((only.ts + step) * 1000).toLocaleString(), value: only.value });
+    }
+
+    return points;
   }
 
   const LS_KEY = "netatmo_selection_v1";
@@ -689,7 +697,7 @@ const NetatmoDashboardPage: React.FC = () => {
                               dataKey="value"
                               stroke="#1d4ed8"
                               strokeWidth={2.5}
-                              dot={false}
+                              dot
                               activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }}
                               animationDuration={400}
                             />
@@ -735,7 +743,7 @@ const NetatmoDashboardPage: React.FC = () => {
                               dataKey="value"
                               stroke="#10b981"
                               strokeWidth={2.5}
-                              dot={false}
+                              dot
                               activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
                               animationDuration={400}
                             />

@@ -122,6 +122,13 @@ serve(async (req) => {
   const optimize: boolean | undefined = payload?.optimize;
   const real_time: boolean | undefined = payload?.real_time;
 
+  // NEW: createnewhomeschedule params
+  const schedule_name: string | undefined = payload?.name;
+  const hg_temp: number | undefined = payload?.hg_temp;
+  const away_temp: number | undefined = payload?.away_temp;
+  const zones: any[] | undefined = payload?.zones;
+  const timetable: any[] | undefined = payload?.timetable;
+
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
   let userId: string | null = null;
 
@@ -288,6 +295,32 @@ serve(async (req) => {
         "Accept": "application/json",
       },
     });
+  } else if (action === "createnewhomeschedule") {
+    // NEW: créer un planning hebdo
+    if (!home_id || !Array.isArray(zones) || !Array.isArray(timetable) || typeof hg_temp !== "number" || typeof away_temp !== "number") {
+      return new Response(JSON.stringify({ error: "Missing required fields: home_id, zones[], timetable[], hg_temp, away_temp" }), { status: 400, headers: corsHeaders });
+    }
+    const bodyPayload: Record<string, any> = {
+      home_id,
+      zones,
+      timetable,
+      hg_temp,
+      away_temp,
+    };
+    if (typeof schedule_name === "string" && schedule_name.trim().length > 0) {
+      bodyPayload.name = schedule_name.trim();
+    }
+
+    url = "https://api.netatmo.com/api/createnewhomeschedule";
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(bodyPayload),
+    });
   } else if (action === "getstationsdata") {
     // rétrocompat météo
     url = "https://api.netatmo.com/api/getstationsdata";
@@ -309,7 +342,7 @@ serve(async (req) => {
   const text = await upstream.text();
   const contentType = upstream.headers.get("content-type") || "application/json";
 
-  // Calculer count_points si possible
+  // Calculer countPoints si possible
   let countPoints: number | null = null;
   try {
     const parsed = JSON.parse(text);
@@ -330,6 +363,9 @@ serve(async (req) => {
     } else if (action === "getmeasure") {
       const items = parsed?.body?.items;
       countPoints = Array.isArray(items) ? items.length : (items ? 1 : 0);
+    } else if (action === "createnewhomeschedule") {
+      // Le retour contient souvent status ok; pas de points à compter
+      countPoints = null;
     }
   } catch {
     // ignore
@@ -338,7 +374,10 @@ serve(async (req) => {
   // Enregistrer log
   const paramsLog = {
     home_id, room_id, device_id, module_id, scale, type: typeParam, date_begin, date_end, real_time, optimize,
-    mode, temp, endtime, url
+    mode, temp, endtime, url,
+    name: schedule_name, hg_temp, away_temp,
+    zones_len: Array.isArray(zones) ? zones.length : null,
+    timetable_len: Array.isArray(timetable) ? timetable.length : null,
   };
   const preview = text ? text.slice(0, 500) : "";
 

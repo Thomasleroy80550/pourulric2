@@ -111,6 +111,15 @@ serve(async (req) => {
   const temp: number | undefined = payload?.temp;
   const endtime: string | number | undefined = payload?.endtime;
 
+  // NEW: getmeasure params
+  const scale: string | undefined = payload?.scale;
+  const typeParam: string[] | string | undefined = payload?.type;
+  const date_begin: number | undefined = payload?.date_begin;
+  const date_end: number | undefined = payload?.date_end;
+  const limit: number | undefined = payload?.limit;
+  const optimize: boolean | undefined = payload?.optimize;
+  const real_time: boolean | undefined = payload?.real_time;
+
   // Vérifier l'utilisateur via JWT
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
   const { data: userData, error: userErr } = await supabaseUser.auth.getUser();
@@ -202,6 +211,35 @@ serve(async (req) => {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: form.toString(),
+    });
+  } else if (action === "getmeasure") {
+    // NEW: historique chaudière
+    // Required: device_id (gateway MAC), module_id (thermostat MAC), scale, type
+    if (!device_id || !module_id || !scale || !typeParam) {
+      return new Response(JSON.stringify({ error: "Missing required fields: device_id, module_id, scale, type" }), { status: 400, headers: corsHeaders });
+    }
+    // Normaliser type (array -> comma-separated string)
+    const typeStr = Array.isArray(typeParam) ? typeParam.join(",") : String(typeParam);
+    url = "https://api.netatmo.com/api/getmeasure";
+    const qs = new URLSearchParams({
+      device_id,
+      module_id,
+      scale,
+      type: typeStr,
+    });
+    if (typeof date_begin === "number") qs.set("date_begin", String(date_begin));
+    if (typeof date_end === "number") qs.set("date_end", String(date_end));
+    if (typeof limit === "number") qs.set("limit", String(Math.min(Math.max(limit, 1), 1024)));
+    if (typeof optimize === "boolean") qs.set("optimize", optimize ? "true" : "false");
+    if (typeof real_time === "boolean") qs.set("real_time", real_time ? "true" : "false");
+
+    url += `?${qs.toString()}`;
+    upstream = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+      },
     });
   } else if (action === "getstationsdata") {
     // rétrocompat: météo (stations)

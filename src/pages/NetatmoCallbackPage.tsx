@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type StationsResponse = any;
 type HomesDataResponse = any;
@@ -37,6 +38,167 @@ async function setRoomThermPoint(opts: { homeId: string; roomId: string; mode: "
   }
   toast.success("Thermostat mis à jour.");
   if (typeof onDone === "function") onDone();
+}
+
+// Persistance locale pour éviter la perte au reload
+const LS_KEY = "netatmo_selection_v1";
+
+// NEW: états pour affectations et user rooms
+const [userRooms, setUserRooms] = React.useState<{ id: string; room_name: string }[]>([]);
+const [assignments, setAssignments] = React.useState<any[]>([]);
+
+// NEW: états pour getmeasure
+const [selectedModuleId, setSelectedModuleId] = React.useState<string | null>(null);
+const [selectedBridgeId, setSelectedBridgeId] = React.useState<string | null>(null);
+const [selectedScale, setSelectedScale] = React.useState<string>("1day");
+const [selectedTypes, setSelectedTypes] = React.useState<string>("sum_boiler_on");
+const [boilerHistory, setBoilerHistory] = React.useState<any | null>(null);
+
+// Charger user rooms et assignments
+async function loadUserRoomsAndAssignments() {
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData?.user?.id;
+  if (!userId) return;
+
+  const { data: rooms } = await supabase
+    .from("user_rooms")
+    .select("id, room_name")
+    .eq("user_id", userId)
+    .order("room_name", { ascending: true });
+  setUserRooms(rooms || []);
+
+  const { data: assigns } = await supabase
+    .from("netatmo_thermostats")
+    .select("*")
+    .eq("user_id", userId);
+  setAssignments(assigns || []);
+}
+
+// Restaurer sélections au reload
+React.useEffect(() => {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      setHomeId(parsed.homeId ?? null);
+      setSelectedModuleId(parsed.moduleId ?? null);
+      setSelectedBridgeId(parsed.bridgeId ?? null);
+      setSelectedScale(parsed.scale ?? "1day");
+      setSelectedTypes(parsed.types ?? "sum_boiler_on");
+    }
+  } catch {}
+}, []);
+
+function persistSelection() {
+  const payload = {
+    homeId,
+    moduleId: selectedModuleId,
+    bridgeId: selectedBridgeId,
+    scale: selectedScale,
+    types: selectedTypes,
+  };
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(payload));
+  } catch {}
+}
+
+// Mettre à jour modules & bridge sélectionnés lorsque homesdata arrive
+React.useEffect(() => {
+  if (!homesData) return;
+  const home = homesData?.body?.homes?.[0];
+  if (!home) return;
+  // Sélection par défaut: premier thermostat et son bridge
+  const firstTherm = (home.modules || []).find((m: any) => m.type === "NATherm1");
+  if (firstTherm) {
+    setSelectedModuleId(firstTherm.id);
+    setSelectedBridgeId(firstTherm.bridge);
+  }
+  persistSelection();
+  // Charger rooms + assignments
+  loadUserRoomsAndAssignments();
+}, [homesData]);
+
+// Charger homestatus et persister sélection
+async function loadHomestatus() {
+  if (!homeId) {
+    toast.error("home_id introuvable.");
+    return;
+  }
+  setLoading(true);
+  const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+    body: { endpoint: "homestatus", home_id: homeId },
+  });
+  setLoading(false);
+
+  if (error) {
+    toast.error(error.message || "Erreur de récupération du statut (homestatus).");
+    return;
+  }
+  setHomeStatus(data);
+  persistSelection();
+}
+
+// Historique chaudière via getmeasure
+async function loadBoilerHistory() {
+  if (!selectedBridgeId || !selectedModuleId) {
+    toast.error("Sélectionnez un thermostat.");
+    return;
+  }
+  setLoading(true);
+  const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+    body: {
+      endpoint: "getmeasure",
+      device_id: selectedBridgeId,
+      module_id: selectedModuleId,
+      scale: selectedScale,
+      type: selectedTypes, // string CSV ou simple clé, le proxy normalise
+      optimize: true,
+    },
+  });
+  setLoading(false);
+  if (error) {
+    toast.error(error.message || "Erreur de récupération de l’historique chaudière.");
+    return;
+  }
+  setBoilerHistory(data);
+  persistSelection();
+}
+
+// Assignation thermostat → logement
+async function assignThermostatToRoom(opts: { homeId: string; bridgeId: string; moduleId: string; netatmoRoomId?: string; netatmoRoomName?: string; userRoomId: string }) {
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData?.user?.id;
+  if (!userId) {
+    toast.error("Non authentifié.");
+    return;
+  }
+  const payload = {
+    user_id: userId,
+    user_room_id: opts.userRoomId,
+    home_id: opts.homeId,
+    device_id: opts.bridgeId,
+    module_id: opts.moduleId,
+    netatmo_room_id: opts.netatmoRoomId ?? null,
+    netatmo_room_name: opts.netatmoRoomName ?? null,
+  };
+  const { error } = await supabase.from("netatmo_thermostats").insert(payload);
+  if (error) {
+    toast.error(error.message || "Erreur lors de l’assignation.");
+    return;
+  }
+  toast.success("Thermostat assigné au logement.");
+  await loadUserRoomsAndAssignments();
+}
+
+// Désassignation
+async function unassignThermostat(recordId: string) {
+  const { error } = await supabase.from("netatmo_thermostats").delete().eq("id", recordId);
+  if (error) {
+    toast.error(error.message || "Erreur lors de la suppression.");
+    return;
+  }
+  toast.success("Thermostat désassigné.");
+  await loadUserRoomsAndAssignments();
 }
 
 const NetatmoCallbackPage: React.FC = () => {
@@ -97,31 +259,16 @@ const NetatmoCallbackPage: React.FC = () => {
     setHomeId(id);
   };
 
-  const loadHomestatus = async () => {
-    if (!homeId) {
-      toast.error("home_id introuvable.");
-      return;
-    }
-    setLoading(true);
-    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-      body: { endpoint: "homestatus", home_id: homeId },
-    });
-    setLoading(false);
-
-    if (error) {
-      toast.error(error.message || "Erreur de récupération du statut (homestatus).");
-      return;
-    }
-
-    setHomeStatus(data);
-  };
-
   React.useEffect(() => {
     // Si on revient avec ?code=..., tenter l'échange automatiquement
     const params = new URLSearchParams(window.location.search);
     if (params.get("code")) {
       exchangeCode();
     }
+  }, []);
+
+  React.useEffect(() => {
+    loadUserRoomsAndAssignments();
   }, []);
 
   return (
@@ -271,6 +418,88 @@ const NetatmoCallbackPage: React.FC = () => {
 
                             <Card>
                               <CardHeader>
+                                <CardTitle>Thermostats détectés</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                {(() => {
+                                  const home = homesData?.body?.homes?.[0];
+                                  if (!home) return null;
+                                  const relays = (home.modules || []).filter((m: any) => m.type === "NAPlug");
+                                  const therms = (home.modules || []).filter((m: any) => m.type === "NATherm1");
+                                  const currentTherm = therms.find((t: any) => t.id === selectedModuleId);
+                                  const currentBridge = relays.find((r: any) => r.id === (currentTherm?.bridge ?? selectedBridgeId));
+
+                                  return (
+                                    <div className="space-y-3 text-sm">
+                                      <div className="grid md:grid-cols-3 gap-3">
+                                        <div>
+                                          <p className="font-medium mb-1">Thermostat</p>
+                                          <Select value={selectedModuleId ?? ""} onValueChange={(v) => { setSelectedModuleId(v); persistSelection(); }}>
+                                            <SelectTrigger className="w-full"><SelectValue placeholder="Choisir" /></SelectTrigger>
+                                            <SelectContent>
+                                              {therms.map((m: any) => (
+                                                <SelectItem key={m.id} value={m.id}>{m.name || m.id}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div>
+                                          <p className="font-medium mb-1">Passerelle (relay)</p>
+                                          <Select value={selectedBridgeId ?? ""} onValueChange={(v) => { setSelectedBridgeId(v); persistSelection(); }}>
+                                            <SelectTrigger className="w-full"><SelectValue placeholder="Choisir" /></SelectTrigger>
+                                            <SelectContent>
+                                              {relays.map((r: any) => (
+                                                <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div>
+                                          <p className="font-medium mb-1">Assigner au logement</p>
+                                          <Select onValueChange={(roomId) => {
+                                            const netRoom = (home.rooms || []).find((r: any) => r.id === currentTherm?.room_id);
+                                            assignThermostatToRoom({
+                                              homeId: home.id,
+                                              bridgeId: selectedBridgeId || currentTherm?.bridge,
+                                              moduleId: selectedModuleId || currentTherm?.id,
+                                              netatmoRoomId: netRoom?.id,
+                                              netatmoRoomName: netRoom?.name,
+                                              userRoomId: roomId,
+                                            });
+                                          }}>
+                                            <SelectTrigger className="w-full"><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
+                                            <SelectContent>
+                                              {userRooms.map((ur) => (
+                                                <SelectItem key={ur.id} value={ur.id}>{ur.room_name}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+
+                                      {/* Assignations existantes */}
+                                      <div className="mt-3">
+                                        <p className="font-medium">Assignations</p>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                          {assignments.map((a) => {
+                                            const ur = userRooms.find((r) => r.id === a.user_room_id);
+                                            return (
+                                              <li key={a.id}>
+                                                {ur?.room_name || a.user_room_id} ← {a.module_id} (relay {a.device_id}) {a.netatmo_room_name ? `· pièce ${a.netatmo_room_name}` : ""}
+                                                <Button variant="ghost" size="sm" className="ml-2 h-6 px-2" onClick={() => unassignThermostat(a.id)}>Retirer</Button>
+                                              </li>
+                                            );
+                                          })}
+                                        </ul>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </CardContent>
+                            </Card>
+
+                            <Card>
+                              <CardHeader>
                                 <CardTitle>Modules</CardTitle>
                               </CardHeader>
                               <CardContent>
@@ -339,6 +568,78 @@ const NetatmoCallbackPage: React.FC = () => {
                                 </CardContent>
                               </Card>
                             )}
+
+                            <Card className="mt-4">
+                              <CardHeader>
+                                <CardTitle>Historique chaudière</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid md:grid-cols-3 gap-3 text-sm">
+                                  <div>
+                                    <p className="font-medium mb-1">Échelle</p>
+                                    <Select value={selectedScale} onValueChange={(v) => { setSelectedScale(v); persistSelection(); }}>
+                                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="30min">30min</SelectItem>
+                                        <SelectItem value="1hour">1hour</SelectItem>
+                                        <SelectItem value="3hours">3hours</SelectItem>
+                                        <SelectItem value="1day">1day</SelectItem>
+                                        <SelectItem value="1week">1week</SelectItem>
+                                        <SelectItem value="1month">1month</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <p className="font-medium mb-1">Type</p>
+                                    <Select value={selectedTypes} onValueChange={(v) => { setSelectedTypes(v); persistSelection(); }}>
+                                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="boileron">boileron</SelectItem>
+                                        <SelectItem value="boileroff">boileroff</SelectItem>
+                                        <SelectItem value="sum_boiler_on">sum_boiler_on</SelectItem>
+                                        <SelectItem value="sum_boiler_off">sum_boiler_off</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="flex items-end">
+                                    <Button className="w-full" onClick={loadBoilerHistory} disabled={loading || !selectedModuleId || !selectedBridgeId}>
+                                      {loading ? "Chargement…" : "Charger l'historique"}
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {boilerHistory && (
+                                  <div className="mt-3">
+                                    <p className="text-sm font-medium">Mesures</p>
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-xs border border-muted rounded">
+                                        <thead>
+                                          <tr className="bg-muted">
+                                            <th className="p-2 text-left">beg_time</th>
+                                            <th className="p-2 text-left">step_time</th>
+                                            <th className="p-2 text-left">value</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {(() => {
+                                            const items = boilerHistory?.body?.items;
+                                            if (!items) return null;
+                                            const rows = Array.isArray(items) ? items : [items];
+                                            return rows.map((it: any, idx: number) => (
+                                              <tr key={idx} className="border-t">
+                                                <td className="p-2">{it.beg_time}</td>
+                                                <td className="p-2">{it.step_time}</td>
+                                                <td className="p-2">{Array.isArray(it.value) ? it.value.join(", ") : String(it.value)}</td>
+                                              </tr>
+                                            ));
+                                          })()}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
                           </>
                         );
                       })()}

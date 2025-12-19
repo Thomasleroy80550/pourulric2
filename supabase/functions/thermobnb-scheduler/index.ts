@@ -39,9 +39,7 @@ serve(async (req) => {
 
   const nowIso = new Date().toISOString();
 
-  // Charger les programmations dues:
-  // - Mode cron: toutes les programmations pending dont start_time <= maintenant
-  // - Mode utilisateur: seulement celles de l'utilisateur connecté
+  // Sélection des programmations dues
   let selQuery = supabaseAdmin
     .from("thermostat_schedules")
     .select("*")
@@ -85,13 +83,19 @@ serve(async (req) => {
         payload = { endpoint: "setroomthermpoint", home_id, room_id, mode: "home" };
       }
 
+      // Déterminer l'auth pour le proxy:
+      // - Cron: CRON_SECRET et transmettre user_id de la programmation
+      // - Utilisateur: JWT reçu en authHeader
+      const proxyAuth = isCron ? `Bearer ${cronSecret}` : (authHeader ?? "");
+      const proxyBody = isCron ? { ...payload, user_id: sched.user_id } : payload;
+
       const upstream = await fetch(`${supabaseUrl}/functions/v1/netatmo-proxy`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${supabaseAnonKey}`, // Appelle le proxy avec la clé publique; le proxy vérifie le token utilisateur côté DB
+          "Authorization": proxyAuth,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(proxyBody),
       });
 
       const text = await upstream.text();

@@ -91,9 +91,8 @@ serve(async (req) => {
   }
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-  }
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const isCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
 
   let payload: any = {};
   try {
@@ -105,8 +104,8 @@ serve(async (req) => {
   // CHANGED: utiliser Energy API par défaut
   const action: string = payload?.endpoint ?? "homesdata";
   const home_id: string | undefined = payload?.home_id;
-  const device_id: string | undefined = payload?.device_id; // rétrocompat éventuelle
-  const module_id: string | undefined = payload?.module_id; // thermostat MAC (manquant auparavant)
+  const device_id: string | undefined = payload?.device_id;
+  const module_id: string | undefined = payload?.module_id;
   const room_id: string | undefined = payload?.room_id;
   const mode: string | undefined = payload?.mode;
   const temp: number | undefined = payload?.temp;
@@ -121,13 +120,22 @@ serve(async (req) => {
   const optimize: boolean | undefined = payload?.optimize;
   const real_time: boolean | undefined = payload?.real_time;
 
-  // Vérifier l'utilisateur via JWT
-  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader } } });
-  const { data: userData, error: userErr } = await supabaseUser.auth.getUser();
-  if (userErr || !userData?.user?.id) {
-    return new Response(JSON.stringify({ error: "Unauthorized user" }), { status: 401, headers: corsHeaders });
+  // Déterminer l'utilisateur
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader ?? "" } } });
+  let userId: string | null = null;
+
+  if (isCron) {
+    userId = payload?.user_id ?? null;
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Missing user_id for cron mode" }), { status: 400, headers: corsHeaders });
+    }
+  } else {
+    const { data: userData, error: userErr } = await supabaseUser.auth.getUser();
+    if (userErr || !userData?.user?.id) {
+      return new Response(JSON.stringify({ error: "Unauthorized user" }), { status: 401, headers: corsHeaders });
+    }
+    userId = userData.user.id;
   }
-  const userId = userData.user.id;
 
   // Charger le token de l'utilisateur
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -167,7 +175,6 @@ serve(async (req) => {
         count_points: typeof countPoints === "number" ? countPoints : null,
       });
     } catch (_e) {
-      // Ne jamais bloquer la réponse si le log échoue
       console.warn(`[netatmo-proxy][${requestId}] Log insert failed:`, String(_e));
     }
   }

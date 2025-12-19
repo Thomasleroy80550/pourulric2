@@ -58,6 +58,19 @@ const NetatmoDashboardPage: React.FC = () => {
   const [quickTemp, setQuickTemp] = React.useState<number>(19);
   const [quickMinutes, setQuickMinutes] = React.useState<number>(60);
 
+  // Synchroniser la valeur par défaut du slider avec la consigne actuelle (si disponible)
+  React.useEffect(() => {
+    if (!homeStatus || !selectedRoomId || quickMode !== "manual") return;
+    const rooms = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
+    const activeRoom = rooms.find((r: any) => r.id === selectedRoomId) || rooms[0];
+    const setpoint = typeof activeRoom?.therm_setpoint_temperature === "number"
+      ? activeRoom.therm_setpoint_temperature
+      : null;
+    if (typeof setpoint === "number") {
+      setQuickTemp(setpoint);
+    }
+  }, [homeStatus, selectedRoomId, quickMode]);
+
   // Helper: build chart points (robuste) + resampling pour day/hour et week/hour
   function buildChartPoints(data: any, scaleForFallback?: string, range?: { startSec?: number; endSec?: number }) {
     const mapStep: Record<string, number> = {
@@ -594,7 +607,14 @@ const NetatmoDashboardPage: React.FC = () => {
                         <span className="text-xs text-muted-foreground">Température</span>
                         <span className="text-xs font-medium">{quickTemp.toFixed(1)}°C</span>
                       </div>
-                      <Slider value={[quickTemp]} min={7} max={30} step={0.5} onValueChange={(vals) => setQuickTemp(vals[0] as number)} className="mt-1" />
+                      <Slider
+                        value={[quickTemp]} // valeur contrôlée = consigne actuelle par défaut
+                        min={7}
+                        max={30}
+                        step={0.5}
+                        onValueChange={(vals) => setQuickTemp(vals[0] as number)}
+                        className="mt-1"
+                      />
                     </div>
                   )}
                   {/* Durée (manual/max) */}

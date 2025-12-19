@@ -39,21 +39,29 @@ const NetatmoDashboardPage: React.FC = () => {
   const [selectedRoomId, setSelectedRoomId] = React.useState<string | null>(null);
   const [dayChartData, setDayChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
   const [weekChartData, setWeekChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
+  // NEW: raw responses for logs
+  const [dayRaw, setDayRaw] = React.useState<any | null>(null);
+  const [weekRaw, setWeekRaw] = React.useState<any | null>(null);
 
-  // Helper: build chart points from getroommeasure response
+  // Helper: build chart points from getroommeasure response (robuste)
   function buildChartPoints(data: any) {
-    const beg = data?.body?.home?.beg_time;
-    const step = data?.body?.home?.step_time;
-    const values = data?.body?.home?.values;
+    const homeBlock = data?.body?.home ?? data?.body; // fallback si API retourne body.home ou body direct
+    const beg = homeBlock?.beg_time;
+    const step = homeBlock?.step_time;
+    const values = homeBlock?.values;
     if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
     return values
       .map((item: any, idx: number) => {
-        const raw = Array.isArray(item?.value) ? item.value[0] : item?.value;
+        let raw: any = item;
+        // Les formats possibles: nombre, tableau [val], objet { value: number | [val] }
+        if (Array.isArray(raw)) raw = raw[0];
+        else if (raw && typeof raw === "object") raw = Array.isArray(raw.value) ? raw.value[0] : raw.value;
         const val = Number(raw);
         const ts = beg + idx * step;
+        if (Number.isNaN(val)) return null;
         return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
       })
-      .filter((p) => !Number.isNaN(p.value));
+      .filter((p) => p !== null) as { ts: number; label: string; value: number }[];
   }
 
   const LS_KEY = "netatmo_selection_v1";
@@ -144,14 +152,18 @@ const NetatmoDashboardPage: React.FC = () => {
     if (dayRes.error) {
       toast.error(dayRes.error.message || "Erreur historique (jour).");
       setDayChartData([]);
+      setDayRaw(dayRes.error);
     } else {
+      setDayRaw(dayRes.data);
       setDayChartData(buildChartPoints(dayRes.data));
     }
 
     if (weekRes.error) {
       toast.error(weekRes.error.message || "Erreur historique (semaine).");
       setWeekChartData([]);
+      setWeekRaw(weekRes.error);
     } else {
+      setWeekRaw(weekRes.data);
       setWeekChartData(buildChartPoints(weekRes.data));
     }
   }
@@ -604,7 +616,20 @@ const NetatmoDashboardPage: React.FC = () => {
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
-                      {dayChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour ce jour.</p>}
+                      {dayChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour ce jour.</p>}
+                      {/* NEW: logs sous le graphique jour */}
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Points: {dayChartData.length} • beg_time: {dayRaw?.body?.home?.beg_time ?? dayRaw?.body?.beg_time ?? "n/a"} • step_time: {dayRaw?.body?.home?.step_time ?? dayRaw?.body?.step_time ?? "n/a"}
+                      </div>
+                      {dayRaw && (
+                        <pre className="mt-1 text-[10px] whitespace-pre-wrap break-words bg-muted p-2 rounded">
+                          {(() => {
+                            const vals = dayRaw?.body?.home?.values ?? dayRaw?.body?.values ?? [];
+                            const preview = Array.isArray(vals) ? vals.slice(0, 10) : vals;
+                            return `Aperçu valeurs (10): ${JSON.stringify(preview)}`;
+                          })()}
+                        </pre>
+                      )}
                     </div>
 
                     {/* Courbe hebdomadaire */}
@@ -637,7 +662,20 @@ const NetatmoDashboardPage: React.FC = () => {
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
-                      {weekChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour cette semaine.</p>}
+                      {weekChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour cette semaine.</p>}
+                      {/* NEW: logs sous le graphique semaine */}
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Points: {weekChartData.length} • beg_time: {weekRaw?.body?.home?.beg_time ?? weekRaw?.body?.beg_time ?? "n/a"} • step_time: {weekRaw?.body?.home?.step_time ?? weekRaw?.body?.step_time ?? "n/a"}
+                      </div>
+                      {weekRaw && (
+                        <pre className="mt-1 text-[10px] whitespace-pre-wrap break-words bg-muted p-2 rounded">
+                          {(() => {
+                            const vals = weekRaw?.body?.home?.values ?? weekRaw?.body?.values ?? [];
+                            const preview = Array.isArray(vals) ? vals.slice(0, 10) : vals;
+                            return `Aperçu valeurs (10): ${JSON.stringify(preview)}`;
+                          })()}
+                        </pre>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

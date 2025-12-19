@@ -333,8 +333,12 @@ const NetatmoDashboardPage: React.FC = () => {
     }
   }, [hasTokens]);
 
-  // Auto-load charts when homeId and selectedRoomId ready
+  // Auto-load status + charts when homeId/room ready
   React.useEffect(() => {
+    if (homeId) {
+      // Charger le statut en direct automatiquement
+      loadHomestatus();
+    }
     if (homeId && selectedRoomId) {
       loadRoomCharts();
       loadLogs();
@@ -507,7 +511,7 @@ const NetatmoDashboardPage: React.FC = () => {
       <section className="container mx-auto py-10 md:py-16">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 mb-4">
-            <Badge variant="secondary">Intégration</Badge>
+            <Badge variant="secondary">ThermoBnB</Badge>
             <Badge variant="outline">Netatmo</Badge>
           </div>
 
@@ -537,6 +541,50 @@ const NetatmoDashboardPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* NEW: Statut en temps réel, affiché automatiquement */}
+          {home && (
+            <Card className="mt-4">
+              <CardHeader className="flex items-center justify-between">
+                <CardTitle>Statut en temps réel</CardTitle>
+                <Button variant="secondary" size="sm" onClick={loadHomestatus} disabled={loading}>
+                  {loading ? "…" : "Actualiser"}
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {homeStatus ? (
+                  <div className="text-sm space-y-3">
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div>
+                        <p className="font-medium">Pièces</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {(() => {
+                            const rooms = homeStatus?.body?.home?.rooms || homeStatus?.body?.rooms || [];
+                            if (!rooms.length) {
+                              return [<li key="empty" className="text-muted-foreground">Aucune donnée détaillée de pièce disponible.</li>];
+                            }
+                            return rooms.map((room: any) => (
+                              <li key={room.id}>
+                                {room.name || room.id}: mesurée {room.therm_measured_temperature ?? "n/a"}°C · consigne {room.therm_setpoint_temperature ?? "n/a"}°C
+                              </li>
+                            ));
+                          })()}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-medium">Infos</p>
+                        <div className="text-muted-foreground">
+                          Dernier rafraîchissement: {new Date().toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Chargement du statut…</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {home && (
             <>

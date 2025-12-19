@@ -558,8 +558,39 @@ const NetatmoDashboardPage: React.FC = () => {
   // NEW: scénario: degré Eco après départ
   const [scenarioAfterDepartureTemp, setScenarioAfterDepartureTemp] = React.useState<number>(16);
 
-  // Charger le scénario existant (ajout lecture facultative si la colonne existe)
-  React.useEffect(() => { loadScenario(); }, []);
+  // NEW: scenario state (used by saveScenario and reservations planning)
+  const [scenarioMode, setScenarioMode] = React.useState<"relative" | "absolute">("relative");
+  const [scenarioMinutes, setScenarioMinutes] = React.useState<number>(240);
+  const [scenarioHeatStart, setScenarioHeatStart] = React.useState<string>("");
+  const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
+  const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
+
+  // Load scenario from DB for current user
+  async function loadScenario() {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) return;
+
+    const { data, error } = await supabase
+      .from("thermostat_scenarios")
+      .select("arrival_preheat_mode, arrival_preheat_minutes, heat_start_time, arrival_temp, stop_time")
+      .eq("user_id", uid)
+      .limit(1);
+
+    if (error) {
+      // keep defaults silently
+      return;
+    }
+
+    const s = data?.[0];
+    if (s) {
+      setScenarioMode(s.arrival_preheat_mode === "absolute" ? "absolute" : "relative");
+      setScenarioMinutes(typeof s.arrival_preheat_minutes === "number" ? s.arrival_preheat_minutes : 240);
+      setScenarioHeatStart(s.heat_start_time || "");
+      setScenarioArrivalTemp(typeof s.arrival_temp === "number" ? s.arrival_temp : 20);
+      setScenarioStopTime(s.stop_time || "11:00");
+    }
+  }
 
   // Sauvegarde du scénario (on ne stocke pas scenarioAfterDepartureTemp en BDD pour éviter une erreur si colonne absente)
   const saveScenario = async () => {

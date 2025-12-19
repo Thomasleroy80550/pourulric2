@@ -944,6 +944,9 @@ const NetatmoDashboardPage: React.FC = () => {
   const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
   const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
 
+  // Derive the current home object from homesData (used throughout the JSX)
+  const home = homesData?.body?.homes?.[0] ?? null;
+
   return (
     <MainLayout>
       <section className="container mx-auto py-10 md:py-16 relative">

@@ -12,6 +12,9 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
+// REPLACED: ajouter AreaChart/Area pour le rendu dégradé
+import { ResponsiveContainer as RC2 } from "recharts";
+import { AreaChart, Area } from "recharts";
 
 function computeEndtime(minutes: number): number {
   const nowMs = Date.now();
@@ -749,29 +752,56 @@ const NetatmoDashboardPage: React.FC = () => {
                       <p className="text-sm font-medium mb-2">Quotidien (1 jour) – Température</p>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={dayChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
-                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={24} />
-                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`} />
+                          <AreaChart data={dayChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="dayGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.35} />
+                                <stop offset="70%" stopColor="#1d4ed8" stopOpacity={0.10} />
+                                <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.00} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
+                            <XAxis
+                              dataKey="label"
+                              tick={{ fontSize: 11, fill: "#6b7280" }}
+                              minTickGap={18}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 11, fill: "#6b7280" }}
+                              tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`}
+                              domain={['dataMin - 0.5', 'dataMax + 0.5']}
+                            />
                             <Tooltip
                               wrapperStyle={{ outline: "none" }}
-                              contentStyle={{ background: "rgba(17, 24, 39, 0.92)", border: "1px solid #374151", borderRadius: 8 }}
+                              contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }}
                               labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
                               itemStyle={{ color: "#e5e7eb" }}
-                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "temperature"]}
+                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "Température"]}
                             />
                             <Legend />
-                            <Line
+                            <Area
                               name="Température"
                               type="monotone"
                               dataKey="value"
                               stroke="#1d4ed8"
+                              fill="url(#dayGrad)"
                               strokeWidth={2.5}
-                              dot
-                              activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }}
-                              animationDuration={400}
+                              connectNulls
+                              animationDuration={450}
                             />
-                          </LineChart>
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#1d4ed8"
+                              strokeWidth={2.5}
+                              dot={{ r: 2 }}
+                              activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }}
+                              connectNulls
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              animationDuration={450}
+                            />
+                          </AreaChart>
                         </ResponsiveContainer>
                       </div>
                       {dayChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour ce jour.</p>}
@@ -795,29 +825,56 @@ const NetatmoDashboardPage: React.FC = () => {
                       <p className="text-sm font-medium mb-2">Hebdomadaire (1 semaine) – Température</p>
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={weekChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
-                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={24} />
-                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`} />
+                          <AreaChart data={weekChartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="weekGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.35} />
+                                <stop offset="70%" stopColor="#10b981" stopOpacity={0.10} />
+                                <stop offset="100%" stopColor="#10b981" stopOpacity={0.00} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.5} />
+                            <XAxis
+                              dataKey="label"
+                              tick={{ fontSize: 11, fill: "#6b7280" }}
+                              minTickGap={18}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 11, fill: "#6b7280" }}
+                              tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`}
+                              domain={['dataMin - 0.5', 'dataMax + 0.5']}
+                            />
                             <Tooltip
                               wrapperStyle={{ outline: "none" }}
-                              contentStyle={{ background: "rgba(17, 24, 39, 0.92)", border: "1px solid #374151", borderRadius: 8 }}
+                              contentStyle={{ background: "rgba(17,24,39,0.92)", border: "1px solid #374151", borderRadius: 10 }}
                               labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
                               itemStyle={{ color: "#e5e7eb" }}
-                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "temperature"]}
+                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "Température"]}
                             />
                             <Legend />
-                            <Line
+                            <Area
                               name="Température"
                               type="monotone"
                               dataKey="value"
                               stroke="#10b981"
-                              strokeWidth={2}
-                              dot={false}
-                              activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }}
-                              animationDuration={300}
+                              fill="url(#weekGrad)"
+                              strokeWidth={2.5}
+                              connectNulls
+                              animationDuration={450}
                             />
-                          </LineChart>
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#10b981"
+                              strokeWidth={2.5}
+                              dot={false}  // 168 points: dots cachés pour lisibilité
+                              activeDot={{ r: 2, stroke: "#10b981", fill: "#fff" }}
+                              connectNulls
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              animationDuration={450}
+                            />
+                          </AreaChart>
                         </ResponsiveContainer>
                       </div>
                       {weekChartData.length === 0 && <p className="text-xs text-red-600 mt-2">Aucune donnée disponible pour cette semaine.</p>}

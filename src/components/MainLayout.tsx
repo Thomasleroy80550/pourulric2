@@ -95,6 +95,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
       { name: 'Mes Avis', href: '/reviews', icon: Star },
       { name: 'Analyse Concurrentielle', href: '/comp-set', icon: Copy },
       { name: 'PowerSense', href: '/powersense', icon: Zap },
+      { name: 'ThermoBnB', href: '/integrations/netatmo/dashboard', icon: LayoutDashboard },
     ],
   },
   {

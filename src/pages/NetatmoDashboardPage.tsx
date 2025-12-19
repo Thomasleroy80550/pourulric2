@@ -21,6 +21,7 @@ import { ResponsiveContainer as RC2 } from "recharts";
 import { AreaChart, Area } from "recharts";
 // NEW: icons
 import { Thermometer, Gauge, Flame, Home as HomeIcon, Clock, Wifi } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 function computeEndtime(minutes: number): number {
   const nowMs = Date.now();
@@ -1450,6 +1451,83 @@ const NetatmoDashboardPage: React.FC = () => {
     await loadSchedules();
   }
 
+  // Statuts du scheduler
+  const [schedulerStats, setSchedulerStats] = React.useState<{ pendingNow: number; nextStart: string | null }>({
+    pendingNow: 0,
+    nextStart: null,
+  });
+  const [autoRunEnabled, setAutoRunEnabled] = React.useState(false);
+
+  async function refreshSchedulerStats() {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId) return;
+
+    const nowIso = new Date().toISOString();
+
+    const pendingNowRes = await supabase
+      .from("thermostat_schedules")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .lte("start_time", nowIso);
+
+    const upcoming = await supabase
+      .from("thermostat_schedules")
+      .select("start_time")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .gte("start_time", nowIso)
+      .order("start_time", { ascending: true })
+      .limit(1);
+
+    setSchedulerStats({
+      pendingNow: pendingNowRes.error ? 0 : (pendingNowRes.data?.length || 0),
+      nextStart: upcoming.error ? null : (upcoming.data?.[0]?.start_time || null),
+    });
+  }
+
+  // Exécution auto: lance le scheduler toutes les 60s si activé
+  React.useEffect(() => {
+    let id: any;
+    if (autoRunEnabled) {
+      id = setInterval(() => {
+        runSchedulerNow();
+        refreshSchedulerStats();
+      }, 60_000);
+    }
+    return () => {
+      if (id) clearInterval(id);
+    };
+  }, [autoRunEnabled]);
+
+  // Mode test: ajouter une réservation de test pour générer des programmations
+  const [testGuestName, setTestGuestName] = React.useState<string>("Client test");
+  const [testPropertyName, setTestPropertyName] = React.useState<string>("");
+  const [testArrivalAt, setTestArrivalAt] = React.useState<string>("");
+  const [testDepartureAt, setTestDepartureAt] = React.useState<string>("");
+
+  function addTestReservation() {
+    if (!testPropertyName || !testArrivalAt || !testDepartureAt) {
+      toast.error("Renseignez le logement, l'arrivée et le départ pour le test.");
+      return;
+    }
+    const id = `test_${Date.now()}`;
+    const resa = {
+      id,
+      guest_name: testGuestName || "Client test",
+      property_name: testPropertyName,
+      check_in_date: new Date(testArrivalAt).toISOString(),
+      check_out_date: new Date(testDepartureAt).toISOString(),
+      cod_channel: "test",
+    };
+    setUpcomingReservations((prev) => {
+      const next = [...prev.filter((r) => r.id !== id), resa];
+      return next;
+    });
+    toast.success("Réservation de test ajoutée. Créez les programmations depuis la liste des réservations.");
+  }
+
   if (hasTokens === null) {
     return (
       <MainLayout>
@@ -1819,6 +1897,73 @@ const NetatmoDashboardPage: React.FC = () => {
             <CardContent>
               <p className="text-gray-600">Logements: {userRooms.length}</p>
               <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bloc: Statuts du scheduler et exécution automatique */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Statuts du scheduler</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-700">Programmations dues maintenant</p>
+                  <Badge variant={schedulerStats.pendingNow > 0 ? "default" : "secondary"}>
+                    {schedulerStats.pendingNow}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-700">Prochaine programmation</p>
+                  <span className="text-sm text-gray-600">
+                    {schedulerStats.nextStart ? new Date(schedulerStats.nextStart).toLocaleString() : "Aucune"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Button variant="outline" onClick={refreshSchedulerStats}>Actualiser</Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700">Exécuter automatiquement</span>
+                    <Switch checked={autoRunEnabled} onCheckedChange={setAutoRunEnabled} />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Mode test: ajouter une réservation rapidement */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Mode test (réservation rapide)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium">Nom du client</label>
+                    <Input value={testGuestName} onChange={(e) => setTestGuestName(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Logement (nom de la pièce Netatmo)</label>
+                    <Input value={testPropertyName} onChange={(e) => setTestPropertyName(e.target.value)} className="mt-1" placeholder="Ex: Chambre 1" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium">Arrivée (date & heure)</label>
+                    <Input type="datetime-local" value={testArrivalAt} onChange={(e) => setTestArrivalAt(e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Départ (date & heure)</label>
+                    <Input type="datetime-local" value={testDepartureAt} onChange={(e) => setTestDepartureAt(e.target.value)} className="mt-1" />
+                  </div>
+                </div>
+                <Button className="w-full" onClick={addTestReservation}>Ajouter la réservation de test</Button>
+                <p className="text-xs text-gray-600">
+                  Astuce: mettez l'arrivée dans les 30 prochaines minutes pour tester le préchauffage en mode horaire.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

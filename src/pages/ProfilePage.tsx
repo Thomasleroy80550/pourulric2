@@ -28,6 +28,23 @@ import DelegatedAccessPanel from '@/components/DelegatedAccessPanel';
 import AttestationFormDialog from '@/components/AttestationFormDialog';
 import { supabase } from '@/integrations/supabase/client';
 
+// Bouton discret pour accéder au dashboard Netatmo
+function HiddenNetatmoDashboardButton() {
+  return (
+    <div className="fixed bottom-2 right-2 z-50">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-[10px] opacity-20 hover:opacity-70 transition-opacity"
+        onClick={() => (window.location.href = "/integrations/netatmo/dashboard")}
+        title="Netatmo Dashboard"
+      >
+        Netatmo
+      </Button>
+    </div>
+  );
+}
+
 // Ajout d'un bouton discret caché dans un coin
 // Positionné en bas à droite, petite taille, faible opacité, remonte au survol
 // Redirige vers /integrations/netatmo
@@ -627,6 +644,9 @@ const ProfilePage: React.FC = () => {
             profile={profile}
           />
         )}
+
+        {/* Bouton caché Netatmo Dashboard */}
+        <HiddenNetatmoDashboardButton />
 
         {/* Bouton caché pour Netatmo */}
         <HiddenNetatmoButton />

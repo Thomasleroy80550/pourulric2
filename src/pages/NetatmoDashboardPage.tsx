@@ -157,6 +157,26 @@ const NetatmoDashboardPage: React.FC = () => {
   const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
   const [scenarioAfterDepartureTemp, setScenarioAfterDepartureTemp] = React.useState<number>(16);
   const scenarioSaveTimer = React.useRef<number | null>(null);
+  // NEW: heure d'arrivée de base (ex: 15:00)
+  const [scenarioArrivalTime, setScenarioArrivalTime] = React.useState<string>("15:00");
+
+  // NEW: aperçu de l'heure de démarrage du préchauffage
+  const preheatStartPreview = React.useMemo(() => {
+    const today = new Date();
+    const [ah, am] = (scenarioArrivalTime || "15:00").split(":").map((n) => Number(n));
+    const arrivalToday = new Date(today);
+    arrivalToday.setHours(ah || 15, am || 0, 0, 0);
+
+    if (scenarioMode === "absolute" && scenarioHeatStart) {
+      const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
+      const absStart = new Date(arrivalToday);
+      absStart.setHours(hh || 0, mm || 0, 0, 0);
+      return absStart.toLocaleString();
+    }
+
+    const relStart = new Date(arrivalToday.getTime() - Math.max(5, scenarioMinutes) * 60 * 1000);
+    return relStart.toLocaleString();
+  }, [scenarioMode, scenarioMinutes, scenarioHeatStart, scenarioArrivalTime]);
 
   // Logs
   const [logs, setLogs] = React.useState<any[]>([]);
@@ -578,13 +598,13 @@ const NetatmoDashboardPage: React.FC = () => {
       toast.error("Non authentifié.");
       return;
     }
-    const ARRIVAL_HOUR = 15;
-    const ARRIVAL_MINUTE = 0;
+    // CHANGED: utiliser l'heure d'arrivée de base au lieu de 15:00
+    const [ARRIVAL_HOUR, ARRIVAL_MINUTE] = (scenarioArrivalTime || "15:00").split(":").map((n) => Number(n));
     const now = new Date();
     const rows: any[] = [];
     for (const resa of upcomingReservations) {
       const arrivalDay = new Date(resa.check_in_date);
-      arrivalDay.setHours(ARRIVAL_HOUR, ARRIVAL_MINUTE, 0, 0);
+      arrivalDay.setHours(ARRIVAL_HOUR || 15, ARRIVAL_MINUTE || 0, 0, 0);
       let startHeatDate: Date;
       if (scenarioMode === "absolute" && scenarioHeatStart) {
         const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
@@ -658,10 +678,10 @@ const NetatmoDashboardPage: React.FC = () => {
       toast.error("Non authentifié.");
       return;
     }
-    const ARRIVAL_HOUR = 15;
-    const ARRIVAL_MINUTE = 0;
+    // CHANGED: utiliser l'heure d'arrivée de base au lieu de 15:00
+    const [ARRIVAL_HOUR, ARRIVAL_MINUTE] = (scenarioArrivalTime || "15:00").split(":").map((n) => Number(n));
     const arrivalDay = new Date(resa.check_in_date);
-    arrivalDay.setHours(ARRIVAL_HOUR, ARRIVAL_MINUTE, 0, 0);
+    arrivalDay.setHours(ARRIVAL_HOUR || 15, ARRIVAL_MINUTE || 0, 0, 0);
     let startHeatDate: Date;
     if (scenarioMode === "absolute" && scenarioHeatStart) {
       const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
@@ -912,24 +932,13 @@ const NetatmoDashboardPage: React.FC = () => {
                 <div className="flex items-center space-x-2"><RadioGroupItem value="absolute" id="sc-abs" /><label htmlFor="sc-abs">Heure précise</label></div>
               </RadioGroup>
             </div>
-            {scenarioMode === "relative" ? (
-              <div>
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Préchauffer (minutes avant arrivée)</label>
-                  <span className="text-sm text-gray-600">{scenarioMinutes} min</span>
-                </div>
-                <Slider value={[scenarioMinutes]} onValueChange={(vals) => setScenarioMinutes(vals[0])} min={5} max={600} step={5} className="mt-2" />
-              </div>
-            ) : (
-              <div>
-                <label className="text-sm font-medium">Heure de lancement</label>
-                <Input type="time" value={scenarioHeatStart} onChange={(e) => setScenarioHeatStart(e.target.value)} className="mt-1" />
-              </div>
-            )}
+
+            {/* NEW: Heure d'arrivée de base */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <div className="flex items-center justify-between"><label className="text-sm font-medium">Température arrivée</label><span className="text-sm text-gray-600">{scenarioArrivalTemp}°C</span></div>
-                <Slider value={[scenarioArrivalTemp]} onValueChange={(vals) => setScenarioArrivalTemp(vals[0])} min={10} max={25} step={0.5} className="mt-2" />
+                <label className="text-sm font-medium">Heure d'arrivée de base</label>
+                <Input type="time" value={scenarioArrivalTime} onChange={(e) => setScenarioArrivalTime(e.target.value)} className="mt-1" />
+                <p className="mt-1 text-xs text-gray-500">Exemple: 15:00 (utilisée pour calculer le préchauffage si l'heure d'arrivée exacte n'est pas fournie).</p>
               </div>
               <div>
                 <label className="text-sm font-medium">Heure éco (départ)</label>
@@ -940,7 +949,35 @@ const NetatmoDashboardPage: React.FC = () => {
                 <Slider value={[scenarioAfterDepartureTemp]} onValueChange={(vals) => setScenarioAfterDepartureTemp(vals[0])} min={10} max={22} step={0.5} className="mt-2" />
               </div>
             </div>
-            <p className="text-xs text-gray-600">Astuce: pas besoin d’enregistrer, le scénario se sauvegarde automatiquement.</p>
+
+            {scenarioMode === "relative" ? (
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Préchauffer (minutes avant arrivée)</label>
+                  <span className="text-sm text-gray-600">{scenarioMinutes} min</span>
+                </div>
+                <Slider value={[scenarioMinutes]} onValueChange={(vals) => setScenarioMinutes(vals[0])} min={5} max={600} step={5} className="mt-2" />
+              </div>
+            ) : (
+              <div>
+                <label className="text-sm font-medium">Heure de lancement (absolu)</label>
+                <Input type="time" value={scenarioHeatStart} onChange={(e) => setScenarioHeatStart(e.target.value)} className="mt-1" />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="flex items-center justify-between"><label className="text-sm font-medium">Température arrivée</label><span className="text-sm text-gray-600">{scenarioArrivalTemp}°C</span></div>
+                <Slider value={[scenarioArrivalTemp]} onValueChange={(vals) => setScenarioArrivalTemp(vals[0])} min={10} max={25} step={0.5} className="mt-2" />
+              </div>
+              {/* NEW: aperçu du démarrage */}
+              <div className="rounded bg-gray-50 p-3">
+                <p className="text-sm font-medium">Préchauffage démarre à</p>
+                <p className="text-sm text-gray-700">{preheatStartPreview}</p>
+                <p className="text-xs text-gray-500">Calculé à partir de l'heure d'arrivée de base et du mode de préchauffage.</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600">Astuce: pas besoin d'enregistrer, le scénario se sauvegarde automatiquement.</p>
           </CardContent>
         </Card>
 
@@ -967,7 +1004,7 @@ const NetatmoDashboardPage: React.FC = () => {
                         <Button size="sm" variant="outline" onClick={() => forceArrivalSetpoint(resa)}>Forcer consigne maintenant</Button>
                       </div>
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">Action simple: crée deux programmations (chauffe avant l’arrivée, éco au départ).</p>
+                    <p className="mt-1 text-xs text-gray-500">Action simple: crée deux programmations (chauffe avant l'arrivée, éco au départ).</p>
                   </div>
                 ))}
               </div>
@@ -1056,7 +1093,7 @@ const NetatmoDashboardPage: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <div className="flex items-center justify-between"><label className="text-sm font-medium">Température à l’arrivée</label><span className="text-sm text-gray-600">{testArrivalTempOverride}°C</span></div>
+                <div className="flex items-center justify-between"><label className="text-sm font-medium">Température à l'arrivée</label><span className="text-sm text-gray-600">{testArrivalTempOverride}°C</span></div>
                 <Slider value={[testArrivalTempOverride]} onValueChange={(vals) => setTestArrivalTempOverride(vals[0])} min={10} max={25} step={0.5} className="mt-2" />
               </div>
               <div>
@@ -1078,7 +1115,7 @@ const NetatmoDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <p className="text-sm text-gray-600">Aujourd’hui</p>
+              <p className="text-sm text-gray-600">Aujourd'hui</p>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={dayChartData}>

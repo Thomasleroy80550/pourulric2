@@ -11,10 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type StationsResponse = any;
-type HomesDataResponse = any;
-type HomeStatusResponse = any;
-
 // Helper: calculer endtime local en secondes (durée en minutes)
 function computeEndtime(minutes: number): number {
   const nowMs = Date.now();
@@ -24,14 +20,13 @@ function computeEndtime(minutes: number): number {
 
 // NEW: appliquer setroomthermpoint
 async function setRoomThermPoint(opts: { homeId: string; roomId: string; mode: "manual" | "max" | "home"; temp?: number; minutes?: number }, onDone?: () => void) {
-  const { homeId, roomId, mode, temp, minutes = 60 } = opts;
-  const payload: any = { endpoint: "setroomthermpoint", home_id: homeId, room_id: roomId, mode };
+  const { homeId: hid, roomId: rid, mode, temp, minutes = 60 } = opts;
+  const payload: any = { endpoint: "setroomthermpoint", home_id: hid, room_id: rid, mode };
   if (mode === "manual") payload.temp = temp;
   const endtime = computeEndtime(minutes);
-  // Envoyer endtime pour manual/max; pour home ce n'est pas obligatoire, on peut ne pas l'envoyer
   if (mode !== "home") payload.endtime = endtime;
 
-  const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
+  const { error } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
   if (error) {
     toast.error(error.message || "Échec de la mise à jour du thermostat.");
     return;
@@ -54,160 +49,15 @@ const [selectedScale, setSelectedScale] = React.useState<string>("1day");
 const [selectedTypes, setSelectedTypes] = React.useState<string>("sum_boiler_on");
 const [boilerHistory, setBoilerHistory] = React.useState<any | null>(null);
 
-// Charger user rooms et assignments
-async function loadUserRoomsAndAssignments() {
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData?.user?.id;
-  if (!userId) return;
-
-  const { data: rooms } = await supabase
-    .from("user_rooms")
-    .select("id, room_name")
-    .eq("user_id", userId)
-    .order("room_name", { ascending: true });
-  setUserRooms(rooms || []);
-
-  const { data: assigns } = await supabase
-    .from("netatmo_thermostats")
-    .select("*")
-    .eq("user_id", userId);
-  setAssignments(assigns || []);
-}
-
-// Restaurer sélections au reload
-React.useEffect(() => {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      setHomeId(parsed.homeId ?? null);
-      setSelectedModuleId(parsed.moduleId ?? null);
-      setSelectedBridgeId(parsed.bridgeId ?? null);
-      setSelectedScale(parsed.scale ?? "1day");
-      setSelectedTypes(parsed.types ?? "sum_boiler_on");
-    }
-  } catch {}
-}, []);
-
-function persistSelection() {
-  const payload = {
-    homeId,
-    moduleId: selectedModuleId,
-    bridgeId: selectedBridgeId,
-    scale: selectedScale,
-    types: selectedTypes,
-  };
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(payload));
-  } catch {}
-}
-
-// Mettre à jour modules & bridge sélectionnés lorsque homesdata arrive
-React.useEffect(() => {
-  if (!homesData) return;
-  const home = homesData?.body?.homes?.[0];
-  if (!home) return;
-  // Sélection par défaut: premier thermostat et son bridge
-  const firstTherm = (home.modules || []).find((m: any) => m.type === "NATherm1");
-  if (firstTherm) {
-    setSelectedModuleId(firstTherm.id);
-    setSelectedBridgeId(firstTherm.bridge);
-  }
-  persistSelection();
-  // Charger rooms + assignments
-  loadUserRoomsAndAssignments();
-}, [homesData]);
-
-// Charger homestatus et persister sélection
-async function loadHomestatus() {
-  if (!homeId) {
-    toast.error("home_id introuvable.");
-    return;
-  }
-  setLoading(true);
-  const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-    body: { endpoint: "homestatus", home_id: homeId },
-  });
-  setLoading(false);
-
-  if (error) {
-    toast.error(error.message || "Erreur de récupération du statut (homestatus).");
-    return;
-  }
-  setHomeStatus(data);
-  persistSelection();
-}
-
-// Historique chaudière via getmeasure
-async function loadBoilerHistory() {
-  if (!selectedBridgeId || !selectedModuleId) {
-    toast.error("Sélectionnez un thermostat.");
-    return;
-  }
-  setLoading(true);
-  const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-    body: {
-      endpoint: "getmeasure",
-      device_id: selectedBridgeId,
-      module_id: selectedModuleId,
-      scale: selectedScale,
-      type: selectedTypes, // string CSV ou simple clé, le proxy normalise
-      optimize: true,
-    },
-  });
-  setLoading(false);
-  if (error) {
-    toast.error(error.message || "Erreur de récupération de l’historique chaudière.");
-    return;
-  }
-  setBoilerHistory(data);
-  persistSelection();
-}
-
-// Assignation thermostat → logement
-async function assignThermostatToRoom(opts: { homeId: string; bridgeId: string; moduleId: string; netatmoRoomId?: string; netatmoRoomName?: string; userRoomId: string }) {
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData?.user?.id;
-  if (!userId) {
-    toast.error("Non authentifié.");
-    return;
-  }
-  const payload = {
-    user_id: userId,
-    user_room_id: opts.userRoomId,
-    home_id: opts.homeId,
-    device_id: opts.bridgeId,
-    module_id: opts.moduleId,
-    netatmo_room_id: opts.netatmoRoomId ?? null,
-    netatmo_room_name: opts.netatmoRoomName ?? null,
-  };
-  const { error } = await supabase.from("netatmo_thermostats").insert(payload);
-  if (error) {
-    toast.error(error.message || "Erreur lors de l’assignation.");
-    return;
-  }
-  toast.success("Thermostat assigné au logement.");
-  await loadUserRoomsAndAssignments();
-}
-
-// Désassignation
-async function unassignThermostat(recordId: string) {
-  const { error } = await supabase.from("netatmo_thermostats").delete().eq("id", recordId);
-  if (error) {
-    toast.error(error.message || "Erreur lors de la suppression.");
-    return;
-  }
-  toast.success("Thermostat désassigné.");
-  await loadUserRoomsAndAssignments();
-}
-
 const NetatmoCallbackPage: React.FC = () => {
   const [exchanged, setExchanged] = React.useState(false);
-  const [stations, setStations] = React.useState<StationsResponse | null>(null);
+  const [stations, setStations] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [homesData, setHomesData] = React.useState<HomesDataResponse | null>(null);
+
+  // NEW: états pour homesdata, homeId et homestatus
+  const [homesData, setHomesData] = React.useState<any | null>(null);
   const [homeId, setHomeId] = React.useState<string | null>(null);
-  const [homeStatus, setHomeStatus] = React.useState<HomeStatusResponse | null>(null);
+  const [homeStatus, setHomeStatus] = React.useState<any | null>(null);
 
   const redirectUri = React.useMemo(() => `${window.location.origin}/integrations/netatmo/callback`, []);
 
@@ -227,7 +77,7 @@ const NetatmoCallbackPage: React.FC = () => {
     }
 
     setLoading(true);
-    const { error, data } = await supabase.functions.invoke("netatmo-auth", {
+    const { error } = await supabase.functions.invoke("netatmo-auth", {
       body: { code, redirect_uri: redirectUri },
     });
     setLoading(false);
@@ -240,6 +90,38 @@ const NetatmoCallbackPage: React.FC = () => {
     toast.success("Connexion Netatmo réussie !");
     setExchanged(true);
     localStorage.removeItem("netatmo_oauth_state");
+  };
+
+  const persistSelection = () => {
+    const payload = {
+      homeId,
+      moduleId: selectedModuleId,
+      bridgeId: selectedBridgeId,
+      scale: selectedScale,
+      types: selectedTypes,
+    };
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(payload));
+    } catch {}
+  };
+
+  const loadUserRoomsAndAssignments = async () => {
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) return;
+
+    const { data: rooms } = await supabase
+      .from("user_rooms")
+      .select("id, room_name")
+      .eq("user_id", userId)
+      .order("room_name", { ascending: true });
+    setUserRooms(rooms || []);
+
+    const { data: assigns } = await supabase
+      .from("netatmo_thermostats")
+      .select("*")
+      .eq("user_id", userId);
+    setAssignments(assigns || []);
   };
 
   const loadStations = async () => {
@@ -257,16 +139,114 @@ const NetatmoCallbackPage: React.FC = () => {
     setHomesData(data);
     const id = data?.body?.homes?.[0]?.id ?? null;
     setHomeId(id);
+    persistSelection();
+    loadUserRoomsAndAssignments();
   };
 
+  const loadHomestatus = async () => {
+    if (!homeId) {
+      toast.error("home_id introuvable.");
+      return;
+    }
+    setLoading(true);
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+      body: { endpoint: "homestatus", home_id: homeId },
+    });
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message || "Erreur de récupération du statut (homestatus).");
+      return;
+    }
+
+    setHomeStatus(data);
+    persistSelection();
+  };
+
+  const loadBoilerHistory = async () => {
+    if (!selectedBridgeId || !selectedModuleId) {
+      toast.error("Sélectionnez un thermostat.");
+      return;
+    }
+    setLoading(true);
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "getmeasure",
+        device_id: selectedBridgeId,
+        module_id: selectedModuleId,
+        scale: selectedScale,
+        type: selectedTypes,
+        optimize: true,
+      },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message || "Erreur de récupération de l'historique chaudière.");
+      return;
+    }
+    setBoilerHistory(data);
+    persistSelection();
+  };
+
+  const assignThermostatToRoom = async (opts: { homeId: string; bridgeId: string; moduleId: string; netatmoRoomId?: string; netatmoRoomName?: string; userRoomId: string }) => {
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id;
+    if (!userId) {
+      toast.error("Non authentifié.");
+      return;
+    }
+    const payload = {
+      user_id: userId,
+      user_room_id: opts.userRoomId,
+      home_id: opts.homeId,
+      device_id: opts.bridgeId,
+      module_id: opts.moduleId,
+      netatmo_room_id: opts.netatmoRoomId ?? null,
+      netatmo_room_name: opts.netatmoRoomName ?? null,
+    };
+    const { error } = await supabase.from("netatmo_thermostats").insert(payload);
+    if (error) {
+      toast.error(error.message || "Erreur lors de l'assignation.");
+      return;
+    }
+    toast.success("Thermostat assigné au logement.");
+    await loadUserRoomsAndAssignments();
+  };
+
+  const unassignThermostat = async (recordId: string) => {
+    const { error } = await supabase.from("netatmo_thermostats").delete().eq("id", recordId);
+    if (error) {
+      toast.error(error.message || "Erreur lors de la suppression.");
+      return;
+    }
+    toast.success("Thermostat désassigné.");
+    await loadUserRoomsAndAssignments();
+  };
+
+  // Auto-échange si ?code=...
   React.useEffect(() => {
-    // Si on revient avec ?code=..., tenter l'échange automatiquement
     const params = new URLSearchParams(window.location.search);
     if (params.get("code")) {
       exchangeCode();
     }
   }, []);
 
+  // Restaurer sélection au reload initial
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setHomeId(parsed.homeId ?? null);
+        setSelectedModuleId(parsed.moduleId ?? null);
+        setSelectedBridgeId(parsed.bridgeId ?? null);
+        setSelectedScale(parsed.scale ?? "1day");
+        setSelectedTypes(parsed.types ?? "sum_boiler_on");
+      }
+    } catch {}
+  }, []);
+
+  // Premier chargement de rooms/assignments
   React.useEffect(() => {
     loadUserRoomsAndAssignments();
   }, []);

@@ -256,10 +256,25 @@ const NetatmoDashboardPage: React.FC = () => {
     setLogs(data || []);
   };
 
-  // Trigger auto-loading when ready
+  // Trigger initial: restore selection and check tokens ONCE
+  React.useEffect(() => {
+    restoreSelection();
+    checkTokens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When tokens are known, load homes data
+  React.useEffect(() => {
+    if (hasTokens) {
+      loadHomesData();
+    }
+  }, [hasTokens]);
+
+  // Auto-load charts when homeId and selectedRoomId ready
   React.useEffect(() => {
     if (homeId && selectedRoomId) {
       loadRoomCharts();
+      loadLogs();
     }
   }, [homeId, selectedRoomId]);
 
@@ -376,14 +391,9 @@ const NetatmoDashboardPage: React.FC = () => {
 
   React.useEffect(() => {
     restoreSelection();
-    checkTokens().then(async () => {
-      if (hasTokens === null) return;
-      if (hasTokens) {
-        await loadHomesData();
-      }
-    });
+    checkTokens();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasTokens]);
+  }, []);
 
   if (hasTokens === null) {
     return (

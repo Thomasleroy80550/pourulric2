@@ -1100,27 +1100,27 @@ const NetatmoDashboardPage: React.FC = () => {
 
   // Lancer une programmation immédiatement (sans attendre le cron)
   const applyScheduleNow = async (s: any) => {
+    // Traiter toutes les lignes comme des consignes manuelles quand type === 'heat'
     const isHeat = s.type === 'heat';
-    const isEco = s.type === 'eco';
 
     const payload: any = {
       endpoint: 'setroomthermpoint',
       home_id: s.home_id,
       room_id: s.netatmo_room_id,
-      mode: isHeat || isEco ? 'manual' : 'home',
+      mode: isHeat ? 'manual' : 'home',
     };
 
     if (isHeat) {
       payload.temp = Number(s.temp);
-      // Utiliser end_time si elle existe (chauffe jusqu'à l'eco), sinon +1h
-      const end = s.end_time
-        ? Math.floor(new Date(s.end_time).getTime() / 1000)
-        : (Math.floor(Date.now() / 1000) + 3600);
-      payload.endtime = end;
-    } else if (isEco) {
-      payload.temp = Number(s.temp);
-      // Appliquer ECO pour 24h par défaut (peut être étendu si besoin)
-      payload.endtime = Math.floor(Date.now() / 1000) + 24 * 3600;
+      // Si end_time existe, l'utiliser; sinon durée par défaut:
+      // - si c'est la ligne ECO (temp basse), 24h par défaut
+      // - sinon 1h si rien n'est précisé
+      if (s.end_time) {
+        payload.endtime = Math.floor(new Date(s.end_time).getTime() / 1000);
+      } else {
+        const defaultDurationSec = 24 * 3600; // ECO par défaut
+        payload.endtime = Math.floor(Date.now() / 1000) + defaultDurationSec;
+      }
     }
 
     const { error } = await supabase.functions.invoke('netatmo-proxy', { body: payload });
@@ -1285,7 +1285,8 @@ const NetatmoDashboardPage: React.FC = () => {
         home_id: homeId,
         netatmo_room_id: targetRoomId,
         module_id: selectedModuleId,
-        type: "eco",
+        // CHANGED: utiliser 'heat' au lieu de 'eco' pour respecter la contrainte
+        type: "heat",
         mode: "manual",
         temp: tempEco,
         start_time: ecoAt.toISOString(),
@@ -1393,7 +1394,8 @@ const NetatmoDashboardPage: React.FC = () => {
         home_id: homeId,
         netatmo_room_id: targetRoomId,
         module_id: selectedModuleId,
-        type: "eco",
+        // CHANGED: utiliser un type autorisé (heat) pour respecter la contrainte
+        type: "heat",
         mode: "manual",
         temp: tempEco,
         start_time: ecoAt.toISOString(),
@@ -1852,7 +1854,8 @@ const NetatmoDashboardPage: React.FC = () => {
                       <div key={s.id} className="flex items-center justify-between border rounded p-2">
                         <div>
                           <p className="font-medium">
-                            {s.type === "heat" ? "Chauffer" : s.type === "eco" ? "Éco (manuel)" : "Arrêt (home)"} — {new Date(s.start_time).toLocaleString()}
+                            {/* Affichage: distinguer chauffe d'arrivée vs ECO par la temp et l'heure */}
+                            {s.end_time ? "Chauffer (arrivée)" : "Éco (manuel)"} — {new Date(s.start_time).toLocaleString()}
                           </p>
                           <p className="text-sm text-gray-600">
                             Pièce: {home?.rooms?.find((r: any) => String(r.id) === String(s.netatmo_room_id))?.name || s.netatmo_room_id}

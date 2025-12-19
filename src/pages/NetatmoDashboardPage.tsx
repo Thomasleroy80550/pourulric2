@@ -43,6 +43,9 @@ const NetatmoDashboardPage: React.FC = () => {
   const [dayRaw, setDayRaw] = React.useState<any | null>(null);
   const [weekRaw, setWeekRaw] = React.useState<any | null>(null);
 
+  // NEW: logs state & loader
+  const [logs, setLogs] = React.useState<any[]>([]);
+
   // Helper: build chart points from getroommeasure response (robuste)
   function buildChartPoints(data: any) {
     const homeBlock = data?.body?.home ?? data?.body; // fallback si API retourne body.home ou body direct
@@ -195,6 +198,26 @@ const NetatmoDashboardPage: React.FC = () => {
       setWeekChartData(buildChartPoints(weekRes.data));
     }
   }
+
+  // Charger les logs quand les charts sont prêts
+  React.useEffect(() => {
+    if (homeId && selectedRoomId) {
+      loadLogs();
+    }
+  }, [homeId, selectedRoomId]);
+
+  const loadLogs = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId) return;
+    const { data } = await supabase
+      .from("netatmo_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setLogs(data || []);
+  };
 
   // Trigger auto-loading when ready
   React.useEffect(() => {
@@ -708,6 +731,41 @@ const NetatmoDashboardPage: React.FC = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {/* NEW: Logs Netatmo (diagnostic) */}
+              <Card className="mt-6">
+                <CardHeader><CardTitle>Logs Netatmo (derniers 10)</CardTitle></CardHeader>
+                <CardContent>
+                  {logs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Aucun log enregistré pour l'instant.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {logs.map((l) => (
+                        <div key={l.id} className="border rounded p-2">
+                          <div className="text-xs">
+                            <span className="font-medium">{l.endpoint}</span> · status {l.response_status} · points {l.count_points ?? "n/a"} · {new Date(l.created_at).toLocaleString()}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground break-words mt-1">
+                            params: {JSON.stringify(l.params)}
+                          </div>
+                          {l.error ? (
+                            <div className="text-[10px] text-red-600 break-words mt-1">
+                              error: {l.error}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] break-words mt-1">
+                              preview: {l.body_preview}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2">
+                    <Button variant="secondary" size="sm" onClick={loadLogs}>Rafraîchir les logs</Button>
+                  </div>
+                </CardContent>
+              </Card>
             </>
           )}
         </div>

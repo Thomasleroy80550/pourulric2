@@ -112,7 +112,7 @@ serve(async (req) => {
   const temp: number | undefined = payload?.temp;
   const endtime: string | number | undefined = payload?.endtime;
 
-  // NEW: getmeasure params
+  // NEW: getmeasure/getroommeasure params
   const scale: string | undefined = payload?.scale;
   const typeParam: string[] | string | undefined = payload?.type;
   const date_begin: number | undefined = payload?.date_begin;
@@ -152,6 +152,24 @@ serve(async (req) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return new Response(JSON.stringify({ error: "Refresh failed", details: msg }), { status: 502, headers: corsHeaders });
+  }
+
+  // Helper: enregistrer un log
+  async function logEvent(params: Record<string, any>, responseStatus: number, bodyPreview: string, errorMsg?: string, countPoints?: number | null) {
+    try {
+      await supabaseAdmin.from("netatmo_logs").insert({
+        user_id: userId,
+        endpoint: action,
+        params,
+        response_status: responseStatus,
+        body_preview: bodyPreview,
+        error: errorMsg ?? null,
+        count_points: typeof countPoints === "number" ? countPoints : null,
+      });
+    } catch (_e) {
+      // Ne jamais bloquer la réponse si le log échoue
+      console.warn(`[netatmo-proxy][${requestId}] Log insert failed:`, String(_e));
+    }
   }
 
   // Proxifier l'appel Netatmo
@@ -215,11 +233,9 @@ serve(async (req) => {
     });
   } else if (action === "getmeasure") {
     // NEW: historique chaudière
-    // Required: device_id (gateway MAC), module_id (thermostat MAC), scale, type
     if (!device_id || !module_id || !scale || !typeParam) {
       return new Response(JSON.stringify({ error: "Missing required fields: device_id, module_id, scale, type" }), { status: 400, headers: corsHeaders });
     }
-    // Normaliser type (array -> comma-separated string)
     const typeStr = Array.isArray(typeParam) ? typeParam.join(",") : String(typeParam);
     url = "https://api.netatmo.com/api/getmeasure";
     const qs = new URLSearchParams({
@@ -233,7 +249,6 @@ serve(async (req) => {
     if (typeof limit === "number") qs.set("limit", String(Math.min(Math.max(limit, 1), 1024)));
     if (typeof optimize === "boolean") qs.set("optimize", optimize ? "true" : "false");
     if (typeof real_time === "boolean") qs.set("real_time", real_time ? "true" : "false");
-
     url += `?${qs.toString()}`;
     upstream = await fetch(url, {
       method: "GET",
@@ -243,8 +258,7 @@ serve(async (req) => {
       },
     });
   } else if (action === "getroommeasure") {
-    // NEW: historique d'une pièce (room)
-    // Required: home_id, room_id, scale, type
+    // NEW: historique d'une pièce
     if (!home_id || !room_id || !scale || !typeParam) {
       return new Response(JSON.stringify({ error: "Missing required fields: home_id, room_id, scale, type" }), { status: 400, headers: corsHeaders });
     }
@@ -261,7 +275,6 @@ serve(async (req) => {
     if (typeof limit === "number") qs.set("limit", String(Math.min(Math.max(limit, 1), 1024)));
     if (typeof optimize === "boolean") qs.set("optimize", optimize ? "true" : "false");
     if (typeof real_time === "boolean") qs.set("real_time", real_time ? "true" : "false");
-
     url += `?${qs.toString()}`;
     upstream = await fetch(url, {
       method: "GET",
@@ -271,7 +284,7 @@ serve(async (req) => {
       },
     });
   } else if (action === "getstationsdata") {
-    // rétrocompat: météo (stations)
+    // rétrocompat météo
     url = "https://api.netatmo.com/api/getstationsdata";
     if (device_id) {
       const p = new URLSearchParams({ device_id });
@@ -290,12 +303,38 @@ serve(async (req) => {
 
   const text = await upstream.text();
   const contentType = upstream.headers.get("content-type") || "application/json";
+
+  // Calculer count_points si possible
+  let countPoints: number | null = null;
+  try {
+    const parsed = JSON.parse(text);
+    if (action === "getroommeasure") {
+      const values = parsed?.body?.home?.values ?? parsed?.body?.values;
+      if (Array.isArray(values)) countPoints = values.length;
+    } else if (action === "getmeasure") {
+      const items = parsed?.body?.items;
+      countPoints = Array.isArray(items) ? items.length : (items ? 1 : 0);
+    }
+  } catch {
+    // ignore
+  }
+
+  // Enregistrer log
+  const paramsLog = {
+    home_id, room_id, device_id, module_id, scale, type: typeParam, date_begin, date_end, real_time, optimize,
+    mode, temp, endtime, url
+  };
+  const preview = text ? text.slice(0, 500) : "";
+
   if (!upstream.ok) {
-    return new Response(JSON.stringify({ error: "Netatmo upstream error", status: upstream.status, body: text.slice(0, 500) }), {
+    await logEvent(paramsLog, upstream.status, preview, preview, countPoints);
+    return new Response(JSON.stringify({ error: "Netatmo upstream error", status: upstream.status, body: preview }), {
       status: upstream.status,
       headers: corsHeaders,
     });
   }
+
+  await logEvent(paramsLog, upstream.status, preview, undefined, countPoints);
 
   return new Response(text, {
     status: 200,

@@ -1247,6 +1247,7 @@ const NetatmoDashboardPage: React.FC = () => {
     property_name: string;
     check_in_date: string;
     check_out_date: string;
+    cod_channel?: string;
   }) {
     if (!homeId) {
       toast.error("Maison Netatmo introuvable.");
@@ -1259,14 +1260,12 @@ const NetatmoDashboardPage: React.FC = () => {
       return;
     }
 
-    // Jour d'arrivée fixé à 15:00 en local (si pas d'heure fournie)
     const ARRIVAL_HOUR = 15;
     const ARRIVAL_MINUTE = 0;
 
     const arrivalDay = new Date(resa.check_in_date);
     arrivalDay.setHours(ARRIVAL_HOUR, ARRIVAL_MINUTE, 0, 0);
 
-    // Lancement: relatif X minutes avant 15:00, ou absolu si défini
     let startHeatDate: Date;
     if (scenarioMode === "absolute" && scenarioHeatStart) {
       const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
@@ -1277,7 +1276,6 @@ const NetatmoDashboardPage: React.FC = () => {
       startHeatDate = new Date(arrivalDay.getTime() - minutes * 60 * 1000);
     }
 
-    // Jour de départ: ECO à 11:00 (ou scenarioStopTime)
     const departureDay = new Date(resa.check_out_date);
     const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
     const ecoAt = new Date(departureDay);
@@ -1298,6 +1296,55 @@ const NetatmoDashboardPage: React.FC = () => {
     const tempAtArrival = scenarioArrivalTemp;
     const tempEco = scenarioAfterDepartureTemp;
 
+    const now = new Date();
+
+    // NEW: si test après départ activé et l'heure éco est passée → enchaîner deux consignes horaires immédiates
+    if (testAfterDeparture && ecoAt.getTime() <= now.getTime()) {
+      const heatStart = new Date(now);
+      const heatEnd = new Date(now.getTime() + Math.max(5, testHeatMinutes) * 60 * 1000);
+      const ecoStart = new Date(heatEnd);
+      const ecoEnd = new Date(ecoStart.getTime() + Math.max(5, testEcoMinutes) * 60 * 1000);
+
+      const rows = [
+        {
+          user_id: uid,
+          user_room_id: selectedUserRoomId,
+          home_id: homeId,
+          netatmo_room_id: targetRoomId,
+          module_id: selectedModuleId,
+          type: "heat",
+          mode: "manual",
+          temp: tempAtArrival,
+          start_time: heatStart.toISOString(),
+          end_time: heatEnd.toISOString(),
+          status: "pending",
+        },
+        {
+          user_id: uid,
+          user_room_id: selectedUserRoomId,
+          home_id: homeId,
+          netatmo_room_id: targetRoomId,
+          module_id: selectedModuleId,
+          type: "heat",
+          mode: "manual",
+          temp: tempEco,
+          start_time: ecoStart.toISOString(),
+          end_time: ecoEnd.toISOString(),
+          status: "pending",
+        },
+      ];
+
+      const { error } = await supabase.from("thermostat_schedules").insert(rows);
+      if (error) {
+        toast.error(error.message || "Erreur lors de la création des programmations (mode test).");
+        return;
+      }
+      toast.success("Programmations de test créées (chauffe immédiate puis éco).");
+      await loadSchedules();
+      return;
+    }
+
+    // Cas normal: création chauffe jusqu'à éco
     const rows = [
       {
         user_id: uid,
@@ -1318,7 +1365,7 @@ const NetatmoDashboardPage: React.FC = () => {
         home_id: homeId,
         netatmo_room_id: targetRoomId,
         module_id: selectedModuleId,
-        // CHANGED: utiliser 'heat' au lieu de 'eco' pour respecter la contrainte
+        // éco stocké comme 'heat' manuel (contrainte de type)
         type: "heat",
         mode: "manual",
         temp: tempEco,
@@ -1501,11 +1548,16 @@ const NetatmoDashboardPage: React.FC = () => {
     };
   }, [autoRunEnabled]);
 
-  // Mode test: ajouter une réservation de test pour générer des programmations
+  // Mode test: ajouter une réservation rapidement
   const [testGuestName, setTestGuestName] = React.useState<string>("Client test");
   const [testPropertyName, setTestPropertyName] = React.useState<string>("");
   const [testArrivalAt, setTestArrivalAt] = React.useState<string>("");
   const [testDepartureAt, setTestDepartureAt] = React.useState<string>("");
+
+  // NEW: test après départ (forcer consigne maintenant), durées
+  const [testAfterDeparture, setTestAfterDeparture] = React.useState<boolean>(false);
+  const [testHeatMinutes, setTestHeatMinutes] = React.useState<number>(20);
+  const [testEcoMinutes, setTestEcoMinutes] = React.useState<number>(30);
 
   function addTestReservation() {
     if (!testPropertyName || !testArrivalAt || !testDepartureAt) {
@@ -2006,9 +2058,49 @@ const NetatmoDashboardPage: React.FC = () => {
                     <Input type="datetime-local" value={testDepartureAt} onChange={(e) => setTestDepartureAt(e.target.value)} className="mt-1" />
                   </div>
                 </div>
+
+                {/* NEW: options de test après départ */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={testAfterDeparture} onCheckedChange={setTestAfterDeparture} />
+                    <span className="text-sm text-gray-700">Tester après l'heure de départ</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Durée de chauffe (min)</label>
+                      <span className="text-sm text-gray-600">{testHeatMinutes} min</span>
+                    </div>
+                    <Slider
+                      value={[testHeatMinutes]}
+                      onValueChange={(vals) => setTestHeatMinutes(vals[0])}
+                      min={5}
+                      max={120}
+                      step={5}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Durée éco (min)</label>
+                      <span className="text-sm text-gray-600">{testEcoMinutes} min</span>
+                    </div>
+                    <Slider
+                      value={[testEcoMinutes]}
+                      onValueChange={(vals) => setTestEcoMinutes(vals[0])}
+                      min={5}
+                      max={240}
+                      step={5}
+                      className="mt-2"
+                    />
+                  </div>
+                </div>
+
                 <Button className="w-full" onClick={addTestReservation}>Ajouter la réservation de test</Button>
                 <p className="text-xs text-gray-600">
-                  Astuce: mettez l'arrivée dans les 30 prochaines minutes pour tester le préchauffage en mode horaire.
+                  Astuce: activez "Tester après l'heure de départ" pour créer deux consignes horaires immédiates (chauffe puis éco).
                 </p>
               </div>
             </CardContent>

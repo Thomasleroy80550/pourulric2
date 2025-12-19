@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +50,11 @@ const NetatmoDashboardPage: React.FC = () => {
 
   // NEW: logs state & loader
   const [logs, setLogs] = React.useState<any[]>([]);
+
+  // Quick setpoint controls (mode/temp/minutes)
+  const [quickMode, setQuickMode] = React.useState<"manual" | "max" | "home">("manual");
+  const [quickTemp, setQuickTemp] = React.useState<number>(19);
+  const [quickMinutes, setQuickMinutes] = React.useState<number>(60);
 
   // Helper: build chart points (robuste) + resampling pour day/hour et week/hour
   function buildChartPoints(data: any, scaleForFallback?: string, range?: { startSec?: number; endSec?: number }) {
@@ -457,6 +463,23 @@ const NetatmoDashboardPage: React.FC = () => {
     loadHomestatus();
   };
 
+  const applyQuickSetpoint = async () => {
+    if (!homeId || !selectedRoomId) {
+      toast.error("Sélectionnez une maison et une pièce.");
+      return;
+    }
+    if (quickMode === "manual" && (typeof quickTemp !== "number" || Number.isNaN(quickTemp))) {
+      toast.error("Température invalide.");
+      return;
+    }
+    await setRoomThermPoint({
+      roomId: selectedRoomId,
+      mode: quickMode,
+      temp: quickMode === "manual" ? quickTemp : undefined,
+      minutes: quickMode !== "home" ? quickMinutes : undefined,
+    });
+  };
+
   React.useEffect(() => {
     restoreSelection();
     checkTokens();
@@ -690,8 +713,70 @@ const NetatmoDashboardPage: React.FC = () => {
           {home && (
             <>
               <Card className="mt-4">
-                <CardHeader>
+                <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <CardTitle>Contrôles par pièce</CardTitle>
+                  {/* Barre d'action rapide pour changer la consigne */}
+                  <div className="w-full md:w-auto flex flex-col md:flex-row md:items-center gap-3">
+                    {/* Sélecteur de mode */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Mode</span>
+                      <Select value={quickMode} onValueChange={(v) => setQuickMode(v as any)}>
+                        <SelectTrigger className="w-32"><SelectValue placeholder="Mode" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="max">Max</SelectItem>
+                          <SelectItem value="home">Home</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Slider température (visible uniquement en manual) */}
+                    {quickMode === "manual" && (
+                      <div className="flex-1 min-w-[220px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Température</span>
+                          <span className="text-xs font-medium">{quickTemp.toFixed(1)}°C</span>
+                        </div>
+                        <Slider
+                          value={[quickTemp]}
+                          min={7}
+                          max={30}
+                          step={0.5}
+                          onValueChange={(vals) => setQuickTemp(vals[0] as number)}
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+
+                    {/* Durée (minutes) pour manual/max */}
+                    {quickMode !== "home" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Durée</span>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={360}
+                          step={5}
+                          value={quickMinutes}
+                          onChange={(e) => setQuickMinutes(Number(e.target.value))}
+                          className="w-24"
+                        />
+                        <span className="text-xs text-muted-foreground">min</span>
+                      </div>
+                    )}
+
+                    {/* Bouton appliquer */}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={applyQuickSetpoint}
+                      disabled={!homeId || !selectedRoomId}
+                      className="md:ml-2"
+                      title="Appliquer la consigne sur la pièce sélectionnée"
+                    >
+                      Appliquer
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <ul className="text-sm space-y-3">

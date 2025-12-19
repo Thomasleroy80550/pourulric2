@@ -92,7 +92,6 @@ serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization");
   const cronSecret = Deno.env.get("CRON_SECRET");
-  const isCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
 
   let payload: any = {};
   try {
@@ -101,7 +100,10 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400, headers: corsHeaders });
   }
 
-  // CHANGED: utiliser Energy API par défaut
+  const hasHeaderCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const hasBodyCron = !!cronSecret && payload?.cron_secret === cronSecret;
+  const isCron = hasHeaderCron || hasBodyCron;
+
   const action: string = payload?.endpoint ?? "homesdata";
   const home_id: string | undefined = payload?.home_id;
   const device_id: string | undefined = payload?.device_id;
@@ -111,7 +113,6 @@ serve(async (req) => {
   const temp: number | undefined = payload?.temp;
   const endtime: string | number | undefined = payload?.endtime;
 
-  // NEW: getmeasure/getroommeasure params
   const scale: string | undefined = payload?.scale;
   const typeParam: string[] | string | undefined = payload?.type;
   const date_begin: number | undefined = payload?.date_begin;
@@ -120,7 +121,6 @@ serve(async (req) => {
   const optimize: boolean | undefined = payload?.optimize;
   const real_time: boolean | undefined = payload?.real_time;
 
-  // Déterminer l'utilisateur
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader ?? "" } } });
   let userId: string | null = null;
 
@@ -137,7 +137,6 @@ serve(async (req) => {
     userId = userData.user.id;
   }
 
-  // Charger le token de l'utilisateur
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
   const { data: rows, error: selErr } = await supabaseAdmin
     .from("netatmo_tokens")
@@ -153,7 +152,6 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Not connected to Netatmo" }), { status: 404, headers: corsHeaders });
   }
 
-  // Rafraîchir si nécessaire
   let usable = record;
   try {
     usable = await ensureFreshToken(record);
@@ -162,7 +160,6 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: "Refresh failed", details: msg }), { status: 502, headers: corsHeaders });
   }
 
-  // Helper: enregistrer un log
   async function logEvent(params: Record<string, any>, responseStatus: number, bodyPreview: string, errorMsg?: string, countPoints?: number | null) {
     try {
       await supabaseAdmin.from("netatmo_logs").insert({

@@ -22,7 +22,18 @@ serve(async (req) => {
 
   const authHeader = req.headers.get("Authorization");
   const cronSecret = Deno.env.get("CRON_SECRET");
-  const isCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+  // Lire le body pour fallback d'auth cron si nécessaire
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+
+  const hasHeaderCron = !!authHeader && cronSecret && authHeader === `Bearer ${cronSecret}`;
+  const hasBodyCron = !!cronSecret && body?.cron_secret === cronSecret;
+  const isCron = hasHeaderCron || hasBodyCron;
 
   const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authHeader ?? "" } } });
 
@@ -39,7 +50,6 @@ serve(async (req) => {
 
   const nowIso = new Date().toISOString();
 
-  // Sélection des programmations dues
   let selQuery = supabaseAdmin
     .from("thermostat_schedules")
     .select("*")
@@ -83,11 +93,11 @@ serve(async (req) => {
         payload = { endpoint: "setroomthermpoint", home_id, room_id, mode: "home" };
       }
 
-      // Déterminer l'auth pour le proxy:
-      // - Cron: CRON_SECRET et transmettre user_id de la programmation
-      // - Utilisateur: JWT reçu en authHeader
+      // Auth vers le proxy:
+      // - Cron: utiliser CRON_SECRET et transmettre user_id
+      // - Utilisateur: relayer le JWT reçu en Authorization
       const proxyAuth = isCron ? `Bearer ${cronSecret}` : (authHeader ?? "");
-      const proxyBody = isCron ? { ...payload, user_id: sched.user_id } : payload;
+      const proxyBody = isCron ? { ...payload, user_id: sched.user_id, cron_secret: cronSecret } : payload;
 
       const upstream = await fetch(`${supabaseUrl}/functions/v1/netatmo-proxy`, {
         method: "POST",

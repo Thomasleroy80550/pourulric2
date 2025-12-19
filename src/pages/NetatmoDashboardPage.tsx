@@ -24,7 +24,7 @@ import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tool
 import { fetchKrossbookingReservations } from "@/lib/krossbooking";
 
 // Icons
-import { Thermometer, Flame, Home as HomeIcon, Calendar as CalendarIcon, Clock, Settings as SettingsIcon, ListChecks } from "lucide-react";
+import { Thermometer, Flame, Home as HomeIcon, Calendar as CalendarIcon, Clock, Settings as SettingsIcon, ListChecks, Save } from "lucide-react";
 
 function computeEndtime(minutes: number): number {
   const nowMs = Date.now();
@@ -249,6 +249,39 @@ const NetatmoDashboardPage: React.FC = () => {
     } catch {}
   };
 
+  // NEW: persistance locale du scénario (inclut heure d'arrivée de base)
+  const SCENARIO_LS_KEY = "netatmo_scenario_v1";
+  function persistScenarioLocal() {
+    try {
+      localStorage.setItem(
+        SCENARIO_LS_KEY,
+        JSON.stringify({
+          scenarioMode,
+          scenarioMinutes,
+          scenarioHeatStart,
+          scenarioArrivalTemp,
+          scenarioStopTime,
+          scenarioAfterDepartureTemp,
+          scenarioArrivalTime,
+        })
+      );
+    } catch {}
+  }
+  function restoreScenarioLocal() {
+    try {
+      const raw = localStorage.getItem(SCENARIO_LS_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s.scenarioMode) setScenarioMode(s.scenarioMode);
+      if (typeof s.scenarioMinutes === "number") setScenarioMinutes(s.scenarioMinutes);
+      if (typeof s.scenarioArrivalTemp === "number") setScenarioArrivalTemp(s.scenarioArrivalTemp);
+      if (typeof s.scenarioAfterDepartureTemp === "number") setScenarioAfterDepartureTemp(s.scenarioAfterDepartureTemp);
+      if (typeof s.scenarioHeatStart === "string") setScenarioHeatStart(s.scenarioHeatStart);
+      if (typeof s.scenarioStopTime === "string") setScenarioStopTime(s.scenarioStopTime);
+      if (typeof s.scenarioArrivalTime === "string") setScenarioArrivalTime(s.scenarioArrivalTime);
+    } catch {}
+  }
+
   // Auto-save scenario (debounced)
   function queueSaveScenario() {
     if (scenarioSaveTimer.current) clearTimeout(scenarioSaveTimer.current);
@@ -266,7 +299,29 @@ const NetatmoDashboardPage: React.FC = () => {
         updated_at: new Date().toISOString(),
       };
       await supabase.from("thermostat_scenarios").upsert(payload, { onConflict: "user_id" });
+      // NEW: aussi persister en local
+      persistScenarioLocal();
     }, 600);
+  }
+
+  // NEW: bouton de sauvegarde explicite
+  async function saveScenarioImmediate() {
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) { toast.error("Non authentifié."); return; }
+    const payload: any = {
+      user_id: uid,
+      arrival_preheat_mode: scenarioMode,
+      arrival_preheat_minutes: scenarioMinutes,
+      heat_start_time: scenarioHeatStart,
+      arrival_temp: scenarioArrivalTemp,
+      stop_time: scenarioStopTime,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("thermostat_scenarios").upsert(payload, { onConflict: "user_id" });
+    if (error) { toast.error(error.message || "Erreur sauvegarde scénario"); return; }
+    persistScenarioLocal();
+    toast.success("Scénario enregistré.");
   }
 
   // Initial scenario load
@@ -843,7 +898,7 @@ const NetatmoDashboardPage: React.FC = () => {
   }
 
   // Effects
-  React.useEffect(() => { restoreSelection(); checkTokens(); loadScenario(); }, []);
+  React.useEffect(() => { restoreSelection(); checkTokens(); restoreScenarioLocal(); loadScenario(); }, []);
   React.useEffect(() => { if (hasTokens) loadHomesData(); }, [hasTokens]);
   React.useEffect(() => { if (homeId) loadHomestatus(); }, [homeId]);
   React.useEffect(() => {
@@ -978,6 +1033,13 @@ const NetatmoDashboardPage: React.FC = () => {
               </div>
             </div>
             <p className="text-xs text-gray-600">Astuce: pas besoin d'enregistrer, le scénario se sauvegarde automatiquement.</p>
+            {/* NEW: Bouton d'enregistrement explicite */}
+            <div className="mt-2">
+              <Button onClick={saveScenarioImmediate} variant="secondary" className="w-full md:w-auto">
+                <Save className="w-4 h-4 mr-2" />
+                Enregistrer le scénario
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

@@ -1195,6 +1195,113 @@ const NetatmoDashboardPage: React.FC = () => {
     if (homeId) loadHomeSchedules();
   }, [homeId]);
 
+  // Générer des programmations (rows thermostat_schedules) pour les réservations à venir selon le scénario
+  async function generateCronSchedulesFromReservations() {
+    if (!homeId) {
+      toast.error("Maison Netatmo introuvable.");
+      return;
+    }
+    if (!upcomingReservations || upcomingReservations.length === 0) {
+      toast.message("Aucune réservation à venir.");
+      return;
+    }
+
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) {
+      toast.error("Non authentifié.");
+      return;
+    }
+
+    // Utiliser l'heure d'arrivée standard (15:00) sauf si votre système en fournit une autre
+    const defaultArrivalHour = 15;
+    const defaultArrivalMinute = 0;
+
+    const rows: any[] = [];
+
+    for (const resa of upcomingReservations) {
+      const arrival = new Date(resa.check_in_date);
+      const departure = new Date(resa.check_out_date);
+
+      // Fixer l'heure d'arrivée à 15:00 (modifiable si vous avez une heure différente)
+      arrival.setHours(defaultArrivalHour, defaultArrivalMinute, 0, 0);
+
+      // Déterminer heure de lancement selon scénario global
+      let startHeatDate: Date;
+      if (scenarioMode === "absolute" && scenarioHeatStart) {
+        // utiliser scenarioHeatStart (HH:mm) le jour d'arrivée
+        const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
+        startHeatDate = new Date(arrival);
+        startHeatDate.setHours(hh || 0, mm || 0, 0, 0);
+      } else {
+        // relatif: X minutes avant l'heure d'arrivée (ex: 20 minutes avant)
+        const minutes = Math.max(5, scenarioMinutes);
+        startHeatDate = new Date(arrival.getTime() - minutes * 60 * 1000);
+      }
+
+      // Heure d'arrêt Eco (mode 'home'): scenarioStopTime (HH:mm) le jour de départ
+      const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+      const stopEcoDate = new Date(departure);
+      stopEcoDate.setHours(sh || 11, sm || 0, 0, 0);
+
+      // Choisir une pièce Netatmo par défaut (selectedRoomId si dispo, sinon mapper par nom de propriété)
+      let targetRoomId = selectedRoomId || null;
+      if (!targetRoomId) {
+        const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
+        const match = netatmoRooms.find((r: any) => r?.name === resa.property_name);
+        if (match) targetRoomId = String(match.id);
+      }
+      if (!targetRoomId) {
+        // si aucune pièce mappée, ignorer cette réservation
+        continue;
+      }
+
+      // Température d'arrivée issue du scénario global
+      const tempAtArrival = scenarioArrivalTemp;
+
+      rows.push({
+        user_id: uid,
+        user_room_id: selectedUserRoomId, // facultatif
+        home_id: homeId,
+        netatmo_room_id: targetRoomId,
+        module_id: selectedModuleId,
+        type: "heat",
+        mode: "manual",
+        temp: tempAtArrival,
+        start_time: startHeatDate.toISOString(),
+        end_time: stopEcoDate.toISOString(), // fin de la chauffe (le scheduler calcule endtime pour override)
+        status: "pending",
+      });
+
+      rows.push({
+        user_id: uid,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId,
+        netatmo_room_id: targetRoomId,
+        module_id: selectedModuleId,
+        type: "stop",
+        mode: "home",
+        temp: null,
+        start_time: stopEcoDate.toISOString(),
+        end_time: null,
+        status: "pending",
+      });
+    }
+
+    if (rows.length === 0) {
+      toast.message("Aucune programmation créée (vérifiez le mapping des pièces).");
+      return;
+    }
+
+    const { error } = await supabase.from("thermostat_schedules").insert(rows);
+    if (error) {
+      toast.error(error.message || "Erreur lors de la création des programmations.");
+      return;
+    }
+    toast.success(`${rows.length} programmation(s) ajoutée(s) au cron.`);
+    await loadSchedules();
+  }
+
   if (hasTokens === null) {
     return (
       <MainLayout>
@@ -1564,6 +1671,68 @@ const NetatmoDashboardPage: React.FC = () => {
             <CardContent>
               <p className="text-gray-600">Logements: {userRooms.length}</p>
               <p className="text-gray-600">Pièce sélectionnée: {selectedUserRoomId ? userRooms.find(r => r.id === selectedUserRoomId)?.room_name : "Sélectionnez un logement"}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bloc: Cron programmations */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Programmations (Cron)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button onClick={generateCronSchedulesFromReservations} className="w-full">
+                  Générer programmations depuis réservations
+                </Button>
+                <Button onClick={runSchedulerNow} variant="outline" className="w-full">
+                  Lancer le scheduler (appliquer les programmations dues)
+                </Button>
+              </div>
+              <div className="mt-4">
+                {schedules.length === 0 ? (
+                  <p className="text-gray-600">Aucune programmation enregistrée.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {schedules.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between border rounded p-2">
+                        <div>
+                          <p className="font-medium">
+                            {s.type === "heat" ? "Chauffer" : "Arrêt (home)"} — {new Date(s.start_time).toLocaleString()}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Pièce: {home?.rooms?.find((r: any) => String(r.id) === String(s.netatmo_room_id))?.name || s.netatmo_room_id}
+                            {s.type === "heat" && typeof s.temp === "number" ? ` • ${Number(s.temp)}°C` : ""}
+                            {s.status ? ` • statut: ${s.status}` : ""}
+                          </p>
+                        </div>
+                        <Button size="sm" variant="secondary" onClick={() => applyScheduleNow(s)}>
+                          Appliquer maintenant
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Scénario global</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Plannings Netatmo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">Avec le système cron, pas besoin d'activer un planning Netatmo pour chauffer la résa.</p>
             </CardContent>
           </Card>
         </div>

@@ -9,7 +9,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 // NEW: import accordion for collapsible logs
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
@@ -49,11 +48,9 @@ const NetatmoDashboardPage: React.FC = () => {
   const [selectedRoomId, setSelectedRoomId] = React.useState<string | null>(null);
   const [dayChartData, setDayChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
   const [weekChartData, setWeekChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
-  // NEW: raw responses for logs
   const [dayRaw, setDayRaw] = React.useState<any | null>(null);
   const [weekRaw, setWeekRaw] = React.useState<any | null>(null);
 
-  // NEW: logs state & loader
   const [logs, setLogs] = React.useState<any[]>([]);
 
   // Quick setpoint controls (mode/temp/minutes)
@@ -68,11 +65,9 @@ const NetatmoDashboardPage: React.FC = () => {
   const [departureAt, setDepartureAt] = React.useState<string>("");
   const [preheatMinutes, setPreheatMinutes] = React.useState<number>(90);
   const [arrivalTemp, setArrivalTemp] = React.useState<number>(20);
-  // NEW: choisir le mode de lancement (relatif vs heure précise) + datetime de démarrage
   const [preheatMode, setPreheatMode] = React.useState<"relative" | "absolute">("relative");
   const [heatStartAt, setHeatStartAt] = React.useState<string>("");
 
-  // NEW: réservations (arrivées à venir)
   const [upcomingReservations, setUpcomingReservations] = React.useState<Array<{
     id: string;
     guest_name: string;
@@ -82,6 +77,91 @@ const NetatmoDashboardPage: React.FC = () => {
     check_out_date: string;
     cod_channel?: string;
   }>>([]);
+
+  // NEW: états pour planning hebdo (moved above returns)
+  const [scheduleName, setScheduleName] = React.useState<string>("ThermoBnB Auto");
+  const [scheduleHgTemp, setScheduleHgTemp] = React.useState<number>(7);
+  const [scheduleAwayTemp, setScheduleAwayTemp] = React.useState<number>(12);
+  const [scheduleZones, setScheduleZones] = React.useState<any[] | null>(null);
+  const [scheduleTimetable, setScheduleTimetable] = React.useState<any[] | null>(null);
+
+  // NEW: useCallback hooks must be declared before any conditional returns
+  const buildScheduleFromHome = React.useCallback(() => {
+    const home = homesData?.body?.homes?.[0];
+    if (!home) {
+      toast.error("Maison introuvable (homesdata).");
+      return;
+    }
+    const selected = (home.schedules || []).find((s: any) => s.selected) || home.schedules?.[0];
+    let baseZones: any[] = Array.isArray(selected?.zones) ? JSON.parse(JSON.stringify(selected.zones)) : [];
+    let baseTimetable: any[] = Array.isArray(selected?.timetable) ? JSON.parse(JSON.stringify(selected.timetable)) : [];
+
+    const hasZone = (id: number) => baseZones.some((z: any) => z.id === id);
+    const rooms = Array.isArray(home.rooms) ? home.rooms : [];
+    const ensureZone = (id: number, type: number, temp: number) => {
+      if (!hasZone(id)) {
+        baseZones.push({
+          id,
+          type,
+          rooms_temp: rooms.map((r: any) => ({ room_id: r.id, temp })),
+          rooms: rooms.map((r: any) => ({ id: r.id, therm_setpoint_temperature: temp })),
+        });
+      } else {
+        const zone = baseZones.find((z: any) => z.id === id);
+        const roomIdsInZone = new Set((zone.rooms || []).map((rr: any) => rr.id));
+        rooms.forEach((r: any) => {
+          if (!roomIdsInZone.has(r.id)) {
+            (zone.rooms || (zone.rooms = [])).push({ id: r.id, therm_setpoint_temperature: temp });
+            (zone.rooms_temp || (zone.rooms_temp = [])).push({ room_id: r.id, temp });
+          }
+        });
+      }
+    };
+    ensureZone(0, 0, 20);
+    ensureZone(1, 1, 16);
+    ensureZone(4, 5, 17);
+    if (!Array.isArray(baseTimetable) || baseTimetable.length === 0) {
+      baseTimetable = [];
+      for (let d = 0; d < 7; d++) {
+        const dayStart = d * 24 * 60;
+        baseTimetable.push({ zone_id: 1, m_offset: dayStart + 0 });
+        baseTimetable.push({ zone_id: 0, m_offset: dayStart + 7 * 60 });
+        baseTimetable.push({ zone_id: 4, m_offset: dayStart + 9 * 60 });
+        baseTimetable.push({ zone_id: 0, m_offset: dayStart + 18 * 60 });
+        baseTimetable.push({ zone_id: 1, m_offset: dayStart + 22 * 60 });
+      }
+    }
+    setScheduleZones(baseZones);
+    setScheduleTimetable(baseTimetable);
+    toast.success("Planning chargé depuis le home.");
+  }, [homesData]);
+
+  const createHomeSchedule = React.useCallback(async () => {
+    if (!homeId) {
+      toast.error("home_id introuvable.");
+      return;
+    }
+    if (!scheduleZones || !scheduleTimetable) {
+      toast.error("Charge d'abord le planning (zones + timetable).");
+      return;
+    }
+    const { error } = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "createnewhomeschedule",
+        home_id: homeId,
+        name: scheduleName,
+        hg_temp: scheduleHgTemp,
+        away_temp: scheduleAwayTemp,
+        zones: scheduleZones,
+        timetable: scheduleTimetable,
+      },
+    });
+    if (error) {
+      toast.error(error.message || "Erreur lors de la création du planning.");
+      return;
+    }
+    toast.success("Planning hebdo créé !");
+  }, [homeId, scheduleName, scheduleHgTemp, scheduleAwayTemp, scheduleZones, scheduleTimetable]);
 
   // Charger les logements de l'utilisateur
   const loadUserRooms = React.useCallback(async () => {
@@ -745,7 +825,7 @@ const NetatmoDashboardPage: React.FC = () => {
   const relays = home ? (home.modules || []).filter((m: any) => m.type === "NAPlug") : [];
   const therms = home ? (home.modules || []).filter((m: any) => m.type === "NATherm1") : [];
 
-  // NEW: états pour planning hebdo
+  // NEW: états pour planning hebdo (moved above returns)
   const [scheduleName, setScheduleName] = React.useState<string>("ThermoBnB Auto");
   const [scheduleHgTemp, setScheduleHgTemp] = React.useState<number>(7);
   const [scheduleAwayTemp, setScheduleAwayTemp] = React.useState<number>(12);
@@ -763,7 +843,6 @@ const NetatmoDashboardPage: React.FC = () => {
     let baseZones: any[] = Array.isArray(selected?.zones) ? JSON.parse(JSON.stringify(selected.zones)) : [];
     let baseTimetable: any[] = Array.isArray(selected?.timetable) ? JSON.parse(JSON.stringify(selected.timetable)) : [];
 
-    // S'assurer des zones obligatoires: Confort (0), Night(1), Eco(4)
     const hasZone = (id: number) => baseZones.some((z: any) => z.id === id);
     const rooms = Array.isArray(home.rooms) ? home.rooms : [];
     const ensureZone = (id: number, type: number, temp: number) => {
@@ -775,7 +854,6 @@ const NetatmoDashboardPage: React.FC = () => {
           rooms: rooms.map((r: any) => ({ id: r.id, therm_setpoint_temperature: temp })),
         });
       } else {
-        // compléter les pièces manquantes dans la zone existante
         const zone = baseZones.find((z: any) => z.id === id);
         const roomIdsInZone = new Set((zone.rooms || []).map((rr: any) => rr.id));
         rooms.forEach((r: any) => {
@@ -786,26 +864,20 @@ const NetatmoDashboardPage: React.FC = () => {
         });
       }
     };
-
-    ensureZone(0, 0, 20);  // Confort
-    ensureZone(1, 1, 16);  // Night
-    ensureZone(4, 5, 17);  // Eco (type 5 observé dans homesdata)
-
-    // Si le timetable est vide, créer un timetable simple (matin/soir confort, nuit, eco)
+    ensureZone(0, 0, 20);
+    ensureZone(1, 1, 16);
+    ensureZone(4, 5, 17);
     if (!Array.isArray(baseTimetable) || baseTimetable.length === 0) {
-      // Pattern sur une semaine (offset en minutes depuis début semaine)
-      // Exemple simple: chaque jour 00:00 Night(1), 07:00 Confort(0), 09:00 Eco(4), 18:00 Confort(0), 22:00 Night(1)
       baseTimetable = [];
       for (let d = 0; d < 7; d++) {
         const dayStart = d * 24 * 60;
-        baseTimetable.push({ zone_id: 1, m_offset: dayStart + 0 });     // 00:00 Night
-        baseTimetable.push({ zone_id: 0, m_offset: dayStart + 7 * 60 }); // 07:00 Confort
-        baseTimetable.push({ zone_id: 4, m_offset: dayStart + 9 * 60 }); // 09:00 Eco
-        baseTimetable.push({ zone_id: 0, m_offset: dayStart + 18 * 60 }); // 18:00 Confort
-        baseTimetable.push({ zone_id: 1, m_offset: dayStart + 22 * 60 }); // 22:00 Night
+        baseTimetable.push({ zone_id: 1, m_offset: dayStart + 0 });
+        baseTimetable.push({ zone_id: 0, m_offset: dayStart + 7 * 60 });
+        baseTimetable.push({ zone_id: 4, m_offset: dayStart + 9 * 60 });
+        baseTimetable.push({ zone_id: 0, m_offset: dayStart + 18 * 60 });
+        baseTimetable.push({ zone_id: 1, m_offset: dayStart + 22 * 60 });
       }
     }
-
     setScheduleZones(baseZones);
     setScheduleTimetable(baseTimetable);
     toast.success("Planning chargé depuis le home.");
@@ -820,8 +892,7 @@ const NetatmoDashboardPage: React.FC = () => {
       toast.error("Charge d'abord le planning (zones + timetable).");
       return;
     }
-
-    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+    const { error } = await supabase.functions.invoke("netatmo-proxy", {
       body: {
         endpoint: "createnewhomeschedule",
         home_id: homeId,
@@ -832,7 +903,6 @@ const NetatmoDashboardPage: React.FC = () => {
         timetable: scheduleTimetable,
       },
     });
-
     if (error) {
       toast.error(error.message || "Erreur lors de la création du planning.");
       return;

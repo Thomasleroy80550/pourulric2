@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
 function computeEndtime(minutes: number): number {
   const nowMs = Date.now();
@@ -33,6 +34,13 @@ const NetatmoDashboardPage: React.FC = () => {
   const [selectedScale, setSelectedScale] = React.useState<string>("1day");
   const [selectedTypes, setSelectedTypes] = React.useState<string>("sum_boiler_on");
   const [boilerHistory, setBoilerHistory] = React.useState<any | null>(null);
+
+  // NEW: room history states
+  const [selectedRoomId, setSelectedRoomId] = React.useState<string | null>(null);
+  const [roomHistoryType, setRoomHistoryType] = React.useState<string>("temperature");
+  const [roomHistoryScale, setRoomHistoryScale] = React.useState<string>("1day");
+  const [roomHistory, setRoomHistory] = React.useState<any | null>(null);
+  const [roomChartData, setRoomChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
 
   const LS_KEY = "netatmo_selection_v1";
 
@@ -96,12 +104,11 @@ const NetatmoDashboardPage: React.FC = () => {
 
     const home = data?.body?.homes?.[0];
     if (home) {
-      const firstTherm = (home.modules || []).find((m: any) => m.type === "NATherm1");
-      if (firstTherm) {
-        setSelectedModuleId(firstTherm.id);
-        setSelectedBridgeId(firstTherm.bridge);
-      }
+      // default room selection
+      const firstRoom = (home.rooms || [])[0];
+      if (firstRoom) setSelectedRoomId(firstRoom.id);
     }
+
     persistSelection();
   };
 
@@ -146,6 +153,51 @@ const NetatmoDashboardPage: React.FC = () => {
     }
     setBoilerHistory(data);
     persistSelection();
+  };
+
+  // NEW: load room history via getroommeasure
+  const loadRoomMeasure = async () => {
+    if (!homeId || !selectedRoomId) {
+      toast.error("Sélectionnez une maison et une pièce.");
+      return;
+    }
+    setLoading(true);
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "getroommeasure",
+        home_id: homeId,
+        room_id: selectedRoomId,
+        scale: roomHistoryScale,
+        type: roomHistoryType,
+        optimize: true,
+      },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message || "Erreur de récupération de l’historique de pièce.");
+      return;
+    }
+    setRoomHistory(data);
+
+    // Build chart data from response
+    const beg = data?.body?.home?.beg_time;
+    const step = data?.body?.home?.step_time;
+    const values = data?.body?.home?.values;
+    if (typeof beg === "number" && typeof step === "number" && Array.isArray(values)) {
+      const points: { ts: number; label: string; value: number }[] = values.map((item: any, idx: number) => {
+        let val: number;
+        if (Array.isArray(item?.value)) {
+          val = Number(item.value[0]);
+        } else {
+          val = Number(item?.value);
+        }
+        const ts = beg + idx * step;
+        return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
+      }).filter((p) => !Number.isNaN(p.value));
+      setRoomChartData(points);
+    } else {
+      setRoomChartData([]);
+    }
   };
 
   const setRoomThermPoint = async (opts: { roomId: string; mode: "manual" | "max" | "home"; temp?: number; minutes?: number }) => {
@@ -208,7 +260,7 @@ const NetatmoDashboardPage: React.FC = () => {
               <CardContent className="space-y-4">
                 <Alert>
                   <AlertTitle>Autorisation requise</AlertTitle>
-                  <AlertDescription>Connectez une fois votre compte Netatmo pour activer l’accès aux thermostats.</AlertDescription>
+                  <AlertDescription>Connectez une fois votre compte Netatmo pour activer l'accès aux thermostats.</AlertDescription>
                 </Alert>
                 <Button onClick={() => navigate("/integrations/netatmo")}>
                   Connecter Netatmo
@@ -412,7 +464,7 @@ const NetatmoDashboardPage: React.FC = () => {
                     </div>
                     <div className="flex items-end">
                       <Button className="w-full" onClick={loadBoilerHistory} disabled={loading || !selectedModuleId || !selectedBridgeId}>
-                        {loading ? "Chargement…" : "Charger l’historique"}
+                        {loading ? "Chargement…" : "Charger l'historique"}
                       </Button>
                     </div>
                   </div>
@@ -444,6 +496,109 @@ const NetatmoDashboardPage: React.FC = () => {
                           </tbody>
                         </table>
                       </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* NEW: Room history chart */}
+              <Card className="mt-4">
+                <CardHeader><CardTitle>Historique de pièce (getroommeasure)</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <p className="font-medium mb-1">Pièce</p>
+                      <Select value={selectedRoomId ?? ""} onValueChange={(v) => setSelectedRoomId(v)}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Choisir une pièce" /></SelectTrigger>
+                        <SelectContent>
+                          {(home.rooms || []).map((r: any) => (
+                            <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="font-medium mb-1">Type</p>
+                      <Select value={roomHistoryType} onValueChange={(v) => setRoomHistoryType(v)}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="temperature">temperature</SelectItem>
+                          <SelectItem value="sp_temperature">sp_temperature</SelectItem>
+                          <SelectItem value="min_temp">min_temp</SelectItem>
+                          <SelectItem value="max_temp">max_temp</SelectItem>
+                          <SelectItem value="date_min_temp">date_min_temp</SelectItem>
+                          <SelectItem value="date_max_temp">date_max_temp</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <p className="font-medium mb-1">Échelle</p>
+                      <Select value={roomHistoryScale} onValueChange={(v) => setRoomHistoryScale(v)}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30min">30min</SelectItem>
+                          <SelectItem value="1hour">1hour</SelectItem>
+                          <SelectItem value="3hours">3hours</SelectItem>
+                          <SelectItem value="1day">1day</SelectItem>
+                          <SelectItem value="1week">1week</SelectItem>
+                          <SelectItem value="1month">1month</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button className="w-full" onClick={loadRoomMeasure} disabled={loading || !homeId || !selectedRoomId}>
+                        {loading ? "Chargement…" : "Charger l'historique pièce"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Chart */}
+                  <div className="mt-4 h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={roomChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                        <XAxis
+                          dataKey="label"
+                          tick={{ fontSize: 11, fill: "#6b7280" }}
+                          minTickGap={24}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 11, fill: "#6b7280" }}
+                          tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}°C`}
+                        />
+                        <Tooltip
+                          wrapperStyle={{ outline: "none" }}
+                          contentStyle={{ background: "rgba(17, 24, 39, 0.92)", border: "1px solid #374151", borderRadius: 8 }}
+                          labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                          itemStyle={{ color: "#e5e7eb" }}
+                          formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })}°C`, roomHistoryType]}
+                        />
+                        <Legend />
+                        <Line
+                          name={roomHistoryType}
+                          type="monotone"
+                          dataKey="value"
+                          stroke="#6366f1"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
+                          animationDuration={400}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Raw response (debug) */}
+                  {roomHistory && (
+                    <div className="mt-4">
+                      <Card>
+                        <CardHeader><CardTitle>Réponse brute (getroommeasure)</CardTitle></CardHeader>
+                        <CardContent>
+                          <pre className="text-xs whitespace-pre-wrap break-words bg-muted p-3 rounded">
+                            {JSON.stringify(roomHistory, null, 2)}
+                          </pre>
+                        </CardContent>
+                      </Card>
                     </div>
                   )}
                 </CardContent>

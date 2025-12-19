@@ -242,6 +242,34 @@ serve(async (req) => {
         "Accept": "application/json",
       },
     });
+  } else if (action === "getroommeasure") {
+    // NEW: historique d'une pièce (room)
+    // Required: home_id, room_id, scale, type
+    if (!home_id || !room_id || !scale || !typeParam) {
+      return new Response(JSON.stringify({ error: "Missing required fields: home_id, room_id, scale, type" }), { status: 400, headers: corsHeaders });
+    }
+    const typeStr = Array.isArray(typeParam) ? typeParam.join(",") : String(typeParam);
+    url = "https://api.netatmo.com/api/getroommeasure";
+    const qs = new URLSearchParams({
+      home_id,
+      room_id,
+      scale,
+      type: typeStr,
+    });
+    if (typeof date_begin === "number") qs.set("date_begin", String(date_begin));
+    if (typeof date_end === "number") qs.set("date_end", String(date_end));
+    if (typeof limit === "number") qs.set("limit", String(Math.min(Math.max(limit, 1), 1024)));
+    if (typeof optimize === "boolean") qs.set("optimize", optimize ? "true" : "false");
+    if (typeof real_time === "boolean") qs.set("real_time", real_time ? "true" : "false");
+
+    url += `?${qs.toString()}`;
+    upstream = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${usable.access_token}`,
+        "Accept": "application/json",
+      },
+    });
   } else if (action === "getstationsdata") {
     // rétrocompat: météo (stations)
     url = "https://api.netatmo.com/api/getstationsdata";

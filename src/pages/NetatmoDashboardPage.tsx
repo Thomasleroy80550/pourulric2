@@ -1559,6 +1559,88 @@ const NetatmoDashboardPage: React.FC = () => {
   const [testHeatMinutes, setTestHeatMinutes] = React.useState<number>(20);
   const [testEcoMinutes, setTestEcoMinutes] = React.useState<number>(30);
 
+  // Mode test avancé (ignorer le scénario)
+  const [testPreheatMinutes, setTestPreheatMinutes] = React.useState<number>(60);
+  const [testArrivalTempOverride, setTestArrivalTempOverride] = React.useState<number>(20);
+  const [testEcoTempOverride, setTestEcoTempOverride] = React.useState<number>(16);
+
+  async function createManualTestSchedules() {
+    if (!homeId) {
+      toast.error("Maison Netatmo introuvable.");
+      return;
+    }
+    if (!testPropertyName || !testArrivalAt || !testDepartureAt) {
+      toast.error("Renseignez la pièce, l'heure d'arrivée et l'heure de départ.");
+      return;
+    }
+
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) {
+      toast.error("Non authentifié.");
+      return;
+    }
+
+    const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
+    const match = netatmoRooms.find((r: any) => r?.name === testPropertyName);
+    const targetRoomId = match ? String(match.id) : selectedRoomId || null;
+    if (!targetRoomId) {
+      toast.error("Aucune pièce Netatmo correspondante — vérifiez le nom ou sélectionnez une pièce.");
+      return;
+    }
+
+    const arrivalDT = new Date(testArrivalAt);
+    const departureDT = new Date(testDepartureAt);
+    if (Number.isNaN(arrivalDT.getTime()) || Number.isNaN(departureDT.getTime())) {
+      toast.error("Format de date invalide.");
+      return;
+    }
+    if (departureDT <= arrivalDT) {
+      toast.error("Le départ doit être après l'arrivée.");
+      return;
+    }
+
+    // Préchauffage: X minutes avant l'heure d'arrivée (choisie)
+    const startHeatDate = new Date(arrivalDT.getTime() - Math.max(5, testPreheatMinutes) * 60 * 1000);
+
+    const rows = [
+      {
+        user_id: uid,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId,
+        netatmo_room_id: targetRoomId,
+        module_id: selectedModuleId,
+        type: "heat",
+        mode: "manual",
+        temp: testArrivalTempOverride,
+        start_time: startHeatDate.toISOString(),
+        end_time: departureDT.toISOString(),
+        status: "pending",
+      },
+      {
+        user_id: uid,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId,
+        netatmo_room_id: targetRoomId,
+        module_id: selectedModuleId,
+        type: "heat", // éco stocké comme heat manuel pour respecter la contrainte
+        mode: "manual",
+        temp: testEcoTempOverride,
+        start_time: departureDT.toISOString(),
+        end_time: new Date(departureDT.getTime() + 24 * 3600 * 1000).toISOString(), // technique: fin dans 24h (transparent côté UI)
+        status: "pending",
+      },
+    ];
+
+    const { error } = await supabase.from("thermostat_schedules").insert(rows);
+    if (error) {
+      toast.error(error.message || "Erreur lors de la création des programmations (mode test avancé).");
+      return;
+    }
+    toast.success("Programmations test créées (préchauffage puis éco aux heures choisies).");
+    await loadSchedules();
+  }
+
   function addTestReservation() {
     if (!testPropertyName || !testArrivalAt || !testDepartureAt) {
       toast.error("Renseignez le logement, l'arrivée et le départ pour le test.");
@@ -2000,7 +2082,7 @@ const NetatmoDashboardPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Bloc: Statuts du scheduler et exécution automatique */}
+        {/* Bloc: Statuts du scheduler + Mode test */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <Card>
             <CardHeader>
@@ -2031,23 +2113,34 @@ const NetatmoDashboardPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Mode test: ajouter une réservation rapidement */}
+          {/* Mode test avancé: ignorer le scénario et définir tes heures */}
           <Card>
             <CardHeader>
-              <CardTitle>Mode test (réservation rapide)</CardTitle>
+              <CardTitle>Mode test avancé (ignorer le scénario)</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-medium">Nom du client</label>
-                    <Input value={testGuestName} onChange={(e) => setTestGuestName(e.target.value)} className="mt-1" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Logement (nom de la pièce Netatmo)</label>
+                    <label className="text-sm font-medium">Pièce Netatmo (nom)</label>
                     <Input value={testPropertyName} onChange={(e) => setTestPropertyName(e.target.value)} className="mt-1" placeholder="Ex: Chambre 1" />
                   </div>
+                  <div>
+                    <label className="text-sm font-medium">Préchauffage (minutes avant arrivée)</label>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">{testPreheatMinutes} min</span>
+                    </div>
+                    <Slider
+                      value={[testPreheatMinutes]}
+                      onValueChange={(vals) => setTestPreheatMinutes(vals[0])}
+                      min={5}
+                      max={600}
+                      step={5}
+                      className="mt-2"
+                    />
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium">Arrivée (date & heure)</label>
@@ -2059,48 +2152,48 @@ const NetatmoDashboardPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* NEW: options de test après départ */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Switch checked={testAfterDeparture} onCheckedChange={setTestAfterDeparture} />
-                    <span className="text-sm text-gray-700">Tester après l'heure de départ</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Consigne à l'arrivée</label>
+                      <span className="text-sm text-gray-600">{testArrivalTempOverride}°C</span>
+                    </div>
+                    <Slider
+                      value={[testArrivalTempOverride]}
+                      onValueChange={(vals) => setTestArrivalTempOverride(vals[0])}
+                      min={10}
+                      max={25}
+                      step={0.5}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Consigne Éco au départ</label>
+                      <span className="text-sm text-gray-600">{testEcoTempOverride}°C</span>
+                    </div>
+                    <Slider
+                      value={[testEcoTempOverride]}
+                      onValueChange={(vals) => setTestEcoTempOverride(vals[0])}
+                      min={10}
+                      max={22}
+                      step={0.5}
+                      className="mt-2"
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Durée de chauffe (min)</label>
-                      <span className="text-sm text-gray-600">{testHeatMinutes} min</span>
-                    </div>
-                    <Slider
-                      value={[testHeatMinutes]}
-                      onValueChange={(vals) => setTestHeatMinutes(vals[0])}
-                      min={5}
-                      max={120}
-                      step={5}
-                      className="mt-2"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Durée éco (min)</label>
-                      <span className="text-sm text-gray-600">{testEcoMinutes} min</span>
-                    </div>
-                    <Slider
-                      value={[testEcoMinutes]}
-                      onValueChange={(vals) => setTestEcoMinutes(vals[0])}
-                      min={5}
-                      max={240}
-                      step={5}
-                      className="mt-2"
-                    />
-                  </div>
+                  <Button className="w-full" onClick={createManualTestSchedules}>
+                    Créer programmations test (arrivée/départ)
+                  </Button>
+                  <Button className="w-full" variant="outline" onClick={runSchedulerNow}>
+                    Lancer le scheduler
+                  </Button>
                 </div>
 
-                <Button className="w-full" onClick={addTestReservation}>Ajouter la réservation de test</Button>
                 <p className="text-xs text-gray-600">
-                  Astuce: activez "Tester après l'heure de départ" pour créer deux consignes horaires immédiates (chauffe puis éco).
+                  Astuce: pour tester tout de suite, choisis une arrivée dans les prochaines minutes et un départ proche; le scheduler appliquera "préchauffage → consigne" puis "Éco au départ".
                 </p>
               </div>
             </CardContent>

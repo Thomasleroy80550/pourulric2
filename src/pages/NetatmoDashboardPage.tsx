@@ -1528,6 +1528,53 @@ const NetatmoDashboardPage: React.FC = () => {
     toast.success("Réservation de test ajoutée. Créez les programmations depuis la liste des réservations.");
   }
 
+  // NEW: auto-sauvegarde silencieuse du scénario (debounce)
+  const scenarioSaveTimer = React.useRef<number | null>(null);
+  function queueSaveScenario() {
+    if (scenarioSaveTimer.current) {
+      clearTimeout(scenarioSaveTimer.current);
+    }
+    scenarioSaveTimer.current = window.setTimeout(async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid) return;
+
+      const payload: any = {
+        user_id: uid,
+        arrival_preheat_mode: scenarioMode,
+        arrival_preheat_minutes: scenarioMinutes,
+        heat_start_time: scenarioHeatStart,
+        arrival_temp: scenarioArrivalTemp,
+        stop_time: scenarioStopTime,
+        updated_at: new Date().toISOString(),
+      };
+      await supabase.from("thermostat_scenarios").upsert(payload, { onConflict: "user_id" });
+    }, 600);
+  }
+
+  React.useEffect(() => {
+    queueSaveScenario();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenarioMode, scenarioMinutes, scenarioHeatStart, scenarioArrivalTemp, scenarioStopTime]);
+
+  // NEW: exécuter auto-planner puis scheduler
+  async function runPlannerThenScheduler() {
+    const planRes = await supabase.functions.invoke("thermobnb-auto-planner", { body: {} });
+    if (planRes.error) {
+      toast.error(planRes.error.message || "Erreur lors de l'auto-planning.");
+    } else {
+      toast.success("Auto-planner exécuté.");
+    }
+    const schedRes = await supabase.functions.invoke("thermobnb-scheduler", { body: {} });
+    if (schedRes.error) {
+      toast.error(schedRes.error.message || "Erreur lors du scheduler.");
+    } else {
+      toast.success(`Scheduler exécuté (${schedRes.data?.processed ?? 0}).`);
+    }
+    await loadSchedules();
+    await refreshSchedulerStats?.();
+  }
+
   if (hasTokens === null) {
     return (
       <MainLayout>
@@ -2073,6 +2120,9 @@ const NetatmoDashboardPage: React.FC = () => {
                 </Button>
                 <Button onClick={runSchedulerNow} variant="outline" className="w-full">
                   Lancer le scheduler (appliquer les programmations dues)
+                </Button>
+                <Button onClick={runPlannerThenScheduler} variant="secondary" className="w-full">
+                  Exécuter tout (planner + scheduler)
                 </Button>
               </div>
               <div className="mt-4">

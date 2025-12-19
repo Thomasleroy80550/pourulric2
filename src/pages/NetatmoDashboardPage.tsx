@@ -861,6 +861,40 @@ const NetatmoDashboardPage: React.FC = () => {
     });
   };
 
+  // Lancer une programmation immédiatement (sans attendre le cron)
+  const applyScheduleNow = async (s: any) => {
+    const isHeat = s.type === 'heat';
+    const payload: any = {
+      endpoint: 'setroomthermpoint',
+      home_id: s.home_id,
+      room_id: s.netatmo_room_id,
+      mode: isHeat ? 'manual' : 'home',
+    };
+    if (isHeat) {
+      payload.temp = Number(s.temp);
+      // Utiliser end_time si elle existe, sinon 1h
+      const end = s.end_time ? Math.floor(new Date(s.end_time).getTime() / 1000) : (Math.floor(Date.now() / 1000) + 3600);
+      payload.endtime = end;
+    }
+
+    const { error } = await supabase.functions.invoke('netatmo-proxy', { body: payload });
+    if (error) {
+      toast.error(error.message || "Échec de l'application de la programmation.");
+      await supabase.from('thermostat_schedules')
+        .update({ status: 'failed', error: error.message || 'unknown error' })
+        .eq('id', s.id);
+    } else {
+      toast.success('Programmation appliquée.');
+      await supabase.from('thermostat_schedules')
+        .update({ status: 'applied', updated_at: new Date().toISOString() })
+        .eq('id', s.id);
+      // Rafraîchir statut live
+      await loadHomestatus();
+    }
+    // Recharger la liste des programmations
+    await loadSchedules();
+  };
+
   React.useEffect(() => {
     restoreSelection();
     checkTokens();
@@ -1198,12 +1232,15 @@ const NetatmoDashboardPage: React.FC = () => {
                 <ul className="text-sm divide-y border rounded">
                   {schedules.map((s) => (
                     <li key={s.id} className="p-2 flex items-center justify-between">
-                      <div>
+                      <div className="max-w-[60%]">
                         <span className="font-medium">{s.type === 'heat' ? 'Préchauffage' : 'Arrêt'}</span>
                         <span className="text-muted-foreground ml-2">
                           {new Date(s.start_time).toLocaleString()}
                           {s.type === 'heat' && s.end_time ? ` → fin ${new Date(s.end_time).toLocaleTimeString()}` : ''}
                         </span>
+                        {s.error && (
+                          <div className="mt-1 text-[11px] text-red-600 break-words">Erreur: {s.error}</div>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className={`text-xs px-2 py-0.5 rounded border ${
@@ -1216,13 +1253,21 @@ const NetatmoDashboardPage: React.FC = () => {
                         <span className="text-xs text-muted-foreground">
                           {s.status === 'pending' ? `dans ${timeUntil(s.start_time)}` : ''}
                         </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => applyScheduleNow(s)}
+                          title="Appliquer immédiatement la programmation"
+                        >
+                          Appliquer maintenant
+                        </Button>
                       </div>
                     </li>
                   ))}
                 </ul>
               )}
               <p className="text-xs text-muted-foreground mt-2">
-                Le scheduler applique automatiquement les programmations dues. Vous pouvez utiliser "Lancer maintenant" pour vérifier immédiatement.
+                Le scheduler applique automatiquement les programmations dues. Utilisez "Appliquer maintenant" pour tester immédiatement.
               </p>
             </div>
           )}

@@ -1068,215 +1068,193 @@ const NetatmoDashboardPage: React.FC = () => {
     if (homeId) loadAssignments();
   }, [homeId]);
 
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
+  // Trigger initial: restore selection and check tokens ONCE
+  React.useEffect(() => {
+    restoreSelection();
+    checkTokens();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When tokens are known, load homes data
+  React.useEffect(() => {
+    if (hasTokens) {
+      loadHomesData();
+    }
+  }, [hasTokens]);
+
+  // Auto-load status + charts when homeId/room ready
+  React.useEffect(() => {
+    if (homeId) {
+      // Charger le statut en direct automatiquement
+      loadHomestatus();
+    }
+    if (homeId && selectedRoomId) {
+      loadRoomCharts();
+      loadLogs();
+    }
+  }, [homeId, selectedRoomId]);
+
+  const loadHomestatus = async () => {
+    if (!homeId) {
+      toast.error("home_id introuvable.");
+      return;
+    }
+    setLoading(true);
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+      body: { endpoint: "homestatus", home_id: homeId },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message || "Erreur de récupération du statut (homestatus).");
+      return;
+    }
+    setHomeStatus(data);
+    persistSelection();
+  };
+
+  const loadBoilerHistory = async () => {
+    if (!selectedBridgeId || !selectedModuleId) {
+      toast.error("Sélectionnez un thermostat.");
+      return;
+    }
+    setLoading(true);
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "getmeasure",
+        device_id: selectedBridgeId,
+        module_id: selectedModuleId,
+        scale: selectedScale,
+        type: selectedTypes,
+        optimize: true,
+      },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message || "Erreur de récupération de l'historique chaudière.");
+      return;
+    }
+    setBoilerHistory(data);
+    persistSelection();
+  };
+
+  // NEW: load room history via getroommeasure
+  const loadRoomMeasure = async () => {
+    if (!homeId || !selectedRoomId) {
+      toast.error("Sélectionnez une maison et une pièce.");
+      return;
+    }
+    setLoading(true);
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
+      body: {
+        endpoint: "getroommeasure",
+        home_id: homeId,
+        room_id: selectedRoomId,
+        scale: roomHistoryScale,
+        type: roomHistoryType,
+        optimize: true,
+      },
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message || "Erreur de récupération de l'historique de pièce.");
+      return;
+    }
+    setRoomHistory(data);
+
+    // Build chart data from response
+    const beg = data?.body?.home?.beg_time;
+    const step = data?.body?.home?.step_time;
+    const values = data?.body?.home?.values;
+    if (typeof beg === "number" && typeof step === "number" && Array.isArray(values)) {
+      const points: { ts: number; label: string; value: number }[] = values.map((item: any, idx: number) => {
+        let val: number;
+        if (Array.isArray(item?.value)) {
+          val = Number(item.value[0]);
+        } else {
+          val = Number(item?.value);
+        }
+        const ts = beg + idx * step;
+        return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
+      }).filter((p) => !Number.isNaN(p.value));
+      setRoomChartData(points);
+    } else {
+      setRoomChartData([]);
+    }
+  };
 
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
-
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
+  const setRoomThermPoint = async (opts: { roomId: string; mode: "manual" | "max" | "home"; temp?: number; minutes?: number }) => {
+    if (!homeId) {
+      toast.error("home_id introuvable.");
+      return;
+    }
+    const payload: any = {
+      endpoint: "setroomthermpoint",
+      home_id: homeId,
+      room_id: opts.roomId,
+      mode: opts.mode,
+    };
+    if (opts.mode === "manual") payload.temp = opts.temp;
+    if (opts.mode !== "home") payload.endtime = computeEndtime(opts.minutes ?? 60);
 
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
+    const { error } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
+    if (error) {
+      toast.error(error.message || "Échec de la mise à jour du thermostat.");
+      return;
+    }
+    toast.success("Thermostat mis à jour.");
+    loadHomestatus();
+  };
 
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
+  const applyQuickSetpoint = async () => {
+    if (!homeId || !selectedRoomId) {
+      toast.error("Sélectionnez une maison et une pièce.");
+      return;
+    }
+    if (quickMode === "manual" && (typeof quickTemp !== "number" || Number.isNaN(quickTemp))) {
+      toast.error("Température invalide.");
+      return;
+    }
+    await setRoomThermPoint({
+      roomId: selectedRoomId,
+      mode: quickMode,
+      temp: quickMode === "manual" ? quickTemp : undefined,
+      minutes: quickMode !== "home" ? quickMinutes : undefined,
+    });
+  };
 
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
+  // Lancer une programmation immédiatement (sans attendre le cron)
+  const applyScheduleNow = async (s: any) => {
+    const isHeat = s.type === 'heat';
+    const payload: any = {
+      endpoint: 'setroomthermpoint',
+      home_id: s.home_id,
+      room_id: s.netatmo_room_id,
+      mode: isHeat ? 'manual' : 'home',
+    };
+    if (isHeat) {
+      payload.temp = Number(s.temp);
+      // Utiliser end_time si elle existe, sinon 1h
+      const end = s.end_time ? Math.floor(new Date(s.end_time).getTime() / 1000) : (Math.floor(Date.now() / 1000) + 3600);
+      payload.endtime = end;
+    }
 
-  // Charger les liens quand la maison est connue
-  React.useEffect(() => {
-    if (homeId) loadAssignments();
-  }, [homeId]);
+    const { error } = await supabase.functions.invoke('netatmo-proxy', { body: payload });
+    if (error) {
+      toast.error(error.message || "Échec de l'application de la programmation.");
+      await supabase.from('thermostat_schedules')
+        .update({ status: 'failed', error: error.message || 'unknown error' })
+        .eq('id', s.id);
+    } else {
+      toast.success('Programmation appliquée.');
+      await supabase.from('thermostat_schedules')
+        .update({ status: 'applied', updated_at: new Date().toISOString() })
+        .eq('id', s.id);
+      // Rafraîchir statut live
+      await loadHomestatus();
+    }
+    // Recharger la liste des programmations
+    await loadSchedules();
+  };
 
   // Charger les liens quand la maison est connue
   React.useEffect(() => {
@@ -4058,5 +4036,4 @@ const NetatmoDashboardPage: React.FC = () => {
     if (homeId) loadAssignments();
   }, [homeId]);
 
-  // Charger les liens quand la maison est connue
-  React.useEffect
+  // Charger les liens

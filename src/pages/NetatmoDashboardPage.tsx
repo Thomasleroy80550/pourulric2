@@ -37,10 +37,24 @@ const NetatmoDashboardPage: React.FC = () => {
 
   // NEW: room history states
   const [selectedRoomId, setSelectedRoomId] = React.useState<string | null>(null);
-  const [roomHistoryType, setRoomHistoryType] = React.useState<string>("temperature");
-  const [roomHistoryScale, setRoomHistoryScale] = React.useState<string>("1day");
-  const [roomHistory, setRoomHistory] = React.useState<any | null>(null);
-  const [roomChartData, setRoomChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
+  const [dayChartData, setDayChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
+  const [weekChartData, setWeekChartData] = React.useState<{ ts: number; label: string; value: number }[]>([]);
+
+  // Helper: build chart points from getroommeasure response
+  function buildChartPoints(data: any) {
+    const beg = data?.body?.home?.beg_time;
+    const step = data?.body?.home?.step_time;
+    const values = data?.body?.home?.values;
+    if (typeof beg !== "number" || typeof step !== "number" || !Array.isArray(values)) return [];
+    return values
+      .map((item: any, idx: number) => {
+        const raw = Array.isArray(item?.value) ? item.value[0] : item?.value;
+        const val = Number(raw);
+        const ts = beg + idx * step;
+        return { ts, label: new Date(ts * 1000).toLocaleString(), value: val };
+      })
+      .filter((p) => !Number.isNaN(p.value));
+  }
 
   const LS_KEY = "netatmo_selection_v1";
 
@@ -90,27 +104,64 @@ const NetatmoDashboardPage: React.FC = () => {
 
   const loadHomesData = async () => {
     setLoading(true);
-    const { error, data } = await supabase.functions.invoke("netatmo-proxy", {
-      body: { endpoint: "homesdata" },
-    });
+    const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: { endpoint: "homesdata" } });
     setLoading(false);
     if (error) {
       toast.error(error.message || "Erreur de récupération des thermostats (homesdata).");
       return;
     }
     setHomesData(data);
-    const id = data?.body?.homes?.[0]?.id ?? null;
+    const home = data?.body?.homes?.[0] ?? null;
+    const id = home?.id ?? null;
     setHomeId(id);
 
-    const home = data?.body?.homes?.[0];
     if (home) {
-      // default room selection
+      const firstTherm = (home.modules || []).find((m: any) => m.type === "NATherm1");
+      if (firstTherm) {
+        setSelectedModuleId(firstTherm.id);
+        setSelectedBridgeId(firstTherm.bridge);
+      }
       const firstRoom = (home.rooms || [])[0];
       if (firstRoom) setSelectedRoomId(firstRoom.id);
     }
-
     persistSelection();
   };
+
+  // Auto-load room charts (1 day + 1 week) when homeId and selectedRoomId are ready
+  async function loadRoomCharts() {
+    if (!homeId || !selectedRoomId) return;
+    setLoading(true);
+    const [dayRes, weekRes] = await Promise.all([
+      supabase.functions.invoke("netatmo-proxy", {
+        body: { endpoint: "getroommeasure", home_id: homeId, room_id: selectedRoomId, scale: "1day", type: "temperature", optimize: true },
+      }),
+      supabase.functions.invoke("netatmo-proxy", {
+        body: { endpoint: "getroommeasure", home_id: homeId, room_id: selectedRoomId, scale: "1week", type: "temperature", optimize: true },
+      }),
+    ]);
+    setLoading(false);
+
+    if (dayRes.error) {
+      toast.error(dayRes.error.message || "Erreur historique (jour).");
+      setDayChartData([]);
+    } else {
+      setDayChartData(buildChartPoints(dayRes.data));
+    }
+
+    if (weekRes.error) {
+      toast.error(weekRes.error.message || "Erreur historique (semaine).");
+      setWeekChartData([]);
+    } else {
+      setWeekChartData(buildChartPoints(weekRes.data));
+    }
+  }
+
+  // Trigger auto-loading when ready
+  React.useEffect(() => {
+    if (homeId && selectedRoomId) {
+      loadRoomCharts();
+    }
+  }, [homeId, selectedRoomId]);
 
   const loadHomestatus = async () => {
     if (!homeId) {
@@ -148,7 +199,7 @@ const NetatmoDashboardPage: React.FC = () => {
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message || "Erreur de récupération de l’historique chaudière.");
+      toast.error(error.message || "Erreur de récupération de l'historique chaudière.");
       return;
     }
     setBoilerHistory(data);
@@ -174,7 +225,7 @@ const NetatmoDashboardPage: React.FC = () => {
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message || "Erreur de récupération de l’historique de pièce.");
+      toast.error(error.message || "Erreur de récupération de l'historique de pièce.");
       return;
     }
     setRoomHistory(data);
@@ -501,108 +552,96 @@ const NetatmoDashboardPage: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* NEW: Room history chart */}
-              <Card className="mt-4">
-                <CardHeader><CardTitle>Historique de pièce (getroommeasure)</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-4 gap-3 text-sm">
-                    <div>
-                      <p className="font-medium mb-1">Pièce</p>
-                      <Select value={selectedRoomId ?? ""} onValueChange={(v) => setSelectedRoomId(v)}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Choisir une pièce" /></SelectTrigger>
-                        <SelectContent>
-                          {(home.rooms || []).map((r: any) => (
-                            <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+              {/* NEW: Graphiques auto jour & semaine */}
+              {home && (
+                <Card className="mt-4">
+                  <CardHeader><CardTitle>Historique de pièce</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="font-medium mb-1">Pièce</p>
+                        <Select value={selectedRoomId ?? ""} onValueChange={(v) => setSelectedRoomId(v)}>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir une pièce" /></SelectTrigger>
+                          <SelectContent>
+                            {(home.rooms || []).map((r: any) => (
+                              <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-2 text-muted-foreground flex items-end">
+                        <span className="text-xs">Les courbes se chargent automatiquement (température).</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium mb-1">Type</p>
-                      <Select value={roomHistoryType} onValueChange={(v) => setRoomHistoryType(v)}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="temperature">temperature</SelectItem>
-                          <SelectItem value="sp_temperature">sp_temperature</SelectItem>
-                          <SelectItem value="min_temp">min_temp</SelectItem>
-                          <SelectItem value="max_temp">max_temp</SelectItem>
-                          <SelectItem value="date_min_temp">date_min_temp</SelectItem>
-                          <SelectItem value="date_max_temp">date_max_temp</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <p className="font-medium mb-1">Échelle</p>
-                      <Select value={roomHistoryScale} onValueChange={(v) => setRoomHistoryScale(v)}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="30min">30min</SelectItem>
-                          <SelectItem value="1hour">1hour</SelectItem>
-                          <SelectItem value="3hours">3hours</SelectItem>
-                          <SelectItem value="1day">1day</SelectItem>
-                          <SelectItem value="1week">1week</SelectItem>
-                          <SelectItem value="1month">1month</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end">
-                      <Button className="w-full" onClick={loadRoomMeasure} disabled={loading || !homeId || !selectedRoomId}>
-                        {loading ? "Chargement…" : "Charger l'historique pièce"}
-                      </Button>
-                    </div>
-                  </div>
 
-                  {/* Chart */}
-                  <div className="mt-4 h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={roomChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
-                        <XAxis
-                          dataKey="label"
-                          tick={{ fontSize: 11, fill: "#6b7280" }}
-                          minTickGap={24}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 11, fill: "#6b7280" }}
-                          tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}°C`}
-                        />
-                        <Tooltip
-                          wrapperStyle={{ outline: "none" }}
-                          contentStyle={{ background: "rgba(17, 24, 39, 0.92)", border: "1px solid #374151", borderRadius: 8 }}
-                          labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
-                          itemStyle={{ color: "#e5e7eb" }}
-                          formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 2 })}°C`, roomHistoryType]}
-                        />
-                        <Legend />
-                        <Line
-                          name={roomHistoryType}
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#6366f1"
-                          strokeWidth={2}
-                          dot={false}
-                          activeDot={{ r: 3, stroke: "#6366f1", fill: "#fff" }}
-                          animationDuration={400}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Raw response (debug) */}
-                  {roomHistory && (
+                    {/* Courbe quotidienne */}
                     <div className="mt-4">
-                      <Card>
-                        <CardHeader><CardTitle>Réponse brute (getroommeasure)</CardTitle></CardHeader>
-                        <CardContent>
-                          <pre className="text-xs whitespace-pre-wrap break-words bg-muted p-3 rounded">
-                            {JSON.stringify(roomHistory, null, 2)}
-                          </pre>
-                        </CardContent>
-                      </Card>
+                      <p className="text-sm font-medium mb-2">Quotidien (1 jour) – Température</p>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={dayChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={24} />
+                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`} />
+                            <Tooltip
+                              wrapperStyle={{ outline: "none" }}
+                              contentStyle={{ background: "rgba(17, 24, 39, 0.92)", border: "1px solid #374151", borderRadius: 8 }}
+                              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                              itemStyle={{ color: "#e5e7eb" }}
+                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "temperature"]}
+                            />
+                            <Legend />
+                            <Line
+                              name="Température"
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#1d4ed8"
+                              strokeWidth={2.5}
+                              dot={false}
+                              activeDot={{ r: 3, stroke: "#1d4ed8", fill: "#fff" }}
+                              animationDuration={400}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {dayChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour ce jour.</p>}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+
+                    {/* Courbe hebdomadaire */}
+                    <div className="mt-6">
+                      <p className="text-sm font-medium mb-2">Hebdomadaire (1 semaine) – Température</p>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={weekChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" opacity={0.6} />
+                            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#6b7280" }} minTickGap={24} />
+                            <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} tickFormatter={(v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`} />
+                            <Tooltip
+                              wrapperStyle={{ outline: "none" }}
+                              contentStyle={{ background: "rgba(17, 24, 39, 0.92)", border: "1px solid #374151", borderRadius: 8 }}
+                              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                              itemStyle={{ color: "#e5e7eb" }}
+                              formatter={(val: any) => [`${Number(val).toLocaleString(undefined, { maximumFractionDigits: 1 })}°C`, "temperature"]}
+                            />
+                            <Legend />
+                            <Line
+                              name="Température"
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#10b981"
+                              strokeWidth={2.5}
+                              dot={false}
+                              activeDot={{ r: 3, stroke: "#10b981", fill: "#fff" }}
+                              animationDuration={400}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {weekChartData.length === 0 && <p className="text-xs text-muted-foreground mt-2">Aucune donnée disponible pour cette semaine.</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
         </div>

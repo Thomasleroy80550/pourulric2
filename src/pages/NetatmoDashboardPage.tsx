@@ -1207,6 +1207,102 @@ const NetatmoDashboardPage: React.FC = () => {
     if (homeId) loadHomeSchedules();
   }, [homeId]);
 
+  // Créer les programmations pour une réservation donnée selon le scénario global
+  async function createSchedulesForReservation(resa: {
+    id: string;
+    guest_name: string;
+    property_name: string;
+    check_in_date: string;
+    check_out_date: string;
+  }) {
+    if (!homeId) {
+      toast.error("Maison Netatmo introuvable.");
+      return;
+    }
+    const { data: auth } = await supabase.auth.getUser();
+    const uid = auth?.user?.id;
+    if (!uid) {
+      toast.error("Non authentifié.");
+      return;
+    }
+
+    // Jour d'arrivée fixé à 15:00 en local (si pas d'heure fournie)
+    const ARRIVAL_HOUR = 15;
+    const ARRIVAL_MINUTE = 0;
+
+    const arrivalDay = new Date(resa.check_in_date);
+    arrivalDay.setHours(ARRIVAL_HOUR, ARRIVAL_MINUTE, 0, 0);
+
+    // Lancement: relatif X minutes avant 15:00, ou absolu si défini
+    let startHeatDate: Date;
+    if (scenarioMode === "absolute" && scenarioHeatStart) {
+      const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
+      startHeatDate = new Date(arrivalDay);
+      startHeatDate.setHours(hh || 0, mm || 0, 0, 0);
+    } else {
+      const minutes = Math.max(5, scenarioMinutes);
+      startHeatDate = new Date(arrivalDay.getTime() - minutes * 60 * 1000);
+    }
+
+    // Jour de départ: ECO à 11:00 (ou scenarioStopTime)
+    const departureDay = new Date(resa.check_out_date);
+    const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+    const ecoAt = new Date(departureDay);
+    ecoAt.setHours(sh || 11, sm || 0, 0, 0);
+
+    // Choisir la pièce Netatmo cible (selectedRoomId, sinon mapping par nom)
+    let targetRoomId = selectedRoomId || null;
+    if (!targetRoomId) {
+      const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
+      const match = netatmoRooms.find((r: any) => r?.name === resa.property_name);
+      if (match) targetRoomId = String(match.id);
+    }
+    if (!targetRoomId) {
+      toast.error("Aucune pièce Netatmo mappée à cette réservation.");
+      return;
+    }
+
+    const tempAtArrival = scenarioArrivalTemp;
+    const tempEco = scenarioAfterDepartureTemp;
+
+    const rows = [
+      {
+        user_id: uid,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId,
+        netatmo_room_id: targetRoomId,
+        module_id: selectedModuleId,
+        type: "heat",
+        mode: "manual",
+        temp: tempAtArrival,
+        start_time: startHeatDate.toISOString(),
+        end_time: ecoAt.toISOString(),
+        status: "pending",
+      },
+      {
+        user_id: uid,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId,
+        netatmo_room_id: targetRoomId,
+        module_id: selectedModuleId,
+        type: "eco",
+        mode: "manual",
+        temp: tempEco,
+        start_time: ecoAt.toISOString(),
+        end_time: null,
+        status: "pending",
+      },
+    ];
+
+    const { error } = await supabase.from("thermostat_schedules").insert(rows);
+    if (error) {
+      toast.error(error.message || "Erreur lors de la création des programmations.");
+      return;
+    }
+    toast.success("Programmations créées pour la réservation.");
+    await loadSchedules();
+  }
+
   // Générer des programmations (rows thermostat_schedules) pour les réservations à venir selon le scénario
   async function generateCronSchedulesFromReservations() {
     if (!homeId) {
@@ -1693,8 +1789,47 @@ const NetatmoDashboardPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Bloc: Cron programmations */}
+        {/* Bloc: Réservations à venir et scénarios */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Réservations à venir</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button variant="outline" className="w-full" onClick={() => loadUserRooms()}>
+                  Recharger les réservations
+                </Button>
+                {upcomingReservations.length === 0 ? (
+                  <p className="text-gray-600 mt-2">Aucune réservation à venir.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingReservations.map((resa) => (
+                      <div key={resa.id} className="border rounded p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{resa.guest_name || "Client"} — {resa.property_name}</p>
+                            <p className="text-sm text-gray-600">
+                              Arrivée: {new Date(resa.check_in_date).toLocaleDateString()} • Départ: {new Date(resa.check_out_date).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button size="sm" onClick={() => createSchedulesForReservation(resa)}>
+                            Créer programmations
+                          </Button>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          Préchauffage: {scenarioMode === "absolute" && scenarioHeatStart ? `à ${scenarioHeatStart}` : `${scenarioMinutes} min avant 15:00`} •
+                          Consigne arrivée: {scenarioArrivalTemp}°C •
+                          Éco le départ à {scenarioStopTime || "11:00"}: {scenarioAfterDepartureTemp}°C
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Programmations (Cron)</CardTitle>
@@ -1702,7 +1837,7 @@ const NetatmoDashboardPage: React.FC = () => {
             <CardContent>
               <div className="space-y-3">
                 <Button onClick={generateCronSchedulesFromReservations} className="w-full">
-                  Générer programmations depuis réservations
+                  Générer programmations depuis toutes les réservations
                 </Button>
                 <Button onClick={runSchedulerNow} variant="outline" className="w-full">
                   Lancer le scheduler (appliquer les programmations dues)
@@ -1717,11 +1852,11 @@ const NetatmoDashboardPage: React.FC = () => {
                       <div key={s.id} className="flex items-center justify-between border rounded p-2">
                         <div>
                           <p className="font-medium">
-                            {s.type === "heat" ? "Chauffer" : "Arrêt (home)"} — {new Date(s.start_time).toLocaleString()}
+                            {s.type === "heat" ? "Chauffer" : s.type === "eco" ? "Éco (manuel)" : "Arrêt (home)"} — {new Date(s.start_time).toLocaleString()}
                           </p>
                           <p className="text-sm text-gray-600">
                             Pièce: {home?.rooms?.find((r: any) => String(r.id) === String(s.netatmo_room_id))?.name || s.netatmo_room_id}
-                            {s.type === "heat" && typeof s.temp === "number" ? ` • ${Number(s.temp)}°C` : ""}
+                            {typeof s.temp === "number" ? ` • ${Number(s.temp)}°C` : ""}
                             {s.status ? ` • statut: ${s.status}` : ""}
                           </p>
                         </div>
@@ -1741,16 +1876,12 @@ const NetatmoDashboardPage: React.FC = () => {
               <CardTitle>Scénario global</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button onClick={saveScenario} className="w-full">Sauvegarder le scénario</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Plannings Netatmo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">Avec le système cron, pas besoin d'activer un planning Netatmo pour chauffer la résa.</p>
+              <div className="space-y-2 text-sm text-gray-700">
+                <p>Préchauffage: {scenarioMode === "absolute" && scenarioHeatStart ? `à ${scenarioHeatStart}` : `${scenarioMinutes} min avant 15:00`}</p>
+                <p>Consigne arrivée: {scenarioArrivalTemp}°C</p>
+                <p>Éco au départ à {scenarioStopTime || "11:00"}: {scenarioAfterDepartureTemp}°C</p>
+              </div>
+              <Button onClick={saveScenario} className="w-full mt-3">Sauvegarder le scénario</Button>
             </CardContent>
           </Card>
         </div>

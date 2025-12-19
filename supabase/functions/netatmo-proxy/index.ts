@@ -106,6 +106,7 @@ serve(async (req) => {
   const action: string = payload?.endpoint ?? "homesdata";
   const home_id: string | undefined = payload?.home_id;
   const device_id: string | undefined = payload?.device_id; // rétrocompat éventuelle
+  const module_id: string | undefined = payload?.module_id; // thermostat MAC (manquant auparavant)
   const room_id: string | undefined = payload?.room_id;
   const mode: string | undefined = payload?.mode;
   const temp: number | undefined = payload?.temp;

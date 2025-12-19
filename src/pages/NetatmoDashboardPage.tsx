@@ -749,6 +749,102 @@ const NetatmoDashboardPage: React.FC = () => {
     toast.success("Scénario global sauvegardé — il s'appliquera à toutes vos réservations.");
   };
 
+  // NEW: états pour scénario global
+  const [scenarioMode, setScenarioMode] = React.useState<"relative" | "absolute">("relative");
+  const [scenarioMinutes, setScenarioMinutes] = React.useState<number>(240);
+  const [scenarioHeatStart, setScenarioHeatStart] = React.useState<string>("14:00"); // heure de lancement
+  const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
+  const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
+
+  // NEW: états et helpers pour liaison Thermostat → chambre (netatmo_thermostats)
+  const [assignments, setAssignments] = React.useState<any[]>([]);
+  const [selectedThermId, setSelectedThermId] = React.useState<string | null>(null);
+  const [selectedBridgeForTherm, setSelectedBridgeForTherm] = React.useState<string | null>(null);
+
+  const loadAssignments = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId) {
+      setAssignments([]);
+      return;
+    }
+    const { data } = await supabase
+      .from("netatmo_thermostats")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    setAssignments(data || []);
+  };
+
+  const assignThermostatToRoom = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth?.user?.id;
+    if (!userId) {
+      toast.error("Non authentifié.");
+      return;
+    }
+    if (!homeId || !selectedUserRoomId || !selectedThermId) {
+      toast.error("Sélectionnez la maison, le thermostat et le logement.");
+      return;
+    }
+
+    // Trouver la pièce Netatmo du thermostat (via homesData)
+    const homeObj = homesData?.body?.homes?.[0];
+    const modules = Array.isArray(homeObj?.modules) ? homeObj.modules : [];
+    const thermostats = modules.filter((m: any) => m.type === "NATherm1");
+    const relays = modules.filter((m: any) => m.type === "NAPlug");
+    const therm = thermostats.find((t: any) => t.id === selectedThermId);
+    if (!therm) {
+      toast.error("Thermostat introuvable.");
+      return;
+    }
+    const bridgeId = selectedBridgeForTherm || therm.bridge;
+    const netRoomId = String(therm.room_id || "");
+    const netRoomName = (homeObj?.rooms || []).find((r: any) => String(r.id) === netRoomId)?.name || null;
+
+    // Insérer en base le lien unique
+    const { error } = await supabase
+      .from("netatmo_thermostats")
+      .insert({
+        user_id: userId,
+        user_room_id: selectedUserRoomId,
+        home_id: homeId,
+        device_id: bridgeId,
+        module_id: selectedThermId,
+        netatmo_room_id: netRoomId || null,
+        netatmo_room_name: netRoomName,
+      });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error("Ce thermostat est déjà lié à un logement (un seul lien autorisé).");
+      } else {
+        toast.error(error.message || "Erreur lors de la liaison.");
+      }
+      return;
+    }
+    toast.success("Thermostat lié au logement.");
+    await loadAssignments();
+  };
+
+  const unassignThermostat = async (recordId: string) => {
+    const { error } = await supabase
+      .from("netatmo_thermostats")
+      .delete()
+      .eq("id", recordId);
+    if (error) {
+      toast.error(error.message || "Erreur lors de la suppression du lien.");
+      return;
+    }
+    toast.success("Lien thermostat → logement supprimé.");
+    await loadAssignments();
+  };
+
+  // Charger les liens quand la maison est connue
+  React.useEffect(() => {
+    if (homeId) loadAssignments();
+  }, [homeId]);
+
   // Trigger initial: restore selection and check tokens ONCE
   React.useEffect(() => {
     restoreSelection();
@@ -937,13 +1033,6 @@ const NetatmoDashboardPage: React.FC = () => {
     await loadSchedules();
   };
 
-  // NEW: états pour scénario global
-  const [scenarioMode, setScenarioMode] = React.useState<"relative" | "absolute">("relative");
-  const [scenarioMinutes, setScenarioMinutes] = React.useState<number>(240);
-  const [scenarioHeatStart, setScenarioHeatStart] = React.useState<string>("14:00"); // heure de lancement
-  const [scenarioStopTime, setScenarioStopTime] = React.useState<string>("11:00");
-  const [scenarioArrivalTemp, setScenarioArrivalTemp] = React.useState<number>(20);
-
   // Derive the current home object from homesData (used throughout the JSX)
   const home = homesData?.body?.homes?.[0] ?? null;
 
@@ -1032,6 +1121,93 @@ const NetatmoDashboardPage: React.FC = () => {
                   </Button>
                 </div>
               </CardHeader>
+            </Card>
+          )}
+
+          {/* NEW: Lier thermostat à un logement */}
+          {home && (
+            <Card className="mb-6 shadow-sm">
+              <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <CardTitle>Lier un thermostat à un logement</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const homeObj = homesData?.body?.homes?.[0];
+                  const modules = Array.isArray(homeObj?.modules) ? homeObj.modules : [];
+                  const thermostats = modules.filter((m: any) => m.type === "NATherm1");
+                  const relays = modules.filter((m: any) => m.type === "NAPlug");
+
+                  return (
+                    <div className="grid md:grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="font-medium mb-1">Thermostat (NATherm1)</p>
+                        <Select value={selectedThermId ?? ""} onValueChange={(v) => setSelectedThermId(v)}>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir le thermostat" /></SelectTrigger>
+                          <SelectContent>
+                            {thermostats.map((t: any) => (
+                              <SelectItem key={t.id} value={t.id}>{t.name || t.id}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <p className="font-medium mb-1">Relais (NAPlug)</p>
+                        <Select value={selectedBridgeForTherm ?? ""} onValueChange={(v) => setSelectedBridgeForTherm(v)}>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir le relais" /></SelectTrigger>
+                          <SelectContent>
+                            {relays.map((r: any) => (
+                              <SelectItem key={r.id} value={r.id}>{r.name || r.id}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <p className="font-medium mb-1">Logement</p>
+                        <Select value={selectedUserRoomId ?? ""} onValueChange={(v) => setSelectedUserRoomId(v)}>
+                          <SelectTrigger className="w-full"><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
+                          <SelectContent>
+                            {userRooms.map((ur) => (
+                              <SelectItem key={ur.id} value={ur.id}>{ur.room_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="mt-3 flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={assignThermostatToRoom} disabled={!homeId || !selectedThermId || !selectedUserRoomId}>
+                    Lier thermostat à la chambre
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={loadAssignments}>
+                    Rafraîchir les liens
+                  </Button>
+                </div>
+
+                {/* Liens existants */}
+                <div className="mt-4">
+                  <p className="font-medium">Liens existants</p>
+                  {assignments.length === 0 ? (
+                    <p className="text-xs text-muted-foreground mt-1">Aucun lien enregistré.</p>
+                  ) : (
+                    <ul className="text-sm space-y-1 mt-1">
+                      {assignments.map((a) => (
+                        <li key={a.id} className="flex items-center justify-between">
+                          <span>
+                            Thermostat {a.module_id} → Logement {userRooms.find((r) => r.id === a.user_room_id)?.room_name || a.user_room_id}
+                            {a.netatmo_room_name ? ` · pièce ${a.netatmo_room_name}` : ""}
+                          </span>
+                          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => unassignThermostat(a.id)}>Supprimer</Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground mt-2">
+                  Règle: un thermostat ne peut être lié qu'à une seule chambre. Si un lien existe déjà, vous devez d'abord le supprimer.
+                </p>
+              </CardContent>
             </Card>
           )}
 

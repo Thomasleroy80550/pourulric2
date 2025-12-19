@@ -511,13 +511,16 @@ const NetatmoDashboardPage: React.FC = () => {
       setSchedules([]);
       return;
     }
+    // N'afficher que les programmations à venir (évite celles d'hier)
+    const nowIso = new Date().toISOString();
     const { data } = await supabase
       .from("thermostat_schedules")
       .select("*")
       .eq("user_id", userId)
       .eq("netatmo_room_id", selectedRoomId)
+      .gte("start_time", nowIso)
       .order("start_time", { ascending: true })
-      .limit(10);
+      .limit(20);
     setSchedules(data || []);
   };
 
@@ -1098,17 +1101,26 @@ const NetatmoDashboardPage: React.FC = () => {
   // Lancer une programmation immédiatement (sans attendre le cron)
   const applyScheduleNow = async (s: any) => {
     const isHeat = s.type === 'heat';
+    const isEco = s.type === 'eco';
+
     const payload: any = {
       endpoint: 'setroomthermpoint',
       home_id: s.home_id,
       room_id: s.netatmo_room_id,
-      mode: isHeat ? 'manual' : 'home',
+      mode: isHeat || isEco ? 'manual' : 'home',
     };
+
     if (isHeat) {
       payload.temp = Number(s.temp);
-      // Utiliser end_time si elle existe, sinon 1h
-      const end = s.end_time ? Math.floor(new Date(s.end_time).getTime() / 1000) : (Math.floor(Date.now() / 1000) + 3600);
+      // Utiliser end_time si elle existe (chauffe jusqu'à l'eco), sinon +1h
+      const end = s.end_time
+        ? Math.floor(new Date(s.end_time).getTime() / 1000)
+        : (Math.floor(Date.now() / 1000) + 3600);
       payload.endtime = end;
+    } else if (isEco) {
+      payload.temp = Number(s.temp);
+      // Appliquer ECO pour 24h par défaut (peut être étendu si besoin)
+      payload.endtime = Math.floor(Date.now() / 1000) + 24 * 3600;
     }
 
     const { error } = await supabase.functions.invoke('netatmo-proxy', { body: payload });
@@ -1213,38 +1225,41 @@ const NetatmoDashboardPage: React.FC = () => {
       return;
     }
 
-    // Utiliser l'heure d'arrivée standard (15:00) sauf si votre système en fournit une autre
-    const defaultArrivalHour = 15;
-    const defaultArrivalMinute = 0;
+    // Référence: heure d'arrivée par défaut fixée à 15:00, en local
+    const ARRIVAL_HOUR = 15;
+    const ARRIVAL_MINUTE = 0;
 
+    const now = new Date();
     const rows: any[] = [];
 
     for (const resa of upcomingReservations) {
-      const arrival = new Date(resa.check_in_date);
-      const departure = new Date(resa.check_out_date);
+      // Jour d'arrivée: fixer à 15:00 (si pas d'heure précise fournie par la source)
+      const arrivalDay = new Date(resa.check_in_date);
+      arrivalDay.setHours(ARRIVAL_HOUR, ARRIVAL_MINUTE, 0, 0);
 
-      // Fixer l'heure d'arrivée à 15:00 (modifiable si vous avez une heure différente)
-      arrival.setHours(defaultArrivalHour, defaultArrivalMinute, 0, 0);
-
-      // Déterminer heure de lancement selon scénario global
+      // Calcul du lancement: relatif X minutes avant 15:00, ou absolu si scenarioHeatStart défini
       let startHeatDate: Date;
       if (scenarioMode === "absolute" && scenarioHeatStart) {
-        // utiliser scenarioHeatStart (HH:mm) le jour d'arrivée
         const [hh, mm] = scenarioHeatStart.split(":").map((n) => Number(n));
-        startHeatDate = new Date(arrival);
+        startHeatDate = new Date(arrivalDay);
         startHeatDate.setHours(hh || 0, mm || 0, 0, 0);
       } else {
-        // relatif: X minutes avant l'heure d'arrivée (ex: 20 minutes avant)
         const minutes = Math.max(5, scenarioMinutes);
-        startHeatDate = new Date(arrival.getTime() - minutes * 60 * 1000);
+        startHeatDate = new Date(arrivalDay.getTime() - minutes * 60 * 1000);
       }
 
-      // Heure d'arrêt Eco (mode 'home'): scenarioStopTime (HH:mm) le jour de départ
-      const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
-      const stopEcoDate = new Date(departure);
-      stopEcoDate.setHours(sh || 11, sm || 0, 0, 0);
+      // Ignorer si le lancement serait dans le passé (évite les "programmes hier")
+      if (startHeatDate.getTime() < now.getTime()) {
+        continue;
+      }
 
-      // Choisir une pièce Netatmo par défaut (selectedRoomId si dispo, sinon mapper par nom de propriété)
+      // Jour de départ: appliquer ECO à 11:00
+      const departureDay = new Date(resa.check_out_date);
+      const [sh, sm] = (scenarioStopTime || "11:00").split(":").map((n) => Number(n));
+      const ecoAt = new Date(departureDay);
+      ecoAt.setHours(sh || 11, sm || 0, 0, 0);
+
+      // Déterminer la pièce Netatmo cible (selectedRoomId, sinon mapping par nom de propriété)
       let targetRoomId = selectedRoomId || null;
       if (!targetRoomId) {
         const netatmoRooms = home?.rooms ?? homesData?.body?.homes?.[0]?.rooms ?? [];
@@ -1252,16 +1267,18 @@ const NetatmoDashboardPage: React.FC = () => {
         if (match) targetRoomId = String(match.id);
       }
       if (!targetRoomId) {
-        // si aucune pièce mappée, ignorer cette réservation
+        // Pas de mapping → ignorer cette réservation
         continue;
       }
 
-      // Température d'arrivée issue du scénario global
+      // Températures: consigne à l'arrivée et éco au départ
       const tempAtArrival = scenarioArrivalTemp;
+      const tempEco = scenarioAfterDepartureTemp;
 
+      // 1) Chauffe: du lancement jusqu'à l'heure d'eco le jour du départ
       rows.push({
         user_id: uid,
-        user_room_id: selectedUserRoomId, // facultatif
+        user_room_id: selectedUserRoomId,
         home_id: homeId,
         netatmo_room_id: targetRoomId,
         module_id: selectedModuleId,
@@ -1269,27 +1286,28 @@ const NetatmoDashboardPage: React.FC = () => {
         mode: "manual",
         temp: tempAtArrival,
         start_time: startHeatDate.toISOString(),
-        end_time: stopEcoDate.toISOString(), // fin de la chauffe (le scheduler calcule endtime pour override)
+        end_time: ecoAt.toISOString(),
         status: "pending",
       });
 
+      // 2) ECO: à 11:00 le jour du départ (mode manual avec temp éco)
       rows.push({
         user_id: uid,
         user_room_id: selectedUserRoomId,
         home_id: homeId,
         netatmo_room_id: targetRoomId,
         module_id: selectedModuleId,
-        type: "stop",
-        mode: "home",
-        temp: null,
-        start_time: stopEcoDate.toISOString(),
+        type: "eco",
+        mode: "manual",
+        temp: tempEco,
+        start_time: ecoAt.toISOString(),
         end_time: null,
         status: "pending",
       });
     }
 
     if (rows.length === 0) {
-      toast.message("Aucune programmation créée (vérifiez le mapping des pièces).");
+      toast.message("Aucune programmation à créer (rien d'à venir ou mapping des pièces manquant).");
       return;
     }
 
@@ -1298,7 +1316,7 @@ const NetatmoDashboardPage: React.FC = () => {
       toast.error(error.message || "Erreur lors de la création des programmations.");
       return;
     }
-    toast.success(`${rows.length} programmation(s) ajoutée(s) au cron.`);
+    toast.success(`${rows.length} programmation(s) ajoutée(s) au cron (chauffe + éco par résa).`);
     await loadSchedules();
   }
 

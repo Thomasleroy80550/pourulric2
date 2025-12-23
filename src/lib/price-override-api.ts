@@ -1,85 +1,91 @@
+"use client";
+
 import { supabase } from "@/integrations/supabase/client";
 
-export interface PriceOverride {
-  id: string;
-  user_id: string;
-  room_id: string;
-  room_name: string;
-  room_id_2?: string; // Ajout de ce champ
-  start_date: string; // ISO date string
-  end_date: string; // ISO date string
-  price?: number;
-  closed?: boolean;
-  min_stay?: number;
-  closed_on_arrival?: boolean;
-  closed_on_departure?: boolean;
-  created_at: string;
-}
+type AdminListParams = {
+  page: number;
+  pageSize: number;
+  qClient?: string;
+  qRoom?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  qPrice?: string;
+  qMinStay?: string;
+};
 
-export type NewPriceOverride = Omit<PriceOverride, 'id' | 'user_id' | 'created_at'>;
+export async function getAllPriceOverridesAdmin(params: AdminListParams) {
+  const { page, pageSize, qClient, qRoom, dateFrom, dateTo, qPrice, qMinStay } = params;
 
-export async function getOverrides(): Promise<PriceOverride[]> {
-  const { data, error } = await supabase
-    .from('price_overrides')
-    .select('*')
-    .order('start_date', { ascending: false });
+  // Build base query with join to profiles to fetch client info
+  let query = supabase
+    .from("price_overrides")
+    .select(`
+      id,
+      created_at,
+      user_id,
+      room_id,
+      room_name,
+      start_date,
+      end_date,
+      price,
+      min_stay,
+      closed,
+      closed_on_arrival,
+      closed_on_departure,
+      profiles:profiles!inner (
+        id,
+        email,
+        first_name,
+        last_name
+      )
+    `, { count: "exact" })
+    .order("created_at", { ascending: false });
+
+  // Filters
+  if (dateFrom) {
+    query = query.gte("created_at", dateFrom.toISOString());
+  }
+  if (dateTo) {
+    // include the end of day for dateTo
+    const end = new Date(dateTo);
+    end.setHours(23, 59, 59, 999);
+    query = query.lte("created_at", end.toISOString());
+  }
+  if (qRoom && qRoom.trim().length > 0) {
+    // ilike on room_name or room_id
+    const term = `%${qRoom.trim()}%`;
+    // supabase doesn't support OR directly on the client without filter() raw; use or()
+    query = query.or(`room_name.ilike.${term},room_id.ilike.${term}`);
+  }
+  if (qPrice && qPrice.trim() !== "") {
+    const n = Number(qPrice);
+    if (!Number.isNaN(n)) {
+      query = query.eq("price", n);
+    }
+  }
+  if (qMinStay && qMinStay.trim() !== "") {
+    const n = Number(qMinStay);
+    if (!Number.isNaN(n)) {
+      query = query.eq("min_stay", n);
+    }
+  }
+  if (qClient && qClient.trim().length > 0) {
+    const term = `%${qClient.trim()}%`;
+    // Need to filter on joined profile fields using or with foreign table columns
+    // Supabase filter syntax: or('profiles.email.ilike.%foo%,profiles.first_name.ilike.%foo%,profiles.last_name.ilike.%foo%')
+    query = query.or(
+      `profiles.email.ilike.${term},profiles.first_name.ilike.${term},profiles.last_name.ilike.${term}`
+    );
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await query.range(from, to);
 
   if (error) {
-    console.error("Error fetching price overrides:", error);
-    throw new Error(`Erreur lors de la récupération des modifications de prix : ${error.message}`);
+    throw new Error(error.message);
   }
-  return data || [];
-}
 
-export async function addOverride(overrideData: NewPriceOverride): Promise<PriceOverride> {
-  const { data: { user } } = await supabase.auth.getUser();
-  const ruid = user?.id || 'unknown_user';
-
-  const { data, error } = await supabase
-    .from('price_overrides')
-    .insert([overrideData]) // Wrap in array for insert
-    .select()
-    .single();
-
-  if (error) {
-    console.error(`RUID: ${ruid} - Error adding price override:`, error);
-    throw new Error(`Erreur lors de l'ajout de la modification de prix : ${error.message}`);
-  }
-  console.log(`RUID: ${ruid} - Successfully added price override:`, data);
-  return data;
-}
-
-export async function addOverrides(overridesData: NewPriceOverride[]): Promise<PriceOverride[]> {
-  if (overridesData.length === 0) return [];
-
-  const { data: { user } } = await supabase.auth.getUser();
-  const ruid = user?.id || 'unknown_user';
-
-  const { data, error } = await supabase
-    .from('price_overrides')
-    .insert(overridesData)
-    .select();
-
-  if (error) {
-    console.error(`RUID: ${ruid} - Error adding multiple price overrides:`, error);
-    throw new Error(`Erreur lors de l'ajout des modifications de prix : ${error.message}`);
-  }
-  console.log(`RUID: ${ruid} - Successfully added multiple price overrides:`, data);
-  return data || [];
-}
-
-export async function deleteOverride(id: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  const ruid = user?.id || 'unknown_user';
-
-  const { error } = await supabase
-    .from('price_overrides')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    console.error(`RUID: ${ruid} - Error deleting price override with ID ${id}:`, error);
-    throw new Error(`Erreur lors de la suppression de la modification de prix : ${error.message}`);
-  }
-  console.log(`RUID: ${ruid} - Successfully deleted price override with ID ${id}.`);
+  return { data, count };
 }

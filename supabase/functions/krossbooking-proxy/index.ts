@@ -168,10 +168,7 @@ serve(async (req) => {
           throw new Error("Invalid 'cm' payload for save_channel_manager.");
         }
         krossbookingUrl = `${KROSSBOOKING_API_BASE_URL}/channel/save-cm`;
-        // Inclure id_property si fourni (contexte de l'établissement)
-        krossbookingBody = JSON.stringify({ cm, id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined });
-        // Retourner la réponse complète de Krossbooking pour pouvoir vérifier réellement côté front
-        returnFullData = true;
+        krossbookingBody = JSON.stringify({ cm });
         break;
 
       case 'get_room_types':

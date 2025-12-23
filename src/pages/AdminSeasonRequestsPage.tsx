@@ -17,9 +17,17 @@ import SingleRequestExportMenu from "@/components/admin/SingleRequestExportMenu"
 import AdminSeasonPriceEditor from "@/components/admin/AdminSeasonPriceEditor";
 import { safeFormat } from "@/lib/date-utils";
 import { saveChannelManagerSettings } from "@/lib/krossbooking";
-import { addOverrides, PriceOverrideInsert } from "@/lib/price-override-api";
+import { addOverrides, NewPriceOverride } from "@/lib/price-override-api";
 import { getAllUserRooms, AdminUserRoom } from "@/lib/admin-api";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/notifications-api";
 import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
@@ -36,7 +44,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [pendingApply, setPendingApply] = useState<SeasonPricingRequest | null>(null);
   const [allUserRooms, setAllUserRooms] = useState<AdminUserRoom[]>([]);
   const [roomsLoading, setRoomsLoading] = useState<boolean>(true);
-  const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null; krossbooking_property_id?: number | null }>>({});
+  const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null }>>({});
   const [editingRoom, setEditingRoom] = useState<AdminUserRoom | null>(null);
 
   useEffect(() => {
@@ -79,16 +87,16 @@ const AdminSeasonRequestsPage: React.FC = () => {
       }
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, krossbooking_property_id')
+        .select('id, first_name, last_name, email')
         .in('id', userIds);
 
       if (error) {
         console.error("Erreur chargement des profils:", error);
         return;
       }
-      const map: Record<string, { first_name: string | null; last_name: string | null; email: string | null; krossbooking_property_id?: number | null }> = {};
+      const map: Record<string, { first_name: string | null; last_name: string | null; email: string | null }> = {};
       (data || []).forEach((p: any) => {
-        map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null, email: p.email ?? null, krossbooking_property_id: p.krossbooking_property_id ?? null };
+        map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null, email: p.email ?? null };
       });
       setProfilesById(map);
     };
@@ -180,46 +188,32 @@ const AdminSeasonRequestsPage: React.FC = () => {
         cmBlocks[`block_${req.id}_${idx}`] = block;
       });
 
-      // Récupérer id_property du propriétaire
-      const ownerProfile = profilesById[req.user_id];
-      const idProperty = ownerProfile?.krossbooking_property_id ?? undefined;
+      const cmPayload = { cm: cmBlocks };
 
-      const cmPayload = { cm: cmBlocks, id_property: idProperty };
+      // Envoyer au Channel Manager
+      await saveChannelManagerSettings(cmPayload);
 
-      // Envoyer au Channel Manager et vérifier la réponse réelle
-      const krossResp = await saveChannelManagerSettings(cmPayload);
-      // Log utile pour debug
-      console.log("Kross save-cm raw response:", krossResp);
-
-      // Vérifications prudentes: considérons une réponse KO si un de ces indicateurs est présent
-      if (!krossResp || krossResp.error || krossResp.errors || krossResp.success === false || krossResp.status === 'error') {
-        throw new Error(`Krossbooking n'a pas confirmé la mise à jour (save-cm). Détails: ${JSON.stringify(krossResp)}`);
-      }
-
-      // Enregistrer des overrides pour traçabilité seulement si Kross a confirmé
-      const overrides: PriceOverrideInsert[] = req.items.map((it) => ({
-        user_id: req.user_id,
+      // Enregistrer des overrides pour traçabilité
+      const overrides: NewPriceOverride[] = req.items.map((it) => ({
         room_id: matchingRoom?.room_id || req.room_id || String(roomTypeId),
         room_name: matchingRoom?.room_name || req.room_name || "N/A",
-        room_id_2: matchingRoom?.room_id_2 ?? null,
+        room_id_2: matchingRoom?.room_id_2 || undefined,
         start_date: it.start_date,
         end_date: it.end_date,
-        price: typeof it.price === "number" ? it.price : null,
+        price: typeof it.price === "number" ? it.price : undefined,
         closed: it.closed === true ? true : false,
         min_stay:
-          typeof it.min_stay === "number" && it.min_stay > 0 ? it.min_stay : null,
+          typeof it.min_stay === "number" && it.min_stay > 0 ? it.min_stay : undefined,
         closed_on_arrival: it.closed_on_arrival === true ? true : false,
         closed_on_departure: it.closed_on_departure === true ? true : false,
       }));
 
-      const ruid = req.user_id;
-      const saved = await addOverrides(overrides);
-      console.log(`RUID: ${ruid} - Successfully added multiple price overrides:`, saved);
+      await addOverrides(overrides);
 
       toast.success("Prix & restrictions appliqués avec succès.", { id: toastId });
       setPendingApply(null);
     } catch (err: any) {
-      console.error("Erreur application de la demande au logement (Kross/save-cm):", err);
+      console.error("Erreur application de la demande au logement:", err);
       toast.error(err.message || "Erreur lors de l'application de la demande.", { id: toastId });
     } finally {
       setApplyingId(null);
@@ -559,21 +553,24 @@ const AdminSeasonRequestsPage: React.FC = () => {
         </Card>
 
         {/* Dialog de confirmation pour l'application */}
-        <Dialog open={!!pendingApply} onOpenChange={(open) => !open && setPendingApply(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Appliquer sur le logement ?</DialogTitle>
-              <DialogDescription>
+        <AlertDialog open={!!pendingApply} onOpenChange={(open) => !open && setPendingApply(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Appliquer sur le logement ?</AlertDialogTitle>
+              <AlertDialogDescription>
                 Cette action enverra les prix et restrictions de la demande au Channel Manager
                 et enregistrera les modifications comme overrides. Confirmez pour continuer.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setPendingApply(null)}>Annuler</Button>
-              <Button onClick={() => pendingApply && applyRequestToRoom(pendingApply)}>Confirmer</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => pendingApply && applyRequestToRoom(pendingApply)}
+              >
+                Confirmer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* RENDU: afficher l'éditeur seulement si un logement est sélectionné */}
         {editingRoom && (

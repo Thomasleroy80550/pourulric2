@@ -408,7 +408,7 @@ export async function fetchKrossbookingMessageThreads(reservationId: string): Pr
   }
 }
 
-export async function saveChannelManagerSettings(payload: ChannelManagerPayload & { id_property?: number }): Promise<any> {
+export async function saveChannelManagerSettings(payload: ChannelManagerPayload): Promise<any> {
   return callKrossbookingProxy('save_channel_manager', payload);
 }
 

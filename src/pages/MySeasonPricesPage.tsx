@@ -220,7 +220,7 @@ const MySeasonPricesPage: React.FC = () => {
 
         {/* Dialog de modification */}
         <Dialog open={editOpen} onOpenChange={(o) => { if (!o) setEditOpen(false); }}>
-          <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-4xl">
             <DialogHeader>
               <DialogTitle>Proposer une modification</DialogTitle>
             </DialogHeader>

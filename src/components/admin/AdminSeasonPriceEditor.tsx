@@ -24,91 +24,6 @@ type CsvRow = {
 
 type EditableInputs = Record<number, { price?: number | null; min_stay?: number | null }>;
 
-// AJOUT: utilitaires de date et correctif Pâques 2026 (mêmes que côté user)
-function dmyToDate(dmy: string) {
-  const [dd, mm, yyyy] = dmy.split("/").map((s) => parseInt(s, 10));
-  return new Date(yyyy, mm - 1, dd);
-}
-function dateToDmy(date: Date) {
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yyyy = date.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
-function adjustEasterWeekend(rows: CsvRow[]): CsvRow[] {
-  const easterStartDmy = "03/04/2026";
-  const easterEndDmy = "06/04/2026";
-  const easterStart = dmyToDate(easterStartDmy);
-  const easterEnd = dmyToDate(easterEndDmy);
-  const dayMs = 24 * 60 * 60 * 1000;
-
-  const patchedRows = [...rows];
-
-  let idx = patchedRows.findIndex((r) =>
-    /pâques|paques/i.test(`${r.periodType} ${r.comment}`)
-  );
-
-  if (idx === -1) {
-    idx = patchedRows.findIndex((r) => {
-      const rs = dmyToDate(r.start);
-      const re = dmyToDate(r.end);
-      return rs <= easterEnd && re >= easterStart;
-    });
-  }
-
-  const correctionNote = "Corrigé Pâques 2026 (ven 3 → lun 6, min 3 nuits)";
-
-  if (idx !== -1) {
-    const r = patchedRows[idx];
-    const rs = dmyToDate(r.start);
-    const re = dmyToDate(r.end);
-    patchedRows.splice(idx, 1);
-
-    if (rs < easterStart) {
-      const beforeEnd = new Date(easterStart.getTime() - dayMs);
-      patchedRows.push({
-        ...r,
-        start: r.start,
-        end: dateToDmy(beforeEnd),
-        comment: r.comment ? `${r.comment} • segment avant Pâques` : "segment avant Pâques",
-      });
-    }
-
-    patchedRows.push({
-      start: easterStartDmy,
-      end: easterEndDmy,
-      periodType: "Week-end Pâques",
-      season: "TRÈS HAUTE SAISON",
-      minStayText: "3 nuits",
-      comment: r.comment ? `${r.comment} • ${correctionNote}` : correctionNote,
-    });
-
-    if (re > easterEnd) {
-      const afterStart = new Date(easterEnd.getTime() + dayMs);
-      patchedRows.push({
-        ...r,
-        start: dateToDmy(afterStart),
-        end: r.end,
-        comment: r.comment ? `${r.comment} • segment après Pâques` : "segment après Pâques",
-      });
-    }
-
-    patchedRows.sort((a, b) => dmyToDate(a.start).getTime() - dmyToDate(b.start).getTime());
-  } else {
-    patchedRows.push({
-      start: easterStartDmy,
-      end: easterEndDmy,
-      periodType: "Week-end Pâques",
-      season: "TRÈS HAUTE SAISON",
-      minStayText: "3 nuits",
-      comment: "Ajout automatique selon dates officielles",
-    });
-    patchedRows.sort((a, b) => dmyToDate(a.start).getTime() - dmyToDate(b.start).getTime());
-  }
-
-  return patchedRows;
-}
-
 function dmyToIso(dmy: string): string {
   const [dd, mm, yyyy] = dmy.split("/");
   return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
@@ -136,45 +51,8 @@ function parseCsv(text: string): CsvRow[] {
       comment: parts[5],
     });
   }
-  // AJOUT: appliquer le correctif Pâques comme côté user pour obtenir le même nombre de périodes
-  return adjustEasterWeekend(rows);
+  return rows;
 }
-
-// AJOUT: helpers de suggestion (alignés avec la version user)
-const normalize = (s?: string) => (s || "").toLowerCase();
-const seasonMultiplier = (season: string) => {
-  const s = normalize(season);
-  if (s.includes("très haute") || s.includes("tres haute")) return 1.20;
-  if (s.includes("haute")) return 1.10;
-  if (s.includes("moyenne")) return 1.00;
-  if (s.includes("basse")) return 0.90;
-  return 1.00;
-};
-const extraBoostMultiplier = (periodType: string, comment: string) => {
-  const p = normalize(periodType);
-  const c = normalize(comment);
-  let boost = 0;
-  if (p.includes("week-end") || p.includes("weekend")) boost += 0.08;
-  if (c.includes("vacances") || c.includes("zone ")) boost += 0.04;
-  return 1 + boost;
-};
-const clamp = (n: number, min: number | null, max: number | null) => {
-  let x = n;
-  if (min != null) x = Math.max(x, min);
-  if (max != null) x = Math.min(x, max);
-  return x;
-};
-const computeSuggestedPrice = (
-  row: CsvRow,
-  baseMin: number | null,
-  baseStd: number | null,
-  baseMax: number | null
-): number | null => {
-  if (baseStd == null || baseStd <= 0) return null;
-  const mult = seasonMultiplier(row.season) * extraBoostMultiplier(row.periodType, row.comment || "");
-  const raw = Math.round(baseStd * mult);
-  return clamp(raw, baseMin && baseMin > 0 ? baseMin : null, baseMax && baseMax > 0 ? baseMax : null);
-};
 
 interface AdminSeasonPriceEditorProps {
   open: boolean;
@@ -188,11 +66,6 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
   const [rows, setRows] = useState<CsvRow[]>([]);
   const [inputsByIndex, setInputsByIndex] = useState<EditableInputs>({});
   const [submitting, setSubmitting] = useState(false);
-
-  // REMPLACE: basePrice + coefficient -> prix min / base / max
-  const [baseMinStr, setBaseMinStr] = useState<string>("");
-  const [baseStdStr, setBaseStdStr] = useState<string>("");
-  const [baseMaxStr, setBaseMaxStr] = useState<string>("");
 
   useEffect(() => {
     if (!open) return;
@@ -247,15 +120,6 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
     });
   }, [rows, inputsByIndex]);
 
-  // AJOUT: suggestions calculées
-  const baseMin = baseMinStr !== "" ? Number(baseMinStr) : null;
-  const baseStd = baseStdStr !== "" ? Number(baseStdStr) : null;
-  const baseMax = baseMaxStr !== "" ? Number(baseMaxStr) : null;
-
-  const suggestions = useMemo(() => {
-    return rows.map((r) => computeSuggestedPrice(r, baseMin, baseStd, baseMax));
-  }, [rows, baseMin, baseStd, baseMax]);
-
   const submit = async () => {
     setSubmitting(true);
     const toastId = toast.loading("Création de la demande validée...");
@@ -289,7 +153,7 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Définir les prix – {room.room_name || room.room_id}</DialogTitle>
         </DialogHeader>
@@ -299,71 +163,6 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
             <CardDescription>Saisissez les prix et min séjours, puis créez la demande validée.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Bloc de proposition automatique: prix min / base / max */}
-            <div className="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">Prix minimum (€)</label>
-                <Input
-                  type="number"
-                  step="1"
-                  min="0"
-                  placeholder="ex: 90"
-                  value={baseMinStr}
-                  onChange={(e) => setBaseMinStr(e.target.value.replace(/[^0-9.]/g, ""))}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">Prix de base (€)</label>
-                <Input
-                  type="number"
-                  step="1"
-                  min="0"
-                  placeholder="ex: 120"
-                  value={baseStdStr}
-                  onChange={(e) => setBaseStdStr(e.target.value.replace(/[^0-9.]/g, ""))}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">Prix maximum (€)</label>
-                <Input
-                  type="number"
-                  step="1"
-                  min="0"
-                  placeholder="ex: 180"
-                  value={baseMaxStr}
-                  onChange={(e) => setBaseMaxStr(e.target.value.replace(/[^0-9.]/g, ""))}
-                />
-              </div>
-              <div className="flex items-end">
-                <Button
-                  className="w-full"
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    if (!rows || rows.length === 0) {
-                      toast.error("Aucune période chargée. Veuillez patienter puis réessayer.");
-                      return;
-                    }
-                    if (baseStd == null || Number.isNaN(baseStd) || baseStd <= 0) {
-                      toast.error("Veuillez saisir un prix de base valide.");
-                      return;
-                    }
-                    const next: EditableInputs = { ...inputsByIndex };
-                    rows.forEach((r, idx) => {
-                      const suggested = computeSuggestedPrice(r, baseMin, baseStd, baseMax);
-                      const current = next[idx] || {};
-                      next[idx] = { ...current, price: suggested };
-                    });
-                    setInputsByIndex(next);
-                    toast.success("Prix proposés appliqués à toutes les périodes.");
-                  }}
-                  disabled={loading || rows.length === 0}
-                >
-                  Proposer automatiquement
-                </Button>
-              </div>
-            </div>
-
             {loading ? (
               <Skeleton className="h-48 w-full" />
             ) : (
@@ -375,7 +174,6 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                     <TableHead>Type</TableHead>
                     <TableHead>Saison</TableHead>
                     <TableHead>Commentaire</TableHead>
-                    <TableHead>Prix suggéré</TableHead>
                     <TableHead>Prix (€)</TableHead>
                     <TableHead>Min séjour</TableHead>
                   </TableRow>
@@ -384,7 +182,6 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                   {rows.map((r, idx) => {
                     const inputs = inputsByIndex[idx] || {};
                     const defaultMin = extractMinStay(r.minStayText);
-                    const suggested = suggestions[idx];
                     return (
                       <TableRow key={`${r.start}-${r.end}-${idx}`}>
                         <TableCell>{r.start}</TableCell>
@@ -392,18 +189,11 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                         <TableCell>{r.periodType}</TableCell>
                         <TableCell>{r.season}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{r.comment}</TableCell>
-                        <TableCell className="min-w-[110px]">
-                          {suggested != null ? (
-                            <span className="font-medium">{suggested} €</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
                         <TableCell className="min-w-[120px]">
                           <Input
                             type="number"
                             step="1"
-                            placeholder={suggested != null ? String(suggested) : "ex: 120"}
+                            placeholder="ex: 120"
                             value={typeof inputs.price === "number" ? inputs.price : ""}
                             onChange={(e) => handleInputChange(idx, "price", e.target.value)}
                           />

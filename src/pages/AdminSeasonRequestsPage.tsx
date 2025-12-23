@@ -36,7 +36,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [pendingApply, setPendingApply] = useState<SeasonPricingRequest | null>(null);
   const [allUserRooms, setAllUserRooms] = useState<AdminUserRoom[]>([]);
   const [roomsLoading, setRoomsLoading] = useState<boolean>(true);
-  const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null }>>({});
+  const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null; krossbooking_property_id?: number | null }>>({});
   const [editingRoom, setEditingRoom] = useState<AdminUserRoom | null>(null);
 
   useEffect(() => {
@@ -79,16 +79,16 @@ const AdminSeasonRequestsPage: React.FC = () => {
       }
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email')
+        .select('id, first_name, last_name, email, krossbooking_property_id')
         .in('id', userIds);
 
       if (error) {
         console.error("Erreur chargement des profils:", error);
         return;
       }
-      const map: Record<string, { first_name: string | null; last_name: string | null; email: string | null }> = {};
+      const map: Record<string, { first_name: string | null; last_name: string | null; email: string | null; krossbooking_property_id?: number | null }> = {};
       (data || []).forEach((p: any) => {
-        map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null, email: p.email ?? null };
+        map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null, email: p.email ?? null, krossbooking_property_id: p.krossbooking_property_id ?? null };
       });
       setProfilesById(map);
     };
@@ -180,14 +180,25 @@ const AdminSeasonRequestsPage: React.FC = () => {
         cmBlocks[`block_${req.id}_${idx}`] = block;
       });
 
-      const cmPayload = { cm: cmBlocks };
+      // Récupérer id_property du propriétaire
+      const ownerProfile = profilesById[req.user_id];
+      const idProperty = ownerProfile?.krossbooking_property_id ?? undefined;
 
-      // Envoyer au Channel Manager
-      await saveChannelManagerSettings(cmPayload);
+      const cmPayload = { cm: cmBlocks, id_property: idProperty };
 
-      // Enregistrer des overrides pour traçabilité
+      // Envoyer au Channel Manager et vérifier la réponse réelle
+      const krossResp = await saveChannelManagerSettings(cmPayload);
+      // Log utile pour debug
+      console.log("Kross save-cm raw response:", krossResp);
+
+      // Vérifications prudentes: considérons une réponse KO si un de ces indicateurs est présent
+      if (!krossResp || krossResp.error || krossResp.errors || krossResp.success === false || krossResp.status === 'error') {
+        throw new Error(`Krossbooking n'a pas confirmé la mise à jour (save-cm). Détails: ${JSON.stringify(krossResp)}`);
+      }
+
+      // Enregistrer des overrides pour traçabilité seulement si Kross a confirmé
       const overrides: PriceOverrideInsert[] = req.items.map((it) => ({
-        user_id: req.user_id, // tracer le propriétaire concerné
+        user_id: req.user_id,
         room_id: matchingRoom?.room_id || req.room_id || String(roomTypeId),
         room_name: matchingRoom?.room_name || req.room_name || "N/A",
         room_id_2: matchingRoom?.room_id_2 ?? null,
@@ -201,12 +212,14 @@ const AdminSeasonRequestsPage: React.FC = () => {
         closed_on_departure: it.closed_on_departure === true ? true : false,
       }));
 
-      await addOverrides(overrides);
+      const ruid = req.user_id;
+      const saved = await addOverrides(overrides);
+      console.log(`RUID: ${ruid} - Successfully added multiple price overrides:`, saved);
 
       toast.success("Prix & restrictions appliqués avec succès.", { id: toastId });
       setPendingApply(null);
     } catch (err: any) {
-      console.error("Erreur application de la demande au logement:", err);
+      console.error("Erreur application de la demande au logement (Kross/save-cm):", err);
       toast.error(err.message || "Erreur lors de l'application de la demande.", { id: toastId });
     } finally {
       setApplyingId(null);

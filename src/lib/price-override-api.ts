@@ -18,6 +18,20 @@ export interface PriceOverride {
 
 export type NewPriceOverride = Omit<PriceOverride, 'id' | 'user_id' | 'created_at'>;
 
+export type PriceOverrideInsert = {
+  user_id: string;
+  room_id?: string | null;
+  room_id_2?: string | null;
+  room_name?: string | null;
+  start_date: string; // ISO date string (YYYY-MM-DD)
+  end_date: string;   // ISO date string (YYYY-MM-DD)
+  price?: number | null;
+  min_stay?: number | null;
+  closed?: boolean | null;
+  closed_on_arrival?: boolean | null;
+  closed_on_departure?: boolean | null;
+};
+
 export async function getOverrides(): Promise<PriceOverride[]> {
   const { data, error } = await supabase
     .from('price_overrides')

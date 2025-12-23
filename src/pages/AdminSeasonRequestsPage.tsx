@@ -17,17 +17,9 @@ import SingleRequestExportMenu from "@/components/admin/SingleRequestExportMenu"
 import AdminSeasonPriceEditor from "@/components/admin/AdminSeasonPriceEditor";
 import { safeFormat } from "@/lib/date-utils";
 import { saveChannelManagerSettings } from "@/lib/krossbooking";
-import { addOverrides, NewPriceOverride } from "@/lib/price-override-api";
+import { addOverrides, PriceOverrideInsert } from "@/lib/price-override-api";
 import { getAllUserRooms, AdminUserRoom } from "@/lib/admin-api";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/notifications-api";
 import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
@@ -194,16 +186,17 @@ const AdminSeasonRequestsPage: React.FC = () => {
       await saveChannelManagerSettings(cmPayload);
 
       // Enregistrer des overrides pour traçabilité
-      const overrides: NewPriceOverride[] = req.items.map((it) => ({
+      const overrides: PriceOverrideInsert[] = req.items.map((it) => ({
+        user_id: req.user_id, // tracer le propriétaire concerné
         room_id: matchingRoom?.room_id || req.room_id || String(roomTypeId),
         room_name: matchingRoom?.room_name || req.room_name || "N/A",
-        room_id_2: matchingRoom?.room_id_2 || undefined,
+        room_id_2: matchingRoom?.room_id_2 ?? null,
         start_date: it.start_date,
         end_date: it.end_date,
-        price: typeof it.price === "number" ? it.price : undefined,
+        price: typeof it.price === "number" ? it.price : null,
         closed: it.closed === true ? true : false,
         min_stay:
-          typeof it.min_stay === "number" && it.min_stay > 0 ? it.min_stay : undefined,
+          typeof it.min_stay === "number" && it.min_stay > 0 ? it.min_stay : null,
         closed_on_arrival: it.closed_on_arrival === true ? true : false,
         closed_on_departure: it.closed_on_departure === true ? true : false,
       }));
@@ -553,24 +546,21 @@ const AdminSeasonRequestsPage: React.FC = () => {
         </Card>
 
         {/* Dialog de confirmation pour l'application */}
-        <AlertDialog open={!!pendingApply} onOpenChange={(open) => !open && setPendingApply(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Appliquer sur le logement ?</AlertDialogTitle>
-              <AlertDialogDescription>
+        <Dialog open={!!pendingApply} onOpenChange={(open) => !open && setPendingApply(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Appliquer sur le logement ?</DialogTitle>
+              <DialogDescription>
                 Cette action enverra les prix et restrictions de la demande au Channel Manager
                 et enregistrera les modifications comme overrides. Confirmez pour continuer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction
-                onClick={() => pendingApply && applyRequestToRoom(pendingApply)}
-              >
-                Confirmer
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPendingApply(null)}>Annuler</Button>
+              <Button onClick={() => pendingApply && applyRequestToRoom(pendingApply)}>Confirmer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* RENDU: afficher l'éditeur seulement si un logement est sélectionné */}
         {editingRoom && (

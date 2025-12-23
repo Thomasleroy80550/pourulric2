@@ -54,6 +54,42 @@ function parseCsv(text: string): CsvRow[] {
   return rows;
 }
 
+// AJOUT: helpers de suggestion (alignés avec la version user)
+const normalize = (s?: string) => (s || "").toLowerCase();
+const seasonMultiplier = (season: string) => {
+  const s = normalize(season);
+  if (s.includes("très haute") || s.includes("tres haute")) return 1.20;
+  if (s.includes("haute")) return 1.10;
+  if (s.includes("moyenne")) return 1.00;
+  if (s.includes("basse")) return 0.90;
+  return 1.00;
+};
+const extraBoostMultiplier = (periodType: string, comment: string) => {
+  const p = normalize(periodType);
+  const c = normalize(comment);
+  let boost = 0;
+  if (p.includes("week-end") || p.includes("weekend")) boost += 0.08;
+  if (c.includes("vacances") || c.includes("zone ")) boost += 0.04;
+  return 1 + boost;
+};
+const clamp = (n: number, min: number | null, max: number | null) => {
+  let x = n;
+  if (min != null) x = Math.max(x, min);
+  if (max != null) x = Math.min(x, max);
+  return x;
+};
+const computeSuggestedPrice = (
+  row: CsvRow,
+  baseMin: number | null,
+  baseStd: number | null,
+  baseMax: number | null
+): number | null => {
+  if (baseStd == null || baseStd <= 0) return null;
+  const mult = seasonMultiplier(row.season) * extraBoostMultiplier(row.periodType, row.comment || "");
+  const raw = Math.round(baseStd * mult);
+  return clamp(raw, baseMin && baseMin > 0 ? baseMin : null, baseMax && baseMax > 0 ? baseMax : null);
+};
+
 interface AdminSeasonPriceEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,9 +103,10 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
   const [inputsByIndex, setInputsByIndex] = useState<EditableInputs>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Ajout des champs pour l'auto-proposition
-  const [basePrice, setBasePrice] = useState<string>("");
-  const [coefficient, setCoefficient] = useState<string>("1");
+  // REMPLACE: basePrice + coefficient -> prix min / base / max
+  const [baseMinStr, setBaseMinStr] = useState<string>("");
+  const [baseStdStr, setBaseStdStr] = useState<string>("");
+  const [baseMaxStr, setBaseMaxStr] = useState<string>("");
 
   useEffect(() => {
     if (!open) return;
@@ -124,6 +161,15 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
     });
   }, [rows, inputsByIndex]);
 
+  // AJOUT: suggestions calculées
+  const baseMin = baseMinStr !== "" ? Number(baseMinStr) : null;
+  const baseStd = baseStdStr !== "" ? Number(baseStdStr) : null;
+  const baseMax = baseMaxStr !== "" ? Number(baseMaxStr) : null;
+
+  const suggestions = useMemo(() => {
+    return rows.map((r) => computeSuggestedPrice(r, baseMin, baseStd, baseMax));
+  }, [rows, baseMin, baseStd, baseMax]);
+
   const submit = async () => {
     setSubmitting(true);
     const toastId = toast.loading("Création de la demande validée...");
@@ -167,8 +213,19 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
             <CardDescription>Saisissez les prix et min séjours, puis créez la demande validée.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Bloc de proposition automatique, repris de l'idée user Saison 2026 */}
-            <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Bloc de proposition automatique: prix min / base / max */}
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Prix minimum (€)</label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="ex: 90"
+                  value={baseMinStr}
+                  onChange={(e) => setBaseMinStr(e.target.value.replace(/[^0-9.]/g, ""))}
+                />
+              </div>
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Prix de base (€)</label>
                 <Input
@@ -176,19 +233,19 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                   step="1"
                   min="0"
                   placeholder="ex: 120"
-                  value={basePrice}
-                  onChange={(e) => setBasePrice(e.target.value.replace(/[^0-9.]/g, ""))}
+                  value={baseStdStr}
+                  onChange={(e) => setBaseStdStr(e.target.value.replace(/[^0-9.]/g, ""))}
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Coefficient</label>
+                <label className="text-xs text-muted-foreground block mb-1">Prix maximum (€)</label>
                 <Input
                   type="number"
-                  step="0.01"
+                  step="1"
                   min="0"
-                  placeholder="ex: 1.10"
-                  value={coefficient}
-                  onChange={(e) => setCoefficient(e.target.value.replace(/[^0-9.]/g, ""))}
+                  placeholder="ex: 180"
+                  value={baseMaxStr}
+                  onChange={(e) => setBaseMaxStr(e.target.value.replace(/[^0-9.]/g, ""))}
                 />
               </div>
               <div className="flex items-end">
@@ -197,27 +254,18 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    const base = Number(basePrice);
-                    const coef = Number(coefficient || "1");
-                    if (Number.isNaN(base) || base <= 0) {
+                    if (baseStd == null || Number.isNaN(baseStd) || baseStd <= 0) {
                       toast.error("Veuillez saisir un prix de base valide.");
                       return;
                     }
-                    if (Number.isNaN(coef) || coef <= 0) {
-                      toast.error("Veuillez saisir un coefficient valide.");
-                      return;
-                    }
-                    const suggested = Math.round(base * coef);
-                    // Appliquer aux lignes visibles (comme la version user)
-                    setInputsByIndex((prev) => {
-                      const next: EditableInputs = { ...prev };
-                      rows.forEach((_, idx) => {
-                        const current = next[idx] || {};
-                        next[idx] = { ...current, price: suggested };
-                      });
-                      return next;
+                    const next: EditableInputs = { ...inputsByIndex };
+                    rows.forEach((r, idx) => {
+                      const suggested = computeSuggestedPrice(r, baseMin, baseStd, baseMax);
+                      const current = next[idx] || {};
+                      next[idx] = { ...current, price: suggested };
                     });
-                    toast.success(`Prix proposés appliqués (${suggested} €) à toutes les périodes visibles.`);
+                    setInputsByIndex(next);
+                    toast.success("Prix proposés appliqués à toutes les périodes.");
                   }}
                 >
                   Proposer automatiquement
@@ -236,6 +284,7 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                     <TableHead>Type</TableHead>
                     <TableHead>Saison</TableHead>
                     <TableHead>Commentaire</TableHead>
+                    <TableHead>Prix suggéré</TableHead>
                     <TableHead>Prix (€)</TableHead>
                     <TableHead>Min séjour</TableHead>
                   </TableRow>
@@ -244,6 +293,7 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                   {rows.map((r, idx) => {
                     const inputs = inputsByIndex[idx] || {};
                     const defaultMin = extractMinStay(r.minStayText);
+                    const suggested = suggestions[idx];
                     return (
                       <TableRow key={`${r.start}-${r.end}-${idx}`}>
                         <TableCell>{r.start}</TableCell>
@@ -251,11 +301,18 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                         <TableCell>{r.periodType}</TableCell>
                         <TableCell>{r.season}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{r.comment}</TableCell>
+                        <TableCell className="min-w-[110px]">
+                          {suggested != null ? (
+                            <span className="font-medium">{suggested} €</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="min-w-[120px]">
                           <Input
                             type="number"
                             step="1"
-                            placeholder="ex: 120"
+                            placeholder={suggested != null ? String(suggested) : "ex: 120"}
                             value={typeof inputs.price === "number" ? inputs.price : ""}
                             onChange={(e) => handleInputChange(idx, "price", e.target.value)}
                           />

@@ -153,7 +153,7 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl">
+      <DialogContent className="sm:max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Définir les prix – {room.room_name || room.room_id}</DialogTitle>
         </DialogHeader>

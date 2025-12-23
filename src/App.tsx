@@ -96,6 +96,7 @@ import AdminRecoveryPage from "./pages/AdminRecoveryPage";
 import NetatmoConnectPage from "./pages/NetatmoConnectPage";
 import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
+import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
 
 const queryClient = new QueryClient();
 
@@ -150,6 +151,7 @@ function App() {
                   <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
                   <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                   <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
+                  <Route path="/admin/duplicate-room-ids" element={<AdminDuplicateRoomIdsPage />} />
                   <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
                   <Route path="/admin/crm" element={<AdminCRMPage />} />
                   <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />

@@ -254,6 +254,10 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                   type="button"
                   variant="secondary"
                   onClick={() => {
+                    if (!rows || rows.length === 0) {
+                      toast.error("Aucune période chargée. Veuillez patienter puis réessayer.");
+                      return;
+                    }
                     if (baseStd == null || Number.isNaN(baseStd) || baseStd <= 0) {
                       toast.error("Veuillez saisir un prix de base valide.");
                       return;
@@ -267,6 +271,7 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
                     setInputsByIndex(next);
                     toast.success("Prix proposés appliqués à toutes les périodes.");
                   }}
+                  disabled={loading || rows.length === 0}
                 >
                   Proposer automatiquement
                 </Button>

@@ -24,6 +24,91 @@ type CsvRow = {
 
 type EditableInputs = Record<number, { price?: number | null; min_stay?: number | null }>;
 
+// AJOUT: utilitaires de date et correctif Pâques 2026 (mêmes que côté user)
+function dmyToDate(dmy: string) {
+  const [dd, mm, yyyy] = dmy.split("/").map((s) => parseInt(s, 10));
+  return new Date(yyyy, mm - 1, dd);
+}
+function dateToDmy(date: Date) {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+function adjustEasterWeekend(rows: CsvRow[]): CsvRow[] {
+  const easterStartDmy = "03/04/2026";
+  const easterEndDmy = "06/04/2026";
+  const easterStart = dmyToDate(easterStartDmy);
+  const easterEnd = dmyToDate(easterEndDmy);
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const patchedRows = [...rows];
+
+  let idx = patchedRows.findIndex((r) =>
+    /pâques|paques/i.test(`${r.periodType} ${r.comment}`)
+  );
+
+  if (idx === -1) {
+    idx = patchedRows.findIndex((r) => {
+      const rs = dmyToDate(r.start);
+      const re = dmyToDate(r.end);
+      return rs <= easterEnd && re >= easterStart;
+    });
+  }
+
+  const correctionNote = "Corrigé Pâques 2026 (ven 3 → lun 6, min 3 nuits)";
+
+  if (idx !== -1) {
+    const r = patchedRows[idx];
+    const rs = dmyToDate(r.start);
+    const re = dmyToDate(r.end);
+    patchedRows.splice(idx, 1);
+
+    if (rs < easterStart) {
+      const beforeEnd = new Date(easterStart.getTime() - dayMs);
+      patchedRows.push({
+        ...r,
+        start: r.start,
+        end: dateToDmy(beforeEnd),
+        comment: r.comment ? `${r.comment} • segment avant Pâques` : "segment avant Pâques",
+      });
+    }
+
+    patchedRows.push({
+      start: easterStartDmy,
+      end: easterEndDmy,
+      periodType: "Week-end Pâques",
+      season: "TRÈS HAUTE SAISON",
+      minStayText: "3 nuits",
+      comment: r.comment ? `${r.comment} • ${correctionNote}` : correctionNote,
+    });
+
+    if (re > easterEnd) {
+      const afterStart = new Date(easterEnd.getTime() + dayMs);
+      patchedRows.push({
+        ...r,
+        start: dateToDmy(afterStart),
+        end: r.end,
+        comment: r.comment ? `${r.comment} • segment après Pâques` : "segment après Pâques",
+      });
+    }
+
+    patchedRows.sort((a, b) => dmyToDate(a.start).getTime() - dmyToDate(b.start).getTime());
+  } else {
+    patchedRows.push({
+      start: easterStartDmy,
+      end: easterEndDmy,
+      periodType: "Week-end Pâques",
+      season: "TRÈS HAUTE SAISON",
+      minStayText: "3 nuits",
+      comment: "Ajout automatique selon dates officielles",
+    });
+    patchedRows.sort((a, b) => dmyToDate(a.start).getTime() - dmyToDate(b.start).getTime());
+  }
+
+  return patchedRows;
+}
+
 function dmyToIso(dmy: string): string {
   const [dd, mm, yyyy] = dmy.split("/");
   return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
@@ -51,7 +136,8 @@ function parseCsv(text: string): CsvRow[] {
       comment: parts[5],
     });
   }
-  return rows;
+  // AJOUT: appliquer le correctif Pâques comme côté user pour obtenir le même nombre de périodes
+  return adjustEasterWeekend(rows);
 }
 
 // AJOUT: helpers de suggestion (alignés avec la version user)

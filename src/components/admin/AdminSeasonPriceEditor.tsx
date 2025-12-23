@@ -67,6 +67,10 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
   const [inputsByIndex, setInputsByIndex] = useState<EditableInputs>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // Ajout des champs pour l'auto-proposition
+  const [basePrice, setBasePrice] = useState<string>("");
+  const [coefficient, setCoefficient] = useState<string>("1");
+
   useEffect(() => {
     if (!open) return;
     const load = async () => {
@@ -163,6 +167,64 @@ const AdminSeasonPriceEditor: React.FC<AdminSeasonPriceEditorProps> = ({ open, o
             <CardDescription>Saisissez les prix et min séjours, puis créez la demande validée.</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Bloc de proposition automatique, repris de l'idée user Saison 2026 */}
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Prix de base (€)</label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  placeholder="ex: 120"
+                  value={basePrice}
+                  onChange={(e) => setBasePrice(e.target.value.replace(/[^0-9.]/g, ""))}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Coefficient</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="ex: 1.10"
+                  value={coefficient}
+                  onChange={(e) => setCoefficient(e.target.value.replace(/[^0-9.]/g, ""))}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  className="w-full"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const base = Number(basePrice);
+                    const coef = Number(coefficient || "1");
+                    if (Number.isNaN(base) || base <= 0) {
+                      toast.error("Veuillez saisir un prix de base valide.");
+                      return;
+                    }
+                    if (Number.isNaN(coef) || coef <= 0) {
+                      toast.error("Veuillez saisir un coefficient valide.");
+                      return;
+                    }
+                    const suggested = Math.round(base * coef);
+                    // Appliquer aux lignes visibles (comme la version user)
+                    setInputsByIndex((prev) => {
+                      const next: EditableInputs = { ...prev };
+                      rows.forEach((_, idx) => {
+                        const current = next[idx] || {};
+                        next[idx] = { ...current, price: suggested };
+                      });
+                      return next;
+                    });
+                    toast.success(`Prix proposés appliqués (${suggested} €) à toutes les périodes visibles.`);
+                  }}
+                >
+                  Proposer automatiquement
+                </Button>
+              </div>
+            </div>
+
             {loading ? (
               <Skeleton className="h-48 w-full" />
             ) : (

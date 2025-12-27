@@ -4,19 +4,14 @@ import React from "react";
 import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/components/SessionContextProvider";
 import { Link, Navigate } from "react-router-dom";
 import {
-  Home,
   CalendarDays,
   Book,
   Banknote,
   Wrench,
-  Sparkles,
   ArrowRight,
-  TrendingUp,
 } from "lucide-react";
 import {
   ChartContainer,
@@ -106,48 +101,36 @@ const DashboardPageV2: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="relative mx-auto w-full max-w-[1200px] px-4 sm:px-6 py-6">
-        {/* Hero */}
-        <div className="rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">
-                Bonjour {profile.first_name || ""} {profile.last_name || ""} 👋
-              </h1>
-              <p className="mt-1 text-sm sm:text-base opacity-90">
-                Voici votre aperçu stratégique — design v2
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                Expérimental
-              </Badge>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                V2
-              </Badge>
-            </div>
+      <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6 py-6">
+        {/* En-tête épuré */}
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">Aperçu — Design V2</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Version interne, minimaliste et épurée.
+            </p>
           </div>
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Link to="/calendar">
-              <Button variant="secondary" className="w-full bg-white/20 hover:bg-white/30">
+              <Button variant="ghost" size="sm" className="hover:bg-muted">
                 <CalendarDays className="h-4 w-4 mr-2" />
                 Calendrier
               </Button>
             </Link>
             <Link to="/bookings">
-              <Button variant="secondary" className="w-full bg-white/20 hover:bg-white/30">
+              <Button variant="ghost" size="sm" className="hover:bg-muted">
                 <Book className="h-4 w-4 mr-2" />
                 Réservations
               </Button>
             </Link>
             <Link to="/finances">
-              <Button variant="secondary" className="w-full bg-white/20 hover:bg-white/30">
+              <Button variant="ghost" size="sm" className="hover:bg-muted">
                 <Banknote className="h-4 w-4 mr-2" />
                 Finances
               </Button>
             </Link>
             <Link to="/reports">
-              <Button variant="secondary" className="w-full bg-white/20 hover:bg-white/30">
+              <Button variant="ghost" size="sm" className="hover:bg-muted">
                 <Wrench className="h-4 w-4 mr-2" />
                 Incidents
               </Button>
@@ -155,55 +138,60 @@ const DashboardPageV2: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI */}
+        {/* KPI sobres */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-          <Card className="shadow-md">
+          <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Bénéfice estimé (YTD)</CardTitle>
+              <CardTitle className="text-sm font-semibold text-muted-foreground">
+                Bénéfice estimé (YTD)
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-green-600">13 500€</p>
-              <p className="text-xs text-muted-foreground mt-1">Basé sur les tendances</p>
+              <p className="text-2xl font-bold text-foreground">13 500€</p>
+              <p className="text-xs text-muted-foreground mt-1">Tendance</p>
             </CardContent>
           </Card>
-          <Card className="shadow-md">
+          <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">CA estimé (YTD)</CardTitle>
+              <CardTitle className="text-sm font-semibold text-muted-foreground">
+                CA estimé (YTD)
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-primary">18 000€</p>
-              <p className="text-xs text-muted-foreground mt-1">Simulation v2</p>
+              <p className="text-2xl font-bold text-foreground">18 000€</p>
+              <p className="text-xs text-muted-foreground mt-1">Simulation</p>
             </CardContent>
           </Card>
-          <Card className="shadow-md">
+          <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Occupation moyenne</CardTitle>
+              <CardTitle className="text-sm font-semibold text-muted-foreground">
+                Occupation moyenne
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-teal-600">58%</p>
+              <p className="text-2xl font-bold text-foreground">58%</p>
               <p className="text-xs text-muted-foreground mt-1">6 derniers mois</p>
             </CardContent>
           </Card>
-          <Card className="shadow-md">
+          <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Actions en attente</CardTitle>
+              <CardTitle className="text-sm font-semibold text-muted-foreground">
+                Actions en attente
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-amber-600">3</p>
+              <p className="text-2xl font-bold text-foreground">3</p>
               <p className="text-xs text-muted-foreground mt-1">Voir ci-dessous</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Charts */}
+        {/* Graphiques épurés */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <Card className="shadow-md">
+          <Card className="shadow-sm">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold">Tendance des revenus</CardTitle>
-              <Button variant="outline" size="sm">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Explorer
-              </Button>
+              <Button variant="outline" size="sm">Détails</Button>
             </CardHeader>
             <CardContent className="h-72">
               <ChartContainer config={chartConfig} className="h-full">
@@ -228,13 +216,10 @@ const DashboardPageV2: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md">
+          <Card className="shadow-sm">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-lg font-semibold">Occupation estimée</CardTitle>
-              <Button variant="outline" size="sm">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Détails
-              </Button>
+              <Button variant="outline" size="sm">Détails</Button>
             </CardHeader>
             <CardContent className="h-72">
               <ChartContainer config={chartConfig} className="h-full">
@@ -253,9 +238,9 @@ const DashboardPageV2: React.FC = () => {
           </Card>
         </div>
 
-        {/* Actions requises */}
+        {/* Actions requises minimalistes */}
         <div className="mt-6">
-          <Card className="shadow-md">
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Mes actions requises</CardTitle>
             </CardHeader>
@@ -266,9 +251,7 @@ const DashboardPageV2: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Saisir vos prix et envoyer votre demande</p>
                 </div>
                 <Link to="/season-2026">
-                  <Button variant="outline" size="sm">
-                    Ouvrir
-                  </Button>
+                  <Button variant="outline" size="sm">Ouvrir</Button>
                 </Link>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3">
@@ -277,9 +260,7 @@ const DashboardPageV2: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Chauffage, eau, linge, volets…</p>
                 </div>
                 <Link to="/hivernage-2026">
-                  <Button variant="outline" size="sm">
-                    Ouvrir
-                  </Button>
+                  <Button variant="outline" size="sm">Ouvrir</Button>
                 </Link>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3">
@@ -288,22 +269,17 @@ const DashboardPageV2: React.FC = () => {
                   <p className="text-xs text-muted-foreground">Codes Wi‑Fi, instructions, règles…</p>
                 </div>
                 <Link to="/my-rooms">
-                  <Button variant="outline" size="sm">
-                    Ouvrir
-                  </Button>
+                  <Button variant="outline" size="sm">Ouvrir</Button>
                 </Link>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Footer */}
+        {/* Footer discret */}
         <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
-            <span>Home v2 — aperçu interne</span>
-          </div>
-          <span>Conçu pour l’évaluation du design</span>
+          <span>Home v2 — version interne minimaliste</span>
+          <span>Votre avis nous aide à améliorer le design</span>
         </div>
       </div>
     </MainLayout>

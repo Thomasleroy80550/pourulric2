@@ -5,44 +5,11 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/SessionContextProvider";
-import { Link, Navigate } from "react-router-dom";
-import { CalendarDays, Book, Banknote, Wrench, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { CalendarDays, Book, Banknote, Wrench } from "lucide-react";
 
 const DashboardPageV2: React.FC = () => {
-  const { profile } = useSession();
-
-  // Accès restreint aux admins (page non publique)
-  if (profile && profile.role !== "admin") {
-    return (
-      <MainLayout>
-        <div className="container mx-auto py-10">
-          <Card className="max-w-xl mx-auto">
-            <CardHeader>
-              <CardTitle>Accès restreint</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Cette variante de la page d’accueil est réservée aux administrateurs.
-              </p>
-              <div className="mt-4">
-                <Link to="/">
-                  <Button variant="outline">
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    Retourner à l’accueil
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  // Si pas de profil (chargement ou non connecté), sécurité simple: rediriger vers l'accueil
-  if (!profile) {
-    return <Navigate to="/" replace />;
-  }
+  const { profile, session } = useSession();
 
   return (
     <MainLayout>
@@ -52,7 +19,7 @@ const DashboardPageV2: React.FC = () => {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Aperçu — Design V2</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Version interne, minimaliste et épurée (sans tendances ni occupation estimée).
+              Version interne minimaliste (sans graphiques ni occupation estimée).
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -83,8 +50,8 @@ const DashboardPageV2: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI sobres */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+        {/* KPI sobres (aucune tendance/occupation) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-muted-foreground">
@@ -93,7 +60,7 @@ const DashboardPageV2: React.FC = () => {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-foreground">13 500€</p>
-              <p className="text-xs text-muted-foreground mt-1">Tendance</p>
+              <p className="text-xs text-muted-foreground mt-1">Aperçu</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
@@ -104,18 +71,7 @@ const DashboardPageV2: React.FC = () => {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-foreground">18 000€</p>
-              <p className="text-xs text-muted-foreground mt-1">Simulation</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold text-muted-foreground">
-                Occupation moyenne
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-foreground">58%</p>
-              <p className="text-xs text-muted-foreground mt-1">6 derniers mois</p>
+              <p className="text-xs text-muted-foreground mt-1">Aperçu</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
@@ -172,7 +128,7 @@ const DashboardPageV2: React.FC = () => {
         {/* Footer discret */}
         <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
           <span>Home v2 — version interne minimaliste</span>
-          <span>Sans graphiques de tendance ni occupation estimée</span>
+          <span>{profile ? `Connecté: ${profile.first_name ?? ""} ${profile.last_name ?? ""}` : (session ? "Chargement du profil..." : "Non connecté")}</span>
         </div>
       </div>
     </MainLayout>

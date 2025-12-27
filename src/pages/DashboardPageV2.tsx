@@ -6,62 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/SessionContextProvider";
 import { Link, Navigate } from "react-router-dom";
-import {
-  CalendarDays,
-  Book,
-  Banknote,
-  Wrench,
-  ArrowRight,
-} from "lucide-react";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-} from "@/components/ui/chart";
-import {
-  AreaChart,
-  Area,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  LineChart,
-  Line,
-  ResponsiveContainer,
-} from "recharts";
-
-const revenueData = [
-  { name: "Jan", benef: 8000, ca: 12000 },
-  { name: "Fév", benef: 7000, ca: 11000 },
-  { name: "Mar", benef: 9500, ca: 14000 },
-  { name: "Avr", benef: 10000, ca: 15000 },
-  { name: "Mai", benef: 12000, ca: 17000 },
-  { name: "Juin", benef: 13000, ca: 18000 },
-];
-
-const occupancyData = [
-  { name: "Jan", occupation: 42 },
-  { name: "Fév", occupation: 48 },
-  { name: "Mar", occupation: 55 },
-  { name: "Avr", occupation: 61 },
-  { name: "Mai", occupation: 68 },
-  { name: "Juin", occupation: 72 },
-];
-
-const chartConfig = {
-  benef: {
-    label: "Bénéfice",
-    color: "#22c55e",
-  },
-  ca: {
-    label: "CA",
-    color: "hsl(var(--primary))",
-  },
-  occupation: {
-    label: "Occupation",
-    color: "#14b8a6",
-  },
-};
+import { CalendarDays, Book, Banknote, Wrench, ArrowRight } from "lucide-react";
 
 const DashboardPageV2: React.FC = () => {
   const { profile } = useSession();
@@ -107,7 +52,7 @@ const DashboardPageV2: React.FC = () => {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Aperçu — Design V2</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Version interne, minimaliste et épurée.
+              Version interne, minimaliste et épurée (sans tendances ni occupation estimée).
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -186,58 +131,6 @@ const DashboardPageV2: React.FC = () => {
           </Card>
         </div>
 
-        {/* Graphiques épurés */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <Card className="shadow-sm">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Tendance des revenus</CardTitle>
-              <Button variant="outline" size="sm">Détails</Button>
-            </CardHeader>
-            <CardContent className="h-72">
-              <ChartContainer config={chartConfig} className="h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={revenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                    <YAxis className="text-xs" tickLine={false} axisLine={false} tickFormatter={(v) => `€${v}`} />
-                    <ChartTooltip content={<ChartTooltipContent formatter={(value) => `€${Number(value).toLocaleString()}`} />} />
-                    <ChartLegend />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} />
-                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Occupation estimée</CardTitle>
-              <Button variant="outline" size="sm">Détails</Button>
-            </CardHeader>
-            <CardContent className="h-72">
-              <ChartContainer config={chartConfig} className="h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={occupancyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                    <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
-                    <ChartTooltip content={<ChartTooltipContent formatter={(value) => `${Number(value).toFixed(0)}%`} />} />
-                    <ChartLegend />
-                    <Line type="monotone" dataKey="occupation" stroke="#14b8a6" name="Occupation" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Actions requises minimalistes */}
         <div className="mt-6">
           <Card className="shadow-sm">
@@ -279,7 +172,7 @@ const DashboardPageV2: React.FC = () => {
         {/* Footer discret */}
         <div className="mt-8 flex items-center justify-between text-xs text-muted-foreground">
           <span>Home v2 — version interne minimaliste</span>
-          <span>Votre avis nous aide à améliorer le design</span>
+          <span>Sans graphiques de tendance ni occupation estimée</span>
         </div>
       </div>
     </MainLayout>

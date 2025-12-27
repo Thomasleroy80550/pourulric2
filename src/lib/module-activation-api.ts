@@ -10,6 +10,8 @@ export interface ModuleActivationRequest {
   profiles?: {
     first_name: string;
     last_name: string;
+    email?: string;
+    phone_number?: string;
   };
 }
 
@@ -64,7 +66,9 @@ export async function getAllModuleActivationRequests(): Promise<ModuleActivation
       *,
       profiles (
         first_name,
-        last_name
+        last_name,
+        email,
+        phone_number
       )
     `)
     .order('created_at', { ascending: false });

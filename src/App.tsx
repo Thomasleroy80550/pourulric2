@@ -98,6 +98,7 @@ import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
 import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
 import AdminThermostatOverviewPage from "./pages/AdminThermostatOverviewPage";
+import DashboardPageV2 from "./pages/DashboardPageV2";
 
 const queryClient = new QueryClient();
 
@@ -181,6 +182,7 @@ function App() {
                   <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />
                   <Route path="/integrations/netatmo/dashboard" element={<NetatmoDashboardPage />} />
                   <Route path="/" element={<DashboardPage />} />
+                  <Route path="/home-v2" element={<DashboardPageV2 />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                   <Route path="/bookings" element={<BookingsPage />} />

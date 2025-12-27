@@ -39,7 +39,7 @@ type Row = {
   errorMessage?: string | null;
 };
 
-const NETATMO_FUNCTION_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/netatmo-proxy";
+// Supabase functions invocation est utilisé ci-dessous; pas besoin d'URL brute
 
 const AdminThermostatOverviewPage: React.FC = () => {
   const [loading, setLoading] = React.useState(true);
@@ -90,56 +90,49 @@ const AdminThermostatOverviewPage: React.FC = () => {
         };
       });
 
-      setRows(initialRows);
+      // Regrouper par maison Netatmo et appeler homestatus une fois par home_id
+      const uniqueHomeIds = Array.from(
+        new Set(
+          (thermostats || [])
+            .map((t) => t.home_id)
+            .filter((h): h is string => typeof h === "string" && h.length > 0)
+        )
+      );
 
-      // Appeler l’edge function pour chaque thermostat existant afin d’obtenir la température
-      // La fonction netatmo-proxy doit supporter une action type "get_room_temperature" avec home_id/device_id/netatmo_room_id
-      const promises = initialRows.map(async (row) => {
-        if (!row.thermostat) return { ...row };
+      const tempsByRoomIdGlobal = new Map<string, number>();
+      for (const homeId of uniqueHomeIds) {
         try {
-          const payload = {
-            action: "get_room_temperature",
-            home_id: row.thermostat.home_id,
-            device_id: row.thermostat.device_id,
-            module_id: row.thermostat.module_id,
-            netatmo_room_id: row.thermostat.netatmo_room_id,
-          };
-          const res = await fetch(NETATMO_FUNCTION_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              // Optionnel: Authorization si la fonction le nécessite; la plupart de nos fonctions supportent anon
-            },
-            body: JSON.stringify(payload),
+          const { data, error } = await supabase.functions.invoke("netatmo-proxy", {
+            body: { endpoint: "homestatus", home_id: homeId },
           });
-          if (!res.ok) {
-            const text = await res.text();
-            return {
-              ...row,
-              status: "error" as const,
-              errorMessage: text || `HTTP ${res.status}`,
-            };
+          if (error) {
+            // Continuer: on marquera les lignes correspondantes en erreur plus bas
+            continue;
           }
-          const json = await res.json();
-          // On s’attend à { temperature: number }
-          const temperature = typeof json?.temperature === "number" ? json.temperature : null;
-          return {
-            ...row,
-            temperature,
-            status: temperature != null ? ("ok" as const) : ("error" as const),
-            errorMessage: temperature == null ? "Température non disponible" : null,
-          };
-        } catch (e: any) {
-          return {
-            ...row,
-            status: "error" as const,
-            errorMessage: e?.message || "Erreur inconnue",
-          };
+          const roomsBlock = data?.body?.home?.rooms || data?.body?.rooms || [];
+          for (const r of roomsBlock) {
+            const rid = String(r.id);
+            const t = typeof r.therm_measured_temperature === "number" ? r.therm_measured_temperature : null;
+            if (t != null) tempsByRoomIdGlobal.set(rid, t);
+          }
+        } catch {
+          // ignorer erreur individuelle et poursuivre
+          continue;
         }
+      }
+
+      // Fusionner températures dans les lignes
+      const mergedRows = initialRows.map((row) => {
+        if (!row.thermostat || !row.thermostat.netatmo_room_id) return row;
+        const rid = String(row.thermostat.netatmo_room_id);
+        const t = tempsByRoomIdGlobal.get(rid);
+        if (typeof t === "number") {
+          return { ...row, temperature: t, status: "ok" as const, errorMessage: null };
+        }
+        return { ...row, status: "error" as const, errorMessage: "Température non disponible" };
       });
 
-      const rowsWithTemp = await Promise.all(promises);
-      setRows(rowsWithTemp);
+      setRows(mergedRows);
     } catch (e: any) {
       toast.error("Erreur de chargement", { description: e?.message || String(e) });
     } finally {

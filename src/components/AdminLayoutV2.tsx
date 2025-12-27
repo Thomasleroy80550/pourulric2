@@ -21,6 +21,7 @@ import {
   ArrowLeft,
   CircleUser,
   AlertTriangle,
+  Thermometer
 } from "lucide-react";
 
 const ADMIN_BLOCKED = false;
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { label: "Relevés", icon: FileText, to: "/admin/statements" },
   { label: "Doublons Stripe", icon: AlertTriangle, to: "/admin/stripe-duplicates" },
   { label: "Marketplace", icon: ShoppingBag, to: "/admin/marketplace" },
+  { label: "Thermostats", icon: Thermometer, to: "/admin/thermostats" },
   { label: "Paramètres", icon: Settings, to: "/admin/settings" },
 ];
 

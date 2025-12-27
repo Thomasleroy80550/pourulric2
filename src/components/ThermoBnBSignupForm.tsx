@@ -49,11 +49,11 @@ const ThermoBnBSignupForm: React.FC = () => {
       return;
     }
     if (!state.hasGasBoiler || !state.hasNetatmo) {
-      toast({ title: "ThermoBnB s’adresse aux logements avec chaudière gaz ET Netatmo installé.", variant: "destructive" });
+      toast({ title: "ThermoBnB s'adresse aux logements avec une chaudière gaz et un thermostat Netatmo installés.", variant: "destructive" });
       return;
     }
     if (!state.consent) {
-      toast({ title: "Veuillez accepter d’être contacté pour que nous puissions vous répondre.", variant: "destructive" });
+      toast({ title: "Veuillez accepter d'etre contacté pour que nous puissions vous répondre.", variant: "destructive" });
       return;
     }
 
@@ -83,7 +83,7 @@ const ThermoBnBSignupForm: React.FC = () => {
     setLoading(false);
 
     if (error) {
-      toast({ title: "Échec de l’inscription", description: error.message, variant: "destructive" });
+      toast({ title: "Échec de l'inscription", description: error.message, variant: "destructive" });
       return;
     }
 
@@ -199,16 +199,16 @@ const ThermoBnBSignupForm: React.FC = () => {
               onCheckedChange={(v) => onChange("consent", Boolean(v))}
             />
             <Label htmlFor="consent">
-              J’accepte d’être contacté pour la mise en place de ThermoBnB *
+              J'accepte d'etre contacté pour la mise en place de ThermoBnB *
             </Label>
           </div>
 
           <div className="pt-2">
             <Button type="submit" disabled={loading} className="w-full md:w-auto">
-              {loading ? "Envoi..." : "Demander l’activation"}
+              {loading ? "Envoi..." : "Demander l'activation"}
             </Button>
             <p className="mt-2 text-xs text-gray-500">
-              Nous vous recontactons sous 24-48h avec les prochaines étapes.
+              Nous vous recontactons sous 24 à 48 h avec les prochaines étapes.
             </p>
           </div>
         </form>

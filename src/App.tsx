@@ -97,6 +97,7 @@ import NetatmoConnectPage from "./pages/NetatmoConnectPage";
 import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
 import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
+import AdminThermostatOverviewPage from "./pages/AdminThermostatOverviewPage";
 
 const queryClient = new QueryClient();
 
@@ -154,6 +155,7 @@ function App() {
                   <Route path="/admin/duplicate-room-ids" element={<AdminDuplicateRoomIdsPage />} />
                   <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
                   <Route path="/admin/crm" element={<AdminCRMPage />} />
+                  <Route path="/admin/thermostats" element={<AdminThermostatOverviewPage />} />
                   <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                   <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                   <Route path="/admin/status" element={<AdminStatusPage />} />

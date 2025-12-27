@@ -25,8 +25,11 @@ const AdminModuleRequestsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const initialFilter = params.get('module') === 'electricity' ? 'powersense' : 'all';
-  const [filter, setFilter] = React.useState<'all' | 'powersense'>(initialFilter);
+  const moduleParam = params.get('module');
+  const initialFilter: 'all' | 'powersense' | 'thermobnb' =
+    moduleParam === 'electricity' ? 'powersense' :
+    moduleParam === 'thermobnb' ? 'thermobnb' : 'all';
+  const [filter, setFilter] = React.useState<'all' | 'powersense' | 'thermobnb'>(initialFilter);
 
   const { data: requests, isLoading, error } = useQuery<ModuleActivationRequest[]>({
     queryKey: ['moduleActivationRequests'],
@@ -63,9 +66,8 @@ const AdminModuleRequestsPage: React.FC = () => {
 
   const filteredRequests = React.useMemo(() => {
     if (!requests) return [];
-    if (filter === 'powersense') {
-      return requests.filter(r => r.module_name === 'electricity');
-    }
+    if (filter === 'powersense') return requests.filter(r => r.module_name === 'electricity');
+    if (filter === 'thermobnb') return requests.filter(r => r.module_name === 'thermobnb');
     return requests;
   }, [requests, filter]);
 
@@ -160,10 +162,11 @@ const AdminModuleRequestsPage: React.FC = () => {
     <AdminLayout>
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Demandes d'Activation de Modules</h1>
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'powersense')}>
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'powersense' | 'thermobnb')}>
           <TabsList>
             <TabsTrigger value="all">Tous</TabsTrigger>
             <TabsTrigger value="powersense">PowerSense</TabsTrigger>
+            <TabsTrigger value="thermobnb">ThermoBnB</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="border rounded-lg">

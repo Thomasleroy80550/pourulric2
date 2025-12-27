@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { createModuleActivationRequest } from "@/lib/module-activation-api";
 
 type FormState = {
   firstName: string;
@@ -85,6 +86,17 @@ const ThermoBnBSignupForm: React.FC = () => {
     if (error) {
       toast({ title: "Échec de l'inscription", description: error.message, variant: "destructive" });
       return;
+    }
+
+    // Créer la demande d'activation du module ThermoBnB si l'utilisateur est connecté
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        await createModuleActivationRequest("thermobnb");
+        toast({ title: "Demande ThermoBnB créée", description: "Activation en attente côté admin." });
+      } catch (e: any) {
+        // Silencieux si déjà en attente ou autre, on ne bloque pas l'envoi
+      }
     }
 
     toast({ title: "Inscription envoyée", description: "Nous vous recontactons très vite pour activer ThermoBnB." });

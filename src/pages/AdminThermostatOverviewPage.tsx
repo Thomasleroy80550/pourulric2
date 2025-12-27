@@ -46,6 +46,15 @@ const AdminThermostatOverviewPage: React.FC = () => {
   const [rows, setRows] = React.useState<Row[]>([]);
   const [search, setSearch] = React.useState("");
 
+  const stats = React.useMemo(() => {
+    const total = rows.length;
+    const linked = rows.filter((r) => !!r.thermostat).length;
+    const ok = rows.filter((r) => r.status === "ok").length;
+    const errors = rows.filter((r) => r.status === "error").length;
+    const unlinked = rows.filter((r) => r.status === "no_thermostat").length;
+    return { total, linked, ok, errors, unlinked };
+  }, [rows]);
+
   const filteredRows = React.useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
@@ -149,25 +158,33 @@ const AdminThermostatOverviewPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Thermometer className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Températures des logements</h1>
+          <h1 className="text-2xl font-bold">Thermostats — Températures des logements</h1>
         </div>
         <Card>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <CardTitle>Thermostats Netatmo liés</CardTitle>
-              <CardDescription>Chaque logement doit avoir un thermostat lié pour remonter sa température.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Rechercher un logement ou thermostat…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-64"
-              />
-              <Button variant="outline" onClick={fetchData} disabled={loading}>
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Rafraîchir
-              </Button>
+          <CardHeader className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <CardTitle>Thermostats Netatmo liés</CardTitle>
+                <CardDescription>Chaque logement doit avoir un thermostat lié pour remonter sa température.</CardDescription>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs sm:text-sm">
+                  <Badge variant="secondary">Logements: {stats.total}</Badge>
+                  <Badge variant="secondary">Liés: {stats.linked}</Badge>
+                  <Badge variant={stats.errors > 0 ? "destructive" : "secondary"}>Erreurs: {stats.errors}</Badge>
+                  <Badge variant="secondary">Non configurés: {stats.unlinked}</Badge>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Rechercher un logement ou thermostat…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-64"
+                />
+                <Button variant="outline" onClick={fetchData} disabled={loading}>
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  Rafraîchir
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -184,95 +201,72 @@ const AdminThermostatOverviewPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="w-full overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[220px]">Logement</TableHead>
-                      <TableHead className="min-w-[220px]">Thermostat lié</TableHead>
-                      <TableHead>Température</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRows.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-muted-foreground text-sm">
-                          Aucun logement trouvé.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredRows.map((r) => (
-                        <TableRow key={r.room.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Home className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <div className="font-medium">{r.room.room_name}</div>
-                                <div className="text-xs text-muted-foreground">{r.room.room_id}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {r.thermostat ? (
+              <div>
+                {filteredRows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucun logement trouvé.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredRows.map((r) => {
+                      const isError = r.status === "error";
+                      const isUnlinked = r.status === "no_thermostat";
+                      return (
+                        <Card key={r.room.id} className="hover:shadow-sm transition">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
                               <div className="flex items-center gap-2">
-                                <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                <Home className="h-4 w-4 text-muted-foreground" />
                                 <div>
-                                  <div className="font-medium">
-                                    {r.thermostat.label || r.thermostat.netatmo_room_name || "Thermostat"}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    home={r.thermostat.home_id} • device={r.thermostat.device_id}
-                                  </div>
+                                  <div className="font-medium">{r.room.room_name}</div>
+                                  <div className="text-xs text-muted-foreground">{r.room.room_id}</div>
                                 </div>
                               </div>
-                            ) : (
-                              <Badge variant="destructive">Aucun thermostat lié</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {r.status === "error" ? (
-                              <div className="flex items-center gap-1 text-red-600">
-                                <AlertTriangle className="h-4 w-4" />
-                                <span className="text-sm">Erreur</span>
+                              {isUnlinked ? (
+                                <Badge variant="destructive">Non configuré</Badge>
+                              ) : isError ? (
+                                <Badge variant="destructive">Erreur</Badge>
+                              ) : (
+                                <Badge variant="secondary">OK</Badge>
+                              )}
+                            </div>
+                            <div className="mt-3">
+                              {r.thermostat ? (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">
+                                    {r.thermostat.label || r.thermostat.netatmo_room_name || "Thermostat"}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-muted-foreground">Aucun thermostat lié</div>
+                              )}
+                              <div className="mt-4 flex items-center gap-2">
+                                {isError ? (
+                                  <div className="flex items-center gap-1 text-red-600">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    <span className="text-sm">Température indisponible</span>
+                                  </div>
+                                ) : typeof r.temperature === "number" ? (
+                                  <>
+                                    <Thermometer className="h-5 w-5 text-primary" />
+                                    <div className="text-2xl font-bold">{r.temperature.toFixed(1)}°C</div>
+                                  </>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">—</span>
+                                )}
                               </div>
-                            ) : r.temperature != null ? (
-                              <div className="flex items-center gap-2">
-                                <Thermometer className="h-4 w-4 text-primary" />
-                                <span className="font-medium">{r.temperature.toFixed(1)} °C</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {r.status === "no_thermostat" ? (
-                              <Badge variant="destructive">Non configuré</Badge>
-                            ) : r.status === "error" ? (
-                              <Badge variant="destructive">Erreur</Badge>
-                            ) : (
-                              <Badge variant="secondary">OK</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={fetchData}
-                                title="Recharger la température"
-                              >
+                            </div>
+                            <div className="mt-4">
+                              <Button size="sm" variant="outline" onClick={fetchData}>
                                 <RefreshCcw className="h-4 w-4 mr-1" />
                                 Rafraîchir
                               </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

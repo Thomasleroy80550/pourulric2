@@ -5,14 +5,16 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import ThermoBnBSignupForm from "@/components/ThermoBnBSignupForm";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   Thermometer,
   Flame,
   Clock,
   ShieldCheck,
   Zap,
+  PiggyBank,
+  Leaf,
 } from "lucide-react";
 
 const ThermoBnBLandingPage: React.FC = () => {
@@ -41,12 +43,26 @@ const ThermoBnBLandingPage: React.FC = () => {
               </div>
             </div>
             <p className="mt-6 text-sm text-gray-500">
-              Remplissez le formulaire ci-dessous si vous avez une chaudière gaz et Netatmo déjà installé.
+              Pour les propriétaires avec chaudière gaz et thermostat Netatmo déjà installé.
             </p>
+          </div>
+
+          {/* OFFRE DE LANCEMENT */}
+          <div className="mt-10">
+            <Alert className="max-w-3xl mx-auto">
+              <AlertTitle>Offre de lancement & recherche de testeurs</AlertTitle>
+              <AlertDescription className="mt-2 text-sm text-gray-700">
+                - Module gratuit pour le moment — vous ne payez que les pièces et l’installation.
+                <br />
+                - Un abonnement arrivera ensuite (priorité aux premiers inscrits – premier arrivé, premier servi).
+                <br />
+                - Nous cherchons des testeurs pour lancer le module. Si vous êtes intéressé, inscrivez-vous ci-dessous.
+              </AlertDescription>
+            </Alert>
           </div>
         </div>
 
-        {/* BENEFICES */}
+        {/* BÉNÉFICES PRINCIPAUX */}
         <div className="mx-auto max-w-6xl px-6 mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="shadow-sm">
             <CardContent className="p-5">
@@ -97,6 +113,62 @@ const ThermoBnBLandingPage: React.FC = () => {
           </Card>
         </div>
 
+        {/* GAINS & ÉCONOMIES */}
+        <div className="mx-auto max-w-6xl px-6 mt-14">
+          <div className="rounded-xl border bg-white p-6 md:p-8 shadow-sm">
+            <h2 className="text-xl md:text-2xl font-semibold">Gains & économies</h2>
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <PiggyBank className="w-5 h-5 text-rose-600" />
+                    <p className="font-medium">Moins de dépenses de chauffage</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Évite de chauffer inutilement entre les séjours grâce au mode éco automatique.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <Leaf className="w-5 h-5 text-emerald-600" />
+                    <p className="font-medium">Énergie mieux utilisée</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Préchauffage ciblé avant l’arrivée pour un confort optimal sans surconsommation.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-indigo-600" />
+                    <p className="font-medium">Gain de temps</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Moins d’allers-retours et d’ajustements manuels — tout est automatisé.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-sm">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <Zap className="w-5 h-5 text-orange-600" />
+                    <p className="font-medium">Arrivées toujours prêtes</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Température confortable à l’arrivée — impact positif sur les avis des voyageurs.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+
         {/* COMMENT ÇA MARCHE */}
         <div className="mx-auto max-w-6xl px-6 mt-14">
           <div className="rounded-xl border bg-white p-6 md:p-8 shadow-sm">
@@ -106,7 +178,7 @@ const ThermoBnBLandingPage: React.FC = () => {
                 <CardContent className="p-5">
                   <p className="font-medium">1. Votre logement</p>
                   <p className="mt-2 text-sm text-gray-600">
-                    ThermoBnB cible les logements équipés d’une chaudière gaz avec thermostat Netatmo.
+                    ThermoBnB s’adresse aux logements avec chaudière gaz et thermostat Netatmo.
                   </p>
                 </CardContent>
               </Card>
@@ -130,48 +202,6 @@ const ThermoBnBLandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* TEMOIGNAGES */}
-        <div className="mx-auto max-w-6xl px-6 mt-14">
-          <h2 className="text-xl md:text-2xl font-semibold">Ils en parlent</h2>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage alt="Propriétaire" />
-                    <AvatarFallback>PL</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">Paul L.</p>
-                    <p className="text-xs text-gray-500">Propriétaire à Berck</p>
-                  </div>
-                </div>
-                <p className="mt-4 text-gray-700">
-                  “Avant, on oubliait souvent de relancer le chauffage. ThermoBnB s’occupe de tout, et nos arrivées sont toujours parfaites.”
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage alt="Gestionnaire" />
-                    <AvatarFallback>AM</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">Amélie M.</p>
-                    <p className="text-xs text-gray-500">Gestionnaire multi-logements</p>
-                  </div>
-                </div>
-                <p className="mt-4 text-gray-700">
-                  “Gain de temps énorme. On configure une fois, et le système suit le planning des réservations.”
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
         {/* FAQ */}
         <div className="mx-auto max-w-6xl px-6 mt-14">
           <div className="rounded-xl border bg-white p-6 md:p-8 shadow-sm">
@@ -190,9 +220,10 @@ const ThermoBnBLandingPage: React.FC = () => {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="q3">
-                <AccordionTrigger>Puis-je personnaliser les températures et horaires ?</AccordionTrigger>
+                <AccordionTrigger>Y aura-t-il un abonnement ?</AccordionTrigger>
                 <AccordionContent>
-                  Bien sûr. Vous choisissez la température d’arrivée, celle du séjour, le mode éco, et les horaires qui conviennent à votre logement.
+                  Pour le moment, le module est gratuit (vous ne payez que les pièces et l’installation).
+                  Un abonnement arrivera ensuite, avec priorité aux premiers inscrits (premier arrivé, premier servi).
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -201,10 +232,10 @@ const ThermoBnBLandingPage: React.FC = () => {
 
         {/* FORMULAIRE D'INSCRIPTION */}
         <div className="mx-auto max-w-6xl px-6 pb-20 mt-14" id="signup">
-          <h3 className="text-xl md:text-2xl font-semibold mb-4">Demander l’activation</h3>
+          <h3 className="text-xl md:text-2xl font-semibold mb-4">Devenez testeur & demandez l’activation</h3>
           <p className="text-gray-600 mb-6">
             Ce service s’adresse aux propriétaires ayant une chaudière gaz et Netatmo déjà installé.
-            Remplissez le formulaire, nous vous recontactons sous 24-48h.
+            Remplissez le formulaire — nous vous recontactons sous 24-48h.
           </p>
           <ThermoBnBSignupForm />
         </div>

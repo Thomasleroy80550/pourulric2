@@ -37,9 +37,6 @@ type Row = {
   temperature?: number | null;
   status?: "ok" | "error" | "no_thermostat";
   errorMessage?: string | null;
-  setpoint?: number | null;
-  mode?: string | null;
-  heatingPower?: number | null;
 };
 
 // Supabase functions invocation est utilisé ci-dessous; pas besoin d'URL brute
@@ -48,9 +45,6 @@ const AdminThermostatOverviewPage: React.FC = () => {
   const [loading, setLoading] = React.useState(true);
   const [rows, setRows] = React.useState<Row[]>([]);
   const [search, setSearch] = React.useState("");
-  const [coldMonth, setColdMonth] = React.useState<string>("12"); // Décembre par défaut
-  const [threshold, setThreshold] = React.useState<number>(16); // Seuil "période froide" en °C
-  const [onlyNoHeat, setOnlyNoHeat] = React.useState<boolean>(false);
 
   const stats = React.useMemo(() => {
     const total = rows.length;
@@ -58,20 +52,18 @@ const AdminThermostatOverviewPage: React.FC = () => {
     const ok = rows.filter((r) => r.status === "ok").length;
     const errors = rows.filter((r) => r.status === "error").length;
     const unlinked = rows.filter((r) => r.status === "no_thermostat").length;
-    const noHeat = rows.filter((r) => computeNoHeat(r)).length;
-    return { total, linked, ok, errors, unlinked, noHeat };
-  }, [rows, threshold]);
+    return { total, linked, ok, errors, unlinked };
+  }, [rows]);
 
   const filteredRows = React.useMemo(() => {
     const q = search.trim().toLowerCase();
-    const base = rows.filter((r) => (onlyNoHeat ? computeNoHeat(r) : true));
-    if (!q) return base;
-    return base.filter((r) => {
+    if (!q) return rows;
+    return rows.filter((r) => {
       const roomText = `${r.room.room_name} ${r.room.room_id}`.toLowerCase();
       const thermoText = `${r.thermostat?.label ?? ""} ${r.thermostat?.netatmo_room_name ?? ""}`.toLowerCase();
       return roomText.includes(q) || thermoText.includes(q);
     });
-  }, [rows, search, onlyNoHeat, threshold]);
+  }, [rows, search]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -97,7 +89,7 @@ const AdminThermostatOverviewPage: React.FC = () => {
         if (t.user_room_id) byRoomId.set(t.user_room_id, t as Thermostat);
       });
 
-      // Construire lignes initiales
+      // Construire lignes initiales (sans température)
       const initialRows: Row[] = (rooms || []).map((room) => {
         const thermostat = byRoomId.get(room.id) ?? null;
         return {
@@ -107,47 +99,54 @@ const AdminThermostatOverviewPage: React.FC = () => {
         };
       });
 
-      // Appeler la nouvelle edge function admin-thermostat-status (agrégation multi-utilisateurs)
-      const { data, error } = await supabase.functions.invoke("admin-thermostat-status", { body: {} });
-      if (error) {
-        throw new Error(error.message || "Erreur edge function");
-      }
-      const items = (data?.items ?? []) as Array<any>;
-      // Indexer par netatmo_room_id pour enrichir nos rows
-      const statusByNetatmoRoomId = new Map<string, any>();
-      items.forEach((it) => {
-        const key = String(it.netatmo_room_id ?? "");
-        if (key) statusByNetatmoRoomId.set(key, it);
-      });
+      // Regrouper par maison Netatmo et appeler homestatus une fois par home_id
+      const uniqueHomeIds = Array.from(
+        new Set(
+          (thermostats || [])
+            .map((t) => t.home_id)
+            .filter((h): h is string => typeof h === "string" && h.length > 0)
+        )
+      );
 
-      const mergedRows: Row[] = initialRows.map((row) => {
+      const tempsByRoomIdGlobal = new Map<string, number>();
+      for (const homeId of uniqueHomeIds) {
+        try {
+          const { data, error } = await supabase.functions.invoke("netatmo-proxy", {
+            body: { endpoint: "homestatus", home_id: homeId },
+          });
+          if (error) {
+            // Continuer: on marquera les lignes correspondantes en erreur plus bas
+            continue;
+          }
+          const roomsBlock = data?.body?.home?.rooms || data?.body?.rooms || [];
+          for (const r of roomsBlock) {
+            const rid = String(r.id);
+            const t = typeof r.therm_measured_temperature === "number" ? r.therm_measured_temperature : null;
+            if (t != null) tempsByRoomIdGlobal.set(rid, t);
+          }
+        } catch {
+          // ignorer erreur individuelle et poursuivre
+          continue;
+        }
+      }
+
+      // Fusionner températures dans les lignes
+      const mergedRows = initialRows.map((row) => {
         if (!row.thermostat || !row.thermostat.netatmo_room_id) return row;
         const rid = String(row.thermostat.netatmo_room_id);
-        const s = statusByNetatmoRoomId.get(rid);
-        if (!s) return { ...row, status: "error", errorMessage: "Température non disponible" };
-        const temp = typeof s.therm_measured_temperature === "number" ? s.therm_measured_temperature : null;
-        const setpoint = typeof s.therm_setpoint_temperature === "number" ? s.therm_setpoint_temperature : null;
-        const mode = s.therm_setpoint_mode ?? null;
-        const heatingPower = typeof s.heating_power_request === "number" ? s.heating_power_request : null;
-        return { ...row, temperature: temp, setpoint, mode, heatingPower, status: temp != null ? "ok" : "error", errorMessage: temp == null ? "Température non disponible" : null };
+        const t = tempsByRoomIdGlobal.get(rid);
+        if (typeof t === "number") {
+          return { ...row, temperature: t, status: "ok" as const, errorMessage: null };
+        }
+        return { ...row, status: "error" as const, errorMessage: "Température non disponible" };
       });
+
       setRows(mergedRows);
     } catch (e: any) {
       toast.error("Erreur de chargement", { description: e?.message || String(e) });
     } finally {
       setLoading(false);
     }
-  };
-
-  // Calcul du statut "sans chauffage" selon seuil et mode/power
-  const computeNoHeat = (r: Row) => {
-    const tempOk = typeof r.temperature === "number" ? r.temperature : null;
-    const isCold = tempOk != null ? tempOk < threshold : false;
-    const mode = (r.mode || "").toLowerCase();
-    const powerZero = (typeof r.heatingPower === "number" ? r.heatingPower : 0) === 0;
-    const offModes = ["away", "hg", "off"];
-    const isOff = offModes.includes(mode);
-    return isCold && (isOff || powerZero);
   };
 
   React.useEffect(() => {
@@ -166,13 +165,12 @@ const AdminThermostatOverviewPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <CardTitle>Thermostats Netatmo liés</CardTitle>
-                <CardDescription>Surveillez le chauffage pendant les périodes froides (ex: décembre).</CardDescription>
+                <CardDescription>Chaque logement doit avoir un thermostat lié pour remonter sa température.</CardDescription>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs sm:text-sm">
                   <Badge variant="secondary">Logements: {stats.total}</Badge>
                   <Badge variant="secondary">Liés: {stats.linked}</Badge>
                   <Badge variant={stats.errors > 0 ? "destructive" : "secondary"}>Erreurs: {stats.errors}</Badge>
                   <Badge variant="secondary">Non configurés: {stats.unlinked}</Badge>
-                  <Badge variant={stats.noHeat > 0 ? "destructive" : "secondary"}>Sans chauffage: {stats.noHeat}</Badge>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -185,22 +183,6 @@ const AdminThermostatOverviewPage: React.FC = () => {
                 <Button variant="outline" onClick={fetchData} disabled={loading}>
                   <RefreshCcw className="h-4 w-4 mr-2" />
                   Rafraîchir
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Mois froid</label>
-                <Input value={coldMonth} onChange={(e) => setColdMonth(e.target.value)} className="w-24" placeholder="12" />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Seuil (°C)</label>
-                <Input type="number" value={threshold} onChange={(e) => setThreshold(Number(e.target.value) || 0)} className="w-24" />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Afficher seulement "Sans chauffage"</label>
-                <Button variant={onlyNoHeat ? "destructive" : "secondary"} size="sm" onClick={() => setOnlyNoHeat((v) => !v)}>
-                  {onlyNoHeat ? "Activé" : "Désactivé"}
                 </Button>
               </div>
             </div>
@@ -227,7 +209,6 @@ const AdminThermostatOverviewPage: React.FC = () => {
                     {filteredRows.map((r) => {
                       const isError = r.status === "error";
                       const isUnlinked = r.status === "no_thermostat";
-                      const noHeat = computeNoHeat(r);
                       return (
                         <Card key={r.room.id} className="hover:shadow-sm transition">
                           <CardContent className="p-4">
@@ -243,8 +224,6 @@ const AdminThermostatOverviewPage: React.FC = () => {
                                 <Badge variant="destructive">Non configuré</Badge>
                               ) : isError ? (
                                 <Badge variant="destructive">Erreur</Badge>
-                              ) : noHeat ? (
-                                <Badge variant="destructive">Sans chauffage</Badge>
                               ) : (
                                 <Badge variant="secondary">OK</Badge>
                               )}
@@ -260,23 +239,20 @@ const AdminThermostatOverviewPage: React.FC = () => {
                               ) : (
                                 <div className="text-sm text-muted-foreground">Aucun thermostat lié</div>
                               )}
-                              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <Thermometer className="h-4 w-4 text-primary" />
-                                  <span>Mesurée: {typeof r.temperature === "number" ? `${r.temperature.toFixed(1)}°C` : "—"}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Thermometer className="h-4 w-4 text-muted-foreground" />
-                                  <span>Consigne: {typeof r.setpoint === "number" ? `${r.setpoint.toFixed(1)}°C` : "—"}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">Mode:</span>
-                                  <span className="font-medium">{r.mode ?? "—"}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">Puissance:</span>
-                                  <span className="font-medium">{typeof r.heatingPower === "number" ? `${r.heatingPower}%` : "—"}</span>
-                                </div>
+                              <div className="mt-4 flex items-center gap-2">
+                                {isError ? (
+                                  <div className="flex items-center gap-1 text-red-600">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    <span className="text-sm">Température indisponible</span>
+                                  </div>
+                                ) : typeof r.temperature === "number" ? (
+                                  <>
+                                    <Thermometer className="h-5 w-5 text-primary" />
+                                    <div className="text-2xl font-bold">{r.temperature.toFixed(1)}°C</div>
+                                  </>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">—</span>
+                                )}
                               </div>
                             </div>
                             <div className="mt-4">

@@ -40,7 +40,6 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null }>>({});
   const [editingRoom, setEditingRoom] = useState<AdminUserRoom | null>(null);
   const [showOnlyNotDone, setShowOnlyNotDone] = useState<boolean>(false);
-  const [bulkUpdating, setBulkUpdating] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -157,6 +156,17 @@ const AdminSeasonRequestsPage: React.FC = () => {
     }
   };
 
+  // NEW: handler avec toasts pour clic par ligne
+  const handleForceDoneClick = async (room: AdminUserRoom) => {
+    const toastId = toast.loading("Mise à jour du statut...");
+    try {
+      await forceDoneForRoom(room);
+      toast.success("Statut 'Terminé' appliqué.", { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la mise à jour.", { id: toastId });
+    }
+  };
+
   // NEW: résumé par logement (statut 2026)
   const roomsSummary = useMemo(() => {
     const targetYear = 2026;
@@ -182,27 +192,6 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const roomsFiltered = useMemo(() => {
     return showOnlyNotDone ? roomsSummary.filter(({ status }) => status !== 'done') : roomsSummary;
   }, [roomsSummary, showOnlyNotDone]);
-
-  // NEW: Forcer "Terminé" pour tous les logements visibles
-  const forceDoneForVisibleRooms = async () => {
-    if (roomsFiltered.length === 0) return;
-    const toastId = toast.loading("Mise à jour des statuts en cours...");
-    setBulkUpdating(true);
-    try {
-      for (const item of roomsFiltered) {
-        if (item.status !== 'done') {
-          // Exécuter séquentiellement pour rester simple
-          // eslint-disable-next-line no-await-in-loop
-          await forceDoneForRoom(item.room);
-        }
-      }
-      toast.success("Statut 'Terminé' appliqué aux logements visibles.", { id: toastId });
-    } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la mise à jour des statuts.", { id: toastId });
-    } finally {
-      setBulkUpdating(false);
-    }
-  };
 
   // ADD: liste filtrée en fonction de l'onglet courant
   const filtered = useMemo(() => requests.filter(r => r.status === tab), [requests, tab]);
@@ -632,14 +621,6 @@ const AdminSeasonRequestsPage: React.FC = () => {
                   <Switch id="only-not-done" checked={showOnlyNotDone} onCheckedChange={setShowOnlyNotDone} />
                   <label htmlFor="only-not-done" className="text-sm text-muted-foreground">Afficher non terminés</label>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={forceDoneForVisibleRooms}
-                  disabled={bulkUpdating || roomsFiltered.length === 0}
-                >
-                  {bulkUpdating ? "Mise à jour..." : 'Forcer "Terminé" (visible)'}
-                </Button>
               </div>
             </div>
           </CardHeader>
@@ -700,6 +681,11 @@ const AdminSeasonRequestsPage: React.FC = () => {
                             <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
                               Smart Pricing
                             </Button>
+                            {!isDone && (
+                              <Button variant="ghost" size="sm" onClick={() => handleForceDoneClick(room)}>
+                                Forcer "Terminé"
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );

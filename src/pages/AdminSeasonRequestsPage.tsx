@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/notifications-api";
 import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
 import DOMPurify from "dompurify";
+import { Switch } from "@/components/ui/switch";
 
 const AdminSeasonRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
@@ -38,6 +39,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
   const [roomsLoading, setRoomsLoading] = useState<boolean>(true);
   const [profilesById, setProfilesById] = useState<Record<string, { first_name: string | null; last_name: string | null; email: string | null }>>({});
   const [editingRoom, setEditingRoom] = useState<AdminUserRoom | null>(null);
+  const [showOnlyNotDone, setShowOnlyNotDone] = useState<boolean>(false);
+  const [bulkUpdating, setBulkUpdating] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,6 +98,65 @@ const AdminSeasonRequestsPage: React.FC = () => {
     loadProfiles();
   }, [allUserRooms]);
 
+  // NEW: forcer le statut "done" pour un logement (sans envoi d'email)
+  const forceDoneForRoom = async (room: AdminUserRoom) => {
+    // Chercher une demande 2026 existante pour ce logement
+    let query = supabase
+      .from('season_price_requests')
+      .select('id, status, user_id, season_year, room_id, room_name')
+      .eq('user_id', room.user_id)
+      .eq('season_year', 2026);
+
+    if (room.room_id) {
+      query = query.eq('room_id', room.room_id);
+    } else if (room.room_name) {
+      query = query.eq('room_name', room.room_name);
+    }
+
+    const { data: existing, error: searchError } = await query;
+    if (searchError) {
+      throw new Error(searchError.message);
+    }
+
+    if (existing && existing.length > 0) {
+      const current = existing[0];
+      if (current.status !== 'done') {
+        // MAJ directe sans email
+        const { error: updateError } = await supabase
+          .from('season_price_requests')
+          .update({ status: 'done' })
+          .eq('id', current.id);
+        if (updateError) throw new Error(updateError.message);
+      }
+      // MAJ locale
+      setRequests(prev => {
+        const found = prev.find(r => r.id === current.id);
+        if (found) {
+          return prev.map(r => r.id === current.id ? { ...r, status: 'done' } as SeasonPricingRequest : r);
+        }
+        return [{ ...(current as any), status: 'done' } as SeasonPricingRequest, ...prev];
+      });
+    } else {
+      // Créer une demande "terminée" minimaliste
+      const { data: inserted, error: insertError } = await supabase
+        .from('season_price_requests')
+        .insert({
+          user_id: room.user_id,
+          season_year: 2026,
+          room_id: room.room_id ?? null,
+          room_name: room.room_name ?? null,
+          items: [],
+          status: 'done',
+        })
+        .select('*')
+        .single();
+      if (insertError) throw new Error(insertError.message);
+      if (inserted) {
+        setRequests(prev => [inserted as unknown as SeasonPricingRequest, ...prev]);
+      }
+    }
+  };
+
   // NEW: résumé par logement (statut 2026)
   const roomsSummary = useMemo(() => {
     const targetYear = 2026;
@@ -115,6 +177,32 @@ const AdminSeasonRequestsPage: React.FC = () => {
       return { room, status };
     });
   }, [allUserRooms, requests]);
+
+  // NEW: filtrage des logements non terminés selon le switch
+  const roomsFiltered = useMemo(() => {
+    return showOnlyNotDone ? roomsSummary.filter(({ status }) => status !== 'done') : roomsSummary;
+  }, [roomsSummary, showOnlyNotDone]);
+
+  // NEW: Forcer "Terminé" pour tous les logements visibles
+  const forceDoneForVisibleRooms = async () => {
+    if (roomsFiltered.length === 0) return;
+    const toastId = toast.loading("Mise à jour des statuts en cours...");
+    setBulkUpdating(true);
+    try {
+      for (const item of roomsFiltered) {
+        if (item.status !== 'done') {
+          // Exécuter séquentiellement pour rester simple
+          // eslint-disable-next-line no-await-in-loop
+          await forceDoneForRoom(item.room);
+        }
+      }
+      toast.success("Statut 'Terminé' appliqué aux logements visibles.", { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la mise à jour des statuts.", { id: toastId });
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
 
   // ADD: liste filtrée en fonction de l'onglet courant
   const filtered = useMemo(() => requests.filter(r => r.status === tab), [requests, tab]);
@@ -534,8 +622,26 @@ const AdminSeasonRequestsPage: React.FC = () => {
         {/* KEPT: Tableau unique de suivi des logements */}
         <Card>
           <CardHeader>
-            <CardTitle>Suivi des logements Saison 2026</CardTitle>
-            <CardDescription>Statut par logement (vert = terminé, rouge = non terminé) et actions.</CardDescription>
+            <div className="flex items-start md:items-center justify-between gap-4 flex-wrap">
+              <div>
+                <CardTitle>Suivi des logements Saison 2026</CardTitle>
+                <CardDescription>Statut par logement (vert = terminé, rouge = non terminé) et actions.</CardDescription>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Switch id="only-not-done" checked={showOnlyNotDone} onCheckedChange={setShowOnlyNotDone} />
+                  <label htmlFor="only-not-done" className="text-sm text-muted-foreground">Afficher non terminés</label>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={forceDoneForVisibleRooms}
+                  disabled={bulkUpdating || roomsFiltered.length === 0}
+                >
+                  {bulkUpdating ? "Mise à jour..." : 'Forcer "Terminé" (visible)'}
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {(roomsLoading || loading) ? (
@@ -554,7 +660,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {roomsSummary.map(({ room, status }) => {
+                    {roomsFiltered.map(({ room, status }) => {
                       const profile = profilesById[room.user_id];
                       const ownerName = profile ? (`${profile.first_name ?? ""} ${profile.last_name ?? ""}`).trim() || "—" : "—";
                       const email = profile?.email ?? "—";
@@ -591,7 +697,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                                 </Button>
                               </>
                             )}
-                            <Button variant="outline" size="sm" onClick={() => complete2026ForRoom(room)}>
+                            <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
                               Smart Pricing
                             </Button>
                           </TableCell>

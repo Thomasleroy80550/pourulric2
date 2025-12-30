@@ -309,6 +309,66 @@ const AdminSeasonRequestsPage: React.FC = () => {
     toast.success("L'email Smart Pricing a été envoyé.", { id: loadingId });
   };
 
+  // NEW: Smart Pricing + marquer le statut 2026 comme terminé pour le logement
+  const complete2026ForRoom = async (room: AdminUserRoom) => {
+    const toastId = toast.loading("Smart Pricing: envoi de l'email et clôture 2026...");
+    try {
+      // 1) Envoyer l'email Smart Pricing
+      await sendSmartPricingEmailByUserId(room.user_id);
+
+      // 2) Chercher une demande 2026 existante pour ce logement
+      let query = supabase
+        .from('season_price_requests')
+        .select('id, status, user_id, season_year, room_id, room_name')
+        .eq('user_id', room.user_id)
+        .eq('season_year', 2026);
+
+      if (room.room_id) {
+        query = query.eq('room_id', room.room_id);
+      } else if (room.room_name) {
+        query = query.eq('room_name', room.room_name);
+      }
+
+      const { data: existing, error: searchError } = await query;
+
+      if (searchError) {
+        throw new Error(searchError.message);
+      }
+
+      if (existing && existing.length > 0) {
+        const current = existing[0];
+        if (current.status !== 'done') {
+          await updateSeasonPricingRequestStatus(current.id, 'done');
+          setRequests(prev => prev.map(r => r.id === current.id ? { ...r, status: 'done' } : r));
+        }
+      } else {
+        // 3) Créer une demande "terminée" minimaliste si aucune n'existe
+        const { data: inserted, error: insertError } = await supabase
+          .from('season_price_requests')
+          .insert({
+            user_id: room.user_id,
+            season_year: 2026,
+            room_id: room.room_id ?? null,
+            room_name: room.room_name ?? null,
+            items: [],
+            status: 'done',
+          })
+          .select('*')
+          .single();
+
+        if (insertError) {
+          throw new Error(insertError.message);
+        }
+
+        setRequests(prev => [inserted as any, ...prev]);
+      }
+
+      toast.success("Statut 2026 marqué comme terminé.", { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la mise à jour du statut 2026.", { id: toastId });
+    }
+  };
+
   // ADD: tableau des demandes par onglet (avec détails et actions)
   const renderTable = () => (
     <Table>
@@ -531,7 +591,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                                 </Button>
                               </>
                             )}
-                            <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
+                            <Button variant="outline" size="sm" onClick={() => complete2026ForRoom(room)}>
                               Smart Pricing
                             </Button>
                           </TableCell>

@@ -1,1178 +1,976 @@
-// Nouvelle interface pour les tâches à faire
-// ID unique pour la tâche
-// Titre principal de la tâche
-// Description optionnelle
-// URL vers laquelle naviguer
-// Catégorie de la tâche
-// Spécifique aux rapports techniques
-// Fenêtre d'affichage pour la notif Bilan 2025
-// 4 janvier 2025
-// 1er mars 2025 23:59:59
-// Ensured this line is present and correct
-// Type mis à jour
-// Ouvre la popup globale
-// Ensure amount is treated as number
-// Distribute expenses across months
-// 0-indexed month
-// Calculate final net benefit for each month by subtracting monthly expenses
-// Ajouter les rapports techniques en attente
-// Vérifier si des informations de logement sont incomplètes
-// Si aucun logement n'est enregistré, la configuration est requise
-// Définir ce qui rend un logement incomplet (champs clés manquants)
-// Au moins un logement est incomplet, pas besoin de vérifier les autres
-// Ajouter Hivernage et Saison 2026 comme actions requises
-// Mettre à jour l'état avec toutes les tâches
-// Calculate average rating
-// Removed the useEffect that starts the dashboard tour automatically
-// REMOVED: notificationItems (les actions sont désormais dans 'Mes actions requises')
-/* Notif box BILAN 2025 */
-/* Bloc Cinématique Bonne Année 2026 */
-/* Décor de fond festif discret dans le bloc blanc */
-/* Contenu centré */
-/* Compte à rebours vers le 01/01/2026 */
-/* To-Do List Card */
-// Afficher property_name si c'est un rapport technique
-// Afficher la description pour les autres tâches
-/* REMOVED: Bloc Nouveautés (public) qui affichait <NewsFeedPublic /> */
-/* Bilan Financier Card */
-/* Activité de Location Card */
-/* Activité de Location Card (Donut Chart) */
-/* Statistiques Financières Mensuelles Card */
-/* Réservation / mois Card */
-/* Occupation Mensuelle Card */
 "use client";
+
 import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
+import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays, Sparkles } from "lucide-react"; 
 import {
-    Terminal,
-    ListChecks,
-    ChevronRight,
-    CheckCircle,
-    AlertTriangle,
-    FileText,
-    CalendarDays,
-    Sparkles,
-} from "lucide-react";
-
-import {
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    Tooltip,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Legend,
-    AreaChart,
-    Area,
-    ComposedChart,
-    Line,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  AreaChart,
+  Area,
+  ComposedChart,
+  Line,
 } from "recharts";
-
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 import ObjectiveDialog from "@/components/ObjectiveDialog";
 import { getProfile, UserProfile } from "@/lib/profile-api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { fetchKrossbookingReservations, KrossbookingReservation } from "@/lib/krossbooking";
-import { getUserRooms, UserRoom } from "@/lib/user-room-api";
-
-import {
-    parseISO,
-    isAfter,
-    isSameDay,
-    format,
-    isValid,
-    getDaysInYear,
-    isBefore,
-    differenceInDays,
-    getDaysInMonth,
-    eachMonthOfInterval,
-    startOfMonth,
-    endOfMonth,
-} from "date-fns";
-
-import { fr } from "date-fns/locale";
-import ChartFullScreenDialog from "@/components/ChartFullScreenDialog";
-import ForecastDialog from "@/components/ForecastDialog";
-import { FieryProgressBar } from "@/components/FieryProgressBar";
-import { getMyStatements } from "@/lib/statements-api";
+import { Skeleton } from '@/components/ui/skeleton';
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { getUserRooms, UserRoom } from '@/lib/user-room-api';
+import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore, differenceInDays, getDaysInMonth, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
+import ForecastDialog from '@/components/ForecastDialog';
+import { FieryProgressBar } from '@/components/FieryProgressBar';
+import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from "@/lib/admin-api";
-import CustomChartTooltip from "@/components/CustomChartTooltip";
-import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense } from "@/lib/expenses-api";
-import { toast } from "sonner";
+import CustomChartTooltip from '@/components/CustomChartTooltip';
+import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense } from '@/lib/expenses-api';
+import { toast } from 'sonner';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
-import { getReviews, Review } from "@/lib/revyoos-api";
-import { getTechnicalReportsByUserId, TechnicalReport } from "@/lib/technical-reports-api";
+import { getReviews, Review } from '@/lib/revyoos-api';
+import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
 import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
 import Countdown from "@/components/Countdown";
 
+// Nouvelle interface pour les tâches à faire
 interface TodoTask {
-    id: string;
-    title: string;
-    description?: string;
-    link: string;
-    category: "technical_report" | "room_setup" | "hivernage" | "season_pricing";
-    property_name?: string;
+  id: string; // ID unique pour la tâche
+  title: string; // Titre principal de la tâche
+  description?: string; // Description optionnelle
+  link: string; // URL vers laquelle naviguer
+  category: 'technical_report' | 'room_setup' | 'hivernage' | 'season_pricing'; // Catégorie de la tâche
+  property_name?: string; // Spécifique aux rapports techniques
 }
 
-const DONUT_CATEGORIES = [{
-    name: "Airbnb",
-    color: "#FF5A5F"
-}, {
-    name: "Booking",
-    color: "#003580"
-}, {
-    name: "Abritel",
-    color: "#2D60E0"
-}, {
-    name: "Hello Keys",
-    color: "#00A699"
-}, {
-    name: "Proprio",
-    color: "#4f46e5"
-}, {
-    name: "Autre",
-    color: "#6b7280"
-}];
+const DONUT_CATEGORIES = [
+  { name: 'Airbnb', color: '#FF5A5F' },
+  { name: 'Booking', color: '#003580' },
+  { name: 'Abritel', color: '#2D60E0' },
+  { name: 'Hello Keys', color: '#00A699' },
+  { name: 'Proprio', color: '#4f46e5' },
+  { name: 'Autre', color: '#6b7280' },
+];
 
+// Fenêtre d'affichage pour la notif Bilan 2025
 const BILAN_2025_STORAGE_KEY = "bilan2025_notice_dismissed";
-
 const isInBilan2025Window = () => {
-    const now = new Date();
-    const start = new Date(2025, 0, 4);
-    const end = new Date(2025, 2, 1, 23, 59, 59);
-    return now >= start && now <= end;
+  const now = new Date();
+  const start = new Date(2025, 0, 4); // 4 janvier 2025
+  const end = new Date(2025, 2, 1, 23, 59, 59); // 1er mars 2025 23:59:59
+  return now >= start && now <= end;
 };
 
 const DashboardPage = () => {
-    const {
-        profile
-    } = useSession();
+  const { profile } = useSession();
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
+  const [showBilanNotice, setShowBilanNotice] = useState(false);
 
-    const currentYear = new Date().getFullYear();
-    const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
-    const [showBilanNotice, setShowBilanNotice] = useState(false);
+  const [activityData, setActivityData] = useState(
+    DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))
+  );
 
-    const [activityData, setActivityData] = useState(DONUT_CATEGORIES.map(cat => ({
-        ...cat,
-        value: 0
-    })));
+  const [financialData, setFinancialData] = useState({
+    caAnnee: 0,
+    rentreeArgentAnnee: 0,
+    fraisAnnee: 0,
+    depensesAnnee: 0,
+    resultatAnnee: 0,
+    currentAchievementPercentage: 0,
+  });
+  const [loadingFinancialData, setLoadingFinancialData] = useState(true);
+  const [financialDataError, setFinancialDataError] = useState<string | null>(null);
 
-    const [financialData, setFinancialData] = useState({
-        caAnnee: 0,
-        rentreeArgentAnnee: 0,
-        fraisAnnee: 0,
-        depensesAnnee: 0,
-        resultatAnnee: 0,
-        currentAchievementPercentage: 0
+  const [monthlyFinancialData, setMonthlyFinancialData] = useState<any[]>([]);
+  const [monthlyReservationsData, setMonthlyReservationsData] = useState<any[]>([]);
+  const [monthlyOccupancyData, setMonthlyOccupancyData] = useState<any[]>([]);
+
+  const [isObjectiveDialogOpen, setIsObjectiveDialogOpen] = useState(false);
+  const [userObjectiveAmount, setUserObjectiveAmount] = useState(0);
+
+  const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
+  const [totalReservationsCurrentYear, setTotalReservationsCurrentYear] = useState(0);
+  const [totalNightsCurrentYear, setTotalNightsCurrentYear] = useState(0);
+  const [totalGuestsCurrentYear, setTotalGuestsCurrentYear] = useState(0);
+  const [occupancyRateCurrentYear, setOccupancyRateCurrentYear] = useState(0);
+  const [netPricePerNight, setNetPricePerNight] = useState(0);
+  const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
+  const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
+  const [averageRating, setAverageRating] = useState<number | null>(null);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+
+  const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
+  const [dialogChartData, setDialogChartData] = useState<any[]>([]);
+  const [dialogChartType, setDialogChartType] = useState<'line' | 'bar'>('line');
+  const [dialogChartTitle, setDialogChartTitle] = useState('');
+  const [dialogChartDataKeys, setDialogChartDataKeys] = useState<{ key: string; name: string; color: string; }[]>([]);
+  const [dialogChartYAxisUnit, setDialogChartYAxisUnit] = useState<string | undefined>(undefined);
+
+  const [isForecastDialogOpen, setIsForecastDialogOpen] = useState(false);
+  const [forecastAmount, setForecastAmount] = useState(0); // Ensured this line is present and correct
+  const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
+
+  const [todoTasks, setTodoTasks] = useState<TodoTask[]>([]); // Type mis à jour
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(BILAN_2025_STORAGE_KEY);
+    if (!dismissed) {
+      setShowBilanNotice(true);
+    }
+  }, []);
+
+  const handleDismissBilanNotice = () => {
+    setShowBilanNotice(false);
+    localStorage.setItem(BILAN_2025_STORAGE_KEY, "1");
+  };
+
+  const handleOpenBilanPopup = () => {
+    // Ouvre la popup globale
+    window.dispatchEvent(new Event('open-bilan-2025-notice'));
+  };
+
+  const openChartDialog = (data: any[], type: 'line' | 'bar', title: string, dataKeys: { key: string; name: string; color: string; }[], yAxisUnit?: string) => {
+    setDialogChartData(data);
+    setDialogChartType(type);
+    setDialogChartTitle(title);
+    setDialogChartDataKeys(dataKeys);
+    setDialogChartYAxisUnit(yAxisUnit);
+    setIsChartDialogOpen(true);
+  };
+
+  const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[], expenses: Expense[]) => {
+    const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
+
+    let totalCA = 0, totalRentree = 0, totalFrais = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
+    const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0); // Ensure amount is treated as number
+    let totalResultat = 0;
+
+    const channelCounts: { [key: string]: number } = {};
+    DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name.toLowerCase()] = 0);
+
+    const monthsOfYear = eachMonthOfInterval({
+      start: startOfMonth(new Date(year, 0, 1)),
+      end: endOfMonth(new Date(year, 11, 1)),
     });
 
-    const [loadingFinancialData, setLoadingFinancialData] = useState(true);
-    const [financialDataError, setFinancialDataError] = useState<string | null>(null);
-    const [monthlyFinancialData, setMonthlyFinancialData] = useState<any[]>([]);
-    const [monthlyReservationsData, setMonthlyReservationsData] = useState<any[]>([]);
-    const [monthlyOccupancyData, setMonthlyOccupancyData] = useState<any[]>([]);
-    const [isObjectiveDialogOpen, setIsObjectiveDialogOpen] = useState(false);
-    const [userObjectiveAmount, setUserObjectiveAmount] = useState(0);
-    const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
-    const [totalReservationsCurrentYear, setTotalReservationsCurrentYear] = useState(0);
-    const [totalNightsCurrentYear, setTotalNightsCurrentYear] = useState(0);
-    const [totalGuestsCurrentYear, setTotalGuestsCurrentYear] = useState(0);
-    const [occupancyRateCurrentYear, setOccupancyRateCurrentYear] = useState(0);
-    const [netPricePerNight, setNetPricePerNight] = useState(0);
-    const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
-    const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
-    const [averageRating, setAverageRating] = useState<number | null>(null);
-    const [loadingReviews, setLoadingReviews] = useState(true);
-    const [reviewsError, setReviewsError] = useState<string | null>(null);
-    const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
-    const [dialogChartData, setDialogChartData] = useState<any[]>([]);
-    const [dialogChartType, setDialogChartType] = useState<"line" | "bar">("line");
-    const [dialogChartTitle, setDialogChartTitle] = useState("");
+    const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0, depenses: 0 }));
+    const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
+    const monthlyNights = Array(12).fill(0);
+    
+    const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
 
-    const [dialogChartDataKeys, setDialogChartDataKeys] = useState<{
-        key: string;
-        name: string;
-        color: string;
-    }[]>([]);
+    statementsForYear.forEach(s => {
+      const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
+      const managementFees = s.totals.totalFacture || 0;
+      const moneyIn = s.totals.totalMontantVerse || 0;
+      const netFromStatement = moneyIn - managementFees;
 
-    const [dialogChartYAxisUnit, setDialogChartYAxisUnit] = useState<string | undefined>(undefined);
-    const [isForecastDialogOpen, setIsForecastDialogOpen] = useState(false);
-    const [forecastAmount, setForecastAmount] = useState(0);
-    const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
-    const [todoTasks, setTodoTasks] = useState<TodoTask[]>([]);
-    const [loadingTasks, setLoadingTasks] = useState(true);
-    const [tasksError, setTasksError] = useState<string | null>(null);
+      totalCA += statementCA;
+      totalRentree += moneyIn;
+      totalFrais += managementFees;
+      totalResultat += netFromStatement;
+      totalNights += s.totals.totalNuits || 0;
+      totalGuests += s.totals.totalVoyageurs || 0;
+      totalReservations += s.totals.totalReservations ?? s.invoice_data.length;
 
-    useEffect(() => {
-        const dismissed = localStorage.getItem(BILAN_2025_STORAGE_KEY);
+      const periodParts = s.period.toLowerCase().split(' ');
+      const monthName = periodParts[0];
+      const monthIndex = monthFrToNum[monthName];
 
-        if (!dismissed) {
-            setShowBilanNotice(true);
+      if (monthIndex !== undefined) {
+        newMonthlyFinancialData[monthIndex].ca += statementCA;
+        newMonthlyFinancialData[monthIndex].montantVerse += moneyIn;
+        newMonthlyFinancialData[monthIndex].frais += managementFees;
+        newMonthlyFinancialData[monthIndex].benef += netFromStatement;
+        
+        newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
+        monthlyNights[monthIndex] += s.totals.totalNuits || 0;
+      }
+
+      s.invoice_data.forEach(resa => {
+        const portail = resa.portail.toLowerCase();
+        if (portail.includes('airbnb')) channelCounts['airbnb']++;
+        else if (portail.includes('booking')) channelCounts['booking']++;
+        else if (portail.includes('abritel')) channelCounts['abritel']++;
+        else if (portail.includes('hello keys')) channelCounts['hello keys']++;
+        else if (portail.includes('proprio')) channelCounts['proprio']++;
+        else channelCounts['autre']++;
+      });
+    });
+
+    // Distribute expenses across months
+    expenses.forEach(exp => {
+      const expenseDate = parseISO(exp.expense_date);
+      if (isValid(expenseDate) && expenseDate.getFullYear() === year) {
+        const monthIndex = expenseDate.getMonth(); // 0-indexed month
+        if (monthIndex >= 0 && monthIndex < 12) {
+          newMonthlyFinancialData[monthIndex].depenses += exp.amount;
         }
-    }, []);
+      }
+    });
 
-    const handleDismissBilanNotice = () => {
-        setShowBilanNotice(false);
-        localStorage.setItem(BILAN_2025_STORAGE_KEY, "1");
-    };
+    // Calculate final net benefit for each month by subtracting monthly expenses
+    newMonthlyFinancialData.forEach(monthData => {
+      monthData.benef -= monthData.depenses;
+    });
 
-    const handleOpenBilanPopup = () => {
-        window.dispatchEvent(new Event("open-bilan-2025-notice"));
-    };
+    const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
+      const daysInMonth = getDaysInMonth(m);
+      const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
+      const occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
+      return { name: format(m, 'MMM', { locale: fr }), occupation };
+    });
 
-    const openChartDialog = (
-        data: any[],
-        type: "line" | "bar",
-        title: string,
-        dataKeys: {
-            key: string;
-            name: string;
-            color: string;
-        }[],
-        yAxisUnit?: string
-    ) => {
-        setDialogChartData(data);
-        setDialogChartType(type);
-        setDialogChartTitle(title);
-        setDialogChartDataKeys(dataKeys);
-        setDialogChartYAxisUnit(yAxisUnit);
-        setIsChartDialogOpen(true);
-    };
+    setFinancialData(prev => ({
+      ...prev,
+      caAnnee: totalCA,
+      rentreeArgentAnnee: totalRentree,
+      fraisAnnee: totalFrais,
+      depensesAnnee: totalDepenses,
+      resultatAnnee: totalResultat - totalDepenses,
+    }));
+    setTotalNightsCurrentYear(totalNights);
+    setTotalReservationsCurrentYear(totalReservations);
+    setTotalGuestsCurrentYear(totalGuests);
+    setMonthlyFinancialData(newMonthlyFinancialData);
+    setMonthlyReservationsData(newMonthlyReservationsData);
+    setMonthlyOccupancyData(newMonthlyOccupancyData);
 
-    const processStatements = (
-        statements: SavedInvoice[],
-        year: number,
-        userRooms: UserRoom[],
-        expenses: Expense[]
-    ) => {
-        const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
-        let totalCA = 0, totalRentree = 0, totalFrais = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
-        const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
-        let totalResultat = 0;
+    const newActivityData = DONUT_CATEGORIES.map(cat => ({
+      ...cat,
+      value: channelCounts[cat.name.toLowerCase()] || 0
+    }));
+    setActivityData(newActivityData);
 
-        const channelCounts: {
-            [key: string]: number;
-        } = {};
+    return { totalNights };
+  };
 
-        DONUT_CATEGORIES.forEach(cat => channelCounts[cat.name.toLowerCase()] = 0);
+  const fetchData = useCallback(async () => {
+    setLoadingFinancialData(true);
+    setFinancialDataError(null);
+    setLoadingKrossbookingStats(true);
+    setKrossbookingStatsError(null);
+    setLoadingReviews(true);
+    setReviewsError(null);
+    setLoadingTasks(true);
+    setTasksError(null);
 
-        const monthsOfYear = eachMonthOfInterval({
-            start: startOfMonth(new Date(year, 0, 1)),
-            end: endOfMonth(new Date(year, 11, 1))
-        });
+    try {
+      const userProfile = await getProfile();
+      if (userProfile) {
+        setExpensesModuleEnabled(userProfile.expenses_module_enabled || false);
+      } else {
+        const errorMsg = "Impossible de charger le profil utilisateur.";
+        setFinancialDataError(errorMsg);
+        setKrossbookingStatsError(errorMsg);
+        setReviewsError(errorMsg);
+        setTasksError(errorMsg);
+        setLoadingFinancialData(false);
+        setLoadingKrossbookingStats(false);
+        setLoadingReviews(false);
+        setLoadingTasks(false);
+        return;
+      }
 
-        const newMonthlyFinancialData = monthsOfYear.map(m => ({
-            name: format(m, "MMM", {
-                locale: fr
-            }),
+      let allExpenses: Expense[] = [];
+      if (userProfile?.expenses_module_enabled) {
+        const [singleExpenses, recurringTemplates] = await Promise.all([
+          getExpenses(currentYear),
+          getRecurringExpenses()
+        ]);
+        const recurringInstances = generateRecurringInstances(recurringTemplates, currentYear);
+        allExpenses = [...singleExpenses, ...recurringInstances];
+      }
 
-            ca: 0,
-            montantVerse: 0,
-            frais: 0,
-            benef: 0,
-            depenses: 0
+      const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
+          getMyStatements(),
+          getUserRooms(),
+          getReviews(userProfile.revyoos_holding_ids),
+          getTechnicalReportsByUserId(userProfile.id)
+        ]);
+
+      let allTodoTasks: TodoTask[] = [];
+
+      // Ajouter les rapports techniques en attente
+      const pendingTechnicalReports: TodoTask[] = technicalReports
+        .filter(report => report.status === 'pending_owner_action' && !report.is_archived)
+        .map(report => ({
+          id: report.id,
+          title: report.title,
+          link: `/reports/${report.id}`,
+          category: 'technical_report',
+          property_name: report.property_name,
         }));
+      allTodoTasks = allTodoTasks.concat(pendingTechnicalReports);
 
-        const newMonthlyReservationsData = monthsOfYear.map(m => ({
-            name: format(m, "MMM", {
-                locale: fr
-            }),
+      // Vérifier si des informations de logement sont incomplètes
+      let hasIncompleteRooms = false;
+      if (fetchedUserRooms.length === 0) {
+        hasIncompleteRooms = true; // Si aucun logement n'est enregistré, la configuration est requise
+      } else {
+        for (const room of fetchedUserRooms) {
+          // Définir ce qui rend un logement incomplet (champs clés manquants)
+          if (
+            !room.property_type || room.property_type.trim() === '' ||
+            !room.keybox_code || room.keybox_code.trim() === '' ||
+            !room.wifi_code || room.wifi_code.trim() === '' ||
+            !room.arrival_instructions || room.arrival_instructions.trim() === '' ||
+            !room.house_rules || room.house_rules.trim() === ''
+          ) {
+            hasIncompleteRooms = true;
+            break; // Au moins un logement est incomplet, pas besoin de vérifier les autres
+          }
+        }
+      }
 
-            reservations: 0
-        }));
-
-        const monthlyNights = Array(12).fill(0);
-
-        const monthFrToNum: {
-            [key: string]: number;
-        } = {
-            "janvier": 0,
-            "février": 1,
-            "mars": 2,
-            "avril": 3,
-            "juin": 5,
-            "juillet": 6,
-            "août": 7,
-            "septembre": 8,
-            "octobre": 9,
-            "novembre": 10,
-            "décembre": 11
-        };
-
-        statementsForYear.forEach(s => {
-            const statementCA = s.totals.totalCA ?? s.invoice_data.reduce(
-                (acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0),
-                0
-            );
-
-            const managementFees = s.totals.totalFacture || 0;
-            const moneyIn = s.totals.totalMontantVerse || 0;
-            const netFromStatement = moneyIn - managementFees;
-            totalCA += statementCA;
-            totalRentree += moneyIn;
-            totalFrais += managementFees;
-            totalResultat += netFromStatement;
-            totalNights += s.totals.totalNuits || 0;
-            totalGuests += s.totals.totalVoyageurs || 0;
-            totalReservations += s.totals.totalReservations ?? s.invoice_data.length;
-            const periodParts = s.period.toLowerCase().split(" ");
-            const monthName = periodParts[0];
-            const monthIndex = monthFrToNum[monthName];
-
-            if (monthIndex !== undefined) {
-                newMonthlyFinancialData[monthIndex].ca += statementCA;
-                newMonthlyFinancialData[monthIndex].montantVerse += moneyIn;
-                newMonthlyFinancialData[monthIndex].frais += managementFees;
-                newMonthlyFinancialData[monthIndex].benef += netFromStatement;
-                newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
-                monthlyNights[monthIndex] += s.totals.totalNuits || 0;
-            }
-
-            s.invoice_data.forEach(resa => {
-                const portail = resa.portail.toLowerCase();
-
-                if (portail.includes("airbnb"))
-                    channelCounts["airbnb"]++;
-                else if (portail.includes("booking"))
-                    channelCounts["booking"]++;
-                else if (portail.includes("abritel"))
-                    channelCounts["abritel"]++;
-                else if (portail.includes("hello keys"))
-                    channelCounts["hello keys"]++;
-                else if (portail.includes("proprio"))
-                    channelCounts["proprio"]++;
-                else
-                    channelCounts["autre"]++;
-            });
+      if (hasIncompleteRooms) {
+        allTodoTasks.push({
+          id: 'room-info-incomplete',
+          title: 'Complétez les informations de vos logements',
+          description: 'Certains de vos logements ont des informations manquantes. Veuillez les renseigner pour une gestion optimale.',
+          link: '/my-rooms',
+          category: 'room_setup',
         });
+      }
 
-        expenses.forEach(exp => {
-            const expenseDate = parseISO(exp.expense_date);
+      // Ajouter Hivernage et Saison 2026 comme actions requises
+      allTodoTasks.push({
+        id: 'hivernage-2026',
+        title: "Envoyer mes consignes d'hivernage",
+        description: "Fermeture du 4 au 11 janvier. Chauffage, eau, réfrigérateur, linge, volets...",
+        link: '/hivernage-2026',
+        category: 'hivernage',
+      });
+      allTodoTasks.push({
+        id: 'season-2026-config',
+        title: "Configurer mes prix Saison 2026",
+        description: "Saisissez vos prix par périodes et envoyez votre demande (une par logement et par année).",
+        link: '/season-2026',
+        category: 'season_pricing',
+      });
 
-            if (isValid(expenseDate) && expenseDate.getFullYear() === year) {
-                const monthIndex = expenseDate.getMonth();
+      setTodoTasks(allTodoTasks); // Mettre à jour l'état avec toutes les tâches
 
-                if (monthIndex >= 0 && monthIndex < 12) {
-                    newMonthlyFinancialData[monthIndex].depenses += exp.amount;
-                }
-            }
-        });
+      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
 
-        newMonthlyFinancialData.forEach(monthData => {
-            monthData.benef -= monthData.depenses;
-        });
-
-        const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
-            const daysInMonth = getDaysInMonth(m);
-            const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
-            const occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
-
-            return {
-                name: format(m, "MMM", {
-                    locale: fr
-                }),
-
-                occupation
-            };
-        });
-
+      if (userProfile) {
+        const objectiveAmount = userProfile.objective_amount || 0;
+        setUserObjectiveAmount(objectiveAmount);
         setFinancialData(prev => ({
-            ...prev,
-            caAnnee: totalCA,
-            rentreeArgentAnnee: totalRentree,
-            fraisAnnee: totalFrais,
-            depensesAnnee: totalDepenses,
-            resultatAnnee: totalResultat - totalDepenses
+          ...prev,
+          currentAchievementPercentage: (objectiveAmount === 0) ? 0 : (prev.resultatAnnee / objectiveAmount) * 100,
         }));
+      } else {
+        setFinancialDataError("Impossible de charger le profil utilisateur.");
+      }
 
-        setTotalNightsCurrentYear(totalNights);
-        setTotalReservationsCurrentYear(totalReservations);
-        setTotalGuestsCurrentYear(totalGuests);
-        setMonthlyFinancialData(newMonthlyFinancialData);
-        setMonthlyReservationsData(newMonthlyReservationsData);
-        setMonthlyOccupancyData(newMonthlyOccupancyData);
+      // Calculate average rating
+      if (reviews && reviews.length > 0) {
+        const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+        setAverageRating(totalRating / reviews.length);
+      } else {
+        setAverageRating(null);
+      }
 
-        const newActivityData = DONUT_CATEGORIES.map(cat => ({
-            ...cat,
-            value: channelCounts[cat.name.toLowerCase()] || 0
-        }));
+      const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
 
-        setActivityData(newActivityData);
-
-        return {
-            totalNights
-        };
-    };
-
-    const fetchData = useCallback(async () => {
-        setLoadingFinancialData(true);
-        setFinancialDataError(null);
-        setLoadingKrossbookingStats(true);
-        setKrossbookingStatsError(null);
-        setLoadingReviews(true);
-        setReviewsError(null);
-        setLoadingTasks(true);
-        setTasksError(null);
-
-        try {
-            const userProfile = await getProfile();
-
-            if (userProfile) {
-                setExpensesModuleEnabled(userProfile.expenses_module_enabled || false);
-            } else {
-                const errorMsg = "Impossible de charger le profil utilisateur.";
-                setFinancialDataError(errorMsg);
-                setKrossbookingStatsError(errorMsg);
-                setReviewsError(errorMsg);
-                setTasksError(errorMsg);
-                setLoadingFinancialData(false);
-                setLoadingKrossbookingStats(false);
-                setLoadingReviews(false);
-                setLoadingTasks(false);
-                return;
-            }
-
-            let allExpenses: Expense[] = [];
-
-            if (userProfile?.expenses_module_enabled) {
-                const [singleExpenses, recurringTemplates] = await Promise.all([getExpenses(currentYear), getRecurringExpenses()]);
-                const recurringInstances = generateRecurringInstances(recurringTemplates, currentYear);
-                allExpenses = [...singleExpenses, ...recurringInstances];
-            }
-
-            const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
-                getMyStatements(),
-                getUserRooms(),
-                getReviews(userProfile.revyoos_holding_ids),
-                getTechnicalReportsByUserId(userProfile.id)
-            ]);
-
-            let allTodoTasks: TodoTask[] = [];
-
-            const pendingTechnicalReports: TodoTask[] = technicalReports.filter(report => report.status === "pending_owner_action" && !report.is_archived).map(report => ({
-                id: report.id,
-                title: report.title,
-                link: `/reports/${report.id}`,
-                category: "technical_report",
-                property_name: report.property_name
-            }));
-
-            allTodoTasks = allTodoTasks.concat(pendingTechnicalReports);
-            let hasIncompleteRooms = false;
-
-            if (fetchedUserRooms.length === 0) {
-                hasIncompleteRooms = true;
-            } else {
-                for (const room of fetchedUserRooms) {
-                    if (!room.property_type || room.property_type.trim() === "" || !room.keybox_code || room.keybox_code.trim() === "" || !room.wifi_code || room.wifi_code.trim() === "" || !room.arrival_instructions || room.arrival_instructions.trim() === "" || !room.house_rules || room.house_rules.trim() === "") {
-                        hasIncompleteRooms = true;
-                        break;
-                    }
-                }
-            }
-
-            if (hasIncompleteRooms) {
-                allTodoTasks.push({
-                    id: "room-info-incomplete",
-                    title: "Complétez les informations de vos logements",
-                    description: "Certains de vos logements ont des informations manquantes. Veuillez les renseigner pour une gestion optimale.",
-                    link: "/my-rooms",
-                    category: "room_setup"
-                });
-            }
-
-            allTodoTasks.push({
-                id: "hivernage-2026",
-                title: "Envoyer mes consignes d'hivernage",
-                description: "Fermeture du 4 au 11 janvier. Chauffage, eau, réfrigérateur, linge, volets...",
-                link: "/hivernage-2026",
-                category: "hivernage"
-            });
-
-            allTodoTasks.push({
-                id: "season-2026-config",
-                title: "Configurer mes prix Saison 2026",
-                description: "Saisissez vos prix par périodes et envoyez votre demande (une par logement et par année).",
-                link: "/season-2026",
-                category: "season_pricing"
-            });
-
-            setTodoTasks(allTodoTasks);
-
-            const {
-                totalNights
-            } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
-
-            if (userProfile) {
-                const objectiveAmount = userProfile.objective_amount || 0;
-                setUserObjectiveAmount(objectiveAmount);
-
-                setFinancialData(prev => ({
-                    ...prev,
-                    currentAchievementPercentage: (objectiveAmount === 0) ? 0 : (prev.resultatAnnee / objectiveAmount) * 100
-                }));
-            } else {
-                setFinancialDataError("Impossible de charger le profil utilisateur.");
-            }
-
-            if (reviews && reviews.length > 0) {
-                const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
-                setAverageRating(totalRating / reviews.length);
-            } else {
-                setAverageRating(null);
-            }
-
-            const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            let nextArrivalCandidate: KrossbookingReservation | null = null;
-
-            allReservations.forEach(res => {
-                const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-
-                if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
-                    nextArrivalCandidate = res;
-                }
-            });
-
-            setNextArrival(nextArrivalCandidate);
-            const totalDaysInCurrentYear = getDaysInYear(new Date());
-            const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInCurrentYear;
-            const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNights / totalAvailableNightsInYear) * 100 : 0;
-            setOccupancyRateCurrentYear(calculatedOccupancyRate);
-
-            setFinancialData(prev => {
-                const calculatedNetPricePerNight = totalNights > 0 ? (prev.resultatAnnee / totalNights) : 0;
-                setNetPricePerNight(calculatedNetPricePerNight);
-                return prev;
-            });
-        } catch (err: any) {
-            const errorMsg = `Erreur lors du chargement des données : ${err.message}`;
-            setFinancialDataError(errorMsg);
-            setKrossbookingStatsError(errorMsg);
-            setReviewsError(errorMsg);
-            setTasksError(errorMsg);
-            console.error("Error fetching dashboard data:", err);
-        } finally {
-            setLoadingFinancialData(false);
-            setLoadingKrossbookingStats(false);
-            setLoadingReviews(false);
-            setLoadingTasks(false);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let nextArrivalCandidate: KrossbookingReservation | null = null;
+      allReservations.forEach(res => {
+        const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+        if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
+          nextArrivalCandidate = res;
         }
-    }, [currentYear]);
+      });
+      setNextArrival(nextArrivalCandidate);
 
-    useEffect(() => {
-        if (!profile?.is_banned) {
-            fetchData();
-        }
-    }, [fetchData, profile]);
+      const totalDaysInCurrentYear = getDaysInYear(new Date());
+      const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInCurrentYear;
+      const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNights / totalAvailableNightsInYear) * 100 : 0;
+      setOccupancyRateCurrentYear(calculatedOccupancyRate);
 
-    const handleShowForecast = () => {
-        const today = new Date();
+      setFinancialData(prev => {
+        const calculatedNetPricePerNight = totalNights > 0 ? (prev.resultatAnnee / totalNights) : 0;
+        setNetPricePerNight(calculatedNetPricePerNight);
+        return prev;
+      });
 
-        const dayOfYear = Math.floor(
-            (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        const totalDaysInYear = getDaysInYear(today);
-
-        if (dayOfYear === 0) {
-            toast.error("Impossible de calculer la prévision au début de l'année.");
-            return;
-        }
-
-        const avgDailyRevenue = financialData.resultatAnnee / dayOfYear;
-        const forecast = avgDailyRevenue * totalDaysInYear;
-        setForecastAmount(forecast);
-        setIsForecastDialogOpen(true);
-    };
-
-    if (profile?.is_banned) {
-        return (
-            <MainLayout>
-                <BannedUserMessage />
-            </MainLayout>
-        );
+    } catch (err: any) {
+      const errorMsg = `Erreur lors du chargement des données : ${err.message}`;
+      setFinancialDataError(errorMsg);
+      setKrossbookingStatsError(errorMsg);
+      setReviewsError(errorMsg);
+      setTasksError(errorMsg);
+      console.error("Error fetching dashboard data:", err);
+    } finally {
+      setLoadingFinancialData(false);
+      setLoadingKrossbookingStats(false);
+      setLoadingReviews(false);
+      setLoadingTasks(false);
     }
+  }, [currentYear]);
 
+  useEffect(() => {
+    if (!profile?.is_banned) {
+      fetchData();
+    }
+  }, [fetchData, profile]);
+
+  // Removed the useEffect that starts the dashboard tour automatically
+
+  const handleShowForecast = () => {
+    const today = new Date();
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+    const totalDaysInYear = getDaysInYear(today);
+    if (dayOfYear === 0) {
+      toast.error("Impossible de calculer la prévision au début de l'année.");
+      return;
+    }
+    const avgDailyRevenue = financialData.resultatAnnee / dayOfYear;
+    const forecast = avgDailyRevenue * totalDaysInYear;
+    setForecastAmount(forecast);
+    setIsForecastDialogOpen(true);
+  };
+
+  // REMOVED: notificationItems (les actions sont désormais dans 'Mes actions requises')
+
+  if (profile?.is_banned) {
     return (
-        <MainLayout>
-            <div
-                className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words">
-                <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), "dd MMMM yyyy", {
-                        locale: fr
-                    })}</p>
-                {}
-                {showBilanNotice && (<Alert
-                    className="mb-6 w-full overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/20 shadow-sm p-0">
-                    <div
-                        className="p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        <div className="flex items-start gap-3">
-                            <div
-                                className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-800/40">
-                                <FileText className="h-5 w-5" />
-                            </div>
-                            <div className="min-w-0">
-                                <AlertTitle className="text-base font-semibold">BILAN 2025</AlertTitle>
-                                <AlertDescription className="mt-1">
-                                    <div
-                                        className="flex flex-wrap items-center gap-2 text-sm text-amber-700 dark:text-amber-200">
-                                        <CalendarDays className="h-4 w-4" />
-                                        <span className="break-words">Disponible du 4 janvier au 1er mars</span>
-                                        <Badge
-                                            variant="secondary"
-                                            className="bg-amber-100 text-amber-800 dark:bg-amber-800/40 dark:text-amber-100">Période limitée</Badge>
-                                    </div>
-                                    <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">Retrouvez vos relevés dans la section Finances.
-                                                            </p>
-                                </AlertDescription>
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                            <Link to="/finances">
-                                <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">Voir mes relevés</Button>
-                            </Link>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleOpenBilanPopup}
-                                className="border-amber-300 text-amber-900 hover:bg-amber-50 dark:text-amber-100">Plus d'infos
-                                                </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleDismissBilanNotice}
-                                className="text-amber-900 dark:text-amber-100">Masquer
-                                                </Button>
-                        </div>
-                    </div>
-                </Alert>)}
-                {}
-                <Card className="mb-6 shadow-md">
-                    <CardHeader className="pt-6 bg-[#f6f8fa]">
-                        <div className="w-full flex justify-center">
-                            <div
-                                className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
-                                <div
-                                    className="relative rounded-2xl bg-white/80 dark:bg-slate-900/40 backdrop-blur px-6 py-5 shadow-sm">
-                                    {}
-                                    <div
-                                        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-                                        style={{
-                                            backgroundImage: "repeating-linear-gradient(135deg, rgba(79,70,229,0.12) 0, rgba(79,70,229,0.12) 2px, transparent 2px, transparent 14px)"
-                                        }} />
-                                    <div
-                                        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_60%)]" />
-                                    <div
-                                        className="pointer-events-none absolute -bottom-[6px] left-6 right-6 h-[8px] rounded-full bg-gradient-to-r from-sky-400/30 via-indigo-500/20 to-amber-400/30 blur-md" />
-                                    {}
-                                    <div className="relative flex flex-col items-center justify-center">
-                                        <div
-                                            className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
-                                            <Sparkles className="h-5 w-5 text-indigo-600" />
-                                            <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
-                                            <Sparkles className="h-5 w-5 text-amber-500" />
-                                        </div>
-                                        <p className="mb-3 text-xs md:text-sm text-slate-600 dark:text-slate-300">Merci pour 2025 — en route pour une année 2026 lumineuse ✨
-                                                                </p>
-                                        {}
-                                        <Countdown target={new Date(2026, 0, 1, 0, 0, 0)} className="mt-1" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <NewYear2026Cinematic />
-                    </CardContent>
-                </Card>
-                {}
-                <div className="mt-6">
-                    <Card id="tour-todo-list" className="shadow-md">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold flex items-center">
-                                <ListChecks className="mr-2 h-5 w-5" />Mes actions requises
-                                              </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {loadingTasks ? (<div className="space-y-3">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
-                            </div>) : tasksError ? (<Alert variant="destructive">
-                                <Terminal className="h-4 w-4" />
-                                <AlertTitle>Erreur de chargement</AlertTitle>
-                                <AlertDescription>{tasksError}</AlertDescription>
-                            </Alert>) : todoTasks.length > 0 ? (<ul className="space-y-2">
-                                {todoTasks.map(task => (<li key={task.id}>
-                                    <Link
-                                        to={task.link}
-                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full">
-                                        <div>
-                                            <p className="font-medium text-sm">{task.title}</p>
-                                            {task.property_name && (<p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>)}
-                                            {task.description && !task.property_name && (<p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>)}
-                                        </div>
-                                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                                    </Link>
-                                </li>))}
-                            </ul>) : (<div className="text-center text-gray-500 dark:text-gray-400 py-4">
-                                <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
-                                <p className="font-semibold">Vous êtes à jour !</p>
-                                <p className="text-sm">Aucune action n'est requise de votre part.</p>
-                            </div>)}
-                        </CardContent>
-                    </Card>
-                </div>
-                {}
-                <div
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
-                    {}
-                    <Card id="tour-financial-summary" className="shadow-md">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Bilan Financier</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {loadingFinancialData ? (<div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Skeleton className="h-16 w-full" />
-                                    <Skeleton className="h-16 w-full" />
-                                    <Skeleton className="h-16 w-full" />
-                                    <Skeleton className="h-16 w-full" />
-                                </div>
-                                <Skeleton className="h-4 w-3/4" />
-                                <Skeleton className="h-2 w-full" />
-                                <Skeleton className="h-4 w-1/2" />
-                                <Skeleton className="h-4 w-1/3" />
-                            </div>) : financialDataError ? (<Alert variant="destructive">
-                                <Terminal className="h-4 w-4" />
-                                <AlertTitle>Erreur de chargement</AlertTitle>
-                                <AlertDescription>{financialDataError}</AlertDescription>
-                            </Alert>) : (<>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex flex-col items-start">
-                                        <p className="text-xl md:text-2xl font-bold text-blue-600">{financialData.caAnnee.toFixed(2)}€</p>
-                                        <p className="text-sm text-gray-500">CA sur l'année</p>
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <p className="text-xl md:text-2xl font-bold text-orange-600">{financialData.rentreeArgentAnnee.toFixed(2)}€</p>
-                                        <p className="text-sm text-gray-500">Rentré d'argent sur l'année</p>
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.fraisAnnee.toFixed(2)}€</p>
-                                        <p className="text-sm text-gray-500">Frais de gestion</p>
-                                    </div>
-                                    {expensesModuleEnabled && (<div className="flex flex-col items-start">
-                                        <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.depensesAnnee.toFixed(2)}€</p>
-                                        <p className="text-sm text-gray-500">Autres dépenses</p>
-                                    </div>)}
-                                </div>
-                                <div className="border-t pt-4">
-                                    <p className="text-sm text-gray-500">Résultat net sur l'année</p>
-                                    <p className="text-2xl font-bold text-green-600">{financialData.resultatAnnee.toFixed(2)}€</p>
-                                </div>
-                                <div className="flex space-x-4 items-center">
-                                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -></Button>
-                                    <Button variant="outline" onClick={handleShowForecast}>Prévision</Button>
-                                </div>
-                                <div id="tour-objective" className="space-y-2 mt-2 relative">
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
-                                    <FieryProgressBar
-                                        value={financialData.currentAchievementPercentage}
-                                        className="h-2"
-                                        indicatorClassName={financialData.currentAchievementPercentage >= 80 ? "progress-flame" : ""} />
-                                    <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
-                                    <Button
-                                        variant="link"
-                                        className="p-0 h-auto text-blue-600 dark:text-blue-400"
-                                        onClick={() => setIsObjectiveDialogOpen(true)}>Modifier mon objectif ->
-                                                            </Button>
-                                </div>
-                            </>)}
-                        </CardContent>
-                    </Card>
-                    {}
-                    <Card id="tour-activity-stats" className="shadow-md">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {loadingKrossbookingStats || loadingFinancialData || loadingReviews ? (<div className="space-y-4">
-                                <Skeleton className="h-8 w-1/2" />
-                                <Skeleton className="h-4 w-3/4" />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                </div>
-                                <Skeleton className="h-4 w-1/3" />
-                            </div>) : krossbookingStatsError || financialDataError || reviewsError ? (<Alert variant="destructive">
-                                <Terminal className="h-4 w-4" />
-                                <AlertTitle>Erreur de chargement</AlertTitle>
-                                <AlertDescription>{krossbookingStatsError || financialDataError || reviewsError}</AlertDescription>
-                            </Alert>) : (<>
-                                <div>
-                                    {nextArrival ? (<p className="text-xl font-bold">
-                                        {format(parseISO(nextArrival.check_in_date), "dd MMMM", {
-                                            locale: fr
-                                        })}
-                                    </p>) : (<p className="text-xl font-bold">Aucune</p>)}
-                                    <p className="text-sm text-gray-500">Prochaine arrivée
-                                                              {nextArrival && ` (${nextArrival.property_name})`}
-                                    </p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-xl font-bold">{totalReservationsCurrentYear}</p>
-                                        <p className="text-sm text-gray-500">Réservations sur l'année</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xl font-bold">{totalNightsCurrentYear}</p>
-                                        <p className="text-sm text-gray-500">Nuits sur l'année</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xl font-bold">{totalGuestsCurrentYear}</p>
-                                        <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xl font-bold">{occupancyRateCurrentYear.toFixed(2)}%</p>
-                                        <p className="text-sm text-gray-500">Occupation sur l'année</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xl font-bold">{netPricePerNight.toFixed(2)}€</p>
-                                        <p className="text-sm text-gray-500">Prix net / nuit</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xl font-bold">
-                                            {averageRating !== null ? `${averageRating.toFixed(1)}/5` : "N/A"}
-                                        </p>
-                                        <p className="text-sm text-gray-500">Votre note</p>
-                                    </div>
-                                </div>
-                                <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes avis -></Button>
-                            </>)}
-                        </CardContent>
-                    </Card>
-                    {}
-                    <Card id="tour-activity-chart" className="shadow-md">
-                        <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col p-4 h-[320px] w-full max-w-full">
-                            {loadingFinancialData ? (<div
-                                className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
-                                <Skeleton className="w-full md:w-3/5 h-[280px]" />
-                                <div
-                                    className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 w-full max-w-full flex flex-col items-start break-words">
-                                    {Array.from({
-                                        length: 5
-                                    }).map((_, i) => (<Skeleton key={i} className="h-4 w-full" />))}
-                                </div>
-                            </div>) : financialDataError ? (<Alert variant="destructive">
-                                <Terminal className="h-4 w-4" />
-                                <AlertTitle>Erreur de chargement</AlertTitle>
-                                <AlertDescription>{financialDataError}</AlertDescription>
-                            </Alert>) : (<>
-                                <div
-                                    className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full h-full">
-                                    <div className="w-full md:w-3/5 h-full">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={activityData}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={50}
-                                                    outerRadius={100}
-                                                    fill="#8884d8"
-                                                    paddingAngle={5}
-                                                    dataKey="value"
-                                                    isAnimationActive={true}
-                                                    animationDuration={1500}
-                                                    animationEasing="ease-in-out">
-                                                    {activityData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
-                                                </Pie>
-                                                <Tooltip />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div
-                                        className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 w-full max-w-full flex flex-col items-start break-words">
-                                        {activityData.map(item => (<div key={item.name} className="flex items-center">
-                                            <span
-                                                className="w-3 h-3 rounded-full mr-2"
-                                                style={{
-                                                    backgroundColor: item.color
-                                                }}></span>
-                                            {item.name}
-                                        </div>))}
-                                    </div>
-                                </div>
-                                <Button
-                                    variant="link"
-                                    className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -></Button>
-                            </>)}
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
-                    {}
-                    <Card id="tour-monthly-financials" className="shadow-md">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openChartDialog(monthlyFinancialData, "line", "Statistiques Financières Mensuelles", [{
-                                    key: "ca",
-                                    name: "CA",
-                                    color: "hsl(var(--primary))"
-                                }, {
-                                    key: "montantVerse",
-                                    name: "Montant Versé",
-                                    color: "#FACC15"
-                                }, {
-                                    key: "frais",
-                                    name: "Frais",
-                                    color: "hsl(var(--destructive))"
-                                }, {
-                                    key: "benef",
-                                    name: "Bénéfice",
-                                    color: "#22c55e"
-                                }, ...(expensesModuleEnabled ? [{
-                                    key: "depenses",
-                                    name: "Autres Dépenses",
-                                    color: "#9333EA"
-                                }] : [])], "€")}>Agrandir
-                                              </Button>
-                        </CardHeader>
-                        <CardContent className="h-72">
-                            {loadingFinancialData ? (<Skeleton className="h-full w-full" />) : (<ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart
-                                    data={monthlyFinancialData}
-                                    margin={{
-                                        top: 5,
-                                        right: 10,
-                                        left: 0,
-                                        bottom: 5
-                                    }}>
-                                    <defs>
-                                        <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                                    <XAxis
-                                        dataKey="name"
-                                        className="text-xs text-gray-600 dark:text-gray-400"
-                                        tickLine={false}
-                                        axisLine={false} />
-                                    <YAxis
-                                        className="text-xs text-gray-600 dark:text-gray-400"
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={value => `€${value}`} />
-                                    <Tooltip
-                                        content={<CustomChartTooltip formatter={value => `${value.toFixed(2)}€`} />} />
-                                    <Legend
-                                        wrapperStyle={{
-                                            fontSize: "12px"
-                                        }} />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="ca"
-                                        stroke="hsl(var(--primary))"
-                                        name="CA"
-                                        strokeWidth={2}
-                                        dot={false}
-                                        animationDuration={1500}
-                                        animationEasing="ease-in-out" />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="montantVerse"
-                                        stroke="#FACC15"
-                                        name="Montant Versé"
-                                        strokeWidth={2}
-                                        dot={false}
-                                        animationDuration={1500}
-                                        animationEasing="ease-in-out" />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="frais"
-                                        stroke="hsl(var(--destructive))"
-                                        name="Frais"
-                                        strokeWidth={2}
-                                        dot={false}
-                                        animationDuration={1500}
-                                        animationEasing="ease-in-out" />
-                                    {expensesModuleEnabled && (<Line
-                                        type="monotone"
-                                        dataKey="depenses"
-                                        stroke="#9333EA"
-                                        name="Autres Dépenses"
-                                        strokeWidth={2}
-                                        dot={false}
-                                        animationDuration={1500}
-                                        animationEasing="ease-in-out" />)}
-                                    <Area
-                                        type="monotone"
-                                        dataKey="benef"
-                                        stroke="#22c55e"
-                                        fillOpacity={1}
-                                        fill="url(#colorBenef)"
-                                        name="Bénéfice"
-                                        strokeWidth={3}
-                                        animationDuration={1500}
-                                        animationEasing="ease-in-out" />
-                                </ComposedChart>
-                            </ResponsiveContainer>)}
-                        </CardContent>
-                    </Card>
-                    {}
-                    <Card className="shadow-md">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="text-lg font-semibold">Réservations / mois</CardTitle>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openChartDialog(monthlyReservationsData, "bar", "Réservations par mois", [{
-                                    key: "reservations",
-                                    name: "Réservations",
-                                    color: "#8b5cf6"
-                                }])}>Agrandir
-                                              </Button>
-                        </CardHeader>
-                        <CardContent className="h-72">
-                            {loadingFinancialData ? (<Skeleton className="h-full w-full" />) : (<ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                    data={monthlyReservationsData}
-                                    margin={{
-                                        top: 5,
-                                        right: 10,
-                                        left: 0,
-                                        bottom: 5
-                                    }}>
-                                    <defs>
-                                        <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                                    <YAxis
-                                        allowDecimals={false}
-                                        className="text-xs"
-                                        tickLine={false}
-                                        axisLine={false} />
-                                    <Tooltip
-                                        content={<CustomChartTooltip />}
-                                        cursor={{
-                                            fill: "hsl(var(--muted))"
-                                        }} />
-                                    <Legend
-                                        wrapperStyle={{
-                                            fontSize: "12px"
-                                        }} />
-                                    <Bar
-                                        dataKey="reservations"
-                                        fill="url(#colorReservations)"
-                                        name="Réservations"
-                                        radius={[4, 4, 0, 0]}
-                                        animationDuration={1500}
-                                        animationEasing="ease-in-out" />
-                                </BarChart>
-                            </ResponsiveContainer>)}
-                        </CardContent>
-                    </Card>
-                    {}
-                    <Card className="shadow-md">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="text-lg font-semibold">Taux d'Occupation</CardTitle>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openChartDialog(monthlyOccupancyData, "line", "Taux d'Occupation Mensuel", [{
-                                    key: "occupation",
-                                    name: "Occupation",
-                                    color: "#14b8a6"
-                                }], "%")}>Agrandir
-                                              </Button>
-                        </CardHeader>
-                        <CardContent className="h-72">
-                            {loadingFinancialData ? (<Skeleton className="h-full w-full" />) : (<ResponsiveContainer width="100%" height="100%">
-                                <AreaChart
-                                    data={monthlyOccupancyData}
-                                    margin={{
-                                        top: 5,
-                                        right: 10,
-                                        left: 0,
-                                        bottom: 5
-                                    }}>
-                                    <defs>
-                                        <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                                    <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
-                                    <Tooltip
-                                        content={<CustomChartTooltip formatter={value => `${value.toFixed(2)}%`} />} />
-                                    <Legend
-                                        wrapperStyle={{
-                                            fontSize: "12px"
-                                        }} />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="occupation"
-                                        stroke="#14b8a6"
-                                        fill="url(#colorOccupation)"
-                                        name="Occupation"
-                                        strokeWidth={2}
-                                        animationDuration={1500}
-                                        animationEasing="ease-in-out" />
-                                </AreaChart>
-                            </ResponsiveContainer>)}
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-            <ObjectiveDialog
-                isOpen={isObjectiveDialogOpen}
-                onOpenChange={setIsObjectiveDialogOpen}
-                currentObjectiveAmount={userObjectiveAmount}
-                onObjectiveUpdated={fetchData} />
-            <ChartFullScreenDialog
-                isOpen={isChartDialogOpen}
-                onOpenChange={setIsChartDialogOpen}
-                chartData={dialogChartData}
-                chartType={dialogChartType}
-                title={dialogChartTitle}
-                dataKeys={dialogChartDataKeys}
-                yAxisUnit={dialogChartYAxisUnit} />
-            <ForecastDialog
-                isOpen={isForecastDialogOpen}
-                onOpenChange={setIsForecastDialogOpen}
-                forecastAmount={forecastAmount}
-                year={currentYear} />
-        </MainLayout>
+      <MainLayout>
+        <BannedUserMessage />
+      </MainLayout>
     );
+  }
+
+  return (
+    <MainLayout>
+      <div className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        
+        {/* Notif box BILAN 2025 */}
+        {showBilanNotice && (
+          <Alert className="mb-6 w-full overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/20 shadow-sm p-0">
+            <div className="p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-800/40">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <AlertTitle className="text-base font-semibold">BILAN 2025</AlertTitle>
+                  <AlertDescription className="mt-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-amber-700 dark:text-amber-200">
+                      <CalendarDays className="h-4 w-4" />
+                      <span className="break-words">Disponible du 4 janvier au 1er mars</span>
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-800/40 dark:text-amber-100">Période limitée</Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                      Retrouvez vos relevés dans la section Finances.
+                    </p>
+                  </AlertDescription>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                <Link to="/finances">
+                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">Voir mes relevés</Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenBilanPopup}
+                  className="border-amber-300 text-amber-900 hover:bg-amber-50 dark:text-amber-100"
+                >
+                  Plus d'infos
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDismissBilanNotice}
+                  className="text-amber-900 dark:text-amber-100"
+                >
+                  Masquer
+                </Button>
+              </div>
+            </div>
+          </Alert>
+        )}
+
+        {/* Bloc Cinématique Bonne Année 2026 */}
+        <Card className="mb-6 shadow-md">
+          <CardHeader className="pt-6">
+            <div className="w-full flex justify-center">
+              <div className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
+                <div className="relative rounded-2xl bg-white/80 dark:bg-slate-900/40 backdrop-blur px-6 py-5 shadow-sm">
+                  {/* Décor de fond festif discret dans le bloc blanc */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(135deg, rgba(79,70,229,0.12) 0, rgba(79,70,229,0.12) 2px, transparent 2px, transparent 14px)",
+                    }}
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_60%)]" />
+                  <div className="pointer-events-none absolute -bottom-[6px] left-6 right-6 h-[8px] rounded-full bg-gradient-to-r from-sky-400/30 via-indigo-500/20 to-amber-400/30 blur-md" />
+
+                  {/* Contenu centré */}
+                  <div className="relative flex flex-col items-center justify-center">
+                    <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
+                      <Sparkles className="h-5 w-5 text-indigo-600" />
+                      <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
+                      <Sparkles className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <p className="mb-3 text-xs md:text-sm text-slate-600 dark:text-slate-300">
+                      Merci pour 2025 — en route pour une année 2026 lumineuse ✨
+                    </p>
+                    {/* Compte à rebours vers le 01/01/2026 */}
+                    <Countdown
+                      target={new Date(2026, 0, 1, 0, 0, 0)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <NewYear2026Cinematic />
+          </CardContent>
+        </Card>
+
+        {/* To-Do List Card */}
+        <div className="mt-6">
+          <Card id="tour-todo-list" className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold flex items-center">
+                <ListChecks className="mr-2 h-5 w-5" />
+                Mes actions requises
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingTasks ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : tasksError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{tasksError}</AlertDescription>
+                </Alert>
+              ) : todoTasks.length > 0 ? (
+                <ul className="space-y-2">
+                  {todoTasks.map(task => (
+                    <li key={task.id}>
+                      <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full">
+                        <div>
+                          <p className="font-medium text-sm">{task.title}</p>
+                          {task.property_name && ( // Afficher property_name si c'est un rapport technique
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
+                          )}
+                          {task.description && !task.property_name && ( // Afficher la description pour les autres tâches
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
+                          )}
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                  <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
+                  <p className="font-semibold">Vous êtes à jour !</p>
+                  <p className="text-sm">Aucune action n'est requise de votre part.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* REMOVED: Bloc Nouveautés (public) qui affichait <NewsFeedPublic /> */}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
+          {/* Bilan Financier Card */}
+          <Card id="tour-financial-summary" className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Bilan Financier</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingFinancialData ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-2 w-full" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+              ) : financialDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{financialDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col items-start">
+                      <p className="text-xl md:text-2xl font-bold text-blue-600">{financialData.caAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">CA sur l'année</p>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <p className="text-xl md:text-2xl font-bold text-orange-600">{financialData.rentreeArgentAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Rentré d'argent sur l'année</p>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.fraisAnnee.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Frais de gestion</p>
+                    </div>
+                    {expensesModuleEnabled && (
+                      <div className="flex flex-col items-start">
+                        <p className="text-xl md:text-2xl font-bold text-red-600">{financialData.depensesAnnee.toFixed(2)}€</p>
+                        <p className="text-sm text-gray-500">Autres dépenses</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="border-t pt-4">
+                    <p className="text-sm text-gray-500">Résultat net sur l'année</p>
+                    <p className="text-2xl font-bold text-green-600">{financialData.resultatAnnee.toFixed(2)}€</p>
+                  </div>
+                  <div className="flex space-x-4 items-center">
+                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes statistiques -&gt;</Button>
+                    <Button variant="outline" onClick={handleShowForecast}>Prévision</Button>
+                  </div>
+                  <div id="tour-objective" className="space-y-2 mt-2 relative">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">Mon objectif: <span className="font-bold">{userObjectiveAmount.toFixed(2)}€</span></p>
+                    <FieryProgressBar 
+                      value={financialData.currentAchievementPercentage} 
+                      className="h-2" 
+                      indicatorClassName={financialData.currentAchievementPercentage >= 80 ? 'progress-flame' : ''}
+                    />
+                    <p className="text-xs text-gray-500">Atteint: {financialData.currentAchievementPercentage.toFixed(2)}%</p>
+                    <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" onClick={() => setIsObjectiveDialogOpen(true)}>
+                      Modifier mon objectif -&gt;
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Activité de Location Card */}
+          <Card id="tour-activity-stats" className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingKrossbookingStats || loadingFinancialData || loadingReviews ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-8 w-1/2" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+              ) : krossbookingStatsError || financialDataError || reviewsError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{krossbookingStatsError || financialDataError || reviewsError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div>
+                    {nextArrival ? (
+                      <p className="text-xl font-bold">
+                        {format(parseISO(nextArrival.check_in_date), 'dd MMMM', { locale: fr })}
+                      </p>
+                    ) : (
+                      <p className="text-xl font-bold">Aucune</p>
+                    )}
+                    <p className="text-sm text-gray-500">
+                      Prochaine arrivée
+                      {nextArrival && ` (${nextArrival.property_name})`}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xl font-bold">{totalReservationsCurrentYear}</p>
+                      <p className="text-sm text-gray-500">Réservations sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{totalNightsCurrentYear}</p>
+                      <p className="text-sm text-gray-500">Nuits sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{totalGuestsCurrentYear}</p>
+                      <p className="text-sm text-gray-500">Voyageurs sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{occupancyRateCurrentYear.toFixed(2)}%</p>
+                      <p className="text-sm text-gray-500">Occupation sur l'année</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{netPricePerNight.toFixed(2)}€</p>
+                      <p className="text-sm text-gray-500">Prix net / nuit</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">
+                        {averageRating !== null ? `${averageRating.toFixed(1)}/5` : 'N/A'}
+                      </p>
+                      <p className="text-sm text-gray-500">Votre note</p>
+                    </div>
+                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400">Voir mes avis -&gt;</Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Activité de Location Card (Donut Chart) */}
+          <Card id="tour-activity-chart" className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col p-4 h-[320px] w-full max-w-full">
+              {loadingFinancialData ? (
+                <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full">
+                  <Skeleton className="w-full md:w-3/5 h-[280px]" />
+                  <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 w-full max-w-full flex flex-col items-start break-words">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-4 w-full" />
+                    ))}
+                  </div>
+                </div>
+              ) : financialDataError ? (
+                <Alert variant="destructive">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Erreur de chargement</AlertTitle>
+                  <AlertDescription>{financialDataError}</AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-center md:gap-x-8 w-full h-full">
+                    <div className="w-full md:w-3/5 h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={activityData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={100}
+                            fill="#8884d8"
+                            paddingAngle={5}
+                            dataKey="value"
+                            isAnimationActive={true}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
+                          >
+                            {activityData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="text-sm space-y-2 mt-4 md:mt-0 md:ml-4 md:w-2/5 w-full max-w-full flex flex-col items-start break-words">
+                      {activityData.map((item) => (
+                        <div key={item.name} className="flex items-center">
+                          <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></span>
+                          {item.name}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400 mt-4 md:mt-0 md:self-end">Voir mes réservations -&gt;</Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
+          {/* Statistiques Financières Mensuelles Card */}
+          <Card id="tour-monthly-financials" className="shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                monthlyFinancialData,
+                'line',
+                'Statistiques Financières Mensuelles',
+                [
+                  { key: 'ca', name: 'CA', color: 'hsl(var(--primary))' },
+                  { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
+                  { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
+                  { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
+                  ...(expensesModuleEnabled ? [{ key: 'depenses', name: 'Autres Dépenses', color: '#9333EA' }] : []),
+                ],
+                '€'
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              {loadingFinancialData ? (
+                <Skeleton className="h-full w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                    <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
+                    <YAxis className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
+                    <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    {expensesModuleEnabled && (
+                      <Line type="monotone" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    )}
+                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Réservation / mois Card */}
+          <Card className="shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Réservations / mois</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                monthlyReservationsData,
+                'bar',
+                'Réservations par mois',
+                [{ key: 'reservations', name: 'Réservations', color: '#8b5cf6' }]
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              {loadingFinancialData ? (
+                <Skeleton className="h-full w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
+                    <YAxis allowDecimals={false} className="text-xs" tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Occupation Mensuelle Card */}
+          <Card className="shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Taux d'Occupation</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => openChartDialog(
+                monthlyOccupancyData,
+                'line',
+                'Taux d\'Occupation Mensuel',
+                [{ key: 'occupation', name: 'Occupation', color: '#14b8a6' }],
+                '%'
+              )}>
+                Agrandir
+              </Button>
+            </CardHeader>
+            <CardContent className="h-72">
+              {loadingFinancialData ? (
+                <Skeleton className="h-full w-full" />
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#14b8a6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
+                    <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      <ObjectiveDialog
+        isOpen={isObjectiveDialogOpen}
+        onOpenChange={setIsObjectiveDialogOpen}
+        currentObjectiveAmount={userObjectiveAmount}
+        onObjectiveUpdated={fetchData}
+      />
+      <ChartFullScreenDialog
+        isOpen={isChartDialogOpen}
+        onOpenChange={setIsChartDialogOpen}
+        chartData={dialogChartData}
+        chartType={dialogChartType}
+        title={dialogChartTitle}
+        dataKeys={dialogChartDataKeys}
+        yAxisUnit={dialogChartYAxisUnit}
+      />
+      <ForecastDialog
+        isOpen={isForecastDialogOpen}
+        onOpenChange={setIsForecastDialogOpen}
+        forecastAmount={forecastAmount}
+        year={currentYear}
+      />
+    </MainLayout>
+  );
 };
 
 export default DashboardPage;

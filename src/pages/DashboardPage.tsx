@@ -519,14 +519,29 @@ const DashboardPage = () => {
           <CardHeader className="pt-6">
             <div className="w-full flex justify-center">
               <div className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
-                <div className="relative rounded-2xl bg-white/80 dark:bg-slate-900/40 backdrop-blur px-5 py-4 shadow-sm">
-                  <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
-                    <Sparkles className="h-5 w-5 text-indigo-600" />
-                    <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
-                    <Sparkles className="h-5 w-5 text-amber-500" />
-                  </div>
-                  {/* Compte à rebours vers le 01/01/2026 */}
-                  <div className="flex justify-center">
+                <div className="relative rounded-2xl bg-white/80 dark:bg-slate-900/40 backdrop-blur px-6 py-5 shadow-sm">
+                  {/* Décor de fond festif discret dans le bloc blanc */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                    style={{
+                      backgroundImage:
+                        "repeating-linear-gradient(135deg, rgba(79,70,229,0.12) 0, rgba(79,70,229,0.12) 2px, transparent 2px, transparent 14px)",
+                    }}
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_60%)]" />
+                  <div className="pointer-events-none absolute -bottom-[6px] left-6 right-6 h-[8px] rounded-full bg-gradient-to-r from-sky-400/30 via-indigo-500/20 to-amber-400/30 blur-md" />
+
+                  {/* Contenu centré */}
+                  <div className="relative flex flex-col items-center justify-center">
+                    <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
+                      <Sparkles className="h-5 w-5 text-indigo-600" />
+                      <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
+                      <Sparkles className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <p className="mb-3 text-xs md:text-sm text-slate-600 dark:text-slate-300">
+                      Merci pour 2025 — en route pour une année 2026 lumineuse ✨
+                    </p>
+                    {/* Compte à rebours vers le 01/01/2026 */}
                     <Countdown
                       target={new Date(2026, 0, 1, 0, 0, 0)}
                       className="mt-1"

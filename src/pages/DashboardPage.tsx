@@ -44,6 +44,7 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
+import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -511,6 +512,16 @@ const DashboardPage = () => {
             </div>
           </Alert>
         )}
+
+        {/* Bloc Cinématique Bonne Année 2026 */}
+        <Card className="mb-6 shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Bonne Année 2026</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NewYear2026Cinematic />
+          </CardContent>
+        </Card>
 
         {/* To-Do List Card */}
         <div className="mt-6">

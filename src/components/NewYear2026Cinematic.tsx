@@ -67,18 +67,19 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
   };
 
   const handleToggleMute = () => {
-    setMuted((m) => {
-      const next = !m;
-      if (next === false) {
-        // couper le son
-        if (audioRef.current) audioRef.current.muted = true;
-      } else {
-        // activer le son et forcer lecture (gesture utilisateur)
-        if (audioRef.current) {
-          audioRef.current.muted = false;
+    setMuted((prev) => {
+      const next = !prev;
+      if (audioRef.current) {
+        audioRef.current.muted = next;
+        if (!next) {
+          // Activer son: forcer lecture et déverrouiller Web Audio
           audioRef.current.currentTime = 0;
           audioRef.current.play().catch(() => {});
+          window.dispatchEvent(new Event("ny2026-unlock-audio"));
         }
+      } else {
+        // Pas d'élément audio: déverrouiller tout de même Web Audio
+        if (!next) window.dispatchEvent(new Event("ny2026-unlock-audio"));
       }
       return next;
     });

@@ -27,14 +27,67 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
   const lastFrameRef = useRef<number>(0);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const resizeObsRef = useRef<ResizeObserver | null>(null);
-  const sfxPoolRef = useRef<HTMLAudioElement[]>([]);
-  const sfxIdxRef = useRef<number>(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const burstCountRef = useRef<number>(0);
   // ADDED: flashes (éclat central) pour quelques frames
   const flashesRef = useRef<{ x: number; y: number; life: number; radius: number; color: string }[]>([]);
 
+  // ADDED: helper pour jouer un petit "explosion" via Web Audio
+  const playExplosion = () => {
+    if (!audioCtxRef.current || audioCtxRef.current.state !== "running") return;
+    const ctx = audioCtxRef.current;
+
+    // bruit court
+    const duration = 0.35;
+    const sampleRate = ctx.sampleRate;
+    const buffer = ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      // bruit blanc avec enveloppe décroissante
+      const t = i / sampleRate;
+      const env = Math.max(0, 1 - t / duration);
+      data[i] = (Math.random() * 2 - 1) * env;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+
+    // filtre bandpass pour un "pop" plus réaliste
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1200 + Math.random() * 800;
+    bp.Q.value = 0.8;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+    src.connect(bp).connect(gain).connect(ctx.destination);
+    src.start();
+  };
+
+  // ADDED: créer le contexte audio et le déverrouiller via événement utilisateur
+  useEffect(() => {
+    const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (AC && !audioCtxRef.current) {
+      audioCtxRef.current = new AC();
+    }
+    const unlock = () => {
+      if (audioCtxRef.current && audioCtxRef.current.state !== "running") {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    };
+    window.addEventListener("ny2026-unlock-audio", unlock);
+    return () => {
+      window.removeEventListener("ny2026-unlock-audio", unlock);
+      if (audioCtxRef.current) {
+        // ne pas fermer pour garder l'audio dispo sur toute la cinématique
+        // audioCtxRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
+
   const spawnBurst = (width: number, height: number) => {
-    // CHANGED: centre du burst + palette saturée
     const cx = random(width * 0.2, width * 0.8);
     const cy = random(height * 0.2, height * 0.5);
     const colors = ["#f59e0b", "#ef4444", "#4f46e5", "#0ea5e9", "#22c55e"];
@@ -43,7 +96,7 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
 
     for (let i = 0; i < count; i++) {
       const angle = random(0, Math.PI * 2);
-      const speed = random(1.0, 2.3); // ouverture du rayon
+      const speed = random(1.0, 2.3);
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       particlesRef.current.push({
@@ -71,34 +124,11 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
     });
 
     burstCountRef.current += 1;
-    // SFX: jouer moins souvent (une fois sur deux)
-    if (!muted && sfxPoolRef.current.length && burstCountRef.current % 2 === 0) {
-      sfxIdxRef.current = (sfxIdxRef.current + 1) % sfxPoolRef.current.length;
-      const clip = sfxPoolRef.current[sfxIdxRef.current];
-      try {
-        clip.currentTime = 0;
-        clip.volume = 0.25;
-        clip.play();
-      } catch {}
+    // ADDED: jouer SFX si non muet
+    if (!muted) {
+      playExplosion();
     }
   };
-
-  useEffect(() => {
-    const urls = [
-      "https://cdn.pixabay.com/download/audio/2022/01/12/audio_0e5efd3a4a.mp3?filename=fireworks-9845.mp3",
-      "https://cdn.pixabay.com/download/audio/2023/04/24/audio_3b8f2a4f2a.mp3?filename=firework-explosion-145308.mp3",
-      "https://cdn.pixabay.com/download/audio/2022/03/08/audio_6a8a9d1a77.mp3?filename=fireworks-ambient-21968.mp3",
-    ];
-    sfxPoolRef.current = urls.map((u) => {
-      const a = new Audio(u);
-      a.preload = "auto";
-      a.volume = 0.25;
-      return a;
-    });
-    return () => {
-      sfxPoolRef.current = [];
-    };
-  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;

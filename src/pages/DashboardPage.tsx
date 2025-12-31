@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays } from "lucide-react"; 
+import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays, Sparkles } from "lucide-react"; 
 import {
   ResponsiveContainer,
   PieChart,
@@ -516,13 +516,25 @@ const DashboardPage = () => {
 
         {/* Bloc Cinématique Bonne Année 2026 */}
         <Card className="mb-6 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Bonne Année 2026</CardTitle>
-            {/* Compte à rebours vers le 01/01/2026 */}
-            <Countdown
-              target={new Date(2026, 0, 1, 0, 0, 0)}
-              className="mt-2"
-            />
+          <CardHeader className="pt-6">
+            <div className="w-full flex justify-center">
+              <div className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
+                <div className="relative rounded-2xl bg-white/80 dark:bg-slate-900/40 backdrop-blur px-5 py-4 shadow-sm">
+                  <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
+                    <Sparkles className="h-5 w-5 text-indigo-600" />
+                    <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
+                    <Sparkles className="h-5 w-5 text-amber-500" />
+                  </div>
+                  {/* Compte à rebours vers le 01/01/2026 */}
+                  <div className="flex justify-center">
+                    <Countdown
+                      target={new Date(2026, 0, 1, 0, 0, 0)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <NewYear2026Cinematic />

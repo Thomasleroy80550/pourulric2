@@ -39,7 +39,6 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
 }) => {
   const [active, setActive] = useState(0);
   const max = 4;
-  const intervalRef = useRef<number | null>(null);
 
   // ADDED: format euro pour le montant
   const formattedAmount = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(2143258.95);
@@ -47,21 +46,16 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
   const next = () => setActive((a) => Math.min(a + 1, max - 1));
   const prev = () => setActive((a) => Math.max(a - 1, 0));
 
-  useEffect(() => {
-    intervalRef.current && clearInterval(intervalRef.current);
-    intervalRef.current = window.setInterval(() => {
-      setActive((a) => {
-        if (a >= max - 1) {
-          // fin auto => onFinish
-          clearInterval(intervalRef.current!);
-          setTimeout(onFinish, 800);
-          return a;
-        }
-        return a + 1;
-      });
-    }, autoPlayMs);
-    return () => { intervalRef.current && clearInterval(intervalRef.current); };
-  }, [autoPlayMs, onFinish, max]);
+  // AJOUT: bouton Continuer (ou Terminer sur la dernière slide)
+  const handleContinue = () => {
+    setActive((a) => {
+      if (a >= max - 1) {
+        onFinish();
+        return a;
+      }
+      return a + 1;
+    });
+  };
 
   return (
     <div className={`relative w-full h-[92vh] sm:h-[94vh] overflow-hidden ${className || ""}`}>
@@ -133,6 +127,17 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
           />
         ))}
       </div>
+
+      {/* AJOUT: Bouton Continuer centré en bas */}
+      <div className="absolute inset-x-0 bottom-16 z-10 flex justify-center">
+        <Button
+          onClick={handleContinue}
+          className="px-6 bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+          {active < max - 1 ? "Continuer" : "Terminer"}
+        </Button>
+      </div>
+
       <div className="absolute left-3 top-1/2 -translate-y-1/2 z-10">
         <Button
           variant="outline"

@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Music } from "lucide-react";
 import FireworksCanvas from "@/components/FireworksCanvas";
 import NeonYearTitle from "@/components/NeonYearTitle";
+import NY2025Stats from "@/components/NY2025Stats";
+import NYQuote from "@/components/NYQuote";
+import NYHighlights from "@/components/NYHighlights";
+import NYCallToAction from "@/components/NYCallToAction";
 import { Users, CalendarDays, BedDouble, Euro } from "lucide-react";
 
 type ImmersiveSlidesProps = {
@@ -61,80 +65,32 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
 
   return (
     <div className={`relative w-full h-[92vh] sm:h-[94vh] overflow-hidden ${className || ""}`}>
-      {/* NEW Slide 0: Merci 2025 */}
+      {/* Slide 0: Merci 2025 (stats) */}
       <SlideContainer
         index={0}
         activeIndex={active}
         bgClass="bg-sky-100"
       >
-        {/* Feux d'artifice légers uniquement si active */}
-        {active === 0 && <FireworksCanvas muted={muted} intensity="low" />}
+        {/* Pas de feux d'artifice ici pour lisibilité */}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
-          <div className="text-slate-700 text-xs md:text-sm uppercase tracking-[0.25em] mb-3">
-            Merci à vous
-          </div>
-          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
-            Hello Keys 2025
-          </h2>
-
-          {/* Stats grid */}
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-3xl">
-            <div className="flex items-center gap-3 rounded-lg bg-white/70 border border-slate-200 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sky-100 text-sky-700">
-                <Euro className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-600">Montant des réservations</p>
-                <p className="text-lg md:text-xl font-bold text-slate-900">{formattedAmount}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-lg bg-white/70 border border-slate-200 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sky-100 text-sky-700">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-600">Clients</p>
-                <p className="text-lg md:text-xl font-bold text-slate-900">13 574</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-lg bg-white/70 border border-slate-200 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sky-100 text-sky-700">
-                <BedDouble className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-600">Nuits</p>
-                <p className="text-lg md:text-xl font-bold text-slate-900">25 217</p>
-                <p className="text-xs text-slate-500">≈ 68 ans et 6 mois</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-lg bg-white/70 border border-slate-200 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-sky-100 text-sky-700">
-                <CalendarDays className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-600">Total réservations</p>
-                <p className="text-lg md:text-xl font-bold text-slate-900">4 656</p>
-              </div>
-            </div>
-          </div>
-
-          <p className="mt-6 text-slate-700 text-sm md:text-base text-center max-w-2xl">
-            Merci à notre communauté d'utilisateurs pour leur confiance. En route pour 2026 !
-          </p>
+          <NY2025Stats
+            amount={2143258.95}
+            clients={13574}
+            nights={25217}
+            reservations={4656}
+            nightsEquivalence="≈ 68 ans et 6 mois"
+          />
         </div>
       </SlideContainer>
 
-      {/* Slide 1: fond bleu clair uniforme */}
+      {/* Slide 1: Vœux 2026 + feux d'artifice (wow léger) */}
       <SlideContainer
         index={1}
         activeIndex={active}
         bgClass="bg-sky-100"
       >
         {active === 1 && <FireworksCanvas muted={muted} intensity="low" />}
-        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6"> 
+        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
             Une célébration immersive aux couleurs de votre univers.
@@ -142,22 +98,21 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </div>
       </SlideContainer>
 
-      {/* Slide 2: fond bleu clair uniforme */}
+      {/* Slide 2: Citation + Highlights (sans feu d'artifice pour varier) */}
       <SlideContainer
         index={2}
         activeIndex={active}
         bgClass="bg-sky-100"
       >
-        {active === 2 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
-          <NeonYearTitle />
-          <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
-            Bonheur et réussite pour une année lumineuse.
-          </p>
+          <NYQuote />
+          <div className="mt-8 w-full">
+            <NYHighlights />
+          </div>
         </div>
       </SlideContainer>
 
-      {/* Slide 3: fond bleu clair uniforme */}
+      {/* Slide 3: CTA + feux d'artifice léger */}
       <SlideContainer
         index={3}
         activeIndex={active}
@@ -165,16 +120,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       >
         {active === 3 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
-          <NeonYearTitle />
-          <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
-            2026, pleinement dans votre style Hello Keys.
-          </p>
-          <Button
-            onClick={onFinish}
-            className="mt-8 bg-yellow-400 hover:bg-yellow-500 text-black"
-          >
-            Entrer dans 2026
-          </Button>
+          <NYCallToAction onFinish={onFinish} />
         </div>
       </SlideContainer>
 

@@ -29,6 +29,8 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
   const [open, setOpen] = useState(false);
   const [muted, setMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // ADDED: état test pour ne pas marquer "vu"
+  const [isTesting, setIsTesting] = useState(false);
 
   // CHANGED: lecture du flag "déjà vu" sur la nouvelle clé
   const hasSeen = useMemo(() => {
@@ -47,8 +49,11 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
 
   const handleFinish = () => {
     setOpen(false);
-    // CHANGED: marquer comme vu pour ne l'ouvrir qu'une seule fois
-    localStorage.setItem(STORAGE_KEY, "1");
+    // CHANGED: ne pas marquer comme vu si c'est un test
+    if (!isTesting) {
+      localStorage.setItem(STORAGE_KEY, "1");
+    }
+    setIsTesting(false);
     toast({
       title: "Bonne année 2026 🎉",
       description: "Plongez dans une année pleine de joie, santé et succès.",
@@ -73,8 +78,26 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
     });
   };
 
+  // ADDED: ouvrir en mode test (sans marquer "vu")
+  const handleOpenTest = () => {
+    setIsTesting(true);
+    setOpen(true);
+  };
+
   return (
     <div className={className}>
+      {/* Bouton de test pour ouvrir la cinématique à la demande */}
+      {!open && (
+        <div className="mb-2 flex items-center gap-2">
+          <Button variant="secondary" onClick={handleOpenTest}>
+            Tester la cinématique <Sparkles className="ml-2 h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Ouvre sans marquer comme "déjà vue".
+          </span>
+        </div>
+      )}
+
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : handleFinish())}>
         <DialogContent
           className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[86vh] sm:h-[88vh] overflow-hidden bg-transparent border-0"

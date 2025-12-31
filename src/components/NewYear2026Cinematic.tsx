@@ -25,6 +25,7 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
   const [open, setOpen] = useState(false);
   const [muted, setMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const explosionRef = useRef<HTMLAudioElement | null>(null);
 
   const shouldTest = useMemo(() => getFlag("testNy2026"), []);
   const hasSeen = useMemo(() => {
@@ -66,19 +67,29 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
     });
   };
 
+  const handleOpenCinematic = () => {
+    setOpen(true);
+    const el = explosionRef.current;
+    if (el) {
+      el.currentTime = 0;
+      el.volume = 0.6;
+      el.play().catch(() => {});
+    }
+    // déverrouiller Web Audio si présent
+    window.dispatchEvent(new Event("ny2026-unlock-audio"));
+  };
+
   const handleToggleMute = () => {
     setMuted((prev) => {
       const next = !prev;
       if (audioRef.current) {
         audioRef.current.muted = next;
         if (!next) {
-          // Activer son: forcer lecture et déverrouiller Web Audio
           audioRef.current.currentTime = 0;
           audioRef.current.play().catch(() => {});
           window.dispatchEvent(new Event("ny2026-unlock-audio"));
         }
       } else {
-        // Pas d'élément audio: déverrouiller tout de même Web Audio
         if (!next) window.dispatchEvent(new Event("ny2026-unlock-audio"));
       }
       return next;
@@ -89,7 +100,7 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
     <div className={className}>
       {!open && (
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => setOpen(true)}>
+          <Button variant="secondary" onClick={handleOpenCinematic}>
             Tester la cinématique <Sparkles className="ml-2 h-4 w-4" />
           </Button>
           <span className="text-xs text-muted-foreground">
@@ -110,13 +121,19 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
               onFinish={handleFinish}
               autoPlayMs={7000}
             />
-            {/* Audio global */}
+            {/* Audio global (musique de fond) */}
             <audio
               ref={audioRef}
               src="https://cdn.pixabay.com/download/audio/2022/03/01/audio_ba5d0e70b0.mp3?filename=new-year-ambient-21859.mp3"
               autoPlay
               loop
               muted={muted}
+            />
+            {/* SFX explosion à l'ouverture */}
+            <audio
+              ref={explosionRef}
+              src="https://cdn.pixabay.com/download/audio/2022/01/12/audio_0e5efd3a4a.mp3?filename=fireworks-9845.mp3"
+              preload="auto"
             />
           </div>
         </DialogContent>

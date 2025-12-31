@@ -1,15 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 const NYCallToAction: React.FC<{ onFinish: () => void; className?: string }> = ({ onFinish, className }) => {
+  const [firing, setFiring] = useState(false);
+
   const handleClick = () => {
+    if (firing) return;
+    setFiring(true);
     // Maxi explosion: informer les canvases actifs
     window.dispatchEvent(new Event("ny2026-max-burst"));
     // Laisser l'animation se jouer puis terminer
     setTimeout(() => {
       onFinish();
+      setFiring(false);
     }, 1200);
   };
 
@@ -25,7 +30,11 @@ const NYCallToAction: React.FC<{ onFinish: () => void; className?: string }> = (
         Merci pour 2025. Cliquez ci-dessous pour entrer dans 2026.
       </p>
       <div className="mt-6 flex items-center justify-center">
-        <Button onClick={handleClick} className="bg-yellow-400 hover:bg-yellow-500 text-black">
+        <Button
+          onClick={handleClick}
+          disabled={firing}
+          className="bg-yellow-400 hover:bg-yellow-500 text-black disabled:opacity-50 disabled:pointer-events-none"
+        >
           Entrer dans 2026
         </Button>
       </div>

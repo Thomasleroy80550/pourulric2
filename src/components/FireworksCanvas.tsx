@@ -32,6 +32,10 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
   // ADDED: flashes (éclat central) pour quelques frames
   const flashesRef = useRef<{ x: number; y: number; life: number; radius: number; color: string }[]>([]);
 
+  // ADD: refs pour cooldown et mode burst
+  const maxBurstCooldownRef = useRef<number>(0);
+  const burstModeRef = useRef<boolean>(false);
+
   // ADDED: helper pour jouer un petit "explosion" via Web Audio
   const playExplosion = () => {
     if (!audioCtxRef.current || audioCtxRef.current.state !== "running") return;
@@ -164,33 +168,47 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
   useEffect(() => {
     // Écouter l'évènement global pour la maxi explosion
     const handleMaxBurst = () => {
+      const now = Date.now();
+      // Cooldown de 1500ms pour éviter multiples explosions
+      if (now - maxBurstCooldownRef.current < 1500) return;
+      maxBurstCooldownRef.current = now;
+
       const canvas = canvasRef.current;
-      const ctx = ctxRef.current;
-      if (!canvas || !ctx) return;
+      if (!canvas) return;
       const w = canvas.width;
       const h = canvas.height;
       const colors = ["#f59e0b", "#ef4444", "#4f46e5", "#0ea5e9", "#22c55e"];
 
-      // 6 bursts répartis sur l'écran
+      // Activer le mode burst (allège le dessin)
+      burstModeRef.current = true;
+      setTimeout(() => { burstModeRef.current = false; }, 800);
+
+      // MAXI EXPLOSION allégée: 4 bursts au lieu de 6, moins de particules
       const centers = [
-        [w * 0.25, h * 0.28],
-        [w * 0.75, h * 0.30],
-        [w * 0.50, h * 0.20],
-        [w * 0.35, h * 0.42],
-        [w * 0.65, h * 0.45],
-        [w * 0.50, h * 0.36],
+        [w * 0.28, h * 0.30],
+        [w * 0.72, h * 0.32],
+        [w * 0.50, h * 0.22],
+        [w * 0.50, h * 0.40],
       ] as const;
 
+      // Nombre de rayons par burst selon intensité
+      const burstCounts: Record<"low"|"medium"|"high", number> = { low: 28, medium: 36, high: 46 };
+      const perBurst = burstCounts[intensity ?? "medium"];
+
       centers.forEach(([cx, cy]) => {
-        spawnBurstAt(cx, cy, 68, colors);
+        spawnBurstAt(cx, cy, perBurst, colors);
       });
 
-      // SFX en rafale si non muet
+      // SFX en rafale si WebAudio dispo
       if (audioCtxRef.current && audioCtxRef.current.state === "running") {
-        // trois pops rapides
         playExplosion();
         setTimeout(() => playExplosion(), 120);
-        setTimeout(() => playExplosion(), 240);
+      }
+
+      // Cap dur pour éviter l'explosion de mémoire
+      const hardCap = 480;
+      if (particlesRef.current.length > hardCap) {
+        particlesRef.current.splice(0, particlesRef.current.length - hardCap);
       }
     };
 
@@ -246,7 +264,8 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
     ctx.lineCap = "round";
     const gravity = 0.03;
     const friction = 0.99;
-    const step = lowPerf ? 2 : 1; // dessiner une particule sur deux si perf basse
+    // CHANGED: si mode burst, on dessine une particule sur deux pour fluidité
+    const step = burstModeRef.current ? 2 : (lowPerf ? 2 : 1);
 
     for (let i = 0; i < particlesRef.current.length; i += step) {
       const p = particlesRef.current[i];
@@ -282,8 +301,8 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
       p.prevY = p.y;
     }
 
-    // limiter total pour fluidité
-    const maxParticles: Record<"low" | "medium" | "high", number> = { low: 200, medium: 280, high: 360 };
+    // limiter total pour fluidité (CHANGED: valeurs plus basses)
+    const maxParticles: Record<"low" | "medium" | "high", number> = { low: 180, medium: 240, high: 320 };
     if (particlesRef.current.length > maxParticles[intensity]) {
       particlesRef.current.splice(0, particlesRef.current.length - maxParticles[intensity]);
     }

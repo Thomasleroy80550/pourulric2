@@ -522,7 +522,6 @@ const DashboardPage = () => {
             <Countdown
               target={new Date(2026, 0, 1, 0, 0, 0)}
               className="mt-2"
-              compact
             />
           </CardHeader>
           <CardContent>

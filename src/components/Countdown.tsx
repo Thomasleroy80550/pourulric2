@@ -11,7 +11,44 @@ type CountdownProps = {
 
 const pad = (n: number) => n.toString().padStart(2, "0");
 
+// ADDED: unités stylisées avec animation
+const UnitBox: React.FC<{ value: string; label: string }> = ({ value, label }) => {
+  return (
+    <div className="flex flex-col items-center">
+      <div className="text-[10px] md:text-xs text-slate-600">{label}</div>
+      <div
+        key={value}
+        className="
+          mt-1 rounded-xl border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-indigo-50
+          px-3 py-1.5 md:px-4 md:py-2 text-slate-900 font-bold text-base md:text-xl
+          shadow-sm [box-shadow:inset_0_0_8px_rgba(255,255,255,0.7)]
+          animate-[flipIn_300ms_ease-out]
+        "
+      >
+        {value}
+      </div>
+    </div>
+  );
+};
+
 const Countdown: React.FC<CountdownProps> = ({ target, className, onComplete, compact = false }) => {
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.innerHTML = `
+      @keyframes flipIn {
+        0% { transform: rotateX(80deg); opacity: 0; }
+        60% { transform: rotateX(-10deg); opacity: 1; }
+        100% { transform: rotateX(0deg); opacity: 1; }
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
   const targetMs = useMemo(() => target.getTime(), [target]);
   const [diff, setDiff] = useState(() => Math.max(0, targetMs - Date.now()));
 
@@ -42,35 +79,31 @@ const Countdown: React.FC<CountdownProps> = ({ target, className, onComplete, co
     );
   }
 
+  // Layout compact amélioré
+  if (compact) {
+    return (
+      <div className={className} aria-label="Compte à rebours vers 2026">
+        <div className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-2">
+          <span className="text-sm md:text-base font-semibold text-slate-900">
+            J-{days}
+          </span>
+          <span className="text-slate-700 font-mono">
+            {pad(hours)}:{pad(minutes)}:{pad(seconds)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Layout plein "sexy"
   return (
     <div className={className} aria-label="Compte à rebours vers 2026">
-      {compact ? (
-        <div className="inline-flex items-center gap-2 rounded-lg bg-white/70 border border-slate-200 px-3 py-1 text-sm">
-          <span className="font-semibold text-slate-900">J-{days}</span>
-          <span className="text-slate-700">{pad(hours)}:{pad(minutes)}:{pad(seconds)}</span>
-        </div>
-      ) : (
-        <div className="inline-flex items-center gap-3 rounded-xl bg-white/70 border border-slate-200 px-3 py-2">
-          <div className="flex items-center gap-3">
-            <div className="text-center">
-              <div className="text-xs text-slate-600">Jours</div>
-              <div className="text-lg font-bold text-slate-900">{days}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-slate-600">Heures</div>
-              <div className="text-lg font-bold text-slate-900">{pad(hours)}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-slate-600">Minutes</div>
-              <div className="text-lg font-bold text-slate-900">{pad(minutes)}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-slate-600">Secondes</div>
-              <div className="text-lg font-bold text-slate-900">{pad(seconds)}</div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="flex items-center gap-3 md:gap-4">
+        <UnitBox value={`${days}`} label="Jours" />
+        <UnitBox value={pad(hours)} label="Heures" />
+        <UnitBox value={pad(minutes)} label="Minutes" />
+        <UnitBox value={pad(seconds)} label="Secondes" />
+      </div>
     </div>
   );
 };

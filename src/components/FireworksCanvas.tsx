@@ -27,20 +27,20 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
   const spawnBurst = (width: number, height: number) => {
     const x = random(width * 0.15, width * 0.85);
     const y = random(height * 0.15, height * 0.45);
-    const colors = ["#FFDD55", "#FF6B6B", "#7C3AED", "#34D399", "#60A5FA"];
+    const colors = ["#f59e0b", "#ef4444", "#4f46e5", "#0ea5e9", "#22c55e"];
     const counts = { low: 28, medium: 45, high: 70 } as const;
     const count = counts[intensity];
     for (let i = 0; i < count; i++) {
       const angle = random(0, Math.PI * 2);
-      const speed = random(1.0, 3.0);
+      const speed = random(1.1, 3.2);
       particlesRef.current.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: random(50, 110),
+        life: random(55, 115),
         color: colors[i % colors.length],
-        size: random(1.2, 2.4),
+        size: random(1.6, 3.6),
       });
     }
     // SFX: jouer un son si non muet
@@ -95,9 +95,9 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
       const w = canvas.width;
       const h = canvas.height;
 
-      // voile très léger pour trails (fond clair)
+      // voile très léger pour éviter l'effet lavé sur fond clair
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(255,255,255,0.05)";
+      ctx.fillStyle = "rgba(255,255,255,0.02)";
       ctx.fillRect(0, 0, w, h);
 
       // bursts périodiques selon intensité
@@ -108,7 +108,7 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
       }
 
       // dessiner particules (glow léger)
-      ctx.globalCompositeOperation = "lighter";
+      ctx.globalCompositeOperation = "screen";
       const gravity = 0.03;
       const friction = 0.99;
       particlesRef.current.forEach((p) => {
@@ -119,16 +119,18 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
         p.life -= 1;
 
         ctx.beginPath();
-        ctx.shadowBlur = 6; // glow plus léger
+        ctx.shadowBlur = 10;
         ctx.shadowColor = p.color;
+        ctx.globalAlpha = 0.95;
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.fill();
         ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
       });
 
-      // limiter le nombre total de particules
-      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 350, medium: 500, high: 650 };
+      // limite totale légèrement ajustée
+      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 280, medium: 420, high: 580 };
       if (particlesRef.current.length > maxParticles[intensity]) {
         particlesRef.current.splice(0, particlesRef.current.length - maxParticles[intensity]);
       }

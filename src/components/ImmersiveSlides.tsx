@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Music } from "lucide-react";
 import FireworksCanvas from "@/components/FireworksCanvas";
 import NeonYearTitle from "@/components/NeonYearTitle";
-import BrandBackdrop from "@/components/BrandBackdrop";
 
 type ImmersiveSlidesProps = {
   muted: boolean;
@@ -58,14 +57,13 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
 
   return (
     <div className={`relative w-full h-[92vh] sm:h-[94vh] overflow-hidden ${className || ""}`}>
-      {/* Slide 1: Gradient clair + décor indigo */}
+      {/* Slide 1: fond bleu clair uniforme */}
       <SlideContainer
         index={0}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-indigo-50 via-indigo-100 to-slate-100"
+        bgClass="bg-sky-100"
       >
-        <BrandBackdrop variant="indigo" />
-        {active === 0 && <FireworksCanvas muted={muted} intensity="low" />}
+        {active === 0 && <FireworksCanvas muted={muted} intensity="medium" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6"> 
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
@@ -74,14 +72,12 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </div>
       </SlideContainer>
 
-      {/* Slide 2: Gradient clair bleu + halo doré */}
+      {/* Slide 2: même fond bleu clair */}
       <SlideContainer
         index={1}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-blue-50 via-indigo-50 to-slate-100"
+        bgClass="bg-sky-100"
       >
-        <BrandBackdrop variant="blue" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.12),transparent_60%)]" />
         {active === 1 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
@@ -91,13 +87,12 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </div>
       </SlideContainer>
 
-      {/* Slide 3: Gradient clair sunset + bouton final */}
+      {/* Slide 3: même fond bleu clair */}
       <SlideContainer
         index={2}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-indigo-50 via-sky-50 to-slate-100"
+        bgClass="bg-sky-100"
       >
-        <BrandBackdrop variant="sunset" />
         {active === 2 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />

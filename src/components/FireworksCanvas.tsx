@@ -40,7 +40,7 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
         vy: Math.sin(angle) * speed,
         life: random(55, 115),
         color: colors[i % colors.length],
-        size: random(1.6, 3.6),
+        size: random(1.8, 3.8),
       });
     }
     // SFX: jouer un son si non muet
@@ -95,9 +95,9 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
       const w = canvas.width;
       const h = canvas.height;
 
-      // voile très léger pour éviter l'effet lavé sur fond clair
+      // voile quasi nul pour garder les couleurs punchy
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(255,255,255,0.02)";
+      ctx.fillStyle = "rgba(255,255,255,0.01)";
       ctx.fillRect(0, 0, w, h);
 
       // bursts périodiques selon intensité
@@ -108,7 +108,7 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
       }
 
       // dessiner particules (glow léger)
-      ctx.globalCompositeOperation = "screen";
+      ctx.globalCompositeOperation = "lighter";
       const gravity = 0.03;
       const friction = 0.99;
       particlesRef.current.forEach((p) => {
@@ -119,18 +119,21 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
         p.life -= 1;
 
         ctx.beginPath();
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 8;
         ctx.shadowColor = p.color;
-        ctx.globalAlpha = 0.95;
+        ctx.globalAlpha = 0.98;
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.fill();
+        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = "rgba(255,255,255,0.6)";
+        ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       });
 
-      // limite totale légèrement ajustée
-      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 280, medium: 420, high: 580 };
+      // limite légèrement abaissée pour fluidité
+      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 260, medium: 400, high: 560 };
       if (particlesRef.current.length > maxParticles[intensity]) {
         particlesRef.current.splice(0, particlesRef.current.length - maxParticles[intensity]);
       }

@@ -72,7 +72,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </div>
       </SlideContainer>
 
-      {/* Slide 2: même fond bleu clair */}
+      {/* Slide 2: fond bleu clair uniforme */}
       <SlideContainer
         index={1}
         activeIndex={active}
@@ -82,12 +82,12 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
-            Un halo doré pour accueillir une année de réussites.
+            Bonheur et réussite pour une année lumineuse.
           </p>
         </div>
       </SlideContainer>
 
-      {/* Slide 3: même fond bleu clair */}
+      {/* Slide 3: fond bleu clair uniforme */}
       <SlideContainer
         index={2}
         activeIndex={active}
@@ -97,7 +97,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
-            Une vibration de couleurs pour 2026, totalement intégrée à votre charte.
+            2026, pleinement dans votre style Hello Keys.
           </p>
           <Button
             onClick={onFinish}

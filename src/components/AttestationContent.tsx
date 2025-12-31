@@ -91,7 +91,7 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
           <h2 className="text-lg font-semibold uppercase tracking-wide mb-3">Attestation d'absence de jouissance personnelle</h2>
           <p className="mb-4">
             Nous attestons que, dans le cadre de la gestion locative saisonnière par Hello Keys, le bien susmentionné
-            <strong> n'est pas occupé par le propriétaire au 1er janvier</strong> de l'année {displayYear}. Cette attestation peut
+            est <strong>non occupé par le propriétaire</strong> durant la période <strong>du 1er janvier au 31 décembre</strong> de l'année {displayYear}. Cette attestation peut
             constituer un justificatif auprès de l'administration fiscale, sous réserve de l'examen de la situation du contribuable.
           </p>
           <p className="italic text-sm">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [muted, setMuted] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const shouldTest = useMemo(() => getFlag("testNy2026"), []);
   const hasSeen = useMemo(() => {
@@ -65,6 +66,24 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
     });
   };
 
+  const handleToggleMute = () => {
+    setMuted((m) => {
+      const next = !m;
+      if (next === false) {
+        // couper le son
+        if (audioRef.current) audioRef.current.muted = true;
+      } else {
+        // activer le son et forcer lecture (gesture utilisateur)
+        if (audioRef.current) {
+          audioRef.current.muted = false;
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(() => {});
+        }
+      }
+      return next;
+    });
+  };
+
   return (
     <div className={className}>
       {!open && (
@@ -80,17 +99,19 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
 
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : handleFinish())}>
         <DialogContent
-          className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[90vh] sm:h-[92vh] overflow-hidden bg-transparent border-none"
+          className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[86vh] sm:h-[88vh] overflow-hidden bg-transparent border-0"
           aria-describedby={undefined}
         >
           <div className="relative w-full h-full">
             <ImmersiveSlides
               muted={muted}
-              onToggleMute={() => setMuted((m) => !m)}
+              onToggleMute={handleToggleMute}
               onFinish={handleFinish}
               autoPlayMs={7000}
             />
+            {/* Audio global */}
             <audio
+              ref={audioRef}
               src="https://cdn.pixabay.com/download/audio/2022/03/01/audio_ba5d0e70b0.mp3?filename=new-year-ambient-21859.mp3"
               autoPlay
               loop

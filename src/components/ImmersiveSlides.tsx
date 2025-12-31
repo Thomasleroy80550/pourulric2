@@ -63,7 +63,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         activeIndex={active}
         bgClass="bg-sky-100"
       >
-        {active === 0 && <FireworksCanvas muted={muted} intensity="medium" />}
+        {active === 0 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6"> 
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">

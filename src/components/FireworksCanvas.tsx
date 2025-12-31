@@ -19,37 +19,40 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
   const rafRef = useRef<number | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const lastBurstRef = useRef<number>(0);
+  const lastFrameRef = useRef<number>(0);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const resizeObsRef = useRef<ResizeObserver | null>(null);
   const sfxPoolRef = useRef<HTMLAudioElement[]>([]);
   const sfxIdxRef = useRef<number>(0);
+  const burstCountRef = useRef<number>(0);
 
   const spawnBurst = (width: number, height: number) => {
     const x = random(width * 0.15, width * 0.85);
     const y = random(height * 0.15, height * 0.45);
     const colors = ["#f59e0b", "#ef4444", "#4f46e5", "#0ea5e9", "#22c55e"];
-    const counts = { low: 28, medium: 45, high: 70 } as const;
+    const counts = { low: 18, medium: 30, high: 50 } as const;
     const count = counts[intensity];
     for (let i = 0; i < count; i++) {
       const angle = random(0, Math.PI * 2);
-      const speed = random(1.1, 3.2);
+      const speed = random(1.0, 2.6);
       particlesRef.current.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: random(55, 115),
+        life: random(45, 95),
         color: colors[i % colors.length],
-        size: random(1.8, 3.8),
+        size: random(2.0, 3.8),
       });
     }
-    // SFX: jouer un son si non muet
-    if (!muted && sfxPoolRef.current.length) {
+    burstCountRef.current += 1;
+    // SFX: jouer moins souvent (une fois sur deux) et sans clonage
+    if (!muted && sfxPoolRef.current.length && burstCountRef.current % 2 === 0) {
       sfxIdxRef.current = (sfxIdxRef.current + 1) % sfxPoolRef.current.length;
       const clip = sfxPoolRef.current[sfxIdxRef.current];
       try {
         clip.currentTime = 0;
-        clip.volume = 0.3;
+        clip.volume = 0.25;
         clip.play();
       } catch {}
     }
@@ -59,15 +62,17 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
     const urls = [
       "https://cdn.pixabay.com/download/audio/2022/01/12/audio_0e5efd3a4a.mp3?filename=fireworks-9845.mp3",
       "https://cdn.pixabay.com/download/audio/2023/04/24/audio_3b8f2a4f2a.mp3?filename=firework-explosion-145308.mp3",
-      "https://cdn.pixabay.com/download/audio/2022/03/08/audio_6a8a9d1a77.mp3?filename=fireworks-ambient-21968.mp3"
+      "https://cdn.pixabay.com/download/audio/2022/03/08/audio_6a8a9d1a77.mp3?filename=fireworks-ambient-21968.mp3",
     ];
     sfxPoolRef.current = urls.map((u) => {
       const a = new Audio(u);
       a.preload = "auto";
-      a.volume = 0.3;
+      a.volume = 0.25;
       return a;
     });
-    return () => { sfxPoolRef.current = []; };
+    return () => {
+      sfxPoolRef.current = [];
+    };
   }, []);
 
   useEffect(() => {
@@ -90,55 +95,53 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
     if (parent) resizeObsRef.current.observe(parent);
 
     const loop = (time: number) => {
-      rafRef.current = requestAnimationFrame(loop);
       const ctx = ctxRef.current!;
       const w = canvas.width;
       const h = canvas.height;
 
-      // voile quasi nul pour garder les couleurs punchy
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(255,255,255,0.01)";
-      ctx.fillRect(0, 0, w, h);
+      // mesurer performance
+      const dt = lastFrameRef.current ? time - lastFrameRef.current : 16;
+      lastFrameRef.current = time;
+      const lowPerf = dt > 22; // ~45fps ou moins
 
-      // bursts périodiques selon intensité
-      const intervals: Record<"low" | "medium" | "high", number> = { low: 1500, medium: 1100, high: 800 };
-      if (time - lastBurstRef.current > intervals[intensity]) {
+      rafRef.current = requestAnimationFrame(loop);
+
+      // nettoyage complet (plus rapide que voile + blend)
+      ctx.globalCompositeOperation = "source-over";
+      ctx.clearRect(0, 0, w, h);
+
+      // bursts périodiques, plus espacés en cas de perf basse
+      const baseIntervals: Record<"low" | "medium" | "high", number> = { low: 1800, medium: 1300, high: 900 };
+      const interval = baseIntervals[intensity] + (lowPerf ? 600 : 0);
+      if (time - lastBurstRef.current > interval) {
         spawnBurst(w, h);
         lastBurstRef.current = time;
       }
 
-      // dessiner particules (glow léger)
-      ctx.globalCompositeOperation = "lighter";
+      // dessiner particules: rectangles rapides, sans shadow ni stroke
       const gravity = 0.03;
       const friction = 0.99;
-      particlesRef.current.forEach((p) => {
+      const step = lowPerf ? 2 : 1; // dessiner une particule sur deux si perf basse
+      for (let i = 0; i < particlesRef.current.length; i += step) {
+        const p = particlesRef.current[i];
         p.vx *= friction;
         p.vy = p.vy * friction + gravity;
         p.x += p.vx;
         p.y += p.vy;
         p.life -= 1;
 
-        ctx.beginPath();
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = p.color;
-        ctx.globalAlpha = 0.98;
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
-        ctx.fill();
-        ctx.lineWidth = 0.6;
-        ctx.strokeStyle = "rgba(255,255,255,0.6)";
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
-      });
+        // rectangle au lieu d'arc: beaucoup plus rapide
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      }
 
-      // limite légèrement abaissée pour fluidité
-      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 260, medium: 400, high: 560 };
+      // limiter total pour fluidité
+      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 180, medium: 260, high: 380 };
       if (particlesRef.current.length > maxParticles[intensity]) {
         particlesRef.current.splice(0, particlesRef.current.length - maxParticles[intensity]);
       }
 
-      // retirer celles qui sont mortes ou hors cadre
+      // filtrer mortes/hors cadre
       particlesRef.current = particlesRef.current.filter(
         (p) => p.life > 0 && p.x > -20 && p.x < w + 20 && p.y > -20 && p.y < h + 40
       );

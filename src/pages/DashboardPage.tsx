@@ -45,6 +45,7 @@ import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
 import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
+import Countdown from "@/components/Countdown";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -517,6 +518,12 @@ const DashboardPage = () => {
         <Card className="mb-6 shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Bonne Année 2026</CardTitle>
+            {/* Compte à rebours vers le 01/01/2026 */}
+            <Countdown
+              target={new Date(2026, 0, 1, 0, 0, 0)}
+              className="mt-2"
+              compact
+            />
           </CardHeader>
           <CardContent>
             <NewYear2026Cinematic />

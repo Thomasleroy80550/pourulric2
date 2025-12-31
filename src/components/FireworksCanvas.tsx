@@ -96,7 +96,8 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
 
       // léger voile pour trails
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      // CHANGED: voile clair au lieu de noir
+      ctx.fillStyle = "rgba(255,255,255,0.06)";
       ctx.fillRect(0, 0, w, h);
 
       // bursts périodiques

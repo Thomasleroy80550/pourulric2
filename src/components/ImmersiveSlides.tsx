@@ -61,13 +61,16 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={0}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-indigo-900 via-indigo-800 to-slate-900"
+        bgClass="bg-gradient-to-b from-indigo-50 via-indigo-100 to-slate-100"
       >
-        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 2px, transparent 2px, transparent 12px)" }} />
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(79,70,229,0.12) 0, rgba(79,70,229,0.12) 2px, transparent 2px, transparent 14px)" }}
+        />
         <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
-          <p className="mt-4 text-white/80 text-xs md:text-sm max-w-2xl text-center">
+          <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
             Une célébration immersive aux couleurs de votre univers.
           </p>
         </div>
@@ -77,14 +80,21 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={1}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-[#0b1b33] via-[#0a1930] to-[#0e2138]"
+        bgClass="bg-gradient-to-b from-blue-50 via-indigo-50 to-slate-100"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_60%)]" />
-        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.12),transparent_60%)]" />
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(79,70,229,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(79,70,229,0.12) 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
         <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
-          <p className="mt-4 text-white/85 text-xs md:text-sm max-w-2xl text-center">
+          <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
             Un halo doré pour accueillir une année de réussites.
           </p>
         </div>
@@ -94,15 +104,15 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={2}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-[#0a1020] via-[#0f1b2e] to-[#0c1626]"
+        bgClass="bg-gradient-to-b from-indigo-50 via-sky-50 to-slate-100"
       >
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_20%,#4f46e5_0%,#0ea5e9_35%,#f59e0b_70%,#4f46e5_100%)] opacity-10 animate-[spin_24s_linear_infinite]" />
+          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_20%,#4f46e5_0%,#0ea5e9_35%,#f59e0b_70%,#4f46e5_100%)] opacity-5 animate-[spin_24s_linear_infinite]" />
         </div>
         <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
-          <p className="mt-4 text-white/85 text-xs md:text-sm max-w-2xl text-center">
+          <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
             Une vibration de couleurs pour 2026, totalement intégrée à votre charte.
           </p>
           <Button
@@ -119,7 +129,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         {Array.from({ length: max }).map((_, i) => (
           <div
             key={i}
-            className={`h-1.5 w-8 rounded-full transition-all ${i === active ? "bg-white" : "bg-white/30"}`}
+            className={`h-1.5 w-8 rounded-full transition-all ${i === active ? "bg-slate-800" : "bg-slate-400/40"}`}
           />
         ))}
       </div>
@@ -128,7 +138,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
           variant="outline"
           size="icon"
           onClick={prev}
-          className="border-white/30 text-white hover:bg-white/10"
+          className="border-slate-300 text-slate-800 hover:bg-slate-100"
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -138,7 +148,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
           variant="outline"
           size="icon"
           onClick={next}
-          className="border-white/30 text-white hover:bg-white/10"
+          className="border-slate-300 text-slate-800 hover:bg-slate-100"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -149,7 +159,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         <Button
           variant="outline"
           onClick={onToggleMute}
-          className="border-white/30 text-white hover:bg-white/10"
+          className="border-slate-300 text-slate-800 hover:bg-slate-100"
         >
           {muted ? "Activer son" : "Couper son"} <Music className="ml-2 h-4 w-4" />
         </Button>

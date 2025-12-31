@@ -28,7 +28,7 @@ const NeonYearTitle: React.FC<{ className?: string }> = ({ className }) => {
       <h1
         className="
           text-4xl md:text-6xl font-extrabold text-center
-          [background:linear-gradient(90deg,#fde047,#fb7185,#a78bfa,#22c55e,#60a5fa)]
+          [background:linear-gradient(90deg,hsl(var(--primary)),#4f46e5,#0ea5e9,#f59e0b)]
           bg-[length:200%_200%] animate-[gradientShift_6s_ease-in-out_infinite,softFlicker_2.8s_ease-in-out_infinite]
           text-transparent bg-clip-text drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]
         "
@@ -36,7 +36,7 @@ const NeonYearTitle: React.FC<{ className?: string }> = ({ className }) => {
         Bonne année <span className="text-white">2026</span>
       </h1>
       <p className="mt-4 md:mt-6 max-w-2xl mx-auto text-white/85 text-sm md:text-lg">
-        Que cette nouvelle année vous apporte joie, santé et succès. À 2026, plein d’opportunités et de moments mémorables !
+        Que cette nouvelle année vous apporte joie, santé et succès. À 2026, pleinement dans votre univers.
       </p>
     </div>
   );

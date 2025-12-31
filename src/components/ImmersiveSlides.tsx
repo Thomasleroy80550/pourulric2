@@ -14,53 +14,6 @@ type ImmersiveSlidesProps = {
   className?: string;
 };
 
-const StarField: React.FC<{ density?: number }> = ({ density = 120 }) => {
-  const stars = useMemo(() => Array.from({ length: density }).map((_, i) => {
-    const size = Math.random() * 2 + 0.5;
-    return {
-      id: i,
-      left: Math.random() * 100,
-      top: Math.random() * 100,
-      size,
-      opacity: 0.7 + Math.random() * 0.3,
-      twinkleDelay: Math.random() * 2000,
-      twinkleDuration: 1500 + Math.random() * 1200,
-    };
-  }), [density]);
-
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.innerHTML = `
-      @keyframes twinkle {
-        0%, 100% { opacity: 0.4; filter: drop-shadow(0 0 2px rgba(255,255,255,0.4)); }
-        50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(255,255,255,0.9)); }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => { document.head.removeChild(style); };
-  }, []);
-
-  return (
-    <div className="absolute inset-0">
-      {stars.map(s => (
-        <div
-          key={s.id}
-          className="absolute bg-white rounded-full"
-          style={{
-            left: `${s.left}%`,
-            top: `${s.top}%`,
-            width: s.size,
-            height: s.size,
-            opacity: s.opacity,
-            animation: `twinkle ${s.twinkleDuration}ms ease-in-out infinite`,
-            animationDelay: `${s.twinkleDelay}ms`,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
 const SlideContainer: React.FC<{ index: number; activeIndex: number; children: React.ReactNode; bgClass: string }> = ({ index, activeIndex, children, bgClass }) => {
   return (
     <div
@@ -103,60 +56,54 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
   }, [autoPlayMs, onFinish, max]);
 
   return (
-    <div className={`relative w-full h-[78vh] sm:h-[82vh] overflow-hidden ${className || ""}`}>
-      {/* Slides */}
+    <div className={`relative w-full h-[90vh] sm:h-[92vh] overflow-hidden ${className || ""}`}>
+      {/* Slide 1: Gradient brand + motifs diagonaux subtils */}
       <SlideContainer
         index={0}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-[#0b1023] via-[#0a0f1d] to-black"
+        bgClass="bg-gradient-to-b from-indigo-900 via-slate-900 to-black"
       >
-        <StarField density={140} />
+        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 2px, transparent 2px, transparent 12px)" }} />
         <FireworksCanvas />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-white/80 text-xs md:text-sm max-w-2xl text-center">
-            Embarquez dans un voyage cosmique pour accueillir 2026.
+            Une célébration immersive aux couleurs de votre univers.
           </p>
         </div>
       </SlideContainer>
 
+      {/* Slide 2: Radial glow + grille légère */}
       <SlideContainer
         index={1}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-[#091a2b] via-[#0b2238] to-[#0d2742]"
+        bgClass="bg-gradient-to-b from-[#0b1b33] via-[#0a1930] to-[#09162a]"
       >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(255,255,255,0.08),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
         <FireworksCanvas />
-        <div className="absolute bottom-0 left-0 right-0 h-40 opacity-30">
-          {/* skyline simple */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 flex gap-2 px-6">
-            {Array.from({ length: 20 }).map((_, i) => (
-              <div key={i} className="bg-black/60" style={{ height: 20 + Math.random() * 80, width: 16 + Math.random() * 14 }} />
-            ))}
-          </div>
-        </div>
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-white/85 text-xs md:text-sm max-w-2xl text-center">
-            La ville s’illumine, le ciel explose de couleurs. Bonheur et réussite au rendez-vous.
+            Un halo doré pour accueillir une année de réussites.
           </p>
         </div>
       </SlideContainer>
 
+      {/* Slide 3: Aurore stylisée brand + bouton final */}
       <SlideContainer
         index={2}
         activeIndex={active}
-        bgClass="bg-[radial-gradient(circle_at_top,rgba(39,148,208,0.35),transparent_50%)] bg-gradient-to-b from-[#0a1020] via-[#0f1b2e] to-[#081018]"
+        bgClass="bg-gradient-to-b from-[#0a1020] via-[#0f1b2e] to-[#081018]"
       >
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_20%,#60a5fa_0%,#22c55e_40%,#fde047_80%,#60a5fa_100%)] opacity-10 animate-[spin_24s_linear_infinite]" />
+          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_20%,#4f46e5_0%,#0ea5e9_35%,#f59e0b_70%,#4f46e5_100%)] opacity-10 animate-[spin_24s_linear_infinite]" />
         </div>
         <FireworksCanvas />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-white/85 text-xs md:text-sm max-w-2xl text-center">
-            Une aurore boréale de promesses pour une année exceptionnelle.
+            Une vibration de couleurs pour 2026, totalement intégrée à votre charte.
           </p>
           <Button
             onClick={onFinish}

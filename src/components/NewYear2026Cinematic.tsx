@@ -39,6 +39,21 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
     }
   }, [auto, hasSeen, shouldTest]);
 
+  useEffect(() => {
+    if (!open) return;
+    const style = document.createElement("style");
+    style.setAttribute("data-ny2026-overlay", "true");
+    // Neutraliser l'overlay noir du Dialog pendant la cinématique
+    style.innerHTML = `
+      .bg-black\\/80 { background-color: transparent !important; }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      const s = document.head.querySelector('style[data-ny2026-overlay="true"]');
+      if (s) document.head.removeChild(s);
+    };
+  }, [open]);
+
   const handleFinish = () => {
     setOpen(false);
     if (!shouldTest) {
@@ -58,14 +73,14 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
             Tester la cinématique <Sparkles className="ml-2 h-4 w-4" />
           </Button>
           <span className="text-xs text-muted-foreground">
-            Ou ajoutez ?testNy2026=1 à l’URL pour forcer l’ouverture.
+            Ou ajoutez ?testNy2026=1 à l'URL pour forcer l'ouverture.
           </span>
         </div>
       )}
 
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : handleFinish())}>
         <DialogContent
-          className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[86vh] sm:h-[88vh] overflow-hidden bg-black border-0"
+          className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[86vh] sm:h-[88vh] overflow-hidden bg-transparent border-none"
           aria-describedby={undefined}
         >
           <div className="relative w-full h-full">

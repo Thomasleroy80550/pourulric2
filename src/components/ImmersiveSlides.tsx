@@ -61,10 +61,10 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={0}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-indigo-900 via-slate-900 to-black"
+        bgClass="bg-gradient-to-b from-indigo-900 via-indigo-800 to-slate-900"
       >
         <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.15) 0, rgba(255,255,255,0.15) 2px, transparent 2px, transparent 12px)" }} />
-        <FireworksCanvas />
+        <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-white/80 text-xs md:text-sm max-w-2xl text-center">
@@ -77,11 +77,11 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={1}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-[#0b1b33] via-[#0a1930] to-[#09162a]"
+        bgClass="bg-gradient-to-b from-[#0b1b33] via-[#0a1930] to-[#0e2138]"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_60%)]" />
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
-        <FireworksCanvas />
+        <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-white/85 text-xs md:text-sm max-w-2xl text-center">
@@ -94,12 +94,12 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={2}
         activeIndex={active}
-        bgClass="bg-gradient-to-b from-[#0a1020] via-[#0f1b2e] to-[#081018]"
+        bgClass="bg-gradient-to-b from-[#0a1020] via-[#0f1b2e] to-[#0c1626]"
       >
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_20%,#4f46e5_0%,#0ea5e9_35%,#f59e0b_70%,#4f46e5_100%)] opacity-10 animate-[spin_24s_linear_infinite]" />
         </div>
-        <FireworksCanvas />
+        <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-white/85 text-xs md:text-sm max-w-2xl text-center">

@@ -63,9 +63,13 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={0}
         activeIndex={active}
-        bgClass="bg-sky-100"
+        bgClass="bg-gradient-to-b from-amber-50 via-rose-50 to-sky-50"
       >
-        {/* Pas de feux d'artifice ici pour lisibilité */}
+        {/* Motif doré très subtil */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.06]"
+          style={{ backgroundImage: "repeating-linear-gradient(90deg, rgba(245,158,11,0.18) 0, rgba(245,158,11,0.18) 2px, transparent 2px, transparent 12px)" }}
+        />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NY2025Stats
             amount={2143258.95}
@@ -81,8 +85,12 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={1}
         activeIndex={active}
-        bgClass="bg-sky-100"
+        bgClass="bg-gradient-to-b from-indigo-50 via-amber-50 to-sky-100"
       >
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.06]"
+          style={{ backgroundImage: "repeating-linear-gradient(90deg, rgba(245,158,11,0.18) 0, rgba(245,158,11,0.18) 2px, transparent 2px, transparent 12px)" }}
+        />
         {active === 1 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
@@ -96,8 +104,12 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={2}
         activeIndex={active}
-        bgClass="bg-sky-100"
+        bgClass="bg-gradient-to-b from-rose-50 via-amber-50 to-indigo-50"
       >
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.06]"
+          style={{ backgroundImage: "repeating-linear-gradient(90deg, rgba(245,158,11,0.18) 0, rgba(245,158,11,0.18) 2px, transparent 2px, transparent 12px)" }}
+        />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NYQuote />
           <div className="mt-8 w-full">
@@ -110,8 +122,12 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       <SlideContainer
         index={3}
         activeIndex={active}
-        bgClass="bg-sky-100"
+        bgClass="bg-gradient-to-b from-amber-50 via-sky-50 to-indigo-50"
       >
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.06]"
+          style={{ backgroundImage: "repeating-linear-gradient(90deg, rgba(245,158,11,0.18) 0, rgba(245,158,11,0.18) 2px, transparent 2px, transparent 12px)" }}
+        />
         {active === 3 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NYCallToAction onFinish={onFinish} />

@@ -595,6 +595,7 @@ const AdminUsersPage: React.FC = () => {
         <TableRow>
           <TableHead>Nom</TableHead>
           <TableHead>Email</TableHead>
+          <TableHead>Téléphone</TableHead>
           <TableHead>Rôle</TableHead>
           <TableHead>Agence</TableHead>
           <TableHead>Statut Intégration</TableHead>
@@ -619,6 +620,7 @@ const AdminUsersPage: React.FC = () => {
                 </div>
               </TableCell>
               <TableCell>{user.email || 'N/A'}</TableCell>
+              <TableCell>{user.phone_number || 'N/A'}</TableCell>
               <TableCell>{user.role}</TableCell>
               <TableCell>
                 <div className="min-w-[180px]">

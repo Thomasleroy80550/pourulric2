@@ -65,7 +65,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         bgClass="bg-gradient-to-b from-indigo-50 via-indigo-100 to-slate-100"
       >
         <BrandBackdrop variant="indigo" />
-        <FireworksCanvas muted={muted} />
+        {active === 0 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6"> 
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
@@ -82,7 +82,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       >
         <BrandBackdrop variant="blue" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.12),transparent_60%)]" />
-        <FireworksCanvas muted={muted} />
+        {active === 1 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
@@ -98,7 +98,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         bgClass="bg-gradient-to-b from-indigo-50 via-sky-50 to-slate-100"
       >
         <BrandBackdrop variant="sunset" />
-        <FireworksCanvas muted={muted} />
+        {active === 2 && <FireworksCanvas muted={muted} intensity="low" />}
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">

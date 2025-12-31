@@ -14,7 +14,7 @@ type Particle = {
 
 const random = (min: number, max: number) => Math.random() * (max - min) + min;
 
-const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ className, muted = true }) => {
+const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity?: "low" | "medium" | "high" }> = ({ className, muted = true, intensity = "medium" }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const particlesRef = useRef<Particle[]>([]);
@@ -22,37 +22,40 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const resizeObsRef = useRef<ResizeObserver | null>(null);
   const sfxPoolRef = useRef<HTMLAudioElement[]>([]);
+  const sfxIdxRef = useRef<number>(0);
 
   const spawnBurst = (width: number, height: number) => {
     const x = random(width * 0.15, width * 0.85);
     const y = random(height * 0.15, height * 0.45);
     const colors = ["#FFDD55", "#FF6B6B", "#7C3AED", "#34D399", "#60A5FA"];
-    const count = 60;
+    const counts = { low: 28, medium: 45, high: 70 } as const;
+    const count = counts[intensity];
     for (let i = 0; i < count; i++) {
       const angle = random(0, Math.PI * 2);
-      const speed = random(1.2, 3.6);
+      const speed = random(1.0, 3.0);
       particlesRef.current.push({
         x,
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        life: random(50, 120),
+        life: random(50, 110),
         color: colors[i % colors.length],
-        size: random(1.2, 2.8),
+        size: random(1.2, 2.4),
       });
     }
-
-    // SFX: jouer un son de feu d'artifice si le son est activé
+    // SFX: jouer un son si non muet
     if (!muted && sfxPoolRef.current.length) {
-      const base = sfxPoolRef.current[Math.floor(Math.random() * sfxPoolRef.current.length)];
-      const clip = base.cloneNode(true) as HTMLAudioElement;
-      clip.volume = 0.35;
-      clip.play().catch(() => {});
+      sfxIdxRef.current = (sfxIdxRef.current + 1) % sfxPoolRef.current.length;
+      const clip = sfxPoolRef.current[sfxIdxRef.current];
+      try {
+        clip.currentTime = 0;
+        clip.volume = 0.3;
+        clip.play();
+      } catch {}
     }
   };
 
   useEffect(() => {
-    // Précharger SFX courts (libres de droit)
     const urls = [
       "https://cdn.pixabay.com/download/audio/2022/01/12/audio_0e5efd3a4a.mp3?filename=fireworks-9845.mp3",
       "https://cdn.pixabay.com/download/audio/2023/04/24/audio_3b8f2a4f2a.mp3?filename=firework-explosion-145308.mp3",
@@ -61,12 +64,10 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
     sfxPoolRef.current = urls.map((u) => {
       const a = new Audio(u);
       a.preload = "auto";
-      a.volume = 0.35;
+      a.volume = 0.3;
       return a;
     });
-    return () => {
-      sfxPoolRef.current = [];
-    };
+    return () => { sfxPoolRef.current = []; };
   }, []);
 
   useEffect(() => {
@@ -94,18 +95,19 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
       const w = canvas.width;
       const h = canvas.height;
 
-      // voile clair pour trails (fond blanc, pas noir)
+      // voile très léger pour trails (fond clair)
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      ctx.fillStyle = "rgba(255,255,255,0.05)";
       ctx.fillRect(0, 0, w, h);
 
-      // bursts périodiques
-      if (time - lastBurstRef.current > 850) {
+      // bursts périodiques selon intensité
+      const intervals: Record<"low" | "medium" | "high", number> = { low: 1500, medium: 1100, high: 800 };
+      if (time - lastBurstRef.current > intervals[intensity]) {
         spawnBurst(w, h);
         lastBurstRef.current = time;
       }
 
-      // dessiner particules avec glow
+      // dessiner particules (glow léger)
       ctx.globalCompositeOperation = "lighter";
       const gravity = 0.03;
       const friction = 0.99;
@@ -117,7 +119,7 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
         p.life -= 1;
 
         ctx.beginPath();
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 6; // glow plus léger
         ctx.shadowColor = p.color;
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
@@ -125,7 +127,13 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
         ctx.shadowBlur = 0;
       });
 
-      // retirer les mortes et hors cadre
+      // limiter le nombre total de particules
+      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 350, medium: 500, high: 650 };
+      if (particlesRef.current.length > maxParticles[intensity]) {
+        particlesRef.current.splice(0, particlesRef.current.length - maxParticles[intensity]);
+      }
+
+      // retirer celles qui sont mortes ou hors cadre
       particlesRef.current = particlesRef.current.filter(
         (p) => p.life > 0 && p.x > -20 && p.x < w + 20 && p.y > -20 && p.y < h + 40
       );

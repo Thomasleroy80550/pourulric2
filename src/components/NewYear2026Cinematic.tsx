@@ -12,73 +12,50 @@ type NewYear2026CinematicProps = {
   className?: string;
 };
 
-const STORAGE_KEY = "ny2026_seen";
-const isJanFirst2026 = (d: Date) => d.getFullYear() === 2026 && d.getMonth() === 0 && d.getDate() === 1;
-const getFlag = (name: string) => {
-  if (typeof window === "undefined") return false;
-  const params = new URLSearchParams(window.location.search);
-  return params.get(name) === "1";
-};
+const STORAGE_KEY = "ny2025_seen";
+
+// ADDED: fenêtre d'ouverture 2025 (1er au 10 janvier inclus)
+function isInLaunchWindow2025(date: Date) {
+  return (
+    date.getFullYear() === 2025 &&
+    date.getMonth() === 0 &&
+    date.getDate() >= 1 &&
+    date.getDate() <= 10
+  );
+}
 
 const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true, className }) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [muted, setMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const explosionRef = useRef<HTMLAudioElement | null>(null);
 
-  const shouldTest = useMemo(() => getFlag("testNy2026"), []);
+  // CHANGED: lecture du flag "déjà vu" sur la nouvelle clé
   const hasSeen = useMemo(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(STORAGE_KEY) === "1";
   }, []);
 
+  // CHANGED: ouverture auto pendant la fenêtre 2025, une seule fois par utilisateur
   useEffect(() => {
     if (!auto) return;
     const now = new Date();
-    if ((isJanFirst2026(now) && !hasSeen) || shouldTest) {
+    if (isInLaunchWindow2025(now) && !hasSeen) {
       setOpen(true);
     }
-  }, [auto, hasSeen, shouldTest]);
-
-  useEffect(() => {
-    if (!open) return;
-    const style = document.createElement("style");
-    style.setAttribute("data-ny2026-overlay", "true");
-    // Neutraliser l'overlay noir du Dialog pendant la cinématique
-    style.innerHTML = `
-      .bg-black\\/80 { background-color: transparent !important; }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      const s = document.head.querySelector('style[data-ny2026-overlay="true"]');
-      if (s) document.head.removeChild(s);
-    };
-  }, [open]);
+  }, [auto, hasSeen]);
 
   const handleFinish = () => {
     setOpen(false);
-    if (!shouldTest) {
-      localStorage.setItem(STORAGE_KEY, "1");
-    }
+    // CHANGED: marquer comme vu pour ne l'ouvrir qu'une seule fois
+    localStorage.setItem(STORAGE_KEY, "1");
     toast({
       title: "Bonne année 2026 🎉",
       description: "Plongez dans une année pleine de joie, santé et succès.",
     });
   };
 
-  const handleOpenCinematic = () => {
-    setOpen(true);
-    const el = explosionRef.current;
-    if (el) {
-      el.currentTime = 0;
-      el.volume = 0.6;
-      el.play().catch(() => {});
-    }
-    // déverrouiller Web Audio si présent
-    window.dispatchEvent(new Event("ny2026-unlock-audio"));
-  };
-
+  // CHANGED: Activer/Couper le son (sans test)
   const handleToggleMute = () => {
     setMuted((prev) => {
       const next = !prev;
@@ -98,17 +75,6 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
 
   return (
     <div className={className}>
-      {!open && (
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={handleOpenCinematic}>
-            Tester la cinématique <Sparkles className="ml-2 h-4 w-4" />
-          </Button>
-          <span className="text-xs text-muted-foreground">
-            Ou ajoutez ?testNy2026=1 à l'URL pour forcer l'ouverture.
-          </span>
-        </div>
-      )}
-
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : handleFinish())}>
         <DialogContent
           className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[86vh] sm:h-[88vh] overflow-hidden bg-transparent border-0"
@@ -121,19 +87,12 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
               onFinish={handleFinish}
               autoPlayMs={7000}
             />
-            {/* Audio global (musique de fond) */}
             <audio
               ref={audioRef}
               src="https://cdn.pixabay.com/download/audio/2022/03/01/audio_ba5d0e70b0.mp3?filename=new-year-ambient-21859.mp3"
               autoPlay
               loop
               muted={muted}
-            />
-            {/* SFX explosion à l'ouverture */}
-            <audio
-              ref={explosionRef}
-              src="https://cdn.pixabay.com/download/audio/2022/01/12/audio_0e5efd3a4a.mp3?filename=fireworks-9845.mp3"
-              preload="auto"
             />
           </div>
         </DialogContent>

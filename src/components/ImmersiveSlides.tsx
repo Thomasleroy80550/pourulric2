@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Music } from "lucide-react";
 import FireworksCanvas from "@/components/FireworksCanvas";
 import NeonYearTitle from "@/components/NeonYearTitle";
+import BrandBackdrop from "@/components/BrandBackdrop";
 
 type ImmersiveSlidesProps = {
   muted: boolean;
@@ -56,19 +57,16 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
   }, [autoPlayMs, onFinish, max]);
 
   return (
-    <div className={`relative w-full h-[90vh] sm:h-[92vh] overflow-hidden ${className || ""}`}>
-      {/* Slide 1: Gradient brand + motifs diagonaux subtils */}
+    <div className={`relative w-full h-[92vh] sm:h-[94vh] overflow-hidden ${className || ""}`}>
+      {/* Slide 1: Gradient clair + décor indigo */}
       <SlideContainer
         index={0}
         activeIndex={active}
         bgClass="bg-gradient-to-b from-indigo-50 via-indigo-100 to-slate-100"
       >
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(79,70,229,0.12) 0, rgba(79,70,229,0.12) 2px, transparent 2px, transparent 14px)" }}
-        />
+        <BrandBackdrop variant="indigo" />
         <FireworksCanvas muted={muted} />
-        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
+        <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6"> 
           <NeonYearTitle />
           <p className="mt-4 text-slate-700 text-xs md:text-sm max-w-2xl text-center">
             Une célébration immersive aux couleurs de votre univers.
@@ -76,21 +74,14 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </div>
       </SlideContainer>
 
-      {/* Slide 2: Radial glow + grille légère */}
+      {/* Slide 2: Gradient clair bleu + halo doré */}
       <SlideContainer
         index={1}
         activeIndex={active}
         bgClass="bg-gradient-to-b from-blue-50 via-indigo-50 to-slate-100"
       >
+        <BrandBackdrop variant="blue" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.12),transparent_60%)]" />
-        <div
-          className="absolute inset-0 opacity-[0.05]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(79,70,229,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(79,70,229,0.12) 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        />
         <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
@@ -100,15 +91,13 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </div>
       </SlideContainer>
 
-      {/* Slide 3: Aurore stylisée brand + bouton final */}
+      {/* Slide 3: Gradient clair sunset + bouton final */}
       <SlideContainer
         index={2}
         activeIndex={active}
         bgClass="bg-gradient-to-b from-indigo-50 via-sky-50 to-slate-100"
       >
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_20%,#4f46e5_0%,#0ea5e9_35%,#f59e0b_70%,#4f46e5_100%)] opacity-5 animate-[spin_24s_linear_infinite]" />
-        </div>
+        <BrandBackdrop variant="sunset" />
         <FireworksCanvas muted={muted} />
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
           <NeonYearTitle />
@@ -124,7 +113,7 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </div>
       </SlideContainer>
 
-      {/* Controls */}
+      {/* Indicateurs et contrôles adaptés fonds clairs */}
       <div className="absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-3">
         {Array.from({ length: max }).map((_, i) => (
           <div
@@ -154,7 +143,6 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
         </Button>
       </div>
 
-      {/* Mute toggle */}
       <div className="absolute top-3 right-3 z-10">
         <Button
           variant="outline"

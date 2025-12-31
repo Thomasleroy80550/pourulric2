@@ -52,7 +52,7 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
   };
 
   useEffect(() => {
-    // Précharger quelques sons courts de feux d'artifice (libres de droit)
+    // Précharger SFX courts (libres de droit)
     const urls = [
       "https://cdn.pixabay.com/download/audio/2022/01/12/audio_0e5efd3a4a.mp3?filename=fireworks-9845.mp3",
       "https://cdn.pixabay.com/download/audio/2023/04/24/audio_3b8f2a4f2a.mp3?filename=firework-explosion-145308.mp3",
@@ -94,9 +94,8 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
       const w = canvas.width;
       const h = canvas.height;
 
-      // léger voile pour trails
+      // voile clair pour trails (fond blanc, pas noir)
       ctx.globalCompositeOperation = "source-over";
-      // CHANGED: voile clair au lieu de noir
       ctx.fillStyle = "rgba(255,255,255,0.06)";
       ctx.fillRect(0, 0, w, h);
 
@@ -106,7 +105,7 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
         lastBurstRef.current = time;
       }
 
-      // dessiner particules
+      // dessiner particules avec glow
       ctx.globalCompositeOperation = "lighter";
       const gravity = 0.03;
       const friction = 0.99;
@@ -118,9 +117,12 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean }> = ({ cl
         p.life -= 1;
 
         ctx.beginPath();
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = p.color;
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.fill();
+        ctx.shadowBlur = 0;
       });
 
       // retirer les mortes et hors cadre

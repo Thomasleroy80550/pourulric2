@@ -80,7 +80,7 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
 
       <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : handleFinish())}>
         <DialogContent
-          className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[86vh] sm:h-[88vh] overflow-hidden bg-transparent border-none"
+          className="p-0 max-w-none w-[100vw] sm:w-[96vw] h-[90vh] sm:h-[92vh] overflow-hidden bg-transparent border-none"
           aria-describedby={undefined}
         >
           <div className="relative w-full h-full">
@@ -90,7 +90,6 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
               onFinish={handleFinish}
               autoPlayMs={7000}
             />
-            {/* Audio global */}
             <audio
               src="https://cdn.pixabay.com/download/audio/2022/03/01/audio_ba5d0e70b0.mp3?filename=new-year-ambient-21859.mp3"
               autoPlay

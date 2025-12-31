@@ -669,14 +669,16 @@ const AdminSeasonRequestsPage: React.FC = () => {
                                 <Button size="sm" onClick={() => sendSeasonReminderEmail(room)}>
                                   Relancer
                                 </Button>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => setEditingRoom(room)}
-                                >
-                                  Définir les prix
-                                </Button>
                               </>
+                            )}
+                            {status !== 'done' && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setEditingRoom(room)}
+                              >
+                                Définir les prix
+                              </Button>
                             )}
                             <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
                               Smart Pricing

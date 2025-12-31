@@ -10,9 +10,11 @@ type Particle = {
   life: number;
   color: string;
   size: number;
-  // ADDED: mémoriser l'origine pour tracer un rayon depuis le centre du burst
+  // ADDED: centre du burst et position précédente pour trails
   ox?: number;
   oy?: number;
+  prevX?: number;
+  prevY?: number;
 };
 
 const random = (min: number, max: number) => Math.random() * (max - min) + min;
@@ -28,35 +30,45 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
   const sfxPoolRef = useRef<HTMLAudioElement[]>([]);
   const sfxIdxRef = useRef<number>(0);
   const burstCountRef = useRef<number>(0);
+  // ADDED: flashes (éclat central) pour quelques frames
+  const flashesRef = useRef<{ x: number; y: number; life: number; radius: number; color: string }[]>([]);
 
   const spawnBurst = (width: number, height: number) => {
+    // CHANGED: centre du burst + palette saturée
     const cx = random(width * 0.2, width * 0.8);
     const cy = random(height * 0.2, height * 0.5);
-    // Palette saturée, contrastée sur fond bleu clair
     const colors = ["#f59e0b", "#ef4444", "#4f46e5", "#0ea5e9", "#22c55e"];
-    const counts = { low: 26, medium: 38, high: 54 } as const;
+    const counts = { low: 24, medium: 36, high: 52 } as const;
     const count = counts[intensity];
 
     for (let i = 0; i < count; i++) {
       const angle = random(0, Math.PI * 2);
-      const speed = random(1.0, 2.4); // vitesse d'ouverture du rayon
+      const speed = random(1.0, 2.3); // ouverture du rayon
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       particlesRef.current.push({
-        // départ au centre du burst
         x: cx,
         y: cy,
         ox: cx,
         oy: cy,
+        prevX: cx,
+        prevY: cy,
         vx,
         vy,
-        // durée de vie cohérente avec un rayon qui s'éteint
-        life: random(38, 80),
+        life: random(40, 80),
         color: colors[i % colors.length],
-        // taille utilisée comme largeur de trait visuel
         size: random(1.6, 2.6),
       });
     }
+
+    // ADDED: flash central court pour effet "pop"
+    flashesRef.current.push({
+      x: cx,
+      y: cy,
+      life: 12,
+      radius: random(18, 34),
+      color: "#ffd54f",
+    });
 
     burstCountRef.current += 1;
     // SFX: jouer moins souvent (une fois sur deux)
@@ -131,6 +143,25 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
         lastBurstRef.current = time;
       }
 
+      // ADDED: dessiner les flashes radiaux (éclat court au centre)
+      for (let i = 0; i < flashesRef.current.length; i++) {
+        const f = flashesRef.current[i];
+        const alpha = Math.max(0, f.life / 12);
+        const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.radius);
+        grad.addColorStop(0, `rgba(255,255,255,${0.9 * alpha})`);
+        grad.addColorStop(0.4, `rgba(255,213,79,${0.6 * alpha})`);
+        grad.addColorStop(1, `rgba(255,213,79,0)`);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+        ctx.fill();
+        f.life -= 1;
+      }
+      // nettoyer les flashes terminés
+      flashesRef.current = flashesRef.current.filter(f => f.life > 0);
+
       // Rendu des rayons: traits depuis (ox,oy) jusqu'à (x,y), blend additive
       ctx.globalCompositeOperation = "lighter";
       ctx.lineCap = "round";
@@ -146,21 +177,34 @@ const FireworksCanvas: React.FC<{ className?: string; muted?: boolean; intensity
         p.y += p.vy;
         p.life -= 1;
 
-        // opacité décroissante pour un rayon qui s'éteint
-        const alpha = Math.max(0.15, Math.min(1, p.life / 80));
+        // trail: ligne fine de la position précédente vers la nouvelle
+        const trailAlpha = Math.max(0.12, Math.min(0.8, p.life / 80));
         ctx.strokeStyle = p.color;
-        ctx.globalAlpha = alpha;
-        ctx.lineWidth = p.size;
-
+        ctx.globalAlpha = trailAlpha;
+        ctx.lineWidth = p.size * 0.6;
         ctx.beginPath();
-        // tracer du centre du burst jusqu'à la pointe actuelle
-        ctx.moveTo(p.ox ?? p.x, p.oy ?? p.y);
+        ctx.moveTo(p.prevX ?? p.x, p.prevY ?? p.y);
         ctx.lineTo(p.x, p.y);
         ctx.stroke();
+
+        // tête du rayon: cercle lumineux
+        const headAlpha = Math.max(0.2, Math.min(1, p.life / 70));
+        ctx.globalAlpha = headAlpha;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = p.color;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // update position précédente
+        p.prevX = p.x;
+        p.prevY = p.y;
       }
 
       // limiter total pour fluidité
-      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 180, medium: 260, high: 360 };
+      const maxParticles: Record<"low" | "medium" | "high", number> = { low: 200, medium: 280, high: 360 };
       if (particlesRef.current.length > maxParticles[intensity]) {
         particlesRef.current.splice(0, particlesRef.current.length - maxParticles[intensity]);
       }

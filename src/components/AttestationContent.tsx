@@ -12,11 +12,13 @@ interface AttestationContentProps {
     city?: string;
     zip?: string;
   };
+  attestationYear?: number;
 }
 
 const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
-  ({ profile, ownerAddress, occasionalStay = false, propertyAddressOverride }, ref) => {
+  ({ profile, ownerAddress, occasionalStay = false, propertyAddressOverride, attestationYear }, ref) => {
     const today = format(new Date(), 'PPP', { locale: fr });
+    const displayYear = attestationYear ?? new Date().getFullYear();
 
     const contractStartDate =
       profile.contract_start_date && isValid(parseISO(profile.contract_start_date))
@@ -74,8 +76,8 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
         <div className="mb-8 text-base text-justify leading-relaxed">
           <h2 className="text-lg font-semibold uppercase tracking-wide mb-3">Rappel du cadre CGUV / Contexte</h2>
           <p className="mb-4">
-            Le logement est régi par les <strong>Conditions Générales d’Utilisation et de Vente (CGUV)</strong> de Hello Keys.
-            Ces CGUV encadrent l’exploitation du bien en <strong>location meublée saisonnière</strong>, sans mise à disposition
+            Le logement est régi par les <strong>Conditions Générales d'Utilisation et de Vente (CGUV)</strong> de Hello Keys.
+            Ces CGUV encadrent l'exploitation du bien en <strong>location meublée saisonnière</strong>, sans mise à disposition
             personnelle du propriétaire pendant les périodes confiées à Hello Keys.
           </p>
           <p>
@@ -84,13 +86,13 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
           </p>
         </div>
 
-        {/* Attestation d’absence de jouissance personnelle */}
+        {/* Attestation d'absence de jouissance personnelle */}
         <div className="mb-8 text-base text-justify leading-relaxed">
-          <h2 className="text-lg font-semibold uppercase tracking-wide mb-3">Attestation d’absence de jouissance personnelle</h2>
+          <h2 className="text-lg font-semibold uppercase tracking-wide mb-3">Attestation d'absence de jouissance personnelle</h2>
           <p className="mb-4">
             Nous attestons que, dans le cadre de la gestion locative saisonnière par Hello Keys, le bien susmentionné
-            <strong> n’est pas occupé par le propriétaire au 1er janvier</strong> de l’année en cours. Cette attestation peut
-            constituer un justificatif auprès de l’administration fiscale, sous réserve de l’examen de la situation du contribuable.
+            <strong> n'est pas occupé par le propriétaire au 1er janvier</strong> de l'année {displayYear}. Cette attestation peut
+            constituer un justificatif auprès de l'administration fiscale, sous réserve de l'examen de la situation du contribuable.
           </p>
           <p className="italic text-sm">
             Informations complémentaires déclarées par le propriétaire — Séjours occasionnels du propriétaire :{' '}
@@ -108,7 +110,7 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
         {/* Disclaimer */}
         <div className="mt-10 text-xs text-gray-700 border-t pt-4">
           <p className="italic">
-            Disclaimer : Hello Keys n’est pas responsable de vos déclarations fiscales et des conséquences qui en découlent. Cette attestation
+            Disclaimer : Hello Keys n'est pas responsable de vos déclarations fiscales et des conséquences qui en découlent. Cette attestation
             est délivrée à titre informatif et ne modifie pas la portée juridique du contrat de prestation ni des CGUV applicables.
           </p>
         </div>

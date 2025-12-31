@@ -25,6 +25,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
   const [propertyZip, setPropertyZip] = useState('');
   const [occasionalStay, setOccasionalStay] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [attestationYear, setAttestationYear] = useState<string>(String(new Date().getFullYear()));
 
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +36,8 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
       setPropertyAddress(profile.property_address || '');
       setPropertyCity(profile.property_city || '');
       setPropertyZip(profile.property_zip_code || '');
+      // Reset l'année à l'année courante à chaque ouverture
+      setAttestationYear(String(new Date().getFullYear()));
     }
   }, [profile, open]);
 
@@ -115,6 +118,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
               city: propertyCity,
               zip: propertyZip,
             }}
+            attestationYear={parseInt(attestationYear, 10) || new Date().getFullYear()}
           />
         </div>
 
@@ -143,6 +147,19 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
           <div className="space-y-2">
             <Label htmlFor="propertyCity">Ville</Label>
             <Input id="propertyCity" value={propertyCity} onChange={(e) => setPropertyCity(e.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="attestationYear">Année</Label>
+            <Input
+              id="attestationYear"
+              type="number"
+              min="2000"
+              max="2100"
+              value={attestationYear}
+              onChange={(e) => setAttestationYear(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder={String(new Date().getFullYear())}
+            />
           </div>
 
           <div className="flex items-center space-x-2 md:col-span-2">

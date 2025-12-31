@@ -519,17 +519,18 @@ const DashboardPage = () => {
           <CardHeader className="pt-6">
             <div className="w-full flex justify-center">
               <div className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
-                <div className="relative rounded-2xl bg-white/80 dark:bg-slate-900/40 backdrop-blur px-6 py-5 shadow-sm">
-                  {/* Décor de fond festif discret dans le bloc blanc */}
+                <div className="relative rounded-2xl border border-slate-200/60 bg-gradient-to-br from-sky-50 via-white to-indigo-50 dark:bg-slate-900/40 backdrop-blur px-8 py-6 shadow-sm max-w-2xl w-full">
+                  {/* Décor de fond festif discret dans le bloc */}
                   <div
-                    className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                    className="pointer-events-none absolute inset-0 opacity-[0.1]"
                     style={{
                       backgroundImage:
-                        "repeating-linear-gradient(135deg, rgba(79,70,229,0.12) 0, rgba(79,70,229,0.12) 2px, transparent 2px, transparent 14px)",
+                        "repeating-linear-gradient(135deg, rgba(79,70,229,0.14) 0, rgba(79,70,229,0.14) 2px, transparent 2px, transparent 14px)",
                     }}
                   />
                   <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_60%)]" />
                   <div className="pointer-events-none absolute -bottom-[6px] left-6 right-6 h-[8px] rounded-full bg-gradient-to-r from-sky-400/30 via-indigo-500/20 to-amber-400/30 blur-md" />
+                  <div className="pointer-events-none absolute -top-[6px] left-8 right-8 h-[6px] rounded-full bg-gradient-to-r from-white/70 via-white/30 to-white/70 blur-sm" />
 
                   {/* Contenu centré */}
                   <div className="relative flex flex-col items-center justify-center">
@@ -546,6 +547,12 @@ const DashboardPage = () => {
                       target={new Date(2026, 0, 1, 0, 0, 0)}
                       className="mt-1"
                     />
+                    {/* Petits badges festifs pour remplir élégamment */}
+                    <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                      <Badge className="bg-sky-100 text-sky-800">Joie</Badge>
+                      <Badge className="bg-indigo-100 text-indigo-800">Santé</Badge>
+                      <Badge className="bg-amber-100 text-amber-800">Succès</Badge>
+                    </div>
                   </div>
                 </div>
               </div>

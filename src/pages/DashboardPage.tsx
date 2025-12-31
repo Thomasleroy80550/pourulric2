@@ -523,6 +523,14 @@ const DashboardPage = () => {
               target={new Date(2026, 0, 1, 0, 0, 0)}
               className="mt-2"
             />
+            {/* Bouton de test pour ouvrir la cinématique */}
+            <Button
+              size="sm"
+              className="mt-2 bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => window.dispatchEvent(new Event("ny2026-test-open"))}
+            >
+              Tester la cinématique
+            </Button>
           </CardHeader>
           <CardContent>
             <NewYear2026Cinematic />

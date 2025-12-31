@@ -29,6 +29,8 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
   const [open, setOpen] = useState(false);
   const [muted, setMuted] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // AJOUT: flag pour savoir si c'est une ouverture de test
+  const [isTestOpen, setIsTestOpen] = useState(false);
 
   // CHANGED: lecture du flag "déjà vu" sur la nouvelle clé
   const hasSeen = useMemo(() => {
@@ -45,10 +47,25 @@ const NewYear2026Cinematic: React.FC<NewYear2026CinematicProps> = ({ auto = true
     }
   }, [auto, hasSeen]);
 
+  // AJOUT: écoute du bouton de test (évènement global)
+  useEffect(() => {
+    const handler = () => {
+      setIsTestOpen(true);
+      setOpen(true);
+      // déverrouiller l'audio si nécessaire
+      window.dispatchEvent(new Event("ny2026-unlock-audio"));
+    };
+    window.addEventListener("ny2026-test-open", handler);
+    return () => window.removeEventListener("ny2026-test-open", handler);
+  }, []);
+
   const handleFinish = () => {
     setOpen(false);
-    // CHANGED: marquer comme vu pour ne l'ouvrir qu'une seule fois
-    localStorage.setItem(STORAGE_KEY, "1");
+    // Ne pas marquer comme vu si c'était une ouverture de test
+    if (!isTestOpen) {
+      localStorage.setItem(STORAGE_KEY, "1");
+    }
+    setIsTestOpen(false);
     toast({
       title: "Bonne année 2026 🎉",
       description: "Plongez dans une année pleine de joie, santé et succès.",

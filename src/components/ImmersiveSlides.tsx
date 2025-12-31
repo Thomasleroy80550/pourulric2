@@ -129,10 +129,10 @@ const ImmersiveSlides: React.FC<ImmersiveSlidesProps> = ({
       </div>
 
       {/* AJOUT: Bouton Continuer centré en bas */}
-      <div className="absolute inset-x-0 bottom-16 z-10 flex justify-center">
+      <div className="absolute inset-x-0 bottom-24 z-10 flex justify-center">
         <Button
           onClick={handleContinue}
-          className="px-6 bg-indigo-600 text-white hover:bg-indigo-700"
+          className="px-6 bg-blue-600 text-white hover:bg-blue-700"
         >
           {active < max - 1 ? "Continuer" : "Terminer"}
         </Button>

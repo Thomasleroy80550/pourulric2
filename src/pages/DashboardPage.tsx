@@ -49,6 +49,7 @@ import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
 import Countdown from "@/components/Countdown";
 import BilanExportButton from "@/components/BilanExportButton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BilanPdfButton from "@/components/BilanPdfButton";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -134,6 +135,35 @@ const DashboardPage = () => {
   const [todoTasks, setTodoTasks] = useState<TodoTask[]>([]); // Type mis à jour
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
+
+  // ADD: function to build monthly rows for PDF from state
+  const buildMonthlyForPdf = () => {
+    // match month names with monthlyFinancialData.name
+    // We also need nights and reservations by month:
+    const nightsByMonth: Record<string, number> = {};
+    const reservationsByMonth: Record<string, number> = {};
+    monthlyOccupancyData.forEach((m, idx) => {
+      // monthlyNights isn't exposed; reconstruct approximate nights via occupancy and availability?
+      // Instead, use monthlyFinancialData's benef + prixParNuit already computed:
+      // For PDF, we display benef and prixParNuit (already computed), and carry reservations from monthlyReservationsData.
+      // Nights: we cannot reconstruct exact nights unless stored; set 0 if not available in state.
+      nightsByMonth[m.name] = 0;
+    });
+    monthlyReservationsData.forEach(m => {
+      reservationsByMonth[m.name] = m.reservations || 0;
+    });
+
+    return monthlyFinancialData.map(m => ({
+      name: m.name,
+      ca: m.ca || 0,
+      montantVerse: m.montantVerse || 0,
+      frais: m.frais || 0,
+      benef: m.benef || 0,
+      nuits: nightsByMonth[m.name] || 0,
+      reservations: reservationsByMonth[m.name] || 0,
+      prixParNuit: m.prixParNuit || 0,
+    }));
+  };
 
   useEffect(() => {
     const dismissed = localStorage.getItem(BILAN_2025_STORAGE_KEY);
@@ -533,7 +563,18 @@ const DashboardPage = () => {
           </div>
           <Badge variant="secondary">{yearLabel}</Badge>
           {selectedYear === 2025 && (
-            <BilanExportButton targetRef={dashboardRef} className="ml-2" />
+            <BilanPdfButton
+              year={selectedYear}
+              totals={{
+                ca: financialData.caAnnee,
+                montantVerse: financialData.rentreeArgentAnnee,
+                frais: financialData.fraisAnnee,
+                depenses: financialData.depensesAnnee,
+                resultatNet: financialData.resultatAnnee,
+              }}
+              monthly={buildMonthlyForPdf()}
+              className="ml-2"
+            />
           )}
         </div>
         

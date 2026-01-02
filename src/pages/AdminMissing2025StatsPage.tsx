@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { ManualStatementEntry } from "@/lib/admin-api";
 import * as XLSX from "xlsx";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type InvoiceLite = {
   user_id: string;
@@ -90,6 +91,10 @@ const AdminMissing2025StatsPage: React.FC = () => {
   const [isXlsxImporting, setIsXlsxImporting] = useState(false);
   const [previewXlsxEntries, setPreviewXlsxEntries] = useState<ManualStatementEntry[]>([]);
   const [xlsxPreviewStats, setXlsxPreviewStats] = useState<{ included: number; tabsChecked: number }>({ included: 0, tabsChecked: 0 });
+
+  const [isMarkZeroOpen, setIsMarkZeroOpen] = useState(false);
+  const [targetUserForZero, setTargetUserForZero] = useState<MissingStatsRow | null>(null);
+  const [selectedZeroMonths, setSelectedZeroMonths] = useState<string[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -490,6 +495,51 @@ const AdminMissing2025StatsPage: React.FC = () => {
     }
   };
 
+  const openMarkZeroDialog = (row: MissingStatsRow) => {
+    setTargetUserForZero(row);
+    setSelectedZeroMonths([]); // aucune sélection par défaut
+    setIsMarkZeroOpen(true);
+  };
+
+  const toggleZeroMonth = (month: string, checked: boolean) => {
+    setSelectedZeroMonths(prev => checked ? [...prev, month] : prev.filter(m => m !== month));
+  };
+
+  const selectAllZeroMonths = () => {
+    if (targetUserForZero) {
+      setSelectedZeroMonths(targetUserForZero.missingMonths.slice());
+    }
+  };
+
+  const clearZeroMonths = () => setSelectedZeroMonths([]);
+
+  const confirmMarkZeroMonths = async () => {
+    if (!targetUserForZero || selectedZeroMonths.length === 0) {
+      toast.error("Sélectionnez au moins un mois à marquer à 0.");
+      return;
+    }
+    const statements = selectedZeroMonths.map(m => ({
+      period: `${m} 2025`,
+      totalCA: 0,
+      totalMontantVerse: 0,
+      totalFacture: 0,
+      totalNuits: 0,
+      totalVoyageurs: 0,
+      totalReservations: 0,
+    }));
+    const id = toast.loading("Enregistrement des mois à 0...");
+    try {
+      await addManualStatements(targetUserForZero.userId, statements);
+      toast.success("Mois enregistrés comme 'pas de locations' (stats à 0).", { id });
+      setIsMarkZeroOpen(false);
+      setTargetUserForZero(null);
+      setSelectedZeroMonths([]);
+      await refreshInvoices2025();
+    } catch (e: any) {
+      toast.error(`Erreur: ${e.message}`, { id });
+    }
+  };
+
   const filteredRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return rows.filter(r => {
@@ -557,6 +607,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
                     <TableHead>Mois présents (2025)</TableHead>
                     <TableHead className="text-right">Mois manquants (hors décembre)</TableHead>
                     <TableHead>Dernier relevé</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -598,6 +649,17 @@ const AdminMissing2025StatsPage: React.FC = () => {
                         {row.lastStatementDate
                           ? format(parseISO(row.lastStatementDate), "dd/MM/yyyy HH:mm", { locale: fr })
                           : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openMarkZeroDialog(row)}
+                          disabled={row.missingMonths.length === 0}
+                          title="Marquer les mois manquants à 0 (pas de locations)"
+                        >
+                          Marquer 0
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -850,6 +912,56 @@ const AdminMissing2025StatsPage: React.FC = () => {
             </Button>
             <Button onClick={confirmImportFromXlsx} disabled={isXlsxImporting || previewXlsxEntries.length === 0}>
               {isXlsxImporting ? "Import en cours..." : "Importer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Marquer mois à 0 */}
+      <Dialog open={isMarkZeroOpen} onOpenChange={(open) => { setIsMarkZeroOpen(open); if (!open) { setTargetUserForZero(null); setSelectedZeroMonths([]); } }}>
+        <DialogContent className="sm:max-w-3xl w-full max-w-[95vw]">
+          <DialogHeader>
+            <DialogTitle>Marquer mois sans locations (stats à 0)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {targetUserForZero ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Client: {(targetUserForZero.firstName ?? "") + " " + (targetUserForZero.lastName ?? "")}
+                </p>
+                {targetUserForZero.missingMonths.length > 0 ? (
+                  <>
+                    <div className="flex gap-2 mb-2">
+                      <Button variant="outline" size="sm" onClick={selectAllZeroMonths}>Tout sélectionner</Button>
+                      <Button variant="outline" size="sm" onClick={clearZeroMonths}>Tout désélectionner</Button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[50vh] overflow-auto border rounded-md p-3">
+                      {targetUserForZero.missingMonths
+                        .sort((a, b) => MONTHS_2025.indexOf(a) - MONTHS_2025.indexOf(b))
+                        .map((m) => {
+                          const checked = selectedZeroMonths.includes(m);
+                          return (
+                            <label key={m} className="flex items-center gap-2 cursor-pointer">
+                              <Checkbox checked={checked} onCheckedChange={(val) => toggleZeroMonth(m, Boolean(val))} />
+                              <span>{m} 2025</span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  </>
+                ) : (
+                  <Alert className="mt-2">
+                    <AlertTitle>Aucun mois manquant</AlertTitle>
+                    <AlertDescription>Ce client n'a aucun mois à marquer à 0.</AlertDescription>
+                  </Alert>
+                )}
+              </>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMarkZeroOpen(false)}>Annuler</Button>
+            <Button onClick={confirmMarkZeroMonths} disabled={!targetUserForZero || selectedZeroMonths.length === 0}>
+              Enregistrer
             </Button>
           </DialogFooter>
         </DialogContent>

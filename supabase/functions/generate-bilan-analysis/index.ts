@@ -8,6 +8,7 @@ type BilanInput = {
     totalFrais: number;
     totalDepenses: number;
     resultatNet: number;
+    totalReservations?: number;
   };
   monthly: Array<{
     name: string;
@@ -43,6 +44,9 @@ serve(async (req) => {
     }
 
     // Compose a structured prompt
+    const nextYear = (input.year || 0) + 1;
+    const totalRes = input.totals.totalReservations ?? input.monthly.reduce((sum, m) => sum + (m.reservations || 0), 0);
+
     const prompt = `
 Tu écris en tant qu'agent Hello Keys. Produit une analyse brève, concrète et actionnable pour l'année ${input.year}, en français.
 Contraintes:
@@ -53,10 +57,10 @@ Contraintes:
   1) Phrase de synthèse claire (une ou deux phrases)
   2) 3 à 5 puces d'insights clés (saisonnalité, variations, prix/nuit, réservations, nuits)
   3) 2 à 3 recommandations concrètes pour la prochaine saison
-- N'invente pas de données si elles manquent.
+- N'invente pas de données si elles manquent. Cite le nombre exact de réservations: ${totalRes}.
 
 Données disponibles:
-Totaux: CA=${input.totals.totalCA.toFixed(2)}€; Versé=${input.totals.totalMontantVerse.toFixed(2)}€; Frais=${input.totals.totalFrais.toFixed(2)}€; Dépenses=${input.totals.totalDepenses.toFixed(2)}€; Résultat net=${input.totals.resultatNet.toFixed(2)}€.
+Totaux: CA=${input.totals.totalCA.toFixed(2)}€; Versé=${input.totals.totalMontantVerse.toFixed(2)}€; Frais=${input.totals.totalFrais.toFixed(2)}€; Dépenses=${input.totals.totalDepenses.toFixed(2)}€; Résultat net=${input.totals.resultatNet.toFixed(2)}€; Réservations=${totalRes}.
 
 Mensuel (mois; CA; Versé; Frais; Bénéf; Nuits; Réserv.; Prix/Nuit):
 ${input.monthly.map(m => `${m.name}: CA=${m.ca.toFixed(2)}€; Versé=${m.montantVerse.toFixed(2)}€; Frais=${m.frais.toFixed(2)}€; Bénéf=${m.benef.toFixed(2)}€; Nuits=${m.nuits}; Réserv=${m.reservations}; Px/Nuit=${m.prixParNuit.toFixed(2)}€`).join("\n")}

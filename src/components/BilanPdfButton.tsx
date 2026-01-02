@@ -59,6 +59,8 @@ const BilanPdfButton: React.FC<BilanPdfButtonProps> = ({ year, totals, monthly, 
     const toastId = toast.loading("Génération du bilan…");
 
     try {
+      const totalReservations = monthly.reduce((sum, m) => sum + (m.reservations || 0), 0);
+
       const input: BilanInput = {
         year,
         totals: {
@@ -67,6 +69,7 @@ const BilanPdfButton: React.FC<BilanPdfButtonProps> = ({ year, totals, monthly, 
           totalFrais: totals.frais,
           totalDepenses: totals.depenses,
           resultatNet: totals.resultatNet,
+          totalReservations, // AJOUT
         },
         monthly: monthly.map(m => ({
           name: m.name,
@@ -129,7 +132,8 @@ const BilanPdfButton: React.FC<BilanPdfButtonProps> = ({ year, totals, monthly, 
       pdf.addPage();
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(14);
-      pdf.text("Analyse IA (ChatGPT)", 20, 25);
+      const nextYear = year + 1;
+      pdf.text(`Analyse Hello Keys — recommandations ${nextYear}`, 20, 25); // AJOUT titre orienté année suivante
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(11);
 

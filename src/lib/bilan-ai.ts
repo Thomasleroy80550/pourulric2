@@ -10,6 +10,7 @@ export type BilanInput = {
     totalFrais: number;
     totalDepenses: number;
     resultatNet: number;
+    totalReservations?: number; // AJOUT
   };
   monthly: Array<{
     name: string; // mois court "Jan", "Fév"...

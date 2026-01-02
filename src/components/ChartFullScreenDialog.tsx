@@ -140,54 +140,79 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
           <div ref={chartContainerRef} className="flex-grow w-full h-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'line' ? (
-                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                  <YAxis unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number) => `${value}${yAxisUnit || ''}`}
-                  />
-                  <Legend />
-                  {dataKeys.map((item) => (
-                    <Line
-                      key={item.key}
-                      type="monotone"
-                      dataKey={item.key}
-                      stroke={item.color}
-                      name={item.name}
-                      strokeWidth={3}
-                      dot={{ r: 4 }}
-                      animationDuration={1500}
-                      animationEasing="ease-in-out"
-                    />
-                  ))}
-                </LineChart>
+                (() => {
+                  const hasSecondary = dataKeys.some(k => k.key === 'prixParNuit');
+                  return (
+                    <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                      <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                      {/* Axes */}
+                      <YAxis yAxisId="left" unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
+                      {hasSecondary && (
+                        <YAxis yAxisId="right" orientation="right" unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
+                      )}
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        itemStyle={{ color: 'hsl(var(--foreground))' }}
+                        formatter={(value: number) => `${value.toFixed(2)}${yAxisUnit || ''}`}
+                      />
+                      <Legend />
+                      {dataKeys.map((item) => {
+                        const axisId = item.key === 'prixParNuit' ? 'right' : 'left';
+                        return (
+                          <Line
+                            key={item.key}
+                            type="monotone"
+                            dataKey={item.key}
+                            stroke={item.color}
+                            name={item.name}
+                            strokeWidth={3}
+                            dot={{ r: 4 }}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
+                            yAxisId={hasSecondary ? axisId : 'left'}
+                          />
+                        );
+                      })}
+                    </LineChart>
+                  );
+                })()
               ) : (
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                  <YAxis unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                    formatter={(value: number) => `${value}${yAxisUnit || ''}`}
-                  />
-                  <Legend />
-                  {dataKeys.map((item) => (
-                    <Bar
-                      key={item.key}
-                      dataKey={item.key}
-                      fill={item.color}
-                      name={item.name}
-                      animationDuration={1500}
-                      animationEasing="ease-in-out"
-                    />
-                  ))}
-                </BarChart>
+                (() => {
+                  const hasSecondary = dataKeys.some(k => k.key === 'prixParNuit');
+                  return (
+                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                      <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
+                      <YAxis yAxisId="left" unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
+                      {hasSecondary && (
+                        <YAxis yAxisId="right" orientation="right" unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
+                      )}
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem' }}
+                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                        itemStyle={{ color: 'hsl(var(--foreground))' }}
+                        formatter={(value: number) => `${value.toFixed(2)}${yAxisUnit || ''}`}
+                      />
+                      <Legend />
+                      {dataKeys.map((item) => {
+                        const axisId = item.key === 'prixParNuit' ? 'right' : 'left';
+                        return (
+                          <Bar
+                            key={item.key}
+                            dataKey={item.key}
+                            fill={item.color}
+                            name={item.name}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
+                            yAxisId={hasSecondary ? axisId : 'left'}
+                          />
+                        );
+                      })}
+                    </BarChart>
+                  );
+                })()
               )}
             </ResponsiveContainer>
           </div>

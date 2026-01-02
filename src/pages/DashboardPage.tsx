@@ -538,7 +538,7 @@ const DashboardPage = () => {
         </div>
         
         {/* Notif box BILAN 2025 */}
-        {showBilanNotice && (
+        {showBilanNotice && selectedYear !== 2025 && (
           <Alert className="mb-6 w-full overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/20 shadow-sm p-0">
             <div className="p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-start gap-3">
@@ -585,104 +585,108 @@ const DashboardPage = () => {
         )}
 
         {/* Bloc Cinématique Bonne Année 2026 */}
-        <Card className="mb-6 shadow-md">
-          <CardHeader className="pt-6">
-            <div className="w-full flex justify-center">
-              <div className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
-                <div className="relative rounded-2xl border border-slate-200/60 bg-gradient-to-br from-sky-50 via-white to-indigo-50 dark:bg-slate-900/40 backdrop-blur px-8 py-6 shadow-sm max-w-2xl w-full">
-                  {/* Décor de fond festif discret dans le bloc */}
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-[0.1]"
-                    style={{
-                      backgroundImage:
-                        "repeating-linear-gradient(135deg, rgba(79,70,229,0.14) 0, rgba(79,70,229,0.14) 2px, transparent 2px, transparent 14px)",
-                    }}
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_60%)]" />
-                  <div className="pointer-events-none absolute -bottom-[6px] left-6 right-6 h-[8px] rounded-full bg-gradient-to-r from-sky-400/30 via-indigo-500/20 to-amber-400/30 blur-md" />
-                  <div className="pointer-events-none absolute -top-[6px] left-8 right-8 h-[6px] rounded-full bg-gradient-to-r from-white/70 via-white/30 to-white/70 blur-sm" />
-
-                  {/* Contenu centré */}
-                  <div className="relative flex flex-col items-center justify-center">
-                    <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
-                      <Sparkles className="h-5 w-5 text-indigo-600" />
-                      <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
-                      <Sparkles className="h-5 w-5 text-amber-500" />
-                    </div>
-                    <p className="mb-3 text-xs md:text-sm text-slate-600 dark:text-slate-300">
-                      Merci pour 2025 — en route pour une année 2026 lumineuse ✨
-                    </p>
-                    {/* Compte à rebours vers le 01/01/2026 */}
-                    <Countdown
-                      target={new Date(2026, 0, 1, 0, 0, 0)}
-                      className="mt-1"
+        {selectedYear !== 2025 && (
+          <Card className="mb-6 shadow-md">
+            <CardHeader className="pt-6">
+              <div className="w-full flex justify-center">
+                <div className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
+                  <div className="relative rounded-2xl border border-slate-200/60 bg-gradient-to-br from-sky-50 via-white to-indigo-50 dark:bg-slate-900/40 backdrop-blur px-8 py-6 shadow-sm max-w-2xl w-full">
+                    {/* Décor de fond festif discret dans le bloc */}
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-[0.1]"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(135deg, rgba(79,70,229,0.14) 0, rgba(79,70,229,0.14) 2px, transparent 2px, transparent 14px)",
+                      }}
                     />
-                    {/* Petits badges festifs pour remplir élégamment */}
-                    <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                      <Badge className="bg-sky-100 text-sky-800">Joie</Badge>
-                      <Badge className="bg-indigo-100 text-indigo-800">Santé</Badge>
-                      <Badge className="bg-amber-100 text-amber-800">Succès</Badge>
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_60%)]" />
+                    <div className="pointer-events-none absolute -bottom-[6px] left-6 right-6 h-[8px] rounded-full bg-gradient-to-r from-sky-400/30 via-indigo-500/20 to-amber-400/30 blur-md" />
+                    <div className="pointer-events-none absolute -top-[6px] left-8 right-8 h-[6px] rounded-full bg-gradient-to-r from-white/70 via-white/30 to-white/70 blur-sm" />
+
+                    {/* Contenu centré */}
+                    <div className="relative flex flex-col items-center justify-center">
+                      <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
+                        <Sparkles className="h-5 w-5 text-indigo-600" />
+                        <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
+                        <Sparkles className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <p className="mb-3 text-xs md:text-sm text-slate-600 dark:text-slate-300">
+                        Merci pour 2025 — en route pour une année 2026 lumineuse ✨
+                      </p>
+                      {/* Compte à rebours vers le 01/01/2026 */}
+                      <Countdown
+                        target={new Date(2026, 0, 1, 0, 0, 0)}
+                        className="mt-1"
+                      />
+                      {/* Petits badges festifs pour remplir élégamment */}
+                      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                        <Badge className="bg-sky-100 text-sky-800">Joie</Badge>
+                        <Badge className="bg-indigo-100 text-indigo-800">Santé</Badge>
+                        <Badge className="bg-amber-100 text-amber-800">Succès</Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <NewYear2026Cinematic />
-          </CardContent>
-        </Card>
-
-        {/* To-Do List Card */}
-        <div className="mt-6">
-          <Card id="tour-todo-list" className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center">
-                <ListChecks className="mr-2 h-5 w-5" />
-                Mes actions requises
-              </CardTitle>
             </CardHeader>
             <CardContent>
-              {loadingTasks ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : tasksError ? (
-                <Alert variant="destructive">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{tasksError}</AlertDescription>
-                </Alert>
-              ) : todoTasks.length > 0 ? (
-                <ul className="space-y-2">
-                  {todoTasks.map(task => (
-                    <li key={task.id}>
-                      <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full">
-                        <div>
-                          <p className="font-medium text-sm">{task.title}</p>
-                          {task.property_name && ( // Afficher property_name si c'est un rapport technique
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
-                          )}
-                          {task.description && !task.property_name && ( // Afficher la description pour les autres tâches
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
-                          )}
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
-                  <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
-                  <p className="font-semibold">Vous êtes à jour !</p>
-                  <p className="text-sm">Aucune action n'est requise de votre part.</p>
-                </div>
-              )}
+              <NewYear2026Cinematic />
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {/* To-Do List Card */}
+        {selectedYear !== 2025 && (
+          <div className="mt-6">
+            <Card id="tour-todo-list" className="shadow-md">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center">
+                  <ListChecks className="mr-2 h-5 w-5" />
+                  Mes actions requises
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingTasks ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : tasksError ? (
+                  <Alert variant="destructive">
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Erreur de chargement</AlertTitle>
+                    <AlertDescription>{tasksError}</AlertDescription>
+                  </Alert>
+                ) : todoTasks.length > 0 ? (
+                  <ul className="space-y-2">
+                    {todoTasks.map(task => (
+                      <li key={task.id}>
+                        <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full">
+                          <div>
+                            <p className="font-medium text-sm">{task.title}</p>
+                            {task.property_name && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
+                            )}
+                            {task.description && !task.property_name && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
+                            )}
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-gray-400" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                    <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
+                    <p className="font-semibold">Vous êtes à jour !</p>
+                    <p className="text-sm">Aucune action n'est requise de votre part.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* REMOVED: Bloc Nouveautés (public) qui affichait <NewsFeedPublic /> */}
 

@@ -46,7 +46,7 @@ import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-re
 import { Badge } from "@/components/ui/badge";
 import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
 import Countdown from "@/components/Countdown";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -79,7 +79,6 @@ const isInBilan2025Window = () => {
 const DashboardPage = () => {
   const { profile } = useSession();
   const currentYear = new Date().getFullYear();
-  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
   const [showBilanNotice, setShowBilanNotice] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const yearLabel = selectedYear === currentYear ? 'Année en cours' : String(selectedYear);
@@ -476,18 +475,15 @@ const DashboardPage = () => {
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-700 dark:text-gray-300">Année:</span>
-            <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(Number(val))}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Choisir une année" />
-              </SelectTrigger>
-              <SelectContent>
-                {years.map(y => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y === currentYear ? `Année en cours (${y})` : String(y)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Tabs
+              value={selectedYear === currentYear ? 'current' : '2025'}
+              onValueChange={(val) => setSelectedYear(val === 'current' ? currentYear : 2025)}
+            >
+              <TabsList>
+                <TabsTrigger value="current">Année en cours ({currentYear})</TabsTrigger>
+                <TabsTrigger value="2025">2025</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           <Badge variant="secondary">{yearLabel}</Badge>
         </div>

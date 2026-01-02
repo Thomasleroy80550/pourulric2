@@ -281,7 +281,19 @@ const AdminUsersPage: React.FC = () => {
       });
 
       if (error) throw error;
-      if (!data.access_token || !data.refresh_token) throw new Error("Tokens de session invalides reçus.");
+
+      // Nouveau: si la fonction renvoie un lien d'action (magic link), on y redirige
+      if (data?.action_link) {
+        toast.success("Ouverture de la session du client...");
+        // La redirection établira la session côté Supabase, puis renverra vers l'app
+        window.location.href = data.action_link;
+        return;
+      }
+
+      // Ancien flux: si des tokens sont fournis, on les utilise directement
+      if (!data?.access_token || !data?.refresh_token) {
+        throw new Error("Tokens de session invalides reçus.");
+      }
 
       const { error: sessionError } = await supabase.auth.setSession({
         access_token: data.access_token,

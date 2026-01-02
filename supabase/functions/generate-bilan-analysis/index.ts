@@ -45,6 +45,8 @@ serve(async (req) => {
     // Compose a structured prompt
     const prompt = `
 Tu es un analyste financier pour des locations saisonnières. Écris une analyse claire et concise pour l'année ${input.year}, en français.
+IMPORTANT: N'utilise PAS de Markdown, pas de '#', '##', '###' ni de backticks. Utilise des titres simples en texte et des puces '•' si nécessaire.
+
 Inclure:
 1) Synthèse générale (CA, montant versé, frais, autres dépenses, résultat net).
 2) Tendances mensuelles clés (saisonnalité, variations fortes).

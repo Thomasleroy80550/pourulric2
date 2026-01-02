@@ -33,6 +33,27 @@ type BilanPdfButtonProps = {
 const BilanPdfButton: React.FC<BilanPdfButtonProps> = ({ year, totals, monthly, className }) => {
   const [loading, setLoading] = useState(false);
 
+  // Ajout: fonction de nettoyage pour enlever le Markdown (###, *, - ...)
+  const sanitizeAnalysis = (text: string) => {
+    if (!text) return "";
+    return text
+      .replace(/\r/g, "")
+      .split("\n")
+      .map((line) =>
+        line
+          // Enlever les titres Markdown (#, ##, ### ...)
+          .replace(/^\s*#{1,6}\s*/g, "")
+          // Transformer puces en •
+          .replace(/^\s*[-*]\s+/g, "• ")
+          // Eviter code blocks/backticks
+          .replace(/^\s*```/g, "")
+      )
+      .join("\n")
+      // Nettoyage résiduel
+      .replace(/```/g, "")
+      .trim();
+  };
+
   const handleGenerate = async () => {
     setLoading(true);
     const toastId = toast.loading("Génération du bilan…");
@@ -60,6 +81,9 @@ const BilanPdfButton: React.FC<BilanPdfButtonProps> = ({ year, totals, monthly, 
       };
 
       const analysis = await generateBilanAnalysis(input);
+
+      // Nettoyage: retirer les ### et mise en forme Markdown
+      const cleanAnalysis = sanitizeAnalysis(analysis);
 
       const pdf = new jsPDF("p", "mm", "a4");
 
@@ -109,9 +133,9 @@ const BilanPdfButton: React.FC<BilanPdfButtonProps> = ({ year, totals, monthly, 
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(11);
 
-      // Découper le texte en lignes pour le PDF
       const maxWidth = 170;
-      const lines = pdf.splitTextToSize(analysis, maxWidth);
+      // Utiliser le texte nettoyé
+      const lines = pdf.splitTextToSize(cleanAnalysis, maxWidth);
       pdf.text(lines, 20, 35);
 
       const stamp = new Date();

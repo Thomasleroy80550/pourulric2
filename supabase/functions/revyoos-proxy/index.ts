@@ -7,7 +7,8 @@ import { fr } from 'npm:date-fns/locale/fr';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 const REVOOYS_EMAIL = Deno.env.get('REVOOYS_EMAIL');
 const REVOOYS_PASSWORD = Deno.env.get('REVOOYS_PASSWORD');
@@ -89,7 +90,6 @@ async function fetchAllReviewsForHolding(id_holding: string, token: string): Pro
   return allHoldingReviews;
 }
 
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -141,8 +141,8 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Error in revyoos-proxy function:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Error in revyoos-proxy function:", (error as any)?.message ?? error);
+    return new Response(JSON.stringify({ error: (error as any)?.message ?? 'Unknown error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

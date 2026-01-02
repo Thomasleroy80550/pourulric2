@@ -5,6 +5,7 @@ import { sha1 } from 'https://esm.sh/js-sha1@0.7.0';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 const CACHE_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours

@@ -56,7 +56,6 @@ Contraintes:
 - Structure: 
   1) Phrase de synthèse claire (une ou deux phrases)
   2) 3 à 5 puces d'insights clés (saisonnalité, variations, prix/nuit, réservations, nuits)
-  3) 2 à 3 recommandations concrètes pour la prochaine saison
 - N'invente pas de données si elles manquent. Cite le nombre exact de réservations: ${totalRes}.
 
 Données disponibles:

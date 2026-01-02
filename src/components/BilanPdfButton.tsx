@@ -132,8 +132,7 @@ const BilanPdfButton: React.FC<BilanPdfButtonProps> = ({ year, totals, monthly, 
       pdf.addPage();
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(14);
-      const nextYear = year + 1;
-      pdf.text(`Analyse Hello Keys — recommandations ${nextYear}`, 20, 25); // AJOUT titre orienté année suivante
+      pdf.text("Analyse Hello Keys", 20, 25);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(11);
 

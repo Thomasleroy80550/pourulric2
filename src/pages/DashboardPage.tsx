@@ -46,6 +46,7 @@ import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-re
 import { Badge } from "@/components/ui/badge";
 import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
 import Countdown from "@/components/Countdown";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -80,6 +81,8 @@ const DashboardPage = () => {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
   const [showBilanNotice, setShowBilanNotice] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const yearLabel = selectedYear === currentYear ? 'Année en cours' : String(selectedYear);
 
   const [activityData, setActivityData] = useState(
     DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))
@@ -293,19 +296,19 @@ const DashboardPage = () => {
       let allExpenses: Expense[] = [];
       if (userProfile?.expenses_module_enabled) {
         const [singleExpenses, recurringTemplates] = await Promise.all([
-          getExpenses(currentYear),
+          getExpenses(selectedYear),
           getRecurringExpenses()
         ]);
-        const recurringInstances = generateRecurringInstances(recurringTemplates, currentYear);
+        const recurringInstances = generateRecurringInstances(recurringTemplates, selectedYear);
         allExpenses = [...singleExpenses, ...recurringInstances];
       }
 
       const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
-          getMyStatements(),
-          getUserRooms(),
-          getReviews(userProfile.revyoos_holding_ids),
-          getTechnicalReportsByUserId(userProfile.id)
-        ]);
+        getMyStatements(),
+        getUserRooms(),
+        getReviews(userProfile.revyoos_holding_ids),
+        getTechnicalReportsByUserId(userProfile.id)
+      ]);
 
       let allTodoTasks: TodoTask[] = [];
 
@@ -369,7 +372,7 @@ const DashboardPage = () => {
 
       setTodoTasks(allTodoTasks); // Mettre à jour l'état avec toutes les tâches
 
-      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
+      const { totalNights } = processStatements(statements, selectedYear, fetchedUserRooms, allExpenses);
 
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
@@ -403,8 +406,8 @@ const DashboardPage = () => {
       });
       setNextArrival(nextArrivalCandidate);
 
-      const totalDaysInCurrentYear = getDaysInYear(new Date());
-      const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInCurrentYear;
+      const totalDaysInSelectedYear = getDaysInYear(new Date(selectedYear, 0, 1));
+      const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInSelectedYear;
       const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNights / totalAvailableNightsInYear) * 100 : 0;
       setOccupancyRateCurrentYear(calculatedOccupancyRate);
 
@@ -427,7 +430,7 @@ const DashboardPage = () => {
       setLoadingReviews(false);
       setLoadingTasks(false);
     }
-  }, [currentYear]);
+  }, [selectedYear]);
 
   useEffect(() => {
     if (!profile?.is_banned) {
@@ -438,6 +441,10 @@ const DashboardPage = () => {
   // Removed the useEffect that starts the dashboard tour automatically
 
   const handleShowForecast = () => {
+    if (selectedYear !== currentYear) {
+      toast.error("La prévision n'est disponible que pour l'année en cours.");
+      return;
+    }
     const today = new Date();
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
     const totalDaysInYear = getDaysInYear(today);
@@ -465,7 +472,25 @@ const DashboardPage = () => {
     <MainLayout>
       <div className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words">
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700 dark:text-gray-300">Année:</span>
+            <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(Number(val))}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Choisir une année" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map(y => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y === currentYear ? `Année en cours (${y})` : String(y)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Badge variant="secondary">{yearLabel}</Badge>
+        </div>
         
         {/* Notif box BILAN 2025 */}
         {showBilanNotice && (
@@ -620,7 +645,7 @@ const DashboardPage = () => {
           {/* Bilan Financier Card */}
           <Card id="tour-financial-summary" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Bilan Financier</CardTitle>
+              <CardTitle className="text-lg font-semibold">Bilan Financier — {yearLabel}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingFinancialData ? (
@@ -692,7 +717,7 @@ const DashboardPage = () => {
           {/* Activité de Location Card */}
           <Card id="tour-activity-stats" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+              <CardTitle className="text-lg font-semibold">Activité de Location — {yearLabel}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingKrossbookingStats || loadingFinancialData || loadingReviews ? (
@@ -767,7 +792,7 @@ const DashboardPage = () => {
           {/* Activité de Location Card (Donut Chart) */}
           <Card id="tour-activity-chart" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+              <CardTitle className="text-lg font-semibold">Activité de Location — {yearLabel}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col p-4 h-[320px] w-full max-w-full">
               {loadingFinancialData ? (
@@ -832,7 +857,7 @@ const DashboardPage = () => {
           {/* Statistiques Financières Mensuelles Card */}
           <Card id="tour-monthly-financials" className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
+              <CardTitle className="text-lg font-semibold">Finances Mensuelles — {yearLabel}</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyFinancialData,
                 'line',
@@ -882,7 +907,7 @@ const DashboardPage = () => {
           {/* Réservation / mois Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Réservations / mois</CardTitle>
+              <CardTitle className="text-lg font-semibold">Réservations / mois — {yearLabel}</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyReservationsData,
                 'bar',
@@ -919,7 +944,7 @@ const DashboardPage = () => {
           {/* Occupation Mensuelle Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Taux d'Occupation</CardTitle>
+              <CardTitle className="text-lg font-semibold">Taux d'Occupation — {yearLabel}</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyOccupancyData,
                 'line',
@@ -974,7 +999,7 @@ const DashboardPage = () => {
         isOpen={isForecastDialogOpen}
         onOpenChange={setIsForecastDialogOpen}
         forecastAmount={forecastAmount}
-        year={currentYear}
+        year={selectedYear}
       />
     </MainLayout>
   );

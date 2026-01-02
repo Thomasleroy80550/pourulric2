@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-import { sha1 } from 'https://esm.sh/js-sha1@0.7.0';
 import { format, parseISO } from 'npm:date-fns';
 import { fr } from 'npm:date-fns/locale/fr';
 
@@ -32,7 +31,7 @@ interface RevyoosReviewDTO {
   score_reviews: number;
   date: string;
   content_reviews: string;
-  type_source_reviews: string; // Added field
+  type_source_reviews: string;
 }
 
 interface ReviewsResponse {
@@ -40,6 +39,14 @@ interface ReviewsResponse {
   code: number;
   a_reviews: RevyoosReviewDTO[];
   s_message?: string;
+}
+
+// Web Crypto helper: SHA-1 hex
+async function sha1Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest('SHA-1', data);
+  const bytes = new Uint8Array(buf);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function getRevyoosToken(): Promise<string> {
@@ -51,7 +58,7 @@ async function getRevyoosToken(): Promise<string> {
     throw new Error("Revyoos credentials are not set in environment variables.");
   }
 
-  const hashedPassword = sha1(REVOOYS_PASSWORD);
+  const hashedPassword = await sha1Hex(REVOOYS_PASSWORD);
   const url = `${API_BASE_URL}/signin?email=${encodeURIComponent(REVOOYS_EMAIL)}&password=${hashedPassword}`;
 
   const response = await fetch(url);
@@ -79,12 +86,12 @@ async function fetchAllReviewsForHolding(id_holding: string, token: string): Pro
 
     if (!data.b_valid || !data.a_reviews) {
       console.warn(`Failed to fetch Revyoos reviews for holding ${id_holding} on page ${page}: ${data.s_message || 'Invalid response'}`);
-      hasMorePages = false; // Stop if the request is invalid
+      hasMorePages = false;
     } else if (data.a_reviews.length > 0) {
       allHoldingReviews = allHoldingReviews.concat(data.a_reviews);
-      page++; // Prepare for the next page
+      page++;
     } else {
-      hasMorePages = false; // No more reviews on this page, so we're done.
+      hasMorePages = false;
     }
   }
   return allHoldingReviews;
@@ -114,15 +121,13 @@ serve(async (req) => {
 
     const token = await getRevyoosToken();
 
-    // Use the new paginated fetch function for each holding ID.
-    const reviewPromises = holdingIds.map(id_holding => 
+    const reviewPromises = holdingIds.map(id_holding =>
       fetchAllReviewsForHolding(id_holding, token)
     );
 
     const results = await Promise.all(reviewPromises);
     const allReviews = results.flat();
 
-    // Deduplicate reviews in case multiple holdings return the same review.
     const uniqueReviews = Array.from(new Map(allReviews.map(review => [review._id, review])).values());
 
     const formattedReviews = uniqueReviews.map((reviewDto) => ({
@@ -132,7 +137,7 @@ serve(async (req) => {
       rating: reviewDto.score_reviews,
       date: format(parseISO(reviewDto.date), 'd MMMM yyyy', { locale: fr }),
       comment: reviewDto.content_reviews,
-      source: reviewDto.type_source_reviews, // Map the new field
+      source: reviewDto.type_source_reviews,
     }));
 
     return new Response(JSON.stringify(formattedReviews), {

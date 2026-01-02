@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { sha1 } from 'https://esm.sh/js-sha1@0.7.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +8,14 @@ const corsHeaders = {
 };
 
 const CACHE_EXPIRY_SECONDS = 24 * 60 * 60; // 24 hours
+
+// Web Crypto helper: SHA-1 hex
+async function sha1Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest('SHA-1', data);
+  const bytes = new Uint8Array(buf);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -43,7 +50,7 @@ serve(async (req) => {
     );
 
     const sortedHoldingIds = [...holdingIds].sort();
-    const holdingIdsHash = sha1(JSON.stringify(sortedHoldingIds));
+    const holdingIdsHash = await sha1Hex(JSON.stringify(sortedHoldingIds));
 
     // 1. Check cache
     const { data: cachedData, error: cacheError } = await adminSupabaseClient

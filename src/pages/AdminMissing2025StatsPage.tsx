@@ -15,6 +15,7 @@ import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { ManualStatementEntry } from "@/lib/admin-api";
 
 type InvoiceLite = {
   user_id: string;
@@ -57,10 +58,17 @@ const AdminMissing2025StatsPage: React.FC = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  // Prévisualisation CSV
+  const [previewCsvByUser, setPreviewCsvByUser] = useState<Record<string, ManualStatementEntry[]>>({});
+  const [csvPreviewStats, setCsvPreviewStats] = useState<{ total: number; included: number; skippedDec: number; skippedExisting: number }>({ total: 0, included: 0, skippedDec: 0, skippedExisting: 0 });
+
+  // Google Sheet import
   const [isGoogleImportOpen, setIsGoogleImportOpen] = useState(false);
   const [googleSheetUrl, setGoogleSheetUrl] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [isGoogleImporting, setIsGoogleImporting] = useState(false);
+  const [previewGoogleEntries, setPreviewGoogleEntries] = useState<ManualStatementEntry[]>([]);
+  const [googlePreviewStats, setGooglePreviewStats] = useState<{ included: number }>({ included: 0 });
 
   useEffect(() => {
     const loadData = async () => {
@@ -156,7 +164,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
   }, [profiles, invoices2025]);
 
   const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, "");
-  const expectedHeaders = [
+  const requiredHeaders = [
     "user_id",
     "period",
     "totalca",
@@ -166,6 +174,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
     "totalvoyageurs",
     "totalreservations",
   ];
+  const optionalHeaders = ["client_name"];
 
   const parseCsv = (text: string) => {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
@@ -213,59 +222,141 @@ const AdminMissing2025StatsPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleImport = async () => {
+  // Prévisualisation CSV (ne fait pas l'insert)
+  const previewCsvImport = async () => {
     if (!file) {
       toast.error("Veuillez sélectionner un fichier CSV.");
+      return;
+    }
+    const text = await file.text();
+    const parsed = parseCsv(text);
+
+    let total = parsed.length;
+    let skippedDec = 0;
+    let skippedExisting = 0;
+    let included = 0;
+
+    const byUser: Record<string, ManualStatementEntry[]> = {};
+    parsed.forEach(r => {
+      const userId = r["user_id"];
+      const periodRaw = r["period"];
+      if (!userId || !periodRaw) return;
+      const period = periodRaw.trim();
+      const lower = period.toLowerCase();
+      // Ignorer Décembre 2025
+      if (lower.includes("decembre 2025") || lower.includes("décembre 2025")) {
+        skippedDec++;
+        return;
+      }
+      const entry: ManualStatementEntry = {
+        period,
+        totalCA: Number(r["totalca"] ?? 0) || 0,
+        totalMontantVerse: Number(r["totalmontantverse"] ?? 0) || 0,
+        totalFacture: Number(r["totalfacture"] ?? 0) || 0,
+        totalNuits: parseInt(r["totalnuits"] ?? "0") || 0,
+        totalVoyageurs: parseInt(r["totalvoyageurs"] ?? "0") || 0,
+        totalReservations: parseInt(r["totalreservations"] ?? "0") || 0,
+      };
+      // Garder uniquement les mois manquants pour ce user
+      const userRow = rows.find(rr => rr.userId === userId);
+      const missingSet = new Set((userRow?.missingMonths ?? []).map(m => `${m} 2025`));
+      if (!missingSet.has(entry.period)) {
+        skippedExisting++;
+        return;
+      }
+      if (!byUser[userId]) byUser[userId] = [];
+      byUser[userId].push(entry);
+      included++;
+    });
+
+    setPreviewCsvByUser(byUser);
+    setCsvPreviewStats({ total, included, skippedDec, skippedExisting });
+    toast.success(`Prévisualisation prête: ${included} lignes seront importées (sur ${total}).`);
+  };
+
+  // Import effectif CSV (utilise la prévisualisation)
+  const confirmCsvImport = async () => {
+    const groups = Object.entries(previewCsvByUser);
+    if (groups.length === 0) {
+      toast.error("Aucune ligne sélectionnée pour import.");
       return;
     }
     setIsImporting(true);
     const id = toast.loading("Import des statistiques en cours...");
     try {
-      const text = await file.text();
-      const rows = parseCsv(text);
-
-      // Grouper par user_id
-      const byUser: Record<string, { period: string; totalCA: number; totalMontantVerse: number; totalFacture: number; totalNuits: number; totalVoyageurs: number; totalReservations: number; }[]> = {};
-      rows.forEach(r => {
-        const userId = r["user_id"];
-        const periodRaw = r["period"];
-        if (!userId || !periodRaw) return;
-
-        const period = periodRaw.trim();
-        const lower = period.toLowerCase();
-        // Ignorer Décembre 2025 à l'import
-        if (lower.includes("decembre 2025") || lower.includes("décembre 2025")) {
-          return;
-        }
-
-        const entry = {
-          period,
-          totalCA: Number(r["totalca"] ?? 0) || 0,
-          totalMontantVerse: Number(r["totalmontantverse"] ?? 0) || 0,
-          totalFacture: Number(r["totalfacture"] ?? 0) || 0,
-          totalNuits: parseInt(r["totalnuits"] ?? "0") || 0,
-          totalVoyageurs: parseInt(r["totalvoyageurs"] ?? "0") || 0,
-          totalReservations: parseInt(r["totalreservations"] ?? "0") || 0,
-        };
-        if (!byUser[userId]) byUser[userId] = [];
-        byUser[userId].push(entry);
-      });
-
-      // Import séquentiel par utilisateur
-      for (const [userId, statements] of Object.entries(byUser)) {
+      for (const [userId, statements] of groups) {
         if (statements.length > 0) {
           await addManualStatements(userId, statements);
         }
       }
-
-      toast.success("Import terminé avec succès.", { id });
+      toast.success("Import CSV effectué.", { id });
       setIsImportOpen(false);
       setFile(null);
+      setPreviewCsvByUser({});
       await refreshInvoices2025();
     } catch (e: any) {
       toast.error(`Erreur d'import: ${e.message}`, { id });
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  // Prévisualisation Google Sheet
+  const previewImportFromGoogle = async () => {
+    if (!selectedUserId) {
+      toast.error("Veuillez sélectionner un client.");
+      return;
+    }
+    if (!googleSheetUrl) {
+      toast.error("Veuillez coller l'URL du Google Sheet.");
+      return;
+    }
+    setIsGoogleImporting(true);
+    const toastId = toast.loading("Prévisualisation Google Sheet...");
+    try {
+      const { data, error } = await supabase.functions.invoke('import-stats-from-sheet', {
+        body: { sheetUrl: googleSheetUrl },
+      });
+      if (error) throw new Error(error.message || "Erreur Edge function.");
+      const entries = (data?.entries ?? []) as ManualStatementEntry[];
+
+      const userRow = rows.find(r => r.userId === selectedUserId);
+      const missingSet = new Set((userRow?.missingMonths ?? []).map(m => `${m} 2025`));
+      const toPreview = entries.filter(e => missingSet.has(e.period));
+
+      setPreviewGoogleEntries(toPreview);
+      setGooglePreviewStats({ included: toPreview.length });
+      toast.success(`Prévisualisation: ${toPreview.length} mois à importer.`, { id: toastId });
+    } catch (e: any) {
+      toast.error(`Erreur: ${e.message}`, { id: toastId });
+    } finally {
+      setIsGoogleImporting(false);
+    }
+  };
+
+  // Import effectif Google (utilise la prévisualisation)
+  const confirmImportFromGoogle = async () => {
+    if (!selectedUserId) {
+      toast.error("Client non sélectionné.");
+      return;
+    }
+    if (previewGoogleEntries.length === 0) {
+      toast.error("Rien à importer. Lancez la prévisualisation d'abord.");
+      return;
+    }
+    setIsGoogleImporting(true);
+    const toastId = toast.loading("Import Google Sheet en cours...");
+    try {
+      await addManualStatements(selectedUserId, previewGoogleEntries);
+      toast.success(`Import réussi: ${previewGoogleEntries.length} mois ajoutés.`, { id: toastId });
+      setIsGoogleImportOpen(false);
+      setGoogleSheetUrl("");
+      setPreviewGoogleEntries([]);
+      await refreshInvoices2025();
+    } catch (e: any) {
+      toast.error(`Erreur import: ${e.message}`, { id: toastId });
+    } finally {
+      setIsGoogleImporting(false);
     }
   };
 
@@ -278,45 +369,6 @@ const AdminMissing2025StatsPage: React.FC = () => {
       return matchesSearch && matchesMissing;
     });
   }, [rows, searchTerm, onlyMissing]);
-
-  const handleImportFromGoogle = async () => {
-    if (!selectedUserId) {
-      toast.error("Veuillez sélectionner un client.");
-      return;
-    }
-    if (!googleSheetUrl) {
-      toast.error("Veuillez coller l'URL du Google Sheet.");
-      return;
-    }
-    setIsGoogleImporting(true);
-    const toastId = toast.loading("Import depuis Google Sheet en cours...");
-    try {
-      const { data, error } = await supabase.functions.invoke('import-stats-from-sheet', {
-        body: { sheetUrl: googleSheetUrl },
-      });
-      if (error) throw new Error(error.message || "Erreur Edge function.");
-      const entries = (data?.entries ?? []) as ManualStatementEntry[];
-
-      // Conserver uniquement les mois manquants (et déjà hors décembre)
-      const row = rows.find(r => r.userId === selectedUserId);
-      const missingSet = new Set((row?.missingMonths ?? []).map(m => `${m} 2025`));
-      const toInsert = entries.filter(e => missingSet.has(e.period));
-
-      if (toInsert.length === 0) {
-        toast.info("Aucun mois à importer pour ce client (ou déjà complet).", { id: toastId });
-      } else {
-        await addManualStatements(selectedUserId, toInsert);
-        toast.success(`Import réussi: ${toInsert.length} mois ajoutés.`, { id: toastId });
-        setIsGoogleImportOpen(false);
-        setGoogleSheetUrl("");
-        await refreshInvoices2025();
-      }
-    } catch (e: any) {
-      toast.error(`Erreur import Google Sheet: ${e.message}`, { id: toastId });
-    } finally {
-      setIsGoogleImporting(false);
-    }
-  };
 
   return (
     <AdminLayout>
@@ -424,25 +476,67 @@ const AdminMissing2025StatsPage: React.FC = () => {
       </div>
 
       {/* Dialog Import CSV */}
-      <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+      <Dialog open={isImportOpen} onOpenChange={(open) => { setIsImportOpen(open); if (!open) { setPreviewCsvByUser({}); setCsvPreviewStats({ total: 0, included: 0, skippedDec: 0, skippedExisting: 0 }); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Importer des statistiques (CSV)</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Chargez un fichier CSV avec les colonnes: user_id, period, totalCA, totalMontantVerse, totalFacture, totalNuits, totalVoyageurs, totalReservations.
-              Les lignes "Décembre 2025" seront ignorées automatiquement.
+              Chargez un fichier CSV avec les colonnes: user_id, client_name (optionnel), period, totalCA, totalMontantVerse, totalFacture, totalNuits, totalVoyageurs, totalReservations.
+              Décembre 2025 est ignoré automatiquement. Utilisez "Prévisualiser" pour vérifier avant import.
             </p>
-            <Input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
+            <Input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            {csvPreviewStats.total > 0 && (
+              <div className="text-xs text-muted-foreground">
+                Total lignes: {csvPreviewStats.total} • À importer: {csvPreviewStats.included} • Ignorées (déc.): {csvPreviewStats.skippedDec} • Ignorées (déjà présentes): {csvPreviewStats.skippedExisting}
+              </div>
+            )}
+            {Object.keys(previewCsvByUser).length > 0 && (
+              <div className="max-h-64 overflow-auto border rounded-md p-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Période</TableHead>
+                      <TableHead>CA</TableHead>
+                      <TableHead>Montant Versé</TableHead>
+                      <TableHead>Facture</TableHead>
+                      <TableHead>Nuits</TableHead>
+                      <TableHead>Voyageurs</TableHead>
+                      <TableHead>Réservations</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(previewCsvByUser).flatMap(([userId, entries]) => {
+                      const name = (() => {
+                        const p = profiles.find(pp => pp.id === userId);
+                        return ((p?.first_name ?? "") + " " + (p?.last_name ?? "")).trim() || "—";
+                      })();
+                      return entries.map((e, idx) => (
+                        <TableRow key={`${userId}-${e.period}-${idx}`}>
+                          <TableCell>{name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{userId}</TableCell>
+                          <TableCell>{e.period}</TableCell>
+                          <TableCell>{e.totalCA}</TableCell>
+                          <TableCell>{e.totalMontantVerse}</TableCell>
+                          <TableCell>{e.totalFacture}</TableCell>
+                          <TableCell>{e.totalNuits}</TableCell>
+                          <TableCell>{e.totalVoyageurs}</TableCell>
+                          <TableCell>{e.totalReservations}</TableCell>
+                        </TableRow>
+                      ));
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsImportOpen(false)}>Annuler</Button>
-            <Button onClick={handleImport} disabled={isImporting || !file}>
+            <Button variant="outline" onClick={previewCsvImport} disabled={!file}>Prévisualiser</Button>
+            <Button onClick={confirmCsvImport} disabled={isImporting || Object.keys(previewCsvByUser).length === 0}>
               {isImporting ? "Import en cours..." : "Importer"}
             </Button>
           </DialogFooter>
@@ -450,7 +544,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
       </Dialog>
 
       {/* Dialog Import depuis Google Sheet */}
-      <Dialog open={isGoogleImportOpen} onOpenChange={setIsGoogleImportOpen}>
+      <Dialog open={isGoogleImportOpen} onOpenChange={(open) => { setIsGoogleImportOpen(open); if (!open) { setPreviewGoogleEntries([]); setGooglePreviewStats({ included: 0 }); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Importer depuis Google Sheet</DialogTitle>
@@ -478,13 +572,49 @@ const AdminMissing2025StatsPage: React.FC = () => {
               />
               <p className="text-xs text-muted-foreground">
                 Les onglets doivent être nommés avec les mois, ex: "Janvier 2025", "Mai 2025"...
-                Décembre 2025 est ignoré automatiquement.
+                Décembre 2025 est ignoré automatiquement. Cliquez sur Prévisualiser pour voir les données avant import.
               </p>
             </div>
+            {googlePreviewStats.included > 0 && (
+              <div className="text-xs text-muted-foreground">À importer: {googlePreviewStats.included} mois</div>
+            )}
+            {previewGoogleEntries.length > 0 && (
+              <div className="max-h-64 overflow-auto border rounded-md p-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Période</TableHead>
+                      <TableHead>CA</TableHead>
+                      <TableHead>Montant Versé</TableHead>
+                      <TableHead>Facture</TableHead>
+                      <TableHead>Nuits</TableHead>
+                      <TableHead>Voyageurs</TableHead>
+                      <TableHead>Réservations</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewGoogleEntries.map((e, idx) => (
+                      <TableRow key={`${e.period}-${idx}`}>
+                        <TableCell>{e.period}</TableCell>
+                        <TableCell>{e.totalCA}</TableCell>
+                        <TableCell>{e.totalMontantVerse}</TableCell>
+                        <TableCell>{e.totalFacture}</TableCell>
+                        <TableCell>{e.totalNuits}</TableCell>
+                        <TableCell>{e.totalVoyageurs}</TableCell>
+                        <TableCell>{e.totalReservations}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsGoogleImportOpen(false)}>Annuler</Button>
-            <Button onClick={handleImportFromGoogle} disabled={isGoogleImporting || !googleSheetUrl || !selectedUserId}>
+            <Button variant="outline" onClick={previewImportFromGoogle} disabled={isGoogleImporting || !googleSheetUrl || !selectedUserId}>
+              {isGoogleImporting ? "Prévisualisation..." : "Prévisualiser"}
+            </Button>
+            <Button onClick={confirmImportFromGoogle} disabled={isGoogleImporting || previewGoogleEntries.length === 0}>
               {isGoogleImporting ? "Import en cours..." : "Importer"}
             </Button>
           </DialogFooter>

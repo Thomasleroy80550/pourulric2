@@ -169,7 +169,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
     const delimiter = headerLine.includes(";") && !headerLine.includes(",") ? ";" : ",";
     const headersRaw = headerLine.split(delimiter).map(h => h.trim());
     const headers = headersRaw.map(h => normalize(h));
-    const missing = expectedHeaders.filter(h => !headers.includes(h));
+    const missing = requiredHeaders.filter(h => !headers.includes(h));
     if (missing.length > 0) {
       throw new Error(`Colonnes manquantes dans le CSV: ${missing.join(", ")}`);
     }
@@ -185,13 +185,14 @@ const AdminMissing2025StatsPage: React.FC = () => {
   };
 
   const downloadPrefilledCsvModel = () => {
-    const header = "user_id,period,totalCA,totalMontantVerse,totalFacture,totalNuits,totalVoyageurs,totalReservations";
+    const header = "user_id,client_name,period,totalCA,totalMontantVerse,totalFacture,totalNuits,totalVoyageurs,totalReservations";
     const lines: string[] = [];
     rows.forEach(r => {
       if (r.missingMonths.length > 0) {
+        const clientName = `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() || "Inconnu";
         r.missingMonths.forEach(m => {
           const period = `${m} 2025`;
-          lines.push([r.userId, period, 0, 0, 0, 0, 0, 0].join(","));
+          lines.push([r.userId, clientName, period, 0, 0, 0, 0, 0, 0].join(","));
         });
       }
     });

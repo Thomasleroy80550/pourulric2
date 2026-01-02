@@ -31,6 +31,7 @@ import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/kr
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore, differenceInDays, getDaysInMonth, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { parse } from 'date-fns';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import ForecastDialog from '@/components/ForecastDialog';
 import { FieryProgressBar } from '@/components/FieryProgressBar';
@@ -162,7 +163,7 @@ const DashboardPage = () => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
     let totalCA = 0, totalRentree = 0, totalFrais = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
-    const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0); // Ensure amount is treated as number
+    const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
     let totalResultat = 0;
 
     const channelCounts: { [key: string]: number } = {};
@@ -177,7 +178,12 @@ const DashboardPage = () => {
     const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
     const monthlyNights = Array(12).fill(0);
     
-    const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
+    // REPLACED: mois FR -> index static mapping by robust parsing with fallback
+    const monthMapFallback: { [key: string]: number } = {
+      'janvier': 0, 'février': 1, 'fevrier': 1, 'mars': 2, 'avril': 3, 'mai': 4,
+      'juin': 5, 'juillet': 6, 'août': 7, 'aout': 7, 'septembre': 8, 'octobre': 9,
+      'novembre': 10, 'décembre': 11, 'decembre': 11
+    };
 
     statementsForYear.forEach(s => {
       const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
@@ -193,9 +199,18 @@ const DashboardPage = () => {
       totalGuests += s.totals.totalVoyageurs || 0;
       totalReservations += s.totals.totalReservations ?? s.invoice_data.length;
 
-      const periodParts = s.period.toLowerCase().split(' ');
-      const monthName = periodParts[0];
-      const monthIndex = monthFrToNum[monthName];
+      // ADDED: Parse "period" to get month index (fr), with fallback
+      let monthIndex: number | undefined;
+      let parsed = parse(s.period, 'MMMM yyyy', new Date(), { locale: fr });
+      if (!isValid(parsed)) {
+        parsed = parse(s.period, 'MMM yyyy', new Date(), { locale: fr });
+      }
+      if (isValid(parsed)) {
+        monthIndex = parsed.getMonth();
+      } else {
+        const monthName = s.period.toLowerCase().split(' ')[0].replace('.', '');
+        monthIndex = monthMapFallback[monthName];
+      }
 
       if (monthIndex !== undefined) {
         newMonthlyFinancialData[monthIndex].ca += statementCA;

@@ -278,6 +278,10 @@ const AdminUsersPage: React.FC = () => {
 
       const { data, error } = await supabase.functions.invoke('impersonate-user', {
         body: { target_user_id: targetUserId },
+        headers: {
+          // IMPORTANT: passer le JWT admin pour que l'edge function puisse vérifier le rôle
+          Authorization: `Bearer ${adminSession.access_token}`,
+        },
       });
 
       if (error) throw error;
@@ -285,12 +289,10 @@ const AdminUsersPage: React.FC = () => {
       // Nouveau: si la fonction renvoie un lien d'action (magic link), on y redirige
       if (data?.action_link) {
         toast.success("Ouverture de la session du client...");
-        // La redirection établira la session côté Supabase, puis renverra vers l'app
         window.location.href = data.action_link;
         return;
       }
 
-      // Ancien flux: si des tokens sont fournis, on les utilise directement
       if (!data?.access_token || !data?.refresh_token) {
         throw new Error("Tokens de session invalides reçus.");
       }

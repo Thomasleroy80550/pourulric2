@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { ManualStatementEntry } from "@/lib/admin-api";
+import * as XLSX from "xlsx";
 
 type InvoiceLite = {
   user_id: string;
@@ -50,6 +51,16 @@ const getMonthIndex = (monthName: string): number | undefined => {
   return map[normalized];
 };
 
+// Helper: vérifier si le nom d'onglet correspond à un mois 2025 (hors décembre)
+const is2025MonthTitle = (title: string) => {
+  const parts = title.split(" ");
+  if (parts.length < 2) return false;
+  const month = parts[0];
+  const year = parts[1];
+  const idx = getMonthIndex(month);
+  return idx !== undefined && year === "2025" && idx !== 11; // exclure décembre (index 11)
+};
+
 const AdminMissing2025StatsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
@@ -71,6 +82,14 @@ const AdminMissing2025StatsPage: React.FC = () => {
   const [previewGoogleEntries, setPreviewGoogleEntries] = useState<ManualStatementEntry[]>([]);
   const [googlePreviewStats, setGooglePreviewStats] = useState<{ included: number }>({ included: 0 });
   const [googleErrorInfo, setGoogleErrorInfo] = useState<{ message?: string; hint?: string; serviceAccountEmail?: string } | null>(null);
+
+  // XLSX import (Google Sheets export)
+  const [isXlsxImportOpen, setIsXlsxImportOpen] = useState(false);
+  const [xlsxFile, setXlsxFile] = useState<File | null>(null);
+  const [selectedUserIdXlsx, setSelectedUserIdXlsx] = useState<string>("");
+  const [isXlsxImporting, setIsXlsxImporting] = useState(false);
+  const [previewXlsxEntries, setPreviewXlsxEntries] = useState<ManualStatementEntry[]>([]);
+  const [xlsxPreviewStats, setXlsxPreviewStats] = useState<{ included: number; tabsChecked: number }>({ included: 0, tabsChecked: 0 });
 
   useEffect(() => {
     const loadData = async () => {
@@ -373,6 +392,104 @@ const AdminMissing2025StatsPage: React.FC = () => {
     }
   };
 
+  // Prévisualisation XLSX (ne fait pas l'insert)
+  const previewImportFromXlsx = async () => {
+    if (!selectedUserIdXlsx) {
+      toast.error("Veuillez sélectionner un client.");
+      return;
+    }
+    if (!xlsxFile) {
+      toast.error("Veuillez sélectionner un fichier .xlsx exporté depuis Google Sheets.");
+      return;
+    }
+    setIsXlsxImporting(true);
+    const toastId = toast.loading("Prévisualisation XLSX en cours...");
+    try {
+      const buffer = await xlsxFile.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+
+      const entries: ManualStatementEntry[] = [];
+      let tabsChecked = 0;
+
+      for (const title of workbook.SheetNames) {
+        if (!is2025MonthTitle(title)) continue;
+        const sheet = workbook.Sheets[title];
+        tabsChecked++;
+
+        // Lire C1, F1, Q1, J1, K1
+        const readNum = (addr: string) => {
+          const cell = sheet[addr];
+          const raw = cell?.v ?? 0;
+          const num = typeof raw === "string" ? parseFloat(raw.replace(",", ".").trim()) : Number(raw);
+          return isNaN(num) ? 0 : num;
+        };
+
+        const totalCA = readNum("C1");
+        const totalMontantVerse = readNum("F1");
+        const totalFacture = readNum("Q1");
+        const totalNuits = readNum("J1");
+        const totalVoyageurs = readNum("K1");
+
+        // Somme L1:P1
+        const letters = ["L", "M", "N", "O", "P"];
+        let totalReservations = 0;
+        for (const col of letters) {
+          totalReservations += readNum(`${col}1`);
+        }
+
+        entries.push({
+          period: title,
+          totalCA,
+          totalMontantVerse,
+          totalFacture,
+          totalNuits,
+          totalVoyageurs,
+          totalReservations,
+        });
+      }
+
+      // Filtrer selon les mois manquants pour ce client
+      const userRow = rows.find(r => r.userId === selectedUserIdXlsx);
+      const missingSet = new Set((userRow?.missingMonths ?? []).map(m => `${m} 2025`));
+      const toPreview = entries.filter(e => missingSet.has(e.period));
+
+      setPreviewXlsxEntries(toPreview);
+      setXlsxPreviewStats({ included: toPreview.length, tabsChecked });
+      toast.success(`Prévisualisation: ${toPreview.length} mois à importer (${tabsChecked} onglets 2025 analysés).`, { id: toastId });
+    } catch (e: any) {
+      toast.error(`Erreur: ${e.message}`, { id: toastId });
+    } finally {
+      setIsXlsxImporting(false);
+    }
+  };
+
+  // Import effectif XLSX (utilise la prévisualisation)
+  const confirmImportFromXlsx = async () => {
+    if (!selectedUserIdXlsx) {
+      toast.error("Client non sélectionné.");
+      return;
+    }
+    if (previewXlsxEntries.length === 0) {
+      toast.error("Rien à importer. Lancez la prévisualisation d'abord.");
+      return;
+    }
+    setIsXlsxImporting(true);
+    const toastId = toast.loading("Import XLSX en cours...");
+    try {
+      await addManualStatements(selectedUserIdXlsx, previewXlsxEntries);
+      toast.success(`Import réussi: ${previewXlsxEntries.length} mois ajoutés.`, { id: toastId });
+      setIsXlsxImportOpen(false);
+      setXlsxFile(null);
+      setSelectedUserIdXlsx("");
+      setPreviewXlsxEntries([]);
+      await refreshInvoices2025();
+    } catch (e: any) {
+      toast.error(`Erreur import: ${e.message}`, { id: toastId });
+    } finally {
+      setIsXlsxImporting(false);
+    }
+  };
+
   const filteredRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return rows.filter(r => {
@@ -415,6 +532,9 @@ const AdminMissing2025StatsPage: React.FC = () => {
                 </Button>
                 <Button onClick={() => setIsGoogleImportOpen(true)}>
                   Importer depuis Google Sheet
+                </Button>
+                <Button onClick={() => setIsXlsxImportOpen(true)}>
+                  Importer fichier XLSX (Google Sheets)
                 </Button>
               </div>
             </div>
@@ -655,6 +775,81 @@ const AdminMissing2025StatsPage: React.FC = () => {
             </Button>
             <Button onClick={confirmImportFromGoogle} disabled={isGoogleImporting || previewGoogleEntries.length === 0}>
               {isGoogleImporting ? "Import en cours..." : "Importer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Import XLSX */}
+      <Dialog open={isXlsxImportOpen} onOpenChange={(open) => { setIsXlsxImportOpen(open); if (!open) { setPreviewXlsxEntries([]); setXlsxPreviewStats({ included: 0, tabsChecked: 0 }); setXlsxFile(null); setSelectedUserIdXlsx(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importer depuis fichier XLSX</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Chargez le fichier .xlsx exporté depuis Google Sheets. Les onglets doivent être nommés “Mois 2025” (ex: “Janvier 2025”, “Mai 2025”). Décembre 2025 est ignoré automatiquement.
+            </p>
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={selectedUserIdXlsx} onValueChange={setSelectedUserIdXlsx}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+                <SelectContent>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {(p.first_name ?? '') + ' ' + (p.last_name ?? '')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Fichier XLSX</Label>
+              <Input type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onChange={(e) => setXlsxFile(e.target.files?.[0] ?? null)} />
+              {xlsxPreviewStats.tabsChecked > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Onglets analysés: {xlsxPreviewStats.tabsChecked} • À importer: {xlsxPreviewStats.included}
+                </div>
+              )}
+            </div>
+            {previewXlsxEntries.length > 0 && (
+              <div className="max-h-64 overflow-auto border rounded-md p-2">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Période</TableHead>
+                      <TableHead>CA</TableHead>
+                      <TableHead>Montant Versé</TableHead>
+                      <TableHead>Facture</TableHead>
+                      <TableHead>Nuits</TableHead>
+                      <TableHead>Voyageurs</TableHead>
+                      <TableHead>Réservations</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewXlsxEntries.map((e, idx) => (
+                      <TableRow key={`${e.period}-${idx}`}>
+                        <TableCell>{e.period}</TableCell>
+                        <TableCell>{e.totalCA}</TableCell>
+                        <TableCell>{e.totalMontantVerse}</TableCell>
+                        <TableCell>{e.totalFacture}</TableCell>
+                        <TableCell>{e.totalNuits}</TableCell>
+                        <TableCell>{e.totalVoyageurs}</TableCell>
+                        <TableCell>{e.totalReservations}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsXlsxImportOpen(false)}>Annuler</Button>
+            <Button variant="outline" onClick={previewImportFromXlsx} disabled={isXlsxImporting || !xlsxFile || !selectedUserIdXlsx}>
+              {isXlsxImporting ? "Prévisualisation..." : "Prévisualiser"}
+            </Button>
+            <Button onClick={confirmImportFromXlsx} disabled={isXlsxImporting || previewXlsxEntries.length === 0}>
+              {isXlsxImporting ? "Import en cours..." : "Importer"}
             </Button>
           </DialogFooter>
         </DialogContent>

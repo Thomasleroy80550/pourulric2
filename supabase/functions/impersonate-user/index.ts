@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    // Vérifier que l'appelant est un administrateur avec le token Authorization du client
+    // Vérifier que l'appelant est un administrateur
     const userSupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -55,7 +55,7 @@ serve(async (req) => {
       throw new Error("Impossible de trouver l'utilisateur cible.");
     }
 
-    // Créer une session directe pour l'utilisateur cible et retourner les tokens
+    // Création directe d'une session et retour des tokens
     const { data: sessionData, error: createSessionError } = await adminSupabaseClient.auth.admin.createSession(target_user_id);
     if (createSessionError || !sessionData?.access_token || !sessionData?.refresh_token) {
       throw new Error(createSessionError?.message || "Échec de création de la session impersonation.");

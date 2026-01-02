@@ -22,7 +22,7 @@ import {
   ComposedChart,
   Line,
 } from "recharts";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from 'react-router-dom';
 import ObjectiveDialog from "@/components/ObjectiveDialog";
 import { getProfile, UserProfile } from "@/lib/profile-api";
@@ -47,6 +47,7 @@ import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-re
 import { Badge } from "@/components/ui/badge";
 import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
 import Countdown from "@/components/Countdown";
+import BilanExportButton from "@/components/BilanExportButton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Nouvelle interface pour les tâches à faire
@@ -83,6 +84,7 @@ const DashboardPage = () => {
   const [showBilanNotice, setShowBilanNotice] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const yearLabel = selectedYear === currentYear ? 'Année en cours' : String(selectedYear);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   const [activityData, setActivityData] = useState(
     DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))
@@ -500,7 +502,10 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
-      <div className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words">
+      <div
+        className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words"
+        ref={dashboardRef}
+      >
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
         <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -527,6 +532,9 @@ const DashboardPage = () => {
             </Tabs>
           </div>
           <Badge variant="secondary">{yearLabel}</Badge>
+          {selectedYear === 2025 && (
+            <BilanExportButton targetRef={dashboardRef} className="ml-2" />
+          )}
         </div>
         
         {/* Notif box BILAN 2025 */}

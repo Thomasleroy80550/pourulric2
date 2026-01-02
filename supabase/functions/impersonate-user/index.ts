@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Vérifier que l'appelant est un administrateur
+    // Vérifier que l'appelant est un administrateur avec le token Authorization du client
     const userSupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -37,46 +37,41 @@ serve(async (req) => {
       });
     }
 
-    // 2. Obtenir l'ID de l'utilisateur cible depuis le corps de la requête
+    // Obtenir l'ID de l'utilisateur cible
     const { target_user_id } = await req.json();
     if (!target_user_id) {
       throw new Error("Champ requis manquant : target_user_id.");
     }
 
-    // 3. Créer un client avec les droits de service
+    // Client admin (service role)
     const adminSupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Récupérer l'utilisateur cible par son ID pour obtenir son email
+    // Vérifier que l'utilisateur cible existe
     const { data: userToImpersonate, error: getUserError } = await adminSupabaseClient.auth.admin.getUserById(target_user_id);
-    if (getUserError || !userToImpersonate.user || !userToImpersonate.user.email) {
-      throw new Error("Impossible de trouver l'utilisateur cible ou son email.");
+    if (getUserError || !userToImpersonate.user) {
+      throw new Error("Impossible de trouver l'utilisateur cible.");
     }
 
-    // 5. Générer un lien magique pour l'utilisateur cible en utilisant son email
-    // L'URL de redirection doit être une URL de votre application où vous pouvez gérer les tokens
-    const { data: sessionData, error: sessionError } = await adminSupabaseClient.auth.admin.generateLink({
-        type: 'magiclink',
-        email: userToImpersonate.user.email,
-        options: {
-            redirectTo: 'http://localhost:5173/' // Remplacez par l'URL de votre application où les tokens seront gérés
-        }
-    });
+    // Créer une session directe pour l'utilisateur cible et retourner les tokens
+    const { data: sessionData, error: createSessionError } = await adminSupabaseClient.auth.admin.createSession(target_user_id);
+    if (createSessionError || !sessionData?.access_token || !sessionData?.refresh_token) {
+      throw new Error(createSessionError?.message || "Échec de création de la session impersonation.");
+    }
 
-    if (sessionError) throw sessionError;
-
-    // 6. Retourner le lien d'action au lieu des tokens
-    // Le client devra naviguer vers ce lien pour obtenir les tokens de session
-    return new Response(JSON.stringify({ action_link: sessionData.properties.action_link }), {
+    return new Response(JSON.stringify({
+      access_token: sessionData.access_token,
+      refresh_token: sessionData.refresh_token,
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
 
   } catch (error: any) {
-    console.error("Erreur dans la fonction impersonate-user:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Erreur dans la fonction impersonate-user:", error?.message || error);
+    return new Response(JSON.stringify({ error: error.message || 'Erreur inconnue' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

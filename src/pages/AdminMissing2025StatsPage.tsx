@@ -8,10 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { getAllProfiles, UserProfile } from "@/lib/admin-api";
+import { getAllProfiles, UserProfile, addManualStatements } from "@/lib/admin-api";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type InvoiceLite = {
   user_id: string;
@@ -51,13 +53,15 @@ const AdminMissing2025StatsPage: React.FC = () => {
   const [invoices2025, setInvoices2025] = useState<InvoiceLite[]>([]);
   const [onlyMissing, setOnlyMissing] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
         const fetchedProfiles = await getAllProfiles();
-        // Filtrer uniquement les clients (éviter admins dans la liste)
         const clientProfiles = fetchedProfiles.filter((p: any) => (p.role ?? "user") === "user");
         setProfiles(clientProfiles);
 
@@ -79,10 +83,17 @@ const AdminMissing2025StatsPage: React.FC = () => {
     loadData();
   }, []);
 
+  const refreshInvoices2025 = async () => {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("user_id, period, created_at")
+      .ilike("period", "% 2025");
+    if (!error && data) setInvoices2025(data as InvoiceLite[]);
+  };
+
   const rows: MissingStatsRow[] = useMemo(() => {
     if (profiles.length === 0) return [];
 
-    // Regrouper factures 2025 par utilisateur
     const invoicesByUser = new Map<string, InvoiceLite[]>();
     invoices2025.forEach(inv => {
       const list = invoicesByUser.get(inv.user_id) ?? [];
@@ -97,7 +108,6 @@ const AdminMissing2025StatsPage: React.FC = () => {
       userInvoices.forEach(inv => {
         const parts = inv.period.split(" ");
         const month = parts[0];
-        // Sécuriser: ne tenir compte que des mois FR attendus
         const idx = getMonthIndex(month);
         if (idx !== undefined) {
           presentMonthsSet.add(MONTHS_2025[idx]);
@@ -110,15 +120,15 @@ const AdminMissing2025StatsPage: React.FC = () => {
         const d = parseISO(profile.contract_start_date);
         const y = d.getFullYear();
         if (y > 2025) {
-          // contrat postérieur à 2025: rien attendu en 2025
-          startIndex = 12;
+          startIndex = 12; // aucun mois attendu en 2025
         } else if (y === 2025) {
           startIndex = d.getMonth(); // 0-11
         } else {
-          startIndex = 0; // avant 2025 -> tous les mois attendus
+          startIndex = 0;
         }
       }
-      const expectedMonths = MONTHS_2025.slice(startIndex, 12);
+      // IMPORTANT: ignorer Décembre 2025 (index 11)
+      const expectedMonths = MONTHS_2025.slice(startIndex, 11);
       const missingMonths = expectedMonths.filter(m => !presentMonthsSet.has(m));
 
       const lastStatementDate = userInvoices.length > 0
@@ -140,6 +150,96 @@ const AdminMissing2025StatsPage: React.FC = () => {
     });
   }, [profiles, invoices2025]);
 
+  const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, "");
+  const expectedHeaders = [
+    "user_id",
+    "period",
+    "totalca",
+    "totalmontantverse",
+    "totalfacture",
+    "totalnuits",
+    "totalvoyageurs",
+    "totalreservations",
+  ];
+
+  const parseCsv = (text: string) => {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) throw new Error("CSV vide.");
+    const headerLine = lines[0];
+    const delimiter = headerLine.includes(";") && !headerLine.includes(",") ? ";" : ",";
+    const headersRaw = headerLine.split(delimiter).map(h => h.trim());
+    const headers = headersRaw.map(h => normalize(h));
+    const missing = expectedHeaders.filter(h => !headers.includes(h));
+    if (missing.length > 0) {
+      throw new Error(`Colonnes manquantes dans le CSV: ${missing.join(", ")}`);
+    }
+    const rows = lines.slice(1).map(line => {
+      const cells = line.split(delimiter);
+      const obj: Record<string, string> = {};
+      headers.forEach((h, idx) => {
+        obj[h] = (cells[idx] ?? "").trim();
+      });
+      return obj;
+    });
+    return rows;
+  };
+
+  const handleImport = async () => {
+    if (!file) {
+      toast.error("Veuillez sélectionner un fichier CSV.");
+      return;
+    }
+    setIsImporting(true);
+    const id = toast.loading("Import des statistiques en cours...");
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+
+      // Grouper par user_id
+      const byUser: Record<string, { period: string; totalCA: number; totalMontantVerse: number; totalFacture: number; totalNuits: number; totalVoyageurs: number; totalReservations: number; }[]> = {};
+      rows.forEach(r => {
+        const userId = r["user_id"];
+        const periodRaw = r["period"];
+        if (!userId || !periodRaw) return;
+
+        const period = periodRaw.trim();
+        const lower = period.toLowerCase();
+        // Ignorer Décembre 2025 à l'import
+        if (lower.includes("decembre 2025") || lower.includes("décembre 2025")) {
+          return;
+        }
+
+        const entry = {
+          period,
+          totalCA: Number(r["totalca"] ?? 0) || 0,
+          totalMontantVerse: Number(r["totalmontantverse"] ?? 0) || 0,
+          totalFacture: Number(r["totalfacture"] ?? 0) || 0,
+          totalNuits: parseInt(r["totalnuits"] ?? "0") || 0,
+          totalVoyageurs: parseInt(r["totalvoyageurs"] ?? "0") || 0,
+          totalReservations: parseInt(r["totalreservations"] ?? "0") || 0,
+        };
+        if (!byUser[userId]) byUser[userId] = [];
+        byUser[userId].push(entry);
+      });
+
+      // Import séquentiel par utilisateur
+      for (const [userId, statements] of Object.entries(byUser)) {
+        if (statements.length > 0) {
+          await addManualStatements(userId, statements);
+        }
+      }
+
+      toast.success("Import terminé avec succès.", { id });
+      setIsImportOpen(false);
+      setFile(null);
+      await refreshInvoices2025();
+    } catch (e: any) {
+      toast.error(`Erreur d'import: ${e.message}`, { id });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const filteredRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return rows.filter(r => {
@@ -157,19 +257,31 @@ const AdminMissing2025StatsPage: React.FC = () => {
           <CardHeader>
             <CardTitle>Statistiques 2025 manquantes</CardTitle>
             <CardDescription>
-              Liste des clients et des mois de 2025 sans relevé/statistiques (ajuste automatiquement selon la date de début de contrat).
+              Liste des clients et des mois de 2025 sans relevé/statistiques (décembre 2025 est ignoré).
             </CardDescription>
-            <div className="mt-4 flex flex-col md:flex-row gap-3 md:items-center">
-              <div className="relative w-full md:w-1/3">
-                <Input
-                  placeholder="Rechercher un client..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col md:flex-row gap-3 md:items-center">
+                <div className="relative w-full md:w-72">
+                  <Input
+                    placeholder="Rechercher un client..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={onlyMissing} onCheckedChange={setOnlyMissing} id="only-missing" />
+                  <Label htmlFor="only-missing">Afficher uniquement ceux avec mois manquants</Label>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={onlyMissing} onCheckedChange={setOnlyMissing} id="only-missing" />
-                <Label htmlFor="only-missing">Afficher uniquement ceux avec mois manquants</Label>
+              <div className="flex gap-2">
+                <Button asChild variant="outline">
+                  <a href="/data/MODELE_STATS_2025.csv" download>
+                    Télécharger le modèle CSV
+                  </a>
+                </Button>
+                <Button onClick={() => setIsImportOpen(true)}>
+                  Importer CSV
+                </Button>
               </div>
             </div>
           </CardHeader>
@@ -189,7 +301,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
                     <TableHead>Client</TableHead>
                     <TableHead>Début de contrat</TableHead>
                     <TableHead>Mois présents (2025)</TableHead>
-                    <TableHead className="text-right">Mois manquants</TableHead>
+                    <TableHead className="text-right">Mois manquants (hors décembre)</TableHead>
                     <TableHead>Dernier relevé</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -241,6 +353,32 @@ const AdminMissing2025StatsPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog Import CSV */}
+      <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importer des statistiques (CSV)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Chargez un fichier CSV avec les colonnes: user_id, period, totalCA, totalMontantVerse, totalFacture, totalNuits, totalVoyageurs, totalReservations.
+              Les lignes "Décembre 2025" seront ignorées automatiquement.
+            </p>
+            <Input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportOpen(false)}>Annuler</Button>
+            <Button onClick={handleImport} disabled={isImporting || !file}>
+              {isImporting ? "Import en cours..." : "Importer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

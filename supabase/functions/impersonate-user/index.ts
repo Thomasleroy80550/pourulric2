@@ -55,15 +55,25 @@ serve(async (req) => {
       throw new Error("Impossible de trouver l'utilisateur cible.");
     }
 
-    // Création directe d'une session et retour des tokens
-    const { data: sessionData, error: createSessionError } = await adminSupabaseClient.auth.admin.createSession(target_user_id);
-    if (createSessionError || !sessionData?.access_token || !sessionData?.refresh_token) {
-      throw new Error(createSessionError?.message || "Échec de création de la session impersonation.");
+    // Générer un magic link pour établir la session du client
+    const userEmail = userToImpersonate.user.email;
+    if (!userEmail) {
+      throw new Error("L'utilisateur cible n'a pas d'email, impossible de générer un lien de session.");
+    }
+
+    const redirectTo = Deno.env.get('APP_BASE_URL') || 'https://beta.proprietaire.hellokeys.fr/';
+    const { data: linkData, error: linkError } = await adminSupabaseClient.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userEmail,
+      options: { redirectTo }
+    });
+
+    if (linkError || !linkData?.action_link) {
+      throw new Error(linkError?.message || "Échec de génération du magic link.");
     }
 
     return new Response(JSON.stringify({
-      access_token: sessionData.access_token,
-      refresh_token: sessionData.refresh_token,
+      action_link: linkData.action_link
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

@@ -217,8 +217,13 @@ const DashboardPage = () => {
         newMonthlyFinancialData[monthIndex].montantVerse += moneyIn;
         newMonthlyFinancialData[monthIndex].frais += managementFees;
         newMonthlyFinancialData[monthIndex].benef += netFromStatement;
-        
-        newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
+
+        // CHANGED: utiliser totals.totalReservations si présent (pour les stats manuelles), sinon la longueur des réservations générées
+        const reservationsCount = (s.totals && typeof s.totals.totalReservations === 'number')
+          ? s.totals.totalReservations
+          : s.invoice_data.length;
+        newMonthlyReservationsData[monthIndex].reservations += reservationsCount;
+
         monthlyNights[monthIndex] += s.totals.totalNuits || 0;
       }
 

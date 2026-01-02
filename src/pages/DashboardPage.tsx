@@ -479,16 +479,16 @@ const DashboardPage = () => {
               value={selectedYear === currentYear ? 'current' : '2025'}
               onValueChange={(val) => setSelectedYear(val === 'current' ? currentYear : 2025)}
             >
-              <TabsList className="flex gap-2 bg-transparent p-0 border-0 shadow-none">
+              <TabsList className="flex gap-1 bg-transparent p-0 border-0 shadow-none">
                 <TabsTrigger
                   value="2025"
-                  className="px-2 py-1 text-sm bg-transparent rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                  className="px-1.5 py-0.5 text-xs bg-transparent rounded-none border-b border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
                 >
                   2025
                 </TabsTrigger>
                 <TabsTrigger
                   value="current"
-                  className="px-2 py-1 text-sm bg-transparent rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                  className="px-1.5 py-0.5 text-xs bg-transparent rounded-none border-b border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
                 >
                   Année en cours ({currentYear})
                 </TabsTrigger>

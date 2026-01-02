@@ -819,6 +819,12 @@ const DashboardPage = () => {
           <Card id="tour-activity-chart" className="shadow-md">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Activité de Location — {yearLabel}</CardTitle>
+              {selectedYear === 2025 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pour 2025, nous ajoutons des statistiques agrégées sans détail par plateforme.
+                  Le graphique ne peut donc pas indiquer quelle plateforme a le mieux fonctionné.
+                </p>
+              )}
             </CardHeader>
             <CardContent className="flex flex-col p-4 h-[320px] w-full max-w-full">
               {loadingFinancialData ? (

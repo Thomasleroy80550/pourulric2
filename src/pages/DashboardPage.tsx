@@ -81,19 +81,9 @@ const isInBilan2025Window = () => {
 const DashboardPage = () => {
   const { profile } = useSession();
   const currentYear = new Date().getFullYear();
-  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
   const [showBilanNotice, setShowBilanNotice] = useState(false);
-
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const yearLabel = selectedYear === currentYear ? 'Année en cours' : String(selectedYear);
-
-  // Quand on passe sur 2025, on force l'affichage du bandeau BILAN 2025
-  useEffect(() => {
-    if (selectedYear === 2025) {
-      setShowBilanNotice(true);
-    }
-  }, [selectedYear]);
-
   const dashboardRef = useRef<HTMLDivElement>(null);
 
   const [activityData, setActivityData] = useState(
@@ -512,12 +502,43 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
-      <div className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words">
+      <div
+        className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words"
+        ref={dashboardRef}
+      >
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700 dark:text-gray-300">Année:</span>
+            <Tabs
+              value={selectedYear === currentYear ? 'current' : '2025'}
+              onValueChange={(val) => setSelectedYear(val === 'current' ? currentYear : 2025)}
+            >
+              <TabsList className="flex gap-1 bg-transparent p-0 border-0 shadow-none">
+                <TabsTrigger
+                  value="2025"
+                  className="px-1.5 py-0.5 text-xs bg-transparent rounded-none border-b border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                >
+                  2025
+                </TabsTrigger>
+                <TabsTrigger
+                  value="current"
+                  className="px-1.5 py-0.5 text-xs bg-transparent rounded-none border-b border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                >
+                  Année en cours ({currentYear})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <Badge variant="secondary">{yearLabel}</Badge>
+          {selectedYear === 2025 && (
+            <BilanExportButton targetRef={dashboardRef} className="ml-2" />
+          )}
+        </div>
         
         {/* Notif box BILAN 2025 */}
-        {(selectedYear === 2025 ? true : showBilanNotice) && (
+        {showBilanNotice && (
           <Alert className="mb-6 w-full overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/20 shadow-sm p-0">
             <div className="p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-start gap-3">

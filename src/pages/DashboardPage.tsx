@@ -174,7 +174,15 @@ const DashboardPage = () => {
       end: endOfMonth(new Date(year, 11, 1)),
     });
 
-    const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0, depenses: 0 }));
+    const newMonthlyFinancialData = monthsOfYear.map(m => ({
+      name: format(m, 'MMM', { locale: fr }),
+      ca: 0,
+      montantVerse: 0,
+      frais: 0,
+      benef: 0,
+      depenses: 0,
+      prixParNuit: 0, // AJOUT: prix / nuit par mois
+    }));
     const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
     const monthlyNights = Array(12).fill(0);
     
@@ -250,8 +258,11 @@ const DashboardPage = () => {
     });
 
     // Calculate final net benefit for each month by subtracting monthly expenses
-    newMonthlyFinancialData.forEach(monthData => {
+    newMonthlyFinancialData.forEach((monthData, index) => {
       monthData.benef -= monthData.depenses;
+      // AJOUT: calcul du prix / nuit pour chaque mois (bénéfice net ÷ nuits)
+      const nights = monthlyNights[index] || 0;
+      monthData.prixParNuit = nights > 0 ? monthData.benef / nights : 0;
     });
 
     const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
@@ -889,7 +900,7 @@ const DashboardPage = () => {
           {/* Statistiques Financières Mensuelles Card */}
           <Card id="tour-monthly-financials" className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Finances Mensuelles — {yearLabel}</CardTitle>
+              <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyFinancialData,
                 'line',
@@ -900,6 +911,7 @@ const DashboardPage = () => {
                   { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
                   { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
                   ...(expensesModuleEnabled ? [{ key: 'depenses', name: 'Autres Dépenses', color: '#9333EA' }] : []),
+                  { key: 'prixParNuit', name: 'Prix / nuit', color: '#0ea5e9' }, // AJOUT: série prix / nuit
                 ],
                 '€'
               )}>
@@ -929,6 +941,8 @@ const DashboardPage = () => {
                     {expensesModuleEnabled && (
                       <Line type="monotone" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     )}
+                    {/* AJOUT: ligne Prix / nuit */}
+                    <Line type="monotone" dataKey="prixParNuit" stroke="#0ea5e9" name="Prix / nuit" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
                   </ComposedChart>
                 </ResponsiveContainer>

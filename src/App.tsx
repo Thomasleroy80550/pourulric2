@@ -99,6 +99,7 @@ import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
 import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
 import AdminThermostatOverviewPage from "./pages/AdminThermostatOverviewPage";
 import DashboardPageV2 from "./pages/DashboardPageV2";
+import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 
 const queryClient = new QueryClient();
 
@@ -207,6 +208,7 @@ function App() {
                   <Route path="/electricity-start" element={<ElectricityServiceLanding />} />
                   <Route path="/electricity" element={<ElectricityConsumptionPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/admin/missing-2025-stats" element={<AdminMissing2025StatsPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </SessionContextProvider>

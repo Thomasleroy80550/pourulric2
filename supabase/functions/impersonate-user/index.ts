@@ -55,16 +55,22 @@ serve(async (req) => {
       throw new Error("Impossible de trouver l'utilisateur cible.");
     }
 
-    // Créer une session directe pour l'utilisateur cible et retourner les tokens
-    const { data: sessionData, error: createSessionError } = await adminSupabaseClient.auth.admin.createSession(target_user_id);
-    if (createSessionError || !sessionData?.access_token || !sessionData?.refresh_token) {
-      throw new Error(createSessionError?.message || "Échec de création de la session impersonation.");
+    const userEmail = userToImpersonate.user.email;
+    if (!userEmail) {
+      throw new Error("L'utilisateur cible n'a pas d'email, impossible de générer un lien de session.");
     }
 
-    return new Response(JSON.stringify({
-      access_token: sessionData.access_token,
-      refresh_token: sessionData.refresh_token,
-    }), {
+    // Générer un magic link SANS redirectTo (utilisera SITE_URL du projet)
+    const { data: linkData, error: linkError } = await adminSupabaseClient.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userEmail
+    });
+
+    if (linkError || !linkData?.action_link) {
+      throw new Error(linkError?.message || "Échec de génération du magic link.");
+    }
+
+    return new Response(JSON.stringify({ action_link: linkData.action_link }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

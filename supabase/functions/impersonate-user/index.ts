@@ -60,17 +60,41 @@ serve(async (req) => {
       throw new Error("L'utilisateur cible n'a pas d'email, impossible de générer un lien de session.");
     }
 
-    // Générer un magic link SANS redirectTo (utilisera SITE_URL du projet)
-    const { data: linkData, error: linkError } = await adminSupabaseClient.auth.admin.generateLink({
-      type: 'magiclink',
-      email: userEmail
-    });
+    // Essai 1: avec redirectTo
+    const redirectTo = Deno.env.get('APP_BASE_URL') || 'https://beta.proprietaire.hellokeys.fr/';
+    let linkData: any | null = null;
+    let linkError: any | null = null;
 
-    if (linkError || !linkData?.action_link) {
+    {
+      const { data, error } = await adminSupabaseClient.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userEmail,
+        options: { redirectTo }
+      });
+      linkData = data;
+      linkError = error;
+    }
+
+    // Fallback: sans redirectTo
+    if (linkError || !linkData?.properties?.action_link) {
+      const { data, error } = await adminSupabaseClient.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userEmail
+      });
+      linkData = data;
+      linkError = error;
+    }
+
+    if (linkError || !linkData?.properties?.action_link) {
       throw new Error(linkError?.message || "Échec de génération du magic link.");
     }
 
-    return new Response(JSON.stringify({ action_link: linkData.action_link }), {
+    // Retourne le lien + email_otp pour un fallback côté client
+    return new Response(JSON.stringify({
+      action_link: linkData.properties.action_link,
+      email_otp: linkData.properties.email_otp,
+      email: userEmail
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

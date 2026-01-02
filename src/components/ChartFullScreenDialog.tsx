@@ -172,6 +172,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
                             animationDuration={1500}
                             animationEasing="ease-in-out"
                             yAxisId={hasSecondary ? axisId : 'left'}
+                            strokeDasharray={item.key === 'prixParNuit' ? '3 3' : undefined}
                           />
                         );
                       })}

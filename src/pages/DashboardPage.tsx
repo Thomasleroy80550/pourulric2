@@ -942,7 +942,7 @@ const DashboardPage = () => {
                     {expensesModuleEnabled && (
                       <Line type="monotone" yAxisId="left" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     )}
-                    <Line type="monotone" yAxisId="right" dataKey="prixParNuit" stroke="#0ea5e9" name="Prix / nuit" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" yAxisId="right" dataKey="prixParNuit" stroke="#0ea5e9" name="Prix / nuit" strokeWidth={2} dot={false} strokeDasharray="3 3" animationDuration={1500} animationEasing="ease-in-out" />
                     <Area type="monotone" yAxisId="left" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
                   </ComposedChart>
                 </ResponsiveContainer>

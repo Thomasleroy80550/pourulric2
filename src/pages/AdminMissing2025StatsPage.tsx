@@ -15,6 +15,7 @@ import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { ManualStatementEntry } from "@/lib/admin-api";
 
 type InvoiceLite = {
@@ -69,6 +70,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
   const [isGoogleImporting, setIsGoogleImporting] = useState(false);
   const [previewGoogleEntries, setPreviewGoogleEntries] = useState<ManualStatementEntry[]>([]);
   const [googlePreviewStats, setGooglePreviewStats] = useState<{ included: number }>({ included: 0 });
+  const [googleErrorInfo, setGoogleErrorInfo] = useState<{ message?: string; hint?: string; serviceAccountEmail?: string } | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -317,7 +319,18 @@ const AdminMissing2025StatsPage: React.FC = () => {
       const { data, error } = await supabase.functions.invoke('import-stats-from-sheet', {
         body: { sheetUrl: googleSheetUrl },
       });
-      if (error) throw new Error(error.message || "Erreur Edge function.");
+      if (error) {
+        // Essayer de parser un JSON retourné par la fonction
+        let info: any = null;
+        try {
+          info = JSON.parse(error.message || "{}");
+        } catch {
+          info = null;
+        }
+        setGoogleErrorInfo(info && (info.hint || info.serviceAccountEmail) ? info : { message: error.message });
+        throw new Error(info?.error || error.message || "Erreur Edge function.");
+      }
+      setGoogleErrorInfo(null);
       const entries = (data?.entries ?? []) as ManualStatementEntry[];
 
       const userRow = rows.find(r => r.userId === selectedUserId);
@@ -544,7 +557,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
       </Dialog>
 
       {/* Dialog Import depuis Google Sheet */}
-      <Dialog open={isGoogleImportOpen} onOpenChange={(open) => { setIsGoogleImportOpen(open); if (!open) { setPreviewGoogleEntries([]); setGooglePreviewStats({ included: 0 }); } }}>
+      <Dialog open={isGoogleImportOpen} onOpenChange={(open) => { setIsGoogleImportOpen(open); if (!open) { setPreviewGoogleEntries([]); setGooglePreviewStats({ included: 0 }); setGoogleErrorInfo(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Importer depuis Google Sheet</DialogTitle>
@@ -575,6 +588,32 @@ const AdminMissing2025StatsPage: React.FC = () => {
                 Décembre 2025 est ignoré automatiquement. Cliquez sur Prévisualiser pour voir les données avant import.
               </p>
             </div>
+            {googleErrorInfo && (
+              <Alert variant="destructive">
+                <AlertTitle>Accès refusé au Google Sheet</AlertTitle>
+                <AlertDescription>
+                  {googleErrorInfo.hint ? (
+                    <div className="space-y-2">
+                      <p>{googleErrorInfo.hint}</p>
+                      {googleErrorInfo.serviceAccountEmail && (
+                        <div className="flex items-center gap-2">
+                          <code className="px-2 py-1 bg-muted rounded text-xs">{googleErrorInfo.serviceAccountEmail}</code>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigator.clipboard.writeText(googleErrorInfo.serviceAccountEmail!)}
+                          >
+                            Copier l'email
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p>{googleErrorInfo.message || "Veuillez vérifier les permissions du fichier."}</p>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
             {googlePreviewStats.included > 0 && (
               <div className="text-xs text-muted-foreground">À importer: {googlePreviewStats.included} mois</div>
             )}

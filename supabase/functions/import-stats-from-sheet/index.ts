@@ -6,7 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple logger prefixé pour faciliter la lecture dans Supabase logs
 const log = (...args: unknown[]) => console.log("[import-stats-from-sheet]", ...args);
 const logError = (...args: unknown[]) => console.error("[import-stats-from-sheet][ERROR]", ...args);
 
@@ -30,9 +29,6 @@ const MONTHS_2025 = [
 ];
 
 function parseSpreadsheetId(url: string): string | null {
-  // Common formats:
-  // https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit#gid=0
-  // https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/
   const match = url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
   return match ? match[1] : null;
 }
@@ -46,49 +42,43 @@ async function getAccessToken(): Promise<string> {
     throw new Error("Google service account secrets not configured.");
   }
 
-  // Replace \n in env var to real newlines
   const privateKey = privateKeyRaw.replace(/\\n/g, "\n");
   log("Preparing service account JWT for", clientEmail);
 
-  try {
-    const iat = Math.floor(Date.now() / 1000);
-    const exp = iat + 3600;
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + 3600;
 
-    const key = await importPKCS8(privateKey, "RS256");
+  const key = await importPKCS8(privateKey, "RS256");
 
-    const jwt = await new SignJWT({
-      iss: clientEmail,
-      scope: "https://www.googleapis.com/auth/spreadsheets.readonly",
-      aud: "https://oauth2.googleapis.com/token",
-    })
-      .setProtectedHeader({ alg: "RS256", typ: "JWT" })
-      .setIssuedAt(iat)
-      .setExpirationTime(exp)
-      .sign(key);
+  const jwt = await new SignJWT({
+    iss: clientEmail,
+    scope: "https://www.googleapis.com/auth/spreadsheets.readonly",
+    aud: "https://oauth2.googleapis.com/token",
+  })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setIssuedAt(iat)
+    .setExpirationTime(exp)
+    .sign(key);
 
-    log("Requesting Google OAuth token…");
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        assertion: jwt,
-      }),
-    });
+  log("Requesting Google OAuth token…");
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      logError("OAuth token request failed", res.status, txt);
-      throw new Error(`Failed to obtain access token: ${res.status} ${txt}`);
-    }
-
-    const data = await res.json();
-    log("Google OAuth token received.");
-    return data.access_token as string;
-  } catch (err) {
-    logError("getAccessToken failed:", (err as Error).message);
-    throw err;
+  if (!res.ok) {
+    const txt = await res.text();
+    logError("OAuth token request failed", res.status, txt);
+    throw new Error(`Failed to obtain access token: ${res.status} ${txt}`);
   }
+
+  const data = await res.json();
+  log("Google OAuth token received.");
+  return data.access_token as string;
 }
 
 async function listSheetTitles(spreadsheetId: string, accessToken: string): Promise<string[]> {
@@ -100,7 +90,11 @@ async function listSheetTitles(spreadsheetId: string, accessToken: string): Prom
   if (!res.ok) {
     const txt = await res.text();
     logError("Failed to fetch spreadsheet info", res.status, txt);
-    throw new Error(`Failed to fetch spreadsheet info: ${res.status} ${txt}`);
+    // Propager le statut pour traitement dans le handler
+    const err = new Error(`Failed to fetch spreadsheet info: ${res.status} ${txt}`);
+    // @ts-ignore
+    err.status = res.status;
+    throw err;
   }
   const json = await res.json();
   const titles: string[] = (json.sheets || []).map((s: any) => s.properties?.title).filter((t: string) => !!t);
@@ -109,20 +103,18 @@ async function listSheetTitles(spreadsheetId: string, accessToken: string): Prom
 }
 
 function is2025Month(title: string): boolean {
-  const lower = title.toLowerCase();
-  // Must end with "2025" and start with a month name
   const parts = title.split(" ");
   if (parts.length < 2) return false;
   const month = parts[0];
   const year = parts[1];
   const monthIndex = MONTHS_2025.findIndex(m => m.toLowerCase() === month.toLowerCase());
-  return monthIndex >= 0 && year === "2025" && monthIndex !== 11; // exclude Décembre (index 11)
+  return monthIndex >= 0 && year === "2025" && monthIndex !== 11;
 }
 
 async function fetchValues(spreadsheetId: string, title: string, accessToken: string): Promise<ManualStatementEntry> {
   log("Fetching values for tab:", title);
   const ranges = [`${title}!C1`, `${title}!F1`, `${title}!Q1`, `${title}!J1`, `${title}!K1`, `${title}!L1:P1`];
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${ranges.map(r => `ranges=${encodeURIComponent(r)}`).join("&")}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetsId}/values:batchGet?${ranges.map(r => `ranges=${encodeURIComponent(r)}`).join("&")}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -195,9 +187,27 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid Google Sheet URL" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const clientEmail = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL") || "service-account@unknown";
     const accessToken = await getAccessToken();
 
-    const titles = await listSheetTitles(spreadsheetId, accessToken);
+    let titles: string[] = [];
+    try {
+      titles = await listSheetTitles(spreadsheetId, accessToken);
+    } catch (err) {
+      const status = (err as any).status || 500;
+      const message = (err as Error).message || "Failed to fetch spreadsheet info";
+      // 403 explicite avec hint
+      if (status === 403 || message.includes("PERMISSION_DENIED")) {
+        const hint = `Donnez l'accès en lecture au Google Sheet à ce compte: ${clientEmail} (ou publiez le fichier en lecture publique).`;
+        logError("Permission denied; returning hint to client:", hint);
+        return new Response(JSON.stringify({ error: message, hint, serviceAccountEmail: clientEmail }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw err;
+    }
+
     const monthTitles2025 = titles.filter(is2025Month);
     log("Filtered 2025 titles (excl. Dec):", monthTitles2025);
 
@@ -208,7 +218,6 @@ serve(async (req) => {
         entries.push(e);
       } catch (err) {
         logError("Failed fetching values for tab:", title, (err as Error).message);
-        // Continue to next tab while keeping context of the failure
       }
     }
 

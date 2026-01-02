@@ -14,6 +14,7 @@ import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type InvoiceLite = {
   user_id: string;
@@ -56,6 +57,10 @@ const AdminMissing2025StatsPage: React.FC = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isGoogleImportOpen, setIsGoogleImportOpen] = useState(false);
+  const [googleSheetUrl, setGoogleSheetUrl] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [isGoogleImporting, setIsGoogleImporting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -274,6 +279,45 @@ const AdminMissing2025StatsPage: React.FC = () => {
     });
   }, [rows, searchTerm, onlyMissing]);
 
+  const handleImportFromGoogle = async () => {
+    if (!selectedUserId) {
+      toast.error("Veuillez sélectionner un client.");
+      return;
+    }
+    if (!googleSheetUrl) {
+      toast.error("Veuillez coller l'URL du Google Sheet.");
+      return;
+    }
+    setIsGoogleImporting(true);
+    const toastId = toast.loading("Import depuis Google Sheet en cours...");
+    try {
+      const { data, error } = await supabase.functions.invoke('import-stats-from-sheet', {
+        body: { sheetUrl: googleSheetUrl },
+      });
+      if (error) throw new Error(error.message || "Erreur Edge function.");
+      const entries = (data?.entries ?? []) as ManualStatementEntry[];
+
+      // Conserver uniquement les mois manquants (et déjà hors décembre)
+      const row = rows.find(r => r.userId === selectedUserId);
+      const missingSet = new Set((row?.missingMonths ?? []).map(m => `${m} 2025`));
+      const toInsert = entries.filter(e => missingSet.has(e.period));
+
+      if (toInsert.length === 0) {
+        toast.info("Aucun mois à importer pour ce client (ou déjà complet).", { id: toastId });
+      } else {
+        await addManualStatements(selectedUserId, toInsert);
+        toast.success(`Import réussi: ${toInsert.length} mois ajoutés.`, { id: toastId });
+        setIsGoogleImportOpen(false);
+        setGoogleSheetUrl("");
+        await refreshInvoices2025();
+      }
+    } catch (e: any) {
+      toast.error(`Erreur import Google Sheet: ${e.message}`, { id: toastId });
+    } finally {
+      setIsGoogleImporting(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -297,12 +341,15 @@ const AdminMissing2025StatsPage: React.FC = () => {
                   <Label htmlFor="only-missing">Afficher uniquement ceux avec mois manquants</Label>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button onClick={downloadPrefilledCsvModel} variant="outline">
                   Télécharger le modèle CSV (pré-rempli)
                 </Button>
                 <Button onClick={() => setIsImportOpen(true)}>
                   Importer CSV
+                </Button>
+                <Button onClick={() => setIsGoogleImportOpen(true)}>
+                  Importer depuis Google Sheet
                 </Button>
               </div>
             </div>
@@ -397,6 +444,48 @@ const AdminMissing2025StatsPage: React.FC = () => {
             <Button variant="outline" onClick={() => setIsImportOpen(false)}>Annuler</Button>
             <Button onClick={handleImport} disabled={isImporting || !file}>
               {isImporting ? "Import en cours..." : "Importer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Import depuis Google Sheet */}
+      <Dialog open={isGoogleImportOpen} onOpenChange={setIsGoogleImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importer depuis Google Sheet</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+                <SelectContent>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {(p.first_name ?? '') + ' ' + (p.last_name ?? '')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>URL du Google Sheet</Label>
+              <Input
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                value={googleSheetUrl}
+                onChange={(e) => setGoogleSheetUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Les onglets doivent être nommés avec les mois, ex: "Janvier 2025", "Mai 2025"...
+                Décembre 2025 est ignoré automatiquement.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGoogleImportOpen(false)}>Annuler</Button>
+            <Button onClick={handleImportFromGoogle} disabled={isGoogleImporting || !googleSheetUrl || !selectedUserId}>
+              {isGoogleImporting ? "Import en cours..." : "Importer"}
             </Button>
           </DialogFooter>
         </DialogContent>

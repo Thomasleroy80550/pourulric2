@@ -184,6 +184,29 @@ const AdminMissing2025StatsPage: React.FC = () => {
     return rows;
   };
 
+  const downloadPrefilledCsvModel = () => {
+    const header = "user_id,period,totalCA,totalMontantVerse,totalFacture,totalNuits,totalVoyageurs,totalReservations";
+    const lines: string[] = [];
+    rows.forEach(r => {
+      if (r.missingMonths.length > 0) {
+        r.missingMonths.forEach(m => {
+          const period = `${m} 2025`;
+          lines.push([r.userId, period, 0, 0, 0, 0, 0, 0].join(","));
+        });
+      }
+    });
+    const csv = [header, ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "MODELE_STATS_2025.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleImport = async () => {
     if (!file) {
       toast.error("Veuillez sélectionner un fichier CSV.");
@@ -274,10 +297,8 @@ const AdminMissing2025StatsPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button asChild variant="outline">
-                  <a href="/data/MODELE_STATS_2025.csv" download>
-                    Télécharger le modèle CSV
-                  </a>
+                <Button onClick={downloadPrefilledCsvModel} variant="outline">
+                  Télécharger le modèle CSV (pré-rempli)
                 </Button>
                 <Button onClick={() => setIsImportOpen(true)}>
                   Importer CSV

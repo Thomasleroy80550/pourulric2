@@ -46,6 +46,7 @@ import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-re
 import { Badge } from "@/components/ui/badge";
 import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
 import Countdown from "@/components/Countdown";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -474,24 +475,25 @@ const DashboardPage = () => {
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-700 dark:text-gray-300">Année:</span>
-            <div className="flex items-center gap-1 rounded-lg border border-muted p-1 bg-background">
-              <Button
-                size="sm"
-                variant={selectedYear === currentYear ? "default" : "ghost"}
-                className={selectedYear === currentYear ? "shadow-sm" : ""}
-                onClick={() => setSelectedYear(currentYear)}
-              >
-                Année en cours ({currentYear})
-              </Button>
-              <Button
-                size="sm"
-                variant={selectedYear === 2025 ? "default" : "ghost"}
-                className={selectedYear === 2025 ? "shadow-sm" : ""}
-                onClick={() => setSelectedYear(2025)}
-              >
-                2025
-              </Button>
-            </div>
+            <Tabs
+              value={selectedYear === currentYear ? 'current' : '2025'}
+              onValueChange={(val) => setSelectedYear(val === 'current' ? currentYear : 2025)}
+            >
+              <TabsList className="flex gap-2 bg-transparent p-0 border-0 shadow-none">
+                <TabsTrigger
+                  value="current"
+                  className="px-2 py-1 text-sm bg-transparent rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                >
+                  Année en cours ({currentYear})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="2025"
+                  className="px-2 py-1 text-sm bg-transparent rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                >
+                  2025
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           <Badge variant="secondary">{yearLabel}</Badge>
         </div>

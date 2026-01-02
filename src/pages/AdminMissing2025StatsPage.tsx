@@ -610,7 +610,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
 
       {/* Dialog Import CSV */}
       <Dialog open={isImportOpen} onOpenChange={(open) => { setIsImportOpen(open); if (!open) { setPreviewCsvByUser({}); setCsvPreviewStats({ total: 0, included: 0, skippedDec: 0, skippedExisting: 0 }); } }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-5xl w-full max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>Importer des statistiques (CSV)</DialogTitle>
           </DialogHeader>
@@ -626,7 +626,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
               </div>
             )}
             {Object.keys(previewCsvByUser).length > 0 && (
-              <div className="max-h-64 overflow-auto border rounded-md p-2">
+              <div className="max-h-[60vh] overflow-auto overflow-x-auto border rounded-md p-2">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -678,7 +678,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
 
       {/* Dialog Import depuis Google Sheet */}
       <Dialog open={isGoogleImportOpen} onOpenChange={(open) => { setIsGoogleImportOpen(open); if (!open) { setPreviewGoogleEntries([]); setGooglePreviewStats({ included: 0 }); setGoogleErrorInfo(null); } }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-5xl w-full max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>Importer depuis Google Sheet</DialogTitle>
           </DialogHeader>
@@ -738,7 +738,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
               <div className="text-xs text-muted-foreground">À importer: {googlePreviewStats.included} mois</div>
             )}
             {previewGoogleEntries.length > 0 && (
-              <div className="max-h-64 overflow-auto border rounded-md p-2">
+              <div className="max-h-[60vh] overflow-auto overflow-x-auto border rounded-md p-2">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -782,13 +782,13 @@ const AdminMissing2025StatsPage: React.FC = () => {
 
       {/* Dialog Import XLSX */}
       <Dialog open={isXlsxImportOpen} onOpenChange={(open) => { setIsXlsxImportOpen(open); if (!open) { setPreviewXlsxEntries([]); setXlsxPreviewStats({ included: 0, tabsChecked: 0 }); setXlsxFile(null); setSelectedUserIdXlsx(""); } }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-5xl w-full max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>Importer depuis fichier XLSX</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Chargez le fichier .xlsx exporté depuis Google Sheets. Les onglets doivent être nommés “Mois 2025” (ex: “Janvier 2025”, “Mai 2025”). Décembre 2025 est ignoré automatiquement.
+              Chargez le fichier .xlsx exporté depuis Google Sheets. Les onglets doivent être nommés "Mois 2025" (ex: "Janvier 2025", "Mai 2025"). Décembre 2025 est ignoré automatiquement.
             </p>
             <div className="space-y-2">
               <Label>Client</Label>
@@ -813,7 +813,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
               )}
             </div>
             {previewXlsxEntries.length > 0 && (
-              <div className="max-h-64 overflow-auto border rounded-md p-2">
+              <div className="max-h-[60vh] overflow-auto overflow-x-auto border rounded-md p-2">
                 <Table>
                   <TableHeader>
                     <TableRow>

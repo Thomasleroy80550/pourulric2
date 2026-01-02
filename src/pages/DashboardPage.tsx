@@ -481,16 +481,16 @@ const DashboardPage = () => {
             >
               <TabsList className="flex gap-2 bg-transparent p-0 border-0 shadow-none">
                 <TabsTrigger
-                  value="current"
-                  className="px-2 py-1 text-sm bg-transparent rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
-                >
-                  Année en cours ({currentYear})
-                </TabsTrigger>
-                <TabsTrigger
                   value="2025"
                   className="px-2 py-1 text-sm bg-transparent rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
                 >
                   2025
+                </TabsTrigger>
+                <TabsTrigger
+                  value="current"
+                  className="px-2 py-1 text-sm bg-transparent rounded-none border-b-2 border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                >
+                  Année en cours ({currentYear})
                 </TabsTrigger>
               </TabsList>
             </Tabs>

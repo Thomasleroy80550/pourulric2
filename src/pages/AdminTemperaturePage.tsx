@@ -180,6 +180,22 @@ const AdminTemperaturePage: React.FC = () => {
     setStationDashboard(map);
   }
 
+  // Rafraîchissement auto des mesures
+  const AUTO_REFRESH_MS = 5 * 60 * 1000;
+
+  React.useEffect(() => {
+    // Démarre l'auto-refresh uniquement quand des assignations existent
+    if (thermAssigns.length || stationAssigns.length) {
+      const id = window.setInterval(() => {
+        refreshThermostatsStatus();
+        refreshStationsStatus();
+      }, AUTO_REFRESH_MS);
+      return () => window.clearInterval(id);
+    }
+    return;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thermAssigns.length, stationAssigns.length]);
+
   React.useEffect(() => {
     loadAssignments();
   }, []);

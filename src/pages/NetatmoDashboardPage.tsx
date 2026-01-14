@@ -130,6 +130,9 @@ const LS_KEY = "netatmo_selection_v1";
 const NetatmoDashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
+  // NEW: accès ThermoBnB depuis le profil utilisateur
+  const [hasThermoAccess, setHasThermoAccess] = React.useState<boolean | null>(null);
+
   // Connexion & maison
   const [hasTokens, setHasTokens] = React.useState<boolean | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -344,6 +347,29 @@ const NetatmoDashboardPage: React.FC = () => {
       setScenarioStopTime(s.stop_time || "10:00");
     }
   }
+
+  // NEW: vérifier l'accès ThermoBnB depuis la table profiles
+  React.useEffect(() => {
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id;
+      if (!uid) {
+        setHasThermoAccess(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("thermobnb_enabled")
+        .eq("id", uid)
+        .limit(1);
+      if (error) {
+        setHasThermoAccess(false);
+        return;
+      }
+      const enabled = !!data?.[0]?.thermobnb_enabled;
+      setHasThermoAccess(enabled);
+    })();
+  }, []);
 
   // Tokens & homes
   const checkTokens = async () => {
@@ -921,21 +947,19 @@ const NetatmoDashboardPage: React.FC = () => {
     if (typeof setpoint === "number") setQuickTemp(setpoint);
   }, [homeStatus, selectedRoomId, quickMode]);
 
-  // Garde d'accès ThermoBnB via mot de passe enregistré en local
-  React.useEffect(() => {
-    const allowed = localStorage.getItem("thermobnb_access_granted");
-    if (!allowed) {
-      navigate("/thermobnb");
-    }
-  }, [navigate]);
-
-  if (hasTokens === null) {
+  // Blocage d'accès si non autorisé
+  if (hasThermoAccess === false) {
     return (
       <MainLayout>
-        <div className="p-6">
-          <h1 className="text-2xl font-bold mb-4">ThermoBnB — Mode guidé pas-à-pas</h1>
-          <p className="text-gray-600 mb-6">Veuillez vous connecter.</p>
-          <Button onClick={() => navigate("/login")}>Se connecter</Button>
+        <div className="p-6 max-w-xl mx-auto">
+          <h1 className="text-2xl font-bold mb-2">Accès ThermoBnB requis</h1>
+          <p className="text-gray-600 mb-4">
+            Votre profil n'a pas l'accès ThermoBnB activé. Merci de contacter un administrateur pour l'activer dans votre profil.
+          </p>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/thermobnb")} variant="outline">Voir la landing ThermoBnB</Button>
+            <Button onClick={() => navigate("/messages")}>Contacter le support</Button>
+          </div>
         </div>
       </MainLayout>
     );

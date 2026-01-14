@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getSetting } from "@/lib/admin-api";
 
-const DEFAULT_SCOPE = "read_thermostat write_thermostat";
+const DEFAULT_SCOPE = "read_thermostat write_thermostat read_station";
 
 const NetatmoConnectPage: React.FC = () => {
   const navigate = useNavigate();

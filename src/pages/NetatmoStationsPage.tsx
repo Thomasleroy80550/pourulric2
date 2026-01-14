@@ -102,8 +102,16 @@ const NetatmoStationsPage: React.FC = () => {
     setLoading(true);
     const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: { endpoint: "getstationsdata" } });
     setLoading(false);
+
     if (error) {
-      toast.error(error.message || "Impossible de charger les stations Netatmo.");
+      const status = (error as any)?.status;
+      if (status === 403) {
+        toast.error("Accès Netatmo refusé (scope read_station manquant). Reconnectez Netatmo depuis l'intégration pour autoriser les stations météo.");
+      } else if (status === 401) {
+        toast.error("Session expirée. Veuillez vous reconnecter.");
+      } else {
+        toast.error(error.message || "Impossible de charger les stations Netatmo.");
+      }
       return;
     }
     setStationsData(data);

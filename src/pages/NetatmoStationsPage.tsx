@@ -46,24 +46,57 @@ const TYPE_OPTIONS = [
   { key: "guststrength", label: "Rafales (force)" },
 ] as const;
 
-// Construire des points pour le graphique depuis /getmeasure (body.items)
-function buildChartFromGetMeasure(data: any) {
-  const items = data?.body?.items;
-  if (!Array.isArray(items) || items.length === 0) return [];
+// Construire un tableau unifié pour multi-types, timestamps exacts (real_time)
+function buildUnifiedPoints(data: any, selectedTypeKeys: string[]) {
+  const items = Array.isArray(data?.body?.items) ? data.body.items : (data?.body?.items ? [data.body.items] : []);
+  if (!items.length) return [];
   const first = items[0];
   const beg = Number(first?.beg_time);
   const step = Number(first?.step_time);
-  let values: any = first?.value;
-  if (Array.isArray(values) && Array.isArray(values[0])) {
-    values = values[0];
+
+  // Helper pour normaliser les values en structure [typeIndex][sampleIndex]
+  function extractMatrix(it: any) {
+    let v = it?.value;
+    if (!Array.isArray(v)) return [];
+    // cas A: v = [ [type1_samples...], [type2_samples...] ]
+    if (Array.isArray(v[0])) {
+      return v.map((arr: any[]) => arr.map((x) => (Array.isArray(x) ? Number(x[0]) : Number(x))));
+    }
+    // cas B: v = [ sample1, sample2, ... ] -> un seul type
+    return [v.map((x) => (Array.isArray(x) ? Number(x[0]) : Number(x)))];
   }
-  if (!Array.isArray(values) || !Number.isFinite(beg) || !Number.isFinite(step)) return [];
-  return values.map((v: any, idx: number) => {
-    const ts = beg + idx * step;
-    const val = Array.isArray(v) ? Number(v[0]) : Number(v);
-    const label = new Date(ts * 1000).toLocaleString();
-    return { ts, label, value: Number.isNaN(val) ? null : val };
-  });
+
+  let matrix = extractMatrix(first);
+  // Fallback: si plusieurs items et le premier n'a qu'un seul type, combiner les items (supposés correspondre aux types dans l'ordre)
+  if (items.length > 1 && matrix.length === 1) {
+    const mats = items.map(extractMatrix).filter((m) => m.length > 0);
+    if (mats.length) {
+      const maxLen = Math.max(...mats.map((m) => m[0]?.length || 0));
+      const combined: number[][] = [];
+      for (let i = 0; i < mats.length; i++) {
+        combined[i] = mats[i][0] || [];
+        // compléter au besoin
+        if (combined[i].length < maxLen) {
+          combined[i] = [...combined[i], ...Array(maxLen - combined[i].length).fill(null)];
+        }
+      }
+      matrix = combined;
+    }
+  }
+
+  const samplesCount = Math.max(...matrix.map((arr) => arr.length));
+  const points: any[] = [];
+  for (let idx = 0; idx < samplesCount; idx++) {
+    const ts = Number.isFinite(beg) && Number.isFinite(step) ? beg + idx * step : undefined;
+    const label = ts ? new Date(ts * 1000).toLocaleString() : String(idx);
+    const row: any = { ts, label };
+    selectedTypeKeys.forEach((tKey, tIdx) => {
+      const val = matrix?.[tIdx]?.[idx];
+      row[tKey] = typeof val === "number" && !Number.isNaN(val) ? val : null;
+    });
+    points.push(row);
+  }
+  return points;
 }
 
 const NetatmoStationsPage: React.FC = () => {
@@ -75,13 +108,15 @@ const NetatmoStationsPage: React.FC = () => {
   const [selectedTypes, setSelectedTypes] = React.useState<Set<string>>(new Set(["temperature"]));
   const [dateBegin, setDateBegin] = React.useState<string>("");
   const [dateEnd, setDateEnd] = React.useState<string>("");
+  const [datePreset, setDatePreset] = React.useState<string>("today"); // NEW: preset
   const [limit, setLimit] = React.useState<number>(256);
   const [optimize, setOptimize] = React.useState<boolean>(true);
-  const [realTime, setRealTime] = React.useState<boolean>(false);
+  const [realTime, setRealTime] = React.useState<boolean>(true); // CHANGED: true par défaut
 
   const [loading, setLoading] = React.useState(false);
   const [measures, setMeasures] = React.useState<any | null>(null);
-  const [chartData, setChartData] = React.useState<{ ts: number; label: string; value: number | null }[]>([]);
+  const [chartData, setChartData] = React.useState<any[]>([]); // multi-séries (lignes dynamiques)
+  const [seriesTypes, setSeriesTypes] = React.useState<string[]>(["temperature"]); // NEW: pour rendu dynamique
 
   const devices: StationDevice[] = React.useMemo(() => {
     const devs = stationsData?.body?.devices;
@@ -98,6 +133,40 @@ const NetatmoStationsPage: React.FC = () => {
     return Array.isArray(mods) ? mods : [];
   }, [currentDevice]);
 
+  // NEW: couleurs simples par type
+  const colorFor = (key: string) => {
+    const palette = {
+      temperature: "#2563eb",
+      humidity: "#10b981",
+      co2: "#ef4444",
+      pressure: "#f59e0b",
+      noise: "#6b7280",
+      rain: "#0ea5e9",
+      sum_rain: "#22c55e",
+      windstrength: "#a855f7",
+      guststrength: "#f43f5e",
+      min_temp: "#3b82f6",
+      max_temp: "#f59e0b",
+    } as Record<string, string>;
+    return palette[key] || "#374151";
+  };
+
+  // NEW: appliquer presets de date
+  React.useEffect(() => {
+    const now = new Date();
+    if (datePreset === "today") {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      setDateBegin(start.toISOString().slice(0, 16));
+      setDateEnd(end.toISOString().slice(0, 16));
+    } else if (datePreset === "last7") {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      setDateBegin(start.toISOString().slice(0, 16));
+      setDateEnd(end.toISOString().slice(0, 16));
+    }
+  }, [datePreset]);
+
   async function loadStations() {
     setLoading(true);
     const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: { endpoint: "getstationsdata" } });
@@ -106,7 +175,7 @@ const NetatmoStationsPage: React.FC = () => {
     if (error) {
       const status = (error as any)?.status;
       if (status === 403) {
-        toast.error("Accès Netatmo refusé (scope read_station manquant). Reconnectez Netatmo depuis l'intégration pour autoriser les stations météo.");
+        toast.error("Accès Netatmo refusé (scope read_station manquant). Reconnectez Netatmo pour autoriser les stations météo.");
       } else if (status === 401) {
         toast.error("Session expirée. Veuillez vous reconnecter.");
       } else {
@@ -159,7 +228,7 @@ const NetatmoStationsPage: React.FC = () => {
       optimize,
       real_time: realTime,
     };
-    if (selectedModuleId) payload.module_id = selectedModuleId;
+    if (selectedModuleId && selectedModuleId !== "__none__") payload.module_id = selectedModuleId;
     const begin = toUnixSecLocal(dateBegin);
     const end = toUnixSecLocal(dateEnd);
     if (typeof begin === "number") payload.date_begin = begin;
@@ -168,14 +237,22 @@ const NetatmoStationsPage: React.FC = () => {
     const { error, data } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
     setLoading(false);
     if (error) {
-      toast.error(error.message || "Erreur de récupération des mesures.");
+      const status = (error as any)?.status;
+      if (status === 403) {
+        toast.error("Accès Netatmo refusé (vérifiez le scope read_station).");
+      } else {
+        toast.error(error.message || "Erreur de récupération des mesures.");
+      }
       setMeasures(null);
       setChartData([]);
+      setSeriesTypes(typesArr);
       return;
     }
     setMeasures(data);
-    setChartData(buildChartFromGetMeasure(data));
-    toast.success("Mesures chargées.");
+    const unified = buildUnifiedPoints(data, typesArr);
+    setChartData(unified);
+    setSeriesTypes(typesArr);
+    toast.success("Mesures chargées (horodatage exact).");
   }
 
   return (
@@ -266,35 +343,61 @@ const NetatmoStationsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Options avancées */}
+              {/* Plage de dates + options avancées */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
+                  <Label className="text-sm font-medium">Preset</Label>
+                  <Select value={datePreset} onValueChange={(v) => setDatePreset(v)}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Choisir un preset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">Aujourd'hui</SelectItem>
+                      <SelectItem value="last7">7 derniers jours</SelectItem>
+                      <SelectItem value="custom">Personnalisé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label className="text-sm font-medium">Date début</Label>
-                  <Input type="datetime-local" value={dateBegin} onChange={(e) => setDateBegin(e.target.value)} className="mt-1" />
+                  <Input
+                    type="datetime-local"
+                    value={dateBegin}
+                    onChange={(e) => setDateBegin(e.target.value)}
+                    className="mt-1"
+                    disabled={datePreset !== "custom"}
+                  />
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Date fin</Label>
-                  <Input type="datetime-local" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="mt-1" />
+                  <Input
+                    type="datetime-local"
+                    value={dateEnd}
+                    onChange={(e) => setDateEnd(e.target.value)}
+                    className="mt-1"
+                    disabled={datePreset !== "custom"}
+                  />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Limit</Label>
                   <Input type="number" min={1} max={1024} value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="mt-1" />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center justify-between rounded border p-2">
                   <span className="text-sm">Optimize</span>
                   <Switch checked={optimize} onCheckedChange={setOptimize} />
                 </div>
                 <div className="flex items-center justify-between rounded border p-2">
-                  <span className="text-sm">Real time</span>
+                  <span className="text-sm">Real time (horodatage exact)</span>
                   <Switch checked={realTime} onCheckedChange={setRealTime} />
                 </div>
               </div>
 
-              {/* Graphique simple */}
+              {/* Graphique multi-séries */}
               <div>
-                <Label className="text-sm font-medium">Graphique (premier type)</Label>
+                <Label className="text-sm font-medium">Graphique (valeurs en temps réel)</Label>
                 <div className="h-56 mt-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
@@ -303,13 +406,41 @@ const NetatmoStationsPage: React.FC = () => {
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Line type="monotone" dataKey="value" stroke="#2563eb" dot={false} />
+                      {seriesTypes.map((t) => (
+                        <Line key={t} type="monotone" dataKey={t} stroke={colorFor(t)} dot={false} />
+                      ))}
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* Tableau brut des items */}
+              {/* Tableau complet des points */}
+              {chartData.length > 0 && (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-xs border border-muted rounded">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="p-2 text-left">Horodatage</th>
+                        {seriesTypes.map((t) => (
+                          <th key={t} className="p-2 text-left">{t}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chartData.map((row, idx) => (
+                        <tr key={idx} className="border-t">
+                          <td className="p-2">{row.label}</td>
+                          {seriesTypes.map((t) => (
+                            <td key={t} className="p-2">{typeof row[t] === "number" ? row[t] : (row[t] ?? "—")}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Réponse brute */}
               {measures?.body?.items && (
                 <div className="mt-4">
                   <Card>

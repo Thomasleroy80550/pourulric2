@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAllModuleActivationRequests, ModuleActivationRequest } from '@/lib/module-activation-api';
 import { toast } from "sonner";
 import NewsFeed from '@/components/admin/NewsFeed';
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminDashboardPage: React.FC = () => {
   const { profile } = useSession();

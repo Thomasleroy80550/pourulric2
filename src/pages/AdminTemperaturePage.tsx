@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Thermometer, Cloud, Home as HomeIcon, AlertTriangle, Droplets, Leaf, Volume2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 // Types de tables
 type ThermAssign = {
@@ -138,9 +139,69 @@ const AdminTemperaturePage: React.FC = () => {
     if (stationAssigns.length) refreshStationsStatus();
   }, [stationAssigns.length]);
 
-  // Helpers
-  const roomName = (id: string) => userRooms.find((r) => r.id === id)?.room_name || id;
+  // ADD: état pour la vue détaillée
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [detailsRoom, setDetailsRoom] = React.useState<{
+    roomId: string;
+    roomName: string;
+    thermostat?: { measured?: number; setpoint?: number; netatmoRoomName?: string };
+    stationIndoor?: { Temperature?: number; CO2?: number; Humidity?: number; Noise?: number; time_utc?: number };
+    stationOutdoor?: { Temperature?: number; Humidity?: number; time_utc?: number };
+    alert?: boolean;
+  } | null>(null);
+
+  // ADD: helpers list view data
   const alertThreshold = 14;
+  const roomName = (id: string) => userRooms.find((r) => r.id === id)?.room_name || id;
+
+  const listItems = React.useMemo(() => {
+    // index assignments par user_room_id
+    const byRoom: Record<string, { therm?: typeof thermAssigns[number]; station?: typeof stationAssigns[number] }> = {};
+    thermAssigns.forEach((t) => {
+      byRoom[t.user_room_id] = byRoom[t.user_room_id] || {};
+      byRoom[t.user_room_id].therm = t;
+    });
+    stationAssigns.forEach((s) => {
+      byRoom[s.user_room_id] = byRoom[s.user_room_id] || {};
+      byRoom[s.user_room_id].station = s;
+    });
+
+    return Object.entries(byRoom).map(([userRoomId, data]) => {
+      const rn = data.therm?.netatmo_room_id ? roomLiveTemps[String(data.therm.netatmo_room_id)] : undefined;
+      const indoorKey = data.station ? `device:${data.station.device_id}` : "";
+      const outdoorKey = data.station?.module_id ? `module:${data.station.module_id}` : "";
+      const indoor = indoorKey ? stationDashboard[indoorKey] : undefined;
+      const outdoor = outdoorKey ? stationDashboard[outdoorKey] : undefined;
+
+      const measured = rn?.measured;
+      const alert = typeof measured === "number" && measured < alertThreshold;
+
+      return {
+        roomId: userRoomId,
+        roomName: roomName(userRoomId),
+        thermostat: {
+          measured,
+          setpoint: rn?.setpoint,
+          netatmoRoomName: rn?.name,
+        },
+        stationIndoor: indoor,
+        stationOutdoor: outdoor,
+        alert,
+      };
+    }).sort((a, b) => a.roomName.localeCompare(b.roomName));
+  }, [thermAssigns, stationAssigns, roomLiveTemps, stationDashboard, userRooms]);
+
+  function openDetails(item: typeof listItems[number]) {
+    setDetailsRoom({
+      roomId: item.roomId,
+      roomName: item.roomName,
+      thermostat: item.thermostat,
+      stationIndoor: item.stationIndoor,
+      stationOutdoor: item.stationOutdoor,
+      alert: item.alert,
+    });
+    setDetailsOpen(true);
+  }
 
   return (
     <MainLayout>
@@ -156,6 +217,71 @@ const AdminTemperaturePage: React.FC = () => {
           <Button variant="secondary" onClick={refreshThermostatsStatus}>Actualiser thermostats</Button>
           <Button variant="secondary" onClick={refreshStationsStatus}>Actualiser stations</Button>
         </div>
+
+        {/* NEW: Vue liste sexy */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Logements — Vue liste</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {listItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun logement avec assignation de thermostat ou station.</p>
+            ) : (
+              <div className="divide-y rounded-md border bg-white">
+                {listItems.map((item) => (
+                  <div key={item.roomId} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2 w-48">
+                      <HomeIcon className="w-4 h-4 text-orange-600" />
+                      <span className="font-medium truncate">{item.roomName}</span>
+                      {item.alert && (
+                        <Badge variant="destructive" className="ml-1">Alerte &lt; {alertThreshold}°C</Badge>
+                      )}
+                    </div>
+
+                    {/* Thermostat */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-xs text-muted-foreground">Thermostat</span>
+                      <Thermometer className="w-4 h-4 text-red-500" />
+                      <span className="text-sm">
+                        {typeof item.thermostat?.measured === "number" ? `${item.thermostat!.measured}°C` : "—"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Consigne:</span>
+                      <span className="text-sm">
+                        {typeof item.thermostat?.setpoint === "number" ? `${item.thermostat!.setpoint}°C` : "—"}
+                      </span>
+                    </div>
+
+                    {/* Station intérieure */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-xs text-muted-foreground">Station</span>
+                      <Thermometer className="w-4 h-4 text-red-500" />
+                      <span className="text-sm">{typeof item.stationIndoor?.Temperature === "number" ? `${item.stationIndoor!.Temperature}°C` : "—"}</span>
+                      <Leaf className="w-4 h-4 text-green-600" />
+                      <span className="text-sm">{typeof item.stationIndoor?.CO2 === "number" ? `${item.stationIndoor!.CO2} ppm` : "—"}</span>
+                      <Droplets className="w-4 h-4 text-sky-500" />
+                      <span className="text-sm">{typeof item.stationIndoor?.Humidity === "number" ? `${item.stationIndoor!.Humidity}%` : "—"}</span>
+                      <Volume2 className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm">{typeof item.stationIndoor?.Noise === "number" ? `${item.stationIndoor!.Noise} dB` : "—"}</span>
+                    </div>
+
+                    {/* Station extérieure */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-xs text-muted-foreground">Extérieur</span>
+                      <Cloud className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm">{typeof item.stationOutdoor?.Temperature === "number" ? `${item.stationOutdoor!.Temperature}°C` : "—"}</span>
+                      <Droplets className="w-4 h-4 text-sky-500" />
+                      <span className="text-sm">{typeof item.stationOutdoor?.Humidity === "number" ? `${item.stationOutdoor!.Humidity}%` : "—"}</span>
+                    </div>
+
+                    <div className="flex items-center justify-end w-32">
+                      <Button size="sm" variant="secondary" onClick={() => openDetails(item)}>Voir plus</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Section Thermostats */}
         <Card>
@@ -265,6 +391,60 @@ const AdminTemperaturePage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* NEW: Dialog détails */}
+        <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="sm:max-w-[700px]">
+            <DialogHeader>
+              <DialogTitle>Détails — {detailsRoom?.roomName || ""}</DialogTitle>
+            </DialogHeader>
+            {detailsRoom ? (
+              <div className="space-y-4">
+                {/* Thermostat */}
+                <div className="rounded border p-3">
+                  <p className="font-medium flex items-center gap-2"><Thermometer className="w-4 h-4 text-red-500" /> Thermostat</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <div>Mesurée: {typeof detailsRoom.thermostat?.measured === "number" ? `${detailsRoom.thermostat!.measured}°C` : "—"}</div>
+                    <div>Consigne: {typeof detailsRoom.thermostat?.setpoint === "number" ? `${detailsRoom.thermostat!.setpoint}°C` : "—"}</div>
+                    <div>Pièce Netatmo: {detailsRoom.thermostat?.netatmoRoomName || "—"}</div>
+                    {detailsRoom.alert && (
+                      <div className="col-span-2">
+                        <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                          <AlertTriangle className="w-3 h-3" /> Alerte &lt; {alertThreshold}°C
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Station intérieur */}
+                <div className="rounded border p-3">
+                  <p className="font-medium flex items-center gap-2"><HomeIcon className="w-4 h-4 text-orange-600" /> Station — Intérieur</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <div>Température: {typeof detailsRoom.stationIndoor?.Temperature === "number" ? `${detailsRoom.stationIndoor!.Temperature}°C` : "—"}</div>
+                    <div>CO₂: {typeof detailsRoom.stationIndoor?.CO2 === "number" ? `${detailsRoom.stationIndoor!.CO2} ppm` : "—"}</div>
+                    <div>Humidité: {typeof detailsRoom.stationIndoor?.Humidity === "number" ? `${detailsRoom.stationIndoor!.Humidity}%` : "—"}</div>
+                    <div>Bruit: {typeof detailsRoom.stationIndoor?.Noise === "number" ? `${detailsRoom.stationIndoor!.Noise} dB` : "—"}</div>
+                    <div className="col-span-2 text-xs text-gray-600">Maj: {detailsRoom.stationIndoor?.time_utc ? new Date(detailsRoom.stationIndoor!.time_utc * 1000).toLocaleString() : "—"}</div>
+                  </div>
+                </div>
+
+                {/* Station extérieur */}
+                <div className="rounded border p-3">
+                  <p className="font-medium flex items-center gap-2"><Cloud className="w-4 h-4 text-gray-600" /> Station — Extérieur</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                    <div>Température: {typeof detailsRoom.stationOutdoor?.Temperature === "number" ? `${detailsRoom.stationOutdoor!.Temperature}°C` : "—"}</div>
+                    <div>Humidité: {typeof detailsRoom.stationOutdoor?.Humidity === "number" ? `${detailsRoom.stationOutdoor!.Humidity}%` : "—"}</div>
+                    <div className="col-span-2 text-xs text-gray-600">Maj: {detailsRoom.stationOutdoor?.time_utc ? new Date(detailsRoom.stationOutdoor!.time_utc * 1000).toLocaleString() : "—"}</div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDetailsOpen(false)}>Fermer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );

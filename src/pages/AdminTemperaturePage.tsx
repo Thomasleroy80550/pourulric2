@@ -11,6 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { Thermometer, Cloud, Home as HomeIcon, AlertTriangle, Droplets, Leaf, Volume2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 // Types de tables
 type ThermAssign = {
@@ -167,6 +169,19 @@ const AdminTemperaturePage: React.FC = () => {
   const alertThreshold = 14;
   const roomName = (id: string) => userRooms.find((r) => r.id === id)?.room_name || id;
 
+  // ADD: helpers pour styliser les valeurs
+  function tempChipClasses(val?: number) {
+    if (typeof val !== "number") return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+    if (val < 14) return "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200";
+    if (val < 18) return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200";
+    if (val <= 22) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200";
+    return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200";
+  }
+  function chip(val: string | number | undefined) {
+    if (val === undefined || val === null || (typeof val === "number" && Number.isNaN(val))) return "—";
+    return String(val);
+  }
+
   const listItems = React.useMemo(() => {
     // index assignments par user_room_id
     const byRoom: Record<string, { therm?: typeof thermAssigns[number]; station?: typeof stationAssigns[number] }> = {};
@@ -286,56 +301,87 @@ const AdminTemperaturePage: React.FC = () => {
             {listItems.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucun logement avec assignation de thermostat ou station.</p>
             ) : (
-              <div className="divide-y rounded-md border bg-white">
+              <div className="space-y-3">
                 {listItems.map((item) => (
-                  <div key={item.roomId} className="flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-2 w-48">
+                  <div
+                    key={item.roomId}
+                    className={cn(
+                      "flex items-center gap-4 p-3 rounded-xl border transition-all",
+                      "bg-gradient-to-r from-white to-slate-50 hover:shadow-md dark:from-slate-900 dark:to-slate-950",
+                      item.alert ? "ring-1 ring-red-300/60" : "ring-1 ring-transparent"
+                    )}
+                  >
+                    {/* Bloc chambre */}
+                    <div className="flex items-center gap-2 min-w-[220px]">
                       <HomeIcon className="w-4 h-4 text-orange-600" />
-                      <span className="font-medium truncate">{item.roomName}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium truncate">{item.roomName}</span>
+                        {item.thermostat?.netatmoRoomName && (
+                          <span className="text-xs text-muted-foreground truncate">{item.thermostat.netatmoRoomName}</span>
+                        )}
+                      </div>
                       {item.alert && (
-                        <Badge variant="destructive" className="ml-1">Alerte &lt; {alertThreshold}°C</Badge>
+                        <Badge variant="destructive" className="ml-1">Alerte &lt; 14°C</Badge>
                       )}
                     </div>
 
-                    {/* Thermostat */}
+                    {/* Bloc Thermostat */}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-xs text-muted-foreground">Thermostat</span>
-                      <Thermometer className="w-4 h-4 text-red-500" />
-                      <span className="text-sm">
-                        {typeof item.thermostat?.measured === "number" ? `${item.thermostat!.measured}°C` : "—"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">Consigne:</span>
-                      <span className="text-sm">
-                        {typeof item.thermostat?.setpoint === "number" ? `${item.thermostat!.setpoint}°C` : "—"}
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className={cn("px-2 py-1 rounded-full text-xs flex items-center gap-1", tempChipClasses(item.thermostat?.measured))}>
+                            <Thermometer className="w-3 h-3" />
+                            <span className="font-medium">{typeof item.thermostat?.measured === "number" ? `${item.thermostat!.measured}°C` : "—"}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>Température mesurée (thermostat)</TooltipContent>
+                      </Tooltip>
+                      <div className="px-2 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        <span className="opacity-70">Consigne</span>
+                        <span className="font-medium">{typeof item.thermostat?.setpoint === "number" ? `${item.thermostat!.setpoint}°C` : "—"}</span>
+                      </div>
                     </div>
 
-                    {/* Station intérieure */}
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <span className="text-xs text-muted-foreground">Station</span>
-                      <Thermometer className="w-4 h-4 text-red-500" />
-                      <span className="text-sm">{typeof item.stationIndoor?.Temperature === "number" ? `${item.stationIndoor!.Temperature}°C` : "—"}</span>
-                      <Leaf className="w-4 h-4 text-green-600" />
-                      <span className="text-sm">{typeof item.stationIndoor?.CO2 === "number" ? `${item.stationIndoor!.CO2} ppm` : "—"}</span>
-                      <Droplets className="w-4 h-4 text-sky-500" />
-                      <span className="text-sm">{typeof item.stationIndoor?.Humidity === "number" ? `${item.stationIndoor!.Humidity}%` : "—"}</span>
-                      <Volume2 className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm">{typeof item.stationIndoor?.Noise === "number" ? `${item.stationIndoor!.Noise} dB` : "—"}</span>
+                    {/* Bloc Station intérieure */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className={cn("px-2 py-1 rounded-full text-xs flex items-center gap-1", tempChipClasses(item.stationIndoor?.Temperature))}>
+                        <Thermometer className="w-3 h-3" />
+                        <span className="font-medium">{typeof item.stationIndoor?.Temperature === "number" ? `${item.stationIndoor!.Temperature}°C` : "—"}</span>
+                      </div>
+                      <div className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200 flex items-center gap-1">
+                        <Leaf className="w-3 h-3" />
+                        <span className="font-medium">{typeof item.stationIndoor?.CO2 === "number" ? `${item.stationIndoor!.CO2} ppm` : "—"}</span>
+                      </div>
+                      <div className="px-2 py-1 rounded-full text-xs bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200 flex items-center gap-1">
+                        <Droplets className="w-3 h-3" />
+                        <span className="font-medium">{typeof item.stationIndoor?.Humidity === "number" ? `${item.stationIndoor!.Humidity}%` : "—"}</span>
+                      </div>
+                      <div className="px-2 py-1 rounded-full text-xs bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-200 flex items-center gap-1">
+                        <Volume2 className="w-3 h-3" />
+                        <span className="font-medium">{typeof item.stationIndoor?.Noise === "number" ? `${item.stationIndoor!.Noise} dB` : "—"}</span>
+                      </div>
                     </div>
 
-                    {/* Station extérieure */}
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <span className="text-xs text-muted-foreground">Extérieur</span>
-                      <Cloud className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm">{typeof item.stationOutdoor?.Temperature === "number" ? `${item.stationOutdoor!.Temperature}°C` : "—"}</span>
-                      <Droplets className="w-4 h-4 text-sky-500" />
-                      <span className="text-sm">{typeof item.stationOutdoor?.Humidity === "number" ? `${item.stationOutdoor!.Humidity}%` : "—"}</span>
+                    {/* Bloc Station extérieure */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="px-2 py-1 rounded-full text-xs bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 flex items-center gap-1">
+                        <Cloud className="w-3 h-3" />
+                        <span className="font-medium">
+                          {typeof item.stationOutdoor?.Temperature === "number" ? `${item.stationOutdoor!.Temperature}°C` : "—"}
+                        </span>
+                      </div>
+                      <div className="px-2 py-1 rounded-full text-xs bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200 flex items-center gap-1">
+                        <Droplets className="w-3 h-3" />
+                        <span className="font-medium">
+                          {typeof item.stationOutdoor?.Humidity === "number" ? `${item.stationOutdoor!.Humidity}%` : "—"}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-end w-32">
-                      <Button size="sm" variant="secondary" onClick={() => openDetails(item)}>Voir plus</Button>
-                      {/* NEW: régler temp */}
-                      <Button size="sm" className="ml-2" onClick={() => openTempDialog(item)}>Régler temp.</Button>
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openDetails(item)}>Voir plus</Button>
+                      <Button size="sm" onClick={() => openTempDialog(item)}>Régler temp.</Button>
                     </div>
                   </div>
                 ))}

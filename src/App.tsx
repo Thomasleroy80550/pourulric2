@@ -96,6 +96,7 @@ import AdminRecoveryPage from "./pages/AdminRecoveryPage";
 import NetatmoConnectPage from "./pages/NetatmoConnectPage";
 import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
+import NetatmoStationsPage from "./pages/NetatmoStationsPage";
 import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
 import AdminThermostatOverviewPage from "./pages/AdminThermostatOverviewPage";
 import DashboardPageV2 from "./pages/DashboardPageV2";
@@ -182,6 +183,7 @@ function App() {
                   <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />
                   <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />
                   <Route path="/integrations/netatmo/dashboard" element={<NetatmoDashboardPage />} />
+                  <Route path="/integrations/netatmo/stations" element={<NetatmoStationsPage />} />
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/home-v2" element={<DashboardPageV2 />} />
                   <Route path="/calendar" element={<CalendarPage />} />

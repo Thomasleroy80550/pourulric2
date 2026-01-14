@@ -149,7 +149,7 @@ const AdminTemperaturePage: React.FC = () => {
           <Thermometer className="w-6 h-6" />
           Temperature — Admin
         </h1>
-        <p className="text-gray-600">Vue d’ensemble des thermostats et des stations météo par logement.</p>
+        <p className="text-gray-600">Vue d'ensemble des thermostats et des stations météo par logement.</p>
 
         <div className="flex gap-2">
           <Button onClick={loadAssignments} disabled={loading}>{loading ? "Chargement..." : "Recharger les assignations"}</Button>
@@ -186,7 +186,7 @@ const AdminTemperaturePage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         {underThreshold && (
                           <Badge variant="destructive" className="flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" /> Alerte < {alertThreshold}°C
+                            <AlertTriangle className="w-3 h-3" /> Alerte &lt; {alertThreshold}°C
                           </Badge>
                         )}
                         {!underThreshold && <Badge variant="secondary">OK</Badge>}
@@ -229,7 +229,7 @@ const AdminTemperaturePage: React.FC = () => {
                         </p>
                         {underThresholdIndoor && (
                           <Badge variant="destructive" className="flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" /> Alerte < {alertThreshold}°C
+                            <AlertTriangle className="w-3 h-3" /> Alerte &lt; {alertThreshold}°C
                           </Badge>
                         )}
                       </div>

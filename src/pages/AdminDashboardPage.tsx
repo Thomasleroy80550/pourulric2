@@ -3,7 +3,7 @@ import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning, FilePlus, Settings, Puzzle, Mail, FileText } from 'lucide-react';
+import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning, FilePlus, Settings, Puzzle, Mail, FileText, Thermometer } from 'lucide-react';
 import { getAdminReportsByStatus, TechnicalReport } from '@/lib/technical-reports-api';
 import { getAdminReservationReports, ReservationReport } from '@/lib/reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAllModuleActivationRequests, ModuleActivationRequest } from '@/lib/module-activation-api';
 import { toast } from "sonner";
 import NewsFeed from '@/components/admin/NewsFeed';
+import { supabase } from '@/lib/supabase';
 
 const AdminDashboardPage: React.FC = () => {
   const { profile } = useSession();
@@ -40,6 +41,23 @@ const AdminDashboardPage: React.FC = () => {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tempAlertsCount, setTempAlertsCount] = useState<number>(0);
+  const [tempAlerts, setTempAlerts] = useState<Array<{ room_name: string; measured: number; threshold: number }>>([]);
+
+  useEffect(() => {
+    const fetchTempAlerts = async () => {
+      const { data, error } = await supabase.functions.invoke("temperature-alerts", { body: {} });
+      if (error) {
+        // silencieux: pas d'alerte si indisponible
+        return;
+      }
+      const count = Number(data?.count || 0);
+      setTempAlertsCount(count);
+      const rows = Array.isArray(data?.alerts) ? data.alerts : [];
+      setTempAlerts(rows.map((r: any) => ({ room_name: r.room_name, measured: r.measured, threshold: r.threshold })));
+    };
+    fetchTempAlerts();
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -273,6 +291,28 @@ const AdminDashboardPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Bonjour, {profile?.first_name || 'Admin'} !</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">Bienvenue sur votre tableau de bord centralisé.</p>
         </div>
+
+        {tempAlertsCount > 0 && (
+          <Alert className="border-amber-300 bg-amber-50">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Attention: température insuffisante pour l'arrivée</AlertTitle>
+            <AlertDescription>
+              {tempAlertsCount} logement(s) mesuré(s) en dessous du seuil d'arrivée.
+              <div className="mt-2 grid md:grid-cols-2 gap-2">
+                {tempAlerts.slice(0, 6).map((a, idx) => (
+                  <div key={idx} className="text-sm flex items-center gap-2">
+                    <Thermometer className="h-3 w-3 text-red-600" />
+                    <span className="font-semibold">{a.room_name}</span>
+                    <span className="text-muted-foreground">• mesurée {a.measured}°C (seuil {a.threshold}°C)</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2">
+                <Button asChild size="sm" variant="outline"><Link to="/admin/temperature">Voir détail et agir</Link></Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Total Utilisateurs" value={stats.totalUsers.toString()} icon={<Users className="h-4 w-4 text-muted-foreground" />} description={`${stats.newUsersLast30Days} nouveaux ce mois-ci`} loading={loading} />

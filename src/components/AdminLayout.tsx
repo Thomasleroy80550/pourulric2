@@ -143,6 +143,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { profile, loading } = useSession();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [tempAlertsCount, setTempAlertsCount] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    // Charger compte d'alertes en arrière-plan
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("temperature-alerts", { body: {} });
+      if (error) return;
+      const count = Number(data?.count || 0);
+      setTempAlertsCount(count);
+    })();
+  }, []);
 
   React.useEffect(() => {
     if (!loading && profile?.role !== 'admin') {
@@ -292,6 +303,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               Retour au site
             </Link>
           </Button>
+          {tempAlertsCount > 0 && (
+            <Button variant="destructive" size="sm" asChild>
+              <Link to="/admin/temperature">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                {tempAlertsCount} logement(s) sous le seuil
+              </Link>
+            </Button>
+          )}
           <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

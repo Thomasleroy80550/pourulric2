@@ -40,7 +40,7 @@ const navItems: NavItem[] = [
   { label: "Relevés", icon: FileText, to: "/admin/statements" },
   { label: "Doublons Stripe", icon: AlertTriangle, to: "/admin/stripe-duplicates" },
   { label: "Marketplace", icon: ShoppingBag, to: "/admin/marketplace" },
-  { label: "Thermostats", icon: Thermometer, to: "/admin/thermostats" },
+  { label: "Temperature", icon: Thermometer, to: "/admin/temperature" },
   { label: "Paramètres", icon: Settings, to: "/admin/settings" },
 ];
 

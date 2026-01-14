@@ -56,6 +56,8 @@ export interface UserProfile {
   referral_credits?: number;
   krossbooking_property_id?: number;
   stripe_account_id?: string;
+  // NEW: flag d'accès ThermoBnB
+  thermobnb_enabled?: boolean;
 }
 
 export async function getProfile(): Promise<UserProfile | null> {

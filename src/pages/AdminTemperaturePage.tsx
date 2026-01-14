@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Thermometer, Cloud, Home as HomeIcon, AlertTriangle, Droplets, Leaf, Volume2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 // Types de tables
 type ThermAssign = {
@@ -150,6 +151,18 @@ const AdminTemperaturePage: React.FC = () => {
     alert?: boolean;
   } | null>(null);
 
+  // NEW: dialog pour régler la température
+  const [tempDialogOpen, setTempDialogOpen] = React.useState(false);
+  const [tempDialogItem, setTempDialogItem] = React.useState<{
+    roomId: string;
+    roomName: string;
+    homeId?: string;
+    netatmoRoomId?: string;
+    current?: number | undefined;
+  } | null>(null);
+  const [tempValue, setTempValue] = React.useState<number>(20);
+  const [tempMinutes, setTempMinutes] = React.useState<number>(60);
+
   // ADD: helpers list view data
   const alertThreshold = 14;
   const roomName = (id: string) => userRooms.find((r) => r.id === id)?.room_name || id;
@@ -187,6 +200,9 @@ const AdminTemperaturePage: React.FC = () => {
         stationIndoor: indoor,
         stationOutdoor: outdoor,
         alert,
+        // NEW: infos nécessaires pour setpoint
+        homeId: data.therm?.home_id,
+        netatmoRoomId: data.therm?.netatmo_room_id ? String(data.therm.netatmo_room_id) : undefined,
       };
     }).sort((a, b) => a.roomName.localeCompare(b.roomName));
   }, [thermAssigns, stationAssigns, roomLiveTemps, stationDashboard, userRooms]);
@@ -201,6 +217,49 @@ const AdminTemperaturePage: React.FC = () => {
       alert: item.alert,
     });
     setDetailsOpen(true);
+  }
+
+  // NEW: ouvrir dialog de température
+  function openTempDialog(item: typeof listItems[number]) {
+    if (!item.homeId || !item.netatmoRoomId) {
+      toast.error("Aucun thermostat assigné à ce logement.");
+      return;
+    }
+    setTempDialogItem({
+      roomId: item.roomId,
+      roomName: item.roomName,
+      homeId: item.homeId,
+      netatmoRoomId: item.netatmoRoomId,
+      current: item.thermostat?.measured,
+    });
+    setTempValue(typeof item.thermostat?.measured === "number" ? item.thermostat!.measured : 20);
+    setTempMinutes(60);
+    setTempDialogOpen(true);
+  }
+
+  // NEW: appliquer la consigne
+  async function applyTemperature() {
+    if (!tempDialogItem?.homeId || !tempDialogItem.netatmoRoomId) {
+      toast.error("Thermostat introuvable pour ce logement.");
+      return;
+    }
+    const endtime = Math.floor(Date.now() / 1000) + Math.max(5, tempMinutes) * 60;
+    const payload: any = {
+      endpoint: "setroomthermpoint",
+      home_id: tempDialogItem.homeId,
+      room_id: tempDialogItem.netatmoRoomId,
+      mode: "manual",
+      temp: Number(tempValue),
+      endtime,
+    };
+    const { error } = await supabase.functions.invoke("netatmo-proxy", { body: payload });
+    if (error) {
+      toast.error(error.message || "Échec de l'application de la consigne.");
+      return;
+    }
+    toast.success("Consigne appliquée.");
+    setTempDialogOpen(false);
+    await refreshThermostatsStatus();
   }
 
   return (
@@ -275,6 +334,8 @@ const AdminTemperaturePage: React.FC = () => {
 
                     <div className="flex items-center justify-end w-32">
                       <Button size="sm" variant="secondary" onClick={() => openDetails(item)}>Voir plus</Button>
+                      {/* NEW: régler temp */}
+                      <Button size="sm" className="ml-2" onClick={() => openTempDialog(item)}>Régler temp.</Button>
                     </div>
                   </div>
                 ))}
@@ -391,6 +452,51 @@ const AdminTemperaturePage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* NEW: Dialog réglage de température */}
+        <Dialog open={tempDialogOpen} onOpenChange={setTempDialogOpen}>
+          <DialogContent className="sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>Régler la température — {tempDialogItem?.roomName || ""}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium">Température (°C)</label>
+                  <Input
+                    type="number"
+                    min={10}
+                    max={25}
+                    step={0.5}
+                    value={tempValue}
+                    onChange={(e) => setTempValue(Number(e.target.value))}
+                    className="mt-1"
+                  />
+                  {typeof tempDialogItem?.current === "number" && (
+                    <p className="mt-1 text-xs text-muted-foreground">Mesurée actuellement: {tempDialogItem!.current}°C</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Durée (minutes)</label>
+                  <Input
+                    type="number"
+                    min={5}
+                    max={360}
+                    step={5}
+                    value={tempMinutes}
+                    onChange={(e) => setTempMinutes(Number(e.target.value))}
+                    className="mt-1"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Après la durée, le mode repasse au planning de la maison.</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="mt-4 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setTempDialogOpen(false)}>Annuler</Button>
+              <Button onClick={applyTemperature}>Appliquer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* NEW: Dialog détails */}
         <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>

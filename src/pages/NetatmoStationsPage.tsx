@@ -219,7 +219,7 @@ const NetatmoStationsPage: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {modules.length === 0 ? (
-                        <SelectItem value="">Aucun module</SelectItem>
+                        <SelectItem value="__none__" disabled>Aucun module</SelectItem>
                       ) : modules.map((m) => {
                         const id = String(m._id || m.id);
                         const name = m.module_name || id;

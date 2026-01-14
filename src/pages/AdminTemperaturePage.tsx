@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Thermometer, Cloud, Home as HomeIcon, AlertTriangle, Droplets, Leaf, Volume2 } from "lucide-react";
+import { Thermometer, Cloud, Home as HomeIcon, AlertTriangle, Droplets, Leaf, Volume2, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -58,6 +58,14 @@ const AdminTemperaturePage: React.FC = () => {
   // Stations: cache des dashboard_data par device_id/ module_id
   const [stationDashboard, setStationDashboard] = React.useState<Record<string, any>>({});
 
+  // Seuils d'alerte par logement
+  const [alertSettings, setAlertSettings] = React.useState<Record<string, number>>({});
+
+  // Dialog édition seuil
+  const [thresholdDialogOpen, setThresholdDialogOpen] = React.useState(false);
+  const [thresholdRoom, setThresholdRoom] = React.useState<{ roomId: string; roomName: string; userId?: string } | null>(null);
+  const [thresholdValue, setThresholdValue] = React.useState<number>(14);
+
   // Charger toutes les assignations (admin)
   async function loadAssignments() {
     setLoading(true);
@@ -83,6 +91,46 @@ const AdminTemperaturePage: React.FC = () => {
     setStationAssigns(stationRes.data || []);
 
     setLoading(false);
+  }
+
+  // Charger seuils d'alerte
+  async function loadAlertSettings() {
+    const { data, error } = await supabase
+      .from("temperature_alert_settings")
+      .select("user_room_id, threshold")
+      .limit(1000);
+    if (error) {
+      toast.message("Seuils d'alerte indisponibles.");
+      return;
+    }
+    const map: Record<string, number> = {};
+    (data || []).forEach((row: any) => {
+      map[String(row.user_room_id)] = Number(row.threshold) || 14;
+    });
+    setAlertSettings(map);
+  }
+
+  // Sauvegarder seuil pour un logement
+  async function saveAlertThreshold(roomId: string, userId: string, threshold: number) {
+    // Upsert par clé unique user_room_id
+    const { error } = await supabase
+      .from("temperature_alert_settings")
+      .upsert(
+        {
+          user_id: userId,
+          user_room_id: roomId,
+          threshold,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_room_id" }
+      );
+    if (error) {
+      toast.error(error.message || "Erreur de sauvegarde du seuil.");
+      return;
+    }
+    toast.success("Seuil d'alerte mis à jour.");
+    setAlertSettings((prev) => ({ ...prev, [roomId]: threshold }));
+    setThresholdDialogOpen(false);
   }
 
   // Charger homestatus par home_id et remplir roomLiveTemps
@@ -142,6 +190,19 @@ const AdminTemperaturePage: React.FC = () => {
     if (stationAssigns.length) refreshStationsStatus();
   }, [stationAssigns.length]);
 
+  // Charger aussi les seuils
+  React.useEffect(() => {
+    loadAlertSettings();
+  }, []);
+
+  const roomOwnerId = (roomId: string) => userRooms.find((r) => r.id === roomId)?.user_id || undefined;
+  const roomName = (id: string) => userRooms.find((r) => r.id === id)?.room_name || id;
+  // Obtenir seuil pour un logement (default 14)
+  const thresholdFor = (roomId: string) => {
+    const v = alertSettings[roomId];
+    return typeof v === "number" && !Number.isNaN(v) ? v : 14;
+  };
+
   // ADD: état pour la vue détaillée
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [detailsRoom, setDetailsRoom] = React.useState<{
@@ -167,7 +228,6 @@ const AdminTemperaturePage: React.FC = () => {
 
   // ADD: helpers list view data
   const alertThreshold = 14;
-  const roomName = (id: string) => userRooms.find((r) => r.id === id)?.room_name || id;
 
   // ADD: helpers pour styliser les valeurs
   function tempChipClasses(val?: number) {
@@ -183,7 +243,6 @@ const AdminTemperaturePage: React.FC = () => {
   }
 
   const listItems = React.useMemo(() => {
-    // index assignments par user_room_id
     const byRoom: Record<string, { therm?: typeof thermAssigns[number]; station?: typeof stationAssigns[number] }> = {};
     thermAssigns.forEach((t) => {
       byRoom[t.user_room_id] = byRoom[t.user_room_id] || {};
@@ -202,7 +261,8 @@ const AdminTemperaturePage: React.FC = () => {
       const outdoor = outdoorKey ? stationDashboard[outdoorKey] : undefined;
 
       const measured = rn?.measured;
-      const alert = typeof measured === "number" && measured < alertThreshold;
+      const thr = thresholdFor(userRoomId);
+      const alert = typeof measured === "number" && measured < thr;
 
       return {
         roomId: userRoomId,
@@ -215,12 +275,12 @@ const AdminTemperaturePage: React.FC = () => {
         stationIndoor: indoor,
         stationOutdoor: outdoor,
         alert,
-        // NEW: infos nécessaires pour setpoint
+        threshold: thr,
         homeId: data.therm?.home_id,
         netatmoRoomId: data.therm?.netatmo_room_id ? String(data.therm.netatmo_room_id) : undefined,
       };
     }).sort((a, b) => a.roomName.localeCompare(b.roomName));
-  }, [thermAssigns, stationAssigns, roomLiveTemps, stationDashboard, userRooms]);
+  }, [thermAssigns, stationAssigns, roomLiveTemps, stationDashboard, userRooms, alertSettings]);
 
   function openDetails(item: typeof listItems[number]) {
     setDetailsRoom({
@@ -277,6 +337,17 @@ const AdminTemperaturePage: React.FC = () => {
     await refreshThermostatsStatus();
   }
 
+  function openThresholdDialog(item: typeof listItems[number]) {
+    const ownerId = roomOwnerId(item.roomId);
+    if (!ownerId) {
+      toast.error("Propriétaire introuvable pour ce logement.");
+      return;
+    }
+    setThresholdRoom({ roomId: item.roomId, roomName: item.roomName, userId: ownerId });
+    setThresholdValue(item.threshold || 14);
+    setThresholdDialogOpen(true);
+  }
+
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
@@ -321,8 +392,16 @@ const AdminTemperaturePage: React.FC = () => {
                         )}
                       </div>
                       {item.alert && (
-                        <Badge variant="destructive" className="ml-1">Alerte &lt; 14°C</Badge>
+                        <Badge variant="destructive" className="ml-1">Alerte &lt; {item.threshold}°C</Badge>
                       )}
+                      {/* Chip seuil + bouton édition */}
+                      <div className="ml-2 px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200 flex items-center gap-1">
+                        <span className="opacity-70">Seuil</span>
+                        <span className="font-semibold">{item.threshold}°C</span>
+                        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={() => openThresholdDialog(item)}>
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Bloc Thermostat */}
@@ -559,6 +638,48 @@ const AdminTemperaturePage: React.FC = () => {
             <DialogFooter className="mt-4 flex items-center justify-end gap-2">
               <Button variant="outline" onClick={() => setTempDialogOpen(false)}>Annuler</Button>
               <Button onClick={applyTemperature}>Appliquer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* NEW: Dialog réglage du seuil d'alerte */}
+        <Dialog open={thresholdDialogOpen} onOpenChange={setThresholdDialogOpen}>
+          <DialogContent className="sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>Seuil d'alerte — {thresholdRoom?.roomName || ""}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium">Seuil (°C)</label>
+                <Input
+                  type="number"
+                  min={5}
+                  max={25}
+                  step={0.5}
+                  value={thresholdValue}
+                  onChange={(e) => setThresholdValue(Number(e.target.value))}
+                  className="mt-1"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  En‑dessous de ce seuil, une alerte visuelle sera affichée pour ce logement.
+                </p>
+              </div>
+            </div>
+            <DialogFooter className="mt-4 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={() => setThresholdDialogOpen(false)}>Annuler</Button>
+              <Button
+                onClick={() => {
+                  if (!thresholdRoom?.roomId || !thresholdRoom.userId) return;
+                  const v = Number(thresholdValue);
+                  if (Number.isNaN(v) || v < 5 || v > 25) {
+                    toast.error("Veuillez saisir un seuil entre 5 et 25°C.");
+                    return;
+                  }
+                  saveAlertThreshold(thresholdRoom.roomId, thresholdRoom.userId, v);
+                }}
+              >
+                Enregistrer
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

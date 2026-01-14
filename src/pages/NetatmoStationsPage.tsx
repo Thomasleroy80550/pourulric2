@@ -48,55 +48,68 @@ const TYPE_OPTIONS = [
 
 // Construire un tableau unifié pour multi-types, timestamps exacts (real_time)
 function buildUnifiedPoints(data: any, selectedTypeKeys: string[]) {
-  const items = Array.isArray(data?.body?.items) ? data.body.items : (data?.body?.items ? [data.body.items] : []);
-  if (!items.length) return [];
-  const first = items[0];
-  const beg = Number(first?.beg_time);
-  const step = Number(first?.step_time);
+  const items = Array.isArray(data?.body?.items) ? data.body.items : [];
+  if (!items.length) return { points: [], seriesKeys: selectedTypeKeys };
 
-  // Helper pour normaliser les values en structure [typeIndex][sampleIndex]
-  function extractMatrix(it: any) {
-    let v = it?.value;
-    if (!Array.isArray(v)) return [];
-    // cas A: v = [ [type1_samples...], [type2_samples...] ]
-    if (Array.isArray(v[0])) {
-      return v.map((arr: any[]) => arr.map((x) => (Array.isArray(x) ? Number(x[0]) : Number(x))));
+  const beg = Number(items[0]?.beg_time);
+  const step = Number(items[0]?.step_time);
+  const hasValidTs = Number.isFinite(beg) && Number.isFinite(step);
+
+  // seriesMap: type -> valeurs[]
+  const seriesMap: Record<string, Array<number | null>> = {};
+  let fallbackIdx = 0;
+
+  for (const it of items) {
+    const v = it?.value;
+    const itemType: any = it?.type ?? it?.types ?? it?.measure_type ?? null;
+
+    const toNumber = (x: any) => {
+      const n = Array.isArray(x) ? Number(x[0]) : Number(x);
+      return Number.isNaN(n) ? null : n;
+    };
+
+    if (Array.isArray(v) && Array.isArray(v[0])) {
+      // Plusieurs séries dans un même item: v = [ [samples type1], [samples type2], ... ]
+      const arrs = v.map((arr: any[]) => arr.map(toNumber));
+      const names: string[] = Array.isArray(itemType) ? itemType.map((s: any) => String(s)) : [];
+      arrs.forEach((series: Array<number | null>, i: number) => {
+        const key = names[i] || selectedTypeKeys[i] || `series_${fallbackIdx++}`;
+        seriesMap[key] = series;
+      });
+    } else if (Array.isArray(v)) {
+      // Une seule série pour cet item
+      const series = v.map(toNumber);
+      const key =
+        (Array.isArray(itemType) && typeof itemType[0] === "string")
+          ? String(itemType[0])
+          : (typeof itemType === "string"
+              ? itemType
+              : (selectedTypeKeys[fallbackIdx] || `series_${fallbackIdx}`));
+      fallbackIdx += 1;
+      seriesMap[key] = series;
     }
-    // cas B: v = [ sample1, sample2, ... ] -> un seul type
-    return [v.map((x) => (Array.isArray(x) ? Number(x[0]) : Number(x)))];
   }
 
-  let matrix = extractMatrix(first);
-  // Fallback: si plusieurs items et le premier n'a qu'un seul type, combiner les items (supposés correspondre aux types dans l'ordre)
-  if (items.length > 1 && matrix.length === 1) {
-    const mats = items.map(extractMatrix).filter((m) => m.length > 0);
-    if (mats.length) {
-      const maxLen = Math.max(...mats.map((m) => m[0]?.length || 0));
-      const combined: number[][] = [];
-      for (let i = 0; i < mats.length; i++) {
-        combined[i] = mats[i][0] || [];
-        // compléter au besoin
-        if (combined[i].length < maxLen) {
-          combined[i] = [...combined[i], ...Array(maxLen - combined[i].length).fill(null)];
-        }
-      }
-      matrix = combined;
-    }
-  }
+  // Ordonner les clés: préférer l'ordre des types sélectionnés, puis le reste
+  const keysOrdered = [
+    ...selectedTypeKeys.filter((k) => k in seriesMap),
+    ...Object.keys(seriesMap).filter((k) => !selectedTypeKeys.includes(k)),
+  ];
 
-  const samplesCount = Math.max(...matrix.map((arr) => arr.length));
+  const maxLen = Math.max(0, ...Object.values(seriesMap).map((arr) => arr.length));
   const points: any[] = [];
-  for (let idx = 0; idx < samplesCount; idx++) {
-    const ts = Number.isFinite(beg) && Number.isFinite(step) ? beg + idx * step : undefined;
-    const label = ts ? new Date(ts * 1000).toLocaleString() : String(idx);
+  for (let i = 0; i < maxLen; i++) {
+    const ts = hasValidTs ? beg + i * step : undefined;
+    const label = ts ? new Date(ts * 1000).toLocaleString() : String(i);
     const row: any = { ts, label };
-    selectedTypeKeys.forEach((tKey, tIdx) => {
-      const val = matrix?.[tIdx]?.[idx];
-      row[tKey] = typeof val === "number" && !Number.isNaN(val) ? val : null;
-    });
+    for (const key of keysOrdered) {
+      const val = seriesMap[key]?.[i];
+      row[key] = typeof val === "number" ? val : (val ?? null);
+    }
     points.push(row);
   }
-  return points;
+
+  return { points, seriesKeys: keysOrdered };
 }
 
 const NetatmoStationsPage: React.FC = () => {
@@ -250,9 +263,13 @@ const NetatmoStationsPage: React.FC = () => {
     }
     setMeasures(data);
     const unified = buildUnifiedPoints(data, typesArr);
-    setChartData(unified);
-    setSeriesTypes(typesArr);
-    toast.success("Mesures chargées (horodatage exact).");
+    setChartData(unified.points);
+    setSeriesTypes(unified.seriesKeys);
+    if (unified.points.length === 0) {
+      toast.message("Aucune donnée pour la période sélectionnée.");
+    } else {
+      toast.success("Mesures chargées (horodatage exact).");
+    }
   }
 
   return (
@@ -398,20 +415,26 @@ const NetatmoStationsPage: React.FC = () => {
               {/* Graphique multi-séries */}
               <div>
                 <Label className="text-sm font-medium">Graphique (valeurs en temps réel)</Label>
-                <div className="h-56 mt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      {seriesTypes.map((t) => (
-                        <Line key={t} type="monotone" dataKey={t} stroke={colorFor(t)} dot={false} />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                {chartData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Aucune donnée disponible pour les paramètres choisis. Essayez de changer la plage de dates, le scale ou les types.
+                  </p>
+                ) : (
+                  <div className="h-56 mt-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        {seriesTypes.map((t) => (
+                          <Line key={t} type="monotone" dataKey={t} stroke={colorFor(t)} dot={false} />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
 
               {/* Tableau complet des points */}

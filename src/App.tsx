@@ -102,6 +102,7 @@ import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
 import AdminThermostatOverviewPage from "./pages/AdminThermostatOverviewPage";
 import DashboardPageV2 from "./pages/DashboardPageV2";
 import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
+import AdminTemperaturePage from "./pages/AdminTemperaturePage";
 
 const queryClient = new QueryClient();
 
@@ -159,7 +160,7 @@ function App() {
                   <Route path="/admin/duplicate-room-ids" element={<AdminDuplicateRoomIdsPage />} />
                   <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
                   <Route path="/admin/crm" element={<AdminCRMPage />} />
-                  <Route path="/admin/thermostats" element={<AdminThermostatOverviewPage />} />
+                  <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
                   <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                   <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                   <Route path="/admin/status" element={<AdminStatusPage />} />

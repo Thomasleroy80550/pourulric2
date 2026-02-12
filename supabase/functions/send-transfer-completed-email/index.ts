@@ -101,6 +101,7 @@ serve(async (req) => {
     );
 
     const appUrl = Deno.env.get('APP_BASE_URL') ?? 'https://beta.proprietaire.hellokeys.fr';
+    const logoUrl = "https://dkjaejzwmmwwzhokpbgs.supabase.co/storage/v1/object/public/public-assets/logo.png";
 
     let recipientEmail = testTo ?? '';
     let recipientName = 'Client';
@@ -135,7 +136,7 @@ serve(async (req) => {
     }
 
     const defaultSubject = "DING DONG ! Tous vos virements sont faits";
-    const defaultBody = `DING DONG !\n\nBonne nouvelle {{userName}} : vos virements viennent d'être effectués.\n\nVous pouvez retrouver le détail dans votre espace Finances : {{appUrl}}/finances\n\nMerci pour votre confiance,\nL'équipe Hello Keys`;
+    const defaultBody = `Bonjour {{userName}},\n\nBonne nouvelle : l'ensemble de vos virements vient d'être effectué.\n\nRetrouvez le détail dans votre espace Finances : {{appUrl}}/finances\n\nMerci pour votre confiance,\nL'équipe Hello Keys`;
 
     const { data: notifTemplatesSetting } = await admin
       .from('app_settings')
@@ -160,32 +161,32 @@ serve(async (req) => {
     const subject = replaceVars(subjectTpl, vars);
     const body = replaceVars(bodyTpl, vars);
 
+    // Charte bleu + logo (alignée avec les autres emails)
+    const brandBlue = "#2563eb"; // blue-600
+
     const html = `
-      <div style="font-family: Inter, Arial, sans-serif; background: #f6f7fb; padding: 24px;">
-        <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px;">
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-            <div style="width:44px;height:44px;border-radius:12px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">HK</div>
-            <div>
-              <div style="font-size:12px;color:#6b7280;">Hello Keys</div>
-              <div style="font-size:18px;font-weight:700;color:#111827;">Notification de virement</div>
-            </div>
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a; background: #f5faff; padding: 24px;">
+        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #dbeafe; border-radius: 12px; background: #ffffff;">
+          <div style="text-align:center; padding-bottom: 14px; border-bottom: 1px solid #e5e7eb;">
+            <img src="${logoUrl}" alt="Hello Keys Logo" style="width: 150px; height: auto; margin: 6px auto 0; display:block;" />
           </div>
 
-          <h1 style="margin: 0 0 10px; font-size: 28px; line-height: 1.1; color: #111827;">DING DONG&nbsp;!</h1>
-          <p style="margin: 0 0 16px; font-size: 16px; color: #111827;">Tous vos virements sont faits.</p>
+          <h1 style="margin: 18px 0 6px; font-size: 26px; color: ${brandBlue};">DING DONG !</h1>
+          <p style="margin: 0 0 14px; font-size: 16px; color: #0f172a;"><strong>Tous vos virements sont faits.</strong></p>
 
-          <div style="background:#ecfdf5;border:1px solid #a7f3d0;padding:16px;border-radius:12px;margin:16px 0;">
-            <p style="margin:0;color:#065f46;font-weight:600;">Bonne nouvelle ${recipientName} :</p>
-            <p style="margin:8px 0 0;color:#065f46;">Les virements ont été effectués. Vous pouvez consulter le détail à tout moment.</p>
+          <div style="background-color: #eff6ff; padding: 14px 14px; border-radius: 10px; border: 1px solid #bfdbfe; margin: 16px 0;">
+            <p style="margin: 0;">${textToHtml(body)}</p>
           </div>
 
-          <p style="margin:0 0 16px;color:#374151;">${textToHtml(body)}</p>
+          <a href="${appUrl}/finances" style="background-color: ${brandBlue}; color: white; padding: 12px 18px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
+            Voir mes virements
+          </a>
 
-          <p style="margin: 18px 0 0;">
-            <a href="${appUrl}/finances" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 16px;border-radius:10px;font-weight:600;">Voir mes virements</a>
+          <p style="margin-top: 22px; font-size: 0.9em; color: #64748b;">
+            Une question ? Répondez simplement à cet e‑mail ou écrivez‑nous à <a href="mailto:contact@hellokeys.fr" style="color:${brandBlue}; text-decoration:underline;">contact@hellokeys.fr</a>.
           </p>
 
-          <p style="margin: 18px 0 0; color:#6b7280; font-size: 12px;">Si vous avez la moindre question, répondez simplement à cet e-mail.</p>
+          <p style="margin-top: 10px; font-size: 0.9em; color: #64748b;">À bientôt,<br>L'équipe Hello Keys</p>
         </div>
       </div>
     `;

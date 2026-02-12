@@ -170,16 +170,40 @@ const AdminTransferSummaryPage: React.FC = () => {
     }
   };
 
+  const sendTransfersDoneEmail = async (to: string, firstName?: string | null, lastName?: string | null) => {
+    const displayName = `${firstName ?? ''} ${lastName ?? ''}`.trim() || 'Client';
+    const subject = `DING DONG ! Tous vos virements sont faits`;
+    const htmlBody = `
+      <p>Bonjour ${displayName},</p>
+      <p>Bonne nouvelle : <strong>tous vos virements ont été effectués</strong>.</p>
+      <p>Vous pouvez retrouver le détail dans votre espace Finances.</p>
+      <p>Cordialement,</p>
+      <p>L'équipe Hello Keys</p>
+    `;
+
+    const { error } = await supabase.functions.invoke('send-email', {
+      body: { to, subject, html: htmlBody },
+    });
+
+    if (error) throw error;
+  };
+
   const handleSendTransferDoneEmail = async (userId: string) => {
     setSendingEmailForUserId(userId);
     const toastId = toast.loading("Envoi de l'e-mail en cours...");
+
     try {
-      const { error } = await supabase.functions.invoke('send-transfer-completed-email', {
-        body: { userId },
-      });
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('id', userId)
+        .single();
 
-      if (error) throw error;
+      if (profileError || !profileData?.email) {
+        throw new Error("Impossible de trouver l'email du client.");
+      }
 
+      await sendTransfersDoneEmail(profileData.email, profileData.first_name, profileData.last_name);
       toast.success("Notification envoyée par e-mail.", { id: toastId });
     } catch (e: any) {
       toast.error(`Impossible d'envoyer l'e-mail : ${e.message}`, { id: toastId });
@@ -191,11 +215,9 @@ const AdminTransferSummaryPage: React.FC = () => {
   const handleSendTestEmail = async () => {
     setSendingTestEmail(true);
     const toastId = toast.loading("Envoi du mail de test en cours...");
+
     try {
-      const { error } = await supabase.functions.invoke('send-transfer-completed-email', {
-        body: { testTo: 'thomasleroy80550@gmail.com' },
-      });
-      if (error) throw error;
+      await sendTransfersDoneEmail('thomasleroy80550@gmail.com', 'Thomas', 'Leroy');
       toast.success("Mail de test envoyé à thomasleroy80550@gmail.com", { id: toastId });
     } catch (e: any) {
       toast.error(`Impossible d'envoyer le mail de test : ${e.message}`, { id: toastId });

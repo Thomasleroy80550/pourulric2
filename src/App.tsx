@@ -11,7 +11,6 @@ import ReviewsPage from "./pages/ReviewsPage";
 import HelpPage from "./pages/HelpPage";
 import ModulesPage from "./pages/ModulesPage";
 import RoadmapPage from "./pages/RoadmapPage";
-import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import LoginV2 from "./pages/LoginV2";
@@ -96,16 +95,11 @@ import AdminRecoveryPage from "./pages/AdminRecoveryPage";
 import NetatmoConnectPage from "./pages/NetatmoConnectPage";
 import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
-<<<<<<< HEAD
-=======
 import NetatmoStationsPage from "./pages/NetatmoStationsPage";
 import NetatmoTokenOverridePage from "./pages/NetatmoTokenOverridePage";
-import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
-import AdminThermostatOverviewPage from "./pages/AdminThermostatOverviewPage";
 import DashboardPageV2 from "./pages/DashboardPageV2";
 import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 import AdminTemperaturePage from "./pages/AdminTemperaturePage";
->>>>>>> e6a0d2113af65478d624fc87a449db1cc05079ac
 
 const queryClient = new QueryClient();
 

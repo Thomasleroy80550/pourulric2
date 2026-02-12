@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { getTransferSummaries, UserTransferSummary, updateInvoiceSourceTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout, reconcileStripeTransfers } from '@/lib/admin-api';
-import { Terminal, Banknote, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
+import { Terminal, Banknote, CheckCircle2, Loader2, RefreshCw, Mail } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input'; // Import Input component
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminTransferSummaryPage: React.FC = () => {
   const [summaries, setSummaries] = useState<UserTransferSummary[]>([]);
@@ -33,6 +34,8 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [isReconciling, setIsReconciling] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState(true);
   const [searchQuery, setSearchQuery] = useState(''); // New state for search query
+  const [sendingEmailForUserId, setSendingEmailForUserId] = useState<string | null>(null);
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
 
   const getPropertyName = (id: number | null | undefined) => {
     switch (id) {
@@ -167,6 +170,40 @@ const AdminTransferSummaryPage: React.FC = () => {
     }
   };
 
+  const handleSendTransferDoneEmail = async (userId: string) => {
+    setSendingEmailForUserId(userId);
+    const toastId = toast.loading("Envoi de l'e-mail en cours...");
+    try {
+      const { error } = await supabase.functions.invoke('send-transfer-completed-email', {
+        body: { userId },
+      });
+
+      if (error) throw error;
+
+      toast.success("Notification envoyée par e-mail.", { id: toastId });
+    } catch (e: any) {
+      toast.error(`Impossible d'envoyer l'e-mail : ${e.message}`, { id: toastId });
+    } finally {
+      setSendingEmailForUserId(null);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setSendingTestEmail(true);
+    const toastId = toast.loading("Envoi du mail de test en cours...");
+    try {
+      const { error } = await supabase.functions.invoke('send-transfer-completed-email', {
+        body: { testTo: 'thomasleroy80550@gmail.com' },
+      });
+      if (error) throw error;
+      toast.success("Mail de test envoyé à thomasleroy80550@gmail.com", { id: toastId });
+    } catch (e: any) {
+      toast.error(`Impossible d'envoyer le mail de test : ${e.message}`, { id: toastId });
+    } finally {
+      setSendingTestEmail(false);
+    }
+  };
+
   const filteredSummaries = summaries
     .filter(summary => {
       // 1. Filter by search query
@@ -266,6 +303,17 @@ const AdminTransferSummaryPage: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 flex items-center justify-end gap-2">
+              <Button variant="outline" onClick={handleSendTestEmail} disabled={sendingTestEmail}>
+                {sendingTestEmail ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="mr-2 h-4 w-4" />
+                )}
+                Test email (Thomas)
+              </Button>
+            </div>
+
             {error && (
               <Alert variant="destructive" className="mb-4">
                 <Terminal className="h-4 w-4" />
@@ -348,6 +396,28 @@ const AdminTransferSummaryPage: React.FC = () => {
                             </div>
                           </AccordionTrigger>
                           <AccordionContent>
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <div className="text-sm text-muted-foreground">
+                                {summary.krossbooking_property_id ? (
+                                  <>Propriété : <span className="font-medium text-foreground">{getPropertyName(summary.krossbooking_property_id)}</span></>
+                                ) : null}
+                              </div>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleSendTransferDoneEmail(summary.user_id)}
+                                disabled={!allTransfersDone || sendingEmailForUserId === summary.user_id}
+                                title={!allTransfersDone ? "Disponible uniquement quand tous les virements sont cochés comme effectués" : undefined}
+                              >
+                                {sendingEmailForUserId === summary.user_id ? (
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Mail className="mr-2 h-4 w-4" />
+                                )}
+                                Notifier par email
+                              </Button>
+                            </div>
+
                             <Table>
                               <TableHeader>
                                 <TableRow>

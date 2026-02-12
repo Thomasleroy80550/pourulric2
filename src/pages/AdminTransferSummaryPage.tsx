@@ -173,12 +173,34 @@ const AdminTransferSummaryPage: React.FC = () => {
   const sendTransfersDoneEmail = async (to: string, firstName?: string | null, lastName?: string | null) => {
     const displayName = `${firstName ?? ''} ${lastName ?? ''}`.trim() || 'Client';
     const subject = `DING DONG ! Tous vos virements sont faits`;
+
+    const appUrl = window.location.origin;
+    const logoUrl = "https://dkjaejzwmmwwzhokpbgs.supabase.co/storage/v1/object/public/public-assets/logo.png";
+    const brandBlue = "#2563eb";
+
     const htmlBody = `
-      <p>Bonjour ${displayName},</p>
-      <p>Bonne nouvelle : <strong>tous vos virements ont été effectués</strong>.</p>
-      <p>Vous pouvez retrouver le détail dans votre espace Finances.</p>
-      <p>Cordialement,</p>
-      <p>L'équipe Hello Keys</p>
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a; background: #f5faff; padding: 24px;">
+        <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #dbeafe; border-radius: 12px; background: #ffffff;">
+          <div style="text-align:center; padding-bottom: 14px; border-bottom: 1px solid #e5e7eb;">
+            <img src="${logoUrl}" alt="Hello Keys Logo" style="width: 150px; height: auto; margin: 6px auto 0; display:block;" />
+          </div>
+
+          <h1 style="margin: 18px 0 6px; font-size: 26px; color: ${brandBlue};">DING DONG !</h1>
+          <p style="margin: 0 0 14px; font-size: 16px; color: #0f172a;"><strong>Tous vos virements sont faits.</strong></p>
+
+          <div style="background-color: #eff6ff; padding: 14px 14px; border-radius: 10px; border: 1px solid #bfdbfe; margin: 16px 0;">
+            <p style="margin: 0;">Bonjour ${displayName},</p>
+            <p style="margin: 10px 0 0;">Bonne nouvelle : l'ensemble de vos virements vient d'être effectué.</p>
+            <p style="margin: 10px 0 0;">Vous pouvez retrouver le détail dans votre espace Finances.</p>
+          </div>
+
+          <a href="${appUrl}/finances" style="background-color: ${brandBlue}; color: white; padding: 12px 18px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
+            Voir mes virements
+          </a>
+
+          <p style="margin-top: 22px; font-size: 0.9em; color: #64748b;">À bientôt,<br>L'équipe Hello Keys</p>
+        </div>
+      </div>
     `;
 
     const { error } = await supabase.functions.invoke('send-email', {

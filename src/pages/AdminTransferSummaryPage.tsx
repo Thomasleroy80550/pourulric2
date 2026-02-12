@@ -452,8 +452,7 @@ const AdminTransferSummaryPage: React.FC = () => {
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => handleSendTransferDoneEmail(summary.user_id)}
-                                disabled={!allTransfersDone || sendingEmailForUserId === summary.user_id}
-                                title={!allTransfersDone ? "Disponible uniquement quand tous les virements sont cochés comme effectués" : undefined}
+                                disabled={sendingEmailForUserId === summary.user_id}
                               >
                                 {sendingEmailForUserId === summary.user_id ? (
                                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

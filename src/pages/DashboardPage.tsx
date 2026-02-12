@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays } from "lucide-react"; 
+import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays, Sparkles } from "lucide-react"; 
 import {
   ResponsiveContainer,
   PieChart,
@@ -22,7 +22,7 @@ import {
   ComposedChart,
   Line,
 } from "recharts";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from 'react-router-dom';
 import ObjectiveDialog from "@/components/ObjectiveDialog";
 import { getProfile, UserProfile } from "@/lib/profile-api";
@@ -31,6 +31,7 @@ import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/kr
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { parseISO, isAfter, isSameDay, format, isValid, getDaysInYear, isBefore, differenceInDays, getDaysInMonth, eachMonthOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { parse } from 'date-fns';
 import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import ForecastDialog from '@/components/ForecastDialog';
 import { FieryProgressBar } from '@/components/FieryProgressBar';
@@ -44,6 +45,11 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import { getReviews, Review } from '@/lib/revyoos-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
+import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
+import Countdown from "@/components/Countdown";
+import BilanExportButton from "@/components/BilanExportButton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BilanPdfButton from "@/components/BilanPdfButton";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -76,8 +82,10 @@ const isInBilan2025Window = () => {
 const DashboardPage = () => {
   const { profile } = useSession();
   const currentYear = new Date().getFullYear();
-  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1];
   const [showBilanNotice, setShowBilanNotice] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const yearLabel = selectedYear === currentYear ? 'Année en cours' : String(selectedYear);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   const [activityData, setActivityData] = useState(
     DONUT_CATEGORIES.map(cat => ({ ...cat, value: 0 }))
@@ -128,6 +136,35 @@ const DashboardPage = () => {
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
 
+  // ADD: function to build monthly rows for PDF from state
+  const buildMonthlyForPdf = () => {
+    // match month names with monthlyFinancialData.name
+    // We also need nights and reservations by month:
+    const nightsByMonth: Record<string, number> = {};
+    const reservationsByMonth: Record<string, number> = {};
+    monthlyOccupancyData.forEach((m, idx) => {
+      // monthlyNights isn't exposed; reconstruct approximate nights via occupancy and availability?
+      // Instead, use monthlyFinancialData's benef + prixParNuit already computed:
+      // For PDF, we display benef and prixParNuit (already computed), and carry reservations from monthlyReservationsData.
+      // Nights: we cannot reconstruct exact nights unless stored; set 0 if not available in state.
+      nightsByMonth[m.name] = 0;
+    });
+    monthlyReservationsData.forEach(m => {
+      reservationsByMonth[m.name] = m.reservations || 0;
+    });
+
+    return monthlyFinancialData.map(m => ({
+      name: m.name,
+      ca: m.ca || 0,
+      montantVerse: m.montantVerse || 0,
+      frais: m.frais || 0,
+      benef: m.benef || 0,
+      nuits: nightsByMonth[m.name] || 0,
+      reservations: reservationsByMonth[m.name] || 0,
+      prixParNuit: m.prixParNuit || 0,
+    }));
+  };
+
   useEffect(() => {
     const dismissed = localStorage.getItem(BILAN_2025_STORAGE_KEY);
     if (!dismissed) {
@@ -158,7 +195,7 @@ const DashboardPage = () => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
     let totalCA = 0, totalRentree = 0, totalFrais = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
-    const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0); // Ensure amount is treated as number
+    const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
     let totalResultat = 0;
 
     const channelCounts: { [key: string]: number } = {};
@@ -169,11 +206,24 @@ const DashboardPage = () => {
       end: endOfMonth(new Date(year, 11, 1)),
     });
 
-    const newMonthlyFinancialData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), ca: 0, montantVerse: 0, frais: 0, benef: 0, depenses: 0 }));
+    const newMonthlyFinancialData = monthsOfYear.map(m => ({
+      name: format(m, 'MMM', { locale: fr }),
+      ca: 0,
+      montantVerse: 0,
+      frais: 0,
+      benef: 0,
+      depenses: 0,
+      prixParNuit: 0, // AJOUT: prix / nuit par mois
+    }));
     const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
     const monthlyNights = Array(12).fill(0);
     
-    const monthFrToNum: { [key: string]: number } = { 'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3, 'juin': 5, 'juillet': 6, 'août': 7, 'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11 };
+    // REPLACED: mois FR -> index static mapping by robust parsing with fallback
+    const monthMapFallback: { [key: string]: number } = {
+      'janvier': 0, 'février': 1, 'fevrier': 1, 'mars': 2, 'avril': 3, 'mai': 4,
+      'juin': 5, 'juillet': 6, 'août': 7, 'aout': 7, 'septembre': 8, 'octobre': 9,
+      'novembre': 10, 'décembre': 11, 'decembre': 11
+    };
 
     statementsForYear.forEach(s => {
       const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
@@ -189,17 +239,31 @@ const DashboardPage = () => {
       totalGuests += s.totals.totalVoyageurs || 0;
       totalReservations += s.totals.totalReservations ?? s.invoice_data.length;
 
-      const periodParts = s.period.toLowerCase().split(' ');
-      const monthName = periodParts[0];
-      const monthIndex = monthFrToNum[monthName];
+      // ADDED: Parse "period" to get month index (fr), with fallback
+      let monthIndex: number | undefined;
+      let parsed = parse(s.period, 'MMMM yyyy', new Date(), { locale: fr });
+      if (!isValid(parsed)) {
+        parsed = parse(s.period, 'MMM yyyy', new Date(), { locale: fr });
+      }
+      if (isValid(parsed)) {
+        monthIndex = parsed.getMonth();
+      } else {
+        const monthName = s.period.toLowerCase().split(' ')[0].replace('.', '');
+        monthIndex = monthMapFallback[monthName];
+      }
 
       if (monthIndex !== undefined) {
         newMonthlyFinancialData[monthIndex].ca += statementCA;
         newMonthlyFinancialData[monthIndex].montantVerse += moneyIn;
         newMonthlyFinancialData[monthIndex].frais += managementFees;
         newMonthlyFinancialData[monthIndex].benef += netFromStatement;
-        
-        newMonthlyReservationsData[monthIndex].reservations += s.invoice_data.length;
+
+        // CHANGED: utiliser totals.totalReservations si présent (pour les stats manuelles), sinon la longueur des réservations générées
+        const reservationsCount = (s.totals && typeof s.totals.totalReservations === 'number')
+          ? s.totals.totalReservations
+          : s.invoice_data.length;
+        newMonthlyReservationsData[monthIndex].reservations += reservationsCount;
+
         monthlyNights[monthIndex] += s.totals.totalNuits || 0;
       }
 
@@ -226,8 +290,11 @@ const DashboardPage = () => {
     });
 
     // Calculate final net benefit for each month by subtracting monthly expenses
-    newMonthlyFinancialData.forEach(monthData => {
+    newMonthlyFinancialData.forEach((monthData, index) => {
       monthData.benef -= monthData.depenses;
+      // AJOUT: calcul du prix / nuit pour chaque mois (bénéfice net ÷ nuits)
+      const nights = monthlyNights[index] || 0;
+      monthData.prixParNuit = nights > 0 ? monthData.benef / nights : 0;
     });
 
     const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
@@ -291,19 +358,19 @@ const DashboardPage = () => {
       let allExpenses: Expense[] = [];
       if (userProfile?.expenses_module_enabled) {
         const [singleExpenses, recurringTemplates] = await Promise.all([
-          getExpenses(currentYear),
+          getExpenses(selectedYear),
           getRecurringExpenses()
         ]);
-        const recurringInstances = generateRecurringInstances(recurringTemplates, currentYear);
+        const recurringInstances = generateRecurringInstances(recurringTemplates, selectedYear);
         allExpenses = [...singleExpenses, ...recurringInstances];
       }
 
       const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
-          getMyStatements(),
-          getUserRooms(),
-          getReviews(userProfile.revyoos_holding_ids),
-          getTechnicalReportsByUserId(userProfile.id)
-        ]);
+        getMyStatements(),
+        getUserRooms(),
+        getReviews(userProfile.revyoos_holding_ids),
+        getTechnicalReportsByUserId(userProfile.id)
+      ]);
 
       let allTodoTasks: TodoTask[] = [];
 
@@ -367,7 +434,7 @@ const DashboardPage = () => {
 
       setTodoTasks(allTodoTasks); // Mettre à jour l'état avec toutes les tâches
 
-      const { totalNights } = processStatements(statements, currentYear, fetchedUserRooms, allExpenses);
+      const { totalNights } = processStatements(statements, selectedYear, fetchedUserRooms, allExpenses);
 
       if (userProfile) {
         const objectiveAmount = userProfile.objective_amount || 0;
@@ -401,8 +468,8 @@ const DashboardPage = () => {
       });
       setNextArrival(nextArrivalCandidate);
 
-      const totalDaysInCurrentYear = getDaysInYear(new Date());
-      const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInCurrentYear;
+      const totalDaysInSelectedYear = getDaysInYear(new Date(selectedYear, 0, 1));
+      const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInSelectedYear;
       const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNights / totalAvailableNightsInYear) * 100 : 0;
       setOccupancyRateCurrentYear(calculatedOccupancyRate);
 
@@ -425,7 +492,7 @@ const DashboardPage = () => {
       setLoadingReviews(false);
       setLoadingTasks(false);
     }
-  }, [currentYear]);
+  }, [selectedYear]);
 
   useEffect(() => {
     if (!profile?.is_banned) {
@@ -436,6 +503,10 @@ const DashboardPage = () => {
   // Removed the useEffect that starts the dashboard tour automatically
 
   const handleShowForecast = () => {
+    if (selectedYear !== currentYear) {
+      toast.error("La prévision n'est disponible que pour l'année en cours.");
+      return;
+    }
     const today = new Date();
     const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
     const totalDaysInYear = getDaysInYear(today);
@@ -461,12 +532,54 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
-      <div className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words">
+      <div
+        className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words"
+        ref={dashboardRef}
+      >
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-6">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700 dark:text-gray-300">Année:</span>
+            <Tabs
+              value={selectedYear === currentYear ? 'current' : '2025'}
+              onValueChange={(val) => setSelectedYear(val === 'current' ? currentYear : 2025)}
+            >
+              <TabsList className="flex gap-1 bg-transparent p-0 border-0 shadow-none">
+                <TabsTrigger
+                  value="2025"
+                  className="px-1.5 py-0.5 text-xs bg-transparent rounded-none border-b border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                >
+                  2025
+                </TabsTrigger>
+                <TabsTrigger
+                  value="current"
+                  className="px-1.5 py-0.5 text-xs bg-transparent rounded-none border-b border-transparent text-muted-foreground hover:text-foreground data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:border-foreground"
+                >
+                  Année en cours ({currentYear})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <Badge variant="secondary">{yearLabel}</Badge>
+          {selectedYear === 2025 && (
+            <BilanPdfButton
+              year={selectedYear}
+              totals={{
+                ca: financialData.caAnnee,
+                montantVerse: financialData.rentreeArgentAnnee,
+                frais: financialData.fraisAnnee,
+                depenses: financialData.depensesAnnee,
+                resultatNet: financialData.resultatAnnee,
+              }}
+              monthly={buildMonthlyForPdf()}
+              className="ml-2"
+            />
+          )}
+        </div>
         
         {/* Notif box BILAN 2025 */}
-        {showBilanNotice && (
+        {showBilanNotice && selectedYear !== 2025 && (
           <Alert className="mb-6 w-full overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/20 shadow-sm p-0">
             <div className="p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-start gap-3">
@@ -512,56 +625,109 @@ const DashboardPage = () => {
           </Alert>
         )}
 
-        {/* To-Do List Card */}
-        <div className="mt-6">
-          <Card id="tour-todo-list" className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center">
-                <ListChecks className="mr-2 h-5 w-5" />
-                Mes actions requises
-              </CardTitle>
+        {/* Bloc Cinématique Bonne Année 2026 */}
+        {selectedYear !== 2025 && (
+          <Card className="mb-6 shadow-md">
+            <CardHeader className="pt-6">
+              <div className="w-full flex justify-center">
+                <div className="relative inline-flex items-center justify-center text-center rounded-2xl p-[2px] bg-gradient-to-r from-sky-400 via-indigo-500 to-amber-400">
+                  <div className="relative rounded-2xl border border-slate-200/60 bg-gradient-to-br from-sky-50 via-white to-indigo-50 dark:bg-slate-900/40 backdrop-blur px-8 py-6 shadow-sm max-w-2xl w-full">
+                    {/* Décor de fond festif discret dans le bloc */}
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-[0.1]"
+                      style={{
+                        backgroundImage:
+                          "repeating-linear-gradient(135deg, rgba(79,70,229,0.14) 0, rgba(79,70,229,0.14) 2px, transparent 2px, transparent 14px)",
+                      }}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.12),transparent_60%)]" />
+                    <div className="pointer-events-none absolute -bottom-[6px] left-6 right-6 h-[8px] rounded-full bg-gradient-to-r from-sky-400/30 via-indigo-500/20 to-amber-400/30 blur-md" />
+                    <div className="pointer-events-none absolute -top-[6px] left-8 right-8 h-[6px] rounded-full bg-gradient-to-r from-white/70 via-white/30 to-white/70 blur-sm" />
+
+                    {/* Contenu centré */}
+                    <div className="relative flex flex-col items-center justify-center">
+                      <div className="flex items-center justify-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
+                        <Sparkles className="h-5 w-5 text-indigo-600" />
+                        <CardTitle className="text-xl font-extrabold tracking-tight">Bonne Année 2026</CardTitle>
+                        <Sparkles className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <p className="mb-3 text-xs md:text-sm text-slate-600 dark:text-slate-300">
+                        Merci pour 2025 — en route pour une année 2026 lumineuse ✨
+                      </p>
+                      {/* Compte à rebours vers le 01/01/2026 */}
+                      <Countdown
+                        target={new Date(2026, 0, 1, 0, 0, 0)}
+                        className="mt-1"
+                      />
+                      {/* Petits badges festifs pour remplir élégamment */}
+                      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                        <Badge className="bg-sky-100 text-sky-800">Joie</Badge>
+                        <Badge className="bg-indigo-100 text-indigo-800">Santé</Badge>
+                        <Badge className="bg-amber-100 text-amber-800">Succès</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              {loadingTasks ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : tasksError ? (
-                <Alert variant="destructive">
-                  <Terminal className="h-4 w-4" />
-                  <AlertTitle>Erreur de chargement</AlertTitle>
-                  <AlertDescription>{tasksError}</AlertDescription>
-                </Alert>
-              ) : todoTasks.length > 0 ? (
-                <ul className="space-y-2">
-                  {todoTasks.map(task => (
-                    <li key={task.id}>
-                      <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full">
-                        <div>
-                          <p className="font-medium text-sm">{task.title}</p>
-                          {task.property_name && ( // Afficher property_name si c'est un rapport technique
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
-                          )}
-                          {task.description && !task.property_name && ( // Afficher la description pour les autres tâches
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
-                          )}
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
-                  <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
-                  <p className="font-semibold">Vous êtes à jour !</p>
-                  <p className="text-sm">Aucune action n'est requise de votre part.</p>
-                </div>
-              )}
+              <NewYear2026Cinematic />
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {/* To-Do List Card */}
+        {selectedYear !== 2025 && (
+          <div className="mt-6">
+            <Card id="tour-todo-list" className="shadow-md">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center">
+                  <ListChecks className="mr-2 h-5 w-5" />
+                  Mes actions requises
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingTasks ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : tasksError ? (
+                  <Alert variant="destructive">
+                    <Terminal className="h-4 w-4" />
+                    <AlertTitle>Erreur de chargement</AlertTitle>
+                    <AlertDescription>{tasksError}</AlertDescription>
+                  </Alert>
+                ) : todoTasks.length > 0 ? (
+                  <ul className="space-y-2">
+                    {todoTasks.map(task => (
+                      <li key={task.id}>
+                        <Link to={task.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors w-full">
+                          <div>
+                            <p className="font-medium text-sm">{task.title}</p>
+                            {task.property_name && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{task.property_name}</p>
+                            )}
+                            {task.description && !task.property_name && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{task.description}</p>
+                            )}
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-gray-400" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                    <CheckCircle className="mx-auto h-10 w-10 text-green-500 mb-2" />
+                    <p className="font-semibold">Vous êtes à jour !</p>
+                    <p className="text-sm">Aucune action n'est requise de votre part.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* REMOVED: Bloc Nouveautés (public) qui affichait <NewsFeedPublic /> */}
 
@@ -569,7 +735,7 @@ const DashboardPage = () => {
           {/* Bilan Financier Card */}
           <Card id="tour-financial-summary" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Bilan Financier</CardTitle>
+              <CardTitle className="text-lg font-semibold">Bilan Financier — {yearLabel}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingFinancialData ? (
@@ -641,7 +807,7 @@ const DashboardPage = () => {
           {/* Activité de Location Card */}
           <Card id="tour-activity-stats" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+              <CardTitle className="text-lg font-semibold">Activité de Location — {yearLabel}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loadingKrossbookingStats || loadingFinancialData || loadingReviews ? (
@@ -716,7 +882,13 @@ const DashboardPage = () => {
           {/* Activité de Location Card (Donut Chart) */}
           <Card id="tour-activity-chart" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Activité de Location</CardTitle>
+              <CardTitle className="text-lg font-semibold">Activité de Location — {yearLabel}</CardTitle>
+              {selectedYear === 2025 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pour 2025, nous ajoutons des statistiques agrégées sans détail par plateforme.
+                  Le graphique ne peut donc pas indiquer quelle plateforme a le mieux fonctionné.
+                </p>
+              )}
             </CardHeader>
             <CardContent className="flex flex-col p-4 h-[320px] w-full max-w-full">
               {loadingFinancialData ? (
@@ -792,6 +964,7 @@ const DashboardPage = () => {
                   { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
                   { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
                   ...(expensesModuleEnabled ? [{ key: 'depenses', name: 'Autres Dépenses', color: '#9333EA' }] : []),
+                  { key: 'prixParNuit', name: 'Prix / nuit', color: '#0ea5e9' }, // AJOUT: série prix / nuit
                 ],
                 '€'
               )}>
@@ -812,16 +985,18 @@ const DashboardPage = () => {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                     <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
-                    <YAxis className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
+                    <YAxis yAxisId="left" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
+                    <YAxis yAxisId="right" orientation="right" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Line type="monotone" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" yAxisId="left" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" yAxisId="left" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" yAxisId="left" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     {expensesModuleEnabled && (
-                      <Line type="monotone" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                      <Line type="monotone" yAxisId="left" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     )}
-                    <Area type="monotone" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" yAxisId="right" dataKey="prixParNuit" stroke="#0ea5e9" name="Prix / nuit" strokeWidth={2} dot={false} strokeDasharray="3 3" animationDuration={1500} animationEasing="ease-in-out" />
+                    <Area type="monotone" yAxisId="left" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
@@ -831,7 +1006,7 @@ const DashboardPage = () => {
           {/* Réservation / mois Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Réservations / mois</CardTitle>
+              <CardTitle className="text-lg font-semibold">Réservations / mois — {yearLabel}</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyReservationsData,
                 'bar',
@@ -868,7 +1043,7 @@ const DashboardPage = () => {
           {/* Occupation Mensuelle Card */}
           <Card className="shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Taux d'Occupation</CardTitle>
+              <CardTitle className="text-lg font-semibold">Taux d'Occupation — {yearLabel}</CardTitle>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyOccupancyData,
                 'line',
@@ -923,7 +1098,7 @@ const DashboardPage = () => {
         isOpen={isForecastDialogOpen}
         onOpenChange={setIsForecastDialogOpen}
         forecastAmount={forecastAmount}
-        year={currentYear}
+        year={selectedYear}
       />
     </MainLayout>
   );

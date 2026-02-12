@@ -244,18 +244,18 @@ serve(async (req) => {
       body: form.toString(),
     });
   } else if (action === "getmeasure") {
-    // NEW: historique chaudière
-    if (!device_id || !module_id || !scale || !typeParam) {
-      return new Response(JSON.stringify({ error: "Missing required fields: device_id, module_id, scale, type" }), { status: 400, headers: corsHeaders });
+    // NEW: historique météo/station: module_id devient optionnel
+    if (!device_id || !scale || !typeParam) {
+      return new Response(JSON.stringify({ error: "Missing required fields: device_id, scale, type" }), { status: 400, headers: corsHeaders });
     }
     const typeStr = Array.isArray(typeParam) ? typeParam.join(",") : String(typeParam);
     url = "https://api.netatmo.com/api/getmeasure";
     const qs = new URLSearchParams({
       device_id,
-      module_id,
       scale,
       type: typeStr,
     });
+    if (module_id) qs.set("module_id", module_id);
     if (typeof date_begin === "number") qs.set("date_begin", String(date_begin));
     if (typeof date_end === "number") qs.set("date_end", String(date_end));
     if (typeof limit === "number") qs.set("limit", String(Math.min(Math.max(limit, 1), 1024)));

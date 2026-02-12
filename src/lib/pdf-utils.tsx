@@ -414,3 +414,92 @@ export const openHivernageRequestPdfInNewWindow = (request: import('@/lib/hivern
     setTimeout(captureAndResolve, 600);
   });
 };
+
+export const generateAllHivernageRequestsPdf = async (requests: import('@/lib/hivernage-api').HivernageRequest[]): Promise<void> => {
+  if (!Array.isArray(requests) || requests.length === 0) {
+    throw new Error("Aucune demande d'hivernage à imprimer.");
+  }
+
+  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const margin = 10;
+  const targetWidth = pdfWidth - margin * 2;
+
+  for (let idx = 0; idx < requests.length; idx++) {
+    const request = requests[idx];
+
+    await new Promise<void>((resolve, reject) => {
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.width = '1024px';
+      document.body.appendChild(container);
+
+      const root = createRoot(container);
+
+      const cleanup = () => {
+        root.unmount();
+        if (document.body.contains(container)) {
+          document.body.removeChild(container);
+        }
+      };
+
+      const capture = async () => {
+        try {
+          const el = container.querySelector('#hivernage-request-to-print') as HTMLElement | null;
+          if (!el) {
+            throw new Error("Élément d'impression non trouvé pour une demande.");
+          }
+
+          const canvas = await html2canvas(el, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            width: el.scrollWidth,
+            height: el.scrollHeight,
+          });
+
+          const imgData = canvas.toDataURL('image/png');
+          const imgHeight = (canvas.height * targetWidth) / canvas.width;
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          // Nouvelle page pour chaque nouvelle demande sauf la première
+          if (idx > 0) {
+            pdf.addPage();
+          }
+
+          // Première page
+          pdf.addImage(imgData, 'PNG', margin, margin + position, targetWidth, imgHeight);
+          heightLeft -= (pdfHeight - margin * 2);
+
+          // Pages suivantes si nécessaire
+          while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', margin, margin + position, targetWidth, imgHeight);
+            heightLeft -= (pdfHeight - margin * 2);
+          }
+
+          resolve();
+        } catch (e) {
+          reject(e);
+        } finally {
+          cleanup();
+        }
+      };
+
+      root.render(
+        <React.StrictMode>
+          <HivernageRequestPrintLayout request={request} />
+        </React.StrictMode>
+      );
+
+      setTimeout(capture, 600);
+    });
+  }
+
+  const filename = `Hivernage_Toutes_Demandes_${new Date().toISOString().slice(0, 10)}.pdf`;
+  pdf.save(filename);
+};

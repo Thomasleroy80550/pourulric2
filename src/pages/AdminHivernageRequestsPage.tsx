@@ -27,6 +27,22 @@ const AdminHivernageRequestsPage: React.FC = () => {
     })();
   }, []);
 
+  // handler pour imprimer toutes les demandes
+  const handlePrintAll = async () => {
+    if (!requests || requests.length === 0) {
+      toast.error("Aucune demande à imprimer.");
+      return;
+    }
+    const toastId = toast.loading("Génération du PDF de toutes les demandes…");
+    try {
+      const { generateAllHivernageRequestsPdf } = await import('@/lib/pdf-utils');
+      await generateAllHivernageRequestsPdf(requests);
+      toast.success("PDF généré avec toutes les demandes.", { id: toastId });
+    } catch (e: any) {
+      toast.error(e.message || "Erreur lors de la génération du PDF.", { id: toastId });
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto px-4 py-6">
@@ -37,7 +53,17 @@ const AdminHivernageRequestsPage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Liste des demandes</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Liste des demandes</CardTitle>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handlePrintAll}
+                disabled={loading || requests.length === 0}
+              >
+                <Printer className="h-4 w-4 mr-1" /> Tout imprimer
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>

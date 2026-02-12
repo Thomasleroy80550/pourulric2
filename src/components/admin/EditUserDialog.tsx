@@ -58,7 +58,8 @@ const editUserSchema = z.object({
   referral_credits: z.coerce.number().min(0, "Les crédits de parrainage doivent être positifs.").optional().nullable(),
   krossbooking_property_id: z.coerce.number().optional().nullable(),
   stripe_account_id: z.string().optional().nullable(),
-  pennylane_customer_id: z.string().optional().nullable(), // Correction: de number à string
+  pennylane_customer_id: z.string().optional().nullable(),
+  thermobnb_enabled: z.boolean().optional(),
 });
 
 const addRoomFormSchema = z.object({
@@ -139,7 +140,8 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         referral_credits: user.referral_credits || 0,
         krossbooking_property_id: user.krossbooking_property_id || undefined,
         stripe_account_id: user.stripe_account_id || '',
-        pennylane_customer_id: user.pennylane_customer_id || undefined, // L'initialisation reste la même, car undefined est géré par z.string().optional().nullable()
+        pennylane_customer_id: user.pennylane_customer_id || undefined,
+        thermobnb_enabled: user as any && (user as any).thermobnb_enabled ? true : false,
       });
       setNewEmail(user.email || '');
       setShowTerminationNotice(false);
@@ -265,11 +267,11 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
     }
 
     try {
-      const { revyoos_holding_ids, referral_credits, ...restOfValues } = values;
+      const { revyoos_holding_ids, referral_credits, commission_rate, ...restOfValues } = values;
       const payload: UpdateUserPayload = {
         user_id: user.id,
         ...restOfValues,
-        commission_rate: values.commission_rate !== undefined ? values.commission_rate / 100 : undefined,
+        commission_rate: commission_rate !== undefined ? commission_rate / 100 : undefined,
         revyoos_holding_ids: revyoos_holding_ids ? revyoos_holding_ids.split(',').map(s => s.trim()).filter(Boolean) : [],
         referral_credits: referral_credits !== undefined ? referral_credits : undefined,
       };
@@ -571,6 +573,23 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
                               />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="thermobnb_enabled"
+                        render={({ field }) => (
+                          <FormItem className="mt-3 flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                              <FormLabel>Accès ThermoBnB</FormLabel>
+                              <p className="text-xs text-muted-foreground">
+                                Permet la connexion au dashboard Netatmo (ThermoBnB) et aux intégrations associées.
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                           </FormItem>
                         )}

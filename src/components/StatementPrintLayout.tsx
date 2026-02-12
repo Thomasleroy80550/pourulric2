@@ -1,7 +1,6 @@
 import React from 'react';
 import { SavedInvoice } from '@/lib/admin-api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { HELLO_KEYS_IBAN, HELLO_KEYS_BIC } from '@/lib/constants';
 
 interface StatementPrintLayoutProps {
   statement: SavedInvoice;
@@ -112,19 +111,6 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Coordonnées de paiement Hello Keys */}
-      <div className="mb-8 bg-gray-50 p-6 rounded-lg border">
-        <h2 className="text-lg font-semibold mb-2 text-gray-800">Informations de paiement Hello Keys</h2>
-        <p className="text-sm">
-          Merci de virer le <span className="font-semibold">Total Facture Hello Keys</span> sur&nbsp;
-          <span className="font-semibold">IBAN:</span> {HELLO_KEYS_IBAN}
-          {HELLO_KEYS_BIC ? <> &nbsp;•&nbsp; <span className="font-semibold">BIC:</span> {HELLO_KEYS_BIC}</> : null}
-        </p>
-        <p className="text-xs text-gray-600 mt-1">
-          Si la facture est déduite automatiquement du loyer perçu, aucun paiement n'est requis.
-        </p>
       </div>
 
       {/* Detailed Reservations Table */}

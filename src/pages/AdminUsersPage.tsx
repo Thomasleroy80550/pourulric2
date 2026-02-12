@@ -278,20 +278,50 @@ const AdminUsersPage: React.FC = () => {
 
       const { data, error } = await supabase.functions.invoke('impersonate-user', {
         body: { target_user_id: targetUserId },
+        headers: {
+          Authorization: `Bearer ${adminSession.access_token}`,
+        },
       });
 
       if (error) throw error;
-      if (!data.access_token || !data.refresh_token) throw new Error("Tokens de session invalides reçus.");
 
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      });
-      if (sessionError) throw sessionError;
+      // Fallback direct: si l'edge renvoie un OTP, on vérifie côté client pour établir la session sans redirection
+      if (data?.email && data?.email_otp) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          email: data.email,
+          token: data.email_otp,
+          type: 'magiclink',
+        });
+        if (otpError) throw otpError;
 
-      toast.success(`Vous êtes maintenant connecté en tant que le client.`);
-      navigate('/');
-      window.location.reload();
+        toast.success("Connexion établie via OTP.");
+        navigate('/');
+        window.location.reload();
+        return;
+      }
+
+      // Si la fonction renvoie un lien d'action (magic link), on y redirige
+      if (data?.action_link) {
+        toast.success("Ouverture de la session du client...");
+        window.location.href = data.action_link;
+        return;
+      }
+
+      // Ancien flux: si des tokens sont fournis, on les utilise directement
+      if (data?.access_token && data?.refresh_token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        });
+        if (sessionError) throw sessionError;
+
+        toast.success("Vous êtes maintenant connecté en tant que le client.");
+        navigate('/');
+        window.location.reload();
+        return;
+      }
+
+      throw new Error("Réponse d'impersonation inattendue (ni OTP, ni lien, ni tokens).");
 
     } catch (error: any) {
       toast.error(`Erreur lors du changement de compte : ${error.message}`);
@@ -595,6 +625,7 @@ const AdminUsersPage: React.FC = () => {
         <TableRow>
           <TableHead>Nom</TableHead>
           <TableHead>Email</TableHead>
+          <TableHead>Téléphone</TableHead>
           <TableHead>Rôle</TableHead>
           <TableHead>Agence</TableHead>
           <TableHead>Statut Intégration</TableHead>
@@ -619,6 +650,7 @@ const AdminUsersPage: React.FC = () => {
                 </div>
               </TableCell>
               <TableCell>{user.email || 'N/A'}</TableCell>
+              <TableCell>{user.phone_number || 'N/A'}</TableCell>
               <TableCell>{user.role}</TableCell>
               <TableCell>
                 <div className="min-w-[180px]">

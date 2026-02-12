@@ -36,7 +36,8 @@ import {
   CalendarDays,
   Snowflake,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  Thermometer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -70,6 +71,7 @@ const adminNavigationCategories = [
       { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
       { name: 'Compteurs coupés', href: '/admin/utility-cuts', icon: PlugZap, description: 'Liste des logements où électricité/eau sont coupées.' },
+      { name: 'Temperature', href: '/admin/temperature', icon: Thermometer, description: 'Température des logements (Thermostats & Stations).' },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },
       { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
       { name: 'Demandes PowerSense', href: '/admin/module-requests?module=electricity', icon: Zap, description: 'Candidatures PowerSense.' },
@@ -97,6 +99,7 @@ const adminNavigationCategories = [
       { name: 'Ajouter Stats Manuelles', href: '/admin/manual-stats', icon: FilePlus, description: 'Ajouter manuellement les statistiques mensuelles passées.' },
       { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText, description: 'Consulter les relevés existants.' },
       { name: 'Statuts de facturation', href: '/admin/billing-status', icon: FileText, description: 'Dernier relevé par client pour contrôler la facturation.' },
+      { name: 'Stats 2025 manquantes', href: '/admin/missing-2025-stats', icon: FileText, description: 'Voir les mois 2025 manquants par client.' },
       { name: 'Créer Facture (Pennylane)', href: '/admin/create-pennylane-invoice', icon: FilePlus, description: 'Créer une facture client via Pennylane.' },
       { name: 'Synthèse des Virements', href: '/admin/transfer-summary', icon: Banknote, description: 'Voir le total des virements à effectuer par client.' },
       { name: 'Transactions Stripe', href: '/admin/stripe-transactions', icon: CreditCard, description: 'Consulter les transactions Stripe.' },
@@ -140,6 +143,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { profile, loading } = useSession();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [tempAlertsCount, setTempAlertsCount] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    // Charger compte d'alertes en arrière-plan
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("temperature-alerts", { body: {} });
+      if (error) return;
+      const count = Number(data?.count || 0);
+      setTempAlertsCount(count);
+    })();
+  }, []);
 
   React.useEffect(() => {
     if (!loading && profile?.role !== 'admin') {
@@ -289,6 +303,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               Retour au site
             </Link>
           </Button>
+          {tempAlertsCount > 0 && (
+            <Button variant="destructive" size="sm" asChild>
+              <Link to="/admin/temperature">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                {tempAlertsCount} logement(s) sous le seuil
+              </Link>
+            </Button>
+          )}
           <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

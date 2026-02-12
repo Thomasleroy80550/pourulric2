@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Vérifier que l'appelant est un administrateur
+    // Vérifier que l'appelant est un administrateur
     const userSupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -37,46 +37,71 @@ serve(async (req) => {
       });
     }
 
-    // 2. Obtenir l'ID de l'utilisateur cible depuis le corps de la requête
+    // Obtenir l'ID de l'utilisateur cible
     const { target_user_id } = await req.json();
     if (!target_user_id) {
       throw new Error("Champ requis manquant : target_user_id.");
     }
 
-    // 3. Créer un client avec les droits de service
+    // Client admin (service role)
     const adminSupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Récupérer l'utilisateur cible par son ID pour obtenir son email
+    // Vérifier que l'utilisateur cible existe
     const { data: userToImpersonate, error: getUserError } = await adminSupabaseClient.auth.admin.getUserById(target_user_id);
-    if (getUserError || !userToImpersonate.user || !userToImpersonate.user.email) {
-      throw new Error("Impossible de trouver l'utilisateur cible ou son email.");
+    if (getUserError || !userToImpersonate?.user) {
+      throw new Error("Impossible de trouver l'utilisateur cible.");
     }
 
-    // 5. Générer un lien magique pour l'utilisateur cible en utilisant son email
-    // L'URL de redirection doit être une URL de votre application où vous pouvez gérer les tokens
-    const { data: sessionData, error: sessionError } = await adminSupabaseClient.auth.admin.generateLink({
+    const userEmail = userToImpersonate.user.email;
+    if (!userEmail) {
+      throw new Error("L'utilisateur cible n'a pas d'email, impossible de générer un lien de session.");
+    }
+
+    // Essai 1: avec redirectTo
+    const redirectTo = Deno.env.get('APP_BASE_URL') || 'https://beta.proprietaire.hellokeys.fr/';
+    let linkData: any | null = null;
+    let linkError: any | null = null;
+
+    {
+      const { data, error } = await adminSupabaseClient.auth.admin.generateLink({
         type: 'magiclink',
-        email: userToImpersonate.user.email,
-        options: {
-            redirectTo: 'http://localhost:5173/' // Remplacez par l'URL de votre application où les tokens seront gérés
-        }
-    });
+        email: userEmail,
+        options: { redirectTo }
+      });
+      linkData = data;
+      linkError = error;
+    }
 
-    if (sessionError) throw sessionError;
+    // Fallback: sans redirectTo
+    if (linkError || !linkData?.properties?.action_link) {
+      const { data, error } = await adminSupabaseClient.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userEmail
+      });
+      linkData = data;
+      linkError = error;
+    }
 
-    // 6. Retourner le lien d'action au lieu des tokens
-    // Le client devra naviguer vers ce lien pour obtenir les tokens de session
-    return new Response(JSON.stringify({ action_link: sessionData.properties.action_link }), {
+    if (linkError || !linkData?.properties?.action_link) {
+      throw new Error(linkError?.message || "Échec de génération du magic link.");
+    }
+
+    // Retourne le lien + email_otp pour un fallback côté client
+    return new Response(JSON.stringify({
+      action_link: linkData.properties.action_link,
+      email_otp: linkData.properties.email_otp,
+      email: userEmail
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
 
   } catch (error: any) {
-    console.error("Erreur dans la fonction impersonate-user:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Erreur dans la fonction impersonate-user:", error?.message || error);
+    return new Response(JSON.stringify({ error: error.message || 'Erreur inconnue' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });

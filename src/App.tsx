@@ -96,6 +96,16 @@ import AdminRecoveryPage from "./pages/AdminRecoveryPage";
 import NetatmoConnectPage from "./pages/NetatmoConnectPage";
 import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
+<<<<<<< HEAD
+=======
+import NetatmoStationsPage from "./pages/NetatmoStationsPage";
+import NetatmoTokenOverridePage from "./pages/NetatmoTokenOverridePage";
+import AdminDuplicateRoomIdsPage from "./pages/AdminDuplicateRoomIdsPage";
+import AdminThermostatOverviewPage from "./pages/AdminThermostatOverviewPage";
+import DashboardPageV2 from "./pages/DashboardPageV2";
+import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
+import AdminTemperaturePage from "./pages/AdminTemperaturePage";
+>>>>>>> e6a0d2113af65478d624fc87a449db1cc05079ac
 
 const queryClient = new QueryClient();
 
@@ -152,6 +162,7 @@ function App() {
                   <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
                   <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
                   <Route path="/admin/crm" element={<AdminCRMPage />} />
+                  <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
                   <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                   <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                   <Route path="/admin/status" element={<AdminStatusPage />} />
@@ -176,7 +187,10 @@ function App() {
                   <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />
                   <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />
                   <Route path="/integrations/netatmo/dashboard" element={<NetatmoDashboardPage />} />
+                  <Route path="/integrations/netatmo/stations" element={<NetatmoStationsPage />} />
+                  <Route path="/integrations/netatmo/override" element={<NetatmoTokenOverridePage />} />
                   <Route path="/" element={<DashboardPage />} />
+                  <Route path="/home-v2" element={<DashboardPageV2 />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                   <Route path="/bookings" element={<BookingsPage />} />
@@ -201,6 +215,7 @@ function App() {
                   <Route path="/electricity-start" element={<ElectricityServiceLanding />} />
                   <Route path="/electricity" element={<ElectricityConsumptionPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/admin/missing-2025-stats" element={<AdminMissing2025StatsPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </SessionContextProvider>

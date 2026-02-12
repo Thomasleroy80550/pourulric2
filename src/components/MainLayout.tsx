@@ -63,6 +63,7 @@ import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new consta
 import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
+import { Badge } from '@/components/ui/badge';
 
 const housekeepingSidebarSections = [
   {
@@ -421,6 +422,14 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
 
             <div className="w-1/3 md:w-auto flex items-center justify-end space-x-2 sm:space-x-4">
+              {isImpersonating && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="destructive" className="uppercase">Impersonation active</Badge>
+                  <Button variant="outline" size="sm" onClick={handleReturnToAdmin} title="Revenir au compte administrateur">
+                    Retour admin
+                  </Button>
+                </div>
+              )}
               <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4">
                 <Plus className="h-4 w-4" />
                 <span className="ml-2 hidden xl:inline-block">Actions rapides</span>

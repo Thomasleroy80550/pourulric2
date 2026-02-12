@@ -174,8 +174,9 @@ const AdminTransferSummaryPage: React.FC = () => {
     const displayName = `${firstName ?? ''} ${lastName ?? ''}`.trim() || 'Client';
     const subject = `DING DONG ! Tous vos virements sont faits`;
 
-    const appUrl = window.location.origin;
-    const logoUrl = "https://dkjaejzwmmwwzhokpbgs.supabase.co/storage/v1/object/public/public-assets/logo.png";
+    // Prod URLs (demandé)
+    const appUrl = "https://beta.proprietaire.hellokeys.fr";
+    const logoUrl = "https://beta.proprietaire.hellokeys.fr/logo.png";
     const brandBlue = "#2563eb";
 
     const htmlBody = `
@@ -203,6 +204,7 @@ const AdminTransferSummaryPage: React.FC = () => {
       </div>
     `;
 
+    // NB: la fonction send-email BCC automatiquement contact@hellokeys.fr (ou la valeur app_settings.contact_email)
     const { error } = await supabase.functions.invoke('send-email', {
       body: { to, subject, html: htmlBody },
     });

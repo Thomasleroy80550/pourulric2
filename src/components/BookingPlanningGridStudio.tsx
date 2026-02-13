@@ -778,15 +778,13 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     </div>
                   )}
                 </div>
-
-                <LegendPanel compact />
               </div>
             </aside>
           </div>
         ) : null}
 
-        {/* Legend (mobile / petit écran) */}
-        <div className="mt-8 xl:hidden">
+        {/* Legend (toujours en bas du planning) */}
+        <div className="mt-8">
           <LegendPanel />
         </div>
       </CardContent>

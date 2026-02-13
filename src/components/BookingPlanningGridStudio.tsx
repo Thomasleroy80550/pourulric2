@@ -17,7 +17,7 @@ import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Profile } from '@/lib/profile-api';
+import { UserProfile } from '@/lib/profile-api';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
@@ -39,7 +39,7 @@ interface BookingPlanningGridStudioProps {
   userRooms: UserRoom[];
   reservations: KrossbookingReservation[];
   onReservationChange: () => void;
-  profile: Profile | null;
+  profile: UserProfile | null;
 }
 
 const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile }) => {
@@ -368,8 +368,10 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
             <div className="grid-container relative rounded-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm" style={{
               display: 'grid',
-              gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, minmax(0, 1fr))`,
-              width: '100%',
+              // IMPORTANT: utilisez des colonnes en px (et non en 1fr) pour garantir l'alignement
+              // des barres (positionnées en absolute) avec la grille dès le premier rendu.
+              gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${effectiveDayCellWidth}px)`,
+              width: `${propertyColumnWidth + daysInMonth.length * effectiveDayCellWidth}px`,
               gridAutoRows: '40px',
               position: 'relative',
             }}

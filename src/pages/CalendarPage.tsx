@@ -151,7 +151,6 @@ const CalendarPage: React.FC = () => {
           .filter(override => override.closed)
           .map((override): KrossbookingReservation => ({
             id: `override-${override.id}`, // Prefix to avoid ID collision
-            label: 'Période bloquée',
             guest_name: 'Période bloquée',
             property_name: override.room_name,
             krossbooking_room_id: override.room_id,
@@ -165,6 +164,7 @@ const CalendarPage: React.FC = () => {
             email: '',
             phone: '',
             tourist_tax_amount: 0,
+            property_id: 0,
           }));
         
         console.log("DEBUG: Owner blocks created from overrides:", closedBlocks);

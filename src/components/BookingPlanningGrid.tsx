@@ -15,7 +15,7 @@ import ReservationActionsDialog from './ReservationActionsDialog';
 import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Profile } from '@/lib/profile-api'; // Import de Profile
+import { UserProfile } from '@/lib/profile-api';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
@@ -34,7 +34,7 @@ interface BookingPlanningGridProps {
   userRooms: UserRoom[];
   reservations: KrossbookingReservation[];
   onReservationChange: () => void;
-  profile: Profile | null; // Ajout de la prop profile
+  profile: UserProfile | null;
 }
 
 const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile }) => {

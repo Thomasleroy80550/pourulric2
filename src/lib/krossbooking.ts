@@ -5,7 +5,7 @@ import { getProfile } from "./profile-api";
 import { format, parseISO, isValid, isAfter, subDays, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-interface KrossbookingReservation {
+export interface KrossbookingReservation {
   id: string;
   guest_name: string;
   property_name: string;

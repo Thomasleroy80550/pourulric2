@@ -733,6 +733,11 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   ))}
                 </div>
               </div>
+
+              {/* Légende (toujours juste sous le planning, même si la colonne droite est plus haute) */}
+              <div className="mt-3">
+                <LegendPanel compact />
+              </div>
             </div>
 
             {/* Zone droite (desktop large) */}
@@ -832,11 +837,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             </aside>
           </div>
         ) : null}
-
-        {/* Legend (toujours en bas du planning) */}
-        <div className="mt-3">
-          <LegendPanel compact />
-        </div>
       </CardContent>
 
       <ReservationActionsDialog

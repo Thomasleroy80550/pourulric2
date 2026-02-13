@@ -205,18 +205,32 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   }, [parsedReservations]);
 
   const LegendPanel = ({ compact }: { compact?: boolean }) => (
-    <div className={cn(
-      compact ? "p-3" : "p-4",
-      "border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm"
-    )}>
-      <h3 className={cn(compact ? "text-sm" : "text-md", "font-semibold mb-3")}>Légende</h3>
-      <div className="flex flex-wrap gap-3">
+    <div
+      className={cn(
+        compact ? "p-2" : "p-4",
+        "border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm"
+      )}
+    >
+      <h3 className={cn(compact ? "text-sm" : "text-md", "font-semibold", compact ? "mb-2" : "mb-3")}>
+        Légende
+      </h3>
+      <div className={cn(compact ? "grid grid-cols-2 gap-x-3 gap-y-1" : "flex flex-wrap gap-3")}>
         {Object.entries(channelColors).map(([key, value]) => {
           const initial = value.name.charAt(0).toUpperCase();
           return (
-            <div key={key} className="flex items-center">
-              <span className={`legend-bubble mr-2 ${value.bgColor}`}>{initial}</span>
-              <span className={cn(compact ? "text-xs" : "text-sm", "text-gray-700 dark:text-gray-300")}>{value.name}</span>
+            <div key={key} className={cn("flex items-center", compact ? "min-w-0" : "")}>
+              <span
+                className={cn(
+                  "mr-2 inline-flex items-center justify-center rounded-full font-semibold",
+                  value.bgColor,
+                  compact ? "h-5 w-5 text-[10px]" : "legend-bubble"
+                )}
+              >
+                {initial}
+              </span>
+              <span className={cn(compact ? "text-xs truncate" : "text-sm", "text-gray-700 dark:text-gray-300")}>
+                {value.name}
+              </span>
             </div>
           );
         })}
@@ -820,8 +834,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
         ) : null}
 
         {/* Legend (toujours en bas du planning) */}
-        <div className="mt-4">
-          <LegendPanel />
+        <div className="mt-3">
+          <LegendPanel compact />
         </div>
       </CardContent>
 

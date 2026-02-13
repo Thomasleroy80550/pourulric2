@@ -5,7 +5,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut, CalendarDays, BedDouble, CalendarCheck2, Globe, KeyRound, UserRound, Shapes } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
@@ -204,39 +204,67 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     return items;
   }, [parsedReservations]);
 
-  const LegendPanel = ({ compact }: { compact?: boolean }) => (
-    <div
-      className={cn(
-        compact ? "p-2" : "p-4",
-        "border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm"
-      )}
-    >
-      <h3 className={cn(compact ? "text-sm" : "text-md", "font-semibold", compact ? "mb-2" : "mb-3")}>
-        Légende
-      </h3>
-      <div className={cn(compact ? "grid grid-cols-2 gap-x-3 gap-y-1" : "flex flex-wrap gap-3")}>
-        {Object.entries(channelColors).map(([key, value]) => {
-          const initial = value.name.charAt(0).toUpperCase();
-          return (
-            <div key={key} className={cn("flex items-center", compact ? "min-w-0" : "")}>
-              <span
-                className={cn(
-                  "mr-2 inline-flex items-center justify-center rounded-full font-semibold",
-                  value.bgColor,
-                  compact ? "h-5 w-5 text-[10px]" : "legend-bubble"
-                )}
-              >
-                {initial}
-              </span>
-              <span className={cn(compact ? "text-xs truncate" : "text-sm", "text-gray-700 dark:text-gray-300")}>
-                {value.name}
-              </span>
-            </div>
-          );
-        })}
+  const LegendPanel = ({ compact }: { compact?: boolean }) => {
+    const iconFor = (key: string) => {
+      switch (key) {
+        case 'AIRBNB':
+          return BedDouble;
+        case 'BOOKING':
+          return CalendarCheck2;
+        case 'ABRITEL':
+        case 'HOMEAWAY':
+          return Globe;
+        case 'HELLOKEYS':
+        case 'DIRECT':
+          return KeyRound;
+        case 'PROPRI':
+        case 'PROP0':
+          return UserRound;
+        case 'UNKNOWN':
+          return Shapes;
+        default:
+          return Sparkles;
+      }
+    };
+
+    return (
+      <div
+        className={cn(
+          compact ? "p-2" : "p-4",
+          "border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm"
+        )}
+      >
+        <h3 className={cn(compact ? "text-sm" : "text-md", "font-semibold", compact ? "mb-2" : "mb-3")}>
+          Légende
+        </h3>
+
+        <div className={cn(compact ? "grid grid-cols-2 gap-x-3 gap-y-1" : "flex flex-wrap gap-3")}>
+          {Object.entries(channelColors).map(([key, value]) => {
+            const Icon = iconFor(key);
+
+            return (
+              <div key={key} className={cn("flex items-center", compact ? "min-w-0" : "")}>
+                <span
+                  className={cn(
+                    "mr-2 inline-flex items-center justify-center rounded-full ring-1 ring-black/5 dark:ring-white/10 shadow-sm",
+                    value.bgColor,
+                    // un look plus "premium" (léger gradient + highlight)
+                    "bg-gradient-to-br from-white/20 to-black/10",
+                    compact ? "h-6 w-6" : "h-8 w-8"
+                  )}
+                >
+                  <Icon className={cn("text-white drop-shadow-sm", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
+                </span>
+                <span className={cn(compact ? "text-xs truncate" : "text-sm", "text-gray-700 dark:text-gray-300")}>
+                  {value.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const scrollToToday = () => {
     if (!wrapperRef.current) return;

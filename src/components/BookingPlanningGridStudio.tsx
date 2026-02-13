@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min, getISOWeek, startOfDay } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addDays, subDays, differenceInDays, isValid, max, min, getISOWeek, startOfDay, isAfter, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -187,6 +187,21 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     const arrivals = parsedReservations.filter(({ checkIn }) => isSameDay(checkIn, today)).map(({ r }) => r);
     const departures = parsedReservations.filter(({ checkOut }) => isSameDay(checkOut, today)).map(({ r }) => r);
     return { arrivals, departures };
+  }, [parsedReservations]);
+
+  const next7Days = useMemo(() => {
+    const today = startOfDay(new Date());
+    const end = addDays(today, 7);
+
+    const items: { type: 'arrivée' | 'départ'; date: Date; r: KrossbookingReservation }[] = [];
+
+    for (const { r, checkIn, checkOut } of parsedReservations) {
+      if (checkIn >= today && checkIn <= end) items.push({ type: 'arrivée', date: checkIn, r });
+      if (checkOut >= today && checkOut <= end) items.push({ type: 'départ', date: checkOut, r });
+    }
+
+    items.sort((a, b) => a.date.getTime() - b.date.getTime());
+    return items;
   }, [parsedReservations]);
 
   const LegendPanel = ({ compact }: { compact?: boolean }) => (
@@ -778,13 +793,34 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                     </div>
                   )}
                 </div>
+
+                <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
+                  <h3 className="text-md font-semibold mb-2">Prochains 7 jours</h3>
+                  {next7Days.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">Aucun mouvement prévu.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {next7Days.slice(0, 10).map((it) => (
+                        <div key={`${it.type}-${it.r.id}-${it.date.toISOString()}`} className="text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium capitalize">{it.type}</span>
+                            <span className="text-muted-foreground">{format(it.date, 'EEE dd/MM', { locale: fr })}</span>
+                          </div>
+                          <div className="text-muted-foreground truncate">
+                            {it.r.property_name} — {it.r.guest_name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </aside>
           </div>
         ) : null}
 
         {/* Legend (toujours en bas du planning) */}
-        <div className="mt-8">
+        <div className="mt-4">
           <LegendPanel />
         </div>
       </CardContent>

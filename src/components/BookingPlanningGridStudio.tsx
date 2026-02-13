@@ -132,13 +132,22 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     const minCell = isMobile ? 24 : 32;
     if (!containerWidth) return minCell;
     const available = Math.max(0, containerWidth - propertyColumnWidth);
-    const calculated = Math.floor(available / daysInMonth.length);
+    // IMPORTANT: ne pas arrondir à l'entier (floor) sinon la grille peut être plus petite que le conteneur
+    // et laisser un "vide" à droite. Les px fractionnaires sont OK en CSS.
+    const calculated = available / daysInMonth.length;
     return Math.max(minCell, calculated);
   }, [isMobile, containerWidth, propertyColumnWidth, daysInMonth]);
 
   const effectiveDayCellWidth = useMemo(() => {
     return measuredDayCellWidth > 0 ? measuredDayCellWidth : dayCellWidth;
   }, [measuredDayCellWidth, dayCellWidth]);
+
+  const gridWidthPx = useMemo(() => {
+    const contentWidth = propertyColumnWidth + daysInMonth.length * effectiveDayCellWidth;
+    // Si la grille est plus petite que la zone visible, on l'étire à la largeur du conteneur
+    // pour éviter l'impression de "planning plus petit".
+    return containerWidth ? Math.max(contentWidth, containerWidth) : contentWidth;
+  }, [propertyColumnWidth, daysInMonth.length, effectiveDayCellWidth, containerWidth]);
 
   const scrollToToday = () => {
     if (!wrapperRef.current) return;
@@ -371,7 +380,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
               // IMPORTANT: utilisez des colonnes en px (et non en 1fr) pour garantir l'alignement
               // des barres (positionnées en absolute) avec la grille dès le premier rendu.
               gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${effectiveDayCellWidth}px)`,
-              width: `${propertyColumnWidth + daysInMonth.length * effectiveDayCellWidth}px`,
+              width: `${gridWidthPx}px`,
               gridAutoRows: '40px',
               position: 'relative',
             }}

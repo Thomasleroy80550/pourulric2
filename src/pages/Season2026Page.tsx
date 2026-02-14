@@ -562,6 +562,7 @@ const Season2026Page: React.FC = () => {
                         <TableHead>Commentaire</TableHead>
                         <TableHead>Prix suggéré</TableHead>
                         <TableHead>Prix (€)</TableHead>
+                        <TableHead>Prix Airbnb (+18%)</TableHead>
                         <TableHead>Min séjour</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -570,6 +571,8 @@ const Season2026Page: React.FC = () => {
                         const defaultsMinStay = extractMinStay(r.minStayText);
                         const inputs = inputsByIndex[i] || {};
                         const suggested = suggestions[i];
+                        const airbnbPrice =
+                          typeof inputs.price === "number" ? Math.round(inputs.price * 1.18) : null;
                         return (
                           <TableRow key={`${r.start}-${r.end}-${i}`}>
                             <TableCell>{r.start}</TableCell>
@@ -594,6 +597,13 @@ const Season2026Page: React.FC = () => {
                                   handleInputChange(i, "price", e.target.value === "" ? null : Number(e.target.value))
                                 }
                               />
+                            </TableCell>
+                            <TableCell className="min-w-[150px]">
+                              {airbnbPrice != null ? (
+                                <span className="font-medium">{airbnbPrice} €</span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </TableCell>
                             <TableCell className="min-w-[110px]">
                               <Input

@@ -604,20 +604,55 @@ const Season2026Page: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-1">
-                                <div className="flex items-center justify-between gap-2 rounded-md border border-[#ff385c]/30 bg-[#ff385c]/10 px-2 py-1 text-xs">
-                                  <span className="font-medium text-[#ff385c]">Airbnb +17%</span>
+                                <div
+                                  className="flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-xs"
+                                  style={{
+                                    borderColor: "#ff385c",
+                                    backgroundColor: "rgba(255, 56, 92, 0.10)",
+                                  }}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#ff385c" }} />
+                                    <span className="font-medium" style={{ color: "#ff385c" }}>
+                                      Airbnb +17%
+                                    </span>
+                                  </span>
                                   <span className="tabular-nums text-foreground">
                                     {airbnbPrice != null ? `${airbnbPrice} €` : "—"}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between gap-2 rounded-md border border-[#016ce4]/30 bg-[#016ce4]/10 px-2 py-1 text-xs">
-                                  <span className="font-medium text-[#016ce4]">Booking +19%</span>
+
+                                <div
+                                  className="flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-xs"
+                                  style={{
+                                    borderColor: "#016ce4",
+                                    backgroundColor: "rgba(1, 108, 228, 0.10)",
+                                  }}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#016ce4" }} />
+                                    <span className="font-medium" style={{ color: "#016ce4" }}>
+                                      Booking +19%
+                                    </span>
+                                  </span>
                                   <span className="tabular-nums text-foreground">
                                     {bookingPrice != null ? `${bookingPrice} €` : "—"}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between gap-2 rounded-md border border-[#0067db]/30 bg-[#0067db]/10 px-2 py-1 text-xs">
-                                  <span className="font-medium text-[#0067db]">Abritel +17%</span>
+
+                                <div
+                                  className="flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-xs"
+                                  style={{
+                                    borderColor: "#0067db",
+                                    backgroundColor: "rgba(0, 103, 219, 0.10)",
+                                  }}
+                                >
+                                  <span className="inline-flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "#0067db" }} />
+                                    <span className="font-medium" style={{ color: "#0067db" }}>
+                                      Abritel +17%
+                                    </span>
+                                  </span>
                                   <span className="tabular-nums text-foreground">
                                     {abritelPrice != null ? `${abritelPrice} €` : "—"}
                                   </span>

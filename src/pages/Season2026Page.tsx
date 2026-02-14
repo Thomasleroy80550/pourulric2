@@ -562,7 +562,7 @@ const Season2026Page: React.FC = () => {
                         <TableHead>Commentaire</TableHead>
                         <TableHead>Prix suggéré</TableHead>
                         <TableHead>Prix (€)</TableHead>
-                        <TableHead>Prix Airbnb (+18%)</TableHead>
+                        <TableHead>Prix Airbnb (+17%)</TableHead>
                         <TableHead>Min séjour</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -572,7 +572,7 @@ const Season2026Page: React.FC = () => {
                         const inputs = inputsByIndex[i] || {};
                         const suggested = suggestions[i];
                         const airbnbPrice =
-                          typeof inputs.price === "number" ? Math.round(inputs.price * 1.18) : null;
+                          typeof inputs.price === "number" ? Math.round(inputs.price * 1.17) : null;
                         return (
                           <TableRow key={`${r.start}-${r.end}-${i}`}>
                             <TableCell>{r.start}</TableCell>

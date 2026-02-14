@@ -562,7 +562,7 @@ const Season2026Page: React.FC = () => {
                         <TableHead>Commentaire</TableHead>
                         <TableHead>Prix suggéré</TableHead>
                         <TableHead>Prix (€)</TableHead>
-                        <TableHead>Prix Airbnb (+17%)</TableHead>
+                        <TableHead className="min-w-[190px]">Prix plateformes</TableHead>
                         <TableHead>Min séjour</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -571,8 +571,12 @@ const Season2026Page: React.FC = () => {
                         const defaultsMinStay = extractMinStay(r.minStayText);
                         const inputs = inputsByIndex[i] || {};
                         const suggested = suggestions[i];
-                        const airbnbPrice =
-                          typeof inputs.price === "number" ? Math.round(inputs.price * 1.17) : null;
+
+                        const basePrice = typeof inputs.price === "number" ? inputs.price : null;
+                        const airbnbPrice = basePrice != null ? Math.round(basePrice * 1.17) : null;
+                        const bookingPrice = basePrice != null ? Math.round(basePrice * 1.19) : null;
+                        const abritelPrice = basePrice != null ? Math.round(basePrice * 1.17) : null;
+
                         return (
                           <TableRow key={`${r.start}-${r.end}-${i}`}>
                             <TableCell>{r.start}</TableCell>
@@ -598,12 +602,27 @@ const Season2026Page: React.FC = () => {
                                 }
                               />
                             </TableCell>
-                            <TableCell className="min-w-[150px]">
-                              {airbnbPrice != null ? (
-                                <span className="font-medium">{airbnbPrice} €</span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between gap-2 rounded-md border border-[#ff385c]/30 bg-[#ff385c]/10 px-2 py-1 text-xs">
+                                  <span className="font-medium text-[#ff385c]">Airbnb +17%</span>
+                                  <span className="tabular-nums text-foreground">
+                                    {airbnbPrice != null ? `${airbnbPrice} €` : "—"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 rounded-md border border-[#016ce4]/30 bg-[#016ce4]/10 px-2 py-1 text-xs">
+                                  <span className="font-medium text-[#016ce4]">Booking +19%</span>
+                                  <span className="tabular-nums text-foreground">
+                                    {bookingPrice != null ? `${bookingPrice} €` : "—"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 rounded-md border border-[#0067db]/30 bg-[#0067db]/10 px-2 py-1 text-xs">
+                                  <span className="font-medium text-[#0067db]">Abritel +17%</span>
+                                  <span className="tabular-nums text-foreground">
+                                    {abritelPrice != null ? `${abritelPrice} €` : "—"}
+                                  </span>
+                                </div>
+                              </div>
                             </TableCell>
                             <TableCell className="min-w-[110px]">
                               <Input

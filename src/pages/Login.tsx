@@ -298,6 +298,7 @@ const Login = () => {
                     <div className="pt-2 text-center">
                       <Link
                         to="/prospect-signup"
+                        state={{ transition: "push" }}
                         className="text-sm font-semibold text-primary"
                       >
                         Créer un compte

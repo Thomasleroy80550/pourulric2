@@ -579,51 +579,7 @@ const DashboardPage = () => {
         </div>
         
         {/* Notif box BILAN 2025 */}
-        {showBilanNotice && selectedYear !== 2025 && (
-          <Alert className="mb-6 w-full overflow-hidden rounded-xl border border-amber-200/70 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/20 shadow-sm p-0">
-            <div className="p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-800/40">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <AlertTitle className="text-base font-semibold">BILAN 2025</AlertTitle>
-                  <AlertDescription className="mt-1">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-amber-700 dark:text-amber-200">
-                      <CalendarDays className="h-4 w-4" />
-                      <span className="break-words">Disponible du 4 janvier au 1er mars</span>
-                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-800/40 dark:text-amber-100">Période limitée</Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                      Retrouvez vos relevés dans la section Finances.
-                    </p>
-                  </AlertDescription>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                <Link to="/finances">
-                  <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">Voir mes relevés</Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleOpenBilanPopup}
-                  className="border-amber-300 text-amber-900 hover:bg-amber-50 dark:text-amber-100"
-                >
-                  Plus d'infos
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDismissBilanNotice}
-                  className="text-amber-900 dark:text-amber-100"
-                >
-                  Masquer
-                </Button>
-              </div>
-            </div>
-          </Alert>
-        )}
+        {/* REMOVED: Notif BILAN 2025 */}
 
         {/* Bloc Cinématique Bonne Année 2026 */}
         {selectedYear !== 2025 && (

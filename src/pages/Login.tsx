@@ -154,9 +154,9 @@ const Login = () => {
               </div>
 
               <h1 className="mt-6 text-3xl font-semibold tracking-tight text-gray-900">
-                Login
+                Connexion
               </h1>
-              <p className="mt-1 text-sm text-gray-500">Welcome back to the app</p>
+              <p className="mt-1 text-sm text-gray-500">Bienvenue, connectez-vous à l'application</p>
 
               <div className="mt-6">
                 <Form {...form}>
@@ -170,7 +170,7 @@ const Login = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-medium text-gray-700">
-                            Email Address
+                            Adresse e-mail
                           </FormLabel>
                           <FormControl>
                             <div className="relative">
@@ -201,15 +201,15 @@ const Login = () => {
                         <FormItem>
                           <div className="flex items-center justify-between">
                             <FormLabel className="text-xs font-medium text-gray-700">
-                              Password
-                            </FormLabel>
+                            Mot de passe
+                          </FormLabel>
                             <button
                               type="button"
                               onClick={handleForgotPassword}
                               className="text-xs font-medium text-primary"
                               disabled={loading}
                             >
-                              Forgot Password?
+                              Mot de passe oublié ?
                             </button>
                           </div>
                           <FormControl>
@@ -260,7 +260,7 @@ const Login = () => {
                         htmlFor="keep-signed-in"
                         className="text-sm text-gray-600"
                       >
-                        Keep me signed in
+                        Rester connecté
                       </label>
                     </div>
 
@@ -272,16 +272,16 @@ const Login = () => {
                       {loading ? (
                         <>
                           <Loader2 className="h-5 w-5 animate-spin" />
-                          Login…
+                          Connexion…
                         </>
                       ) : (
-                        "Login"
+                        "Se connecter"
                       )}
                     </Button>
 
                     <div className="flex items-center gap-3 pt-2">
                       <div className="h-px flex-1 bg-gray-200" />
-                      <span className="text-xs text-gray-500">or sign in with</span>
+                      <span className="text-xs text-gray-500">ou se connecter avec</span>
                       <div className="h-px flex-1 bg-gray-200" />
                     </div>
 
@@ -300,7 +300,7 @@ const Login = () => {
                         to="/prospect-signup"
                         className="text-sm font-semibold text-primary"
                       >
-                        Create an account
+                        Créer un compte
                       </Link>
                     </div>
                   </form>

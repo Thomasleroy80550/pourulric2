@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { getAllProfiles, UserProfile, addManualStatements } from "@/lib/admin-api";
+import { getAllProfiles, addManualStatements } from "@/lib/admin-api";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -20,6 +20,8 @@ import type { ManualStatementEntry } from "@/lib/admin-api";
 import * as XLSX from "xlsx";
 import { Checkbox } from "@/components/ui/checkbox";
 
+type ProfileRow = Awaited<ReturnType<typeof getAllProfiles>>[number];
+
 type InvoiceLite = {
   user_id: string;
   period: string;
@@ -30,6 +32,7 @@ type MissingStatsRow = {
   userId: string;
   firstName: string | null;
   lastName: string | null;
+  agency?: string | null;
   contractStartDate?: string | null;
   missingMonths: string[];
   presentMonths: string[];
@@ -62,9 +65,11 @@ const is2025MonthTitle = (title: string) => {
   return idx !== undefined && year === "2025" && idx !== 11; // exclure décembre (index 11)
 };
 
+const AGENCY_FALLBACK_LABEL = "Sans agence";
+
 const AdminMissing2025StatsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [invoices2025, setInvoices2025] = useState<InvoiceLite[]>([]);
   const [onlyMissing, setOnlyMissing] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -180,6 +185,7 @@ const AdminMissing2025StatsPage: React.FC = () => {
         userId: profile.id,
         firstName: profile.first_name ?? null,
         lastName: profile.last_name ?? null,
+        agency: profile.agency ?? null,
         contractStartDate: profile.contract_start_date ?? null,
         missingMonths,
         presentMonths: Array.from(presentMonthsSet),
@@ -544,11 +550,41 @@ const AdminMissing2025StatsPage: React.FC = () => {
     const term = searchTerm.trim().toLowerCase();
     return rows.filter(r => {
       const name = `${r.firstName ?? ""} ${r.lastName ?? ""}`.toLowerCase();
-      const matchesSearch = term === "" || name.includes(term);
+      const agency = (r.agency ?? "").toLowerCase();
+      const matchesSearch = term === "" || name.includes(term) || agency.includes(term);
       const matchesMissing = !onlyMissing || r.missingMonths.length > 0;
       return matchesSearch && matchesMissing;
     });
   }, [rows, searchTerm, onlyMissing]);
+
+  const groupedRows = useMemo(() => {
+    const groups = new Map<string, MissingStatsRow[]>();
+    for (const r of filteredRows) {
+      const key = r.agency?.trim() ? r.agency.trim() : AGENCY_FALLBACK_LABEL;
+      const list = groups.get(key) ?? [];
+      list.push(r);
+      groups.set(key, list);
+    }
+
+    const preferredOrder = ["Côte d'opal", "Baie de somme", AGENCY_FALLBACK_LABEL];
+    const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+      const ai = preferredOrder.indexOf(a);
+      const bi = preferredOrder.indexOf(b);
+      if (ai !== -1 || bi !== -1) {
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      }
+      return a.localeCompare(b, "fr");
+    });
+
+    return sortedKeys.map((k) => ({
+      agency: k,
+      rows: (groups.get(k) ?? []).slice().sort((a, b) => {
+        const an = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
+        const bn = `${b.firstName ?? ""} ${b.lastName ?? ""}`.trim();
+        return an.localeCompare(bn, "fr");
+      }),
+    }));
+  }, [filteredRows]);
 
   return (
     <AdminLayout>
@@ -557,13 +593,13 @@ const AdminMissing2025StatsPage: React.FC = () => {
           <CardHeader>
             <CardTitle>Statistiques 2025 manquantes</CardTitle>
             <CardDescription>
-              Liste des clients et des mois de 2025 sans relevé/statistiques (décembre 2025 est ignoré).
+              Liste des clients et des mois de 2025 sans relevé/statistiques (décembre 2025 est ignoré). Les clients sont séparés par agence.
             </CardDescription>
             <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-col md:flex-row gap-3 md:items-center">
                 <div className="relative w-full md:w-72">
                   <Input
-                    placeholder="Rechercher un client..."
+                    placeholder="Rechercher un client (ou agence)..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -596,75 +632,90 @@ const AdminMissing2025StatsPage: React.FC = () => {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
-            ) : filteredRows.length === 0 ? (
+            ) : groupedRows.length === 0 ? (
               <p className="text-center text-gray-500 py-8">Aucun utilisateur à afficher selon vos filtres.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Début de contrat</TableHead>
-                    <TableHead>Mois présents (2025)</TableHead>
-                    <TableHead className="text-right">Mois manquants (hors décembre)</TableHead>
-                    <TableHead>Dernier relevé</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRows.map((row) => (
-                    <TableRow key={row.userId}>
-                      <TableCell className="font-medium">
-                        {(row.firstName ?? "") + " " + (row.lastName ?? "")}
-                      </TableCell>
-                      <TableCell>
-                        {row.contractStartDate
-                          ? format(parseISO(row.contractStartDate), "dd/MM/yyyy", { locale: fr })
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {row.presentMonths.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {row.presentMonths
-                              .sort((a, b) => MONTHS_2025.indexOf(a) - MONTHS_2025.indexOf(b))
-                              .map(m => <Badge key={m} variant="secondary">{m}</Badge>)
-                            }
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {row.missingMonths.length > 0 ? (
-                          <div className="flex flex-wrap gap-2 justify-end">
-                            {row.missingMonths
-                              .sort((a, b) => MONTHS_2025.indexOf(a) - MONTHS_2025.indexOf(b))
-                              .map(m => <Badge key={m} className="bg-red-100 text-red-700">{m}</Badge>)
-                            }
-                          </div>
-                        ) : (
-                          <Badge className="bg-green-100 text-green-700">Complet</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {row.lastStatementDate
-                          ? format(parseISO(row.lastStatementDate), "dd/MM/yyyy HH:mm", { locale: fr })
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openMarkZeroDialog(row)}
-                          disabled={row.missingMonths.length === 0}
-                          title="Marquer les mois manquants à 0 (pas de locations)"
-                        >
-                          Marquer 0
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-10">
+                {groupedRows.map((group) => (
+                  <div key={group.agency} className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-semibold">Agence : {group.agency}</h3>
+                        <p className="text-xs text-muted-foreground">{group.rows.length} client(s)</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Client</TableHead>
+                            <TableHead>Début de contrat</TableHead>
+                            <TableHead>Mois présents (2025)</TableHead>
+                            <TableHead className="text-right">Mois manquants (hors décembre)</TableHead>
+                            <TableHead>Dernier relevé</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.rows.map((row) => (
+                            <TableRow key={row.userId}>
+                              <TableCell className="font-medium">
+                                {(row.firstName ?? "") + " " + (row.lastName ?? "")}
+                              </TableCell>
+                              <TableCell>
+                                {row.contractStartDate
+                                  ? format(parseISO(row.contractStartDate), "dd/MM/yyyy", { locale: fr })
+                                  : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {row.presentMonths.length > 0 ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    {row.presentMonths
+                                      .sort((a, b) => MONTHS_2025.indexOf(a) - MONTHS_2025.indexOf(b))
+                                      .map(m => <Badge key={m} variant="secondary">{m}</Badge>)
+                                    }
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {row.missingMonths.length > 0 ? (
+                                  <div className="flex flex-wrap gap-2 justify-end">
+                                    {row.missingMonths
+                                      .sort((a, b) => MONTHS_2025.indexOf(a) - MONTHS_2025.indexOf(b))
+                                      .map(m => <Badge key={m} className="bg-red-100 text-red-700">{m}</Badge>)
+                                    }
+                                  </div>
+                                ) : (
+                                  <Badge className="bg-green-100 text-green-700">Complet</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {row.lastStatementDate
+                                  ? format(parseISO(row.lastStatementDate), "dd/MM/yyyy HH:mm", { locale: fr })
+                                  : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openMarkZeroDialog(row)}
+                                  disabled={row.missingMonths.length === 0}
+                                  title="Marquer les mois manquants à 0 (pas de locations)"
+                                >
+                                  Marquer 0
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

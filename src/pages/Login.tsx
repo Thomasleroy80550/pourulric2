@@ -14,8 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Home, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import MigrationHelpDialog from "@/components/MigrationHelpDialog";
 import { getServiceStatuses, ServiceStatus } from "@/lib/status-api";
@@ -36,6 +38,7 @@ const Login = () => {
   const [serviceStatuses, setServiceStatuses] = useState<ServiceStatus[]>([]);
   const [statusesLoading, setStatusesLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
 
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
@@ -119,7 +122,7 @@ const Login = () => {
     <div className="min-h-[100svh] bg-white md:bg-gradient-to-b md:from-gray-50 md:via-white md:to-[#EAF4FF]">
       {loading && <LoadingOverlay message="Connexion en cours..." />}
 
-      {/* Mobile: plein écran, clean */}
+      {/* Mobile: plein écran, style "app" */}
       <div className="md:hidden min-h-[100svh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <div className="min-h-[100svh] flex flex-col">
           <header className="px-5 pt-5">
@@ -139,165 +142,197 @@ const Login = () => {
 
           <main className="flex-1 flex flex-col justify-center px-5">
             <div className="mx-auto w-full max-w-sm">
-              <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-                Connexion
-              </h1>
-              <p className="mt-1 text-xs text-gray-500">
-                Accédez à votre espace propriétaire.
-              </p>
-
-              <div className="mt-6 rounded-3xl border bg-white shadow-sm">
-                <div className="p-5">
-                  <Form {...form}>
-                    <form
-                      onSubmit={form.handleSubmit(handleEmailSubmit)}
-                      className="space-y-4"
-                    >
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[11px] text-gray-700">
-                              Adresse e-mail
-                            </FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <span className="absolute inset-y-0 left-4 flex items-center">
-                                  <Mail className="h-5 w-5 text-[#175e82b3]" />
-                                </span>
-                                <Input
-                                  type="email"
-                                  inputMode="email"
-                                  autoCapitalize="none"
-                                  autoCorrect="off"
-                                  placeholder="vous@exemple.com"
-                                  {...field}
-                                  disabled={loading}
-                                  className="h-12 rounded-2xl bg-[#175e821a] pl-12 pr-4 py-0 text-[16px] text-[#0A2540] placeholder:text-[#175e82b3] border-0"
-                                />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-[11px] text-gray-700">
-                              Mot de passe
-                            </FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <span className="absolute inset-y-0 left-4 flex items-center">
-                                  <Lock className="h-5 w-5 text-[#175e82b3]" />
-                                </span>
-                                <Input
-                                  type={showPassword ? "text" : "password"}
-                                  autoCapitalize="none"
-                                  autoCorrect="off"
-                                  placeholder="Votre mot de passe"
-                                  {...field}
-                                  disabled={loading}
-                                  className="h-12 rounded-2xl bg-[#175e821a] pl-12 pr-12 py-0 text-[16px] text-[#0A2540] placeholder:text-[#175e82b3] border-0"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPassword((v) => !v)}
-                                  className="absolute inset-y-0 right-3 flex items-center text-[#175e82b3] hover:text-[#175e82] transition"
-                                  aria-label={
-                                    showPassword
-                                      ? "Masquer le mot de passe"
-                                      : "Afficher le mot de passe"
-                                  }
-                                  disabled={loading}
-                                >
-                                  {showPassword ? (
-                                    <EyeOff className="h-5 w-5" />
-                                  ) : (
-                                    <Eye className="h-5 w-5" />
-                                  )}
-                                </button>
-                              </div>
-                            </FormControl>
-                            <div className="mt-2 flex justify-end">
-                              <button
-                                type="button"
-                                onClick={handleForgotPassword}
-                                className="text-[11px] text-gray-500 hover:text-gray-700"
-                                disabled={loading}
-                              >
-                                Mot de passe oublié ?
-                              </button>
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <Button
-                        type="submit"
-                        className="w-full h-11 rounded-2xl bg-[#175e82e6] hover:bg-[#175e82b3] text-white flex items-center justify-center gap-2 text-sm"
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            Connexion…
-                          </>
-                        ) : (
-                          "Se connecter"
-                        )}
-                      </Button>
-
-                      <div className="py-1">
-                        <Separator />
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="w-full text-sm text-gray-600"
-                        onClick={handleMagicLink}
-                        disabled={loading}
-                      >
-                        Utiliser un lien magique
-                      </Button>
-                    </form>
-                  </Form>
+              {/* Illustration */}
+              <div className="flex justify-center">
+                <div className="w-44 h-44 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                  <img
+                    src="/placeholder.svg"
+                    alt="Welcome"
+                    className="w-28 h-28 opacity-80"
+                  />
                 </div>
               </div>
 
-              {/* Status footer */}
-              <div className="mt-5">
-                <div className="flex flex-nowrap gap-3 overflow-x-auto">
-                  {statusesLoading ? (
-                    <span className="text-[11px] text-gray-500">Chargement…</span>
-                  ) : (
-                    serviceStatuses.map((s) => {
-                      const dotClass =
-                        s.status === "operational"
-                          ? "bg-green-500"
-                          : s.status === "outage"
-                            ? "bg-red-500"
-                            : s.status === "degraded"
-                              ? "bg-gradient-to-r from-amber-400 to-orange-500"
-                              : "bg-blue-500";
-                      return (
-                        <span
-                          key={s.id}
-                          className="inline-flex items-center gap-1.5 flex-shrink-0"
-                        >
-                          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-                          <span className="text-[11px] text-gray-800">{s.name}</span>
-                        </span>
-                      );
-                    })
-                  )}
+              <h1 className="mt-6 text-3xl font-semibold tracking-tight text-gray-900">
+                Login
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">Welcome back to the app</p>
+
+              <div className="mt-6">
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(handleEmailSubmit)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium text-gray-700">
+                            Email Address
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-3 flex items-center">
+                                <Mail className="h-4 w-4 text-gray-400" />
+                              </span>
+                              <Input
+                                type="email"
+                                inputMode="email"
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                placeholder="hello@example.com"
+                                {...field}
+                                disabled={loading}
+                                className="h-12 rounded-xl bg-white pl-10 pr-3 text-[16px] border-gray-200 focus-visible:ring-2 focus-visible:ring-primary/25"
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-xs font-medium text-gray-700">
+                              Password
+                            </FormLabel>
+                            <button
+                              type="button"
+                              onClick={handleForgotPassword}
+                              className="text-xs font-medium text-primary"
+                              disabled={loading}
+                            >
+                              Forgot Password?
+                            </button>
+                          </div>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute inset-y-0 left-3 flex items-center">
+                                <Lock className="h-4 w-4 text-gray-400" />
+                              </span>
+                              <Input
+                                type={showPassword ? "text" : "password"}
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                placeholder="••••••••"
+                                {...field}
+                                disabled={loading}
+                                className="h-12 rounded-xl bg-white pl-10 pr-10 text-[16px] border-gray-200 focus-visible:ring-2 focus-visible:ring-primary/25"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword((v) => !v)}
+                                className="absolute inset-y-0 right-3 flex items-center text-gray-500"
+                                aria-label={
+                                  showPassword
+                                    ? "Masquer le mot de passe"
+                                    : "Afficher le mot de passe"
+                                }
+                                disabled={loading}
+                              >
+                                {showPassword ? (
+                                  <EyeOff className="h-5 w-5" />
+                                ) : (
+                                  <Eye className="h-5 w-5" />
+                                )}
+                              </button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <Checkbox
+                        id="keep-signed-in"
+                        checked={keepSignedIn}
+                        onCheckedChange={(v) => setKeepSignedIn(Boolean(v))}
+                      />
+                      <label
+                        htmlFor="keep-signed-in"
+                        className="text-sm text-gray-600"
+                      >
+                        Keep me signed in
+                      </label>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full h-12 rounded-full bg-primary text-primary-foreground text-sm font-semibold"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          Login…
+                        </>
+                      ) : (
+                        "Login"
+                      )}
+                    </Button>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <div className="h-px flex-1 bg-gray-200" />
+                      <span className="text-xs text-gray-500">or sign in with</span>
+                      <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-12 rounded-full text-sm"
+                      onClick={handleMagicLink}
+                      disabled={loading}
+                    >
+                      Continuer avec un lien magique
+                    </Button>
+
+                    <div className="pt-2 text-center">
+                      <Link
+                        to="/prospect-signup"
+                        className="text-sm font-semibold text-primary"
+                      >
+                        Create an account
+                      </Link>
+                    </div>
+                  </form>
+                </Form>
+
+                {/* Status footer */}
+                <div className="mt-5">
+                  <div className="flex flex-nowrap gap-3 overflow-x-auto">
+                    {statusesLoading ? (
+                      <span className="text-[11px] text-gray-500">Chargement…</span>
+                    ) : (
+                      serviceStatuses.map((s) => {
+                        const dotClass =
+                          s.status === "operational"
+                            ? "bg-green-500"
+                            : s.status === "outage"
+                              ? "bg-red-500"
+                              : s.status === "degraded"
+                                ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                                : "bg-blue-500";
+                        return (
+                          <span
+                            key={s.id}
+                            className="inline-flex items-center gap-1.5 flex-shrink-0"
+                          >
+                            <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                            <span className="text-[11px] text-gray-800">{s.name}</span>
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -305,7 +340,7 @@ const Login = () => {
 
           <footer className="px-5 pb-5">
             <div className="mx-auto max-w-sm text-center text-[11px] text-gray-500">
-              En continuant, vous acceptez nos conditions d’utilisation.
+              En continuant, vous acceptez nos conditions d'utilisation.
             </div>
           </footer>
         </div>

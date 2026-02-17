@@ -160,172 +160,184 @@ const Login = () => {
           </div>
 
           {/* Colonne droite: formulaire modernisé */}
-          <div className="p-6 sm:p-8 md:p-14">
-            {/* Logo + aide */}
-            <div className="mb-6 flex items-center justify-between">
-              <img src="/logo.png" alt="Hello Keys" className="h-10 w-auto" />
-              <button
-                type="button"
-                onClick={() => setIsMigrationHelpDialogOpen(true)}
-                className="text-xs text-gray-500 hover:text-gray-700"
-              >
-                Aide migration
-              </button>
-            </div>
+          <div className="p-6 sm:p-8 md:p-14 flex flex-col justify-center">
+            <div className="mx-auto w-full max-w-sm text-center md:text-left">
+              {/* Logo + aide */}
+              <div className="mb-6 flex items-center justify-center md:justify-between">
+                <img src="/logo.png" alt="Hello Keys" className="h-9 w-auto" />
+                <button
+                  type="button"
+                  onClick={() => setIsMigrationHelpDialogOpen(true)}
+                  className="hidden md:inline text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Aide migration
+                </button>
+              </div>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">Bienvenue</h1>
-            <p className="text-sm text-gray-500 mb-6">Connectez-vous à votre compte</p>
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-gray-900">Bienvenue</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mb-6">Connectez-vous à votre compte</p>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm text-gray-700">Adresse e-mail</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute inset-y-0 left-4 flex items-center">
-                            <Mail className="h-5 w-5 text-[#175e82b3]" />
-                          </span>
-                          <Input
-                            type="email"
-                            inputMode="email"
-                            autoCapitalize="none"
-                            autoCorrect="off"
-                            placeholder="vous@exemple.com"
-                            {...field}
-                            disabled={loading}
-                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-4 py-0 text-base text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-gray-700">Adresse e-mail</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-4 flex items-center">
+                              <Mail className="h-5 w-5 text-[#175e82b3]" />
+                            </span>
+                            <Input
+                              type="email"
+                              inputMode="email"
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              placeholder="vous@exemple.com"
+                              {...field}
+                              disabled={loading}
+                              className="h-12 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-4 py-0 text-[16px] text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[48px] md:leading-[64px]"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm text-gray-700">Mot de passe</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute inset-y-0 left-4 flex items-center">
-                            <Lock className="h-5 w-5 text-[#175e82b3]" />
-                          </span>
-                          <Input
-                            type={showPassword ? 'text' : 'password'}
-                            autoCapitalize="none"
-                            autoCorrect="off"
-                            placeholder="Votre mot de passe"
-                            {...field}
-                            disabled={loading}
-                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-12 py-0 text-base text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
-                          />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-gray-700">Mot de passe</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-4 flex items-center">
+                              <Lock className="h-5 w-5 text-[#175e82b3]" />
+                            </span>
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              autoCapitalize="none"
+                              autoCorrect="off"
+                              placeholder="Votre mot de passe"
+                              {...field}
+                              disabled={loading}
+                              className="h-12 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-12 py-0 text-[16px] text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[48px] md:leading-[64px]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword((v) => !v)}
+                              className="absolute inset-y-0 right-3 flex items-center text-[#175e82b3] hover:text-[#175e82] transition"
+                              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                              disabled={loading}
+                            >
+                              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <div className="mt-2 flex justify-center md:justify-end">
                           <button
                             type="button"
-                            onClick={() => setShowPassword((v) => !v)}
-                            className="absolute inset-y-0 right-3 flex items-center text-[#175e82b3] hover:text-[#175e82] transition"
-                            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                            onClick={handleForgotPassword}
+                            className="text-[11px] text-gray-500 hover:text-gray-700"
                             disabled={loading}
                           >
-                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            Mot de passe oublié ?
                           </button>
                         </div>
-                      </FormControl>
-                      <div className="mt-2 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={handleForgotPassword}
-                          className="text-xs text-gray-500 hover:text-gray-700"
-                          disabled={loading}
-                        >
-                          Mot de passe oublié ?
-                        </button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-2xl bg-[#175e82e6] hover:bg-[#175e82b3] text-white flex items-center justify-center gap-2"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Connexion…
-                    </>
-                  ) : (
-                    'Se connecter'
-                  )}
-                </Button>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 rounded-2xl bg-[#175e82e6] hover:bg-[#175e82b3] text-white flex items-center justify-center gap-2 text-sm"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Connexion…
+                      </>
+                    ) : (
+                      'Se connecter'
+                    )}
+                  </Button>
 
-                <div className="py-2">
-                  <Separator />
-                </div>
+                  <div className="py-2">
+                    <Separator />
+                  </div>
 
-                <Button
-                  type="button"
-                  variant="link"
-                  className="w-full text-sm text-gray-600"
-                  onClick={handleMagicLink}
-                  disabled={loading}
-                >
-                  Utiliser un lien magique
-                </Button>
-              </form>
-            </Form>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full text-sm text-gray-600"
+                    onClick={handleMagicLink}
+                    disabled={loading}
+                  >
+                    Utiliser un lien magique
+                  </Button>
 
-            <div className="mt-6">
-              <div className="space-y-2">
-                {/* Services sur une seule ligne, minimalistes */}
-                <div className="flex flex-nowrap gap-3 overflow-x-auto">
-                  {statusesLoading ? (
-                    <span className="text-[11px] text-gray-500">Chargement…</span>
-                  ) : (
-                    serviceStatuses.map((s) => {
-                      const dotClass =
-                        s.status === "operational"
-                          ? "bg-green-500"
-                          : s.status === "outage"
-                          ? "bg-red-500"
-                          : s.status === "degraded"
-                          ? "bg-gradient-to-r from-amber-400 to-orange-500"
-                          : "bg-blue-500";
-                      return (
-                        <span key={s.id} className="inline-flex items-center gap-1.5 flex-shrink-0">
-                          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-                          <span className="text-[11px] text-gray-800">{s.name}</span>
-                        </span>
-                      );
-                    })
-                  )}
-                </div>
-                {/* Légende compacte */}
-                <div className="flex flex-wrap items-center gap-3 text-[10px] text-gray-600">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-green-500" />
-                    <span>Actif</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
-                    <span>Dégradé</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
-                    <span>Panne</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-full bg-blue-500" />
-                    <span>Maintenance</span>
-                  </span>
+                  {/* Bouton d'aide sur mobile */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-xs text-gray-600 md:hidden"
+                    onClick={() => setIsMigrationHelpDialogOpen(true)}
+                  >
+                    Besoin d'aide ?
+                  </Button>
+                </form>
+              </Form>
+
+              <div className="mt-6">
+                <div className="space-y-2">
+                  {/* Services sur une seule ligne, minimalistes */}
+                  <div className="flex flex-nowrap gap-3 overflow-x-auto">
+                    {statusesLoading ? (
+                      <span className="text-[11px] text-gray-500">Chargement…</span>
+                    ) : (
+                      serviceStatuses.map((s) => {
+                        const dotClass =
+                          s.status === "operational"
+                            ? "bg-green-500"
+                            : s.status === "outage"
+                            ? "bg-red-500"
+                            : s.status === "degraded"
+                            ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                            : "bg-blue-500";
+                        return (
+                          <span key={s.id} className="inline-flex items-center gap-1.5 flex-shrink-0">
+                            <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                            <span className="text-[11px] text-gray-800">{s.name}</span>
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
+                  {/* Légende compacte */}
+                  <div className="flex flex-wrap items-center gap-3 text-[10px] text-gray-600">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-green-500" />
+                      <span>Actif</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
+                      <span>Dégradé</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      <span>Panne</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-blue-500" />
+                      <span>Maintenance</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,13 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AccountantExportClient = {
+export type StatementsExportClient = {
   id: string;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
 };
 
-export type AccountantExportInvoice = {
+export type StatementsExportInvoice = {
   id: string;
   user_id: string;
   period: string;
@@ -18,17 +18,17 @@ export type AccountantExportInvoice = {
   paid_at?: string | null;
 };
 
-export async function fetchAccountantExportData(): Promise<{
-  invoices: AccountantExportInvoice[];
-  clients: AccountantExportClient[];
+export async function fetchStatementsExportData(): Promise<{
+  invoices: StatementsExportInvoice[];
+  clients: StatementsExportClient[];
 }> {
-  const { data, error } = await supabase.functions.invoke('export-accountant-statements');
+  const { data, error } = await supabase.functions.invoke('export-statements');
   if (error) {
     throw new Error(error.message || "Erreur lors de la récupération des relevés.");
   }
 
   return {
-    invoices: (data?.invoices ?? []) as AccountantExportInvoice[],
-    clients: (data?.clients ?? []) as AccountantExportClient[],
+    invoices: (data?.invoices ?? []) as StatementsExportInvoice[],
+    clients: (data?.clients ?? []) as StatementsExportClient[],
   };
 }

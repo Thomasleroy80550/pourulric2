@@ -4,7 +4,7 @@ import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { triggerBlobDownload } from "@/lib/download-utils";
-import { fetchAccountantExportData } from "@/lib/accountant-export-api";
+import { fetchStatementsExportData } from "@/lib/statements-export-api";
 
 function safeFileSegment(input: string) {
   return input
@@ -23,13 +23,13 @@ function formatDateFr(iso?: string | null) {
   return d.toLocaleString('fr-FR');
 }
 
-export default function AccountantStatementsExportButton() {
+export default function StatementsExportButton() {
   const [loading, setLoading] = useState(false);
 
   const filename = useMemo(() => {
     const now = new Date();
     const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    return `export_releves_comptable_${stamp}.xlsx`;
+    return `export_releves_${stamp}.xlsx`;
   }, []);
 
   const handleExport = async () => {
@@ -37,7 +37,7 @@ export default function AccountantStatementsExportButton() {
     const toastId = toast.loading("Préparation de l'export Excel…");
 
     try {
-      const { invoices, clients } = await fetchAccountantExportData();
+      const { invoices, clients } = await fetchStatementsExportData();
 
       if (!invoices.length) {
         toast.info("Aucun relevé à exporter.", { id: toastId });
@@ -111,7 +111,7 @@ export default function AccountantStatementsExportButton() {
       triggerBlobDownload(blob, safeFileSegment(filename));
       toast.success("Export prêt.", { id: toastId });
     } catch (e: any) {
-      console.error('Accountant export failed:', e);
+      console.error('Statements export failed:', e);
       toast.error(`Impossible de générer l'export : ${e?.message || 'Erreur inconnue'}`, { id: toastId });
     } finally {
       setLoading(false);
@@ -128,7 +128,7 @@ export default function AccountantStatementsExportButton() {
       ) : (
         <>
           <Download className="mr-2 h-4 w-4" />
-          Export Excel (tous les relevés)
+          Export Excel
         </>
       )}
     </Button>

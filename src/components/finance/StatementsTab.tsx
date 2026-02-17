@@ -11,6 +11,8 @@ import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import StatementDetailsDialog from '@/components/StatementDetailsDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSession } from '@/components/SessionContextProvider';
+import AccountantStatementsExportButton from '@/components/finance/AccountantStatementsExportButton';
 
 const StatementsTab: React.FC = () => {
   const [statements, setStatements] = useState<SavedInvoice[]>([]);
@@ -19,6 +21,7 @@ const StatementsTab: React.FC = () => {
   const [selectedStatement, setSelectedStatement] = useState<SavedInvoice | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const isMobile = useIsMobile();
+  const { profile } = useSession();
 
   useEffect(() => {
     const loadStatements = async () => {
@@ -131,8 +134,15 @@ const StatementsTab: React.FC = () => {
   return (
     <div className="mt-6">
       <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle>Historique des relevés générés</CardTitle>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle>Historique des relevés générés</CardTitle>
+          </div>
+          {profile?.role === 'accountant' && (
+            <div className="shrink-0">
+              <AccountantStatementsExportButton />
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {renderContent()}

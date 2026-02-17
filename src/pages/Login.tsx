@@ -144,11 +144,11 @@ const Login = () => {
             <div className="mx-auto w-full max-w-sm">
               {/* Illustration */}
               <div className="flex justify-center">
-                <div className="w-44 h-44 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                <div className="w-44 h-44 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
                   <img
-                    src="/placeholder.svg"
-                    alt="Welcome"
-                    className="w-28 h-28 opacity-80"
+                    src="/undraw_booking_1ztt.png"
+                    alt="Illustration de réservation"
+                    className="w-full h-full object-contain p-4"
                   />
                 </div>
               </div>

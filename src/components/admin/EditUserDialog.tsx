@@ -25,6 +25,7 @@ import { uploadFile } from '@/lib/storage-api';
 import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
 import { Label } from '@/components/ui/label';
 import ChangePasswordDialog from '@/components/admin/ChangePasswordDialog';
+import DownloadUserStatementsButton from '@/components/admin/DownloadUserStatementsButton';
 
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
@@ -157,13 +158,14 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
           const urls: { identity?: string; address?: string; cguv?: string } = {};
           const expiresIn = 60 * 5;
           try {
-            if (user.kyc_documents?.identity) {
-              const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(user.kyc_documents.identity, expiresIn);
+            const kycDocs = user.kyc_documents as any;
+            if (kycDocs?.identity) {
+              const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(kycDocs.identity, expiresIn);
               if (error) throw error;
               urls.identity = data.signedUrl;
             }
-            if (user.kyc_documents?.address) {
-              const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(user.kyc_documents.address, expiresIn);
+            if (kycDocs?.address) {
+              const { data, error } = await supabase.storage.from('kyc-documents').createSignedUrl(kycDocs.address, expiresIn);
               if (error) throw error;
               urls.address = data.signedUrl;
             }
@@ -489,6 +491,20 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       <FormField control={form.control} name="bic_airbnb_booking" render={({ field }) => (<FormItem><FormLabel>BIC</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                     </CardContent>
                   </Card>
+
+                  <Card className="mt-4">
+                    <CardHeader>
+                      <CardTitle>Relevés</CardTitle>
+                      <CardDescription>Télécharger en 1 clic tous les relevés de cet utilisateur (ZIP de PDFs).</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <DownloadUserStatementsButton
+                        userId={user.id}
+                        clientName={`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()}
+                      />
+                    </CardContent>
+                  </Card>
+
                   <Card className="mt-4">
                     <CardHeader><CardTitle>Paiement Stripe</CardTitle></CardHeader>
                     <CardContent>
@@ -638,54 +654,61 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       <div>
                         <FormLabel>Documents fournis</FormLabel>
                         <div className="mt-2 p-3 border rounded-md bg-gray-50 dark:bg-gray-800/50 min-h-[60px]">
-                          {!user?.kyc_documents || (!user.kyc_documents.identity && !user.kyc_documents.address) ? (
-                            <p className="text-sm text-muted-foreground">Aucun document n'a été fourni.</p>
-                          ) : (
-                            <ul className="space-y-2 text-sm">
-                              {user.kyc_documents.identity && (
-                                <li className="flex items-center justify-between">
-                                  <span>Pièce d'identité</span>
-                                  {documentUrls.identity ? (
-                                    <Button asChild variant="link" className="p-0 h-auto">
-                                      <a href={documentUrls.identity} target="_blank" rel="noopener noreferrer">
-                                        Voir le document
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <span className="text-muted-foreground">Chargement...</span>
-                                  )}
-                                </li>
-                              )}
-                              {user.kyc_documents.address && (
-                                <li className="flex items-center justify-between">
-                                  <span>Justificatif de domicile</span>
-                                  {documentUrls.address ? (
-                                    <Button asChild variant="link" className="p-0 h-auto">
-                                      <a href={documentUrls.address} target="_blank" rel="noopener noreferrer">
-                                        Voir le document
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <span className="text-muted-foreground">Chargement...</span>
-                                  )}
-                                </li>
-                              )}
-                              {user.cguv_signed_document_url && (
-                                <li className="flex items-center justify-between">
-                                  <span>CGUV signées</span>
-                                  {documentUrls.cguv ? (
-                                    <Button asChild variant="link" className="p-0 h-auto">
-                                      <a href={documentUrls.cguv} target="_blank" rel="noopener noreferrer">
-                                        Voir le document
-                                      </a>
-                                    </Button>
-                                  ) : (
-                                    <span className="text-muted-foreground">Chargement...</span>
-                                  )}
-                                </li>
-                              )}
-                            </ul>
-                          )}
+                          {(() => {
+                            const kycDocs = user.kyc_documents as any;
+                            const hasDocs = !!(kycDocs?.identity || kycDocs?.address || user.cguv_signed_document_url);
+
+                            if (!hasDocs) {
+                              return <p className="text-sm text-muted-foreground">Aucun document n'a été fourni.</p>;
+                            }
+
+                            return (
+                              <ul className="space-y-2 text-sm">
+                                {kycDocs?.identity && (
+                                  <li className="flex items-center justify-between">
+                                    <span>Pièce d'identité</span>
+                                    {documentUrls.identity ? (
+                                      <Button asChild variant="link" className="p-0 h-auto">
+                                        <a href={documentUrls.identity} target="_blank" rel="noopener noreferrer">
+                                          Voir le document
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <span className="text-muted-foreground">Chargement...</span>
+                                    )}
+                                  </li>
+                                )}
+                                {kycDocs?.address && (
+                                  <li className="flex items-center justify-between">
+                                    <span>Justificatif de domicile</span>
+                                    {documentUrls.address ? (
+                                      <Button asChild variant="link" className="p-0 h-auto">
+                                        <a href={documentUrls.address} target="_blank" rel="noopener noreferrer">
+                                          Voir le document
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <span className="text-muted-foreground">Chargement...</span>
+                                    )}
+                                  </li>
+                                )}
+                                {user.cguv_signed_document_url && (
+                                  <li className="flex items-center justify-between">
+                                    <span>CGUV signées</span>
+                                    {documentUrls.cguv ? (
+                                      <Button asChild variant="link" className="p-0 h-auto">
+                                        <a href={documentUrls.cguv} target="_blank" rel="noopener noreferrer">
+                                          Voir le document
+                                        </a>
+                                      </Button>
+                                    ) : (
+                                      <span className="text-muted-foreground">Chargement...</span>
+                                    )}
+                                  </li>
+                                )}
+                              </ul>
+                            );
+                          })()}
                         </div>
                       </div>
                     </CardContent>

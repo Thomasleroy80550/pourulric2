@@ -37,7 +37,6 @@ import {
   Ban, // Ajout de l'icône Ban
   MessageSquare, // Ajout de l'icône pour les tickets
   Store, // Ajout de l'icône pour la marketplace
-  Wrench, // Ajout de l'icône pour le ménage
   Mail, // icône e-mail
   Zap, // icône éclair pour conso électricité
 } from "lucide-react";
@@ -391,7 +390,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       <div className="flex-1 flex flex-col">
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="bg-background border-b h-16 flex items-center px-6 justify-between">
+          <header className="bg-background border-b h-16 flex items-center px-3 sm:px-6 justify-between">
             <div className="w-1/3 md:w-auto">
               {isMobile && (
                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -421,7 +420,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </div>
             </div>
 
-            <div className="w-1/3 md:w-auto flex items-center justify-end space-x-2 sm:space-x-4">
+            <div className="w-1/3 md:w-auto flex items-center justify-end space-x-1 sm:space-x-4">
               {isImpersonating && (
                 <div className="flex items-center gap-2">
                   <Badge variant="destructive" className="uppercase">Impersonation active</Badge>
@@ -440,9 +439,9 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Button variant="ghost" size="icon" onClick={() => setIsWhatsNewOpen(true)}>
                 <Gift className="h-5 w-5" />
               </Button>
-              
+
               {/* REMOVED: EcowattBadge dans le header (visible uniquement sur la page Calendrier désormais) */}
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
@@ -520,7 +519,13 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 bg-muted/40">
+          <main
+            className={cn(
+              "flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 bg-muted/40",
+              // évite que le contenu passe sous la bottom bar + gère le safe-area iOS
+              isMobile && "pb-[calc(5rem+env(safe-area-inset-bottom))]"
+            )}
+          >
             {profile?.is_payment_suspended && (
               <Alert variant="destructive" className="mb-6 sticky top-0 z-10">
                 <Ban className="h-4 w-4" />

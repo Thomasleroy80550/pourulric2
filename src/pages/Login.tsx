@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { Home, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import LoadingOverlay from '@/components/LoadingOverlay';
 import MigrationHelpDialog from '@/components/MigrationHelpDialog';
-import { getServiceStatuses, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
+import { getServiceStatuses, ServiceStatus } from "@/lib/status-api";
 
 const emailSchema = zod.object({
   email: zod.string().email({ message: 'Email invalide.' }),
@@ -112,82 +112,73 @@ const Login = () => {
     }
   };
 
-  const handleOAuth = async (provider: 'google' | 'facebook') => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: window.location.origin },
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const onSubmit = (values: EmailFormValues) => {
     handleEmailSubmit(values);
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-6 py-10">
+    <div className="min-h-[100svh] bg-gradient-to-b from-gray-50 via-white to-[#EAF4FF] flex items-center justify-center px-4 py-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       {loading && <LoadingOverlay message="Connexion en cours..." />}
-      <div className="w-full md:w-[92vw] lg:w-[88vw] max-w-7xl bg-white rounded-[48px] shadow-none overflow-hidden min-h-[720px]">
+
+      {/* Conteneur principal : style plus "app iOS" en mobile */}
+      <div className="w-full max-w-md md:max-w-7xl bg-white/80 backdrop-blur-xl rounded-3xl md:rounded-[48px] shadow-lg md:shadow-none border border-white/40 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2">
-          {/* Colonne gauche: cadre photo avec padding blanc interne */}
-          <div className="p-10 md:p-14 bg-gray-50 flex items-center">
+          {/* Colonne gauche: hero (compact en mobile) */}
+          <div className="p-5 sm:p-6 md:p-14 bg-gray-50/70 flex items-center">
             <div className="w-full">
-              <div className="rounded-[40px] bg-transparent p-0 shadow-none">
-                <div className="rounded-[32px] overflow-hidden">
-                  <div className="relative h-[520px] md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
-                    {/* Effet brume léger pour donner de la profondeur */}
-                    <div className="fog-layer"></div>
-                    <div className="fog-layer fog-layer-2"></div>
+              <div className="rounded-3xl md:rounded-[32px] overflow-hidden">
+                <div className="relative h-44 sm:h-56 md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
+                  {/* Effet brume léger pour donner de la profondeur */}
+                  <div className="fog-layer"></div>
+                  <div className="fog-layer fog-layer-2"></div>
 
-                    <div className="absolute inset-0 p-8 md:p-14 pb-20 flex flex-col items-start justify-center text-left text-white gap-3 relative z-[2]">
-                      <h2 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
-                        Simplifiez la gestion
-                        <br /><span className="text-white">avec notre dashboard.</span>
-                      </h2>
-                      <div className="mt-4 flex items-center gap-3">
-                        <span className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white/20">
-                          <Home className="h-7 w-7 text-white" />
-                        </span>
-                        <div className="h-1 w-24 md:w-32 rounded-full bg-white/40" />
-                      </div>
-
-                    </div>
-
-                    {/* Vague ancrée tout en bas du bloc dégradé, sous le contenu */}
-                    <div className="absolute bottom-0 left-0 right-0 z-[1] pointer-events-none select-none">
-                      <svg className="w-full h-16 md:h-24" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
-                        <path d="M0,120 C240,160 480,80 720,120 C960,160 1200,80 1440,120 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.18)"/>
-                        <path d="M0,100 C240,140 480,60 720,100 C960,140 1200,60 1440,100 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.28)"/>
-                      </svg>
+                  <div className="absolute inset-0 p-6 md:p-14 pb-16 flex flex-col items-start justify-center text-left text-white gap-3 relative z-[2]">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight tracking-tight">
+                      Simplifiez la gestion
+                      <br />
+                      <span className="text-white">avec notre dashboard.</span>
+                    </h2>
+                    <div className="mt-2 md:mt-4 flex items-center gap-3">
+                      <span className="inline-flex items-center justify-center h-11 w-11 md:h-12 md:w-12 rounded-xl bg-white/20">
+                        <Home className="h-6 w-6 md:h-7 md:w-7 text-white" />
+                      </span>
+                      <div className="h-1 w-20 md:w-32 rounded-full bg-white/40" />
                     </div>
                   </div>
+
+                  {/* Vague ancrée tout en bas */}
+                  <div className="absolute bottom-0 left-0 right-0 z-[1] pointer-events-none select-none">
+                    <svg className="w-full h-12 md:h-24" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
+                      <path d="M0,120 C240,160 480,80 720,120 C960,160 1200,80 1440,120 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.18)" />
+                      <path d="M0,100 C240,140 480,60 720,100 C960,140 1200,60 1440,100 L1440,160 L0,160 Z" fill="rgba(255,255,255,0.28)" />
+                    </svg>
+                  </div>
                 </div>
+              </div>
+
+              {/* Indication "app" sur mobile (optionnelle mais iOS-like) */}
+              <div className="md:hidden mt-4 text-xs text-gray-600">
+                Conseil : utilisez <span className="font-semibold">"Ajouter à l'écran d'accueil"</span> pour une expérience iOS optimale.
               </div>
             </div>
           </div>
 
           {/* Colonne droite: formulaire modernisé */}
-          <div className="p-10 md:p-14">
-            {/* Logo Hello Keys en haut */}
-            <div className="mb-8 flex items-center justify-between">
-              <img src="/logo.png" alt="Hello Keys" className="h-12 w-auto" />
+          <div className="p-6 sm:p-8 md:p-14">
+            {/* Logo + aide */}
+            <div className="mb-6 flex items-center justify-between">
+              <img src="/logo.png" alt="Hello Keys" className="h-10 w-auto" />
               <button
                 type="button"
                 onClick={() => setIsMigrationHelpDialogOpen(true)}
                 className="text-xs text-gray-500 hover:text-gray-700"
               >
-                Besoin d'aide pour migrer ?
+                Aide migration
               </button>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Bienvenue</h1>
-            <p className="text-sm text-gray-500 mb-6">Veuillez vous connecter à votre compte</p>
+
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">Bienvenue</h1>
+            <p className="text-sm text-gray-500 mb-6">Connectez-vous à votre compte</p>
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -203,10 +194,14 @@ const Login = () => {
                             <Mail className="h-5 w-5 text-[#175e82b3]" />
                           </span>
                           <Input
+                            type="email"
+                            inputMode="email"
+                            autoCapitalize="none"
+                            autoCorrect="off"
                             placeholder="vous@exemple.com"
                             {...field}
                             disabled={loading}
-                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-4 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
+                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-4 py-0 text-base text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
                           />
                         </div>
                       </FormControl>
@@ -214,6 +209,7 @@ const Login = () => {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="password"
@@ -227,10 +223,12 @@ const Login = () => {
                           </span>
                           <Input
                             type={showPassword ? 'text' : 'password'}
+                            autoCapitalize="none"
+                            autoCorrect="off"
                             placeholder="Votre mot de passe"
                             {...field}
                             disabled={loading}
-                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-12 py-0 text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
+                            className="h-14 md:h-16 rounded-2xl bg-[#175e821a] pl-12 pr-12 py-0 text-base text-[#0A2540] placeholder:text-[#175e82b3] border-0 outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-0 focus:bg-[#175e821a] leading-[56px] md:leading-[64px]"
                           />
                           <button
                             type="button"
@@ -266,7 +264,7 @@ const Login = () => {
                   {loading ? (
                     <>
                       <Loader2 className="h-5 w-5 animate-spin" />
-                      Connexion en cours...
+                      Connexion…
                     </>
                   ) : (
                     'Se connecter'
@@ -280,11 +278,11 @@ const Login = () => {
                 <Button
                   type="button"
                   variant="link"
-                  className="w-full text-sm text-gray-600 mt-2"
+                  className="w-full text-sm text-gray-600"
                   onClick={handleMagicLink}
                   disabled={loading}
                 >
-                  Ou utilisez un lien magique
+                  Utiliser un lien magique
                 </Button>
               </form>
             </Form>
@@ -315,7 +313,7 @@ const Login = () => {
                   )}
                 </div>
                 {/* Légende compacte */}
-                <div className="flex items-center gap-3 text-[10px] text-gray-600">
+                <div className="flex flex-wrap items-center gap-3 text-[10px] text-gray-600">
                   <span className="inline-flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-green-500" />
                     <span>Actif</span>

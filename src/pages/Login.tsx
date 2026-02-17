@@ -123,8 +123,8 @@ const Login = () => {
       {/* Conteneur principal : style plus "app iOS" en mobile */}
       <div className="w-full max-w-md md:max-w-7xl bg-white/80 backdrop-blur-xl rounded-3xl md:rounded-[48px] shadow-lg md:shadow-none border border-white/40 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2">
-          {/* Colonne gauche: hero (compact en mobile) */}
-          <div className="p-5 sm:p-6 md:p-14 bg-gray-50/70 flex items-center">
+          {/* Colonne gauche: hero (desktop uniquement) */}
+          <div className="hidden md:flex p-5 sm:p-6 md:p-14 bg-gray-50/70 items-center">
             <div className="w-full">
               <div className="rounded-3xl md:rounded-[32px] overflow-hidden">
                 <div className="relative h-44 sm:h-56 md:h-[640px] w-full bg-gradient-to-br from-[#175e82e6] to-[#175e82b3]">
@@ -156,10 +156,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Indication "app" sur mobile (optionnelle mais iOS-like) */}
-              <div className="md:hidden mt-4 text-xs text-gray-600">
-                Conseil : utilisez <span className="font-semibold">"Ajouter à l'écran d'accueil"</span> pour une expérience iOS optimale.
-              </div>
             </div>
           </div>
 

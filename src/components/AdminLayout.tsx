@@ -113,6 +113,8 @@ const adminNavigationCategories = [
     categoryName: 'Support',
     items: [
       { name: 'Rapports Techniques', href: '/admin/technical-reports', icon: Wrench, description: 'Suivre les problèmes techniques signalés.' },
+      { name: 'Signalements (bugs)', href: '/admin/error-logs', icon: AlertTriangle, description: 'Consulter les erreurs applicatives signalées.' },
+
     ]
   },
 ];

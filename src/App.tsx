@@ -100,6 +100,7 @@ import NetatmoTokenOverridePage from "./pages/NetatmoTokenOverridePage";
 import DashboardPageV2 from "./pages/DashboardPageV2";
 import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 import AdminTemperaturePage from "./pages/AdminTemperaturePage";
+import AdminErrorLogsPage from "./pages/AdminErrorLogsPage";
 
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 
@@ -160,6 +161,8 @@ function App() {
                     <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
                     <Route path="/admin/crm" element={<AdminCRMPage />} />
                     <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
+                    <Route path="/admin/error-logs" element={<AdminErrorLogsPage />} />
+
                     <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                     <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                     <Route path="/admin/status" element={<AdminStatusPage />} />

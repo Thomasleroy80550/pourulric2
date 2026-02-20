@@ -132,37 +132,57 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-  // Largeurs ultra (adaptatives)
+  // Largeurs (adaptatives)
   const propertyColumnWidth = useMemo(() => {
     if (isMobile) return 70;
-    // Clamp style: min 110px, idéal ~18% de la largeur visible, max 160px
+
+    // Debug: basé sur vw
+    if (debugFullWidth && viewportWidth) {
+      const preferred = viewportWidth * 0.16; // ~16vw
+      return Math.round(clamp(110, preferred, 180));
+    }
+
+    // Standard: basé sur la largeur du conteneur
     const preferred = containerWidth ? containerWidth * 0.18 : 160;
     return Math.round(clamp(110, preferred, 160));
-  }, [isMobile, containerWidth]);
+  }, [isMobile, debugFullWidth, viewportWidth, containerWidth]);
+
+  const sizingBaseWidth = useMemo(
+    () => (debugFullWidth ? viewportWidth : containerWidth),
+    [debugFullWidth, viewportWidth, containerWidth]
+  );
 
   const dayCellWidth = useMemo(() => {
-    // On réduit un peu le min sur desktop pour petites résolutions (1366×768)
-    const minCell = isMobile ? 22 : 20;
-    const maxCell = isMobile ? 26 : 34;
-    if (!containerWidth) return isMobile ? 24 : 32;
+    // Debug: tailles plus petites, basées sur le viewport
+    const minCell = isMobile ? 22 : (debugFullWidth ? 16 : 20);
+    const maxCell = isMobile ? 26 : (debugFullWidth ? 32 : 34);
 
-    const available = Math.max(0, containerWidth - propertyColumnWidth);
+    if (!sizingBaseWidth) return isMobile ? 24 : 32;
+
+    // On réserve un léger "gutters" pour éviter que ça touche les bords (équivalent à ~2vw)
+    const gutters = debugFullWidth ? sizingBaseWidth * 0.02 : 0;
+    const available = Math.max(0, sizingBaseWidth - propertyColumnWidth - gutters);
     const preferred = available / daysInMonth.length;
 
     // Clamp style: taille fluide avec limites
     return clamp(minCell, preferred, maxCell);
-  }, [isMobile, containerWidth, propertyColumnWidth, daysInMonth.length]);
+  }, [isMobile, debugFullWidth, sizingBaseWidth, propertyColumnWidth, daysInMonth.length]);
 
   const effectiveDayCellWidth = useMemo(() => {
+    // En debug: on force la largeur calculée (vw -> px) pour éviter tout écart de mesure
+    // et rester parfaitement aligné avec les barres.
+    if (debugFullWidth) return dayCellWidth;
+
     return measuredDayCellWidth > 0 ? measuredDayCellWidth : dayCellWidth;
-  }, [measuredDayCellWidth, dayCellWidth]);
+  }, [debugFullWidth, measuredDayCellWidth, dayCellWidth]);
 
   const gridWidthPx = useMemo(() => {
     const contentWidth = propertyColumnWidth + daysInMonth.length * effectiveDayCellWidth;
-    // Si la grille est plus petite que la zone visible, on l'étire à la largeur du conteneur
-    // pour éviter l'impression de "planning plus petit".
-    return containerWidth ? Math.max(contentWidth, containerWidth) : contentWidth;
-  }, [propertyColumnWidth, daysInMonth.length, effectiveDayCellWidth, containerWidth]);
+    const minWidth = debugFullWidth ? sizingBaseWidth : containerWidth;
+    // Si la grille est plus petite que la zone visible, on l'étire à la largeur disponible
+    // (en debug: basée sur le viewport; en normal: basée sur le conteneur)
+    return minWidth ? Math.max(contentWidth, minWidth) : contentWidth;
+  }, [propertyColumnWidth, daysInMonth.length, effectiveDayCellWidth, containerWidth, debugFullWidth, sizingBaseWidth]);
 
   const monthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
   const monthEnd = useMemo(() => endOfMonth(currentMonth), [currentMonth]);

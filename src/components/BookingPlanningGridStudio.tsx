@@ -41,9 +41,10 @@ interface BookingPlanningGridStudioProps {
   reservations: KrossbookingReservation[];
   onReservationChange: () => void;
   profile: UserProfile | null;
+  debugFullWidth?: boolean;
 }
 
-const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile }) => {
+const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile, debugFullWidth = false }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [housekeepingTasks, setHousekeepingTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
@@ -554,22 +555,24 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
           {/* Sur 1366x768 et autres résolutions, la colonne droite n'a pas assez de place :
               on garde l'info accessible via un panneau */}
-          <Sheet open={isInfoPanelOpen} onOpenChange={setIsInfoPanelOpen}>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="2xl:hidden">
-                <PanelRight className="h-4 w-4" />
-                <span className="ml-2">Infos</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[360px] sm:w-[420px]">
-              <SheetHeader>
-                <SheetTitle>Infos calendrier</SheetTitle>
-              </SheetHeader>
-              <div className="mt-4">
-                <InfoPanelContent />
-              </div>
-            </SheetContent>
-          </Sheet>
+          {!debugFullWidth && (
+            <Sheet open={isInfoPanelOpen} onOpenChange={setIsInfoPanelOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="2xl:hidden">
+                  <PanelRight className="h-4 w-4" />
+                  <span className="ml-2">Infos</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[360px] sm:w-[420px]">
+                <SheetHeader>
+                  <SheetTitle>Infos calendrier</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4">
+                  <InfoPanelContent />
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
         {/* Shine discret sur le header */}
         <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 45%)' }} />
@@ -589,9 +592,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
-          <div className="flex flex-col 2xl:flex-row gap-4 items-start">
-            {/* Zone planning (gauche) */}
-            <div className="min-w-0 w-full flex-1">
+          debugFullWidth ? (
+            <div className="min-w-0 w-full">
               <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-xl" onScroll={handleScroll}>
                 {/* Boutons flottants de navigation horizontale */}
                 {hasScrolledLeft && (
@@ -617,8 +619,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
                 <div className="grid-container relative rounded-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm" style={{
                   display: 'grid',
-                  // IMPORTANT: utilisez des colonnes en px (et non en 1fr) pour garantir l'alignement
-                  // des barres (positionnées en absolute) avec la grille dès le premier rendu.
                   gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${effectiveDayCellWidth}px)`,
                   width: `${gridWidthPx}px`,
                   gridAutoRows: '40px',
@@ -882,19 +882,318 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                 </div>
               </div>
 
-              {/* Légende (toujours juste sous le planning) */}
               <div className="mt-3">
                 <LegendPanel compact />
               </div>
             </div>
+          ) : (
+            <div className="flex flex-col 2xl:flex-row gap-4 items-start">
+              {/* Zone planning (gauche) */}
+              <div className="min-w-0 w-full flex-1">
+                <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-xl" onScroll={handleScroll}>
+                  {/* Boutons flottants de navigation horizontale */}
+                  {hasScrolledLeft && (
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => scrollByAmount('left')}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-[7] rounded-full bg-white/80 dark:bg-gray-900/70 hover:bg-white/90 dark:hover:bg-gray-900"
+                    >
+                      <ChevronLeft className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+                    </Button>
+                  )}
+                  {hasScrolledRight && (
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => scrollByAmount('right')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-[7] rounded-full bg-white/80 dark:bg-gray-900/70 hover:bg-white/90 dark:hover:bg-gray-900"
+                    >
+                      <ChevronRight className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+                    </Button>
+                  )}
 
-            {/* Zone droite (desktop large) */}
-            <aside className="hidden 2xl:block w-80 shrink-0">
-              <div className="sticky top-24 space-y-4">
-                <InfoPanelContent />
+                  <div className="grid-container relative rounded-xl ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm" style={{
+                    display: 'grid',
+                    // IMPORTANT: utilisez des colonnes en px (et non en 1fr) pour garantir l'alignement
+                    // des barres (positionnées en absolute) avec la grille dès le premier rendu.
+                    gridTemplateColumns: `${propertyColumnWidth}px repeat(${daysInMonth.length}, ${effectiveDayCellWidth}px)`,
+                    width: `${gridWidthPx}px`,
+                    gridAutoRows: '40px',
+                    position: 'relative',
+                  }}
+                    ref={gridRef}
+                    onMouseLeave={() => { setHoveredColumnIndex(null); setHoveredRowIndex(null); }}
+                  >
+                    {/* Row hover highlight (fluide) */}
+                    {hoveredRowIndex !== null && (
+                      <div
+                        className="pointer-events-none absolute left-0 right-0 z-[1] bg-slate-200/20 dark:bg-slate-700/15"
+                        style={{
+                          top: `${(3 + hoveredRowIndex) * 40}px`,
+                          height: `40px`,
+                        }}
+                      />
+                    )}
+
+                    {/* Hovered column guideline */}
+                    {hoveredColumnIndex !== null && (
+                      <div
+                        className="pointer-events-none absolute top-0 bottom-0 z-[2] bg-slate-200/10 dark:bg-slate-700/10 border-x border-slate-300/40"
+                        style={{
+                          left: `${propertyColumnWidth + hoveredColumnIndex * effectiveDayCellWidth}px`,
+                          width: `${effectiveDayCellWidth}px`,
+                        }}
+                      />
+                    )}
+
+                    {/* Header Row 0: Week numbers */}
+                    <div className="grid-cell header-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-r col-span-1"></div>
+                    {daysInMonth.map((day, index) => (
+                      <div
+                        key={`week-${index}`}
+                        className={cn(
+                          "grid-cell header-cell text-center text-[11px] sm:text-xs text-gray-500 border-b border-r",
+                          isMonday(day) && ""
+                        )}
+                        onMouseEnter={() => setHoveredColumnIndex(index)}
+                      >
+                        {isMonday(day) ? `S ${getISOWeek(day)}` : ""}
+                      </div>
+                    ))}
+
+                    {/* Header Row 1: Day numbers */}
+                    <div className="grid-cell header-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-r col-span-1"></div>
+                    {daysInMonth.map((day, index) => (
+                      <div
+                        key={index}
+                        ref={index === 0 ? firstDayCellRef : undefined}
+                        className={cn(
+                          "grid-cell header-cell text-center font-semibold border-b border-r",
+                          slimMode && "text-[10px]",
+                          "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
+                        )}
+                        onMouseEnter={() => setHoveredColumnIndex(index)}
+                      >
+                        {format(day, 'dd', { locale: fr })}
+                      </div>
+                    ))}
+
+                    {/* Header Row 2: Day names */}
+                    <div className="grid-cell header-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-r col-span-1"></div>
+                    {daysInMonth.map((day, index) => (
+                      <div
+                        key={`day-name-${index}`}
+                        className={cn(
+                          "grid-cell header-cell text-center text-xs text-gray-500 border-b border-r",
+                          slimMode && "text-[9px]",
+                          "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
+                        )}
+                        onMouseEnter={() => setHoveredColumnIndex(index)}
+                      >
+                        {format(day, 'EEE', { locale: fr })}
+                      </div>
+                    ))}
+
+                    {/* Rows per room */}
+                    {userRooms.map((room, roomIndex) => (
+                      <React.Fragment key={room.id}>
+                        {/* Property Name Cell */}
+                        <div
+                          className={cn(
+                            "grid-cell property-name-cell sticky left-0 z-10 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-r border-b flex items-center px-2",
+                            slimMode ? "text-xs" : "text-sm"
+                          )}
+                          style={{ gridRow: `${4 + roomIndex}` }}
+                          onMouseEnter={() => setHoveredRowIndex(roomIndex)}
+                          onMouseLeave={() => setHoveredRowIndex((prev) => (prev === roomIndex ? null : prev))}
+                        >
+                          <Home className="h-4 w-4 mr-2 text-gray-500" />
+                          <span className={cn("font-medium truncate", slimMode ? "text-xs" : "text-sm")}>
+                            {room.room_name}
+                          </span>
+                        </div>
+
+                        {/* Background day cells */}
+                        {daysInMonth.map((day, dayIndex) => {
+                          const tasksForThisDay = housekeepingTasks.filter(task =>
+                            isValid(parseISO(task.date)) && isSameDay(parseISO(task.date), day) && norm(task.id_room) === norm(room.room_id)
+                          );
+                          const isStripe = roomIndex % 2 === 0;
+
+                          return (
+                            <div
+                              key={`${room.id}-${format(day, 'yyyy-MM-dd')}-bg`}
+                              className={cn(
+                                "grid-cell border-b border-r relative flex flex-col justify-center items-center border-slate-200 dark:border-slate-700",
+                                (isStripe ? "bg-gray-50 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-900/60"),
+                                "hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
+                              )}
+                              style={{ gridRow: `${4 + roomIndex}` }}
+                              onMouseEnter={() => { setHoveredColumnIndex(dayIndex); setHoveredRowIndex(roomIndex); }}
+                              onMouseLeave={() => setHoveredRowIndex((prev) => (prev === roomIndex ? null : prev))}
+                            >
+                              {tasksForThisDay.length > 0 && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20">
+                                      {tasksForThisDay.length > 1 ? (
+                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
+                                      ) : (
+                                        getTaskIcon(tasksForThisDay[0].status)
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="p-2 text-sm">
+                                    <p className="font-bold mb-1">Tâches de ménage ({format(day, 'dd/MM', { locale: fr })}):</p>
+                                    {tasksForThisDay.map((task, idx) => (
+                                      <p key={idx} className="flex items-center">
+                                        {getTaskIcon(task.status)}
+                                        <span className="ml-1 capitalize">{task.task_type.replace('_', ' ')} - {task.status}</span>
+                                      </p>
+                                    ))}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Reservation Bars */}
+                        {reservations
+                          .filter((res) => {
+                            // Correspondance robuste: par id principal, id secondaire, OU nom exact normalisé
+                            const resId = norm(res.krossbooking_room_id);
+                            const resName = norm(res.property_name);
+                            const roomId1 = norm(room.room_id);
+                            const roomId2 = norm((room as any).room_id_2);
+                            const roomName = norm(room.room_name);
+                            const byId = !!resId && (resId === roomId1 || (!!roomId2 && resId === roomId2));
+                            const byName = !!resName && resName === roomName;
+                            return byId || byName;
+                          })
+                          .map((reservation, idx) => {
+                            // Filtre robuste annulation
+                            const status = (reservation.status || '').toString().toUpperCase();
+                            if (status.includes('CANC')) return null;
+
+                            const checkIn = isValid(parseISO(reservation.check_in_date)) ? parseISO(reservation.check_in_date) : null;
+                            const checkOut = isValid(parseISO(reservation.check_out_date)) ? parseISO(reservation.check_out_date) : null;
+                            if (!checkIn || !checkOut) return null;
+
+                            const monthStart = startOfMonth(currentMonth);
+                            const monthEnd = endOfMonth(currentMonth);
+                            const numberOfNights = differenceInDays(checkOut, checkIn);
+
+                            const barStartDate = checkIn;
+                            const barEndDate = checkOut;
+                            const visibleBarStart = max([barStartDate, monthStart]);
+                            const visibleBarEnd = min([barEndDate, monthEnd]);
+                            if (visibleBarStart > visibleBarEnd) return null;
+
+                            const startIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarStart));
+                            const endIndex = daysInMonth.findIndex(d => isSameDay(d, visibleBarEnd));
+                            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return null;
+
+                            let calculatedLeft: number;
+                            let calculatedWidth: number;
+                            const isSingleDayStay = numberOfNights === 0;
+
+                            if (isSingleDayStay) {
+                              calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 4);
+                              calculatedWidth = Math.max(8, effectiveDayCellWidth / 2);
+                            } else {
+                              calculatedLeft = propertyColumnWidth + (startIndex * effectiveDayCellWidth) + (effectiveDayCellWidth / 2);
+                              calculatedWidth = Math.max(8, (endIndex - startIndex) * effectiveDayCellWidth);
+                            }
+
+                            const isOwnerBlock = reservation.status === 'PROPRI' || reservation.status === 'PROP0';
+                            const effectiveChannelKey = isOwnerBlock ? reservation.status : (reservation.channel_identifier || 'UNKNOWN');
+                            const channelInfo = channelColors[effectiveChannelKey] || channelColors['UNKNOWN'];
+
+                            const isArrivalDayVisible = isSameDay(checkIn, visibleBarStart);
+                            const isDepartureDayVisible = isSameDay(checkOut, visibleBarEnd);
+
+                            const barClasses = cn(
+                              `flex items-center justify-center font-semibold overflow-hidden whitespace-nowrap ${channelInfo.bgColor} ${channelInfo.textColor}`,
+                              isMobile ? 'text-[0.6rem] px-0.5' : 'text-xs px-1',
+                              slimMode && (isMobile ? 'text-[0.55rem]' : 'text-[10px]'),
+                              'border border-white/20 dark:border-black/20 hover:brightness-105 transition-transform hover:-translate-y-[1px] hover:scale-[1.01] rounded-full'
+                            );
+
+                            return (
+                              <Tooltip key={reservation.id}>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={barClasses}
+                                    style={{
+                                      position: 'absolute',
+                                      top: `${(3 + roomIndex) * 40 + 6}px`,
+                                      left: `${calculatedLeft}px`,
+                                      width: `${calculatedWidth}px`,
+                                      height: '28px',
+                                      marginTop: '0px',
+                                      marginBottom: '0px',
+                                      zIndex: 5,
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                    }}
+                                    onClick={() => handleReservationClick(reservation)}
+                                  >
+                                    {isArrivalDayVisible && !isSingleDayStay && <LogIn className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
+                                    {isSingleDayStay && <Sparkles className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
+
+                                    <span className="flex-grow text-center px-1 truncate">
+                                      <span className="inline-flex items-center gap-1">
+                                        <span className={cn("inline-block w-2 h-2 rounded-full", channelInfo.bgColor)} />
+                                        <span className="mr-1">{channelInfo.name.charAt(0).toUpperCase()}.</span>
+                                      </span>
+                                      <span className="mr-1">{numberOfNights}n</span>
+                                      <span className="mx-1">|</span>
+                                      <span className="truncate">{reservation.guest_name}</span>
+                                    </span>
+                                    <span className="ml-1 mr-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white/90 text-[10px] font-semibold">
+                                      {getInitials(reservation.guest_name)}
+                                    </span>
+
+                                    {isDepartureDayVisible && !isSingleDayStay && <LogOut className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="p-2 text-sm">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={cn("inline-block w-2 h-2 rounded-full", channelInfo.bgColor)} />
+                                    <p className="font-bold">{reservation.guest_name}</p>
+                                  </div>
+                                  <p>Chambre: {reservation.property_name}</p>
+                                  <p>Du {format(checkIn, 'dd/MM/yyyy', { locale: fr })} au {format(checkOut, 'dd/MM/yyyy', { locale: fr })}</p>
+                                  <p>{numberOfNights} nuit(s)</p>
+                                  <p>Statut: {channelInfo.name}</p>
+                                  <p>Montant: {reservation.amount}</p>
+                                  <p>Canal: {reservation.channel_identifier || 'N/A'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Légende (toujours juste sous le planning) */}
+                <div className="mt-3">
+                  <LegendPanel compact />
+                </div>
               </div>
-            </aside>
-          </div>
+
+              {/* Zone droite (desktop large) */}
+              <aside className="hidden 2xl:block w-80 shrink-0">
+                <div className="sticky top-24 space-y-4">
+                  <InfoPanelContent />
+                </div>
+              </aside>
+            </div>
+          )
         ) : null}
       </CardContent>
 

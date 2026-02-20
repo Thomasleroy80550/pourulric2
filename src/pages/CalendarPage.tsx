@@ -52,7 +52,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-  const [activeTab, setActiveTab] = useState<'planning' | 'twelve'>('planning');
+  const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug'>('planning');
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -394,10 +394,11 @@ const CalendarPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Calendrier</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve')} className="w-full">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug')} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
                 <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
+                <TabsTrigger value="debug">Vue debug</TabsTrigger>
               </TabsList>
 
               <TabsContent value="planning">
@@ -436,6 +437,29 @@ const CalendarPage: React.FC = () => {
                 ) : (
                   <div className="w-full">
                     <TwelveMonthView userRooms={userRooms} reservations={reservations} />
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="debug">
+                {loadingData ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-[400px] w-full" />
+                  </div>
+                ) : userRooms.length === 0 ? (
+                  <p className="text-muted-foreground">Aucune chambre configurée.</p>
+                ) : (
+                  // Debug = full width: on annule le padding du CardContent (p-6) pour utiliser toute la largeur dispo.
+                  <div className="-mx-6 w-[calc(100%+3rem)]">
+                    <BookingPlanningGridStudio
+                      refreshTrigger={refreshTrigger}
+                      userRooms={userRooms}
+                      reservations={reservations}
+                      onReservationChange={handleReservationChange}
+                      profile={profile}
+                      debugFullWidth
+                    />
                   </div>
                 )}
               </TabsContent>

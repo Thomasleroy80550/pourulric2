@@ -73,6 +73,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState<number>(() => (typeof window !== 'undefined' ? window.innerWidth : 0));
 
   const gridRef = useRef<HTMLDivElement | null>(null);
   const firstDayCellRef = useRef<HTMLDivElement | null>(null);
@@ -545,6 +546,25 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     }
   }, [measuredDayCellWidth]);
 
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Affichage de la colonne de droite uniquement sur une plage de largeurs.
+  // À partir de 1989px, on remplace la colonne par un bouton "Infos" (panneau) pour laisser le planning en pleine largeur.
+  const showRightAside = useMemo(() => {
+    if (debugFullWidth) return false;
+    if (viewportWidth >= 1989) return false;
+    return viewportWidth >= 1536; // équivalent 2xl
+  }, [debugFullWidth, viewportWidth]);
+
+  const showInfoButton = useMemo(() => {
+    if (debugFullWidth) return false;
+    return !showRightAside;
+  }, [debugFullWidth, showRightAside]);
+
   return (
     <Card className="max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
       <CardHeader className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
@@ -564,12 +584,10 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             <span className="ml-2 hidden sm:inline">Aujourd'hui</span>
           </Button>
 
-          {/* Sur 1366x768 et autres résolutions, la colonne droite n'a pas assez de place :
-              on garde l'info accessible via un panneau */}
-          {!debugFullWidth && (
+          {showInfoButton && (
             <Sheet open={isInfoPanelOpen} onOpenChange={setIsInfoPanelOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="2xl:hidden">
+                <Button variant="outline" size="sm">
                   <PanelRight className="h-4 w-4" />
                   <span className="ml-2">Infos</span>
                 </Button>
@@ -1197,12 +1215,14 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                 </div>
               </div>
 
-              {/* Zone droite (desktop large) */}
-              <aside className="hidden 2xl:block w-80 shrink-0">
-                <div className="sticky top-24 space-y-4">
-                  <InfoPanelContent />
-                </div>
-              </aside>
+              {/* Zone droite (desktop) */}
+              {showRightAside && (
+                <aside className="w-80 shrink-0">
+                  <div className="sticky top-24 space-y-4">
+                    <InfoPanelContent />
+                  </div>
+                </aside>
+              )}
             </div>
           )
         ) : null}

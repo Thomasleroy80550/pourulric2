@@ -450,8 +450,8 @@ const CalendarPage: React.FC = () => {
                 ) : userRooms.length === 0 ? (
                   <p className="text-muted-foreground">Aucune chambre configurée.</p>
                 ) : (
-                  // Debug = full width: on annule le padding du CardContent (p-6) pour utiliser toute la largeur dispo.
-                  <div className="-mx-6 w-[calc(100%+3rem)]">
+                  // Debug = full width: on évite les marges négatives (qui peuvent créer un débordement global)
+                  <div className="w-full overflow-x-hidden">
                     <BookingPlanningGridStudio
                       refreshTrigger={refreshTrigger}
                       userRooms={userRooms}

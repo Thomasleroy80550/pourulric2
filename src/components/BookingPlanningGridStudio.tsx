@@ -136,41 +136,34 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const propertyColumnWidth = useMemo(() => {
     if (isMobile) return 70;
 
-    // Debug: basé sur vw
-    if (debugFullWidth && viewportWidth) {
-      const preferred = viewportWidth * 0.16; // ~16vw
-      return Math.round(clamp(110, preferred, 180));
+    // Vue debug: on adapte au conteneur visible (pas au viewport) pour éviter tout débordement,
+    // tout en autorisant des cellules plus grandes sur grand écran.
+    if (debugFullWidth) {
+      const preferred = containerWidth ? containerWidth * 0.18 : 180;
+      return Math.round(clamp(140, preferred, 240));
     }
 
     // Standard: basé sur la largeur du conteneur
     const preferred = containerWidth ? containerWidth * 0.18 : 160;
     return Math.round(clamp(110, preferred, 160));
-  }, [isMobile, debugFullWidth, viewportWidth, containerWidth]);
-
-  const sizingBaseWidth = useMemo(
-    () => (debugFullWidth ? viewportWidth : containerWidth),
-    [debugFullWidth, viewportWidth, containerWidth]
-  );
+  }, [isMobile, debugFullWidth, containerWidth]);
 
   const dayCellWidth = useMemo(() => {
-    // Debug: tailles plus petites, basées sur le viewport
-    const minCell = isMobile ? 22 : (debugFullWidth ? 16 : 20);
-    const maxCell = isMobile ? 26 : (debugFullWidth ? 32 : 34);
+    // Debug: tailles plus grandes possibles sur grands écrans
+    const minCell = isMobile ? 22 : (debugFullWidth ? 22 : 20);
+    const maxCell = isMobile ? 26 : (debugFullWidth ? 48 : 34);
 
-    if (!sizingBaseWidth) return isMobile ? 24 : 32;
+    if (!containerWidth) return isMobile ? 24 : 32;
 
-    // On réserve un léger "gutters" pour éviter que ça touche les bords (équivalent à ~2vw)
-    const gutters = debugFullWidth ? sizingBaseWidth * 0.02 : 0;
-    const available = Math.max(0, sizingBaseWidth - propertyColumnWidth - gutters);
+    const gutters = debugFullWidth ? containerWidth * 0.02 : 0;
+    const available = Math.max(0, containerWidth - propertyColumnWidth - gutters);
     const preferred = available / daysInMonth.length;
 
-    // Clamp style: taille fluide avec limites
     return clamp(minCell, preferred, maxCell);
-  }, [isMobile, debugFullWidth, sizingBaseWidth, propertyColumnWidth, daysInMonth.length]);
+  }, [isMobile, debugFullWidth, containerWidth, propertyColumnWidth, daysInMonth.length]);
 
   const effectiveDayCellWidth = useMemo(() => {
-    // En debug: on force la largeur calculée (vw -> px) pour éviter tout écart de mesure
-    // et rester parfaitement aligné avec les barres.
+    // En debug: on force la largeur calculée pour rester parfaitement aligné avec les barres.
     if (debugFullWidth) return dayCellWidth;
 
     return measuredDayCellWidth > 0 ? measuredDayCellWidth : dayCellWidth;
@@ -178,11 +171,10 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   const gridWidthPx = useMemo(() => {
     const contentWidth = propertyColumnWidth + daysInMonth.length * effectiveDayCellWidth;
-    const minWidth = debugFullWidth ? sizingBaseWidth : containerWidth;
-    // Si la grille est plus petite que la zone visible, on l'étire à la largeur disponible
-    // (en debug: basée sur le viewport; en normal: basée sur le conteneur)
+    // Debug: on se cale sur la zone visible (containerWidth), pas sur le viewport.
+    const minWidth = containerWidth;
     return minWidth ? Math.max(contentWidth, minWidth) : contentWidth;
-  }, [propertyColumnWidth, daysInMonth.length, effectiveDayCellWidth, containerWidth, debugFullWidth, sizingBaseWidth]);
+  }, [propertyColumnWidth, daysInMonth.length, effectiveDayCellWidth, containerWidth]);
 
   const monthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
   const monthEnd = useMemo(() => endOfMonth(currentMonth), [currentMonth]);

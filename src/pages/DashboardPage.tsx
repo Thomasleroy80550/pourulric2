@@ -82,16 +82,14 @@ const isInBilan2025Window = () => {
   return now >= start && now <= end;
 };
 
-const DashboardErrorThrower = () => {
-  throw new Error("Test ErrorBoundary (DashboardPage)");
-};
+// REMOVED: DashboardErrorThrower (le test se fait via simulateError sur SectionErrorBoundary)
 
 const DashboardPage = () => {
   const { profile } = useSession();
 
   // Switch de test (visible uniquement en local/dev)
   const isDev = import.meta.env.DEV;
-  const [throwTestError, setThrowTestError] = useState(false);
+  const [showTestBoundary, setShowTestBoundary] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const [showBilanNotice, setShowBilanNotice] = useState(false);
@@ -557,12 +555,12 @@ const DashboardPage = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Label htmlFor="throw-boundary-error" className="text-sm">
-                  Provoquer une erreur
+                  Afficher le fallback
                 </Label>
                 <Switch
                   id="throw-boundary-error"
-                  checked={throwTestError}
-                  onCheckedChange={setThrowTestError}
+                  checked={showTestBoundary}
+                  onCheckedChange={setShowTestBoundary}
                   variant="destructive"
                 />
               </div>
@@ -570,9 +568,15 @@ const DashboardPage = () => {
           </div>
         ) : null}
 
-        {isDev && throwTestError ? (
-          <SectionErrorBoundary componentName="DashboardPage.ErrorTest" extra={{ dev: true }}>
-            <DashboardErrorThrower />
+        {isDev ? (
+          <SectionErrorBoundary
+            componentName="DashboardPage.ErrorTest"
+            extra={{ dev: true }}
+            simulateError={showTestBoundary}
+            simulateErrorMessage="Test ErrorBoundary (DashboardPage)"
+            onRetry={() => setShowTestBoundary(false)}
+          >
+            <></>
           </SectionErrorBoundary>
         ) : null}
 

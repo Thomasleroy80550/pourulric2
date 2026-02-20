@@ -40,9 +40,11 @@ export function RoomParkingForm({ room }: RoomParkingFormProps) {
 
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof parkingSchema>) => updateUserRoom(room.id, values),
-    onSuccess: () => {
+    onSuccess: (updatedRoom) => {
       toast.success("Informations de stationnement mises à jour.");
-      queryClient.invalidateQueries({ queryKey: ['userRooms'] });
+      queryClient.setQueryData<UserRoom[]>(['userRooms'], (prev) =>
+        (prev || []).map((r) => (r.id === updatedRoom.id ? updatedRoom : r))
+      );
     },
     onError: (error) => {
       toast.error(`Erreur : ${error.message}`);

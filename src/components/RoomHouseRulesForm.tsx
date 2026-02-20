@@ -39,9 +39,11 @@ export function RoomHouseRulesForm({ room }: RoomHouseRulesFormProps) {
 
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof houseRulesSchema>) => updateUserRoom(room.id, values),
-    onSuccess: () => {
+    onSuccess: (updatedRoom) => {
       toast.success("Règlement intérieur mis à jour.");
-      queryClient.invalidateQueries({ queryKey: ['userRooms'] });
+      queryClient.setQueryData<UserRoom[]>(['userRooms'], (prev) =>
+        (prev || []).map((r) => (r.id === updatedRoom.id ? updatedRoom : r))
+      );
     },
     onError: (error) => {
       toast.error(`Erreur : ${error.message}`);

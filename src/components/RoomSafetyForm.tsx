@@ -36,9 +36,11 @@ export function RoomSafetyForm({ room }: RoomSafetyFormProps) {
 
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof safetySchema>) => updateUserRoom(room.id, values),
-    onSuccess: () => {
+    onSuccess: (updatedRoom) => {
       toast.success("Informations de sécurité mises à jour.");
-      queryClient.invalidateQueries({ queryKey: ['userRooms'] });
+      queryClient.setQueryData<UserRoom[]>(['userRooms'], (prev) =>
+        (prev || []).map((r) => (r.id === updatedRoom.id ? updatedRoom : r))
+      );
     },
     onError: (error) => {
       toast.error(`Erreur : ${error.message}`);

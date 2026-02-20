@@ -4,12 +4,12 @@ import MainLayout from '@/components/MainLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
-import { Building } from 'lucide-react';
+import { Building, Loader2 } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import SuspendedAccountMessage from '@/components/SuspendedAccountMessage';
 
 const MyRoomsPage = () => {
-  const { data: rooms, isLoading, error } = useQuery({
+  const { data: rooms, isLoading, isFetching, error } = useQuery({
     queryKey: ['userRooms'],
     queryFn: getUserRooms,
   });
@@ -23,15 +23,27 @@ const MyRoomsPage = () => {
     );
   }
 
+  const showInitialLoading = isLoading && !rooms;
+
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Mes Logements</h1>
-          <p className="text-muted-foreground">Gérez les informations et l'inventaire de vos propriétés.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Mes Logements</h1>
+            <p className="text-muted-foreground">Gérez les informations et l'inventaire de vos propriétés.</p>
+          </div>
+
+          {/* Évite l'effet "page blanche" pendant un refetch: on garde le contenu et on affiche un indicateur discret */}
+          {isFetching && !showInitialLoading && (
+            <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Mise à jour…
+            </div>
+          )}
         </div>
 
-        {isLoading && (
+        {showInitialLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
           </div>
@@ -61,7 +73,7 @@ const MyRoomsPage = () => {
           </div>
         )}
 
-        {rooms && rooms.length === 0 && !isLoading && (
+        {rooms && rooms.length === 0 && !showInitialLoading && (
           <div className="text-center py-12 border-2 border-dashed rounded-lg">
             <h3 className="text-xl font-semibold">Aucun logement trouvé</h3>
             <p className="text-muted-foreground mt-2">Aucun logement ne vous a encore été assigné par un administrateur.</p>

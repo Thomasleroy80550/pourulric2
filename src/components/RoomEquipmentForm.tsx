@@ -40,9 +40,11 @@ export function RoomEquipmentForm({ room }: RoomEquipmentFormProps) {
 
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof equipmentSchema>) => updateUserRoom(room.id, values),
-    onSuccess: () => {
+    onSuccess: (updatedRoom) => {
       toast.success("Équipements mis à jour.");
-      queryClient.invalidateQueries({ queryKey: ['userRooms'] });
+      queryClient.setQueryData<UserRoom[]>(['userRooms'], (prev) =>
+        (prev || []).map((r) => (r.id === updatedRoom.id ? updatedRoom : r))
+      );
     },
     onError: (error) => {
       toast.error(`Erreur : ${error.message}`);

@@ -39,9 +39,12 @@ export function RoomGeneralInfoForm({ room }: RoomGeneralInfoFormProps) {
 
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof generalInfoSchema>) => updateUserRoom(room.id, values),
-    onSuccess: () => {
+    onSuccess: (updatedRoom) => {
       toast.success("Informations générales mises à jour.");
-      queryClient.invalidateQueries({ queryKey: ['userRooms'] });
+      // Évite un refetch qui peut donner un effet "page blanche" : on met à jour le cache local.
+      queryClient.setQueryData<UserRoom[]>(['userRooms'], (prev) =>
+        (prev || []).map((r) => (r.id === updatedRoom.id ? updatedRoom : r))
+      );
     },
     onError: (error) => {
       toast.error(`Erreur : ${error.message}`);

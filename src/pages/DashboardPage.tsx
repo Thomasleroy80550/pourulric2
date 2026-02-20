@@ -52,6 +52,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BilanPdfButton from "@/components/BilanPdfButton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -81,15 +82,16 @@ const isInBilan2025Window = () => {
   return now >= start && now <= end;
 };
 
+const DashboardErrorThrower = () => {
+  throw new Error("Test ErrorBoundary (DashboardPage)");
+};
+
 const DashboardPage = () => {
   const { profile } = useSession();
 
   // Switch de test (visible uniquement en local/dev)
   const isDev = import.meta.env.DEV;
   const [throwTestError, setThrowTestError] = useState(false);
-  if (isDev && throwTestError) {
-    throw new Error("Test ErrorBoundary (DashboardPage)");
-  }
 
   const currentYear = new Date().getFullYear();
   const [showBilanNotice, setShowBilanNotice] = useState(false);
@@ -566,6 +568,12 @@ const DashboardPage = () => {
               </div>
             </div>
           </div>
+        ) : null}
+
+        {isDev && throwTestError ? (
+          <SectionErrorBoundary componentName="DashboardPage.ErrorTest" extra={{ dev: true }}>
+            <DashboardErrorThrower />
+          </SectionErrorBoundary>
         ) : null}
 
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>

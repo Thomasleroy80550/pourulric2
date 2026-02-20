@@ -5,7 +5,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut, CalendarDays, BedDouble, CalendarCheck2, Globe, KeyRound, UserRound, Shapes } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, Sparkles, CheckCircle, Clock, XCircle, LogIn, LogOut, CalendarDays, BedDouble, CalendarCheck2, Globe, KeyRound, UserRound, Shapes, PanelRight } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal } from 'lucide-react';
 import { fetchKrossbookingHousekeepingTasks, KrossbookingReservation, saveKrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
@@ -18,6 +18,7 @@ import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserProfile } from '@/lib/profile-api';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
@@ -67,6 +68,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const [hasScrolledRight, setHasScrolledRight] = useState(false);
 
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
   const firstDayCellRef = useRef<HTMLDivElement | null>(null);
@@ -248,7 +250,6 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                   className={cn(
                     "mr-2 inline-flex items-center justify-center rounded-full ring-1 ring-black/5 dark:ring-white/10 shadow-sm",
                     value.bgColor,
-                    // un look plus "premium" (léger gradient + highlight)
                     "bg-gradient-to-br from-white/20 to-black/10",
                     compact ? "h-6 w-6" : "h-8 w-8"
                   )}
@@ -265,6 +266,97 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
       </div>
     );
   };
+
+  const InfoPanelContent = () => (
+    <div className="space-y-4">
+      <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
+        <h3 className="text-md font-semibold mb-2">Résumé du mois</h3>
+        <div className="text-sm text-muted-foreground">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="rounded-md border bg-background/60 p-2">
+            <div className="text-[11px] text-muted-foreground">Réservations</div>
+            <div className="text-base font-semibold">{monthReservations.length}</div>
+          </div>
+          <div className="rounded-md border bg-background/60 p-2">
+            <div className="text-[11px] text-muted-foreground">Logements</div>
+            <div className="text-base font-semibold">{userRooms.length}</div>
+          </div>
+        </div>
+
+        {channelSummary.length > 0 && (
+          <div className="mt-3">
+            <div className="text-xs font-medium mb-2">Par plateforme</div>
+            <div className="space-y-1">
+              {channelSummary.map(([key, count]) => {
+                const info = channelColors[key] || channelColors.UNKNOWN;
+                return (
+                  <div key={key} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("w-2 h-2 rounded-full", info.bgColor)} />
+                      <span className="text-muted-foreground">{info.name}</span>
+                    </div>
+                    <span className="font-medium">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 text-xs text-muted-foreground">Astuce: ← / → pour changer de mois</div>
+      </div>
+
+      <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
+        <h3 className="text-md font-semibold mb-2">Aujourd'hui</h3>
+        <div className="text-xs text-muted-foreground mb-3">{format(new Date(), 'dd/MM/yyyy', { locale: fr })}</div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Arrivées</span>
+            <span className="font-semibold">{todayStats.arrivals.length}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Départs</span>
+            <span className="font-semibold">{todayStats.departures.length}</span>
+          </div>
+        </div>
+
+        {(todayStats.arrivals.length > 0 || todayStats.departures.length > 0) && (
+          <div className="mt-3 space-y-2">
+            {todayStats.arrivals.slice(0, 4).map((r) => (
+              <div key={`arr-${r.id}`} className="text-xs">
+                <span className="font-medium">Arrivée</span> — {r.property_name} — {r.guest_name}
+              </div>
+            ))}
+            {todayStats.departures.slice(0, 4).map((r) => (
+              <div key={`dep-${r.id}`} className="text-xs">
+                <span className="font-medium">Départ</span> — {r.property_name} — {r.guest_name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
+        <h3 className="text-md font-semibold mb-2">Prochains 7 jours</h3>
+        {next7Days.length === 0 ? (
+          <div className="text-sm text-muted-foreground">Aucun mouvement prévu.</div>
+        ) : (
+          <div className="space-y-2">
+            {next7Days.slice(0, 10).map((it) => (
+              <div key={`${it.type}-${it.r.id}-${it.date.toISOString()}`} className="text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium capitalize">{it.type}</span>
+                  <span className="text-muted-foreground">{format(it.date, 'EEE dd/MM', { locale: fr })}</span>
+                </div>
+                <div className="text-muted-foreground truncate">{it.r.property_name} — {it.r.guest_name}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const scrollToToday = () => {
     if (!wrapperRef.current) return;
@@ -443,13 +535,13 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   return (
     <Card className="max-w-full overflow-hidden border border-slate-200 dark:border-slate-700">
-      <CardHeader className="relative flex flex-row items-center justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
+      <CardHeader className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
         <CardTitle className="text-lg font-semibold">Planning Studio 2026</CardTitle>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
           <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-semibold text-lg tracking-tight text-slate-900 dark:text-white">
+          <span className="font-semibold text-base sm:text-lg tracking-tight text-slate-900 dark:text-white px-1 whitespace-nowrap">
             {format(currentMonth, 'MMMM yyyy', { locale: fr })}
           </span>
           <Button variant="outline" size="icon" onClick={goToNextMonth}>
@@ -459,6 +551,25 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             <CalendarDays className="h-4 w-4" />
             <span className="ml-2 hidden sm:inline">Aujourd'hui</span>
           </Button>
+
+          {/* Sur 1366x768 et autres résolutions, la colonne droite n'a pas assez de place :
+              on garde l'info accessible via un panneau */}
+          <Sheet open={isInfoPanelOpen} onOpenChange={setIsInfoPanelOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="2xl:hidden">
+                <PanelRight className="h-4 w-4" />
+                <span className="ml-2">Infos</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[360px] sm:w-[420px]">
+              <SheetHeader>
+                <SheetTitle>Infos calendrier</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <InfoPanelContent />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
         {/* Shine discret sur le header */}
         <div className="pointer-events-none absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 45%)' }} />
@@ -771,7 +882,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                 </div>
               </div>
 
-              {/* Légende (toujours juste sous le planning, même si la colonne droite est plus haute) */}
+              {/* Légende (toujours juste sous le planning) */}
               <div className="mt-3">
                 <LegendPanel compact />
               </div>
@@ -780,96 +891,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             {/* Zone droite (desktop large) */}
             <aside className="hidden 2xl:block w-80 shrink-0">
               <div className="sticky top-24 space-y-4">
-                <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
-                  <h3 className="text-md font-semibold mb-2">Résumé du mois</h3>
-                  <div className="text-sm text-muted-foreground">{format(currentMonth, 'MMMM yyyy', { locale: fr })}</div>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="rounded-md border bg-background/60 p-2">
-                      <div className="text-[11px] text-muted-foreground">Réservations</div>
-                      <div className="text-base font-semibold">{monthReservations.length}</div>
-                    </div>
-                    <div className="rounded-md border bg-background/60 p-2">
-                      <div className="text-[11px] text-muted-foreground">Logements</div>
-                      <div className="text-base font-semibold">{userRooms.length}</div>
-                    </div>
-                  </div>
-
-                  {channelSummary.length > 0 && (
-                    <div className="mt-3">
-                      <div className="text-xs font-medium mb-2">Par plateforme</div>
-                      <div className="space-y-1">
-                        {channelSummary.map(([key, count]) => {
-                          const info = channelColors[key] || channelColors.UNKNOWN;
-                          return (
-                            <div key={key} className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-2">
-                                <span className={cn("w-2 h-2 rounded-full", info.bgColor)} />
-                                <span className="text-muted-foreground">{info.name}</span>
-                              </div>
-                              <span className="font-medium">{count}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    Astuce: ← / → pour changer de mois
-                  </div>
-                </div>
-
-                <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
-                  <h3 className="text-md font-semibold mb-2">Aujourd'hui</h3>
-                  <div className="text-xs text-muted-foreground mb-3">{format(new Date(), 'dd/MM/yyyy', { locale: fr })}</div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Arrivées</span>
-                      <span className="font-semibold">{todayStats.arrivals.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Départs</span>
-                      <span className="font-semibold">{todayStats.departures.length}</span>
-                    </div>
-                  </div>
-
-                  {(todayStats.arrivals.length > 0 || todayStats.departures.length > 0) && (
-                    <div className="mt-3 space-y-2">
-                      {todayStats.arrivals.slice(0, 4).map((r) => (
-                        <div key={`arr-${r.id}`} className="text-xs">
-                          <span className="font-medium">Arrivée</span> — {r.property_name} — {r.guest_name}
-                        </div>
-                      ))}
-                      {todayStats.departures.slice(0, 4).map((r) => (
-                        <div key={`dep-${r.id}`} className="text-xs">
-                          <span className="font-medium">Départ</span> — {r.property_name} — {r.guest_name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
-                  <h3 className="text-md font-semibold mb-2">Prochains 7 jours</h3>
-                  {next7Days.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">Aucun mouvement prévu.</div>
-                  ) : (
-                    <div className="space-y-2">
-                      {next7Days.slice(0, 10).map((it) => (
-                        <div key={`${it.type}-${it.r.id}-${it.date.toISOString()}`} className="text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium capitalize">{it.type}</span>
-                            <span className="text-muted-foreground">{format(it.date, 'EEE dd/MM', { locale: fr })}</span>
-                          </div>
-                          <div className="text-muted-foreground truncate">
-                            {it.r.property_name} — {it.r.guest_name}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <InfoPanelContent />
               </div>
             </aside>
           </div>

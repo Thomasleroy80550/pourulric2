@@ -300,6 +300,15 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     setHasScrolledRight(el.scrollLeft < maxScroll);
   };
 
+  // IMPORTANT: sur certaines configs (petite résolution + scrollbar masquée),
+  // l'utilisateur ne voit pas qu'il peut scroller horizontalement.
+  // On calcule donc l'état initial pour afficher le bouton "→" dès que nécessaire.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => handleScroll());
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [daysInMonth, propertyColumnWidth, effectiveDayCellWidth, containerWidth]);
+
   // Boutons flottants pour un scroll fluide
   const scrollByAmount = (dir: 'left' | 'right') => {
     const el = wrapperRef.current;
@@ -469,7 +478,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour les voir ici.
           </p>
         ) : !loadingTasks && !error && userRooms.length > 0 ? (
-          <div className="flex flex-col xl:flex-row gap-4 items-start">
+          <div className="flex flex-col 2xl:flex-row gap-4 items-start">
             {/* Zone planning (gauche) */}
             <div className="min-w-0 w-full flex-1">
               <div ref={wrapperRef} className="relative w-full max-w-full overflow-x-auto rounded-xl" onScroll={handleScroll}>
@@ -769,7 +778,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
             </div>
 
             {/* Zone droite (desktop large) */}
-            <aside className="hidden xl:block w-80 shrink-0">
+            <aside className="hidden 2xl:block w-80 shrink-0">
               <div className="sticky top-24 space-y-4">
                 <div className="p-4 border rounded-md bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm">
                   <h3 className="text-md font-semibold mb-2">Résumé du mois</h3>

@@ -50,9 +50,6 @@ import Countdown from "@/components/Countdown";
 import BilanExportButton from "@/components/BilanExportButton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BilanPdfButton from "@/components/BilanPdfButton";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -82,14 +79,10 @@ const isInBilan2025Window = () => {
   return now >= start && now <= end;
 };
 
-// REMOVED: DashboardErrorThrower (le test se fait via simulateError sur SectionErrorBoundary)
+// REMOVED: test switch / simulated error boundary UI on DashboardPage
 
 const DashboardPage = () => {
   const { profile } = useSession();
-
-  // Switch de test (visible uniquement en local/dev)
-  const isDev = import.meta.env.DEV;
-  const [showTestBoundary, setShowTestBoundary] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const [showBilanNotice, setShowBilanNotice] = useState(false);
@@ -128,10 +121,11 @@ const DashboardPage = () => {
   const [loadingKrossbookingStats, setLoadingKrossbookingStats] = useState(true);
   const [krossbookingStatsError, setKrossbookingStatsError] = useState<string | null>(null);
   const [averageRating, setAverageRating] = useState<number | null>(null);
-  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [loadingReviews, setLoadingReviews] = useState(false);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
 
   const [isChartDialogOpen, setIsChartDialogOpen] = useState(false);
+
   const [dialogChartData, setDialogChartData] = useState<any[]>([]);
   const [dialogChartType, setDialogChartType] = useState<'line' | 'bar'>('line');
   const [dialogChartTitle, setDialogChartTitle] = useState('');
@@ -343,8 +337,6 @@ const DashboardPage = () => {
     setFinancialDataError(null);
     setLoadingKrossbookingStats(true);
     setKrossbookingStatsError(null);
-    setLoadingReviews(true);
-    setReviewsError(null);
     setLoadingTasks(true);
     setTasksError(null);
 
@@ -356,11 +348,9 @@ const DashboardPage = () => {
         const errorMsg = "Impossible de charger le profil utilisateur.";
         setFinancialDataError(errorMsg);
         setKrossbookingStatsError(errorMsg);
-        setReviewsError(errorMsg);
         setTasksError(errorMsg);
         setLoadingFinancialData(false);
         setLoadingKrossbookingStats(false);
-        setLoadingReviews(false);
         setLoadingTasks(false);
         return;
       }
@@ -493,13 +483,11 @@ const DashboardPage = () => {
       const errorMsg = `Erreur lors du chargement des données : ${err.message}`;
       setFinancialDataError(errorMsg);
       setKrossbookingStatsError(errorMsg);
-      setReviewsError(errorMsg);
       setTasksError(errorMsg);
       console.error("Error fetching dashboard data:", err);
     } finally {
       setLoadingFinancialData(false);
       setLoadingKrossbookingStats(false);
-      setLoadingReviews(false);
       setLoadingTasks(false);
     }
   }, [selectedYear]);
@@ -546,40 +534,6 @@ const DashboardPage = () => {
         className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words"
         ref={dashboardRef}
       >
-        {isDev ? (
-          <div className="mb-4 rounded-md border bg-background p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <div className="text-sm font-medium">Tests ErrorBoundary</div>
-                <div className="text-xs text-muted-foreground">Visible uniquement en dev/local.</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="throw-boundary-error" className="text-sm">
-                  Afficher le fallback
-                </Label>
-                <Switch
-                  id="throw-boundary-error"
-                  checked={showTestBoundary}
-                  onCheckedChange={setShowTestBoundary}
-                  variant="destructive"
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {isDev ? (
-          <SectionErrorBoundary
-            componentName="DashboardPage.ErrorTest"
-            extra={{ dev: true }}
-            simulateError={showTestBoundary}
-            simulateErrorMessage="Test ErrorBoundary (DashboardPage)"
-            onRetry={() => setShowTestBoundary(false)}
-          >
-            <></>
-          </SectionErrorBoundary>
-        ) : null}
-
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
         <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
         <div className="mb-6 flex flex-wrap items-center gap-3">

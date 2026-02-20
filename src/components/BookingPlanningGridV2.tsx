@@ -9,6 +9,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMont
 import { fr } from "date-fns/locale";
 import { UserRoom } from "@/lib/user-room-api";
 import { KrossbookingReservation } from "@/lib/krossbooking";
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 
 type Props = {
   userRooms: UserRoom[];
@@ -27,7 +28,7 @@ const channelMap = (channel?: string) => {
   return { name: key || "N/A", bg: "bg-emerald-600", text: "text-white" };
 };
 
-const BookingPlanningGridV2: React.FC<Props> = ({ userRooms, reservations }) => {
+const BookingPlanningGridV2Inner: React.FC<Props> = ({ userRooms, reservations }) => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -211,5 +212,11 @@ const BookingPlanningGridV2: React.FC<Props> = ({ userRooms, reservations }) => 
     </Card>
   );
 };
+
+const BookingPlanningGridV2: React.FC<Props> = (props) => (
+  <SectionErrorBoundary componentName="BookingPlanningGridV2">
+    <BookingPlanningGridV2Inner {...props} />
+  </SectionErrorBoundary>
+);
 
 export default BookingPlanningGridV2;

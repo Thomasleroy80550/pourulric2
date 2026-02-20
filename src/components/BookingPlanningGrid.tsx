@@ -16,6 +16,7 @@ import OwnerReservationDialog from './OwnerReservationDialog';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserProfile } from '@/lib/profile-api';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
@@ -614,4 +615,10 @@ const BookingPlanningGrid: React.FC<BookingPlanningGridProps> = ({ refreshTrigge
   );
 };
 
-export default BookingPlanningGrid;
+const BookingPlanningGridWithBoundary: React.FC<BookingPlanningGridProps> = (props) => (
+  <SectionErrorBoundary componentName="BookingPlanningGrid">
+    <BookingPlanningGrid {...props} />
+  </SectionErrorBoundary>
+);
+
+export default BookingPlanningGridWithBoundary;

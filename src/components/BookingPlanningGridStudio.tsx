@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserProfile } from '@/lib/profile-api';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 const channelColors: { [key: string]: { name: string; bgColor: string; textColor: string; } } = {
   'AIRBNB': { name: 'Airbnb', bgColor: 'bg-[#ff0000]', textColor: 'text-white' },
@@ -1260,4 +1261,10 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   );
 };
 
-export default BookingPlanningGridStudio;
+const BookingPlanningGridStudioWithBoundary: React.FC<BookingPlanningGridStudioProps> = (props) => (
+  <SectionErrorBoundary componentName="BookingPlanningGridStudio">
+    <BookingPlanningGridStudio {...props} />
+  </SectionErrorBoundary>
+);
+
+export default BookingPlanningGridStudioWithBoundary;

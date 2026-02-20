@@ -3,6 +3,7 @@
 import React from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 
 type EmailHtmlEditorProps = {
   value: string;
@@ -52,18 +53,20 @@ const EmailHtmlEditor: React.FC<EmailHtmlEditorProps> = ({
   className,
 }) => {
   return (
-    <div className={className}>
-      <div className="rounded-md border border-input bg-background">
-        <ReactQuill
-          theme="snow"
-          value={value}
-          onChange={onChange}
-          modules={modules}
-          formats={formats}
-          readOnly={disabled}
-        />
+    <SectionErrorBoundary componentName="EmailHtmlEditor">
+      <div className={className}>
+        <div className="rounded-md border border-input bg-background">
+          <ReactQuill
+            theme="snow"
+            value={value}
+            onChange={onChange}
+            modules={modules}
+            formats={formats}
+            readOnly={disabled}
+          />
+        </div>
       </div>
-    </div>
+    </SectionErrorBoundary>
   );
 };
 

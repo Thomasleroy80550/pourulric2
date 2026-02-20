@@ -15,6 +15,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import SectionErrorBoundary from "@/components/SectionErrorBoundary"
 
 interface PricePositionChartProps {
   data: {
@@ -24,6 +25,14 @@ interface PricePositionChartProps {
 }
 
 export function PricePositionChart({ data }: PricePositionChartProps) {
+  return (
+    <SectionErrorBoundary componentName="PricePositionChart">
+      <PricePositionChartInner data={data} />
+    </SectionErrorBoundary>
+  )
+}
+
+function PricePositionChartInner({ data }: PricePositionChartProps) {
   const chartData = [
     { label: "Votre Prix Moyen", value: data.userAveragePrice, fill: "var(--color-user)" },
     { label: "Moyenne Concurrents", value: data.competitorAveragePrice, fill: "var(--color-competitors)" },

@@ -101,6 +101,8 @@ import DashboardPageV2 from "./pages/DashboardPageV2";
 import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 import AdminTemperaturePage from "./pages/AdminTemperaturePage";
 
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -113,105 +115,107 @@ function App() {
           <BrowserRouter>
             <InvoiceGenerationProvider>
               <SessionContextProvider>
-                {/* Bandeau global Contrat résilié */}
-                <ContractTerminatedBanner />
-                {/* The SessionContextProvider handles its own loading state and redirects */}
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/login-v2" element={<LoginV2 />} />
-                  <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
-                  <Route path="/admin" element={<AdminDashboardPage />} />
-                  <Route path="/admin/pages" element={<PageCreator />} />
-                  <Route path="/admin/blog" element={<BlogManager />} />
-                  <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
-                  <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} />
-                  <Route path="/admin/statements" element={<AdminStatementsPage />} />
-                  <Route path="/admin/transfer-summary" element={<AdminTransferSummaryPage />} />
-                  <Route path="/admin/users" element={<AdminUsersPage />} />
-                  <Route path="/admin/settings" element={<AdminSettingsPage />} />
-                  <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
-                  <Route path="/admin/module-requests" element={<AdminModuleRequestsPage />} />
-                  <Route path="/admin/season-requests" element={<AdminSeasonRequestsPage />} />
-                  <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
-                  <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
-                  <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
-                  <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
-                  <Route path="/admin/faq" element={<AdminFaqPage />} />
-                  <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
-                  <Route path="/admin/changelog" element={<AdminChangelogPage />} />
-                  <Route path="/admin/ideas" element={<AdminIdeasPage />} />
-                  <Route path="/admin/documents" element={<AdminDocumentsPage />} />
-                  <Route path="/admin/newsletter" element={<AdminNewsletterPage />} />
-                  <Route path="/prospect-signup" element={<ProspectSignupPage />} />
-                  <Route path="/admin/marketplace" element={<AdminMarketplacePage />} /> {/* New route */}
-                  <Route path="/admin/stripe-transactions" element={<AdminStripeTransactionsPage />} />
-                  <Route path="/admin/stripe-match" element={<AdminStripeMatchPage />} /> {/* New route */}
-                  <Route path="/admin/hello-keys-stats" element={<AdminHelloKeysStatsPage />} /> {/* New route */}
-                  <Route path="/admin/stripe-transfers" element={<AdminStripeTransfersPage />} /> {/* New route */}
-                  <Route path="/admin/stripe-duplicates" element={<AdminStripeDuplicatesPage />} /> {/* New route */}
-                  <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}
-                  <Route path="/admin/manual-stats" element={<AdminManualStatsPage />} /> {/* New route */}
-                  <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
-                  <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
-                  <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
-                  <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
-                  <Route path="/admin/crm" element={<AdminCRMPage />} />
-                  <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
-                  <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
-                  <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
-                  <Route path="/admin/status" element={<AdminStatusPage />} />
-                  <Route path="/status" element={<StatusPage />} />
-                  <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
-                  <Route path="/pages/:slug" element={<ContentPage />} />
-                  <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/blog" element={<BlogPage />} />
-                  <Route path="/blog/:slug" element={<BlogPostPage />} />
-                  <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
-                  <Route path="/promotion" element={<PromotionPage />} />
-                  <Route path="/new-version" element={<NewVersionPage />} />
-                  <Route path="/redeem-invite" element={<RedeemInvitePage />} />
-                  <Route path="/season-2026" element={<Season2026Page />} />
-                  <Route path="/season-2026/prices" element={<MySeasonPricesPage />} />
-                  <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
-                  <Route path="/powersense" element={<PowerSenseLandingFull />} />
-                  <Route path="/marvel-2026" element={<Marvel2026Landing />} />
-                  <Route path="/thermobnb" element={<ThermoBnBLandingPage />} />
-                  <Route path="/thermobnb-access" element={<ThermoBnBAccessPage />} />
-                  <Route path="/admin/recovery" element={<AdminRecoveryPage />} />
-                  <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />
-                  <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />
-                  <Route path="/integrations/netatmo/dashboard" element={<NetatmoDashboardPage />} />
-                  <Route path="/integrations/netatmo/stations" element={<NetatmoStationsPage />} />
-                  <Route path="/integrations/netatmo/override" element={<NetatmoTokenOverridePage />} />
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/home-v2" element={<DashboardPageV2 />} />
-                  <Route path="/calendar" element={<CalendarPage />} />
-                  <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
-                  <Route path="/bookings" element={<BookingsPage />} />
-                  <Route path="/performance" element={<PerformancePage />} />
-                  <Route path="/reviews" element={<ReviewsPage />} />
-                  <Route path="/finances" element={<FinancePage />} />
-                  <Route path="/tourist-tax" element={<TouristTaxPage />} />
-                  <Route path="/reports" element={<TechnicalReportsPage />} />
-                  <Route path="/reports/:id" element={<TechnicalReportDetailPage />} />
-                  <Route path="/help" element={<HelpPage />} />
-                  <Route path="/modules" element={<ModulesPage />} />
-                  <Route path="/roadmap" element={<RoadmapPage />} />
-                  <Route path="/my-rooms" element={<MyRoomsPage />} />
-                  <Route path="/faq" element={<FaqPage />} />
-                  <Route path="/comp-set" element={<CompSetPage />} />
-                  <Route path="/tickets" element={<TicketsPage />} />
-                  <Route path="/tickets/:id" element={<TicketDetailPage />} />
-                  <Route path="/marketplace" element={<MarketplacePage />} /> {/* New route */}
-                  <Route path="/admin-v2" element={<AdminV2Dashboard />} />
-                  <Route path="/admin-v2/users" element={<AdminV2Users />} />
-                  <Route path="/messages" element={<MessagesPage />} />
-                  <Route path="/electricity-start" element={<ElectricityServiceLanding />} />
-                  <Route path="/electricity" element={<ElectricityConsumptionPage />} />
-                  <Route path="/notifications" element={<NotificationsPage />} />
-                  <Route path="/admin/missing-2025-stats" element={<AdminMissing2025StatsPage />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <SectionErrorBoundary kind="global" componentName="AppRoutes">
+                  {/* Bandeau global Contrat résilié */}
+                  <ContractTerminatedBanner />
+                  {/* The SessionContextProvider handles its own loading state and redirects */}
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/login-v2" element={<LoginV2 />} />
+                    <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
+                    <Route path="/admin" element={<AdminDashboardPage />} />
+                    <Route path="/admin/pages" element={<PageCreator />} />
+                    <Route path="/admin/blog" element={<BlogManager />} />
+                    <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
+                    <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} />
+                    <Route path="/admin/statements" element={<AdminStatementsPage />} />
+                    <Route path="/admin/transfer-summary" element={<AdminTransferSummaryPage />} />
+                    <Route path="/admin/users" element={<AdminUsersPage />} />
+                    <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                    <Route path="/admin/strategies" element={<AdminStrategiesPage />} />
+                    <Route path="/admin/module-requests" element={<AdminModuleRequestsPage />} />
+                    <Route path="/admin/season-requests" element={<AdminSeasonRequestsPage />} />
+                    <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
+                    <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
+                    <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
+                    <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
+                    <Route path="/admin/faq" element={<AdminFaqPage />} />
+                    <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+                    <Route path="/admin/changelog" element={<AdminChangelogPage />} />
+                    <Route path="/admin/ideas" element={<AdminIdeasPage />} />
+                    <Route path="/admin/documents" element={<AdminDocumentsPage />} />
+                    <Route path="/admin/newsletter" element={<AdminNewsletterPage />} />
+                    <Route path="/prospect-signup" element={<ProspectSignupPage />} />
+                    <Route path="/admin/marketplace" element={<AdminMarketplacePage />} /> {/* New route */}
+                    <Route path="/admin/stripe-transactions" element={<AdminStripeTransactionsPage />} />
+                    <Route path="/admin/stripe-match" element={<AdminStripeMatchPage />} /> {/* New route */}
+                    <Route path="/admin/hello-keys-stats" element={<AdminHelloKeysStatsPage />} /> {/* New route */}
+                    <Route path="/admin/stripe-transfers" element={<AdminStripeTransfersPage />} /> {/* New route */}
+                    <Route path="/admin/stripe-duplicates" element={<AdminStripeDuplicatesPage />} /> {/* New route */}
+                    <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}
+                    <Route path="/admin/manual-stats" element={<AdminManualStatsPage />} /> {/* New route */}
+                    <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
+                    <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
+                    <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
+                    <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
+                    <Route path="/admin/crm" element={<AdminCRMPage />} />
+                    <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
+                    <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
+                    <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
+                    <Route path="/admin/status" element={<AdminStatusPage />} />
+                    <Route path="/status" element={<StatusPage />} />
+                    <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
+                    <Route path="/pages/:slug" element={<ContentPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/blog" element={<BlogPage />} />
+                    <Route path="/blog/:slug" element={<BlogPostPage />} />
+                    <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
+                    <Route path="/promotion" element={<PromotionPage />} />
+                    <Route path="/new-version" element={<NewVersionPage />} />
+                    <Route path="/redeem-invite" element={<RedeemInvitePage />} />
+                    <Route path="/season-2026" element={<Season2026Page />} />
+                    <Route path="/season-2026/prices" element={<MySeasonPricesPage />} />
+                    <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
+                    <Route path="/powersense" element={<PowerSenseLandingFull />} />
+                    <Route path="/marvel-2026" element={<Marvel2026Landing />} />
+                    <Route path="/thermobnb" element={<ThermoBnBLandingPage />} />
+                    <Route path="/thermobnb-access" element={<ThermoBnBAccessPage />} />
+                    <Route path="/admin/recovery" element={<AdminRecoveryPage />} />
+                    <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />
+                    <Route path="/integrations/netatmo/callback" element={<NetatmoCallbackPage />} />
+                    <Route path="/integrations/netatmo/dashboard" element={<NetatmoDashboardPage />} />
+                    <Route path="/integrations/netatmo/stations" element={<NetatmoStationsPage />} />
+                    <Route path="/integrations/netatmo/override" element={<NetatmoTokenOverridePage />} />
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/home-v2" element={<DashboardPageV2 />} />
+                    <Route path="/calendar" element={<CalendarPage />} />
+                    <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
+                    <Route path="/bookings" element={<BookingsPage />} />
+                    <Route path="/performance" element={<PerformancePage />} />
+                    <Route path="/reviews" element={<ReviewsPage />} />
+                    <Route path="/finances" element={<FinancePage />} />
+                    <Route path="/tourist-tax" element={<TouristTaxPage />} />
+                    <Route path="/reports" element={<TechnicalReportsPage />} />
+                    <Route path="/reports/:id" element={<TechnicalReportDetailPage />} />
+                    <Route path="/help" element={<HelpPage />} />
+                    <Route path="/modules" element={<ModulesPage />} />
+                    <Route path="/roadmap" element={<RoadmapPage />} />
+                    <Route path="/my-rooms" element={<MyRoomsPage />} />
+                    <Route path="/faq" element={<FaqPage />} />
+                    <Route path="/comp-set" element={<CompSetPage />} />
+                    <Route path="/tickets" element={<TicketsPage />} />
+                    <Route path="/tickets/:id" element={<TicketDetailPage />} />
+                    <Route path="/marketplace" element={<MarketplacePage />} /> {/* New route */}
+                    <Route path="/admin-v2" element={<AdminV2Dashboard />} />
+                    <Route path="/admin-v2/users" element={<AdminV2Users />} />
+                    <Route path="/messages" element={<MessagesPage />} />
+                    <Route path="/electricity-start" element={<ElectricityServiceLanding />} />
+                    <Route path="/electricity" element={<ElectricityConsumptionPage />} />
+                    <Route path="/notifications" element={<NotificationsPage />} />
+                    <Route path="/admin/missing-2025-stats" element={<AdminMissing2025StatsPage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </SectionErrorBoundary>
               </SessionContextProvider>
             </InvoiceGenerationProvider>
           </BrowserRouter>

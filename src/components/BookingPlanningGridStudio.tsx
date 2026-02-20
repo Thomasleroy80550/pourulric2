@@ -35,6 +35,9 @@ const channelColors: { [key: string]: { name: string; bgColor: string; textColor
 // Helper: normaliser pour les comparaisons (évite les soucis de casse/espaces)
 const norm = (v?: string | number) => (v ?? '').toString().trim().toLowerCase();
 
+// Helper clamp (équivalent JS de CSS clamp())
+const clamp = (minV: number, preferred: number, maxV: number) => Math.min(maxV, Math.max(minV, preferred));
+
 interface BookingPlanningGridStudioProps {
   refreshTrigger: number;
   userRooms: UserRoom[];
@@ -128,18 +131,26 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
   const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
-  // Largeurs ultra
-  const propertyColumnWidth = useMemo(() => (isMobile ? 70 : 160), [isMobile]);
+  // Largeurs ultra (adaptatives)
+  const propertyColumnWidth = useMemo(() => {
+    if (isMobile) return 70;
+    // Clamp style: min 110px, idéal ~18% de la largeur visible, max 160px
+    const preferred = containerWidth ? containerWidth * 0.18 : 160;
+    return Math.round(clamp(110, preferred, 160));
+  }, [isMobile, containerWidth]);
 
   const dayCellWidth = useMemo(() => {
-    const minCell = isMobile ? 24 : 32;
-    if (!containerWidth) return minCell;
+    // On réduit un peu le min sur desktop pour petites résolutions (1366×768)
+    const minCell = isMobile ? 22 : 20;
+    const maxCell = isMobile ? 26 : 34;
+    if (!containerWidth) return isMobile ? 24 : 32;
+
     const available = Math.max(0, containerWidth - propertyColumnWidth);
-    // IMPORTANT: ne pas arrondir à l'entier (floor) sinon la grille peut être plus petite que le conteneur
-    // et laisser un "vide" à droite. Les px fractionnaires sont OK en CSS.
-    const calculated = available / daysInMonth.length;
-    return Math.max(minCell, calculated);
-  }, [isMobile, containerWidth, propertyColumnWidth, daysInMonth]);
+    const preferred = available / daysInMonth.length;
+
+    // Clamp style: taille fluide avec limites
+    return clamp(minCell, preferred, maxCell);
+  }, [isMobile, containerWidth, propertyColumnWidth, daysInMonth.length]);
 
   const effectiveDayCellWidth = useMemo(() => {
     return measuredDayCellWidth > 0 ? measuredDayCellWidth : dayCellWidth;
@@ -518,7 +529,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
         if (w > 0) setMeasuredDayCellWidth(w);
       } else {
         const total = el.getBoundingClientRect().width - propertyColumnWidth;
-        const w = Math.floor(total / daysInMonth.length);
+        const w = total / daysInMonth.length;
         if (w > 0) setMeasuredDayCellWidth(w);
       }
     });

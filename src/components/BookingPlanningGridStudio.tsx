@@ -552,12 +552,11 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Affichage de la colonne de droite uniquement sur une plage de largeurs.
-  // À partir de 1989px, on remplace la colonne par un bouton "Infos" (panneau) pour laisser le planning en pleine largeur.
+  // Affichage de la colonne de droite uniquement quand l'écran est suffisamment large.
+  // À partir de 1989px : colonne visible. En dessous : bouton "Infos" obligatoire.
   const showRightAside = useMemo(() => {
     if (debugFullWidth) return false;
-    if (viewportWidth >= 1989) return false;
-    return viewportWidth >= 1536; // équivalent 2xl
+    return viewportWidth >= 1989;
   }, [debugFullWidth, viewportWidth]);
 
   const showInfoButton = useMemo(() => {

@@ -220,7 +220,7 @@ const MySeasonPricesPage: React.FC = () => {
 
         {/* Dialog de modification */}
         <Dialog open={editOpen} onOpenChange={(o) => { if (!o) setEditOpen(false); }}>
-          <DialogContent className="sm:max-w-4xl">
+          <DialogContent className="w-[95vw] max-w-xl sm:max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Proposer une modification</DialogTitle>
             </DialogHeader>
@@ -234,49 +234,53 @@ const MySeasonPricesPage: React.FC = () => {
                     <CardDescription>Modifiez vos prix et/ou min séjour; une nouvelle demande sera créée.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Du</TableHead>
-                          <TableHead>Au</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Saison</TableHead>
-                          <TableHead>Prix (€)</TableHead>
-                          <TableHead>Min séjour</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {editingRequest.items.map((it, idx) => {
-                          const inputs = inputsByIndex[idx] || {};
-                          return (
-                            <TableRow key={`${editingRequest.id}-edit-${idx}`}>
-                              <TableCell>{it.start_date}</TableCell>
-                              <TableCell>{it.end_date}</TableCell>
-                              <TableCell>{it.period_type || "—"}</TableCell>
-                              <TableCell>{it.season || "—"}</TableCell>
-                              <TableCell>
-                                <Input
-                                  type="number"
-                                  step="1"
-                                  placeholder={typeof it.price === "number" ? String(it.price) : "ex: 120"}
-                                  value={typeof inputs.price === "number" ? inputs.price : ""}
-                                  onChange={(e) => handleInputChange(idx, "price", e.target.value)}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  type="number"
-                                  step="1"
-                                  placeholder={typeof it.min_stay === "number" ? String(it.min_stay) : "ex: 2"}
-                                  value={typeof inputs.min_stay === "number" ? inputs.min_stay : ""}
-                                  onChange={(e) => handleInputChange(idx, "min_stay", e.target.value)}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Du</TableHead>
+                            <TableHead>Au</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Saison</TableHead>
+                            <TableHead>Prix (€)</TableHead>
+                            <TableHead>Min séjour</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {editingRequest.items.map((it, idx) => {
+                            const inputs = inputsByIndex[idx] || {};
+                            return (
+                              <TableRow key={`${editingRequest.id}-edit-${idx}`}>
+                                <TableCell>{it.start_date}</TableCell>
+                                <TableCell>{it.end_date}</TableCell>
+                                <TableCell>{it.period_type || "—"}</TableCell>
+                                <TableCell>{it.season || "—"}</TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    placeholder={typeof it.price === "number" ? String(it.price) : "ex: 120"}
+                                    value={typeof inputs.price === "number" ? inputs.price : ""}
+                                    onChange={(e) => handleInputChange(idx, "price", e.target.value)}
+                                    className="min-w-24"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    step="1"
+                                    placeholder={typeof it.min_stay === "number" ? String(it.min_stay) : "ex: 2"}
+                                    value={typeof inputs.min_stay === "number" ? inputs.min_stay : ""}
+                                    onChange={(e) => handleInputChange(idx, "min_stay", e.target.value)}
+                                    className="min-w-20"
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                     <div className="flex justify-end mt-4">
                       <Button onClick={submitModification} disabled={submitting}>
                         {submitting ? (

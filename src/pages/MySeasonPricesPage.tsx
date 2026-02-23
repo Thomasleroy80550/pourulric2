@@ -222,7 +222,23 @@ const MySeasonPricesPage: React.FC = () => {
         <Dialog open={editOpen} onOpenChange={(o) => { if (!o) setEditOpen(false); }}>
           <DialogContent className="w-[95vw] max-w-xl sm:max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Proposer une modification</DialogTitle>
+              <div className="flex items-start justify-between gap-3">
+                <DialogTitle>Proposer une modification</DialogTitle>
+                <Button
+                  onClick={submitModification}
+                  disabled={submitting || !editingRequest}
+                  className="shrink-0"
+                >
+                  {submitting ? (
+                    <span className="inline-flex items-center">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Envoi...
+                    </span>
+                  ) : (
+                    "Envoyer"
+                  )}
+                </Button>
+              </div>
             </DialogHeader>
             {editingRequest ? (
               <div className="space-y-4">
@@ -280,18 +296,6 @@ const MySeasonPricesPage: React.FC = () => {
                           })}
                         </TableBody>
                       </Table>
-                    </div>
-                    <div className="flex justify-end mt-4">
-                      <Button onClick={submitModification} disabled={submitting}>
-                        {submitting ? (
-                          <span className="inline-flex items-center">
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Envoi...
-                          </span>
-                        ) : (
-                          "Envoyer la modification"
-                        )}
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>

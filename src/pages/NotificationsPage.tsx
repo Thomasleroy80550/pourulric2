@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import SupportPolicyDialog from "@/components/SupportPolicyDialog";
 import Bilan2025NoticeDialog from "@/components/Bilan2025NoticeDialog";
 import { useSession } from "@/components/SessionContextProvider";
+import DirectDebitRequestDialog from "@/components/DirectDebitRequestDialog";
 
 const isInBilanNoticeWindow = () => {
   const now = new Date();
@@ -133,6 +134,37 @@ const NotificationsPage: React.FC = () => {
             <CardTitle className="text-lg">Informations importantes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Fin d'acceptation des paiements par chèque */}
+            <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4">
+              <h3 className="text-base md:text-lg font-semibold text-amber-900 dark:text-amber-100 break-words">
+                Fin d’acceptation des paiements par chèque (factures propriétaire)
+              </h3>
+              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200 break-words">
+                Nous n'acceptons plus le règlement par chèque pour les factures propriétaire.
+              </p>
+              <div className="mt-3 text-sm text-amber-900 dark:text-amber-100">
+                <div className="font-semibold">Moyens de paiement :</div>
+                <ul className="list-disc pl-5 mt-1 space-y-1">
+                  <li>Prélèvement bancaire</li>
+                  <li>Virement bancaire</li>
+                  <li>Carte bancaire (CB)</li>
+                </ul>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <DirectDebitRequestDialog />
+                <Button
+                  variant="ghost"
+                  className="text-amber-700 hover:bg-amber-100"
+                  onClick={() => {
+                    window.location.href = "mailto:contact@hellokeys.fr?subject=Paiement%20factures%20propri%C3%A9taire%20-%20informations";
+                  }}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Contacter Hello Keys
+                </Button>
+              </div>
+            </div>
+
             {/* Arrêt du support WhatsApp */}
             <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4">
               <h3 className="text-base md:text-lg font-semibold text-amber-900 dark:text-amber-100 break-words">

@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { buildClientErrorPayload, ErrorLoggingContext, logClientError } from "@/lib/error-logging-api";
+import { supabase } from "@/integrations/supabase/client";
+import { buildClientErrorPayload, ErrorLoggingContext } from "@/lib/error-logging-api";
 
 type ErrorReportDialogProps = {
   open: boolean;
@@ -52,7 +53,7 @@ export default function ErrorReportDialog({ open, onOpenChange, error, errorInfo
   const onSend = async () => {
     setSending(true);
     try {
-      await logClientError({
+      const payload = {
         ...defaultPayload,
         user_email: email || null,
         user_description: description || null,
@@ -60,7 +61,14 @@ export default function ErrorReportDialog({ open, onOpenChange, error, errorInfo
           ...(defaultPayload.metadata ?? {}),
           kind: "user_report",
         },
+      };
+
+      const { error } = await supabase.functions.invoke("log-client-error", {
+        body: payload,
       });
+
+      if (error) throw error;
+
       toast.success("Merci, votre signalement a été envoyé.");
       onOpenChange(false);
     } catch (e: any) {

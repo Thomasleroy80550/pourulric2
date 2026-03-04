@@ -282,7 +282,7 @@ const ProfilePage: React.FC = () => {
     return (
       <MainLayout>
         <div className="container mx-auto py-4 sm:py-6">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Mon Profil</h1>
+          <h1 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-6">Mon Profil</h1>
           {renderSkeleton()}
         </div>
       </MainLayout>
@@ -292,7 +292,7 @@ const ProfilePage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto py-4 sm:py-6">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Mon Profil</h1>
+        <h1 className="text-xl sm:text-3xl font-bold mb-4 sm:mb-6">Mon Profil</h1>
 
         {userProfile?.is_banned && (
           <Alert variant="destructive" className="mb-6">
@@ -348,7 +348,7 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="personal-data" className="flex-1">
             <Card className="w-full">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><User /> Données personnelles</CardTitle>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><User /> Données personnelles</CardTitle>
                 <CardDescription>Les informations fournies ci-dessous figureront sur vos factures.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -403,7 +403,7 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="payment-preferences" className="flex-1">
             <Card className="w-full mb-6">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Airbnb/Booking.com</CardTitle>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Banknote /> Paiement Airbnb/Booking.com</CardTitle>
                 <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Airbnb et Booking.com.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -420,7 +420,7 @@ const ProfilePage: React.FC = () => {
 
             <Card className="w-full">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Banknote /> Paiement Abritel/Hello Keys</CardTitle>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Banknote /> Paiement Abritel/Hello Keys</CardTitle>
                 <CardDescription>Les renseignements fournis ci-dessous seront utilisés afin de vous envoyer les fonds pour vos réservations via Abritel et notre site.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -445,7 +445,7 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="my-offer" className="flex-1">
             <Card className="w-full">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Briefcase /> Mon offre</CardTitle>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Briefcase /> Mon offre</CardTitle>
                 <CardDescription>Les informations fournies ci-dessous constituent les détails de votre offre.</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -518,14 +518,14 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="referral" className="flex-1">
             <Card className="w-full">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Gift /> Programme de Parrainage</CardTitle>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Gift /> Programme de Parrainage</CardTitle>
                 <CardDescription>Partagez votre code de parrainage et gagnez des crédits pour chaque nouvel utilisateur qui nous rejoint grâce à vous !</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
                   <Label htmlFor="referralCode">Votre code de parrainage unique</Label>
                   <div className="flex items-center gap-2 mt-1">
-                    <Input id="referralCode" value={profile?.referral_code || 'Génération...'} readOnly className="font-mono text-lg" />
+                    <Input id="referralCode" value={profile?.referral_code || 'Génération...'} readOnly className="font-mono text-base sm:text-lg" />
                     <Button
                       variant="outline"
                       size="icon"
@@ -543,7 +543,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div>
                   <Label>Vos crédits de parrainage</Label>
-                  <div className="text-4xl font-bold text-primary mt-1">
+                  <div className="text-3xl sm:text-4xl font-bold text-primary mt-1">
                     {profile?.referral_credits || 0}
                   </div>
                   <p className="text-sm text-muted-foreground">Utilisez vos crédits pour obtenir des réductions sur nos services.</p>
@@ -559,7 +559,7 @@ const ProfilePage: React.FC = () => {
           <TabsContent value="settings" className="flex-1">
             <Card className="w-full">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Settings /> Paramètres & Notifications</CardTitle>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Settings /> Paramètres & Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
@@ -624,7 +624,7 @@ const ProfilePage: React.FC = () => {
             ) : (
               <Card className="w-full">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><KeyRound /> Sécurité</CardTitle>
+                  <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><KeyRound /> Sécurité</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Alert>

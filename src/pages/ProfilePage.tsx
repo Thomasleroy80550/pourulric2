@@ -79,6 +79,10 @@ const ProfilePage: React.FC = () => {
   const [isAttestationDialogOpen, setIsAttestationDialogOpen] = useState(false);
   const [insuranceLoading, setInsuranceLoading] = useState(false);
 
+  const [activeTab, setActiveTab] = useState(
+    'personal-data'
+  );
+
   // Form state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -107,7 +111,7 @@ const ProfilePage: React.FC = () => {
     setError(null);
     try {
       const fetchedProfile = await getProfile();
-      
+
       setProfile(fetchedProfile);
 
       if (fetchedProfile) {
@@ -277,8 +281,8 @@ const ProfilePage: React.FC = () => {
   if (loading && !profile) {
     return (
       <MainLayout>
-        <div className="container mx-auto py-6">
-          <h1 className="text-3xl font-bold mb-6">Mon Profil</h1>
+        <div className="container mx-auto py-4 sm:py-6">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Mon Profil</h1>
           {renderSkeleton()}
         </div>
       </MainLayout>
@@ -287,8 +291,8 @@ const ProfilePage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Mon Profil</h1>
+      <div className="container mx-auto py-4 sm:py-6">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Mon Profil</h1>
 
         {userProfile?.is_banned && (
           <Alert variant="destructive" className="mb-6">
@@ -308,8 +312,28 @@ const ProfilePage: React.FC = () => {
           </Alert>
         )}
 
-        <Tabs defaultValue="personal-data" className="flex flex-col lg:flex-row lg:space-x-6 h-full">
-          <TabsList className="flex flex-row lg:flex-col w-full lg:w-64 space-x-2 lg:space-x-0 lg:space-y-1 overflow-x-auto pb-2 lg:pb-0">
+        {/* Navigation mobile : un select (plus lisible qu'une liste d'onglets trop large) */}
+        <div className="lg:hidden mb-4">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choisir une section" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="personal-data">Données personnelles</SelectItem>
+              <SelectItem value="payment-preferences">Préférences de paiement</SelectItem>
+              <SelectItem value="my-offer">Mon offre</SelectItem>
+              <SelectItem value="referral">Parrainage</SelectItem>
+              <SelectItem value="kyc">KYC / Vérification</SelectItem>
+              <SelectItem value="settings">Paramètres</SelectItem>
+              <SelectItem value="security">Sécurité</SelectItem>
+              <SelectItem value="documents">Coffre-Fort</SelectItem>
+              <SelectItem value="delegated-access">Accès délégués</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col lg:flex-row lg:space-x-6 h-full">
+          <TabsList className="hidden lg:flex lg:flex-col w-full lg:w-64 lg:space-y-1">
             <TabsTrigger value="personal-data">Données personnelles</TabsTrigger>
             <TabsTrigger value="payment-preferences">Préférences de paiement</TabsTrigger>
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
@@ -345,7 +369,7 @@ const ProfilePage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Input id="phone" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+33612345678" disabled={userProfile?.is_banned} />
                     {profile?.phone_number && phoneNumber === profile.phone_number ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" title="Numéro vérifié" />
+                      <CheckCircle className="h-5 w-5 text-green-500" />
                     ) : (
                       <Button
                         variant="outline"
@@ -457,9 +481,16 @@ const ProfilePage: React.FC = () => {
                   <Label>Dernière signature CGUV</Label>
                   <Input value={profile?.cguv_accepted_at && isValid(parseISO(profile.cguv_accepted_at)) ? `${format(parseISO(profile.cguv_accepted_at), 'dd/MM/yyyy')} (v${profile.cguv_version || CURRENT_CGUV_VERSION})` : 'Non signé'} disabled />
                 </div>
-                <div className="flex items-center gap-4 md:col-span-2">
-                  <Button variant="outline" onClick={() => setIsCguvModalOpen(true)}>Voir nos CGUV</Button>
-                  <Button variant="outline" onClick={handleOpenAttestationDialog} disabled={!profile || isDownloading}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 md:col-span-2">
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCguvModalOpen(true)}>
+                    Voir nos CGUV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={handleOpenAttestationDialog}
+                    disabled={!profile || isDownloading}
+                  >
                     {isDownloading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -467,10 +498,10 @@ const ProfilePage: React.FC = () => {
                     )}
                     {isDownloading ? 'Téléchargement...' : 'Télécharger une attestation'}
                   </Button>
-                  <Button 
-                    onClick={handleRequestInsuranceAttestation} 
+                  <Button
+                    onClick={handleRequestInsuranceAttestation}
                     disabled={!profile || insuranceLoading || userProfile?.is_banned}
-                    className="inline-flex items-center"
+                    className="w-full sm:w-auto inline-flex items-center"
                   >
                     {insuranceLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -531,7 +562,7 @@ const ProfilePage: React.FC = () => {
                 <CardTitle className="flex items-center gap-2"><Settings /> Paramètres & Notifications</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <div>
                     <Label htmlFor="darkMode">Mode Sombre</Label>
                     <p className="text-sm text-gray-500">Activez le thème sombre pour l'application.</p>
@@ -542,7 +573,7 @@ const ProfilePage: React.FC = () => {
                     onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                   />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
                   <div>
                     <Label htmlFor="noelMode" className="text-green-800 dark:text-green-300">🎄 Mode Noël</Label>
                     <p className="text-sm text-green-600 dark:text-green-400">Esprit de Noël ! Activez un thème spécial.</p>
@@ -553,30 +584,30 @@ const ProfilePage: React.FC = () => {
                     onCheckedChange={(checked) => setTheme(checked ? 'noel' : 'light')}
                   />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-new-booking-email">Recevoir les nouvelles réservations par email</Label>
                   <Switch id="notif-new-booking-email" checked={notifyNewBookingEmail} onCheckedChange={setNotifyNewBookingEmail} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-email">Recevoir les annulations par email</Label>
                   <Switch id="notif-cancel-email" checked={notifyCancellationEmail} onCheckedChange={setNotifyCancellationEmail} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
                   <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
                   <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <div>
                     <Label htmlFor="expenses-module">Activer le module de dépenses</Label>
                     <p className="text-sm text-gray-500">Permet de gérer vos dépenses directement depuis l'application.</p>
                   </div>
                   <Switch id="expenses-module" checked={expensesModuleEnabled} onCheckedChange={setExpensesModuleEnabled} disabled={userProfile?.is_banned} />
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-md">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <div>
                     <Label htmlFor="digital-booklet-module">Activer le livret d'accueil numérique</Label>
                     <p className="text-sm text-gray-500">Permet de créer et gérer un livret d'accueil pour vos voyageurs.</p>
@@ -624,7 +655,7 @@ const ProfilePage: React.FC = () => {
         </div>
 
         <CGUVModal isOpen={isCguvModalOpen} onOpenChange={setIsCguvModalOpen} viewOnly={true} />
-        
+
         <div className="absolute -left-[9999px] top-0" aria-hidden="true">
           {profile && <AttestationContent ref={attestationRef} profile={profile} />}
         </div>

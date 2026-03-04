@@ -102,7 +102,7 @@ import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 import AdminTemperaturePage from "./pages/AdminTemperaturePage";
 import AdminErrorLogsPage from "./pages/AdminErrorLogsPage";
 
-import SectionErrorBoundary from "@/components/SectionErrorBoundary";
+import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -116,7 +116,7 @@ function App() {
           <BrowserRouter>
             <InvoiceGenerationProvider>
               <SessionContextProvider>
-                <SectionErrorBoundary kind="global" componentName="AppRoutes">
+                <GlobalAppErrorBoundary>
                   {/* Bandeau global Contrat résilié */}
                   <ContractTerminatedBanner />
                   {/* The SessionContextProvider handles its own loading state and redirects */}
@@ -162,7 +162,6 @@ function App() {
                     <Route path="/admin/crm" element={<AdminCRMPage />} />
                     <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
                     <Route path="/admin/error-logs" element={<AdminErrorLogsPage />} />
-
                     <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                     <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                     <Route path="/admin/status" element={<AdminStatusPage />} />
@@ -218,7 +217,7 @@ function App() {
                     <Route path="/admin/missing-2025-stats" element={<AdminMissing2025StatsPage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                </SectionErrorBoundary>
+                </GlobalAppErrorBoundary>
               </SessionContextProvider>
             </InvoiceGenerationProvider>
           </BrowserRouter>

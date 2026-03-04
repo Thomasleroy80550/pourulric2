@@ -40,6 +40,18 @@ function scrubStack(stack?: string | null): string | null {
   return lines.join("\n");
 }
 
+function getBrowserMetadata(): Record<string, unknown> {
+  if (typeof window === "undefined") return {};
+  try {
+    return {
+      href: window.location?.href,
+      userAgent: navigator?.userAgent,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export function buildClientErrorPayload(
   error: unknown,
   context?: ErrorLoggingContext,
@@ -53,9 +65,9 @@ export function buildClientErrorPayload(
     message: err.message || "Unknown error",
     stack: scrubStack(err.stack ?? null),
     metadata: {
+      ...getBrowserMetadata(),
       componentStack: scrubStack(errorInfo?.componentStack ?? null),
       context: safeSerialize(context?.extra ?? null),
-
     },
   };
 }

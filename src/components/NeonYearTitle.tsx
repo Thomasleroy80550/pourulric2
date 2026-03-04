@@ -17,7 +17,12 @@ const NeonYearTitle: React.FC<{ className?: string }> = ({ className }) => {
       }
     `;
     document.head.appendChild(style);
-    return () => document.head.removeChild(style);
+    return () => {
+      if (style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
+    };
+
   }, []);
 
   return (

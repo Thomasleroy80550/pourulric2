@@ -58,7 +58,12 @@ const Countdown: React.FC<CountdownProps> = ({ target, className, onComplete, co
       }
     `;
     document.head.appendChild(style);
-    return () => { document.head.removeChild(style); };
+    return () => {
+      if (style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
+    };
+
   }, []);
 
   const targetMs = useMemo(() => target.getTime(), [target]);

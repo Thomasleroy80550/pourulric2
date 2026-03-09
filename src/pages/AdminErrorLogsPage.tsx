@@ -9,6 +9,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type ErrorLogRow = {
   id: string;
@@ -28,6 +39,7 @@ export default function AdminErrorLogsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<ErrorLogRow | null>(null);
+  const [clearing, setClearing] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -44,6 +56,22 @@ export default function AdminErrorLogsPage() {
       toast.error("Impossible de charger les signalements.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const clearAll = async () => {
+    setClearing(true);
+    try {
+      const { error } = await supabase.functions.invoke("clear-error-logs");
+      if (error) throw error;
+
+      setSelected(null);
+      toast.success("Signalements supprimés.");
+      await load();
+    } catch (e: any) {
+      toast.error("Impossible de supprimer les signalements.");
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -79,9 +107,31 @@ export default function AdminErrorLogsPage() {
                 placeholder="Filtrer (route, composant, message, email…)"
                 className="sm:w-[360px]"
               />
-              <Button variant="outline" onClick={load} disabled={loading}>
+              <Button variant="outline" onClick={load} disabled={loading || clearing}>
                 {loading ? "Chargement…" : "Rafraîchir"}
               </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={loading || clearing || rows.length === 0}>
+                    {clearing ? "Suppression…" : "Tout effacer"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer tous les signalements ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Utile pour vérifier si les erreurs réapparaissent.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={clearing}>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={clearAll} disabled={clearing}>
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardHeader>
           <CardContent>

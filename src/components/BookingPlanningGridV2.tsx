@@ -166,8 +166,9 @@ const BookingPlanningGridV2Inner: React.FC<Props> = ({ userRooms, reservations }
                     return (
                       <Tooltip key={r.id}>
                         <TooltipTrigger asChild>
-                          <div
-                            className={`absolute ${info.bg} ${info.text} font-semibold shadow-sm border border-white/20 dark:border-black/20`}
+                          <button
+                            type="button"
+                            className={`absolute ${info.bg} ${info.text} font-semibold shadow-sm border border-white/20 dark:border-black/20 focus:outline-none`}
                             style={{
                               gridRow: `${2 + roomIdx}`,
                               left: `${left}px`,
@@ -189,7 +190,7 @@ const BookingPlanningGridV2Inner: React.FC<Props> = ({ userRooms, reservations }
                               {r.guest_name} • {r.amount || ""} • {info.name}
                             </span>
                             {!isSingle && <LogOut className="h-3 w-3 opacity-80" />}
-                          </div>
+                          </button>
                         </TooltipTrigger>
                         <TooltipContent className="p-2 text-sm">
                           <p className="font-bold">{r.guest_name}</p>

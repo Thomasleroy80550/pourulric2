@@ -779,13 +779,16 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                             {tasksForThisDay.length > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20">
+                                  <button
+                                    type="button"
+                                    className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20 p-0 focus:outline-none"
+                                  >
                                     {tasksForThisDay.length > 1 ? (
                                       <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
                                     ) : (
                                       getTaskIcon(tasksForThisDay[0].status)
                                     )}
-                                  </div>
+                                  </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="p-2 text-sm">
                                   <p className="font-bold mb-1">Tâches de ménage ({format(day, 'dd/MM', { locale: fr })}):</p>
@@ -867,7 +870,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                           return (
                             <Tooltip key={reservation.id}>
                               <TooltipTrigger asChild>
-                                <div
+                                <button
+                                  type="button"
                                   className={barClasses}
                                   style={{
                                     position: 'absolute',
@@ -901,7 +905,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                                   </span>
 
                                   {isDepartureDayVisible && !isSingleDayStay && <LogOut className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
-                                </div>
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent className="p-2 text-sm">
                                 <div className="flex items-center gap-2 mb-1">
@@ -1077,13 +1081,16 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                               {tasksForThisDay.length > 0 && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20">
+                                    <button
+                                      type="button"
+                                      className="absolute top-1 right-1 flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 cursor-pointer z-20 p-0 focus:outline-none"
+                                    >
                                       {tasksForThisDay.length > 1 ? (
                                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{tasksForThisDay.length}</span>
                                       ) : (
                                         getTaskIcon(tasksForThisDay[0].status)
                                       )}
-                                    </div>
+                                    </button>
                                   </TooltipTrigger>
                                   <TooltipContent className="p-2 text-sm">
                                     <p className="font-bold mb-1">Tâches de ménage ({format(day, 'dd/MM', { locale: fr })}):</p>
@@ -1165,7 +1172,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                             return (
                               <Tooltip key={reservation.id}>
                                 <TooltipTrigger asChild>
-                                  <div
+                                  <button
+                                    type="button"
                                     className={barClasses}
                                     style={{
                                       position: 'absolute',
@@ -1199,7 +1207,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
                                     </span>
 
                                     {isDepartureDayVisible && !isSingleDayStay && <LogOut className={cn("h-4 w-4 flex-shrink-0", isMobile && "h-3 w-3")} />}
-                                  </div>
+                                  </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="p-2 text-sm">
                                   <div className="flex items-center gap-2 mb-1">

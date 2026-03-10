@@ -304,6 +304,7 @@ const AdminStatementsPage: React.FC = () => {
                       const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}` : 'Client Supprimé';
                       const creator = statement.created_by ? profilesMap[statement.created_by] : null;
                       const creatorName = creator ? `${creator.first_name ?? ''} ${creator.last_name ?? ''}`.trim() || statement.created_by : '—';
+                      const totalFacture = statement.totals?.totalFacture ?? 0;
                       return (
                         <TableRow key={statement.id}>
                           <TableCell className="font-medium">{clientName}</TableCell>
@@ -314,8 +315,8 @@ const AdminStatementsPage: React.FC = () => {
                             <StatusBadge status={statement.pennylane_status} />
                           </TableCell>
                           <TableCell>{statement.admin_comment ? 'Oui' : 'Non'}</TableCell>
-                          <TableCell className="text-right font-bold">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
-                          <TableCell className="text-right">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
+                          <TableCell className="text-right font-bold">{totalFacture.toFixed(2)}€</TableCell>
+                          <TableCell className="text-right">{totalFacture.toFixed(2)}€</TableCell>
                           <TableCell>
                             {statement.is_paid ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-green-100 text-green-700 px-2 py-1 text-xs">

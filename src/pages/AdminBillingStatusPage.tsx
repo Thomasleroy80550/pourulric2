@@ -9,8 +9,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { getAllProfiles, UserProfile } from '@/lib/admin-api';
-import { FileText, RefreshCcw, Search } from 'lucide-react';
+import { getAllProfiles } from '@/lib/admin-api';
+import { UserProfile } from '@/lib/profile-api';
+import { FileText, RefreshCcw, Search, XCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -19,6 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 type LatestInvoice = {
   id: string;
@@ -29,13 +41,14 @@ type LatestInvoice = {
 };
 
 const AdminBillingStatusPage: React.FC = () => {
-  const [profiles, setProfiles] = React.useState<UserProfile[]>([]);
+  const [profiles, setProfiles] = React.useState<any[]>([]);
   const [latestByUser, setLatestByUser] = React.useState<Map<string, LatestInvoice>>(new Map());
   const [invoicesByUserAndPeriod, setInvoicesByUserAndPeriod] = React.useState<Map<string, Map<string, LatestInvoice>>>(new Map());
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [search, setSearch] = React.useState('');
   const [onlyNotInvoiced, setOnlyNotInvoiced] = React.useState(true);
+  const [markingNoInvoice, setMarkingNoInvoice] = React.useState<string | null>(null);
 
   const MONTHS_FR = [
     'Janvier','Février','Mars','Avril','Mai','Juin',
@@ -55,6 +68,32 @@ const AdminBillingStatusPage: React.FC = () => {
     });
     return ['Toutes', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [profiles]);
+
+  const markAsNoInvoice = async (userId: string, userName: string) => {
+    setMarkingNoInvoice(userId);
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .insert({
+          user_id: userId,
+          period: selectedPeriod,
+          invoice_data: {},
+          totals: {},
+          pennylane_status: 'no_invoice',
+          source_type: 'manual',
+        });
+
+      if (error) throw error;
+
+      toast.success(`${userName} marqué comme "pas de facture" pour ${selectedPeriod}`);
+      await fetchData();
+    } catch (e: any) {
+      console.error('Erreur marquage pas de facture:', e);
+      toast.error('Impossible de marquer comme "pas de facture".');
+    } finally {
+      setMarkingNoInvoice(null);
+    }
+  };
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
@@ -282,35 +321,84 @@ const AdminBillingStatusPage: React.FC = () => {
                     filteredProfiles.map((p) => {
                       const latest = latestByUser.get(p.id);
                       const selectedInv = invoicesByUserAndPeriod.get(p.id)?.get(selectedPeriod);
+                      const isNoInvoice = selectedInv?.pennylane_status === 'no_invoice';
+                      const userName = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim();
+
                       return (
                         <TableRow key={p.id} className={!selectedInv ? 'bg-red-50' : ''}>
                           <TableCell className="font-medium">
-                            {(p.first_name ?? '') + ' ' + (p.last_name ?? '')}
-                            {!selectedInv && (
+                            {userName}
+                            {!selectedInv && !isNoInvoice && (
                               <Badge variant="destructive" className="ml-2">Non facturé</Badge>
+                            )}
+                            {isNoInvoice && (
+                              <Badge variant="secondary" className="ml-2">Pas de facture</Badge>
                             )}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">{p.email ?? '—'}</TableCell>
                           <TableCell>{(p.agency ?? '').trim() || 'Sans agence'}</TableCell>
-                          <TableCell>{selectedInv ? selectedInv.period : 'Aucun'}</TableCell>
+                          <TableCell>
+                            {selectedInv ? (
+                              isNoInvoice ? (
+                                <span className="text-muted-foreground">Pas de facture</span>
+                              ) : (
+                                selectedInv.period
+                              )
+                            ) : (
+                              'Aucun'
+                            )}
+                          </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {selectedInv ? new Date(selectedInv.created_at).toLocaleDateString() : '—'}
                           </TableCell>
                           <TableCell className="hidden md:table-cell capitalize">
-                            {selectedInv?.pennylane_status ?? '—'}
+                            {selectedInv?.pennylane_status === 'no_invoice' ? (
+                              <Badge variant="secondary">Pas de facture</Badge>
+                            ) : (
+                              selectedInv?.pennylane_status ?? '—'
+                            )}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">{latest ? latest.period : 'Aucun'}</TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                toast.info('Ouverture des relevés…');
-                                window.location.href = '/admin/statements';
-                              }}
-                            >
-                              Voir les relevés
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                              {!isNoInvoice && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={markingNoInvoice === p.id}
+                                    >
+                                      {markingNoInvoice === p.id ? '…' : 'Pas de facture'}
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Marquer comme "pas de facture" ?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Cela indiquera que {userName} n&apos;a pas de facture pour {selectedPeriod}.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel disabled={markingNoInvoice === p.id}>Annuler</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => markAsNoInvoice(p.id, userName)} disabled={markingNoInvoice === p.id}>
+                                        Confirmer
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  toast.info('Ouverture des relevés…');
+                                  window.location.href = '/admin/statements';
+                                }}
+                              >
+                                Voir les relevés
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

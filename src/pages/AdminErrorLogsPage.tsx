@@ -77,14 +77,20 @@ export default function AdminErrorLogsPage() {
   };
 
   const deleteLog = async (id: string) => {
+    console.log("[AdminErrorLogs] Tentative de suppression du log:", id);
     try {
       const { error } = await supabase.from("error_logs").delete().eq("id", id);
-      if (error) throw error;
+      if (error) {
+        console.error("[AdminErrorLogs] Erreur lors de la suppression:", error);
+        throw error;
+      }
 
       if (selected?.id === id) setSelected(null);
+      console.log("[AdminErrorLogs] Suppression réussie");
       toast.success("Signalement supprimé.");
       await load();
     } catch (e: any) {
+      console.error("[AdminErrorLogs] Exception:", e);
       toast.error("Impossible de supprimer le signalement.");
     }
   };

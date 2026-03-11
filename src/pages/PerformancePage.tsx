@@ -96,20 +96,18 @@ const PerformanceDashboard = () => {
       let totalGuests = 0;
 
       statementsForYear.forEach(s => {
-        const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((itemAcc, item) => itemAcc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
+        const invoiceData = Array.isArray(s.invoice_data) ? s.invoice_data : [];
+        const statementCA = s.totals.totalCA ?? invoiceData.reduce((itemAcc, item) => itemAcc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
         totalCA += statementCA;
 
         // Corrected calculation for net revenue from statement
         const statementNetToPay = (s.totals.totalMontantVerse || 0) - (s.totals.totalFacture || 0);
         totalNetRevenueFromStatements += statementNetToPay;
-
         const statementNights = s.totals.totalNuits || 0;
         totalNightsSold += statementNights;
-
-        const statementReservations = s.totals.totalReservations ?? s.invoice_data.length;
+        const statementReservations = s.totals.totalReservations ?? invoiceData.length;
         totalReservations += statementReservations;
-
-        const statementGuests = s.invoice_data.reduce((acc, item) => acc + (item.voyageurs || 0), 0);
+        const statementGuests = invoiceData.reduce((acc, item) => acc + (item.voyageurs || 0), 0);
         totalGuests += statementGuests;
 
         const periodParts = s.period.toLowerCase().split(' ');

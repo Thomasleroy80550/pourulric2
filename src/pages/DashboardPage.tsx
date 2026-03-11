@@ -230,7 +230,8 @@ const DashboardPage = () => {
     };
 
     statementsForYear.forEach(s => {
-      const statementCA = s.totals.totalCA ?? s.invoice_data.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
+      const invoiceData = Array.isArray(s.invoice_data) ? s.invoice_data : [];
+      const statementCA = s.totals.totalCA ?? invoiceData.reduce((acc, item) => acc + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0), 0);
       const managementFees = s.totals.totalFacture || 0;
       const moneyIn = s.totals.totalMontantVerse || 0;
       const netFromStatement = moneyIn - managementFees;
@@ -241,7 +242,7 @@ const DashboardPage = () => {
       totalResultat += netFromStatement;
       totalNights += s.totals.totalNuits || 0;
       totalGuests += s.totals.totalVoyageurs || 0;
-      totalReservations += s.totals.totalReservations ?? s.invoice_data.length;
+      totalReservations += s.totals.totalReservations ?? invoiceData.length;
 
       // ADDED: Parse "period" to get month index (fr), with fallback
       let monthIndex: number | undefined;
@@ -265,13 +266,13 @@ const DashboardPage = () => {
         // CHANGED: utiliser totals.totalReservations si présent (pour les stats manuelles), sinon la longueur des réservations générées
         const reservationsCount = (s.totals && typeof s.totals.totalReservations === 'number')
           ? s.totals.totalReservations
-          : s.invoice_data.length;
+          : invoiceData.length;
         newMonthlyReservationsData[monthIndex].reservations += reservationsCount;
 
         monthlyNights[monthIndex] += s.totals.totalNuits || 0;
       }
 
-      s.invoice_data.forEach(resa => {
+      invoiceData.forEach(resa => {
         const portail = resa.portail.toLowerCase();
         if (portail.includes('airbnb')) channelCounts['airbnb']++;
         else if (portail.includes('booking')) channelCounts['booking']++;

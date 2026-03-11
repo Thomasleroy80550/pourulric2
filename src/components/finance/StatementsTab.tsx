@@ -71,7 +71,8 @@ const StatementsTab: React.FC = () => {
       return (
         <div className="grid grid-cols-1 gap-4">
           {statements.map((statement) => {
-            const totalFacture = statement.totals?.totalFacture ?? 0;
+            const totalFacture = Number(statement.totals?.totalFacture ?? 0);
+            const displayAmount = isNaN(totalFacture) ? '0.00' : totalFacture.toFixed(2);
             return (
               <Card key={statement.id} className="shadow-sm">
                 <CardHeader className="pb-2">
@@ -87,7 +88,7 @@ const StatementsTab: React.FC = () => {
                   </p>
                   <p className="flex items-center">
                     <Euro className="h-4 w-4 mr-2 text-gray-500" />
-                    Montant Facturé: <span className="font-bold ml-1">{totalFacture.toFixed(2)}€</span>
+                    Montant Facturé: <span className="font-bold ml-1">{displayAmount}€</span>
                   </p>
                   <div className="pt-2">
                     <Button variant="outline" size="sm" className="w-full" onClick={() => handleViewDetails(statement)}>

@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Trash2, Check, Copy } from "lucide-react";
 
 type ErrorLogRow = {
   id: string;
@@ -73,6 +74,25 @@ export default function AdminErrorLogsPage() {
     } finally {
       setClearing(false);
     }
+  };
+
+  const deleteLog = async (id: string) => {
+    try {
+      const { error } = await supabase.from("error_logs").delete().eq("id", id);
+      if (error) throw error;
+
+      if (selected?.id === id) setSelected(null);
+      toast.success("Signalement supprimé.");
+      await load();
+    } catch (e: any) {
+      toast.error("Impossible de supprimer le signalement.");
+    }
+  };
+
+  const copyError = (row: ErrorLogRow) => {
+    const text = `Message: ${row.message}\n\nRoute: ${row.route || "N/A"}\nComposant: ${row.component || "N/A"}\nUser Email: ${row.user_email || "N/A"}\nDescription: ${row.user_description || "N/A"}\n\nStack:\n${row.stack || "N/A"}`;
+    navigator.clipboard.writeText(text);
+    toast.success("Erreur copiée dans le presse-papier");
   };
 
   useEffect(() => {
@@ -147,7 +167,7 @@ export default function AdminErrorLogsPage() {
                     <TableHead>Route</TableHead>
                     <TableHead>Composant</TableHead>
                     <TableHead>Message</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -166,9 +186,35 @@ export default function AdminErrorLogsPage() {
                         {r.message}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => setSelected(r)}>
-                          Détails
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="outline" size="icon" onClick={() => copyError(r)} title="Copier l'erreur">
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setSelected(r)}>
+                            Détails
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" title="Supprimer">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Supprimer ce signalement ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Cette action est irréversible. Le signalement sera définitivement supprimé.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteLog(r.id)}>
+                                  Supprimer
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

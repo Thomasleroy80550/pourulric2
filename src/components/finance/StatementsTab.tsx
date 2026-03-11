@@ -70,32 +70,35 @@ const StatementsTab: React.FC = () => {
     if (isMobile) {
       return (
         <div className="grid grid-cols-1 gap-4">
-          {statements.map((statement) => (
-            <Card key={statement.id} className="shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-semibold flex items-center">
-                  <FileText className="h-4 w-4 mr-2 text-gray-500" />
-                  Relevé: {statement.period}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <p className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                  Créé le: {format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}
-                </p>
-                <p className="flex items-center">
-                  <Euro className="h-4 w-4 mr-2 text-gray-500" />
-                  Montant Facturé: <span className="font-bold ml-1">{statement.totals.totalFacture.toFixed(2)}€</span>
-                </p>
-                <div className="pt-2">
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => handleViewDetails(statement)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Voir les détails
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {statements.map((statement) => {
+            const totalFacture = statement.totals?.totalFacture ?? 0;
+            return (
+              <Card key={statement.id} className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-semibold flex items-center">
+                    <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                    Relevé: {statement.period}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                  <p className="flex items-center">
+                    <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                    Créé le: {format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                  </p>
+                  <p className="flex items-center">
+                    <Euro className="h-4 w-4 mr-2 text-gray-500" />
+                    Montant Facturé: <span className="font-bold ml-1">{totalFacture.toFixed(2)}€</span>
+                  </p>
+                  <div className="pt-2">
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => handleViewDetails(statement)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Voir les détails
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       );
     }
@@ -111,19 +114,22 @@ const StatementsTab: React.FC = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {statements.map((statement) => (
-            <TableRow key={statement.id}>
-              <TableCell>{statement.period}</TableCell>
-              <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
-              <TableCell className="text-right font-bold">{statement.totals.totalFacture.toFixed(2)}€</TableCell>
-              <TableCell className="text-right">
-                <Button variant="outline" size="sm" onClick={() => handleViewDetails(statement)}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Voir
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {statements.map((statement) => {
+            const totalFacture = statement.totals?.totalFacture ?? 0;
+            return (
+              <TableRow key={statement.id}>
+                <TableCell>{statement.period}</TableCell>
+                <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
+                <TableCell className="text-right font-bold">{totalFacture.toFixed(2)}€</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" onClick={() => handleViewDetails(statement)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Voir
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     );

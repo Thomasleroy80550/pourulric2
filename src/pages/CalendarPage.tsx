@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
-import BookingPlanningGridV3 from '@/components/BookingPlanningGridV3';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
@@ -53,7 +52,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-    const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'v3'>('planning');
+    const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug'>('planning');
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -395,11 +394,10 @@ const CalendarPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Calendrier</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug' | 'v3')} className="w-full">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug')} className="w-full">
                           <TabsList className="mb-4">
                             <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
                             <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
-                            <TabsTrigger value="v3">Calendrier V3</TabsTrigger>
                             <TabsTrigger value="debug">Vue debug</TabsTrigger>
                           </TabsList>
 
@@ -444,51 +442,28 @@ const CalendarPage: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="debug">
-                              {loadingData ? (
-                                <div className="space-y-4">
-                                  <Skeleton className="h-8 w-48" />
-                                  <Skeleton className="h-[400px] w-full" />
-                                </div>
-                              ) : userRooms.length === 0 ? (
-                                <p className="text-muted-foreground">Aucune chambre configurée.</p>
-                              ) : (
-                                // Debug = full width: on évite les marges négatives (qui peuvent créer un débordement global)
-                                <div className="w-full overflow-x-hidden">
-                                  <BookingPlanningGridStudio
-                                    refreshTrigger={refreshTrigger}
-                                    userRooms={userRooms}
-                                    reservations={reservations}
-                                    onReservationChange={handleReservationChange}
-                                    profile={profile}
-                                    debugFullWidth
-                                  />
-                                </div>
-                              )}
-                            </TabsContent>
-              
-                            <TabsContent value="v3">
-                              {loadingData ? (
-                                <div className="space-y-4">
-                                  <Skeleton className="h-8 w-48" />
-                                  <Skeleton className="h-[400px] w-full" />
-                                </div>
-                              ) : userRooms.length === 0 ? (
-                                <p className="text-muted-foreground">
-                                  Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir le calendrier V3.
-                                </p>
-                              ) : (
-                                <div className="w-full min-w-0 overflow-x-visible">
-                                  <BookingPlanningGridV3
-                                    refreshTrigger={refreshTrigger}
-                                    userRooms={userRooms}
-                                    reservations={reservations}
-                                    onReservationChange={handleReservationChange}
-                                    profile={profile}
-                                  />
-                                </div>
-                              )}
-                            </TabsContent>
-                          </Tabs>
+                                            {loadingData ? (
+                                              <div className="space-y-4">
+                                                <Skeleton className="h-8 w-48" />
+                                                <Skeleton className="h-[400px] w-full" />
+                                              </div>
+                                            ) : userRooms.length === 0 ? (
+                                              <p className="text-muted-foreground">Aucune chambre configurée.</p>
+                                            ) : (
+                                              // Debug = full width: on évite les marges négatives (qui peuvent créer un débordement global)
+                                              <div className="w-full overflow-x-hidden">
+                                                <BookingPlanningGridStudio
+                                                  refreshTrigger={refreshTrigger}
+                                                  userRooms={userRooms}
+                                                  reservations={reservations}
+                                                  onReservationChange={handleReservationChange}
+                                                  profile={profile}
+                                                  debugFullWidth
+                                                />
+                                              </div>
+                                            )}
+                                          </TabsContent>
+                                        </Tabs>
           </CardContent>
         </Card>
       </div>

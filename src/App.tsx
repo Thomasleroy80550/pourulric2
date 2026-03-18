@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardPage from "./pages/DashboardPage";
 import CalendarPage from "./pages/CalendarPage";
+import CalendarPageMobile from "./pages/CalendarPageMobile";
+import CalendarV3Page from "./pages/CalendarV3Page";
 import BookingsPage from "./pages/BookingsPage";
 import PerformancePage from "./pages/PerformancePage";
 import ReviewsPage from "./pages/ReviewsPage";
@@ -62,7 +64,6 @@ import TicketsPage from "./pages/TicketsPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import AdminMarketplacePage from "./pages/AdminMarketplacePage"; // New import
-import CalendarPageMobile from "./pages/CalendarPageMobile";
 import AdminUtilityCutsPage from "./pages/AdminUtilityCutsPage"; // New import
 import AdminNewsletterPage from "./pages/AdminNewsletterPage";
 import ProspectSignupPage from "./pages/ProspectSignupPage";
@@ -192,6 +193,7 @@ function App() {
                     <Route path="/home-v2" element={<DashboardPageV2 />} />
                     <Route path="/calendar" element={<CalendarPage />} />
                     <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
+                    <Route path="/calendar-v3" element={<CalendarV3Page />} />
                     <Route path="/bookings" element={<BookingsPage />} />
                     <Route path="/performance" element={<PerformancePage />} />
                     <Route path="/reviews" element={<ReviewsPage />} />

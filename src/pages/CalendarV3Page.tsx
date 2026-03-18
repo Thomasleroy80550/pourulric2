@@ -3,41 +3,29 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
-import BookingListMobile from '@/components/BookingListMobile';
-import { useIsMobile } from '@/hooks/use-mobile';
+import BookingPlanningGridV3 from '@/components/BookingPlanningGridV3';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign, RefreshCw, Sparkles } from 'lucide-react';
+import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
 import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useLocation } from 'react-router-dom';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import { addDays, format } from 'date-fns';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import TwelveMonthView from '@/components/TwelveMonthView';
-import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
-import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
-import BookingPlanningGridV3 from '@/components/BookingPlanningGridV3';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const COOLDOWN_KEY = 'calendar_refresh_cooldown';
 const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
 
-const CalendarPage: React.FC = () => {
+const CalendarV3Page: React.FC = () => {
   const { profile, session } = useSession();
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false);
@@ -46,16 +34,11 @@ const CalendarPage: React.FC = () => {
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const location = useLocation();
   const [cooldownEndTime, setCooldownEndTime] = useState<number>(() => {
     const savedTime = localStorage.getItem(COOLDOWN_KEY);
     return savedTime ? parseInt(savedTime, 10) : 0;
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
-  const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-    const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'v3'>('planning');
-
-  console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -173,7 +156,7 @@ const CalendarPage: React.FC = () => {
         setReservations([...fetchedReservations, ...closedBlocks]);
 
       } catch (error) {
-        console.error("Error fetching data for CalendarPage:", error);
+        console.error("Error fetching data for CalendarV3Page:", error);
       } finally {
         setLoadingData(false);
       }
@@ -184,13 +167,6 @@ const CalendarPage: React.FC = () => {
       setLoadingData(false);
     }
   }, [refreshTrigger, profile, session]);
-
-  useEffect(() => {
-    if (location.state?.openOwnerReservationDialog) {
-      setIsOwnerReservationDialogOpen(true);
-      window.history.replaceState({}, document.title); 
-    }
-  }, [location.state]);
 
   const handleReservationChange = () => {
     const now = Date.now();
@@ -265,110 +241,15 @@ const CalendarPage: React.FC = () => {
     );
   }
 
-  // Si c'est mobile, afficher directement la vue liste
-  if (isMobile) {
-    return (
-      <MainLayout>
-        <div className="container mx-auto py-6 px-2 sm:px-4 max-w-full overflow-hidden">
-          <div className="mb-4">
-            <EcowattForecastBox />
-          </div>
-          <Alert className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Information importante</AlertTitle>
-            <AlertDescription>
-              Un bug connu peut afficher certaines réservations au mauvais jour après le chargement.
-              Pour les voir au bon endroit, changez de mois puis revenez au mois actuel.
-            </AlertDescription>
-          </Alert>
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Réservation Propriétaire
-              </Button>
-              <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Configurer Prix
-              </Button>
-              <Button 
-                onClick={handleReservationChange} 
-                variant="outline" 
-                className="flex items-center w-full sm:w-auto text-sm sm:text-base"
-                disabled={Date.now() < cooldownEndTime}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                {Date.now() < cooldownEndTime ? `Attendre ${remainingTime}` : 'Rafraîchir'}
-              </Button>
-            </div>
-          </div>
-          
-          {/* Vue liste mobile directe avec contraintes de largeur */}
-          <div className="w-full max-w-full overflow-x-hidden">
-            <BookingListMobile 
-              reservations={reservations.map(r => ({
-                id: r.id,
-                room_id: r.krossbooking_room_id || r.property_name,
-                room_name: r.property_name,
-                start_date: r.check_in_date,
-                end_date: r.check_out_date,
-                guest_name: r.guest_name,
-                status: r.status,
-                platform: r.channel_identifier || 'Unknown',
-                total_amount: parseFloat(r.amount) || 0
-              }))} 
-            />
-          </div>
-        </div>
-        <OwnerReservationDialog
-          isOpen={isOwnerReservationDialogOpen}
-          onOpenChange={setIsOwnerReservationDialogOpen}
-          userRooms={userRooms}
-          allReservations={reservations}
-          onReservationCreated={handleReservationChange}
-          profile={profile}
-        />
-        <PriceRestrictionDialog
-          isOpen={isPriceRestrictionDialogOpen}
-          onOpenChange={setIsPriceRestrictionDialogOpen}
-          userRooms={userRooms}
-          onSettingsSaved={handlePriceRestrictionSaved}
-        />
-        <AlertDialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Accès non autorisé</AlertDialogTitle>
-              <AlertDialogDescription>
-                Vous n'avez pas la permission de configurer les prix et les restrictions. Veuillez contacter un administrateur pour demander l'accès à cette fonctionnalité.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction onClick={() => setIsAccessDeniedDialogOpen(false)}>Compris</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
       <div className="w-full py-6 px-2 sm:px-4">
         <div className="mb-4">
           <EcowattForecastBox />
         </div>
-        <Alert className="mb-4">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Information importante</AlertTitle>
-          <AlertDescription>
-            Un bug connu peut afficher certaines réservations au mauvais jour après le chargement.
-            Pour les voir au bon endroit, changez de mois puis revenez au mois actuel.
-          </AlertDescription>
-        </Alert>
 
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Calendrier V3</h1>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center">
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -392,103 +273,29 @@ const CalendarPage: React.FC = () => {
 
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Calendrier</CardTitle>
+            <CardTitle className="text-lg font-semibold">Calendrier V3 - Nouvelle génération (CSS Grid)</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug' | 'v3')} className="w-full">
-                          <TabsList className="mb-4">
-                            <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
-                            <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
-                            <TabsTrigger value="v3">Calendrier V3</TabsTrigger>
-                            <TabsTrigger value="debug">Vue debug</TabsTrigger>
-                          </TabsList>
-
-              <TabsContent value="planning">
-                {loadingData ? (
-                  <div className="space-y-4">
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-[400px] w-full" />
-                  </div>
-                ) : userRooms.length === 0 ? (
-                  <p className="text-muted-foreground">
-                    Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
-                  </p>
-                ) : (
-                  <div className="w-full min-w-0 overflow-x-visible">
-                    <BookingPlanningGridStudio
-                      refreshTrigger={refreshTrigger}
-                      userRooms={userRooms}
-                      reservations={reservations}
-                      onReservationChange={handleReservationChange}
-                      profile={profile}
-                    />
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="twelve">
-                {loadingData ? (
-                  <div className="space-y-4">
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-[400px] w-full" />
-                  </div>
-                ) : userRooms.length === 0 ? (
-                  <p className="text-muted-foreground">
-                    Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir la vue annuelle ici.
-                  </p>
-                ) : (
-                  <div className="w-full">
-                    <TwelveMonthView userRooms={userRooms} reservations={reservations} />
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="debug">
-                              {loadingData ? (
-                                <div className="space-y-4">
-                                  <Skeleton className="h-8 w-48" />
-                                  <Skeleton className="h-[400px] w-full" />
-                                </div>
-                              ) : userRooms.length === 0 ? (
-                                <p className="text-muted-foreground">Aucune chambre configurée.</p>
-                              ) : (
-                                // Debug = full width: on évite les marges négatives (qui peuvent créer un débordement global)
-                                <div className="w-full overflow-x-hidden">
-                                  <BookingPlanningGridStudio
-                                    refreshTrigger={refreshTrigger}
-                                    userRooms={userRooms}
-                                    reservations={reservations}
-                                    onReservationChange={handleReservationChange}
-                                    profile={profile}
-                                    debugFullWidth
-                                  />
-                                </div>
-                              )}
-                            </TabsContent>
-              
-                            <TabsContent value="v3">
-                              {loadingData ? (
-                                <div className="space-y-4">
-                                  <Skeleton className="h-8 w-48" />
-                                  <Skeleton className="h-[400px] w-full" />
-                                </div>
-                              ) : userRooms.length === 0 ? (
-                                <p className="text-muted-foreground">
-                                  Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir le calendrier V3.
-                                </p>
-                              ) : (
-                                <div className="w-full min-w-0 overflow-x-visible">
-                                  <BookingPlanningGridV3
-                                    refreshTrigger={refreshTrigger}
-                                    userRooms={userRooms}
-                                    reservations={reservations}
-                                    onReservationChange={handleReservationChange}
-                                    profile={profile}
-                                  />
-                                </div>
-                              )}
-                            </TabsContent>
-                          </Tabs>
+            {loadingData ? (
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-[400px] w-full" />
+              </div>
+            ) : userRooms.length === 0 ? (
+              <p className="text-muted-foreground">
+                Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir les réservations ici.
+              </p>
+            ) : (
+              <div className="w-full min-w-0 overflow-x-visible">
+                <BookingPlanningGridV3
+                  refreshTrigger={refreshTrigger}
+                  userRooms={userRooms}
+                  reservations={reservations}
+                  onReservationChange={handleReservationChange}
+                  profile={profile}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -525,4 +332,4 @@ const CalendarPage: React.FC = () => {
   );
 };
 
-export default CalendarPage;
+export default CalendarV3Page;

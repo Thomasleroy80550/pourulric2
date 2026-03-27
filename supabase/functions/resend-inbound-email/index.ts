@@ -60,7 +60,18 @@ function extractReservationReference(text: string): string | null {
 
 function parseKrossbookingEvent(subject: string, plainText: string) {
   const normalizedSubject = normalizeText(subject);
-  const fromReservationEmail = normalizedSubject.includes("reservation");
+  const normalizedBody = normalizeText(plainText);
+  const normalizedContent = `${normalizedSubject} ${normalizedBody}`.trim();
+
+  const fromReservationEmail = [
+    "reservation",
+    "prenotazione",
+    "cancellazione",
+    "frontoffice",
+    "booking com",
+    "airbnb",
+    "vrbo",
+  ].some((keyword) => normalizedContent.includes(keyword));
 
   if (!fromReservationEmail) {
     return null;
@@ -68,16 +79,28 @@ function parseKrossbookingEvent(subject: string, plainText: string) {
 
   let eventType: "new" | "modified" | "cancelled" | null = null;
 
-  if (normalizedSubject.includes("new reservation")) {
+  if (
+    normalizedContent.includes("new reservation") ||
+    normalizedContent.includes("new resa") ||
+    normalizedContent.includes("nuova prenotazione") ||
+    normalizedContent.includes("new booking")
+  ) {
     eventType = "new";
-  } else if (normalizedSubject.includes("modified") || normalizedSubject.includes("updated")) {
+  } else if (
+    normalizedContent.includes("modified") ||
+    normalizedContent.includes("updated") ||
+    normalizedContent.includes("modifica") ||
+    normalizedContent.includes("modificata")
+  ) {
     eventType = "modified";
   } else if (
-    normalizedSubject.includes("reservation cancellation") ||
-    normalizedSubject.includes("cancelled") ||
-    normalizedSubject.includes("canceled") ||
-    normalizedSubject.includes("annulation") ||
-    normalizedSubject.includes("cancel")
+    normalizedContent.includes("reservation cancellation") ||
+    normalizedContent.includes("cancellazione prenotazione") ||
+    normalizedContent.includes("cancelled") ||
+    normalizedContent.includes("canceled") ||
+    normalizedContent.includes("annulation") ||
+    normalizedContent.includes("cancel") ||
+    normalizedContent.includes("cancellazione")
   ) {
     eventType = "cancelled";
   }

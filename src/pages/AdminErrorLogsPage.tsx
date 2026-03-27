@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Copy } from "lucide-react";
+import { Copy, Loader2, Sparkles, Trash2 } from "lucide-react";
 
 type ErrorLogRow = {
   id: string;
@@ -33,6 +33,14 @@ type ErrorLogRow = {
   user_email: string | null;
   user_description: string | null;
   metadata: any;
+};
+
+type ErrorAnalysis = {
+  summary: string;
+  probable_causes: string[];
+  recommended_fix: string;
+  verification_steps: string[];
+  browser_specific: boolean;
 };
 
 function getBrowserLabel(metadata: any): string {
@@ -48,12 +56,34 @@ function getBrowserLabel(metadata: any): string {
   return "Autre";
 }
 
+function buildAnalysisCopyText(row: ErrorLogRow, analysis: ErrorAnalysis) {
+  return [
+    `Erreur: ${row.message}`,
+    `Route: ${row.route || "N/A"}`,
+    `Composant: ${row.component || "N/A"}`,
+    `Navigateur: ${getBrowserLabel(row.metadata)}`,
+    "",
+    `Résumé: ${analysis.summary}`,
+    "",
+    "Causes probables:",
+    ...(analysis.probable_causes.length > 0 ? analysis.probable_causes.map((cause) => `- ${cause}`) : ["- Aucune cause proposée"]),
+    "",
+    "Correction recommandée:",
+    analysis.recommended_fix,
+    "",
+    "Étapes de vérification:",
+    ...(analysis.verification_steps.length > 0 ? analysis.verification_steps.map((step) => `- ${step}`) : ["- Aucune étape proposée"]),
+  ].join("\n");
+}
+
 export default function AdminErrorLogsPage() {
   const [rows, setRows] = useState<ErrorLogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<ErrorLogRow | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [analysisById, setAnalysisById] = useState<Record<string, ErrorAnalysis>>({});
 
   const load = async () => {
     setLoading(true);
@@ -80,6 +110,7 @@ export default function AdminErrorLogsPage() {
       if (error) throw error;
 
       setSelected(null);
+      setAnalysisById({});
       toast.success("Signalements supprimés.");
       await load();
     } catch (e: any) {
@@ -99,6 +130,11 @@ export default function AdminErrorLogsPage() {
       }
 
       if (selected?.id === id) setSelected(null);
+      setAnalysisById((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
       console.log("[AdminErrorLogs] Suppression réussie");
       toast.success("Signalement supprimé.");
       await load();
@@ -112,6 +148,38 @@ export default function AdminErrorLogsPage() {
     const text = `Message: ${row.message}\n\nRoute: ${row.route || "N/A"}\nComposant: ${row.component || "N/A"}\nNavigateur: ${getBrowserLabel(row.metadata)}\nUser Email: ${row.user_email || "N/A"}\nDescription: ${row.user_description || "N/A"}\n\nStack:\n${row.stack || "N/A"}`;
     navigator.clipboard.writeText(text);
     toast.success("Erreur copiée dans le presse-papier");
+  };
+
+  const analyzeError = async (row: ErrorLogRow) => {
+    setAnalyzingId(row.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-error-log", {
+        body: {
+          route: row.route,
+          component: row.component,
+          message: row.message,
+          stack: row.stack,
+          metadata: row.metadata,
+          user_email: row.user_email,
+          user_description: row.user_description,
+        },
+      });
+
+      if (error) throw error;
+
+      const analysis = data as ErrorAnalysis;
+      setAnalysisById((current) => ({ ...current, [row.id]: analysis }));
+      toast.success("Analyse générée.");
+    } catch (e: any) {
+      toast.error("Impossible d’analyser cette erreur.");
+    } finally {
+      setAnalyzingId(null);
+    }
+  };
+
+  const copyAnalysis = (row: ErrorLogRow, analysis: ErrorAnalysis) => {
+    navigator.clipboard.writeText(buildAnalysisCopyText(row, analysis));
+    toast.success("Analyse copiée dans le presse-papier");
   };
 
   useEffect(() => {
@@ -134,6 +202,8 @@ export default function AdminErrorLogsPage() {
     });
   }, [query, rows]);
 
+  const selectedAnalysis = selected ? analysisById[selected.id] : null;
+
   return (
     <AdminLayout>
       <div className="space-y-4">
@@ -144,7 +214,7 @@ export default function AdminErrorLogsPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Filtrer (route, composant, message, email… )"
+                placeholder="Filtrer (route, composant, message, email, navigateur…)"
                 className="sm:w-[360px]"
               />
               <Button variant="outline" onClick={load} disabled={loading || clearing}>
@@ -175,7 +245,7 @@ export default function AdminErrorLogsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-muted-foreground mb-3">
+            <div className="mb-3 text-sm text-muted-foreground">
               {loading ? "Chargement…" : `${filtered.length} / ${rows.length} (derniers 200)`}
             </div>
 
@@ -245,7 +315,7 @@ export default function AdminErrorLogsPage() {
 
                   {!loading && filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-10">
+                      <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                         Aucun résultat.
                       </TableCell>
                     </TableRow>
@@ -296,20 +366,100 @@ export default function AdminErrorLogsPage() {
                 </div>
 
                 <div>
-                  <div className="text-muted-foreground text-sm mb-1">Message</div>
+                  <div className="mb-1 text-sm text-muted-foreground">Message</div>
                   <div className="rounded-md border bg-background/50 p-3 text-sm">{selected.message}</div>
+                </div>
+
+                <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 font-medium">
+                        <Sparkles className="h-4 w-4" />
+                        Analyse & correction suggérée
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Génère une analyse de cause probable et une proposition de correction directement dans l’app.
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => analyzeError(selected)}
+                        disabled={analyzingId === selected.id}
+                      >
+                        {analyzingId === selected.id ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Analyse…
+                          </>
+                        ) : selectedAnalysis ? (
+                          "Relancer l’analyse"
+                        ) : (
+                          "Analyser l’erreur"
+                        )}
+                      </Button>
+                      {selectedAnalysis ? (
+                        <Button variant="outline" onClick={() => copyAnalysis(selected, selectedAnalysis)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copier l’analyse
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {selectedAnalysis ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant={selectedAnalysis.browser_specific ? "destructive" : "secondary"}>
+                          {selectedAnalysis.browser_specific ? "Possiblement lié au navigateur" : "Pas spécifiquement lié au navigateur"}
+                        </Badge>
+                      </div>
+
+                      <div>
+                        <div className="mb-1 text-sm text-muted-foreground">Résumé</div>
+                        <div className="rounded-md border bg-background p-3 text-sm whitespace-pre-wrap">
+                          {selectedAnalysis.summary}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-2 text-sm text-muted-foreground">Causes probables</div>
+                        <ul className="list-disc space-y-1 pl-5 text-sm">
+                          {selectedAnalysis.probable_causes.map((cause, index) => (
+                            <li key={`${selected.id}-cause-${index}`}>{cause}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <div className="mb-1 text-sm text-muted-foreground">Correction recommandée</div>
+                        <div className="rounded-md border bg-background p-3 text-sm whitespace-pre-wrap">
+                          {selectedAnalysis.recommended_fix}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-2 text-sm text-muted-foreground">Vérifications après correction</div>
+                        <ul className="list-disc space-y-1 pl-5 text-sm">
+                          {selectedAnalysis.verification_steps.map((step, index) => (
+                            <li key={`${selected.id}-step-${index}`}>{step}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {selected.user_description ? (
                   <div>
-                    <div className="text-muted-foreground text-sm mb-1">Description utilisateur</div>
+                    <div className="mb-1 text-sm text-muted-foreground">Description utilisateur</div>
                     <div className="rounded-md border bg-background/50 p-3 text-sm whitespace-pre-wrap">{selected.user_description}</div>
                   </div>
                 ) : null}
 
                 {selected.stack ? (
                   <div>
-                    <div className="text-muted-foreground text-sm mb-1">Stack</div>
+                    <div className="mb-1 text-sm text-muted-foreground">Stack</div>
                     <pre className="max-h-64 overflow-auto rounded-md border bg-background/50 p-3 text-xs whitespace-pre-wrap">
                       {selected.stack}
                     </pre>
@@ -318,7 +468,7 @@ export default function AdminErrorLogsPage() {
 
                 {selected.metadata ? (
                   <div>
-                    <div className="text-muted-foreground text-sm mb-1">Metadata</div>
+                    <div className="mb-1 text-sm text-muted-foreground">Metadata</div>
                     <pre className="max-h-64 overflow-auto rounded-md border bg-background/50 p-3 text-xs whitespace-pre-wrap">
                       {JSON.stringify(selected.metadata, null, 2)}
                     </pre>

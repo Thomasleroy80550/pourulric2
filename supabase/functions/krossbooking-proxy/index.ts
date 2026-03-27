@@ -2,12 +2,23 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
-const CRON_SECRET = (Deno.env.get("CRON_SECRET") ?? "").trim();
+const CRON_SECRETS = [
+  Deno.env.get("CRON_SECRET"),
+  Deno.env.get("CRON_SECRET_2"),
+  Deno.env.get("CRONSECRETNOTIFYNEWRESA"),
+  Deno.env.get("CRON_SECRET_NOTIFY_NEW_RESA"),
+]
+  .map((value) => (value ?? "").trim())
+  .filter(Boolean);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function isAllowedCronSecret(value: string): boolean {
+  return !!value && CRON_SECRETS.includes(value.trim());
+}
 
 interface RoomRequest {
   room_id: string | number;
@@ -75,7 +86,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     const headerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
-    const isCron = !!headerToken && headerToken === CRON_SECRET;
+    const isCron = isAllowedCronSecret(headerToken);
     let supabaseClient;
 
     if (!isCron) {

@@ -7,7 +7,14 @@ import { fr } from "npm:date-fns/locale/fr";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
-const CRON_SECRET = (Deno.env.get("CRON_SECRET") ?? "").trim();
+const CRON_SECRETS = [
+  Deno.env.get("CRON_SECRET"),
+  Deno.env.get("CRON_SECRET_2"),
+  Deno.env.get("CRONSECRETNOTIFYNEWRESA"),
+  Deno.env.get("CRON_SECRET_NOTIFY_NEW_RESA"),
+]
+  .map((value) => (value ?? "").trim())
+  .filter(Boolean);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +26,10 @@ const corsHeaders = {
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const resend = new Resend(RESEND_API_KEY);
 const euroFormatter = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+
+function isAllowedCronSecret(value: string): boolean {
+  return !!value && CRON_SECRETS.includes(value.trim());
+}
 
 interface UserRoom {
   room_id: string | number;
@@ -265,7 +276,7 @@ serve(async (req) => {
   const authHeader = req.headers.get("Authorization") ?? "";
   const headerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
   const bodyToken = typeof body.cron_secret === "string" ? body.cron_secret.trim() : "";
-  const isCron = (!!headerToken && headerToken === CRON_SECRET) || (!!bodyToken && bodyToken === CRON_SECRET);
+  const isCron = isAllowedCronSecret(headerToken) || isAllowedCronSecret(bodyToken);
 
   if (!isCron) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -312,12 +323,12 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${CRON_SECRET}`,
+          "Authorization": `Bearer ${bodyToken || headerToken}`,
         },
         body: JSON.stringify({
           action: "get_reservations_for_user_rooms",
           rooms: profile.user_rooms,
-          cron_secret: CRON_SECRET,
+          cron_secret: bodyToken || headerToken,
         }),
       });
 

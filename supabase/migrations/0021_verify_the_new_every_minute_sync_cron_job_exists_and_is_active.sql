@@ -1,0 +1,1 @@
+select jobid, jobname, schedule, command, active from cron.job where jobname = 'sync_resend_krossbooking_emails_every_minute';

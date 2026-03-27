@@ -61,10 +61,10 @@ const NewsNotificationsPopup: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
-                    Les notifications sont de retour !
+                    Les notifications SMS et mail sont de retour !
                   </h2>
                   <p className="text-sm leading-6 text-slate-600 sm:text-base">
-                    Retrouvez vos alertes importantes directement dans votre espace propriétaire.
+                    Retrouvez vos alertes importantes par email et par SMS directement depuis votre espace propriétaire.
                   </p>
                 </div>
               </div>
@@ -76,7 +76,7 @@ const NewsNotificationsPopup: React.FC = () => {
                 <div>
                   <p className="font-semibold text-slate-900">Nouveau</p>
                   <p className="mt-1 text-sm text-slate-600">
-                    Consultez plus facilement vos messages et informations importantes depuis l’onglet Notifications.
+                    Activez vos alertes de réservations par email et SMS depuis votre profil, dans l’onglet Notifications.
                   </p>
                 </div>
               </div>

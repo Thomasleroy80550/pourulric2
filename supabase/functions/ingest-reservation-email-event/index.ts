@@ -7,6 +7,7 @@ import { fr } from "npm:date-fns/locale/fr";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
+const SMSFACTOR_API_TOKEN = (Deno.env.get("SMSFACTOR_API_TOKEN") ?? "").trim();
 const WEBHOOK_SECRETS = [
   Deno.env.get("RESERVATION_EMAIL_INGEST_SECRET"),
   Deno.env.get("CRON_SECRET_NOTIFY_NEW_RESA"),
@@ -59,9 +60,13 @@ interface MatchedProfile {
   id: string;
   first_name: string | null;
   email: string | null;
+  phone_number: string | null;
   notify_new_booking_email: boolean;
   notify_cancellation_email: boolean;
   notify_booking_change_email: boolean;
+  notify_new_booking_sms: boolean;
+  notify_booking_change_sms: boolean;
+  notify_cancellation_sms: boolean;
 }
 
 function isAllowedSecret(value: string): boolean {
@@ -160,13 +165,73 @@ function formatAmount(value: number | null | undefined): string {
   return euroFormatter.format(value);
 }
 
-function escapeHtml(value: string): string {
+function formatSmsDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  const parsed = parseISO(value);
+  if (!isValid(parsed)) return value;
+  return format(parsed, "dd/MM");
+}
+
+function normalizePhoneForSmsFactor(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  let phone = value.trim().replace(/[\s\-().]/g, "");
+  if (phone.startsWith("00")) phone = `+${phone.slice(2)}`;
+  if (phone.startsWith("33") && !phone.startsWith("+")) phone = `+${phone}`;
+  if (!phone.startsWith("+") && phone.length === 10 && phone.startsWith("0")) phone = `+33${phone.slice(1)}`;
+  if (phone.startsWith("+33") && phone[3] === "0") phone = `+33${phone.slice(4)}`;
+
+  const digits = phone.replace(/\D/g, "");
+  return digits.length >= 11 ? digits : null;
+}
+
+function sanitizeSmsText(value: string): string {
   return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/€/g, " EUR")
+    .replace(/→/g, "->")
+    .replace(/[’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function truncateSmsText(value: string, maxLength = 160): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
+function buildReservationSmsMessage(
+  eventType: "new" | "modified" | "cancelled" | "unknown",
+  roomLabel: string,
+  guestName: string,
+  reservationLabel: string,
+  arrivalDate: string | null,
+  departureDate: string | null,
+  totalAmount: number | null,
+): string | null {
+  const arrival = formatSmsDate(arrivalDate);
+  const departure = formatSmsDate(departureDate);
+  const dateRange = arrival && departure ? `${arrival}-${departure}` : arrival ?? departure ?? "";
+  const amount = totalAmount === null ? "" : formatAmount(totalAmount).replace(/\s/g, "");
+
+  let message = "";
+
+  if (eventType === "new") {
+    message = `HK nouvelle resa ${roomLabel} ${dateRange} ${guestName} ${amount} ref ${reservationLabel}`;
+  } else if (eventType === "cancelled") {
+    message = `HK annulation resa ${roomLabel} ${dateRange} ${guestName} ref ${reservationLabel}`;
+  } else if (eventType === "modified") {
+    message = `HK modif resa ${roomLabel} ${dateRange} ${guestName} ref ${reservationLabel}`;
+  }
+
+  if (!message) {
+    return null;
+  }
+
+  return truncateSmsText(sanitizeSmsText(message));
 }
 
 async function sendEmail(profile: MatchedProfile, subject: string, html: string) {
@@ -181,6 +246,38 @@ async function sendEmail(profile: MatchedProfile, subject: string, html: string)
     subject,
     html,
   });
+}
+
+async function sendSms(profile: MatchedProfile, message: string, smsId: string) {
+  if (!SMSFACTOR_API_TOKEN) {
+    console.warn(`[ingest-reservation-email-event] SMSFACTOR_API_TOKEN missing, SMS skipped user_id=${profile.id}`);
+    return;
+  }
+
+  const destination = normalizePhoneForSmsFactor(profile.phone_number);
+  if (!destination) {
+    console.warn(`[ingest-reservation-email-event] missing or invalid phone_number for user_id=${profile.id}`);
+    return;
+  }
+
+  const params = new URLSearchParams({
+    token: SMSFACTOR_API_TOKEN,
+    text: truncateSmsText(sanitizeSmsText(message)),
+    to: destination,
+    pushtype: "alert",
+    gsmsmsid: smsId,
+  });
+
+  const response = await fetch(`https://api.smsfactor.com/send?${params.toString()}`, {
+    method: "GET",
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`SMSFactor error ${response.status}: ${responseText}`);
+  }
+
+  console.log(`[ingest-reservation-email-event] sms sent user_id=${profile.id} to=${destination}`);
 }
 
 function buildChangesHtml(before: Record<string, unknown> | null | undefined, after: Record<string, unknown> | null | undefined): string {
@@ -334,7 +431,7 @@ serve(async (req) => {
 
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from("profiles")
-      .select("id, first_name, email, notify_new_booking_email, notify_cancellation_email, notify_booking_change_email")
+      .select("id, first_name, email, phone_number, notify_new_booking_email, notify_cancellation_email, notify_booking_change_email, notify_new_booking_sms, notify_booking_change_sms, notify_cancellation_sms")
       .in("id", matchedUserIds);
 
     if (profilesError) {
@@ -356,6 +453,8 @@ serve(async (req) => {
         <p>Un événement de réservation a été reçu pour <strong>${escapeHtml(roomLabel)}</strong>.</p>
       `;
       let shouldSendEmail = false;
+      let shouldSendSms = false;
+      let smsMessage = "";
 
       if (eventType === "new") {
         notificationMessage = `Nouvelle réservation : ${roomLabel} (${guestName}, ${formatDisplayDate(arrivalDate)} → ${formatDisplayDate(departureDate)})`;
@@ -373,6 +472,7 @@ serve(async (req) => {
           </ul>
         `;
         shouldSendEmail = profile.notify_new_booking_email;
+        shouldSendSms = profile.notify_new_booking_sms;
       } else if (eventType === "cancelled") {
         notificationMessage = `Annulation de réservation : ${roomLabel} (${guestName})`;
         notificationLink = "/bookings";
@@ -388,6 +488,7 @@ serve(async (req) => {
           </ul>
         `;
         shouldSendEmail = profile.notify_cancellation_email;
+        shouldSendSms = profile.notify_cancellation_sms;
       } else if (eventType === "modified") {
         notificationMessage = `Réservation modifiée : ${roomLabel} (${guestName})`;
         emailSubject = `Modification de réservation pour ${roomLabel}`;
@@ -402,7 +503,18 @@ serve(async (req) => {
           </ul>
         `;
         shouldSendEmail = profile.notify_booking_change_email;
+        shouldSendSms = profile.notify_booking_change_sms;
       }
+
+      smsMessage = buildReservationSmsMessage(
+        eventType,
+        roomLabel,
+        guestName,
+        reservationLabel,
+        arrivalDate,
+        departureDate,
+        totalAmount,
+      ) ?? "";
 
       const { error: notificationError } = await supabaseAdmin.from("notifications").insert({
         user_id: profile.id,
@@ -420,6 +532,15 @@ serve(async (req) => {
         } catch (emailError) {
           const message = emailError instanceof Error ? emailError.message : String(emailError);
           console.error(`[ingest-reservation-email-event] email send failed user_id=${profile.id} message=${message}`);
+        }
+      }
+
+      if (shouldSendSms && smsMessage) {
+        try {
+          await sendSms(profile, smsMessage, `${insertedEvent?.id ?? "reservation-event"}-${profile.id}`);
+        } catch (smsError) {
+          const message = smsError instanceof Error ? smsError.message : String(smsError);
+          console.error(`[ingest-reservation-email-event] sms send failed user_id=${profile.id} message=${message}`);
         }
       }
     }

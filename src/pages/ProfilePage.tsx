@@ -101,6 +101,7 @@ const ProfilePage: React.FC = () => {
   const [notifyCancellationEmail, setNotifyCancellationEmail] = useState(true);
   const [notifyBookingChangeEmail, setNotifyBookingChangeEmail] = useState(true);
   const [notifyNewBookingSms, setNotifyNewBookingSms] = useState(false);
+  const [notifyBookingChangeSms, setNotifyBookingChangeSms] = useState(false);
   const [notifyCancellationSms, setNotifyCancellationSms] = useState(false);
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
   const [digitalBookletEnabled, setDigitalBookletEnabled] = useState(false);
@@ -133,6 +134,7 @@ const ProfilePage: React.FC = () => {
         setNotifyCancellationEmail(fetchedProfile.notify_cancellation_email ?? true);
         setNotifyBookingChangeEmail(fetchedProfile.notify_booking_change_email ?? true);
         setNotifyNewBookingSms(fetchedProfile.notify_new_booking_sms ?? false);
+        setNotifyBookingChangeSms(fetchedProfile.notify_booking_change_sms ?? false);
         setNotifyCancellationSms(fetchedProfile.notify_cancellation_sms ?? false);
         setExpensesModuleEnabled(fetchedProfile.expenses_module_enabled ?? false);
         setDigitalBookletEnabled(fetchedProfile.digital_booklet_enabled ?? false);
@@ -170,6 +172,7 @@ const ProfilePage: React.FC = () => {
         notify_cancellation_email: notifyCancellationEmail,
         notify_booking_change_email: notifyBookingChangeEmail,
         notify_new_booking_sms: notifyNewBookingSms,
+        notify_booking_change_sms: notifyBookingChangeSms,
         notify_cancellation_sms: notifyCancellationSms,
         expenses_module_enabled: expensesModuleEnabled,
         digital_booklet_enabled: digitalBookletEnabled,
@@ -605,6 +608,13 @@ const ProfilePage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
                   <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
+                  <div>
+                    <Label htmlFor="notif-booking-change-sms">Modifications de réservation par SMS</Label>
+                    <p className="text-sm text-gray-500">SMS court envoyé quand une réservation change.</p>
+                  </div>
+                  <Switch id="notif-booking-change-sms" checked={notifyBookingChangeSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyBookingChangeSms)} disabled={userProfile?.is_banned} />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>

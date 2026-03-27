@@ -1,0 +1,1 @@
+alter table public.profiles add column if not exists notify_booking_change_sms boolean not null default false;

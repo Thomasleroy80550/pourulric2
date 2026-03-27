@@ -144,6 +144,36 @@ const AdminStatusPage: React.FC = () => {
     }
   };
 
+  const onImportKrossbookingEmails = async () => {
+    setSyncingEmails(true);
+    setSyncResult("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-resend-krossbooking-emails", {
+        body: {
+          cron_secret: "abc123-test-notify",
+          limit: 20,
+          inspect_only: false,
+          include_raw: false,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const formatted = JSON.stringify(data, null, 2);
+      setSyncResult(formatted);
+      toast.success("Import des emails terminé.");
+    } catch (e: any) {
+      const message = e?.message || "Erreur lors de l'import des emails.";
+      setSyncResult(message);
+      toast.error(message);
+    } finally {
+      setSyncingEmails(false);
+    }
+  };
+
   const content = useMemo(() => {
     if (error) {
       return (
@@ -238,9 +268,14 @@ const AdminStatusPage: React.FC = () => {
             <p className="text-sm text-muted-foreground">
               Clique sur le bouton pour lire les 20 derniers emails reçus dans Resend et vérifier si un email de réservation Krossbooking est détecté.
             </p>
-            <Button onClick={onInspectKrossbookingEmails} disabled={syncingEmails}>
-              {syncingEmails ? "Inspection en cours..." : "Tester les emails reçus"}
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={onInspectKrossbookingEmails} disabled={syncingEmails} variant="outline">
+                {syncingEmails ? "Inspection en cours..." : "Tester les emails reçus"}
+              </Button>
+              <Button onClick={onImportKrossbookingEmails} disabled={syncingEmails}>
+                {syncingEmails ? "Import en cours..." : "Importer les emails trouvés"}
+              </Button>
+            </div>
             {syncResult && (
               <pre className="max-h-[420px] overflow-auto rounded-md border bg-muted p-4 text-xs whitespace-pre-wrap break-words">
                 {syncResult}

@@ -62,11 +62,21 @@ function getSenderEmail(value: unknown): string {
   return "";
 }
 
+function cleanExtractedValue(value: string | null): string | null {
+  if (!value) return null;
+
+  const cleaned = value.trim();
+  if (!cleaned || cleaned === ":") return null;
+  if (/^[A-Z ]+:$/i.test(cleaned)) return null;
+
+  return cleaned;
+}
+
 function extractLineValue(text: string, label: string): string | null {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const regex = new RegExp(`${escapedLabel}\s*:?\s*(.+)`, "i");
   const match = text.match(regex);
-  return match?.[1]?.trim() || null;
+  return cleanExtractedValue(match?.[1]?.trim() || null);
 }
 
 function extractReservationReference(text: string): string | null {

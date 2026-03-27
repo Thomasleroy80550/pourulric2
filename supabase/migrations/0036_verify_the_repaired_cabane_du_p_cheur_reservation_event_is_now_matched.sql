@@ -1,0 +1,1 @@
+select id, room_name, room_name_normalized, matched_user_ids, matched_user_room_ids, processing_status, error_message from public.reservation_email_events where id = 'eccd6332-5dec-4eb3-b9aa-516c71e2eee1';

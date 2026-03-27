@@ -24,8 +24,21 @@ function stripHtml(value: string | undefined): string {
   return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function repairTextEncoding(value: string): string {
+  if (!/[ÃÂâ€]/.test(value)) return value;
+
+  try {
+    const bytes = Uint8Array.from(Array.from(value).map((char) => char.charCodeAt(0) & 0xff));
+    const decoded = new TextDecoder("utf-8").decode(bytes);
+    return decoded.includes("�") ? value : decoded;
+  } catch {
+    return value;
+  }
+}
+
 function normalizeText(value: string): string {
-  return value
+  const repaired = repairTextEncoding(value);
+  return repaired
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, " ")
@@ -36,7 +49,7 @@ function normalizeText(value: string): string {
 function cleanExtractedValue(value: string | null): string | null {
   if (!value) return null;
 
-  const cleaned = value.trim();
+  const cleaned = repairTextEncoding(value.trim());
   if (!cleaned || cleaned === ":") return null;
   if (/^[A-Z ]+:$/i.test(cleaned)) return null;
 

@@ -73,8 +73,21 @@ function isAllowedSecret(value: string): boolean {
   return !!value && WEBHOOK_SECRETS.includes(value.trim());
 }
 
+function repairTextEncoding(value: string): string {
+  if (!/[ÃÂâ€]/.test(value)) return value;
+
+  try {
+    const bytes = Uint8Array.from(Array.from(value).map((char) => char.charCodeAt(0) & 0xff));
+    const decoded = new TextDecoder("utf-8").decode(bytes);
+    return decoded.includes("�") ? value : decoded;
+  } catch {
+    return value;
+  }
+}
+
 function normalizeText(value: string): string {
-  return value
+  const repaired = repairTextEncoding(value);
+  return repaired
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, " ")
@@ -346,7 +359,8 @@ serve(async (req) => {
     });
   }
 
-  const normalizedRoomName = normalizeText(roomName);
+  const repairedRoomName = repairTextEncoding(roomName);
+  const normalizedRoomName = normalizeText(repairedRoomName);
   const eventType = normalizeEventType(body.event_type);
   const occurredAt = parseDateTimeInput(body.occurred_at) ?? new Date().toISOString();
   const arrivalDate = parseDateInput(body.arrival_date);
@@ -354,7 +368,7 @@ serve(async (req) => {
   const totalAmount = parseAmount(body.total_amount);
   const eventKey = body.event_key?.trim() || null;
 
-  console.log(`[ingest-reservation-email-event] received event_type=${eventType} room_name=${roomName} reservation_id=${body.reservation_id ?? "unknown"}`);
+  console.log(`[ingest-reservation-email-event] received event_type=${eventType} room_name=${repairedRoomName} reservation_id=${body.reservation_id ?? "unknown"}`);
 
   try {
     const { data: userRooms, error: userRoomsError } = await supabaseAdmin
@@ -385,7 +399,7 @@ serve(async (req) => {
       occurred_at: occurredAt,
       reservation_reference: body.reservation_reference?.trim() || null,
       reservation_id: body.reservation_id?.trim() || null,
-      room_name: roomName,
+      room_name: repairedRoomName,
       room_name_normalized: normalizedRoomName,
       guest_name: body.guest_name?.trim() || null,
       guest_email: body.guest_email?.trim() || null,
@@ -403,7 +417,7 @@ serve(async (req) => {
       matched_user_room_ids: matchedRoomIds,
       matched_user_ids: matchedUserIds,
       processing_status: matchedUserIds.length > 0 ? "matched" : "unmatched",
-      error_message: matchedUserIds.length > 0 ? null : `No room matched for ${roomName}`,
+      error_message: matchedUserIds.length > 0 ? null : `No room matched for ${repairedRoomName}`,
       processed_at: new Date().toISOString(),
     };
 
@@ -425,7 +439,7 @@ serve(async (req) => {
     }
 
     if (matchedUserIds.length === 0) {
-      console.warn(`[ingest-reservation-email-event] no room matched for room_name=${roomName}`);
+      console.warn(`[ingest-reservation-email-event] no room matched for room_name=${repairedRoomName}`);
       return new Response(JSON.stringify({
         success: true,
         eventId: insertedEvent?.id ?? null,
@@ -448,7 +462,7 @@ serve(async (req) => {
     }
 
     const matchedProfiles = (profiles ?? []) as MatchedProfile[];
-    const roomLabel = matchedRooms[0]?.room_name ?? roomName;
+    const roomLabel = matchedRooms[0]?.room_name ?? repairedRoomName;
     const guestName = body.guest_name?.trim() || "Client";
     const reservationLabel = body.reservation_reference?.trim() || body.reservation_id?.trim() || "Réservation";
 

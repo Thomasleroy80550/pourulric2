@@ -286,6 +286,10 @@ serve(async (req) => {
   }
 
   const seed = body.seed === true;
+  const inspectLogs = body.inspect_logs === true;
+  const logsLimit = typeof body.logs_limit === "number" ? body.logs_limit : 20;
+  const logsOffset = typeof body.logs_offset === "number" ? body.logs_offset : 0;
+  const logsPage = typeof body.logs_page === "number" ? body.logs_page : null;
   const limitProfiles = typeof body.limit_profiles === "number" ? body.limit_profiles : null;
   const filterUserId = typeof body.user_id === "string" ? body.user_id.trim() : "";
   const filterProfileEmail = typeof body.profile_email === "string" ? body.profile_email.trim() : "";
@@ -299,10 +303,65 @@ serve(async (req) => {
   };
 
   console.log(
-    `[check-new-reservations] Début d'exécution seed=${seed} limit_profiles=${limitProfiles ?? "all"} user_id=${filterUserId || "all"} profile_email=${filterProfileEmail || "all"}`,
+    `[check-new-reservations] Début d'exécution seed=${seed} inspect_logs=${inspectLogs} limit_profiles=${limitProfiles ?? "all"} user_id=${filterUserId || "all"} profile_email=${filterProfileEmail || "all"}`,
   );
 
   try {
+    if (inspectLogs) {
+      const proxyResponse = await fetch(`${SUPABASE_URL}/functions/v1/krossbooking-proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${bodyToken || headerToken}`,
+        },
+        body: JSON.stringify({
+          action: "get_reservations_log",
+          cron_secret: bodyToken || headerToken,
+          limit: logsLimit,
+          offset: logsOffset,
+          ...(logsPage !== null ? { page: logsPage } : {}),
+        }),
+      });
+
+      const rawText = await proxyResponse.text();
+      if (!proxyResponse.ok) {
+        console.error(`[check-new-reservations] Erreur lors de l'inspection des logs: ${proxyResponse.status} ${rawText}`);
+        return new Response(JSON.stringify({ error: rawText || "Unable to fetch reservation logs" }), {
+          status: proxyResponse.status,
+          headers: corsHeaders,
+        });
+      }
+
+      let logsResponse: Record<string, unknown> = {};
+      try {
+        logsResponse = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        logsResponse = { raw: rawText };
+      }
+
+      const logsData = Array.isArray(logsResponse?.data?.data)
+        ? logsResponse.data.data
+        : Array.isArray(logsResponse?.data)
+          ? logsResponse.data
+          : [];
+      const firstEntry = logsData[0] ?? null;
+      const firstEntryKeys = firstEntry && typeof firstEntry === "object" ? Object.keys(firstEntry as Record<string, unknown>) : [];
+
+      console.log(`[check-new-reservations] Inspection logs récupérés count=${logsData.length}`);
+
+      return new Response(JSON.stringify({
+        success: true,
+        inspectLogs: true,
+        count: logsData.length,
+        firstEntryKeys,
+        sample: logsData.slice(0, 5),
+        rawResponse: logsResponse,
+      }), {
+        status: 200,
+        headers: corsHeaders,
+      });
+    }
+
     let profilesQuery = supabaseAdmin
       .from("profiles")
       .select(`

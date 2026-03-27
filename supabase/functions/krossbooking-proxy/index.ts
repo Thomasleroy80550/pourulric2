@@ -196,6 +196,16 @@ serve(async (req) => {
         };
         break;
 
+      case "get_reservations_log":
+        krossbookingPath = "/logs/get-reservations-log";
+        payload = {
+          limit: typeof requestBody.limit === "number" ? requestBody.limit : 20,
+          offset: typeof requestBody.offset === "number" ? requestBody.offset : 0,
+          ...(typeof requestBody.page === "number" ? { page: requestBody.page } : {}),
+        };
+        returnFullData = true;
+        break;
+
       case "get_housekeeping_tasks":
         if (!requestBody.date_from || !requestBody.date_to) {
           throw new Error("Missing date_from/date_to for get_housekeeping_tasks.");

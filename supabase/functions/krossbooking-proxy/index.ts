@@ -83,41 +83,49 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: `Unsupported HTTP method: ${req.method}` }), {
+      status: 405,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+
+  let requestBody: Record<string, unknown> = {};
+
+  try {
+    requestBody = await req.json();
+  } catch {
+    requestBody = {};
+  }
+
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     const headerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
-    const isCron = isAllowedCronSecret(headerToken);
-    let supabaseClient;
+    const bodyToken = typeof requestBody.cron_secret === "string" ? requestBody.cron_secret.trim() : "";
+    const isCron = isAllowedCronSecret(headerToken) || isAllowedCronSecret(bodyToken);
+    const action = typeof requestBody.action === "string" ? requestBody.action : "";
+
+    console.log(`[krossbooking-proxy] start action=${action || "unknown"} isCron=${isCron}`);
 
     if (!isCron) {
-      supabaseClient = createClient(
+      const supabaseClient = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_ANON_KEY") ?? "",
         { global: { headers: { Authorization: authHeader } } },
       );
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabaseClient.auth.getUser();
+      const authResponse = await supabaseClient.auth.getUser();
+      const user = authResponse.data?.user ?? null;
+      const authError = authResponse.error ?? null;
 
       if (authError || !user) {
+        console.warn(`[krossbooking-proxy] unauthorized request action=${action || "unknown"} authError=${authError?.message ?? "missing-user"}`);
         return new Response(JSON.stringify({ error: "Unauthorized: User not authenticated." }), {
           status: 401,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
     }
-
-    if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: `Unsupported HTTP method: ${req.method}` }), {
-        status: 405,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    const requestBody = await req.json();
-    const { action } = requestBody;
 
     if (!action) {
       return new Response(JSON.stringify({ error: "Missing 'action' in request body." }), {
@@ -134,11 +142,13 @@ serve(async (req) => {
         throw new Error("Missing rooms for get_reservations_for_user_rooms.");
       }
 
-      const reservationsById = new Map<string, any>();
+      console.log(`[krossbooking-proxy] fetching reservations for ${rooms.length} rooms`);
+      const reservationsById = new Map<string, unknown>();
 
       for (const room of rooms) {
         const roomId = Number(room.room_id);
         if (!Number.isFinite(roomId)) {
+          console.warn(`[krossbooking-proxy] skipped invalid room_id=${String(room.room_id)}`);
           continue;
         }
 
@@ -148,12 +158,16 @@ serve(async (req) => {
           id_property: room.id_property ? Number(room.id_property) : undefined,
         });
 
-        for (const reservation of Array.isArray(response?.data) ? response.data : []) {
-          reservationsById.set(String(reservation.id_reservation), reservation);
+        const roomReservations = Array.isArray(response?.data) ? response.data : [];
+        console.log(`[krossbooking-proxy] room_id=${roomId} reservations=${roomReservations.length}`);
+
+        for (const reservation of roomReservations) {
+          reservationsById.set(String((reservation as { id_reservation?: string | number }).id_reservation), reservation);
         }
       }
 
       const aggregatedReservations = Array.from(reservationsById.values());
+      console.log(`[krossbooking-proxy] aggregated reservations=${aggregatedReservations.length}`);
 
       return new Response(JSON.stringify({
         data: aggregatedReservations,
@@ -256,12 +270,14 @@ serve(async (req) => {
     const responsePayload = returnFullData
       ? { data }
       : {
-          data: data.data || [],
-          total_count: data.total_count,
-          count: data.count,
-          limit: data.limit,
-          offset: data.offset,
+          data: data?.data || [],
+          total_count: data?.total_count,
+          count: data?.count,
+          limit: data?.limit,
+          offset: data?.offset,
         };
+
+    console.log(`[krossbooking-proxy] success action=${action}`);
 
     return new Response(JSON.stringify(responsePayload), {
       status: 200,
@@ -269,6 +285,7 @@ serve(async (req) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    console.error(`[krossbooking-proxy] error ${message}`);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },

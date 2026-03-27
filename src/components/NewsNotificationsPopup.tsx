@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const DISMISS_STORAGE_KEY = "news_notifications_returned_popup_dismissed_v2";
+const DISMISS_STORAGE_KEY = "news_notifications_returned_popup_dismissed_v3";
 
 const NewsNotificationsPopup: React.FC = () => {
   const navigate = useNavigate();

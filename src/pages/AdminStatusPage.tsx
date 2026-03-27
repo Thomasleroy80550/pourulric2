@@ -19,6 +19,19 @@ const STATUS_OPTIONS: { value: ServiceStatusValue; label: string }[] = [
   { value: "maintenance", label: "Maintenance" },
 ];
 
+interface ProcessedEmailDebugItem {
+  emailId?: string;
+  senderEmail?: string;
+  subject?: string;
+  status?: string;
+  reason?: string;
+  error?: string;
+  response?: {
+    duplicate?: boolean;
+    success?: boolean;
+  } | string;
+}
+
 interface ReservationEmailSyncRun {
   id: string;
   source: string;
@@ -33,6 +46,7 @@ interface ReservationEmailSyncRun {
     duplicates?: number;
     ignored?: number;
     failed?: number;
+    processed?: ProcessedEmailDebugItem[];
   } | null;
   started_at: string;
   finished_at: string | null;
@@ -116,6 +130,23 @@ function getProcessingStatusBadge(status: string) {
       return <Badge variant="outline">Reçu</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
+  }
+}
+
+function getProcessedEmailStatusBadge(status: string | undefined) {
+  switch (status) {
+    case "ingested":
+      return <Badge className="bg-emerald-600 hover:bg-emerald-600">Ingesté</Badge>;
+    case "duplicate":
+      return <Badge variant="secondary">Doublon</Badge>;
+    case "ignored":
+      return <Badge variant="outline">Ignoré</Badge>;
+    case "parsed":
+      return <Badge className="bg-blue-600 hover:bg-blue-600">Reconnu</Badge>;
+    case "ingest_failed":
+      return <Badge variant="destructive">Erreur</Badge>;
+    default:
+      return <Badge variant="outline">{status ?? "Inconnu"}</Badge>;
   }
 }
 
@@ -390,6 +421,7 @@ const AdminStatusPage: React.FC = () => {
   const latestRunDuplicates = latestRun?.details?.duplicates ?? 0;
   const latestRunIgnored = latestRun?.details?.ignored ?? 0;
   const latestRunFailed = latestRun?.details?.failed ?? 0;
+  const latestRunProcessed = latestRun?.details?.processed ?? [];
 
   return (
     <AdminLayout>
@@ -498,6 +530,55 @@ const AdminStatusPage: React.FC = () => {
                 </TableBody>
               </Table>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Debug des emails du dernier run</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Expéditeur</TableHead>
+                    <TableHead>Sujet reçu</TableHead>
+                    <TableHead>Motif / erreur</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {monitoringLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
+                        Chargement du debug...
+                      </TableCell>
+                    </TableRow>
+                  ) : latestRunProcessed.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
+                        Aucun email détaillé sur le dernier run.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    latestRunProcessed.map((item, index) => (
+                      <TableRow key={`${item.emailId ?? item.subject ?? "processed"}-${index}`}>
+                        <TableCell>{getProcessedEmailStatusBadge(item.status)}</TableCell>
+                        <TableCell className="text-sm">{item.senderEmail ?? "—"}</TableCell>
+                        <TableCell className="max-w-[420px] text-sm break-words">{item.subject ?? "—"}</TableCell>
+                        <TableCell className="max-w-[420px] text-xs text-muted-foreground break-words">
+                          {item.reason ?? item.error ?? "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Ce tableau permet de voir exactement quels sujets ont été reçus, lesquels ont été ignorés, et pourquoi.
+            </p>
           </CardContent>
         </Card>
 

@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const PROJECT_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co";
 const RESEND_API_BASE_URL = "https://api.resend.com";
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY_RECEIV") ?? Deno.env.get("RESEND_API_KEY") ?? "";
+const RESEND_API_KEY = (Deno.env.get("RESEND_API_KEY_RECEIV") ?? Deno.env.get("RESEND_API_KEY") ?? "").trim();
 const CRON_SECRETS = [
 
   Deno.env.get("CRON_SECRET_NOTIFY_NEW_RESA"),

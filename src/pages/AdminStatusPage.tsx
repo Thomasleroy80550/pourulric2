@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getServiceStatuses, upsertServiceStatus, deleteServiceStatus, ServiceStatus, ServiceStatusValue } from "@/lib/status-api";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BadgeCheck, AlertTriangle, Wrench, CloudOff, Plus, Trash2, Save } from "lucide-react";
 
@@ -31,6 +32,8 @@ const AdminStatusPage: React.FC = () => {
   const [statuses, setStatuses] = useState<ServiceStatus[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncingEmails, setSyncingEmails] = useState(false);
+  const [syncResult, setSyncResult] = useState<string>("");
 
   // Form pour ajout d'un service
   const [newServiceKey, setNewServiceKey] = useState("");
@@ -108,6 +111,36 @@ const AdminStatusPage: React.FC = () => {
       toast.success("Service supprimé.");
     } catch (e: any) {
       toast.error(e.message || "Erreur lors de la suppression.");
+    }
+  };
+
+  const onInspectKrossbookingEmails = async () => {
+    setSyncingEmails(true);
+    setSyncResult("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-resend-krossbooking-emails", {
+        body: {
+          cron_secret: "abc123-test-notify",
+          limit: 20,
+          inspect_only: true,
+          include_raw: true,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const formatted = JSON.stringify(data, null, 2);
+      setSyncResult(formatted);
+      toast.success("Inspection des emails terminée.");
+    } catch (e: any) {
+      const message = e?.message || "Erreur lors de l'inspection des emails.";
+      setSyncResult(message);
+      toast.error(message);
+    } finally {
+      setSyncingEmails(false);
     }
   };
 
@@ -197,6 +230,25 @@ const AdminStatusPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Test emails Krossbooking</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Clique sur le bouton pour lire les 20 derniers emails reçus dans Resend et vérifier si un email de réservation Krossbooking est détecté.
+            </p>
+            <Button onClick={onInspectKrossbookingEmails} disabled={syncingEmails}>
+              {syncingEmails ? "Inspection en cours..." : "Tester les emails reçus"}
+            </Button>
+            {syncResult && (
+              <pre className="max-h-[420px] overflow-auto rounded-md border bg-muted p-4 text-xs whitespace-pre-wrap break-words">
+                {syncResult}
+              </pre>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Ajouter un service</CardTitle>

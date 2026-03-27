@@ -78,6 +78,7 @@ const ProfilePage: React.FC = () => {
   const [phoneToVerify, setPhoneToVerify] = useState('');
   const [isAttestationDialogOpen, setIsAttestationDialogOpen] = useState(false);
   const [insuranceLoading, setInsuranceLoading] = useState(false);
+  const [smsTestLoading, setSmsTestLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState(
     'personal-data'
@@ -204,6 +205,25 @@ const ProfilePage: React.FC = () => {
       return;
     }
     setter(checked);
+  };
+
+  const handleSendTestSms = async () => {
+    setSmsTestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-test-smsfactor-sms', {
+        body: {},
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`SMS de test envoyé vers ${data?.to ?? 'votre numéro'}.`);
+    } catch (err: any) {
+      toast.error(err?.message || "Impossible d'envoyer le SMS de test.");
+    } finally {
+      setSmsTestLoading(false);
+    }
   };
 
   const handleOpenAttestationDialog = () => {
@@ -619,6 +639,18 @@ const ProfilePage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
                   <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
+                </div>
+                <div className="rounded-md border border-dashed p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <Label>Tester l'envoi SMS</Label>
+                      <p className="text-sm text-gray-500">Envoie un SMS de test court à votre numéro enregistré.</p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={handleSendTestSms} disabled={smsTestLoading || userProfile?.is_banned}>
+                      {smsTestLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Phone className="mr-2 h-4 w-4" />}
+                      {smsTestLoading ? 'Envoi du SMS...' : 'Envoyer un SMS de test'}
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <div>

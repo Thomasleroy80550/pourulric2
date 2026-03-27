@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createNotification, sendEmail } from "./notifications-api";
-import { UserProfile } from "./profile-api";
 import { Strategy } from "./strategy-api";
+
 import { UserRoom } from "./user-room-api"; // Import UserRoom type
 import { Idea } from "./ideas-api";
 import { addDays, format, parseISO } from 'date-fns';
@@ -95,7 +95,8 @@ export interface UserProfile {
   objective_amount?: number | null;
   cguv_accepted_at?: string | null;
   cguv_version?: string | null;
-  pennylane_customer_id?: number | null;
+  pennylane_customer_id?: string | null;
+
   commission_rate?: number | null;
   phone_number?: string | null;
   expenses_module_enabled?: boolean | null;
@@ -112,7 +113,9 @@ export interface UserProfile {
   contract_start_date?: string | null;
   notify_new_booking_email: boolean;
   notify_cancellation_email: boolean;
+  notify_booking_change_email: boolean;
   notify_new_booking_sms: boolean;
+
   notify_cancellation_sms: boolean;
   is_banned: boolean;
   is_payment_suspended: boolean;

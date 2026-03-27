@@ -46,6 +46,7 @@ const editUserSchema = z.object({
   contract_start_date: z.string().optional().nullable(),
   notify_new_booking_email: z.boolean().optional(),
   notify_cancellation_email: z.boolean().optional(),
+  notify_booking_change_email: z.boolean().optional(),
   notify_new_booking_sms: z.boolean().optional(),
   notify_cancellation_sms: z.boolean().optional(),
   is_banned: z.boolean().optional(),
@@ -128,6 +129,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         contract_start_date: user.contract_start_date || '',
         notify_new_booking_email: user.notify_new_booking_email ?? true,
         notify_cancellation_email: user.notify_cancellation_email ?? true,
+        notify_booking_change_email: user.notify_booking_change_email ?? true,
         notify_new_booking_sms: user.notify_new_booking_sms ?? false,
         notify_cancellation_sms: user.notify_cancellation_sms ?? false,
         is_banned: user.is_banned || false,
@@ -619,6 +621,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                     <CardContent className="space-y-4">
                       <FormField control={form.control} name="notify_new_booking_email" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><FormLabel>Nouvelles réservations par email</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                       <FormField control={form.control} name="notify_cancellation_email" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><FormLabel>Annulations par email</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
+                      <FormField control={form.control} name="notify_booking_change_email" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><div className="space-y-0.5"><FormLabel>Modifications par email</FormLabel><FormDescription>Envoie un email lorsque les dates ou le montant d'une réservation changent.</FormDescription></div><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                       <FormField control={form.control} name="notify_new_booking_sms" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><FormLabel>Nouvelles réservations par SMS</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                       <FormField control={form.control} name="notify_cancellation_sms" render={({ field }) => (<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm"><FormLabel>Annulations par SMS</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>)} />
                     </CardContent>

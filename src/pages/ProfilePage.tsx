@@ -99,6 +99,7 @@ const ProfilePage: React.FC = () => {
   const [agency, setAgency] = useState('');
   const [notifyNewBookingEmail, setNotifyNewBookingEmail] = useState(true);
   const [notifyCancellationEmail, setNotifyCancellationEmail] = useState(true);
+  const [notifyBookingChangeEmail, setNotifyBookingChangeEmail] = useState(true);
   const [notifyNewBookingSms, setNotifyNewBookingSms] = useState(false);
   const [notifyCancellationSms, setNotifyCancellationSms] = useState(false);
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
@@ -130,6 +131,7 @@ const ProfilePage: React.FC = () => {
         setAgency(fetchedProfile.agency || '');
         setNotifyNewBookingEmail(fetchedProfile.notify_new_booking_email ?? true);
         setNotifyCancellationEmail(fetchedProfile.notify_cancellation_email ?? true);
+        setNotifyBookingChangeEmail(fetchedProfile.notify_booking_change_email ?? true);
         setNotifyNewBookingSms(fetchedProfile.notify_new_booking_sms ?? false);
         setNotifyCancellationSms(fetchedProfile.notify_cancellation_sms ?? false);
         setExpensesModuleEnabled(fetchedProfile.expenses_module_enabled ?? false);
@@ -166,6 +168,7 @@ const ProfilePage: React.FC = () => {
         agency: agency,
         notify_new_booking_email: notifyNewBookingEmail,
         notify_cancellation_email: notifyCancellationEmail,
+        notify_booking_change_email: notifyBookingChangeEmail,
         notify_new_booking_sms: notifyNewBookingSms,
         notify_cancellation_sms: notifyCancellationSms,
         expenses_module_enabled: expensesModuleEnabled,
@@ -591,6 +594,13 @@ const ProfilePage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-cancel-email">Recevoir les annulations par email</Label>
                   <Switch id="notif-cancel-email" checked={notifyCancellationEmail} onCheckedChange={setNotifyCancellationEmail} disabled={userProfile?.is_banned} />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
+                  <div>
+                    <Label htmlFor="notif-booking-change-email">Modifications de réservation par email</Label>
+                    <p className="text-sm text-gray-500">Recevez un email lorsqu'une réservation change de dates et/ou de montant.</p>
+                  </div>
+                  <Switch id="notif-booking-change-email" checked={notifyBookingChangeEmail} onCheckedChange={setNotifyBookingChangeEmail} disabled={userProfile?.is_banned} />
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>

@@ -1,259 +1,425 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { Resend } from "npm:resend";
-import { format, parseISO, isValid } from 'https://deno.land/std@0.208.0/datetime/mod.ts';
-import { fr } from 'npm:date-fns/locale/fr';
+import { format, isValid, parseISO } from "npm:date-fns";
+import { fr } from "npm:date-fns/locale/fr";
 
-// --- Secrets d'environnement ---
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-const CRON_SECRET = Deno.env.get('CRON_SECRET');
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
+const CRON_SECRET = (Deno.env.get("CRON_SECRET") ?? "").trim();
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json; charset=utf-8",
 };
 
-// --- Initialisation des clients ---
-const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const resend = new Resend(RESEND_API_KEY);
+const euroFormatter = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+
+interface UserRoom {
+  room_id: string | number;
+  room_name?: string | null;
+}
 
 interface UserProfile {
   id: string;
-  first_name: string;
-  email: string;
-  user_rooms: { room_id: string, room_name: string }[];
+  first_name: string | null;
+  email: string | null;
+  user_rooms: UserRoom[] | null;
   notify_new_booking_email: boolean;
   notify_cancellation_email: boolean;
+  notify_booking_change_email: boolean;
 }
 
-interface KrossbookingReservation {
+interface ProcessedReservationRow {
+  reservation_id: string;
+  status: string;
+  check_in_date: string | null;
+  check_out_date: string | null;
+  amount: number | null;
+}
+
+interface ReservationSnapshot {
   id: string;
   guest_name: string;
   property_name: string;
-  check_in_date: string;
-  check_out_date: string;
-  amount: string;
-  status: string; // 'PROP0', 'PROPRI', 'CANC'
+  check_in_date: string | null;
+  check_out_date: string | null;
+  amount: number | null;
+  status: string;
 }
 
-async function sendNewBookingEmail(profile: UserProfile, reservation: KrossbookingReservation) {
-  const checkInDate = isValid(parseISO(reservation.check_in_date)) ? format(parseISO(reservation.check_in_date), 'dd MMMM yyyy', { locale: fr }) : reservation.check_in_date;
-  const checkOutDate = isValid(parseISO(reservation.check_out_date)) ? format(parseISO(reservation.check_out_date), 'dd MMMM yyyy', { locale: fr }) : reservation.check_out_date;
-  
+interface ReservationChange {
+  label: string;
+  before: string;
+  after: string;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatDisplayDate(value: string | null | undefined): string {
+  if (!value) return "—";
+
+  const parsed = parseISO(value);
+  return isValid(parsed) ? format(parsed, "dd MMMM yyyy", { locale: fr }) : value;
+}
+
+function parseAmount(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.replace(/\s/g, "").replace("€", "").replace(",", ".");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function formatAmount(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return euroFormatter.format(value);
+}
+
+function hasAmountChanged(before: number | null, after: number | null): boolean {
+  if (before === null && after === null) return false;
+  return before !== after;
+}
+
+function buildReservationSnapshot(profile: UserProfile, reservation: any): ReservationSnapshot {
+  return {
+    id: String(reservation.id_reservation),
+    guest_name: reservation.label || "N/A",
+    property_name: profile.user_rooms?.find((room) => String(room.room_id) === String(reservation.id_room))?.room_name || "Logement",
+    check_in_date: reservation.arrival || null,
+    check_out_date: reservation.departure || null,
+    amount: parseAmount(reservation.charge_total_amount),
+    status: reservation.cod_reservation_status || "",
+  };
+}
+
+function getReservationChanges(before: ProcessedReservationRow, after: ReservationSnapshot): ReservationChange[] {
+  const changes: ReservationChange[] = [];
+
+  if ((before.check_in_date ?? null) !== (after.check_in_date ?? null)) {
+    changes.push({
+      label: "Arrivée",
+      before: formatDisplayDate(before.check_in_date),
+      after: formatDisplayDate(after.check_in_date),
+    });
+  }
+
+  if ((before.check_out_date ?? null) !== (after.check_out_date ?? null)) {
+    changes.push({
+      label: "Départ",
+      before: formatDisplayDate(before.check_out_date),
+      after: formatDisplayDate(after.check_out_date),
+    });
+  }
+
+  if (hasAmountChanged(before.amount ?? null, after.amount ?? null)) {
+    changes.push({
+      label: "Montant",
+      before: formatAmount(before.amount),
+      after: formatAmount(after.amount),
+    });
+  }
+
+  return changes;
+}
+
+async function sendEmail(profile: UserProfile, subject: string, html: string) {
+  if (!profile.email) {
+    console.warn(`[check-new-reservations] Aucun email pour l'utilisateur ${profile.id}, envoi ignoré.`);
+    return;
+  }
+
+  try {
+    await resend.emails.send({
+      from: "Hello Keys <noreply@notifications.hellokeys.fr>",
+      to: [profile.email],
+      subject,
+      html,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[check-new-reservations] Erreur d'envoi d'email pour l'utilisateur ${profile.id}: ${message}`);
+  }
+}
+
+async function sendNewBookingEmail(profile: UserProfile, reservation: ReservationSnapshot) {
   const subject = `Nouvelle réservation pour ${reservation.property_name}`;
   const html = `
-      <h1>Nouvelle réservation</h1>
-      <p>Bonjour ${profile.first_name || ''},</p>
-      <p>Une nouvelle réservation a été enregistrée pour votre logement <strong>${reservation.property_name}</strong>.</p>
-      <ul>
-          <li><strong>Client :</strong> ${reservation.guest_name}</li>
-          <li><strong>Arrivée :</strong> ${checkInDate}</li>
-          <li><strong>Départ :</strong> ${checkOutDate}</li>
-          <li><strong>Montant :</strong> ${reservation.amount}</li>
-      </ul>
-      <p>Vous pouvez consulter les détails sur votre espace propriétaire.</p>
+    <h1>Nouvelle réservation</h1>
+    <p>Bonjour ${escapeHtml(profile.first_name || "")},</p>
+    <p>Une nouvelle réservation a été enregistrée pour votre logement <strong>${escapeHtml(reservation.property_name)}</strong>.</p>
+    <ul>
+      <li><strong>Client :</strong> ${escapeHtml(reservation.guest_name)}</li>
+      <li><strong>Arrivée :</strong> ${escapeHtml(formatDisplayDate(reservation.check_in_date))}</li>
+      <li><strong>Départ :</strong> ${escapeHtml(formatDisplayDate(reservation.check_out_date))}</li>
+      <li><strong>Montant :</strong> ${escapeHtml(formatAmount(reservation.amount))}</li>
+    </ul>
+    <p>Vous pouvez consulter les détails sur votre espace propriétaire.</p>
   `;
 
-  try {
-    await resend.emails.send({
-      from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
-      to: [profile.email],
-      subject: subject,
-      html: html,
-    });
-    console.log(`Email de nouvelle réservation envoyé à ${profile.email} pour la réservation ${reservation.id}`);
-  } catch (error) {
-    console.error(`Erreur lors de l'envoi de l'email pour la réservation ${reservation.id}:`, error);
-  }
+  await sendEmail(profile, subject, html);
+  console.log(`[check-new-reservations] Email de nouvelle réservation envoyé à ${profile.email} pour la réservation ${reservation.id}.`);
 }
 
-async function sendCancellationEmail(profile: UserProfile, reservation: KrossbookingReservation) {
-  const checkInDate = isValid(parseISO(reservation.check_in_date)) ? format(parseISO(reservation.check_in_date), 'dd MMMM yyyy', { locale: fr }) : reservation.check_in_date;
-  
+async function sendCancellationEmail(profile: UserProfile, reservation: ReservationSnapshot) {
   const subject = `Annulation de réservation pour ${reservation.property_name}`;
   const html = `
-      <h1>Annulation de réservation</h1>
-      <p>Bonjour ${profile.first_name || ''},</p>
-      <p>La réservation suivante pour votre logement <strong>${reservation.property_name}</strong> a été annulée :</p>
-      <ul>
-          <li><strong>Client :</strong> ${reservation.guest_name}</li>
-          <li><strong>Date d'arrivée prévue :</strong> ${checkInDate}</li>
-      </ul>
-      <p>Cette réservation a été retirée de votre calendrier.</p>
+    <h1>Annulation de réservation</h1>
+    <p>Bonjour ${escapeHtml(profile.first_name || "")},</p>
+    <p>La réservation suivante pour votre logement <strong>${escapeHtml(reservation.property_name)}</strong> a été annulée :</p>
+    <ul>
+      <li><strong>Client :</strong> ${escapeHtml(reservation.guest_name)}</li>
+      <li><strong>Date d'arrivée prévue :</strong> ${escapeHtml(formatDisplayDate(reservation.check_in_date))}</li>
+    </ul>
+    <p>Cette réservation a été retirée de votre calendrier.</p>
   `;
 
-  try {
-    await resend.emails.send({
-      from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
-      to: [profile.email],
-      subject: subject,
-      html: html,
-    });
-    console.log(`Email d'annulation envoyé à ${profile.email} pour la réservation ${reservation.id}`);
-  } catch (error) {
-    console.error(`Erreur lors de l'envoi de l'email d'annulation pour la réservation ${reservation.id}:`, error);
-  }
+  await sendEmail(profile, subject, html);
+  console.log(`[check-new-reservations] Email d'annulation envoyé à ${profile.email} pour la réservation ${reservation.id}.`);
 }
 
-// Helper: insère une notification ciblée pour un utilisateur
-async function insertNotification(userId: string, message: string, link?: string) {
-  const { error } = await supabaseAdmin
-    .from('notifications')
-    .insert({
-      user_id: userId,
-      message,
-      link: link ?? '/bookings',
-    });
+async function sendModificationEmail(
+  profile: UserProfile,
+  reservation: ReservationSnapshot,
+  changes: ReservationChange[],
+) {
+  const subject = `Modification de réservation pour ${reservation.property_name}`;
+  const changesHtml = changes
+    .map(
+      (change) => `
+        <li>
+          <strong>${escapeHtml(change.label)} :</strong>
+          ${escapeHtml(change.before)} → ${escapeHtml(change.after)}
+        </li>
+      `,
+    )
+    .join("");
+
+  const html = `
+    <h1>Modification de réservation</h1>
+    <p>Bonjour ${escapeHtml(profile.first_name || "")},</p>
+    <p>La réservation de <strong>${escapeHtml(reservation.guest_name)}</strong> pour votre logement <strong>${escapeHtml(reservation.property_name)}</strong> a été modifiée.</p>
+    <ul>
+      ${changesHtml}
+    </ul>
+    <p>Vous pouvez consulter les détails mis à jour sur votre espace propriétaire.</p>
+  `;
+
+  await sendEmail(profile, subject, html);
+  console.log(`[check-new-reservations] Email de modification envoyé à ${profile.email} pour la réservation ${reservation.id}.`);
+}
+
+async function insertNotification(userId: string, message: string, link: string) {
+  const { error } = await supabaseAdmin.from("notifications").insert({
+    user_id: userId,
+    message,
+    link,
+  });
 
   if (error) {
-    console.error('Erreur lors de la création de la notification:', error.message);
+    console.error(`[check-new-reservations] Erreur lors de la création de la notification pour ${userId}: ${error.message}`);
   }
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const authorization = req.headers.get('Authorization');
-  if (authorization !== `Bearer ${CRON_SECRET}`) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: corsHeaders,
+    });
   }
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const headerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  const bodyToken = typeof body.cron_secret === "string" ? body.cron_secret.trim() : "";
+  const isCron = (!!headerToken && headerToken === CRON_SECRET) || (!!bodyToken && bodyToken === CRON_SECRET);
+
+  if (!isCron) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: corsHeaders,
+    });
+  }
+
+  const seed = body.seed === true;
+  const stats = {
+    processedProfiles: 0,
+    processedReservations: 0,
+    newBookings: 0,
+    cancellations: 0,
+    modifications: 0,
+    seededOnly: seed,
+  };
 
   try {
     const { data: profiles, error: profilesError } = await supabaseAdmin
-      .from('profiles')
+      .from("profiles")
       .select(`
         id,
         first_name,
         email,
         notify_new_booking_email,
         notify_cancellation_email,
+        notify_booking_change_email,
         user_rooms(room_id, room_name)
-      `)
-      .or('notify_new_booking_email.eq.true,notify_cancellation_email.eq.true')
-      .not('email', 'is', null);
+      `);
 
-    if (profilesError) throw profilesError;
-    
-    const formattedProfiles: UserProfile[] = profiles;
+    if (profilesError) {
+      throw profilesError;
+    }
 
-    for (const profile of formattedProfiles) {
-      if (!profile.user_rooms || profile.user_rooms.length === 0) continue;
+    for (const profile of (profiles || []) as UserProfile[]) {
+      if (!profile.user_rooms || profile.user_rooms.length === 0) {
+        continue;
+      }
+
+      stats.processedProfiles += 1;
 
       const proxyResponse = await fetch(`${SUPABASE_URL}/functions/v1/krossbooking-proxy`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${CRON_SECRET}`
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${CRON_SECRET}`,
         },
         body: JSON.stringify({
-            action: 'get_reservations_for_user_rooms',
-            rooms: profile.user_rooms
-        })
+          action: "get_reservations_for_user_rooms",
+          rooms: profile.user_rooms,
+          cron_secret: CRON_SECRET,
+        }),
       });
 
       if (!proxyResponse.ok) {
-          const errorText = await proxyResponse.text();
-          console.error(`Erreur Krossbooking pour l'utilisateur ${profile.id}: Proxy a retourné ${proxyResponse.status}. ${errorText}`);
-          continue;
+        const errorText = await proxyResponse.text();
+        console.error(`[check-new-reservations] Erreur Krossbooking pour l'utilisateur ${profile.id}: ${proxyResponse.status} ${errorText}`);
+        continue;
       }
 
       const reservationsResponse = await proxyResponse.json();
-      const reservations = reservationsResponse.data;
-
-      if (!Array.isArray(reservations)) {
-        console.warn(`La réponse de Krossbooking n'est pas un tableau pour l'utilisateur ${profile.id}`);
-        continue;
-      }
+      const reservations = Array.isArray(reservationsResponse?.data) ? reservationsResponse.data : [];
 
       const { data: processedReservations, error: processedError } = await supabaseAdmin
-        .from('processed_reservations')
-        .select('reservation_id, status')
-        .eq('user_id', profile.id);
+        .from("processed_reservations")
+        .select("reservation_id, status, check_in_date, check_out_date, amount")
+        .eq("user_id", profile.id);
 
       if (processedError) {
-        console.error(`Erreur de récupération des réservations traitées pour ${profile.id}:`, processedError.message);
+        console.error(`[check-new-reservations] Erreur de récupération des réservations traitées pour ${profile.id}: ${processedError.message}`);
         continue;
       }
 
-      const processedMap = new Map(processedReservations.map(p => [p.reservation_id.toString(), p.status]));
+      const processedMap = new Map<string, ProcessedReservationRow>(
+        (processedReservations || []).map((reservation) => [String(reservation.reservation_id), reservation as ProcessedReservationRow]),
+      );
 
-      for (const res of reservations) {
-        const currentReservation: KrossbookingReservation = {
-            id: res.id_reservation.toString(),
-            guest_name: res.label || 'N/A',
-            property_name: profile.user_rooms.find(r => r.room_id == res.id_room)?.room_name || 'N/A',
-            check_in_date: res.arrival || '',
-            check_out_date: res.departure || '',
-            amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
-            status: res.cod_reservation_status,
-        };
+      for (const reservation of reservations) {
+        const currentReservation = buildReservationSnapshot(profile, reservation);
+        const storedReservation = processedMap.get(currentReservation.id);
+        stats.processedReservations += 1;
 
-        const storedStatus = processedMap.get(currentReservation.id);
-        
-        console.log(`Traitement résa ${currentReservation.id}: Statut Actuel='${currentReservation.status}', Statut Stocké='${storedStatus}'`);
-
-        if (storedStatus) {
-          // Réservation existante, on vérifie si le statut a changé
-          if (storedStatus !== currentReservation.status) {
-            console.log(`Changement de statut détecté pour la réservation ${currentReservation.id}: de '${storedStatus}' à '${currentReservation.status}'`);
-            // On vérifie si c'est une annulation
-            if (storedStatus !== 'CANC' && currentReservation.status === 'CANC' && profile.notify_cancellation_email) {
-              console.log(`-> Condition d'annulation remplie. Envoi de l'email.`);
-              await sendCancellationEmail(profile, currentReservation);
-              // Notification ciblée (annulation)
+        if (!seed) {
+          if (!storedReservation) {
+            if (currentReservation.status !== "CANC") {
+              if (profile.notify_new_booking_email) {
+                await sendNewBookingEmail(profile, currentReservation);
+              }
               await insertNotification(
                 profile.id,
-                `Annulation de réservation: ${currentReservation.property_name} (${currentReservation.guest_name}, arrivée ${currentReservation.check_in_date})`,
-                '/bookings'
+                `Nouvelle réservation : ${currentReservation.property_name} (${currentReservation.guest_name}, ${formatDisplayDate(currentReservation.check_in_date)} → ${formatDisplayDate(currentReservation.check_out_date)})`,
+                "/calendar",
               );
+              stats.newBookings += 1;
             }
-          }
-        } else {
-          // Nouvelle réservation
-          if (currentReservation.status !== 'CANC' && profile.notify_new_booking_email) {
-            console.log(`-> Condition de nouvelle réservation remplie. Envoi de l'email.`);
-            await sendNewBookingEmail(profile, currentReservation);
-            // Notification ciblée (nouvelle réservation)
+          } else if (storedReservation.status !== "CANC" && currentReservation.status === "CANC") {
+            if (profile.notify_cancellation_email) {
+              await sendCancellationEmail(profile, currentReservation);
+            }
             await insertNotification(
               profile.id,
-              `Nouvelle réservation: ${currentReservation.property_name} (${currentReservation.guest_name}, ${currentReservation.check_in_date} → ${currentReservation.check_out_date}, ${currentReservation.amount})`,
-              '/calendar'
+              `Annulation de réservation : ${currentReservation.property_name} (${currentReservation.guest_name}, arrivée ${formatDisplayDate(currentReservation.check_in_date)})`,
+              "/bookings",
             );
+            stats.cancellations += 1;
+          } else if (storedReservation.status !== "CANC" && currentReservation.status !== "CANC") {
+            const changes = getReservationChanges(storedReservation, currentReservation);
+
+            if (changes.length > 0) {
+              if (profile.notify_booking_change_email) {
+                await sendModificationEmail(profile, currentReservation, changes);
+              }
+              await insertNotification(
+                profile.id,
+                `Réservation modifiée : ${currentReservation.property_name} (${currentReservation.guest_name})`,
+                "/calendar",
+              );
+              stats.modifications += 1;
+            }
           }
         }
 
-        const { error: upsertError } = await supabaseAdmin
-          .from('processed_reservations')
-          .upsert(
-            {
-              user_id: profile.id,
-              reservation_id: currentReservation.id,
-              status: currentReservation.status,
-              last_processed_at: new Date().toISOString(),
-            },
-            { onConflict: 'user_id,reservation_id' }
-          );
+        const { error: upsertError } = await supabaseAdmin.from("processed_reservations").upsert(
+          {
+            user_id: profile.id,
+            reservation_id: currentReservation.id,
+            status: currentReservation.status,
+            check_in_date: currentReservation.check_in_date,
+            check_out_date: currentReservation.check_out_date,
+            amount: currentReservation.amount,
+            last_processed_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,reservation_id" },
+        );
 
         if (upsertError) {
-          console.error(`Erreur lors de l'upsert de la réservation ${currentReservation.id} pour l'utilisateur ${profile.id}:`, upsertError.message);
+          console.error(`[check-new-reservations] Erreur lors de l'upsert de la réservation ${currentReservation.id} pour l'utilisateur ${profile.id}: ${upsertError.message}`);
         }
       }
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Verification complete.' }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.log(`[check-new-reservations] Exécution terminée. seed=${seed} profils=${stats.processedProfiles} réservations=${stats.processedReservations} nouvelles=${stats.newBookings} annulations=${stats.cancellations} modifications=${stats.modifications}`);
 
+    return new Response(JSON.stringify({ success: true, stats }), {
+      status: 200,
+      headers: corsHeaders,
+    });
   } catch (error) {
-    console.error('Erreur dans la fonction check-new-reservations:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[check-new-reservations] Erreur dans la fonction: ${message}`);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: corsHeaders,
     });
   }
 });

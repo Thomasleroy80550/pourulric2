@@ -36,7 +36,9 @@ export interface UserProfile {
   contract_start_date?: string;
   notify_new_booking_email?: boolean;
   notify_cancellation_email?: boolean;
+  notify_booking_change_email?: boolean;
   notify_new_booking_sms?: boolean;
+
   notify_cancellation_sms?: boolean;
   is_banned?: boolean;
   is_payment_suspended?: boolean;

@@ -97,6 +97,96 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
+function getNumberTokens(value: string): string[] {
+  return Array.from(new Set(normalizeText(value).match(/\b\d+\b/g) ?? []));
+}
+
+function getTextWithoutNumbers(value: string): string {
+  return normalizeText(value).replace(/\b\d+\b/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function haveSameNumberTokens(left: string[], right: string[]): boolean {
+  if (left.length === 0 || right.length === 0 || left.length !== right.length) {
+    return false;
+  }
+
+  const leftSorted = [...left].sort();
+  const rightSorted = [...right].sort();
+  return leftSorted.every((value, index) => value === rightSorted[index]);
+}
+
+function getRoomMatchScore(inputRoomName: string, existingRoomName: string): number {
+  const normalizedInput = normalizeText(inputRoomName);
+  const normalizedExisting = normalizeText(existingRoomName);
+
+  if (!normalizedInput || !normalizedExisting) {
+    return -1;
+  }
+
+  if (normalizedInput === normalizedExisting) {
+    return 1000;
+  }
+
+  const inputNumbers = getNumberTokens(inputRoomName);
+  const existingNumbers = getNumberTokens(existingRoomName);
+  const inputBase = getTextWithoutNumbers(inputRoomName);
+  const existingBase = getTextWithoutNumbers(existingRoomName);
+  const basesCompatible = !!inputBase && !!existingBase && (
+    inputBase === existingBase ||
+    inputBase.includes(existingBase) ||
+    existingBase.includes(inputBase)
+  );
+
+  if (haveSameNumberTokens(inputNumbers, existingNumbers) && basesCompatible) {
+    let score = 800;
+
+    if (normalizedExisting.startsWith(normalizedInput) || normalizedInput.startsWith(normalizedExisting)) {
+      score += 50;
+    }
+
+    return score;
+  }
+
+  if (inputNumbers.length > 0 || existingNumbers.length > 0) {
+    return -1;
+  }
+
+  if (normalizedExisting.includes(normalizedInput) || normalizedInput.includes(normalizedExisting)) {
+    return 100;
+  }
+
+  return -1;
+}
+
+function resolveMatchedRooms(allRooms: MatchedRoom[], inputRoomName: string): { matchedRooms: MatchedRoom[]; errorMessage: string | null } {
+  const scoredRooms = allRooms
+    .map((room) => ({ room, score: getRoomMatchScore(inputRoomName, room.room_name) }))
+    .filter((entry) => entry.score >= 0)
+    .sort((left, right) => right.score - left.score);
+
+  if (scoredRooms.length === 0) {
+    return {
+      matchedRooms: [],
+      errorMessage: `No room matched for ${inputRoomName}`,
+    };
+  }
+
+  const bestScore = scoredRooms[0].score;
+  const bestMatches = scoredRooms.filter((entry) => entry.score === bestScore).map((entry) => entry.room);
+
+  if (bestScore === 100 && bestMatches.length > 1) {
+    return {
+      matchedRooms: [],
+      errorMessage: `Ambiguous partial room match for ${inputRoomName}: ${bestMatches.map((room) => room.room_name).join(", ")}`,
+    };
+  }
+
+  return {
+    matchedRooms: bestMatches,
+    errorMessage: null,
+  };
+}
+
 function normalizeEventType(value: string | undefined): "new" | "modified" | "cancelled" | "unknown" {
   const normalized = normalizeText(value ?? "");
 
@@ -411,17 +501,13 @@ serve(async (req) => {
     }
 
     const allRooms = (userRooms ?? []) as MatchedRoom[];
-    let matchedRooms = allRooms.filter((room) => normalizeText(room.room_name) === normalizedRoomName);
-
-    if (matchedRooms.length === 0) {
-      matchedRooms = allRooms.filter((room) => {
-        const normalizedExisting = normalizeText(room.room_name);
-        return normalizedExisting.includes(normalizedRoomName) || normalizedRoomName.includes(normalizedExisting);
-      });
-    }
-
+    const { matchedRooms, errorMessage: roomMatchError } = resolveMatchedRooms(allRooms, repairedRoomName);
     const matchedUserIds = Array.from(new Set(matchedRooms.map((room) => room.user_id)));
     const matchedRoomIds = matchedRooms.map((room) => room.id);
+
+    if (roomMatchError) {
+      console.warn(`[ingest-reservation-email-event] ${roomMatchError}`);
+    }
 
     const insertPayload = {
       source: body.source?.trim() || "email",
@@ -448,7 +534,7 @@ serve(async (req) => {
       matched_user_room_ids: matchedRoomIds,
       matched_user_ids: matchedUserIds,
       processing_status: matchedUserIds.length > 0 ? "matched" : "unmatched",
-      error_message: matchedUserIds.length > 0 ? null : `No room matched for ${repairedRoomName}`,
+      error_message: matchedUserIds.length > 0 ? null : roomMatchError,
       processed_at: new Date().toISOString(),
     };
 

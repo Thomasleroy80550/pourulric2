@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Check, Copy } from "lucide-react";
+import { Trash2, Copy } from "lucide-react";
 
 type ErrorLogRow = {
   id: string;
@@ -34,6 +34,19 @@ type ErrorLogRow = {
   user_description: string | null;
   metadata: any;
 };
+
+function getBrowserLabel(metadata: any): string {
+  const userAgent = typeof metadata?.userAgent === "string" ? metadata.userAgent : "";
+  if (!userAgent) return "—";
+
+  if (userAgent.includes("Edg/")) return "Edge";
+  if (userAgent.includes("OPR/") || userAgent.includes("Opera")) return "Opera";
+  if (userAgent.includes("Firefox/")) return "Firefox";
+  if (userAgent.includes("Chrome/") && !userAgent.includes("Edg/") && !userAgent.includes("OPR/")) return "Chrome";
+  if (userAgent.includes("Safari/") && !userAgent.includes("Chrome/")) return "Safari";
+
+  return "Autre";
+}
 
 export default function AdminErrorLogsPage() {
   const [rows, setRows] = useState<ErrorLogRow[]>([]);
@@ -96,7 +109,7 @@ export default function AdminErrorLogsPage() {
   };
 
   const copyError = (row: ErrorLogRow) => {
-    const text = `Message: ${row.message}\n\nRoute: ${row.route || "N/A"}\nComposant: ${row.component || "N/A"}\nUser Email: ${row.user_email || "N/A"}\nDescription: ${row.user_description || "N/A"}\n\nStack:\n${row.stack || "N/A"}`;
+    const text = `Message: ${row.message}\n\nRoute: ${row.route || "N/A"}\nComposant: ${row.component || "N/A"}\nNavigateur: ${getBrowserLabel(row.metadata)}\nUser Email: ${row.user_email || "N/A"}\nDescription: ${row.user_description || "N/A"}\n\nStack:\n${row.stack || "N/A"}`;
     navigator.clipboard.writeText(text);
     toast.success("Erreur copiée dans le presse-papier");
   };
@@ -115,7 +128,8 @@ export default function AdminErrorLogsPage() {
         (r.component ?? "").toLowerCase().includes(q) ||
         (r.message ?? "").toLowerCase().includes(q) ||
         (r.user_email ?? "").toLowerCase().includes(q) ||
-        (r.user_description ?? "").toLowerCase().includes(q)
+        (r.user_description ?? "").toLowerCase().includes(q) ||
+        getBrowserLabel(r.metadata).toLowerCase().includes(q)
       );
     });
   }, [query, rows]);
@@ -130,7 +144,7 @@ export default function AdminErrorLogsPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Filtrer (route, composant, message, email…)"
+                placeholder="Filtrer (route, composant, message, email… )"
                 className="sm:w-[360px]"
               />
               <Button variant="outline" onClick={load} disabled={loading || clearing}>
@@ -172,6 +186,7 @@ export default function AdminErrorLogsPage() {
                     <TableHead>Date</TableHead>
                     <TableHead>Route</TableHead>
                     <TableHead>Composant</TableHead>
+                    <TableHead>Navigateur</TableHead>
                     <TableHead>Message</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -187,6 +202,9 @@ export default function AdminErrorLogsPage() {
                       </TableCell>
                       <TableCell className="max-w-[220px] truncate" title={r.component ?? ""}>
                         {r.component ?? <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant="outline">{getBrowserLabel(r.metadata)}</Badge>
                       </TableCell>
                       <TableCell className="max-w-[520px] truncate" title={r.message}>
                         {r.message}
@@ -227,7 +245,7 @@ export default function AdminErrorLogsPage() {
 
                   {!loading && filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">
+                      <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-10">
                         Aucun résultat.
                       </TableCell>
                     </TableRow>
@@ -262,6 +280,10 @@ export default function AdminErrorLogsPage() {
                   <div>
                     <div className="text-muted-foreground">Composant</div>
                     <div className="font-mono text-xs break-all">{selected.component ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Navigateur</div>
+                    <div>{getBrowserLabel(selected.metadata)}</div>
                   </div>
                   <div>
                     <div className="text-muted-foreground">Email (si fourni)</div>

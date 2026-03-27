@@ -169,8 +169,13 @@ serve(async (req) => {
 
   try {
     const providedSecret = req.headers.get("x-resend-webhook-secret");
-    const expectedSecret = Deno.env.get("RESEND_INBOUND_WEBHOOK_SECRET");
+    const expectedSecret =
+      Deno.env.get("RESEND_INBOUND_WEBHOOK_SECRET") ??
+      Deno.env.get("CRON_SECRET_NOTIFY_NEW_RESA") ??
+      Deno.env.get("CRON_SECRET");
+
     if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
+      console.warn("[resend-inbound-email] unauthorized webhook");
       return new Response(JSON.stringify({ error: "Unauthorized webhook" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -178,6 +183,8 @@ serve(async (req) => {
     }
 
     const payload = await req.json();
+    console.log("[resend-inbound-email] webhook received");
+
     const subject: string = payload?.subject ?? "(sans sujet)";
     const fromEmail: string | undefined =
       payload?.from?.address ??

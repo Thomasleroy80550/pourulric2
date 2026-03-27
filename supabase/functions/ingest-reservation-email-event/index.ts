@@ -165,6 +165,15 @@ function formatAmount(value: number | null | undefined): string {
   return euroFormatter.format(value);
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function formatSmsDate(value: string | null | undefined): string | null {
   if (!value) return null;
 

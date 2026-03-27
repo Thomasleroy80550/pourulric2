@@ -1,0 +1,1 @@
+select id, status, total_fetched, matched_krossbooking, ingested, error_message, started_at, finished_at, details->>'failed' as failed, details->>'duplicates' as duplicates from public.reservation_email_sync_runs order by started_at desc limit 10;

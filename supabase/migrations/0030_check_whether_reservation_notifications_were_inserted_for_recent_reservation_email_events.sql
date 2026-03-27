@@ -1,0 +1,1 @@
+select id, user_id, message, link, created_at from public.notifications where created_at > now() - interval '2 hours' order by created_at desc limit 20;

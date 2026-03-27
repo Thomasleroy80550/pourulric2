@@ -1,0 +1,1 @@
+select id, status, error_message, details from public.reservation_email_sync_runs where id = '45ddd0cd-4b17-44fa-8a0e-e5fb798aa186';

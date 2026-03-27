@@ -286,6 +286,9 @@ serve(async (req) => {
   }
 
   const seed = body.seed === true;
+  const limitProfiles = typeof body.limit_profiles === "number" ? body.limit_profiles : null;
+  const filterUserId = typeof body.user_id === "string" ? body.user_id.trim() : "";
+  const filterProfileEmail = typeof body.profile_email === "string" ? body.profile_email.trim() : "";
   const stats = {
     processedProfiles: 0,
     processedReservations: 0,
@@ -295,8 +298,12 @@ serve(async (req) => {
     seededOnly: seed,
   };
 
+  console.log(
+    `[check-new-reservations] Début d'exécution seed=${seed} limit_profiles=${limitProfiles ?? "all"} user_id=${filterUserId || "all"} profile_email=${filterProfileEmail || "all"}`,
+  );
+
   try {
-    const { data: profiles, error: profilesError } = await supabaseAdmin
+    let profilesQuery = supabaseAdmin
       .from("profiles")
       .select(`
         id,
@@ -307,6 +314,20 @@ serve(async (req) => {
         notify_booking_change_email,
         user_rooms(room_id, room_name)
       `);
+
+    if (filterUserId) {
+      profilesQuery = profilesQuery.eq("id", filterUserId);
+    }
+
+    if (filterProfileEmail) {
+      profilesQuery = profilesQuery.eq("email", filterProfileEmail);
+    }
+
+    if (limitProfiles && limitProfiles > 0) {
+      profilesQuery = profilesQuery.limit(limitProfiles);
+    }
+
+    const { data: profiles, error: profilesError } = await profilesQuery;
 
     if (profilesError) {
       throw profilesError;

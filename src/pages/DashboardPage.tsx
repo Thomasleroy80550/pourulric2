@@ -50,6 +50,7 @@ import Countdown from "@/components/Countdown";
 import BilanExportButton from "@/components/BilanExportButton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BilanPdfButton from "@/components/BilanPdfButton";
+import NewsNotificationsPopup from "@/components/NewsNotificationsPopup";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -531,6 +532,7 @@ const DashboardPage = () => {
 
   return (
     <MainLayout>
+      <NewsNotificationsPopup />
       <div
         className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words"
         ref={dashboardRef}

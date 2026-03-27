@@ -69,6 +69,14 @@ function extractLineValue(text: string, label: string): string | null {
   return match?.[1]?.trim() || null;
 }
 
+function extractReservationReference(text: string): string | null {
+  return (
+    text.match(/Reservation\s+n\.\s*([^\s\n]+(?:\/[^\s\n]+)?)/i)?.[1]?.trim() ||
+    text.match(/Reservation\s+([^\s\n]+(?:\/[^\s\n]+)?)\s+cancelled/i)?.[1]?.trim() ||
+    null
+  );
+}
+
 function parseKrossbookingEvent(subject: string, plainText: string) {
   const normalizedSubject = normalizeText(subject);
   if (!normalizedSubject.includes("reservation")) {
@@ -82,6 +90,7 @@ function parseKrossbookingEvent(subject: string, plainText: string) {
   } else if (normalizedSubject.includes("modified") || normalizedSubject.includes("updated")) {
     eventType = "modified";
   } else if (
+    normalizedSubject.includes("reservation cancellation") ||
     normalizedSubject.includes("cancelled") ||
     normalizedSubject.includes("canceled") ||
     normalizedSubject.includes("annulation") ||
@@ -90,10 +99,15 @@ function parseKrossbookingEvent(subject: string, plainText: string) {
     eventType = "cancelled";
   }
 
-  const reservationReference = plainText.match(/Reservation\s*n\.\s*([^\n]+)/i)?.[1]?.trim() || null;
-  const occurredAt = plainText.match(/(?:made on|updated on|cancelled on)\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i)?.[1]?.trim() || null;
+  const reservationReference = extractReservationReference(plainText);
+  const occurredAt =
+    plainText.match(/(?:made on|updated on|cancelled on)\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i)?.[1]?.trim() ||
+    null;
   const arrivalDepartureMatch = plainText.match(/Arrival:\s*(\d{2}\/\d{2}\/\d{4})\s*-\s*Departure:\s*(\d{2}\/\d{2}\/\d{4})/i);
-  const totalFare = plainText.match(/Total fare:\s*([^\n]+)/i)?.[1]?.trim() || null;
+  const totalFare =
+    plainText.match(/Total fare:\s*([^\n]+)/i)?.[1]?.trim() ||
+    plainText.match(/Total amount:\s*([^\n]+)/i)?.[1]?.trim() ||
+    null;
   const guestCountValue = plainText.match(/Guests:\s*(\d+)/i)?.[1]?.trim() || null;
   const assignedRooms = extractLineValue(plainText, "Assigned rooms");
   const reservationFor = extractLineValue(plainText, "Reservation for");

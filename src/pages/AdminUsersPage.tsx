@@ -107,6 +107,8 @@ const AdminUsersPage: React.FC = () => {
   const [updatingPricingFor, setUpdatingPricingFor] = useState<string | null>(null);
   const [bulkUpdatingSmartPricing, setBulkUpdatingSmartPricing] = useState(false);
   const [updatingAgencyFor, setUpdatingAgencyFor] = useState<string | null>(null);
+  const [phoneNumberDrafts, setPhoneNumberDrafts] = useState<Record<string, string>>({});
+  const [savingPhoneFor, setSavingPhoneFor] = useState<string | null>(null);
   const AGENCIES = ["Côte d'opal", "Baie de somme"];
   const [isConfettiOpen, setIsConfettiOpen] = useState(false);
   const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
@@ -174,7 +176,7 @@ const AdminUsersPage: React.FC = () => {
     setLoading(true);
     try {
       const fetchedUsers = await getAllProfiles();
-      setUsers(fetchedUsers);
+      setUsers(fetchedUsers as UserProfile[]);
     } catch (error: any) {
       toast.error(`Erreur: ${error.message}`);
     } finally {
@@ -387,6 +389,44 @@ const AdminUsersPage: React.FC = () => {
       toast.error(`Erreur lors de l'attribution de l'agence : ${error.message}`);
     } finally {
       setUpdatingAgencyFor(null);
+    }
+  };
+
+  const handlePhoneDraftChange = (userId: string, value: string) => {
+    setPhoneNumberDrafts((curr) => ({ ...curr, [userId]: value }));
+  };
+
+  const handleSavePhoneNumber = async (user: UserProfile) => {
+    const nextPhoneNumber = (phoneNumberDrafts[user.id] ?? user.phone_number ?? '').trim();
+    const currentPhoneNumber = (user.phone_number ?? '').trim();
+
+    if (nextPhoneNumber === currentPhoneNumber) {
+      return;
+    }
+
+    setSavingPhoneFor(user.id);
+    setUsers((curr) =>
+      curr.map((u) => (u.id === user.id ? { ...u, phone_number: nextPhoneNumber || undefined } : u))
+    );
+
+    try {
+      await updateUser({
+        user_id: user.id,
+        phone_number: nextPhoneNumber || null,
+      });
+      toast.success('Téléphone mis à jour.');
+      setPhoneNumberDrafts((curr) => {
+        const next = { ...curr };
+        delete next[user.id];
+        return next;
+      });
+    } catch (error: any) {
+      setUsers((curr) =>
+        curr.map((u) => (u.id === user.id ? { ...u, phone_number: user.phone_number || undefined } : u))
+      );
+      toast.error(`Erreur lors de la mise à jour du téléphone : ${error.message}`);
+    } finally {
+      setSavingPhoneFor(null);
     }
   };
 
@@ -650,7 +690,34 @@ const AdminUsersPage: React.FC = () => {
                 </div>
               </TableCell>
               <TableCell>{user.email || 'N/A'}</TableCell>
-              <TableCell>{user.phone_number || 'N/A'}</TableCell>
+              <TableCell>
+                <div className="flex min-w-[220px] items-center gap-2">
+                  <Input
+                    type="tel"
+                    value={phoneNumberDrafts[user.id] ?? user.phone_number ?? ''}
+                    placeholder="Téléphone"
+                    className="h-8"
+                    disabled={savingPhoneFor === user.id}
+                    onChange={(e) => handlePhoneDraftChange(user.id, e.target.value)}
+                    onBlur={() => handleSavePhoneNumber(user)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSavePhoneNumber(user);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={savingPhoneFor === user.id || (phoneNumberDrafts[user.id] ?? user.phone_number ?? '').trim() === (user.phone_number ?? '').trim()}
+                    onClick={() => handleSavePhoneNumber(user)}
+                  >
+                    {savingPhoneFor === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'OK'}
+                  </Button>
+                </div>
+              </TableCell>
               <TableCell>{user.role}</TableCell>
               <TableCell>
                 <div className="min-w-[180px]">

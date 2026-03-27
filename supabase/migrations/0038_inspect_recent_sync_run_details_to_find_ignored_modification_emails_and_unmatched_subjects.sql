@@ -1,0 +1,1 @@
+select started_at, status, matched_krossbooking, ingested, details from public.reservation_email_sync_runs order by started_at desc limit 5;

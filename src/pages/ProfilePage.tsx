@@ -78,7 +78,6 @@ const ProfilePage: React.FC = () => {
   const [phoneToVerify, setPhoneToVerify] = useState('');
   const [isAttestationDialogOpen, setIsAttestationDialogOpen] = useState(false);
   const [insuranceLoading, setInsuranceLoading] = useState(false);
-  const [smsTestLoading, setSmsTestLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState(
     'personal-data'
@@ -100,9 +99,7 @@ const ProfilePage: React.FC = () => {
   const [agency, setAgency] = useState('');
   const [notifyNewBookingEmail, setNotifyNewBookingEmail] = useState(true);
   const [notifyCancellationEmail, setNotifyCancellationEmail] = useState(true);
-  const [notifyBookingChangeEmail, setNotifyBookingChangeEmail] = useState(true);
   const [notifyNewBookingSms, setNotifyNewBookingSms] = useState(false);
-  const [notifyBookingChangeSms, setNotifyBookingChangeSms] = useState(false);
   const [notifyCancellationSms, setNotifyCancellationSms] = useState(false);
   const [expensesModuleEnabled, setExpensesModuleEnabled] = useState(false);
   const [digitalBookletEnabled, setDigitalBookletEnabled] = useState(false);
@@ -133,9 +130,7 @@ const ProfilePage: React.FC = () => {
         setAgency(fetchedProfile.agency || '');
         setNotifyNewBookingEmail(fetchedProfile.notify_new_booking_email ?? true);
         setNotifyCancellationEmail(fetchedProfile.notify_cancellation_email ?? true);
-        setNotifyBookingChangeEmail(fetchedProfile.notify_booking_change_email ?? true);
         setNotifyNewBookingSms(fetchedProfile.notify_new_booking_sms ?? false);
-        setNotifyBookingChangeSms(fetchedProfile.notify_booking_change_sms ?? false);
         setNotifyCancellationSms(fetchedProfile.notify_cancellation_sms ?? false);
         setExpensesModuleEnabled(fetchedProfile.expenses_module_enabled ?? false);
         setDigitalBookletEnabled(fetchedProfile.digital_booklet_enabled ?? false);
@@ -171,9 +166,7 @@ const ProfilePage: React.FC = () => {
         agency: agency,
         notify_new_booking_email: notifyNewBookingEmail,
         notify_cancellation_email: notifyCancellationEmail,
-        notify_booking_change_email: notifyBookingChangeEmail,
         notify_new_booking_sms: notifyNewBookingSms,
-        notify_booking_change_sms: notifyBookingChangeSms,
         notify_cancellation_sms: notifyCancellationSms,
         expenses_module_enabled: expensesModuleEnabled,
         digital_booklet_enabled: digitalBookletEnabled,
@@ -205,25 +198,6 @@ const ProfilePage: React.FC = () => {
       return;
     }
     setter(checked);
-  };
-
-  const handleSendTestSms = async () => {
-    setSmsTestLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-test-smsfactor-sms', {
-        body: {},
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success(`SMS de test envoyé vers ${data?.to ?? 'votre numéro'}.`);
-    } catch (err: any) {
-      toast.error(err?.message || "Impossible d'envoyer le SMS de test.");
-    } finally {
-      setSmsTestLoading(false);
-    }
   };
 
   const handleOpenAttestationDialog = () => {
@@ -602,40 +576,13 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="notif-booking-change-email">Modifications de réservation par email</Label>
-                    <p className="text-sm text-muted-foreground">Recevez un email lorsqu'une réservation change de dates et/ou de montant.</p>
-                  </div>
-                  <Switch id="notif-booking-change-email" checked={notifyBookingChangeEmail} onCheckedChange={setNotifyBookingChangeEmail} disabled={userProfile?.is_banned} />
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
                   <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
                   <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(checked) => handleSmsSwitchChange(checked, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="notif-booking-change-sms">Modifications de réservation par SMS</Label>
-                    <p className="text-sm text-muted-foreground">SMS court envoyé quand une réservation change.</p>
-                  </div>
-                  <Switch id="notif-booking-change-sms" checked={notifyBookingChangeSms} onCheckedChange={(checked) => handleSmsSwitchChange(checked, setNotifyBookingChangeSms)} disabled={userProfile?.is_banned} />
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
                   <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
                   <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(checked) => handleSmsSwitchChange(checked, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border border-dashed p-4">
-                  <div className="space-y-1">
-                    <Label>Tester l'envoi SMS</Label>
-                    <p className="text-sm text-muted-foreground">Envoie un SMS de test court à votre numéro enregistré.</p>
-                  </div>
-                  <Button type="button" variant="outline" onClick={handleSendTestSms} disabled={smsTestLoading || userProfile?.is_banned}>
-                    {smsTestLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Phone className="mr-2 h-4 w-4" />}
-                    {smsTestLoading ? 'Envoi du SMS...' : 'Tester l’envoi SMS'}
-                  </Button>
                 </div>
               </CardContent>
             </Card>

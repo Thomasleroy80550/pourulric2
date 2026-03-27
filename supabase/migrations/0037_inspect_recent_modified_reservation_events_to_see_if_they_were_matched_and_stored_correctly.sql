@@ -1,0 +1,1 @@
+select id, event_type, room_name, guest_name, arrival_date, departure_date, total_amount, before_payload, after_payload, matched_user_ids, processing_status, error_message, created_at from public.reservation_email_events where event_type = 'modified' order by created_at desc limit 10;

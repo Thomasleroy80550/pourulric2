@@ -97,10 +97,21 @@ function extractLineValue(text: string, label: string): string | null {
   return cleanExtractedValue(match?.[1]?.trim() || null);
 }
 
-function extractReservationReference(text: string): string | null {
+function extractFirstLineValue(text: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const value = extractLineValue(text, label);
+    if (value) return value;
+  }
+
+  return null;
+}
+
+function extractReservationReference(subject: string, text: string): string | null {
   return (
-    text.match(/Reservation\s+n\.\s*([^\s\n]+(?:\/[^\s\n]+)?)/i)?.[1]?.trim() ||
+    text.match(/(?:Reservation|Réservation|Prenotazione)\s+n\.\s*([^\s\n]+(?:\/[^\s\n]+)?)/i)?.[1]?.trim() ||
     text.match(/Reservation\s+([^\s\n]+(?:\/[^\s\n]+)?)\s+cancelled/i)?.[1]?.trim() ||
+    text.match(/\b(KB\d{6,}|\d{4,6}\/\d{4})\b/i)?.[1]?.trim() ||
+    subject.match(/\b(KB\d{6,}|\d{4,6}\/\d{4})\b/i)?.[1]?.trim() ||
     null
   );
 }
@@ -112,6 +123,10 @@ function parseKrossbookingEvent(subject: string, plainText: string) {
 
   const looksLikeReservationEmail = [
     "reservation",
+    "reservations",
+    "details des reservations",
+    "details reservation",
+    "espace client",
     "prenotazione",
     "cancellazione",
     "frontoffice",
@@ -136,8 +151,13 @@ function parseKrossbookingEvent(subject: string, plainText: string) {
   } else if (
     normalizedContent.includes("modified") ||
     normalizedContent.includes("updated") ||
+    normalizedContent.includes("updated on") ||
     normalizedContent.includes("modifica") ||
-    normalizedContent.includes("modificata")
+    normalizedContent.includes("modificata") ||
+    normalizedContent.includes("modifie") ||
+    normalizedContent.includes("mise a jour") ||
+    normalizedContent.includes("details des reservations") ||
+    normalizedContent.includes("details reservation")
   ) {
     eventType = "modified";
   } else if (
@@ -152,23 +172,32 @@ function parseKrossbookingEvent(subject: string, plainText: string) {
     eventType = "cancelled";
   }
 
-  const reservationReference = extractReservationReference(plainText);
+  const reservationReference = extractReservationReference(subject, plainText);
   const occurredAt =
-    plainText.match(/(?:made on|updated on|cancelled on)\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i)?.[1]?.trim() ||
+    plainText.match(/(?:made on|updated on|cancelled on|mise a jour le)\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i)?.[1]?.trim() ||
     null;
-  const arrivalDepartureMatch = plainText.match(/Arrival:\s*(\d{2}\/\d{2}\/\d{4})\s*-\s*Departure:\s*(\d{2}\/\d{2}\/\d{4})/i);
+  const arrivalDepartureMatch =
+    plainText.match(/Arrival:\s*(\d{2}\/\d{2}\/\d{4})\s*-\s*Departure:\s*(\d{2}\/\d{2}\/\d{4})/i) ||
+    plainText.match(/Arriv[ée]e?\s*:?\s*(\d{2}\/\d{2}\/\d{4})\s*-\s*D[ée]part\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i) ||
+    plainText.match(/Arrivo\s*:?\s*(\d{2}\/\d{2}\/\d{4})\s*-\s*Partenza\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
   const totalFare =
     plainText.match(/Total fare:\s*([^\n]+)/i)?.[1]?.trim() ||
     plainText.match(/Total amount:\s*([^\n]+)/i)?.[1]?.trim() ||
+    plainText.match(/Montant total\s*:?\s*([^\n]+)/i)?.[1]?.trim() ||
+    plainText.match(/Importo totale\s*:?\s*([^\n]+)/i)?.[1]?.trim() ||
     null;
-  const guestCountValue = plainText.match(/Guests:\s*(\d+)/i)?.[1]?.trim() || null;
-  const assignedRooms = extractLineValue(plainText, "Assigned rooms");
-  const reservationFor = extractLineValue(plainText, "Reservation for");
+  const guestCountValue =
+    plainText.match(/Guests:\s*(\d+)/i)?.[1]?.trim() ||
+    plainText.match(/Voyageurs\s*:?\s*(\d+)/i)?.[1]?.trim() ||
+    plainText.match(/Ospiti\s*:?\s*(\d+)/i)?.[1]?.trim() ||
+    null;
+  const assignedRooms = extractFirstLineValue(plainText, ["Assigned rooms", "Chambres attribuées", "Camere assegnate"]);
+  const reservationFor = extractFirstLineValue(plainText, ["Reservation for", "Réservation pour", "Prenotazione per"]);
   const roomName = assignedRooms || reservationFor?.replace(/^\d+\s*x\s*/i, "").split(" - ")[0]?.trim() || null;
-  const customerName = extractLineValue(plainText, "Customer");
-  const customerEmail = extractLineValue(plainText, "Email");
-  const customerPhone = extractLineValue(plainText, "Phone");
-  const status = extractLineValue(plainText, "Status");
+  const customerName = extractFirstLineValue(plainText, ["Customer", "Client", "Cliente"]);
+  const customerEmail = extractFirstLineValue(plainText, ["Email"]);
+  const customerPhone = extractFirstLineValue(plainText, ["Phone", "Téléphone", "Telefono"]);
+  const status = extractFirstLineValue(plainText, ["Status", "Statut", "Stato"]);
 
   if (!roomName || !reservationReference) {
     return null;

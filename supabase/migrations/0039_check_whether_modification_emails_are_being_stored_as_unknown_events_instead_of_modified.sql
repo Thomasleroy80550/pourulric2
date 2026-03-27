@@ -1,0 +1,1 @@
+select event_type, count(*) from public.reservation_email_events group by event_type order by event_type;

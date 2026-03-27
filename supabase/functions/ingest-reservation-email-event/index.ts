@@ -275,7 +275,7 @@ serve(async (req) => {
     const insertPayload = {
       source: body.source?.trim() || "email",
       event_key: eventKey,
-      event_type,
+      event_type: eventType,
       occurred_at: occurredAt,
       reservation_reference: body.reservation_reference?.trim() || null,
       reservation_id: body.reservation_id?.trim() || null,
@@ -283,6 +283,7 @@ serve(async (req) => {
       room_name_normalized: normalizedRoomName,
       guest_name: body.guest_name?.trim() || null,
       guest_email: body.guest_email?.trim() || null,
+
       guest_phone: body.guest_phone?.trim() || null,
       arrival_date: arrivalDate,
       departure_date: departureDate,

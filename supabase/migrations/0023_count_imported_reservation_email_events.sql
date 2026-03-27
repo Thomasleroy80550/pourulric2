@@ -1,0 +1,1 @@
+select count(*) as total_events from public.reservation_email_events;

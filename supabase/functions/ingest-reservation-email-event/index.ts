@@ -26,6 +26,8 @@ const corsHeaders = {
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 const resend = new Resend(RESEND_API_KEY);
 const euroFormatter = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+const APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "https://beta.proprietaire.hellokeys.fr").replace(/\/$/, "");
+const HELLO_KEYS_LOGO_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/storage/v1/object/public/public-assets/logo.png";
 
 interface IncomingEventPayload {
   event_key?: string;
@@ -256,6 +258,35 @@ function buildReservationSmsMessage(
   return truncateSmsText(sanitizeSmsText(message));
 }
 
+function buildReservationEmailLayout(
+  title: string,
+  firstName: string | null,
+  introHtml: string,
+  detailsHtml: string,
+  ctaPath: string,
+): string {
+  const ctaUrl = `${APP_BASE_URL}${ctaPath.startsWith("/") ? ctaPath : `/${ctaPath}`}`;
+  const greetingName = escapeHtml(firstName?.trim() || "");
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8fafc; padding: 24px 12px;">
+      <div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <img src="${HELLO_KEYS_LOGO_URL}" alt="Hello Keys Logo" style="width: 150px; margin-bottom: 20px;">
+        <h2 style="color: #1a202c; margin: 0 0 16px 0;">${escapeHtml(title)}</h2>
+        <p style="margin: 0 0 16px 0;">Bonjour ${greetingName},</p>
+        <div style="margin: 0 0 20px 0;">${introHtml}</div>
+        <div style="background-color: #f7fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 20px 0;">
+          <ul style="margin: 0; padding-left: 20px;">
+            ${detailsHtml}
+          </ul>
+        </div>
+        <a href="${ctaUrl}" style="background-color: #2563eb; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; margin-top: 8px;">Voir dans mon espace</a>
+        <p style="margin-top: 30px; font-size: 0.9em; color: #718096;">À bientôt,<br>L'équipe Hello Keys</p>
+      </div>
+    </div>
+  `;
+}
+
 async function sendEmail(profile: MatchedProfile, subject: string, html: string) {
   if (!profile.email) {
     console.warn(`[ingest-reservation-email-event] missing email for user_id=${profile.id}`);
@@ -470,11 +501,13 @@ serve(async (req) => {
       let notificationMessage = `Événement réservation : ${roomLabel}`;
       let notificationLink = "/calendar";
       let emailSubject = `Réservation pour ${roomLabel}`;
-      let emailHtml = `
-        <h1>Réservation</h1>
-        <p>Bonjour ${escapeHtml(profile.first_name || "")},</p>
-        <p>Un événement de réservation a été reçu pour <strong>${escapeHtml(roomLabel)}</strong>.</p>
-      `;
+      let emailHtml = buildReservationEmailLayout(
+        "Réservation",
+        profile.first_name,
+        `<p>Un événement de réservation a été reçu pour <strong>${escapeHtml(roomLabel)}</strong>.</p>`,
+        `<li><strong>Référence :</strong> ${escapeHtml(reservationLabel)}</li><li><strong>Client :</strong> ${escapeHtml(guestName)}</li>`,
+        notificationLink,
+      );
       let shouldSendEmail = false;
       let shouldSendSms = false;
       let smsMessage = "";
@@ -482,49 +515,52 @@ serve(async (req) => {
       if (eventType === "new") {
         notificationMessage = `Nouvelle réservation : ${roomLabel} (${guestName}, ${formatDisplayDate(arrivalDate)} → ${formatDisplayDate(departureDate)})`;
         emailSubject = `Nouvelle réservation pour ${roomLabel}`;
-        emailHtml = `
-          <h1>Nouvelle réservation</h1>
-          <p>Bonjour ${escapeHtml(profile.first_name || "")},</p>
-          <p>Une nouvelle réservation a été enregistrée pour votre logement <strong>${escapeHtml(roomLabel)}</strong>.</p>
-          <ul>
+        emailHtml = buildReservationEmailLayout(
+          "Nouvelle réservation",
+          profile.first_name,
+          `<p>Une nouvelle réservation a été enregistrée pour votre logement <strong>${escapeHtml(roomLabel)}</strong>.</p>`,
+          `
             <li><strong>Référence :</strong> ${escapeHtml(reservationLabel)}</li>
             <li><strong>Client :</strong> ${escapeHtml(guestName)}</li>
             <li><strong>Arrivée :</strong> ${escapeHtml(formatDisplayDate(arrivalDate))}</li>
             <li><strong>Départ :</strong> ${escapeHtml(formatDisplayDate(departureDate))}</li>
             <li><strong>Montant :</strong> ${escapeHtml(formatAmount(totalAmount))}</li>
-          </ul>
-        `;
+          `,
+          notificationLink,
+        );
         shouldSendEmail = profile.notify_new_booking_email;
         shouldSendSms = profile.notify_new_booking_sms;
       } else if (eventType === "cancelled") {
         notificationMessage = `Annulation de réservation : ${roomLabel} (${guestName})`;
         notificationLink = "/bookings";
         emailSubject = `Annulation de réservation pour ${roomLabel}`;
-        emailHtml = `
-          <h1>Annulation de réservation</h1>
-          <p>Bonjour ${escapeHtml(profile.first_name || "")},</p>
-          <p>Une réservation a été annulée pour votre logement <strong>${escapeHtml(roomLabel)}</strong>.</p>
-          <ul>
+        emailHtml = buildReservationEmailLayout(
+          "Annulation de réservation",
+          profile.first_name,
+          `<p>Une réservation a été annulée pour votre logement <strong>${escapeHtml(roomLabel)}</strong>.</p>`,
+          `
             <li><strong>Référence :</strong> ${escapeHtml(reservationLabel)}</li>
             <li><strong>Client :</strong> ${escapeHtml(guestName)}</li>
             <li><strong>Arrivée prévue :</strong> ${escapeHtml(formatDisplayDate(arrivalDate))}</li>
-          </ul>
-        `;
+          `,
+          notificationLink,
+        );
         shouldSendEmail = profile.notify_cancellation_email;
         shouldSendSms = profile.notify_cancellation_sms;
       } else if (eventType === "modified") {
         notificationMessage = `Réservation modifiée : ${roomLabel} (${guestName})`;
         emailSubject = `Modification de réservation pour ${roomLabel}`;
-        emailHtml = `
-          <h1>Modification de réservation</h1>
-          <p>Bonjour ${escapeHtml(profile.first_name || "")},</p>
-          <p>Une réservation a été modifiée pour votre logement <strong>${escapeHtml(roomLabel)}</strong>.</p>
-          <ul>
+        emailHtml = buildReservationEmailLayout(
+          "Modification de réservation",
+          profile.first_name,
+          `<p>Une réservation a été modifiée pour votre logement <strong>${escapeHtml(roomLabel)}</strong>.</p>`,
+          `
             <li><strong>Référence :</strong> ${escapeHtml(reservationLabel)}</li>
             <li><strong>Client :</strong> ${escapeHtml(guestName)}</li>
             ${buildChangesHtml(body.before, body.after)}
-          </ul>
-        `;
+          `,
+          notificationLink,
+        );
         shouldSendEmail = profile.notify_booking_change_email;
         shouldSendSms = profile.notify_booking_change_sms;
       }

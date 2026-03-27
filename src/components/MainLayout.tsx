@@ -28,7 +28,6 @@ import {
   AlertTriangle,
   ChevronDown,
   Menu,
-  Plus,
   Gift,
   Lock,
   Copy, // Add new icon
@@ -429,10 +428,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   </Button>
                 </div>
               )}
-              <Button variant="outline" className="hidden md:flex items-center px-2 md:px-4">
-                <Plus className="h-4 w-4" />
-                <span className="ml-2 hidden xl:inline-block">Actions rapides</span>
-              </Button>
               <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
                 <Sparkles className="h-5 w-5 text-blue-500" />
               </Button>

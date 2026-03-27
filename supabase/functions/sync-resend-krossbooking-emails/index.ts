@@ -1,8 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const PROJECT_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co";
 const RESEND_API_BASE_URL = "https://api.resend.com";
 const RESEND_API_KEY = (Deno.env.get("RESEND_API_KEY_RECEIV") ?? Deno.env.get("RESEND_API_KEY") ?? "").trim();
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const CRON_SECRETS = [
 
   Deno.env.get("CRON_SECRET_NOTIFY_NEW_RESA"),
@@ -19,6 +22,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json; charset=utf-8",
 };
+
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 interface ReceivedEmailListItem {
   id?: string;
@@ -209,10 +214,35 @@ serve(async (req) => {
   const inspectOnly = body.inspect_only === true;
   const includeRaw = body.include_raw === true;
   const ingestSecret = bodyToken || headerToken;
+  const startedAt = new Date().toISOString();
+  let syncRunId: string | null = null;
 
   console.log(`[sync-resend-krossbooking-emails] start limit=${limit} inspect_only=${inspectOnly}`);
 
   try {
+    const { data: createdRun, error: createRunError } = await supabaseAdmin
+      .from("reservation_email_sync_runs")
+      .insert({
+        source: "resend-receiving-api",
+        inspect_only: inspectOnly,
+        requested_limit: limit,
+        status: "started",
+        started_at: startedAt,
+        details: {
+          after: after || null,
+          before: before || null,
+          include_raw: includeRaw,
+        },
+      })
+      .select("id")
+      .single();
+
+    if (createRunError) {
+      console.error(`[sync-resend-krossbooking-emails] create run failed ${createRunError.message}`);
+    } else {
+      syncRunId = createdRun?.id ?? null;
+    }
+
     const params = new URLSearchParams();
     params.set("limit", String(limit));
     if (after) params.set("after", after);
@@ -223,6 +253,9 @@ serve(async (req) => {
     const processed: Array<Record<string, unknown>> = [];
     let matchedCount = 0;
     let ingestedCount = 0;
+    let duplicateCount = 0;
+    let ignoredCount = 0;
+    let failedCount = 0;
 
     for (const email of listData as ReceivedEmailListItem[]) {
       const emailId = email.id;
@@ -243,6 +276,7 @@ serve(async (req) => {
       matchedCount += 1;
 
       if (!parsedEvent || parsedEvent.eventType === "unknown") {
+        ignoredCount += 1;
         processed.push({
           emailId,
           senderEmail,
@@ -295,6 +329,7 @@ serve(async (req) => {
 
       const ingestText = await ingestResponse.text();
       if (!ingestResponse.ok) {
+        failedCount += 1;
         processed.push({
           emailId,
           senderEmail,
@@ -305,31 +340,99 @@ serve(async (req) => {
         continue;
       }
 
+      let ingestPayload: Record<string, unknown> | null = null;
+      try {
+        ingestPayload = ingestText ? JSON.parse(ingestText) : null;
+      } catch {
+        ingestPayload = null;
+      }
+
+      if (ingestPayload?.duplicate === true) {
+        duplicateCount += 1;
+        processed.push({
+          emailId,
+          senderEmail,
+          subject,
+          status: "duplicate",
+          response: ingestPayload,
+        });
+        continue;
+      }
+
       ingestedCount += 1;
       processed.push({
         emailId,
         senderEmail,
         subject,
         status: "ingested",
-        response: ingestText,
+        response: ingestPayload ?? ingestText,
       });
     }
 
-    console.log(`[sync-resend-krossbooking-emails] done matched=${matchedCount} ingested=${ingestedCount}`);
-
-    return new Response(JSON.stringify({
+    const finishedAt = new Date().toISOString();
+    const resultPayload = {
       success: true,
       inspectOnly,
       totalFetched: listData.length,
       matchedKrossbooking: matchedCount,
       ingested: ingestedCount,
+      duplicates: duplicateCount,
+      ignored: ignoredCount,
+      failed: failedCount,
       processed,
-    }), {
+    };
+
+    if (syncRunId) {
+      const { error: updateRunError } = await supabaseAdmin
+        .from("reservation_email_sync_runs")
+        .update({
+          total_fetched: listData.length,
+          matched_krossbooking: matchedCount,
+          ingested: ingestedCount,
+          status: failedCount > 0 ? "completed_with_errors" : "success",
+          error_message: failedCount > 0 ? `${failedCount} email(s) failed during ingestion` : null,
+          finished_at: finishedAt,
+          details: {
+            after: after || null,
+            before: before || null,
+            include_raw: includeRaw,
+            duplicates: duplicateCount,
+            ignored: ignoredCount,
+            failed: failedCount,
+            processed,
+          },
+        })
+        .eq("id", syncRunId);
+
+      if (updateRunError) {
+        console.error(`[sync-resend-krossbooking-emails] update run failed ${updateRunError.message}`);
+      }
+    }
+
+    console.log(`[sync-resend-krossbooking-emails] done matched=${matchedCount} ingested=${ingestedCount} duplicates=${duplicateCount}`);
+
+    return new Response(JSON.stringify(resultPayload), {
       status: 200,
       headers: corsHeaders,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+
+    if (syncRunId) {
+      const { error: updateRunError } = await supabaseAdmin
+        .from("reservation_email_sync_runs")
+        .update({
+          status: "error",
+          error_message: message,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", syncRunId);
+
+      if (updateRunError) {
+        console.error(`[sync-resend-krossbooking-emails] update error run failed ${updateRunError.message}`);
+      }
+    }
+
     console.error(`[sync-resend-krossbooking-emails] error ${message}`);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,

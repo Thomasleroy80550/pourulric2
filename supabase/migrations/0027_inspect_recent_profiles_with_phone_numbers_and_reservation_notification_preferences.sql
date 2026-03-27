@@ -1,0 +1,1 @@
+select id, first_name, email, phone_number, notify_new_booking_sms, notify_booking_change_sms, notify_cancellation_sms, notify_new_booking_email, notify_booking_change_email, notify_cancellation_email from public.profiles where phone_number is not null order by last_seen_at desc nulls last limit 10;

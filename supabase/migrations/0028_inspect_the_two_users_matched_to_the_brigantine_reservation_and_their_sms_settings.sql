@@ -1,0 +1,1 @@
+select id, first_name, email, phone_number, notify_new_booking_sms, notify_booking_change_sms, notify_cancellation_sms from public.profiles where id in ('2cf58baa-96bf-4804-9925-1a0898baa142','0d2816be-1b6f-4e13-a2d4-b7eb3d6daee5');

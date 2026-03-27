@@ -1,0 +1,1 @@
+select id, event_type, reservation_reference, room_name, matched_user_ids, processing_status, created_at from public.reservation_email_events order by created_at desc limit 5;

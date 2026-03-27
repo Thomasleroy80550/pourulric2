@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy, Lock, ShieldCheck } from 'lucide-react';
+import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy, Lock, ShieldCheck, Bell } from 'lucide-react';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -350,6 +350,7 @@ const ProfilePage: React.FC = () => {
               <SelectItem value="my-offer">Mon offre</SelectItem>
               <SelectItem value="referral">Parrainage</SelectItem>
               <SelectItem value="kyc">KYC / Vérification</SelectItem>
+              <SelectItem value="notifications">Notifications</SelectItem>
               <SelectItem value="settings">Paramètres</SelectItem>
               <SelectItem value="security">Sécurité</SelectItem>
               <SelectItem value="documents">Coffre-Fort</SelectItem>
@@ -365,6 +366,7 @@ const ProfilePage: React.FC = () => {
             <TabsTrigger value="my-offer">Mon offre</TabsTrigger>
             <TabsTrigger value="referral">Parrainage</TabsTrigger>
             <TabsTrigger value="kyc">KYC / Vérification</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
             <TabsTrigger value="security">Sécurité</TabsTrigger>
             <TabsTrigger value="documents"><Lock className="h-4 w-4 mr-2" />Coffre-Fort</TabsTrigger>
@@ -582,10 +584,67 @@ const ProfilePage: React.FC = () => {
             {profile && <KycForm profile={profile} onUpdate={fetchProfileData} className="w-full" />}
           </TabsContent>
 
+          <TabsContent value="notifications" className="flex-1">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Bell /> Notifications</CardTitle>
+                <CardDescription>Choisissez les alertes que vous souhaitez recevoir.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
+                  <Label htmlFor="notif-new-booking-email">Recevoir les nouvelles réservations par email</Label>
+                  <Switch id="notif-new-booking-email" checked={notifyNewBookingEmail} onCheckedChange={setNotifyNewBookingEmail} disabled={userProfile?.is_banned} />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
+                  <Label htmlFor="notif-cancel-email">Recevoir les annulations par email</Label>
+                  <Switch id="notif-cancel-email" checked={notifyCancellationEmail} onCheckedChange={setNotifyCancellationEmail} disabled={userProfile?.is_banned} />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="notif-booking-change-email">Modifications de réservation par email</Label>
+                    <p className="text-sm text-muted-foreground">Recevez un email lorsqu'une réservation change de dates et/ou de montant.</p>
+                  </div>
+                  <Switch id="notif-booking-change-email" checked={notifyBookingChangeEmail} onCheckedChange={setNotifyBookingChangeEmail} disabled={userProfile?.is_banned} />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
+                  <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
+                  <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(checked) => handleSmsSwitchChange(checked, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="notif-booking-change-sms">Modifications de réservation par SMS</Label>
+                    <p className="text-sm text-muted-foreground">SMS court envoyé quand une réservation change.</p>
+                  </div>
+                  <Switch id="notif-booking-change-sms" checked={notifyBookingChangeSms} onCheckedChange={(checked) => handleSmsSwitchChange(checked, setNotifyBookingChangeSms)} disabled={userProfile?.is_banned} />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border p-4">
+                  <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
+                  <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(checked) => handleSmsSwitchChange(checked, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border border-dashed p-4">
+                  <div className="space-y-1">
+                    <Label>Tester l'envoi SMS</Label>
+                    <p className="text-sm text-muted-foreground">Envoie un SMS de test court à votre numéro enregistré.</p>
+                  </div>
+                  <Button type="button" variant="outline" onClick={handleSendTestSms} disabled={smsTestLoading || userProfile?.is_banned}>
+                    {smsTestLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Phone className="mr-2 h-4 w-4" />}
+                    {smsTestLoading ? 'Envoi du SMS...' : 'Tester l’envoi SMS'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="settings" className="flex-1">
             <Card className="w-full">
               <CardHeader>
-                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Settings /> Paramètres & Notifications</CardTitle>
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Settings /> Paramètres</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
@@ -609,48 +668,6 @@ const ProfilePage: React.FC = () => {
                     checked={theme === 'noel'}
                     onCheckedChange={(checked) => setTheme(checked ? 'noel' : 'light')}
                   />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
-                  <Label htmlFor="notif-new-booking-email">Recevoir les nouvelles réservations par email</Label>
-                  <Switch id="notif-new-booking-email" checked={notifyNewBookingEmail} onCheckedChange={setNotifyNewBookingEmail} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
-                  <Label htmlFor="notif-cancel-email">Recevoir les annulations par email</Label>
-                  <Switch id="notif-cancel-email" checked={notifyCancellationEmail} onCheckedChange={setNotifyCancellationEmail} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
-                  <div>
-                    <Label htmlFor="notif-booking-change-email">Modifications de réservation par email</Label>
-                    <p className="text-sm text-gray-500">Recevez un email lorsqu'une réservation change de dates et/ou de montant.</p>
-                  </div>
-                  <Switch id="notif-booking-change-email" checked={notifyBookingChangeEmail} onCheckedChange={setNotifyBookingChangeEmail} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
-                  <Label htmlFor="notif-new-booking-sms">Recevoir les nouvelles réservations par SMS</Label>
-                  <Switch id="notif-new-booking-sms" checked={notifyNewBookingSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyNewBookingSms)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
-                  <div>
-                    <Label htmlFor="notif-booking-change-sms">Modifications de réservation par SMS</Label>
-                    <p className="text-sm text-gray-500">SMS court envoyé quand une réservation change.</p>
-                  </div>
-                  <Switch id="notif-booking-change-sms" checked={notifyBookingChangeSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyBookingChangeSms)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
-                  <Label htmlFor="notif-cancel-sms">Recevoir les annulations par SMS</Label>
-                  <Switch id="notif-cancel-sms" checked={notifyCancellationSms} onCheckedChange={(c) => handleSmsSwitchChange(c, setNotifyCancellationSms)} disabled={userProfile?.is_banned} />
-                </div>
-                <div className="rounded-md border border-dashed p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <Label>Tester l'envoi SMS</Label>
-                      <p className="text-sm text-gray-500">Envoie un SMS de test court à votre numéro enregistré.</p>
-                    </div>
-                    <Button type="button" variant="outline" onClick={handleSendTestSms} disabled={smsTestLoading || userProfile?.is_banned}>
-                      {smsTestLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Phone className="mr-2 h-4 w-4" />}
-                      {smsTestLoading ? 'Envoi du SMS...' : 'Envoyer un SMS de test'}
-                    </Button>
-                  </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
                   <div>

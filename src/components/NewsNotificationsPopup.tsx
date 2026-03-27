@@ -76,7 +76,7 @@ const NewsNotificationsPopup: React.FC = () => {
                 <div>
                   <p className="font-semibold text-slate-900">Nouveau</p>
                   <p className="mt-1 text-sm text-slate-600">
-                    Activez vos alertes de réservations par email et SMS depuis votre profil, dans l’onglet Notifications.
+                    Activez vos alertes de réservations par email et SMS. Rendez-vous dans votre profil, onglet Notifications.
                   </p>
                 </div>
               </div>

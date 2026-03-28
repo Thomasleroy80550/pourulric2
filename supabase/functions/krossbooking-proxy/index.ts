@@ -257,21 +257,12 @@ async function getAuthorizedThread(
   }
 
   if (userContext.role === "admin") {
-    const reservation = await findReservationInKnownRooms(authToken, userContext, reservationId);
-
-    if (!reservation) {
-      throw new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
     return {
       thread: {
         ...thread,
         id_reservation: reservationId,
       },
-      reservation,
+      reservation: null,
     };
   }
 

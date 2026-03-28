@@ -19,6 +19,11 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getAllUserRooms } from "@/lib/admin-api";
 import {
+  getReservationEmailEventLookups,
+  type ReservationEmailEventLookup,
+} from "@/lib/reservation-email-events-admin";
+
+import {
   AuthorizedMessageThread,
   AuthorizedMessageThreadSummary,
   GeneratedReply,
@@ -38,10 +43,7 @@ type RoomContext = UserRoom & {
 };
 
 function formatDateTime(value?: string | null) {
-  if (!value) {
-    return "—";
-  }
-
+  if (!value) return "—";
   try {
     return format(parseISO(value), "dd MMM yyyy à HH:mm", { locale: fr });
   } catch {
@@ -50,10 +52,7 @@ function formatDateTime(value?: string | null) {
 }
 
 function formatDate(value?: string | null) {
-  if (!value) {
-    return "—";
-  }
-
+  if (!value) return "—";
   try {
     return format(parseISO(value), "dd MMM yyyy", { locale: fr });
   } catch {
@@ -66,9 +65,7 @@ function buildRecentLastUpdate() {
 }
 
 function roomHighlights(room: RoomContext | null) {
-  if (!room) {
-    return [] as Array<{ label: string; value: string }>;
-  }
+  if (!room) return [] as Array<{ label: string; value: string }>;
 
   return [
     room.arrival_instructions ? { label: "Arrivée", value: room.arrival_instructions } : null,
@@ -91,6 +88,7 @@ const SmartRepliesPage = () => {
   const [threads, setThreads] = useState<AuthorizedMessageThreadSummary[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
   const [selectedThread, setSelectedThread] = useState<AuthorizedMessageThread | null>(null);
+  const [reservationLookupMap, setReservationLookupMap] = useState<Record<string, ReservationEmailEventLookup>>({});
   const [search, setSearch] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(true);
   const [additionalInstructions, setAdditionalInstructions] = useState("");
@@ -99,9 +97,42 @@ const SmartRepliesPage = () => {
   const [loadingPage, setLoadingPage] = useState(true);
   const [loadingThreads, setLoadingThreads] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
-  const [generatingReply, setGeneratingReply] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
+  const [generatingReply, setGeneratingReply] = useState(false);
   const initializedRef = useRef(false);
+
+  const hydrateReservationLookups = useCallback(
+    async (threadRows: AuthorizedMessageThreadSummary[]) => {
+      if (!isAdmin) {
+        setReservationLookupMap({});
+        return;
+      }
+
+      const reservationIds = threadRows
+        .map((thread) => thread.id_reservation)
+        .filter((value): value is number => Number.isFinite(value));
+
+      if (reservationIds.length === 0) {
+        setReservationLookupMap({});
+        return;
+      }
+
+      try {
+        const lookups = await getReservationEmailEventLookups(reservationIds);
+        setReservationLookupMap(
+          lookups.reduce<Record<string, ReservationEmailEventLookup>>((acc, row) => {
+            if (row.reservation_id) {
+              acc[String(row.reservation_id)] = row;
+            }
+            return acc;
+          }, {}),
+        );
+      } catch (error: any) {
+        toast.error(error.message || "Erreur lors du chargement du contexte réservation.");
+      }
+    },
+    [isAdmin],
+  );
 
   const loadThreads = useCallback(
     async (options?: { keepSelection?: boolean }) => {
@@ -114,19 +145,20 @@ const SmartRepliesPage = () => {
         });
 
         setThreads(data);
+        await hydrateReservationLookups(data);
 
         const nextSelectedId = options?.keepSelection
           ? data.find((thread) => thread.id_thread === selectedThreadId)?.id_thread ?? data[0]?.id_thread ?? null
           : data[0]?.id_thread ?? null;
 
-        setSelectedThreadId(nextSelectedId);
+        setSelectedThreadId(Number.isFinite(nextSelectedId) ? nextSelectedId : null);
       } catch (error: any) {
         toast.error(error.message || "Erreur lors du chargement des messages.");
       } finally {
         setLoadingThreads(false);
       }
     },
-    [search, selectedThreadId, unreadOnly],
+    [hydrateReservationLookups, search, selectedThreadId, unreadOnly],
   );
 
   useEffect(() => {
@@ -149,8 +181,10 @@ const SmartRepliesPage = () => {
           unreadOnly: true,
           lastUpdate: buildRecentLastUpdate(),
         });
+
         setThreads(data);
-        setSelectedThreadId(data[0]?.id_thread ?? null);
+        await hydrateReservationLookups(data);
+        setSelectedThreadId(Number.isFinite(data[0]?.id_thread) ? data[0].id_thread : null);
       } catch (error: any) {
         toast.error(error.message || "Erreur lors de l'initialisation.");
       } finally {
@@ -159,11 +193,11 @@ const SmartRepliesPage = () => {
     };
 
     initialize();
-  }, [isAdmin, profile, sessionLoading]);
+  }, [hydrateReservationLookups, isAdmin, profile, sessionLoading]);
 
   useEffect(() => {
     const loadSelectedThread = async () => {
-      if (!selectedThreadId) {
+      if (!selectedThreadId || !Number.isFinite(selectedThreadId)) {
         setSelectedThread(null);
         return;
       }
@@ -188,16 +222,79 @@ const SmartRepliesPage = () => {
     loadSelectedThread();
   }, [selectedThreadId, threads]);
 
-  const selectedRoom = useMemo(() => {
-    const roomId = selectedThread?.reservation?.room_id;
-    if (!roomId) {
-      return null;
+  const selectedSummary = useMemo(
+    () => threads.find((thread) => thread.id_thread === selectedThreadId) ?? null,
+    [selectedThreadId, threads],
+  );
+
+  const selectedLookup = useMemo(() => {
+    const reservationId = selectedThread?.thread.id_reservation ?? selectedSummary?.id_reservation;
+    if (!reservationId) return null;
+    return reservationLookupMap[String(reservationId)] ?? null;
+  }, [reservationLookupMap, selectedSummary, selectedThread]);
+
+  const effectiveReservation = useMemo(() => {
+    const reservationId = selectedThread?.thread.id_reservation ?? selectedSummary?.id_reservation;
+
+    if (!reservationId) {
+      return selectedThread?.reservation ?? selectedSummary?.reservation ?? null;
     }
 
-    return rooms.find((room) => room.room_id === roomId) ?? null;
-  }, [rooms, selectedThread]);
+    return {
+      ...(selectedSummary?.reservation ?? {}),
+      ...(selectedThread?.reservation ?? {}),
+      id_reservation: reservationId,
+      label:
+        selectedThread?.reservation?.label ||
+        selectedSummary?.reservation?.label ||
+        selectedLookup?.guest_name ||
+        undefined,
+      arrival:
+        selectedThread?.reservation?.arrival ||
+        selectedSummary?.reservation?.arrival ||
+        selectedLookup?.arrival_date ||
+        undefined,
+      departure:
+        selectedThread?.reservation?.departure ||
+        selectedSummary?.reservation?.departure ||
+        selectedLookup?.departure_date ||
+        undefined,
+      room_name:
+        selectedThread?.reservation?.room_name ||
+        selectedSummary?.reservation?.room_name ||
+        selectedLookup?.room_name ||
+        undefined,
+      room_id:
+        selectedThread?.reservation?.room_id ||
+        selectedSummary?.reservation?.room_id ||
+        undefined,
+    };
+  }, [selectedLookup, selectedSummary, selectedThread]);
+
+  const selectedRoom = useMemo(() => {
+    const roomId = effectiveReservation?.room_id;
+    if (roomId) {
+      const byRoomId = rooms.find((room) => room.room_id === roomId);
+      if (byRoomId) return byRoomId;
+    }
+
+    const matchedRoomId = selectedLookup?.matched_user_room_ids?.[0];
+    if (matchedRoomId) {
+      const byMatchedId = rooms.find((room) => room.id === matchedRoomId);
+      if (byMatchedId) return byMatchedId;
+    }
+
+    const roomName = effectiveReservation?.room_name;
+    if (roomName) {
+      const byName = rooms.find((room) => room.room_name.toLowerCase() === roomName.toLowerCase());
+      if (byName) return byName;
+    }
+
+    return null;
+  }, [effectiveReservation, rooms, selectedLookup]);
 
   const selectedHighlights = useMemo(() => roomHighlights(selectedRoom), [selectedRoom]);
+
   const ownerLabel = useMemo(() => {
     const firstName = selectedRoom?.profiles?.first_name?.trim();
     const lastName = selectedRoom?.profiles?.last_name?.trim();
@@ -205,15 +302,13 @@ const SmartRepliesPage = () => {
   }, [selectedRoom]);
 
   const handleGenerateReply = async () => {
-    if (!selectedThread) {
-      return;
-    }
+    if (!selectedThread) return;
 
     setGeneratingReply(true);
     try {
       const result = await generateKrossbookingReply({
         thread: selectedThread.thread,
-        reservation: selectedThread.reservation,
+        reservation: effectiveReservation,
         room: selectedRoom,
         additionalInstructions,
       });
@@ -229,28 +324,28 @@ const SmartRepliesPage = () => {
   };
 
   const handleSendReply = async () => {
-    if (!selectedThread || !draft.trim()) {
-      return;
-    }
+    if (!selectedThread || !draft.trim()) return;
 
     setSendingReply(true);
     try {
       await sendMessageToAuthorizedThread(
         selectedThread.thread.id_thread,
         draft.trim(),
-        selectedThread.reservation?.id_reservation,
+        effectiveReservation?.id_reservation,
       );
       toast.success("Message envoyé.");
+
       await Promise.all([
         loadThreads({ keepSelection: true }),
         (async () => {
           const refreshedThread = await getAuthorizedMessageThread(
             selectedThread.thread.id_thread,
-            selectedThread.reservation?.id_reservation,
+            effectiveReservation?.id_reservation,
           );
           setSelectedThread(refreshedThread);
         })(),
       ]);
+
       setDraft("");
       setAiResult(null);
     } catch (error: any) {
@@ -309,9 +404,7 @@ const SmartRepliesPage = () => {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      loadThreads();
-                    }
+                    if (event.key === "Enter") loadThreads();
                   }}
                 />
                 <Button variant="secondary" onClick={() => loadThreads()} disabled={loadingThreads}>
@@ -333,27 +426,33 @@ const SmartRepliesPage = () => {
               ) : (
                 <ScrollArea className="h-[60vh] pr-3">
                   <div className="space-y-3">
-                    {threads.map((thread) => (
-                      <button
-                        key={thread.id_thread}
-                        type="button"
-                        onClick={() => setSelectedThreadId(thread.id_thread)}
-                        className={cn(
-                          "w-full rounded-xl border p-4 text-left transition hover:border-primary/40 hover:bg-muted/40",
-                          selectedThreadId === thread.id_thread && "border-primary bg-primary/5",
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="font-medium">{thread.reservation?.label || `Réservation #${thread.id_reservation}`}</div>
-                            <div className="text-sm text-muted-foreground">{thread.reservation?.room_name || "Logement non identifié"}</div>
+                    {threads.map((thread) => {
+                      const lookup = reservationLookupMap[String(thread.id_reservation)] ?? null;
+                      const title = thread.reservation?.label || lookup?.guest_name || `Réservation #${thread.id_reservation || thread.id_thread}`;
+                      const roomName = thread.reservation?.room_name || lookup?.room_name || "Logement non identifié";
+
+                      return (
+                        <button
+                          key={`${thread.id_thread}-${thread.id_reservation}`}
+                          type="button"
+                          onClick={() => setSelectedThreadId(Number.isFinite(thread.id_thread) ? thread.id_thread : null)}
+                          className={cn(
+                            "w-full rounded-xl border p-4 text-left transition hover:border-primary/40 hover:bg-muted/40",
+                            selectedThreadId === thread.id_thread && "border-primary bg-primary/5",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-medium">{title}</div>
+                              <div className="text-sm text-muted-foreground">{roomName}</div>
+                            </div>
+                            <Badge variant="secondary">{thread.cod_channel}</Badge>
                           </div>
-                          <Badge variant="secondary">{thread.cod_channel}</Badge>
-                        </div>
-                        <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{thread.last_message_text || "Aperçu indisponible"}</p>
-                        <div className="mt-3 text-xs text-muted-foreground">{formatDateTime(thread.last_message_date)}</div>
-                      </button>
-                    ))}
+                          <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{thread.last_message_text || "Aperçu indisponible"}</p>
+                          <div className="mt-3 text-xs text-muted-foreground">{formatDateTime(thread.last_message_date)}</div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               )}
@@ -381,10 +480,10 @@ const SmartRepliesPage = () => {
                   <div className="space-y-5">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge>{selectedThread.thread.cod_channel}</Badge>
-                      <Badge variant="outline">{selectedThread.reservation?.room_name || "Logement non trouvé"}</Badge>
+                      <Badge variant="outline">{effectiveReservation?.room_name || "Logement non identifié"}</Badge>
                       {ownerLabel && <Badge variant="outline">Client {ownerLabel}</Badge>}
                       <Badge variant="outline">
-                        {formatDate(selectedThread.reservation?.arrival)} → {formatDate(selectedThread.reservation?.departure)}
+                        {formatDate(effectiveReservation?.arrival)} → {formatDate(effectiveReservation?.departure)}
                       </Badge>
                     </div>
 
@@ -392,7 +491,7 @@ const SmartRepliesPage = () => {
                       <Alert>
                         <AlertTitle>Contexte logement incomplet</AlertTitle>
                         <AlertDescription>
-                          Ce fil est bien rattaché à une réservation, mais aucun logement détaillé n'a été retrouvé pour enrichir la réponse IA.
+                          Le fil a bien été chargé, mais le logement n'a pas encore pu être relié automatiquement aux données internes.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -412,24 +511,28 @@ const SmartRepliesPage = () => {
 
                     <ScrollArea className="h-[340px] rounded-lg border p-4">
                       <div className="space-y-4">
-                        {selectedThread.thread.messages.map((message) => {
-                          const isHost = message.sender === "host";
-                          return (
-                            <div key={message.id_message} className={cn("flex", isHost ? "justify-end" : "justify-start")}>
-                              <div
-                                className={cn(
-                                  "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
-                                  isHost ? "bg-primary text-primary-foreground" : "bg-muted",
-                                )}
-                              >
-                                <div className="mb-1 text-xs opacity-80">
-                                  {isHost ? "Vous" : "Voyageur"} • {formatDateTime(message.date)}
+                        {selectedThread.thread.messages?.length ? (
+                          selectedThread.thread.messages.map((message) => {
+                            const isHost = message.sender === "host";
+                            return (
+                              <div key={`${message.id_message}-${message.date}`} className={cn("flex", isHost ? "justify-end" : "justify-start")}>
+                                <div
+                                  className={cn(
+                                    "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
+                                    isHost ? "bg-primary text-primary-foreground" : "bg-muted",
+                                  )}
+                                >
+                                  <div className="mb-1 text-xs opacity-80">
+                                    {isHost ? "Vous" : effectiveReservation?.label || selectedLookup?.guest_name || "Voyageur"} • {formatDateTime(message.date)}
+                                  </div>
+                                  <div className="whitespace-pre-wrap break-words">{message.text}</div>
                                 </div>
-                                <div className="whitespace-pre-wrap break-words">{message.text}</div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })
+                        ) : (
+                          <div className="text-sm text-muted-foreground">Aucun message exploitable dans ce fil.</div>
+                        )}
                       </div>
                     </ScrollArea>
                   </div>
@@ -455,7 +558,7 @@ const SmartRepliesPage = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
-                  placeholder="Consignes supplémentaires optionnelles pour l'IA (ex: ton plus formel, rappeler l'heure d'arrivée, etc.)"
+                  placeholder="Consignes supplémentaires optionnelles pour l'IA"
                   value={additionalInstructions}
                   onChange={(event) => setAdditionalInstructions(event.target.value)}
                   rows={3}

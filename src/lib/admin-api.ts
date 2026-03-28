@@ -79,6 +79,7 @@ export interface AdminUserRoom extends UserRoom {
 }
 
 export interface AdminIdea extends Idea {
+
   profiles: {
     first_name: string;
     last_name: string;

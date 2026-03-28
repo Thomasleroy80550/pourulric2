@@ -40,12 +40,80 @@ function scrubStack(stack?: string | null): string | null {
   return lines.join("\n");
 }
 
-function getBrowserMetadata(): Record<string, unknown> {
+function detectTranslationState() {
+  if (typeof document === "undefined") {
+    return {};
+  }
+
+  const html = document.documentElement;
+  const body = document.body;
+  const root = document.getElementById("root");
+
+  const googleTranslateSelectors = [
+    ".goog-te-banner-frame",
+    ".goog-te-gadget",
+    ".goog-te-combo",
+    "iframe.goog-te-banner-frame",
+    "[class*='goog-te']",
+  ];
+
+  const googleTranslateDetected = googleTranslateSelectors.some((selector) => {
+    try {
+      return !!document.querySelector(selector);
+    } catch {
+      return false;
+    }
+  });
+
+  return {
+    documentLang: html.lang || null,
+    htmlTranslate: html.getAttribute("translate"),
+    bodyTranslate: body?.getAttribute("translate") ?? null,
+    rootTranslate: root?.getAttribute("translate") ?? null,
+    htmlNoTranslateClass: html.classList.contains("notranslate"),
+    bodyNoTranslateClass: body?.classList.contains("notranslate") ?? false,
+    rootNoTranslateClass: root?.classList.contains("notranslate") ?? false,
+    googleTranslateDetected,
+  };
+}
+
+function getBrowserMetadata(message?: string): Record<string, unknown> {
   if (typeof window === "undefined") return {};
+
   try {
+    const nav = navigator as Navigator & {
+      userAgentData?: { platform?: string; brands?: Array<{ brand: string; version: string }> };
+      deviceMemory?: number;
+    };
+
+    const suspectedExternalDomMutation =
+      typeof message === "string" &&
+      (message.toLowerCase().includes("failed to execute 'removechild' on 'node'") ||
+        message.toLowerCase().includes("failed to execute 'insertbefore' on 'node'"));
+
     return {
       href: window.location?.href,
-      userAgent: navigator?.userAgent,
+      userAgent: nav.userAgent,
+      language: nav.language,
+      languages: Array.isArray(nav.languages) ? nav.languages.slice(0, 5) : [],
+      platform: nav.userAgentData?.platform ?? nav.platform,
+      vendor: nav.vendor,
+      onLine: nav.onLine,
+      cookieEnabled: nav.cookieEnabled,
+      hardwareConcurrency: nav.hardwareConcurrency,
+      deviceMemory: nav.deviceMemory,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio,
+      },
+      screen: {
+        width: window.screen?.width,
+        height: window.screen?.height,
+      },
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      suspectedExternalDomMutation,
+      ...detectTranslationState(),
     };
   } catch {
     return {};
@@ -74,7 +142,7 @@ export function buildClientErrorPayload(
     message: err.message || "Unknown error",
     stack: scrubStack(err.stack ?? null),
     metadata: {
-      ...getBrowserMetadata(),
+      ...getBrowserMetadata(err.message || "Unknown error"),
       componentStack: scrubStack(errorInfo?.componentStack ?? null),
       context: safeSerialize(context?.extra ?? null),
     },

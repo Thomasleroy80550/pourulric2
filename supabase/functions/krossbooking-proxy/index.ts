@@ -46,7 +46,7 @@ function normalizeKrossData<T>(payload: T | { data?: T } | null | undefined): T 
   return payload as T;
 }
 
-function extractReservationId(payload: Record<string, unknown> | null | undefined, fallback?: number | null) {
+function extractReservationId(payload: Record<string, unknown> | null | undefined, fallback?: string | null) {
   const candidates = [
     payload?.id_reservation,
     payload?.reservation_id,
@@ -56,13 +56,26 @@ function extractReservationId(payload: Record<string, unknown> | null | undefine
   ];
 
   for (const candidate of candidates) {
-    const value = Number(candidate);
-    if (Number.isFinite(value)) {
+    if (candidate === null || candidate === undefined) {
+      continue;
+    }
+
+    const value = String(candidate).trim();
+    if (value) {
       return value;
     }
   }
 
   return null;
+}
+
+function parseNumericReservationId(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const normalized = Number(String(value).trim());
+  return Number.isFinite(normalized) ? normalized : null;
 }
 
 function parseDateTime(value: unknown): number | null {
@@ -235,7 +248,7 @@ async function getAuthorizedThread(
   authToken: string,
   userContext: UserContext,
   idThread: number,
-  fallbackReservationId?: number | null,
+  fallbackReservationId?: string | null,
 ) {
   const threadResponse = await postToKrossbooking(authToken, "/messaging/get-thread", {
     id_thread: idThread,
@@ -263,7 +276,8 @@ async function getAuthorizedThread(
   }
 
   const authorizedReservations = await getAuthorizedReservations(authToken, userContext);
-  if (!authorizedReservations.has(reservationId)) {
+  const numericReservationId = parseNumericReservationId(reservationId);
+  if (!numericReservationId || !authorizedReservations.has(numericReservationId)) {
     console.warn(`[krossbooking-proxy] forbidden thread access userId=${userContext.userId} idThread=${idThread} reservationId=${reservationId}`);
     throw new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403,
@@ -276,7 +290,7 @@ async function getAuthorizedThread(
       ...thread,
       id_reservation: reservationId,
     },
-    reservation: authorizedReservations.get(reservationId) ?? null,
+    reservation: authorizedReservations.get(numericReservationId) ?? null,
   };
 }
 
@@ -405,13 +419,14 @@ serve(async (req) => {
 
       const authorizedReservations = await getAuthorizedReservations(authToken, userContext);
       const filteredThreads = threads.filter((thread) => {
-        const reservationId = extractReservationId(thread);
+        const reservationId = parseNumericReservationId(extractReservationId(thread));
         return !!reservationId && authorizedReservations.has(reservationId);
       });
 
       const enrichedThreads = filteredThreads.map((thread) => {
         const reservationId = extractReservationId(thread);
-        const reservation = reservationId ? authorizedReservations.get(reservationId) ?? null : null;
+        const numericReservationId = parseNumericReservationId(reservationId);
+        const reservation = numericReservationId ? authorizedReservations.get(numericReservationId) ?? null : null;
         return {
           ...thread,
           id_reservation: reservationId,
@@ -437,7 +452,9 @@ serve(async (req) => {
       }
 
       const idThread = Number(requestBody.id_thread);
-      const fallbackReservationId = Number(requestBody.id_reservation);
+      const fallbackReservationId = typeof requestBody.id_reservation === "string" || typeof requestBody.id_reservation === "number"
+        ? String(requestBody.id_reservation).trim()
+        : null;
       if (!Number.isFinite(idThread)) {
         throw new Error("Missing id_thread for get_authorized_message_thread.");
       }
@@ -446,7 +463,7 @@ serve(async (req) => {
         authToken,
         userContext,
         idThread,
-        Number.isFinite(fallbackReservationId) ? fallbackReservationId : null,
+        fallbackReservationId,
       );
 
       return new Response(JSON.stringify({ data: authorizedThread }), {
@@ -461,7 +478,9 @@ serve(async (req) => {
       }
 
       const idThread = Number(requestBody.id_thread);
-      const fallbackReservationId = Number(requestBody.id_reservation);
+      const fallbackReservationId = typeof requestBody.id_reservation === "string" || typeof requestBody.id_reservation === "number"
+        ? String(requestBody.id_reservation).trim()
+        : null;
       const message = typeof requestBody.message === "string" ? requestBody.message.trim() : "";
 
       if (!Number.isFinite(idThread)) {
@@ -476,7 +495,7 @@ serve(async (req) => {
         authToken,
         userContext,
         idThread,
-        Number.isFinite(fallbackReservationId) ? fallbackReservationId : null,
+        fallbackReservationId,
       );
 
       const sendResponse = await postToKrossbooking(authToken, "/messaging/send-message", {

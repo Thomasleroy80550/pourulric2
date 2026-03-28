@@ -1,0 +1,1 @@
+select reservation_id, room_name, guest_name, arrival_date, departure_date, matched_user_room_ids, occurred_at from public.reservation_email_events order by occurred_at desc limit 20;

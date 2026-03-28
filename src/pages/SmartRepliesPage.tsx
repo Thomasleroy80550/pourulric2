@@ -124,7 +124,7 @@ const SmartRepliesPage = () => {
 
       const reservationIds = threadRows
         .map((thread) => thread.id_reservation)
-        .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 
       if (reservationIds.length === 0) {
         setReservationLookupMap({});

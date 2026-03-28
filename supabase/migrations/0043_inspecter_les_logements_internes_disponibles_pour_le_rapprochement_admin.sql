@@ -1,0 +1,1 @@
+select id, user_id, room_id, room_name from public.user_rooms order by room_name asc limit 50;

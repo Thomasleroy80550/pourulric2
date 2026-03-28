@@ -1,59 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { KrossbookingMessage } from "@/lib/krossbooking";
-import type { UserRoom } from "@/lib/user-room-api";
 
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
 const KROSSBOOKING_AI_REPLY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-ai-reply";
 
-export interface AuthorizedReservationSummary {
-  id_reservation?: number | null;
-  label?: string;
-  cod_channel?: string;
-  arrival?: string;
-  departure?: string;
-  email?: string;
-  phone?: string;
-  room_id?: string;
-  room_name?: string | null;
-}
-
-export interface AuthorizedMessageThreadSummary {
-  id_thread: number;
-  id_reservation: number | null;
-  cod_channel: string;
-  last_message_date: string;
-  last_message_text: string;
-  to_read?: boolean;
-  reservation: AuthorizedReservationSummary | null;
-}
-
-export interface AuthorizedMessageThread {
-  thread: {
-    id_thread: number;
-    id_reservation: number | null;
-    cod_channel: string;
-    last_message_date: string;
-    last_message_text: string;
-    messages: KrossbookingMessage[];
-  };
-  reservation: AuthorizedReservationSummary | null;
-}
-
-export interface GenerateReplyPayload {
-  thread: AuthorizedMessageThread["thread"];
-  reservation: AuthorizedReservationSummary | null;
-  room: UserRoom | null;
-  additionalInstructions?: string;
-}
-
-export interface GeneratedReply {
-  intentCategory: string;
-  intentSummary: string;
-  confidence: number;
-  suggestedReply: string;
-  missingInformation: string[];
-  factsUsed: string[];
-}
+export type AuthorizedReservationSummary = Record<string, any>;
+export type AuthorizedMessageThread = Record<string, any>;
+export type AuthorizedMessageThreadSummary = Record<string, any>;
+export type GenerateReplyPayload = Record<string, any>;
+export type GeneratedReply = Record<string, any>;
 
 async function getAccessToken() {
   const { data, error } = await supabase.auth.getSession();
@@ -72,6 +26,7 @@ async function getAccessToken() {
 async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
   const accessToken = await getAccessToken();
   const response = await fetch(url, {
+
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -90,12 +45,16 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
   return parsed as T;
 }
 
-function normalizeReservationId(value: unknown): number | null {
-  const normalized = Number(value);
-  return Number.isFinite(normalized) ? normalized : null;
+function normalizeReservationId(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const normalized = String(value).trim();
+  return normalized || null;
 }
 
-function normalizeThreadMessages(messages: any): KrossbookingMessage[] {
+function normalizeThreadMessages(messages: unknown) {
   if (!Array.isArray(messages)) {
     return [];
   }
@@ -116,7 +75,7 @@ export async function listAuthorizedMessageThreads(filters?: {
   codChannel?: string;
   lastUpdate?: string;
   dateTo?: string;
-}): Promise<AuthorizedMessageThreadSummary[]> {
+}) {
   const response = await postJson<{ data: any[] }>(KROSSBOOKING_PROXY_URL, {
     action: "list_message_threads",
     ...(filters?.search ? { search: filters.search } : {}),
@@ -137,14 +96,11 @@ export async function listAuthorizedMessageThreads(filters?: {
   }));
 }
 
-export async function getAuthorizedMessageThread(
-  idThread: number,
-  reservationId?: number | null,
-): Promise<AuthorizedMessageThread> {
+export async function getAuthorizedMessageThread(idThread: number, reservationId?: string | null) {
   const response = await postJson<{ data: { thread: any; reservation: any } }>(KROSSBOOKING_PROXY_URL, {
     action: "get_authorized_message_thread",
     id_thread: idThread,
-    ...(typeof reservationId === "number" ? { id_reservation: reservationId } : {}),
+    ...(reservationId ? { id_reservation: reservationId } : {}),
   });
 
   const thread = response.data.thread;
@@ -156,25 +112,21 @@ export async function getAuthorizedMessageThread(
       id_reservation: normalizeReservationId(thread.id_reservation),
       cod_channel: String(thread.cod_channel || "UNKNOWN"),
       last_message_date: String(thread.last_message_date || thread.last_update || ""),
-      last_message_text: String(thread.last_message_text || thread.last_message || ""),
+      last_message_text: String(thread.last_message || thread.last_message_text || ""),
       messages: normalizeThreadMessages(thread.messages),
     },
   };
 }
 
-export async function sendMessageToAuthorizedThread(
-  idThread: number,
-  message: string,
-  reservationId?: number | null,
-) {
+export async function sendMessageToAuthorizedThread(idThread: number, message: string, reservationId?: string | null) {
   return postJson<{ data: unknown }>(KROSSBOOKING_PROXY_URL, {
     action: "send_message_to_thread",
     id_thread: idThread,
     message,
-    ...(typeof reservationId === "number" ? { id_reservation: reservationId } : {}),
+    ...(reservationId ? { id_reservation: reservationId } : {}),
   });
 }
 
-export async function generateKrossbookingReply(payload: GenerateReplyPayload): Promise<GeneratedReply> {
-  return postJson<GeneratedReply>(KROSSBOOKING_AI_REPLY_URL, payload as unknown as Record<string, unknown>);
+export async function generateKrossbookingReply(payload: GenerateReplyPayload) {
+  return postJson<GeneratedReply>(KROSSBOOKING_AI_REPLY_URL, payload as Record<string, unknown>);
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { format, parseISO, subDays } from "date-fns";
+import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Bot, Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
+import { Bot, CalendarRange, Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import AdminLayout from "@/components/AdminLayout";
@@ -60,8 +60,18 @@ function formatDate(value?: string | null) {
   }
 }
 
-function buildRecentLastUpdate() {
-  return format(subDays(new Date(), 90), "yyyy-MM-dd HH:mm:ss");
+function formatDateInput(value: Date) {
+  return format(value, "yyyy-MM-dd");
+}
+
+function buildDateTimeRange(fromDate: string, toDate: string) {
+  const safeFrom = fromDate || formatDateInput(subDays(new Date(), 365));
+  const safeTo = toDate || formatDateInput(new Date());
+
+  return {
+    lastUpdate: `${safeFrom} 00:00:00`,
+    dateTo: `${safeTo} 23:59:59`,
+  };
 }
 
 function roomHighlights(room: RoomContext | null) {
@@ -91,6 +101,8 @@ const SmartRepliesPage = () => {
   const [reservationLookupMap, setReservationLookupMap] = useState<Record<string, ReservationEmailEventLookup>>({});
   const [search, setSearch] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(true);
+  const [fromDate, setFromDate] = useState(formatDateInput(subDays(startOfDay(new Date()), 365)));
+  const [toDate, setToDate] = useState(formatDateInput(new Date()));
   const [additionalInstructions, setAdditionalInstructions] = useState("");
   const [draft, setDraft] = useState("");
   const [aiResult, setAiResult] = useState<GeneratedReply | null>(null);
@@ -101,6 +113,8 @@ const SmartRepliesPage = () => {
   const [generatingReply, setGeneratingReply] = useState(false);
   const initializedRef = useRef(false);
 
+  const currentRange = useMemo(() => buildDateTimeRange(fromDate, toDate), [fromDate, toDate]);
+
   const hydrateReservationLookups = useCallback(
     async (threadRows: AuthorizedMessageThreadSummary[]) => {
       if (!isAdmin) {
@@ -110,7 +124,7 @@ const SmartRepliesPage = () => {
 
       const reservationIds = threadRows
         .map((thread) => thread.id_reservation)
-        .filter((value): value is number => Number.isFinite(value));
+        .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
 
       if (reservationIds.length === 0) {
         setReservationLookupMap({});
@@ -141,7 +155,8 @@ const SmartRepliesPage = () => {
         const data = await listAuthorizedMessageThreads({
           search: search.trim() || undefined,
           unreadOnly,
-          lastUpdate: buildRecentLastUpdate(),
+          lastUpdate: currentRange.lastUpdate,
+          dateTo: currentRange.dateTo,
         });
 
         setThreads(data);
@@ -158,7 +173,7 @@ const SmartRepliesPage = () => {
         setLoadingThreads(false);
       }
     },
-    [hydrateReservationLookups, search, selectedThreadId, unreadOnly],
+    [currentRange.dateTo, currentRange.lastUpdate, hydrateReservationLookups, search, selectedThreadId, unreadOnly],
   );
 
   useEffect(() => {
@@ -179,7 +194,8 @@ const SmartRepliesPage = () => {
 
         const data = await listAuthorizedMessageThreads({
           unreadOnly: true,
-          lastUpdate: buildRecentLastUpdate(),
+          lastUpdate: currentRange.lastUpdate,
+          dateTo: currentRange.dateTo,
         });
 
         setThreads(data);
@@ -193,7 +209,7 @@ const SmartRepliesPage = () => {
     };
 
     initialize();
-  }, [hydrateReservationLookups, isAdmin, profile, sessionLoading]);
+  }, [currentRange.dateTo, currentRange.lastUpdate, hydrateReservationLookups, isAdmin, profile, sessionLoading]);
 
   useEffect(() => {
     const loadSelectedThread = async () => {
@@ -209,7 +225,7 @@ const SmartRepliesPage = () => {
       setDraft("");
 
       try {
-        const data = await getAuthorizedMessageThread(selectedThreadId, selectedSummary?.id_reservation);
+        const data = await getAuthorizedMessageThread(selectedThreadId, selectedSummary?.id_reservation ?? undefined);
         setSelectedThread(data);
       } catch (error: any) {
         toast.error(error.message || "Erreur lors du chargement du fil.");
@@ -363,7 +379,7 @@ const SmartRepliesPage = () => {
             <h1 className="text-3xl font-bold tracking-tight">Réponses IA</h1>
             <p className="text-muted-foreground">
               {isAdmin
-                ? "Module prioritairement pensé pour l'équipe admin : analyse des demandes voyageurs et préparation d'un brouillon avant envoi."
+                ? "Chargement des fils non lus de tous les logements via Messaging - Get threads, avec filtre de plage de dates."
                 : "Analysez les demandes voyageurs et préparez un brouillon basé sur les informations de vos logements."}
             </p>
           </div>
@@ -396,20 +412,31 @@ const SmartRepliesPage = () => {
             <CardHeader>
               <CardTitle>Fils Krossbooking</CardTitle>
               <CardDescription>
-                {isAdmin ? "Vue globale des fils reliés aux réservations connues dans l'application." : "Filtrés sur vos réservations autorisées."}
+                {isAdmin ? "Tous les fils remontés par Get threads sur la plage choisie." : "Filtrés sur vos réservations autorisées."}
               </CardDescription>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Rechercher un voyageur ou un message"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") loadThreads();
-                  }}
-                />
-                <Button variant="secondary" onClick={() => loadThreads()} disabled={loadingThreads}>
-                  Rechercher
-                </Button>
+              <div className="grid gap-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Rechercher un voyageur ou un message"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") loadThreads();
+                    }}
+                  />
+                  <Button variant="secondary" onClick={() => loadThreads()} disabled={loadingThreads}>
+                    Rechercher
+                  </Button>
+                </div>
+                <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                  <Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+                  <Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+                  <Button variant="outline" onClick={() => loadThreads()} disabled={loadingThreads || fromDate > toDate}>
+                    <CalendarRange className="mr-2 h-4 w-4" />
+                    Appliquer
+                  </Button>
+                </div>
+                {fromDate > toDate && <p className="text-xs text-destructive">La date de fin doit être postérieure à la date de début.</p>}
               </div>
             </CardHeader>
             <CardContent>
@@ -427,13 +454,13 @@ const SmartRepliesPage = () => {
                 <ScrollArea className="h-[60vh] pr-3">
                   <div className="space-y-3">
                     {threads.map((thread) => {
-                      const lookup = reservationLookupMap[String(thread.id_reservation)] ?? null;
-                      const title = thread.reservation?.label || lookup?.guest_name || `Réservation #${thread.id_reservation || thread.id_thread}`;
+                      const lookup = thread.id_reservation ? reservationLookupMap[String(thread.id_reservation)] ?? null : null;
+                      const title = thread.reservation?.label || lookup?.guest_name || `Fil #${thread.id_thread}`;
                       const roomName = thread.reservation?.room_name || lookup?.room_name || "Logement non identifié";
 
                       return (
                         <button
-                          key={`${thread.id_thread}-${thread.id_reservation}`}
+                          key={`${thread.id_thread}-${thread.id_reservation ?? "none"}`}
                           type="button"
                           onClick={() => setSelectedThreadId(Number.isFinite(thread.id_thread) ? thread.id_thread : null)}
                           className={cn(
@@ -491,7 +518,7 @@ const SmartRepliesPage = () => {
                       <Alert>
                         <AlertTitle>Contexte logement incomplet</AlertTitle>
                         <AlertDescription>
-                          Le fil a bien été chargé, mais le logement n'a pas encore pu être relié automatiquement aux données internes.
+                          Le fil est bien chargé depuis Krossbooking, mais son logement n'a pas encore été relié automatiquement aux données internes.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -565,7 +592,7 @@ const SmartRepliesPage = () => {
                 />
 
                 {aiResult && (
-                  <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                  <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{aiResult.intentCategory}</Badge>
                       <Badge variant="outline">Confiance {Math.round((aiResult.confidence || 0) * 100)}%</Badge>

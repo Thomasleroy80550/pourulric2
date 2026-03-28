@@ -6,7 +6,7 @@ const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functio
 const KROSSBOOKING_AI_REPLY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-ai-reply";
 
 export interface AuthorizedReservationSummary {
-  id_reservation?: number;
+  id_reservation?: number | null;
   label?: string;
   cod_channel?: string;
   arrival?: string;
@@ -19,7 +19,7 @@ export interface AuthorizedReservationSummary {
 
 export interface AuthorizedMessageThreadSummary {
   id_thread: number;
-  id_reservation: number;
+  id_reservation: number | null;
   cod_channel: string;
   last_message_date: string;
   last_message_text: string;
@@ -30,7 +30,7 @@ export interface AuthorizedMessageThreadSummary {
 export interface AuthorizedMessageThread {
   thread: {
     id_thread: number;
-    id_reservation: number;
+    id_reservation: number | null;
     cod_channel: string;
     last_message_date: string;
     last_message_text: string;
@@ -90,11 +90,32 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
   return parsed as T;
 }
 
+function normalizeReservationId(value: unknown): number | null {
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : null;
+}
+
+function normalizeThreadMessages(messages: any): KrossbookingMessage[] {
+  if (!Array.isArray(messages)) {
+    return [];
+  }
+
+  return messages.map((message: any, index: number) => ({
+    id_message: Number(message.id_message ?? index + 1),
+    id_thread: Number(message.id_thread ?? 0),
+    date: String(message.date || message.created_at || message.last_update || ""),
+    sender: message.sender === "host" || message.sender === "system" ? message.sender : "guest",
+    text: String(message.text || message.message || message.body || ""),
+    is_read: Boolean(message.is_read),
+  }));
+}
+
 export async function listAuthorizedMessageThreads(filters?: {
   search?: string;
   unreadOnly?: boolean;
   codChannel?: string;
   lastUpdate?: string;
+  dateTo?: string;
 }): Promise<AuthorizedMessageThreadSummary[]> {
   const response = await postJson<{ data: any[] }>(KROSSBOOKING_PROXY_URL, {
     action: "list_message_threads",
@@ -102,11 +123,12 @@ export async function listAuthorizedMessageThreads(filters?: {
     ...(typeof filters?.unreadOnly === "boolean" ? { to_read: filters.unreadOnly } : {}),
     ...(filters?.codChannel ? { cod_channel: filters.codChannel } : {}),
     ...(filters?.lastUpdate ? { last_update: filters.lastUpdate } : {}),
+    ...(filters?.dateTo ? { date_to: filters.dateTo } : {}),
   });
 
   return (response.data || []).map((thread) => ({
     id_thread: Number(thread.id_thread),
-    id_reservation: Number(thread.id_reservation),
+    id_reservation: normalizeReservationId(thread.id_reservation),
     cod_channel: String(thread.cod_channel || "UNKNOWN"),
     last_message_date: String(thread.last_message_date || thread.last_update || ""),
     last_message_text: String(thread.last_message_text || thread.last_message || ""),
@@ -117,7 +139,7 @@ export async function listAuthorizedMessageThreads(filters?: {
 
 export async function getAuthorizedMessageThread(
   idThread: number,
-  reservationId?: number,
+  reservationId?: number | null,
 ): Promise<AuthorizedMessageThread> {
   const response = await postJson<{ data: { thread: any; reservation: any } }>(KROSSBOOKING_PROXY_URL, {
     action: "get_authorized_message_thread",
@@ -131,20 +153,11 @@ export async function getAuthorizedMessageThread(
     reservation: response.data.reservation || null,
     thread: {
       id_thread: Number(thread.id_thread),
-      id_reservation: Number(thread.id_reservation),
+      id_reservation: normalizeReservationId(thread.id_reservation),
       cod_channel: String(thread.cod_channel || "UNKNOWN"),
       last_message_date: String(thread.last_message_date || thread.last_update || ""),
       last_message_text: String(thread.last_message_text || thread.last_message || ""),
-      messages: Array.isArray(thread.messages)
-        ? thread.messages.map((message: any) => ({
-            id_message: Number(message.id_message),
-            id_thread: Number(message.id_thread),
-            date: String(message.date || ""),
-            sender: message.sender,
-            text: String(message.text || ""),
-            is_read: Boolean(message.is_read),
-          }))
-        : [],
+      messages: normalizeThreadMessages(thread.messages),
     },
   };
 }
@@ -152,7 +165,7 @@ export async function getAuthorizedMessageThread(
 export async function sendMessageToAuthorizedThread(
   idThread: number,
   message: string,
-  reservationId?: number,
+  reservationId?: number | null,
 ) {
   return postJson<{ data: unknown }>(KROSSBOOKING_PROXY_URL, {
     action: "send_message_to_thread",

@@ -65,6 +65,35 @@ function extractReservationId(payload: Record<string, unknown> | null | undefine
   return null;
 }
 
+function parseDateTime(value: unknown): number | null {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value.replace(" ", "T"));
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function isThreadWithinDateRange(thread: Record<string, unknown>, startDate?: string, endDate?: string) {
+  const threadDate = parseDateTime(String(thread.last_message_date || thread.last_update || ""));
+  if (threadDate === null) {
+    return true;
+  }
+
+  const startTimestamp = parseDateTime(startDate);
+  const endTimestamp = parseDateTime(endDate);
+
+  if (startTimestamp !== null && threadDate < startTimestamp) {
+    return false;
+  }
+
+  if (endTimestamp !== null && threadDate > endTimestamp) {
+    return false;
+  }
+
+  return true;
+}
+
 async function getAuthToken(): Promise<string> {
   const KROSSBOOKING_API_KEY = Deno.env.get("KROSSBOOKING_API_KEY");
   const KROSSBOOKING_HOTEL_ID = Deno.env.get("KROSSBOOKING_HOTEL_ID");
@@ -200,39 +229,6 @@ async function getAuthorizedReservations(authToken: string, userContext: UserCon
   }
 
   return reservationsById;
-}
-
-async function findReservationInKnownRooms(
-  authToken: string,
-  userContext: UserContext,
-  reservationId: number,
-) {
-  for (const room of userContext.rooms) {
-    const roomId = Number(room.room_id);
-    if (!Number.isFinite(roomId)) {
-      continue;
-    }
-
-    const response = await postToKrossbooking(authToken, "/reservations/get-list", {
-      with_rooms: true,
-      id_room: roomId,
-      id_property: userContext.role === "admin" ? undefined : userContext.propertyId ?? undefined,
-    });
-
-    const reservations = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
-    const match = reservations.find((reservation) => Number((reservation as { id_reservation?: unknown }).id_reservation) === reservationId);
-
-    if (match) {
-      return {
-        ...match,
-        room_id: room.room_id,
-        room_name: room.room_name ?? null,
-        user_id: room.user_id ?? null,
-      };
-    }
-  }
-
-  return null;
 }
 
 async function getAuthorizedThread(
@@ -371,14 +367,22 @@ serve(async (req) => {
         throw new Error("Unauthorized");
       }
 
+      const lastUpdate = typeof requestBody.last_update === "string" ? requestBody.last_update : undefined;
+      const dateTo = typeof requestBody.date_to === "string" ? requestBody.date_to : undefined;
       const response = await postToKrossbooking(authToken, "/messaging/get-threads", {
-        ...(typeof requestBody.last_update === "string" ? { last_update: requestBody.last_update } : {}),
+        ...(lastUpdate ? { last_update: lastUpdate } : {}),
         ...(typeof requestBody.to_read === "boolean" ? { to_read: requestBody.to_read } : {}),
         ...(typeof requestBody.search === "string" && requestBody.search.trim() ? { search: requestBody.search.trim() } : {}),
         ...(typeof requestBody.cod_channel === "string" && requestBody.cod_channel.trim() ? { cod_channel: requestBody.cod_channel.trim() } : {}),
       });
 
-      const threads = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
+      const threads = (normalizeKrossData<Record<string, unknown>[]>(response) ?? [])
+        .filter((thread) => isThreadWithinDateRange(thread, lastUpdate, dateTo))
+        .sort((left, right) => {
+          const leftDate = parseDateTime(String(left.last_message_date || left.last_update || "")) ?? 0;
+          const rightDate = parseDateTime(String(right.last_message_date || right.last_update || "")) ?? 0;
+          return rightDate - leftDate;
+        });
 
       if (userContext.role === "admin") {
         const adminThreads = threads.map((thread) => ({
@@ -387,7 +391,7 @@ serve(async (req) => {
           reservation: null,
         }));
 
-        console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${adminThreads.length}`);
+        console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${adminThreads.length} last_update=${lastUpdate ?? "none"} date_to=${dateTo ?? "none"}`);
 
         return new Response(JSON.stringify({
           data: adminThreads,
@@ -415,7 +419,7 @@ serve(async (req) => {
         };
       });
 
-      console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${enrichedThreads.length}`);
+      console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${enrichedThreads.length} last_update=${lastUpdate ?? "none"} date_to=${dateTo ?? "none"}`);
 
       return new Response(JSON.stringify({
         data: enrichedThreads,

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home,
   Calendar,
@@ -124,7 +124,7 @@ const accountNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
 ];
 
-const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: boolean; unreadCount?: number; hasImportant?: boolean }> = ({ onLinkClick, isPaymentSuspended, unreadCount = 0, hasImportant = true }) => {
+const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: boolean; unreadCount?: number; hasImportant?: boolean; navigate?: (to: string) => void }> = ({ onLinkClick, isPaymentSuspended, unreadCount = 0, hasImportant = true, navigate }) => {
   const location = useLocation();
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
@@ -185,83 +185,81 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
             </h3>
             <ul>
               {section.items.map((item) => (
-                <li key={item.name}>
-                  <Link
-                    to={item.href}
-                    className={cn(
-                      "flex items-center px-4 py-2.5 rounded-md text-sm font-medium tracking-wide transition-all",
-                      "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) && 'bg-sidebar-accent text-sidebar-accent-foreground',
-                      item.disabled && "opacity-50 cursor-not-allowed pointer-events-none"
-                    )}
-                    onClick={item.disabled ? (e) => e.preventDefault() : onLinkClick}
-                  >
-                    <item.icon className="h-5 w-5 mr-3" />
-                    <span className="flex-1">{item.name}</span>
-                    {item.href === '/season-2026' && (
-                      <span
-                        className="ml-2 inline-block h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"
-                        aria-label="Nouveau"
-                        title="Nouveau"
-                      />
-                    )}
-                    {item.href === '/notifications' && unreadCount > 0 && (
-                      <span
-                        className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-blue-600 text-white text-[10px] px-1.5 font-bold"
-                        aria-label={`${unreadCount} notifications non lues`}
-                        title={`${unreadCount} notifications non lues`}
-                      >
-                        {unreadCount}
-                      </span>
-                    )}
-                    {item.href === '/notifications' && hasImportant && (
-                      <span
-                        className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-extrabold"
-                        aria-label="Informations importantes"
-                        title="Informations importantes"
-                      >
-                        !
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
+                              <li key={item.name}>
+                                <div
+                                  className={cn(
+                                    "flex items-center px-4 py-2.5 rounded-md text-sm font-medium tracking-wide transition-all",
+                                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                                    (location.pathname === item.href || (item.href !== '/' && location.pathname.startsWith(item.href))) && 'bg-sidebar-accent text-sidebar-accent-foreground',
+                                    item.disabled && "opacity-50 cursor-not-allowed pointer-events-none"
+                                  )}
+                                  onClick={item.disabled ? undefined : () => { navigate?.(item.href); onLinkClick?.(); }}
+                                >
+                                  <item.icon className="h-5 w-5 mr-3" />
+                                  <span className="flex-1">{item.name}</span>
+                                  {item.href === '/season-2026' && (
+                                    <span
+                                      className="ml-2 inline-block h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"
+                                      aria-label="Nouveau"
+                                      title="Nouveau"
+                                    />
+                                  )}
+                                  {item.href === '/notifications' && unreadCount > 0 && (
+                                    <span
+                                      className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-blue-600 text-white text-[10px] px-1.5 font-bold"
+                                      aria-label={`${unreadCount} notifications non lues`}
+                                      title={`${unreadCount} notifications non lues`}
+                                    >
+                                      {unreadCount}
+                                    </span>
+                                  )}
+                                  {item.href === '/notifications' && hasImportant && (
+                                    <span
+                                      className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-extrabold"
+                                      aria-label="Informations importantes"
+                                      title="Informations importantes"
+                                    >
+                                      !
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
             </ul>
           </div>
         ))}
       </nav>
 
       <nav className="mt-auto p-4 border-t border-sidebar-border">
-        {profile?.role === 'admin' && (
-          <div className="mb-2">
-            <Link to="/admin" onClick={onLinkClick}>
-              <Button variant="outline" className="w-full justify-start bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90">
-                <Shield className="h-5 w-5 mr-3" />
-                Administration
-              </Button>
-            </Link>
-          </div>
-        )}
+              {profile?.role === 'admin' && (
+                <div className="mb-2">
+                  <div onClick={() => { navigate('/admin'); onLinkClick?.(); }}>
+                    <Button variant="outline" className="w-full justify-start bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/90">
+                      <Shield className="h-5 w-5 mr-3" />
+                      Administration
+                    </Button>
+                  </div>
+                </div>
+              )}
         {profile?.role !== 'accountant' && profile?.role !== 'housekeeper' && (
-          <ul>
-            {accountNavigationItems.map((item) => (
-              <li key={item.name}>
-                <Link
-                  to={item.href}
-                  className={cn(
-                    "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
-                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                    location.pathname.startsWith(item.href) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
-                  )}
-                  onClick={onLinkClick}
-                >
-                  <item.icon className="h-5 w-5 mr-3" />
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+                  <ul>
+                    {accountNavigationItems.map((item) => (
+                      <li key={item.name}>
+                        <div
+                          className={cn(
+                            "flex items-center px-4 py-2.5 rounded-md text-sm text-sidebar-foreground font-medium tracking-wide transition-all",
+                            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                            location.pathname.startsWith(item.href) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                          )}
+                          onClick={() => { navigate?.(item.href); onLinkClick?.(); }}
+                        >
+                          <item.icon className="h-5 w-5 mr-3" />
+                          {item.name}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
         <div className="mt-4 text-xs text-sidebar-foreground/60 text-center">
           Version {useVersion()}
         </div>
@@ -382,10 +380,10 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="flex min-h-screen overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {!isMobile && (
-        <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
-          <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} />
-        </aside>
-      )}
+              <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
+                <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} navigate={navigate} />
+              </aside>
+            )}
 
       <div className="flex-1 flex flex-col">
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -399,17 +397,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
-                    <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} />
-                  </SheetContent>
+                                      <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} navigate={navigate} />
+                                    </SheetContent>
                 </Sheet>
               )}
             </div>
 
             <div className="w-1/3 flex justify-center md:hidden">
-              <Link to="/">
-                <img src="/logo.png" alt="Hello Keys Logo" className="h-8 w-auto" />
-              </Link>
-            </div>
+                          <div onClick={() => navigate('/')} className="cursor-pointer">
+                            <img src="/logo.png" alt="Hello Keys Logo" className="h-8 w-auto" />
+                          </div>
+                        </div>
 
             <div className="w-1/3 md:w-auto flex items-center justify-end space-x-1 sm:space-x-4">
               {isImpersonating && (

@@ -154,10 +154,12 @@ const ProfilePage: React.FC = () => {
       const updates: Partial<UserProfile> = {
         first_name: firstName,
         last_name: lastName,
+        phone_number: phoneNumber.trim(),
         property_address: propertyAddress,
         property_city: propertyCity,
         property_zip_code: propertyZipCode,
         iban_airbnb_booking: ibanAirbnbBooking,
+
         bic_airbnb_booking: bicAirbnbBooking,
         sync_with_hellokeys: syncWithHellokeys,
         iban_abritel_hellokeys: syncWithHellokeys ? ibanAbritelHellokeys : '',

@@ -259,6 +259,8 @@ async function getAuthorizedThread(
     throw new Error("Thread not found.");
   }
 
+  console.log(`[krossbooking-proxy] get_authorized_thread payload_keys=${Object.keys(thread).join(",")} nested_thread_keys=${thread.thread && typeof thread.thread === "object" ? Object.keys(thread.thread as Record<string, unknown>).join(",") : "none"}`);
+
   const reservationId = extractReservationId(thread, fallbackReservationId);
   if (!reservationId) {
     console.warn(`[krossbooking-proxy] thread without reservation idThread=${idThread} fallback=${fallbackReservationId ?? "none"}`);

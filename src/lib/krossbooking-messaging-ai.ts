@@ -118,9 +118,13 @@ export async function getAuthorizedMessageThread(idThread: number, reservationId
     ...(reservationId ? { id_reservation: reservationId } : {}),
   });
 
+  const normalizedThread = normalizeDetailedThreadPayload(response.data.thread);
+  console.log("[SmartReplies] raw thread payload", response.data.thread);
+  console.log("[SmartReplies] normalized thread payload", normalizedThread);
+
   return {
     reservation: response.data.reservation || null,
-    thread: normalizeDetailedThreadPayload(response.data.thread),
+    thread: normalizedThread,
   };
 }
 

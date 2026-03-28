@@ -119,7 +119,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[100svh] bg-white md:bg-gradient-to-b md:from-gray-50 md:via-white md:to-[#EAF4FF]">
+    <div className="notranslate min-h-[100svh] bg-white md:bg-gradient-to-b md:from-gray-50 md:via-white md:to-[#EAF4FF]" translate="no">
       {loading && <LoadingOverlay message="Connexion en cours..." />}
 
       {/* Mobile: plein écran, style "app" */}
@@ -186,6 +186,7 @@ const Login = () => {
                                 {...field}
                                 disabled={loading}
                                 className="h-12 rounded-xl bg-white pl-10 pr-3 text-[16px] border-gray-200 focus-visible:ring-2 focus-visible:ring-primary/25"
+                                translate="no"
                               />
                             </div>
                           </FormControl>
@@ -225,6 +226,7 @@ const Login = () => {
                                 {...field}
                                 disabled={loading}
                                 className="h-12 rounded-xl bg-white pl-10 pr-10 text-[16px] border-gray-200 focus-visible:ring-2 focus-visible:ring-primary/25"
+                                translate="no"
                               />
                               <button
                                 type="button"

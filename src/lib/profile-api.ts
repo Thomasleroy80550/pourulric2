@@ -58,6 +58,10 @@ export interface UserProfile {
   referral_credits?: number;
   krossbooking_property_id?: number;
   stripe_account_id?: string;
+  conso_prm?: string;
+  conso_token?: string;
+  conso_price_per_kwh?: number;
+  conso_service_enabled?: boolean;
   // NEW: flag d'accès ThermoBnB
   thermobnb_enabled?: boolean;
 }

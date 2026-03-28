@@ -27,6 +27,11 @@ import { Label } from '@/components/ui/label';
 import ChangePasswordDialog from '@/components/admin/ChangePasswordDialog';
 import DownloadUserStatementsButton from '@/components/admin/DownloadUserStatementsButton';
 
+const optionalPositiveNumberField = z.preprocess(
+  (value) => value === '' || value === null || value === undefined ? null : value,
+  z.coerce.number().min(0).nullable().optional()
+);
+
 const editUserSchema = z.object({
   first_name: z.string().min(1, "Le prénom est requis."),
   last_name: z.string().min(1, "Le nom est requis."),
@@ -62,6 +67,12 @@ const editUserSchema = z.object({
   krossbooking_property_id: z.coerce.number().optional().nullable(),
   stripe_account_id: z.string().optional().nullable(),
   pennylane_customer_id: z.string().optional().nullable(),
+  conso_prm: z.string().optional().nullable().refine((value) => !value || /^\d{14}$/.test(value), {
+    message: "Le PRM / PDL doit contenir 14 chiffres.",
+  }),
+  conso_token: z.string().optional().nullable(),
+  conso_price_per_kwh: optionalPositiveNumberField,
+  conso_service_enabled: z.boolean().optional(),
   thermobnb_enabled: z.boolean().optional(),
 });
 
@@ -146,6 +157,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
         krossbooking_property_id: user.krossbooking_property_id || undefined,
         stripe_account_id: user.stripe_account_id || '',
         pennylane_customer_id: user.pennylane_customer_id || undefined,
+        conso_prm: user.conso_prm || '',
+        conso_token: user.conso_token || '',
+        conso_price_per_kwh: user.conso_price_per_kwh ?? null,
+        conso_service_enabled: user.conso_service_enabled || false,
         thermobnb_enabled: user as any && (user as any).thermobnb_enabled ? true : false,
       });
       setNewEmail(user.email || '');
@@ -363,11 +378,12 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleUpdateUser)} className="flex-grow overflow-y-auto pr-6 pl-2 space-y-4">
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-7">
+                <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
                   <TabsTrigger value="personal">Personnel</TabsTrigger>
                   <TabsTrigger value="onboarding">Intégration</TabsTrigger>
                   <TabsTrigger value="payment">Paiement</TabsTrigger>
                   <TabsTrigger value="offer">Offre</TabsTrigger>
+                  <TabsTrigger value="powersense">PowerSense</TabsTrigger>
                   <TabsTrigger value="notifications">Notifications</TabsTrigger>
                   <TabsTrigger value="kyc">KYC</TabsTrigger>
                   <TabsTrigger value="rooms">Chambres</TabsTrigger>
@@ -611,6 +627,85 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                             <FormControl>
                               <Switch checked={!!field.value} onCheckedChange={field.onChange} />
                             </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="powersense" className="mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Paramètres PowerSense</CardTitle>
+                      <CardDescription>
+                        Ajoutez ici le PRM / PDL Linky du client et, si besoin, ses identifiants PowerSense.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="conso_service_enabled"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                              <FormLabel>Accès PowerSense</FormLabel>
+                              <FormDescription>
+                                Active le module PowerSense pour ce client.
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="conso_prm"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>PRM / PDL Linky</FormLabel>
+                              <FormControl>
+                                <Input {...field} value={field.value ?? ''} placeholder="14 chiffres" inputMode="numeric" maxLength={14} />
+                              </FormControl>
+                              <FormDescription>
+                                Le point de livraison Linky du client utilisé par PowerSense.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="conso_price_per_kwh"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Prix du kWh (€)</FormLabel>
+                              <FormControl>
+                                <Input type="number" step="0.001" {...field} value={field.value ?? ''} />
+                              </FormControl>
+                              <FormDescription>
+                                Optionnel : utilisé pour estimer les coûts dans le tableau de bord.
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="conso_token"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Token Conso API</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} value={field.value ?? ''} placeholder="Token d'accès" className="min-h-[96px]" />
+                            </FormControl>
+                            <FormDescription>
+                              Optionnel : permet de préremplir l'accès du client au dashboard PowerSense.
+                            </FormDescription>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />

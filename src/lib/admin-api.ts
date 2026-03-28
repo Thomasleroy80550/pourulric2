@@ -138,6 +138,10 @@ export interface UserProfile {
   digital_booklet_enabled?: boolean | null;
   krossbooking_property_id?: number | null;
   stripe_account_id?: string | null;
+  conso_prm?: string | null;
+  conso_token?: string | null;
+  conso_price_per_kwh?: number | null;
+  conso_service_enabled?: boolean | null;
 }
 
 export interface RoomUtilityEvent {

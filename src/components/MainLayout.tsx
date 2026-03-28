@@ -33,8 +33,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   Ban, // Ajout de l'icône Ban
-  MessageSquare, // Ajout de l'icône pour les tickets
-  Store, // Ajout de l'icône pour la marketplace
+    Store, // Ajout de l'icône pour la marketplace
   Mail, // icône e-mail
   Zap, // icône éclair pour conso électricité
 } from "lucide-react";
@@ -78,7 +77,6 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
       { name: 'Aperçu', href: '/', icon: Home },
       { name: 'Calendrier', href: '/calendar', icon: Calendar, disabled: isPaymentSuspended },
       { name: 'Réservations', href: '/bookings', icon: Book, disabled: isPaymentSuspended },
-      { name: 'Réponses IA', href: '/smart-replies', icon: MessageSquare, disabled: isPaymentSuspended },
       { name: 'Incidents', href: '/reports', icon: Wrench },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },

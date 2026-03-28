@@ -164,6 +164,7 @@ function App() {
                       <Route path="/admin/crm" element={<AdminCRMPage />} />
                       <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
                       <Route path="/admin/error-logs" element={<AdminErrorLogsPage />} />
+                      <Route path="/admin/smart-replies" element={<SmartRepliesPage />} />
                       <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                       <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                       <Route path="/admin/status" element={<AdminStatusPage />} />

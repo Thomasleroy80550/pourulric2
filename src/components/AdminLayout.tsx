@@ -37,7 +37,8 @@ import {
   Snowflake,
   Zap,
   AlertTriangle,
-  Thermometer
+  Thermometer,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -72,6 +73,7 @@ const adminNavigationCategories = [
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
       { name: 'Compteurs coupés', href: '/admin/utility-cuts', icon: PlugZap, description: 'Liste des logements où électricité/eau sont coupées.' },
       { name: 'Temperature', href: '/admin/temperature', icon: Thermometer, description: 'Température des logements (Thermostats & Stations).' },
+      { name: 'Réponses IA', href: '/admin/smart-replies', icon: Sparkles, description: 'Analyse les messages Krossbooking et prépare des réponses semi-automatiques.' },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },
       { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
       { name: 'Demandes PowerSense', href: '/admin/module-requests?module=electricity', icon: Zap, description: 'Candidatures PowerSense.' },

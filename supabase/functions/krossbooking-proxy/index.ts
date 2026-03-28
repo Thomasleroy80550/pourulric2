@@ -19,11 +19,13 @@ const corsHeaders = {
 interface RoomRequest {
   room_id: string | number;
   room_name?: string | null;
+  user_id?: string | null;
   id_property?: string | number | null;
 }
 
 interface UserContext {
   userId: string;
+  role: string;
   propertyId: number | null;
   rooms: RoomRequest[];
 }
@@ -42,6 +44,25 @@ function normalizeKrossData<T>(payload: T | { data?: T } | null | undefined): T 
   }
 
   return payload as T;
+}
+
+function extractReservationId(payload: Record<string, unknown> | null | undefined, fallback?: number | null) {
+  const candidates = [
+    payload?.id_reservation,
+    payload?.reservation_id,
+    (payload?.reservation as Record<string, unknown> | undefined)?.id_reservation,
+    (payload?.reservation as Record<string, unknown> | undefined)?.reservation_id,
+    fallback,
+  ];
+
+  for (const candidate of candidates) {
+    const value = Number(candidate);
+    if (Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return null;
 }
 
 async function getAuthToken(): Promise<string> {
@@ -115,22 +136,22 @@ async function getUserContext(authHeader: string): Promise<UserContext> {
     });
   }
 
-  const [{ data: profile, error: profileError }, { data: rooms, error: roomsError }] = await Promise.all([
-    supabaseClient
-      .from("profiles")
-      .select("krossbooking_property_id")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabaseClient
-      .from("user_rooms")
-      .select("room_id, room_name")
-      .eq("user_id", user.id),
-  ]);
+  const { data: profile, error: profileError } = await supabaseClient
+    .from("profiles")
+    .select("role, krossbooking_property_id")
+    .eq("id", user.id)
+    .maybeSingle();
 
   if (profileError) {
     console.error(`[krossbooking-proxy] failed to load profile userId=${user.id} error=${profileError.message}`);
     throw new Error(`Unable to load user profile: ${profileError.message}`);
   }
+
+  const isAdmin = profile?.role === "admin";
+  const roomsQuery = supabaseClient.from("user_rooms").select("room_id, room_name, user_id");
+  const { data: rooms, error: roomsError } = isAdmin
+    ? await roomsQuery
+    : await roomsQuery.eq("user_id", user.id);
 
   if (roomsError) {
     console.error(`[krossbooking-proxy] failed to load rooms userId=${user.id} error=${roomsError.message}`);
@@ -139,6 +160,7 @@ async function getUserContext(authHeader: string): Promise<UserContext> {
 
   return {
     userId: user.id,
+    role: profile?.role ?? "user",
     propertyId: typeof profile?.krossbooking_property_id === "number" ? profile.krossbooking_property_id : null,
     rooms: Array.isArray(rooms) ? rooms : [],
   };
@@ -157,7 +179,7 @@ async function getAuthorizedReservations(authToken: string, userContext: UserCon
     const response = await postToKrossbooking(authToken, "/reservations/get-list", {
       with_rooms: true,
       id_room: roomId,
-      id_property: userContext.propertyId ?? undefined,
+      id_property: userContext.role === "admin" ? undefined : userContext.propertyId ?? undefined,
     });
 
     const reservations = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
@@ -172,6 +194,7 @@ async function getAuthorizedReservations(authToken: string, userContext: UserCon
         ...reservation,
         room_id: room.room_id,
         room_name: room.room_name ?? null,
+        user_id: room.user_id ?? null,
       });
     }
   }
@@ -179,7 +202,12 @@ async function getAuthorizedReservations(authToken: string, userContext: UserCon
   return reservationsById;
 }
 
-async function getAuthorizedThread(authToken: string, userContext: UserContext, idThread: number) {
+async function getAuthorizedThread(
+  authToken: string,
+  userContext: UserContext,
+  idThread: number,
+  fallbackReservationId?: number | null,
+) {
   const threadResponse = await postToKrossbooking(authToken, "/messaging/get-thread", {
     id_thread: idThread,
   });
@@ -189,8 +217,9 @@ async function getAuthorizedThread(authToken: string, userContext: UserContext, 
     throw new Error("Thread not found.");
   }
 
-  const reservationId = Number((thread as { id_reservation?: unknown }).id_reservation);
-  if (!Number.isFinite(reservationId)) {
+  const reservationId = extractReservationId(thread, fallbackReservationId);
+  if (!reservationId) {
+    console.warn(`[krossbooking-proxy] thread without reservation idThread=${idThread} fallback=${fallbackReservationId ?? "none"}`);
     throw new Error("Thread does not contain a valid reservation.");
   }
 
@@ -204,7 +233,10 @@ async function getAuthorizedThread(authToken: string, userContext: UserContext, 
   }
 
   return {
-    thread,
+    thread: {
+      ...thread,
+      id_reservation: reservationId,
+    },
     reservation: authorizedReservations.get(reservationId) ?? null,
   };
 }
@@ -306,20 +338,21 @@ serve(async (req) => {
 
       const threads = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
       const filteredThreads = threads.filter((thread) => {
-        const reservationId = Number((thread as { id_reservation?: unknown }).id_reservation);
-        return Number.isFinite(reservationId) && authorizedReservations.has(reservationId);
+        const reservationId = extractReservationId(thread);
+        return !!reservationId && authorizedReservations.has(reservationId);
       });
 
       const enrichedThreads = filteredThreads.map((thread) => {
-        const reservationId = Number((thread as { id_reservation?: unknown }).id_reservation);
-        const reservation = authorizedReservations.get(reservationId) ?? null;
+        const reservationId = extractReservationId(thread);
+        const reservation = reservationId ? authorizedReservations.get(reservationId) ?? null : null;
         return {
           ...thread,
+          id_reservation: reservationId,
           reservation,
         };
       });
 
-      console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} returned=${enrichedThreads.length}`);
+      console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${enrichedThreads.length}`);
 
       return new Response(JSON.stringify({
         data: enrichedThreads,
@@ -337,11 +370,17 @@ serve(async (req) => {
       }
 
       const idThread = Number(requestBody.id_thread);
+      const fallbackReservationId = Number(requestBody.id_reservation);
       if (!Number.isFinite(idThread)) {
         throw new Error("Missing id_thread for get_authorized_message_thread.");
       }
 
-      const authorizedThread = await getAuthorizedThread(authToken, userContext, idThread);
+      const authorizedThread = await getAuthorizedThread(
+        authToken,
+        userContext,
+        idThread,
+        Number.isFinite(fallbackReservationId) ? fallbackReservationId : null,
+      );
 
       return new Response(JSON.stringify({ data: authorizedThread }), {
         status: 200,
@@ -355,6 +394,7 @@ serve(async (req) => {
       }
 
       const idThread = Number(requestBody.id_thread);
+      const fallbackReservationId = Number(requestBody.id_reservation);
       const message = typeof requestBody.message === "string" ? requestBody.message.trim() : "";
 
       if (!Number.isFinite(idThread)) {
@@ -365,14 +405,19 @@ serve(async (req) => {
         throw new Error("Missing message for send_message_to_thread.");
       }
 
-      await getAuthorizedThread(authToken, userContext, idThread);
+      await getAuthorizedThread(
+        authToken,
+        userContext,
+        idThread,
+        Number.isFinite(fallbackReservationId) ? fallbackReservationId : null,
+      );
 
       const sendResponse = await postToKrossbooking(authToken, "/messaging/send-message", {
         id_thread: idThread,
         message,
       });
 
-      console.log(`[krossbooking-proxy] send_message_to_thread userId=${userContext.userId} idThread=${idThread}`);
+      console.log(`[krossbooking-proxy] send_message_to_thread userId=${userContext.userId} role=${userContext.role} idThread=${idThread}`);
 
       return new Response(JSON.stringify({ data: normalizeKrossData(sendResponse) ?? sendResponse }), {
         status: 200,

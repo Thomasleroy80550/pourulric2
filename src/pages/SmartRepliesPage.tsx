@@ -4,7 +4,9 @@ import { fr } from "date-fns/locale";
 import { Bot, Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
+import AdminLayout from "@/components/AdminLayout";
 import MainLayout from "@/components/MainLayout";
+import { useSession } from "@/components/SessionContextProvider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,8 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { getUserRooms, UserRoom } from "@/lib/user-room-api";
+import { getAllUserRooms } from "@/lib/admin-api";
 import {
   AuthorizedMessageThread,
   AuthorizedMessageThreadSummary,
@@ -26,6 +27,15 @@ import {
   listAuthorizedMessageThreads,
   sendMessageToAuthorizedThread,
 } from "@/lib/krossbooking-messaging-ai";
+import { cn } from "@/lib/utils";
+import { getUserRooms, UserRoom } from "@/lib/user-room-api";
+
+type RoomContext = UserRoom & {
+  profiles?: {
+    first_name?: string | null;
+    last_name?: string | null;
+  } | null;
+};
 
 function formatDateTime(value?: string | null) {
   if (!value) {
@@ -55,7 +65,7 @@ function buildRecentLastUpdate() {
   return format(subDays(new Date(), 90), "yyyy-MM-dd HH:mm:ss");
 }
 
-const roomHighlights = (room: UserRoom | null) => {
+function roomHighlights(room: RoomContext | null) {
   if (!room) {
     return [] as Array<{ label: string; value: string }>;
   }
@@ -70,10 +80,14 @@ const roomHighlights = (room: UserRoom | null) => {
     room.house_rules ? { label: "Règles", value: room.house_rules } : null,
     room.logement_specificities ? { label: "Particularités", value: room.logement_specificities } : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
-};
+}
 
 const SmartRepliesPage = () => {
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const { profile, loading: sessionLoading } = useSession();
+  const isAdmin = profile?.role === "admin";
+  const Layout = isAdmin ? AdminLayout : MainLayout;
+
+  const [rooms, setRooms] = useState<RoomContext[]>([]);
   const [threads, setThreads] = useState<AuthorizedMessageThreadSummary[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
   const [selectedThread, setSelectedThread] = useState<AuthorizedMessageThread | null>(null);
@@ -88,35 +102,46 @@ const SmartRepliesPage = () => {
   const [generatingReply, setGeneratingReply] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
 
-  const loadThreads = useCallback(async (options?: { keepSelection?: boolean }) => {
-    setLoadingThreads(true);
-    try {
-      const data = await listAuthorizedMessageThreads({
-        search: search.trim() || undefined,
-        unreadOnly,
-        lastUpdate: buildRecentLastUpdate(),
-      });
+  const loadThreads = useCallback(
+    async (options?: { keepSelection?: boolean }) => {
+      setLoadingThreads(true);
+      try {
+        const data = await listAuthorizedMessageThreads({
+          search: search.trim() || undefined,
+          unreadOnly,
+          lastUpdate: buildRecentLastUpdate(),
+        });
 
-      setThreads(data);
+        setThreads(data);
 
-      const nextSelectedId = options?.keepSelection
-        ? data.find((thread) => thread.id_thread === selectedThreadId)?.id_thread ?? null
-        : data[0]?.id_thread ?? null;
+        const nextSelectedId = options?.keepSelection
+          ? data.find((thread) => thread.id_thread === selectedThreadId)?.id_thread ?? data[0]?.id_thread ?? null
+          : data[0]?.id_thread ?? null;
 
-      setSelectedThreadId(nextSelectedId);
-    } catch (error: any) {
-      toast.error(error.message || "Erreur lors du chargement des messages.");
-    } finally {
-      setLoadingThreads(false);
-    }
-  }, [search, selectedThreadId, unreadOnly]);
+        setSelectedThreadId(nextSelectedId);
+      } catch (error: any) {
+        toast.error(error.message || "Erreur lors du chargement des messages.");
+      } finally {
+        setLoadingThreads(false);
+      }
+    },
+    [search, selectedThreadId, unreadOnly],
+  );
 
   useEffect(() => {
+    if (sessionLoading || !profile) {
+      return;
+    }
+
     const initialize = async () => {
       setLoadingPage(true);
       try {
-        const rooms = await getUserRooms();
-        setUserRooms(rooms);
+        const loadedRooms = isAdmin
+          ? ((await getAllUserRooms()) as RoomContext[])
+          : ((await getUserRooms()) as RoomContext[]);
+
+        setRooms(loadedRooms);
+
         const data = await listAuthorizedMessageThreads({
           unreadOnly: true,
           lastUpdate: buildRecentLastUpdate(),
@@ -131,7 +156,7 @@ const SmartRepliesPage = () => {
     };
 
     initialize();
-  }, []);
+  }, [isAdmin, profile, sessionLoading]);
 
   useEffect(() => {
     const loadSelectedThread = async () => {
@@ -140,12 +165,14 @@ const SmartRepliesPage = () => {
         return;
       }
 
+      const selectedSummary = threads.find((thread) => thread.id_thread === selectedThreadId);
+
       setLoadingThread(true);
       setAiResult(null);
       setDraft("");
 
       try {
-        const data = await getAuthorizedMessageThread(selectedThreadId);
+        const data = await getAuthorizedMessageThread(selectedThreadId, selectedSummary?.id_reservation);
         setSelectedThread(data);
       } catch (error: any) {
         toast.error(error.message || "Erreur lors du chargement du fil.");
@@ -156,7 +183,7 @@ const SmartRepliesPage = () => {
     };
 
     loadSelectedThread();
-  }, [selectedThreadId]);
+  }, [selectedThreadId, threads]);
 
   const selectedRoom = useMemo(() => {
     const roomId = selectedThread?.reservation?.room_id;
@@ -164,10 +191,15 @@ const SmartRepliesPage = () => {
       return null;
     }
 
-    return userRooms.find((room) => room.room_id === roomId) ?? null;
-  }, [selectedThread, userRooms]);
+    return rooms.find((room) => room.room_id === roomId) ?? null;
+  }, [rooms, selectedThread]);
 
   const selectedHighlights = useMemo(() => roomHighlights(selectedRoom), [selectedRoom]);
+  const ownerLabel = useMemo(() => {
+    const firstName = selectedRoom?.profiles?.first_name?.trim();
+    const lastName = selectedRoom?.profiles?.last_name?.trim();
+    return [firstName, lastName].filter(Boolean).join(" ") || null;
+  }, [selectedRoom]);
 
   const handleGenerateReply = async () => {
     if (!selectedThread) {
@@ -200,12 +232,19 @@ const SmartRepliesPage = () => {
 
     setSendingReply(true);
     try {
-      await sendMessageToAuthorizedThread(selectedThread.thread.id_thread, draft.trim());
+      await sendMessageToAuthorizedThread(
+        selectedThread.thread.id_thread,
+        draft.trim(),
+        selectedThread.reservation?.id_reservation,
+      );
       toast.success("Message envoyé.");
       await Promise.all([
         loadThreads({ keepSelection: true }),
         (async () => {
-          const refreshedThread = await getAuthorizedMessageThread(selectedThread.thread.id_thread);
+          const refreshedThread = await getAuthorizedMessageThread(
+            selectedThread.thread.id_thread,
+            selectedThread.reservation?.id_reservation,
+          );
           setSelectedThread(refreshedThread);
         })(),
       ]);
@@ -219,13 +258,15 @@ const SmartRepliesPage = () => {
   };
 
   return (
-    <MainLayout>
+    <Layout>
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Réponses IA</h1>
             <p className="text-muted-foreground">
-              Analysez les demandes voyageurs et préparez un brouillon basé sur les informations de vos logements.
+              {isAdmin
+                ? "Module prioritairement pensé pour l’équipe admin : analyse des demandes voyageurs et préparation d’un brouillon avant envoi."
+                : "Analysez les demandes voyageurs et préparez un brouillon basé sur les informations de vos logements."}
             </p>
           </div>
 
@@ -241,11 +282,13 @@ const SmartRepliesPage = () => {
           </div>
         </div>
 
-        {userRooms.length === 0 && !loadingPage && (
+        {rooms.length === 0 && !loadingPage && (
           <Alert>
-            <AlertTitle>Aucun logement configuré</AlertTitle>
+            <AlertTitle>Aucun logement exploitable</AlertTitle>
             <AlertDescription>
-              Renseignez au moins un logement dans « Mes logements » pour que l'IA puisse utiliser votre contexte métier.
+              {isAdmin
+                ? "Aucun logement utilisateur n'est encore relié pour enrichir les réponses IA."
+                : "Renseignez au moins un logement dans « Mes logements » pour que l'IA puisse utiliser votre contexte métier."}
             </AlertDescription>
           </Alert>
         )}
@@ -254,7 +297,9 @@ const SmartRepliesPage = () => {
           <Card className="min-h-[70vh]">
             <CardHeader>
               <CardTitle>Fils Krossbooking</CardTitle>
-              <CardDescription>Filtrés sur vos réservations autorisées.</CardDescription>
+              <CardDescription>
+                {isAdmin ? "Vue globale des fils reliés aux réservations connues dans l'application." : "Filtrés sur vos réservations autorisées."}
+              </CardDescription>
               <div className="flex gap-2">
                 <Input
                   placeholder="Rechercher un voyageur ou un message"
@@ -272,7 +317,7 @@ const SmartRepliesPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {loadingPage || loadingThreads ? (
+              {loadingPage || loadingThreads || sessionLoading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-24 w-full" />
                   <Skeleton className="h-24 w-full" />
@@ -292,7 +337,7 @@ const SmartRepliesPage = () => {
                         onClick={() => setSelectedThreadId(thread.id_thread)}
                         className={cn(
                           "w-full rounded-xl border p-4 text-left transition hover:border-primary/40 hover:bg-muted/40",
-                          selectedThreadId === thread.id_thread && "border-primary bg-primary/5"
+                          selectedThreadId === thread.id_thread && "border-primary bg-primary/5",
                         )}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -334,6 +379,7 @@ const SmartRepliesPage = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge>{selectedThread.thread.cod_channel}</Badge>
                       <Badge variant="outline">{selectedThread.reservation?.room_name || "Logement non trouvé"}</Badge>
+                      {ownerLabel && <Badge variant="outline">Client {ownerLabel}</Badge>}
                       <Badge variant="outline">
                         {formatDate(selectedThread.reservation?.arrival)} → {formatDate(selectedThread.reservation?.departure)}
                       </Badge>
@@ -343,7 +389,7 @@ const SmartRepliesPage = () => {
                       <Alert>
                         <AlertTitle>Contexte logement incomplet</AlertTitle>
                         <AlertDescription>
-                          Ce fil est bien autorisé, mais aucun logement détaillé n'a été retrouvé pour enrichir la réponse IA.
+                          Ce fil est bien rattaché à une réservation, mais aucun logement détaillé n'a été retrouvé pour enrichir la réponse IA.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -370,10 +416,12 @@ const SmartRepliesPage = () => {
                               <div
                                 className={cn(
                                   "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
-                                  isHost ? "bg-primary text-primary-foreground" : "bg-muted"
+                                  isHost ? "bg-primary text-primary-foreground" : "bg-muted",
                                 )}
                               >
-                                <div className="mb-1 text-xs opacity-80">{isHost ? "Vous" : "Voyageur"} • {formatDateTime(message.date)}</div>
+                                <div className="mb-1 text-xs opacity-80">
+                                  {isHost ? "Vous" : "Voyageur"} • {formatDateTime(message.date)}
+                                </div>
                                 <div className="whitespace-pre-wrap break-words">{message.text}</div>
                               </div>
                             </div>
@@ -450,7 +498,7 @@ const SmartRepliesPage = () => {
           </div>
         </div>
       </div>
-    </MainLayout>
+    </Layout>
   );
 };
 

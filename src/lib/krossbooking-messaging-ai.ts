@@ -115,10 +115,14 @@ export async function listAuthorizedMessageThreads(filters?: {
   }));
 }
 
-export async function getAuthorizedMessageThread(idThread: number): Promise<AuthorizedMessageThread> {
+export async function getAuthorizedMessageThread(
+  idThread: number,
+  reservationId?: number,
+): Promise<AuthorizedMessageThread> {
   const response = await postJson<{ data: { thread: any; reservation: any } }>(KROSSBOOKING_PROXY_URL, {
     action: "get_authorized_message_thread",
     id_thread: idThread,
+    ...(typeof reservationId === "number" ? { id_reservation: reservationId } : {}),
   });
 
   const thread = response.data.thread;
@@ -145,11 +149,16 @@ export async function getAuthorizedMessageThread(idThread: number): Promise<Auth
   };
 }
 
-export async function sendMessageToAuthorizedThread(idThread: number, message: string) {
+export async function sendMessageToAuthorizedThread(
+  idThread: number,
+  message: string,
+  reservationId?: number,
+) {
   return postJson<{ data: unknown }>(KROSSBOOKING_PROXY_URL, {
     action: "send_message_to_thread",
     id_thread: idThread,
     message,
+    ...(typeof reservationId === "number" ? { id_reservation: reservationId } : {}),
   });
 }
 

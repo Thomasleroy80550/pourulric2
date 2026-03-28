@@ -202,6 +202,39 @@ async function getAuthorizedReservations(authToken: string, userContext: UserCon
   return reservationsById;
 }
 
+async function findReservationInKnownRooms(
+  authToken: string,
+  userContext: UserContext,
+  reservationId: number,
+) {
+  for (const room of userContext.rooms) {
+    const roomId = Number(room.room_id);
+    if (!Number.isFinite(roomId)) {
+      continue;
+    }
+
+    const response = await postToKrossbooking(authToken, "/reservations/get-list", {
+      with_rooms: true,
+      id_room: roomId,
+      id_property: userContext.role === "admin" ? undefined : userContext.propertyId ?? undefined,
+    });
+
+    const reservations = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
+    const match = reservations.find((reservation) => Number((reservation as { id_reservation?: unknown }).id_reservation) === reservationId);
+
+    if (match) {
+      return {
+        ...match,
+        room_id: room.room_id,
+        room_name: room.room_name ?? null,
+        user_id: room.user_id ?? null,
+      };
+    }
+  }
+
+  return null;
+}
+
 async function getAuthorizedThread(
   authToken: string,
   userContext: UserContext,
@@ -221,6 +254,25 @@ async function getAuthorizedThread(
   if (!reservationId) {
     console.warn(`[krossbooking-proxy] thread without reservation idThread=${idThread} fallback=${fallbackReservationId ?? "none"}`);
     throw new Error("Thread does not contain a valid reservation.");
+  }
+
+  if (userContext.role === "admin") {
+    const reservation = await findReservationInKnownRooms(authToken, userContext, reservationId);
+
+    if (!reservation) {
+      throw new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    return {
+      thread: {
+        ...thread,
+        id_reservation: reservationId,
+      },
+      reservation,
+    };
   }
 
   const authorizedReservations = await getAuthorizedReservations(authToken, userContext);
@@ -328,7 +380,6 @@ serve(async (req) => {
         throw new Error("Unauthorized");
       }
 
-      const authorizedReservations = await getAuthorizedReservations(authToken, userContext);
       const response = await postToKrossbooking(authToken, "/messaging/get-threads", {
         ...(typeof requestBody.last_update === "string" ? { last_update: requestBody.last_update } : {}),
         ...(typeof requestBody.to_read === "boolean" ? { to_read: requestBody.to_read } : {}),
@@ -337,6 +388,27 @@ serve(async (req) => {
       });
 
       const threads = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
+
+      if (userContext.role === "admin") {
+        const adminThreads = threads.map((thread) => ({
+          ...thread,
+          id_reservation: extractReservationId(thread),
+          reservation: null,
+        }));
+
+        console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${adminThreads.length}`);
+
+        return new Response(JSON.stringify({
+          data: adminThreads,
+          total_count: adminThreads.length,
+          count: adminThreads.length,
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const authorizedReservations = await getAuthorizedReservations(authToken, userContext);
       const filteredThreads = threads.filter((thread) => {
         const reservationId = extractReservationId(thread);
         return !!reservationId && authorizedReservations.has(reservationId);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Bot, Loader2, RefreshCw, Send, Sparkles } from "lucide-react";
@@ -101,6 +101,7 @@ const SmartRepliesPage = () => {
   const [loadingThread, setLoadingThread] = useState(false);
   const [generatingReply, setGeneratingReply] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
+  const initializedRef = useRef(false);
 
   const loadThreads = useCallback(
     async (options?: { keepSelection?: boolean }) => {
@@ -129,9 +130,11 @@ const SmartRepliesPage = () => {
   );
 
   useEffect(() => {
-    if (sessionLoading || !profile) {
+    if (sessionLoading || !profile || initializedRef.current) {
       return;
     }
+
+    initializedRef.current = true;
 
     const initialize = async () => {
       setLoadingPage(true);
@@ -265,7 +268,7 @@ const SmartRepliesPage = () => {
             <h1 className="text-3xl font-bold tracking-tight">Réponses IA</h1>
             <p className="text-muted-foreground">
               {isAdmin
-                ? "Module prioritairement pensé pour l’équipe admin : analyse des demandes voyageurs et préparation d’un brouillon avant envoi."
+                ? "Module prioritairement pensé pour l'équipe admin : analyse des demandes voyageurs et préparation d'un brouillon avant envoi."
                 : "Analysez les demandes voyageurs et préparez un brouillon basé sur les informations de vos logements."}
             </p>
           </div>

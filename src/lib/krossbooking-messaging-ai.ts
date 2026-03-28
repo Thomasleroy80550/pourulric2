@@ -69,6 +69,21 @@ function normalizeThreadMessages(messages: unknown) {
   }));
 }
 
+function normalizeDetailedThreadPayload(threadPayload: any) {
+  const rawThread = threadPayload?.thread && typeof threadPayload.thread === "object"
+    ? threadPayload.thread
+    : threadPayload;
+
+  return {
+    id_thread: Number(rawThread?.id_thread ?? threadPayload?.id_thread ?? 0),
+    id_reservation: normalizeReservationId(rawThread?.id_reservation ?? threadPayload?.id_reservation),
+    cod_channel: String(rawThread?.cod_channel || threadPayload?.cod_channel || "UNKNOWN"),
+    last_message_date: String(rawThread?.last_message_date || threadPayload?.last_message_date || rawThread?.last_update || threadPayload?.last_update || ""),
+    last_message_text: String(rawThread?.last_message_text || threadPayload?.last_message_text || rawThread?.last_message || threadPayload?.last_message || ""),
+    messages: normalizeThreadMessages(rawThread?.messages ?? threadPayload?.messages),
+  };
+}
+
 export async function listAuthorizedMessageThreads(filters?: {
   search?: string;
   unreadOnly?: boolean;
@@ -103,18 +118,9 @@ export async function getAuthorizedMessageThread(idThread: number, reservationId
     ...(reservationId ? { id_reservation: reservationId } : {}),
   });
 
-  const thread = response.data.thread;
-
   return {
     reservation: response.data.reservation || null,
-    thread: {
-      id_thread: Number(thread.id_thread),
-      id_reservation: normalizeReservationId(thread.id_reservation),
-      cod_channel: String(thread.cod_channel || "UNKNOWN"),
-      last_message_date: String(thread.last_message_date || thread.last_update || ""),
-      last_message_text: String(thread.last_message || thread.last_message_text || ""),
-      messages: normalizeThreadMessages(thread.messages),
-    },
+    thread: normalizeDetailedThreadPayload(response.data.thread),
   };
 }
 

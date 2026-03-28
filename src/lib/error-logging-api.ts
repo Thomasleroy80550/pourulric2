@@ -52,6 +52,15 @@ function getBrowserMetadata(): Record<string, unknown> {
   }
 }
 
+function shouldIgnoreClientError(payload: ClientErrorLogPayload): boolean {
+  const message = payload.message.toLowerCase();
+
+  return (
+    message.includes("failed to execute 'removechild' on 'node'") ||
+    message.includes("failed to execute 'insertbefore' on 'node'")
+  );
+}
+
 export function buildClientErrorPayload(
   error: unknown,
   context?: ErrorLoggingContext,
@@ -73,19 +82,19 @@ export function buildClientErrorPayload(
 }
 
 export async function logClientError(payload: ClientErrorLogPayload): Promise<void> {
-  // Fire-and-forget behavior: callers typically shouldn't await.
+  if (shouldIgnoreClientError(payload)) {
+    return;
+  }
+
   try {
     const { error } = await supabase.functions.invoke("log-client-error", {
       body: payload,
     });
 
     if (error) {
-      // Swallow errors to avoid crashing the UI.
-      // eslint-disable-next-line no-console
       console.warn("logClientError failed", error);
     }
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn("logClientError unexpected failure", e);
   }
 }

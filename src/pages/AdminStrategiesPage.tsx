@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import AdminLayout from '@/components/AdminLayout';
-import { getAllProfiles, getAllStrategies, deleteStrategy } from '@/lib/admin-api';
-import { UserProfile } from '@/lib/profile-api';
+import { getAllProfiles, getAllStrategies, deleteStrategy, UserProfile } from '@/lib/admin-api';
 import { Strategy } from '@/lib/strategy-api';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -63,7 +63,13 @@ const AdminStrategiesPage: React.FC = () => {
       const priorityA = statusA ? priority[statusA] || 99 : 100;
       const priorityB = statusB ? priority[statusB] || 99 : 100;
       if (priorityA !== priorityB) return priorityA - priorityB;
-      return a.first_name.localeCompare(b.first_name);
+
+      const firstNameA = a.first_name ?? "";
+      const firstNameB = b.first_name ?? "";
+      const firstNameComparison = firstNameA.localeCompare(firstNameB, 'fr');
+      if (firstNameComparison !== 0) return firstNameComparison;
+
+      return (a.last_name ?? "").localeCompare(b.last_name ?? "", 'fr');
     });
   }, [usersWithStrategies]);
 

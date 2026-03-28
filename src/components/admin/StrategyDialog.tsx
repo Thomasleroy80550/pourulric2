@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { UserProfile } from '@/lib/profile-api';
 import { Strategy } from '@/lib/strategy-api';
-import { upsertStrategy } from '@/lib/admin-api';
+import { upsertStrategy, UserProfile } from '@/lib/admin-api';
+
 import { useSession } from '@/components/SessionContextProvider';
 import { toast } from 'sonner';
 

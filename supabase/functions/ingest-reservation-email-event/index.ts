@@ -173,6 +173,14 @@ function resolveMatchedRooms(allRooms: MatchedRoom[], inputRoomName: string): { 
 
   const bestScore = scoredRooms[0].score;
   const bestMatches = scoredRooms.filter((entry) => entry.score === bestScore).map((entry) => entry.room);
+  const bestMatchUserIds = Array.from(new Set(bestMatches.map((room) => room.user_id)));
+
+  if (bestMatchUserIds.length > 1) {
+    return {
+      matchedRooms: [],
+      errorMessage: `Ambiguous room match for ${inputRoomName}: ${bestMatches.map((room) => `${room.room_name} (${room.user_id})`).join(", ")}`,
+    };
+  }
 
   if (bestScore === 100 && bestMatches.length > 1) {
     return {

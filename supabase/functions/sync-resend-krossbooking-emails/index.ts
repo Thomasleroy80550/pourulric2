@@ -116,6 +116,17 @@ function extractReservationReference(subject: string, text: string): string | nu
   );
 }
 
+function extractRoomName(value: string | null): string | null {
+  if (!value) return null;
+
+  const cleaned = repairTextEncoding(value)
+    .replace(/^\d+\s*x\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned || null;
+}
+
 function parseKrossbookingEvent(subject: string, plainText: string) {
   const normalizedSubject = normalizeText(subject);
   const normalizedBody = normalizeText(plainText);
@@ -193,7 +204,7 @@ function parseKrossbookingEvent(subject: string, plainText: string) {
     null;
   const assignedRooms = extractFirstLineValue(plainText, ["Assigned rooms", "Chambres attribuées", "Camere assegnate"]);
   const reservationFor = extractFirstLineValue(plainText, ["Reservation for", "Réservation pour", "Prenotazione per"]);
-  const roomName = assignedRooms || reservationFor?.replace(/^\d+\s*x\s*/i, "").split(" - ")[0]?.trim() || null;
+  const roomName = extractRoomName(assignedRooms) || extractRoomName(reservationFor) || null;
   const customerName = extractFirstLineValue(plainText, ["Customer", "Client", "Cliente"]);
   const customerEmail = extractFirstLineValue(plainText, ["Email"]);
   const customerPhone = extractFirstLineValue(plainText, ["Phone", "Téléphone", "Telefono"]);

@@ -51,6 +51,7 @@ import BilanExportButton from "@/components/BilanExportButton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BilanPdfButton from "@/components/BilanPdfButton";
 import NewsNotificationsPopup from "@/components/NewsNotificationsPopup";
+import DashboardVersionSwitch from "@/components/DashboardVersionSwitch";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -561,8 +562,16 @@ const DashboardPage = () => {
         className="relative mx-auto w-full max-w-[100vw] box-border px-2 sm:px-4 py-4 sm:py-6 overflow-x-hidden break-words"
         ref={dashboardRef}
       >
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bonjour 👋</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">Nous sommes le {format(new Date(), 'dd MMMM yyyy', { locale: fr })}</p>
+          </div>
+          <DashboardVersionSwitch />
+        </div>
+        <div className="mb-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Version actuelle</p>
+        </div>
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-700 dark:text-gray-300">Année:</span>

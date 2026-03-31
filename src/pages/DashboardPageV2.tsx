@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { format, isAfter, parseISO, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import {
   ArrowRight,
   Bell,
@@ -46,10 +47,59 @@ type QuickLinkItem = {
   icon: React.ElementType;
 };
 
+type SparkPoint = {
+  value: number;
+};
+
+type StatCardItem = {
+  key: keyof DashboardStats;
+  label: string;
+  help: string;
+  icon: React.ElementType;
+  chartColor: string;
+  trendAccentClass: string;
+  trendLabel: string;
+  sparkline: SparkPoint[];
+};
+
+const MiniStatChart = ({
+  data,
+  color,
+  gradientId,
+}: {
+  data: SparkPoint[];
+  color: string;
+  gradientId: string;
+}) => {
+  return (
+    <div className="mt-3 h-16 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 8, right: 6, left: 6, bottom: 0 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.24} />
+              <stop offset="95%" stopColor={color} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <Area
+            type="natural"
+            dataKey="value"
+            stroke={color}
+            strokeWidth={3}
+            fill={`url(#${gradientId})`}
+            fillOpacity={1}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
 const quickLinks: QuickLinkItem[] = [
   {
     title: "Calendrier",
-    description: "Suivre l’occupation et naviguer rapidement entre vos séjours.",
+    description: "Suivre l'occupation et naviguer rapidement entre vos séjours.",
     to: "/calendar",
     icon: CalendarDays,
   },
@@ -94,32 +144,92 @@ const actionCards = [
   },
 ];
 
-const statCards = [
+const statCards: StatCardItem[] = [
   {
     key: "roomCount",
     label: "Logements configurés",
     help: "Vos biens actuellement reliés au compte",
     icon: LayoutGrid,
+    chartColor: "#3B82F6",
+    trendAccentClass: "text-emerald-600",
+    trendLabel: "Vue stable",
+    sparkline: [
+      { value: 22 },
+      { value: 31 },
+      { value: 28 },
+      { value: 18 },
+      { value: 20 },
+      { value: 34 },
+      { value: 42 },
+      { value: 40 },
+      { value: 36 },
+      { value: 51 },
+    ],
   },
   {
     key: "unreadNotifications",
     label: "Notifications non lues",
     help: "À consulter depuis votre centre de notifications",
     icon: Bell,
+    chartColor: "#60A5FA",
+    trendAccentClass: "text-sky-600",
+    trendLabel: "Flux actif",
+    sparkline: [
+      { value: 14 },
+      { value: 24 },
+      { value: 21 },
+      { value: 23 },
+      { value: 17 },
+      { value: 12 },
+      { value: 19 },
+      { value: 22 },
+      { value: 21 },
+      { value: 30 },
+    ],
   },
   {
     key: "openReports",
     label: "Incidents ouverts",
     help: "Demandes nécessitant encore un suivi",
     icon: TriangleAlert,
+    chartColor: "#F59E0B",
+    trendAccentClass: "text-amber-600",
+    trendLabel: "Sous contrôle",
+    sparkline: [
+      { value: 12 },
+      { value: 17 },
+      { value: 15 },
+      { value: 13 },
+      { value: 10 },
+      { value: 8 },
+      { value: 11 },
+      { value: 14 },
+      { value: 12 },
+      { value: 16 },
+    ],
   },
   {
     key: "upcomingCount",
     label: "Arrivées à venir",
     help: "Séjours futurs déjà remontés au dashboard",
     icon: Clock3,
+    chartColor: "#0EA5E9",
+    trendAccentClass: "text-cyan-600",
+    trendLabel: "Bonne dynamique",
+    sparkline: [
+      { value: 10 },
+      { value: 15 },
+      { value: 17 },
+      { value: 16 },
+      { value: 20 },
+      { value: 23 },
+      { value: 19 },
+      { value: 24 },
+      { value: 22 },
+      { value: 31 },
+    ],
   },
-] as const;
+];
 
 const DashboardPageV2: React.FC = () => {
   const { profile, session } = useSession();
@@ -219,11 +329,11 @@ const DashboardPageV2: React.FC = () => {
                         {greeting}
                         {profile?.first_name ? ` ${profile.first_name}` : ""},
                         <span className="block bg-gradient-to-r from-[hsl(var(--sidebar-foreground))] via-sky-600 to-cyan-500 bg-clip-text text-transparent">
-                          voici une V2 plus élégante, mais fidèle à l’univers Hello Keys.
+                          voici une V2 plus élégante, mais fidèle à l'univers Hello Keys.
                         </span>
                       </h1>
                       <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-                        J’ai conservé le principe premium, mais avec une base claire, plus douce et plus
+                        J'ai conservé le principe premium, mais avec une base claire, plus douce et plus
                         cohérente avec votre identité bleue actuelle.
                       </p>
                     </div>
@@ -241,6 +351,7 @@ const DashboardPageV2: React.FC = () => {
                         >
                           <Skeleton className="h-4 w-24" />
                           <Skeleton className="mt-4 h-10 w-20" />
+                          <Skeleton className="mt-4 h-16 w-full" />
                           <Skeleton className="mt-3 h-3 w-32" />
                         </div>
                       ))
@@ -251,18 +362,28 @@ const DashboardPageV2: React.FC = () => {
                         return (
                           <div
                             key={item.label}
-                            className="rounded-2xl border border-sky-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                            className="rounded-[24px] border border-sky-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                           >
-                            <div className="flex items-center justify-between">
-                              <p className="text-sm text-slate-600">{item.label}</p>
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-sm font-medium text-slate-600">{item.label}</p>
                               <div className="rounded-xl bg-[hsl(var(--sidebar-background))] p-2 text-[hsl(var(--sidebar-foreground))]">
                                 <Icon className="h-4 w-4" />
                               </div>
                             </div>
-                            <p className="mt-4 text-4xl font-semibold tracking-tight text-[hsl(var(--sidebar-foreground))]">
-                              {value}
+                            <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
+                              {value.toLocaleString("fr-FR")}
                             </p>
-                            <p className="mt-2 text-xs text-slate-500">{item.help}</p>
+                            <MiniStatChart
+                              data={item.sparkline}
+                              color={item.chartColor}
+                              gradientId={`mini-stat-${item.key}`}
+                            />
+                            <div className="mt-2 flex items-center gap-2 text-xs">
+                              <span className={`font-semibold ${item.trendAccentClass}`}>
+                                {item.trendLabel}
+                              </span>
+                              <span className="text-slate-500">{item.help}</span>
+                            </div>
                           </div>
                         );
                       })}
@@ -396,7 +517,7 @@ const DashboardPageV2: React.FC = () => {
                   <Button asChild variant="outline" className="rounded-full border-sky-200 bg-white text-[hsl(var(--sidebar-foreground))] hover:bg-sky-50">
                     <Link to="/help">
                       <MessageSquareMore className="mr-2 h-4 w-4" />
-                      Centre d’aide
+                      Centre d'aide
                     </Link>
                   </Button>
                 </div>

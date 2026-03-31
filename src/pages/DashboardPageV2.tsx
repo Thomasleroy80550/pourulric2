@@ -2,7 +2,16 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { format, isAfter, parseISO, startOfDay } from "date-fns";
+import {
+  addWeeks,
+  endOfWeek,
+  format,
+  isAfter,
+  isWithinInterval,
+  parseISO,
+  startOfDay,
+  startOfWeek,
+} from "date-fns";
 import { fr } from "date-fns/locale";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import {
@@ -28,9 +37,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
-import { fetchKrossbookingReservations, KrossbookingReservation } from "@/lib/krossbooking";
-import { getNotifications } from "@/lib/notifications-api";
-import { getTechnicalReportsByUserId } from "@/lib/technical-reports-api";
+import {
+  fetchKrossbookingReservations,
+  KrossbookingReservation,
+} from "@/lib/krossbooking";
+import { getNotifications, Notification } from "@/lib/notifications-api";
+import {
+  getTechnicalReportsByUserId,
+  TechnicalReport,
+} from "@/lib/technical-reports-api";
 import { getUserRooms } from "@/lib/user-room-api";
 
 type DashboardStats = {
@@ -38,6 +53,12 @@ type DashboardStats = {
   unreadNotifications: number;
   openReports: number;
   upcomingCount: number;
+};
+
+type DashboardSeries = {
+  notifications: SparkPoint[];
+  reports: SparkPoint[];
+  arrivals: SparkPoint[];
 };
 
 type QuickLinkItem = {
@@ -56,11 +77,14 @@ type StatCardItem = {
   label: string;
   help: string;
   icon: React.ElementType;
-  chartColor: string;
+  chartColor?: string;
   trendAccentClass: string;
   trendLabel: string;
-  sparkline: SparkPoint[];
+  sparkline?: SparkPoint[];
 };
+
+const WEEKS_IN_MINI_CHART = 10;
+const emptySeries = Array.from({ length: WEEKS_IN_MINI_CHART }, () => ({ value: 0 }));
 
 const MiniStatChart = ({
   data,
@@ -94,6 +118,35 @@ const MiniStatChart = ({
       </ResponsiveContainer>
     </div>
   );
+};
+
+const buildWeeklySeries = <T,>(
+  items: T[],
+  getDate: (item: T) => string | null | undefined,
+  future = false,
+): SparkPoint[] => {
+  const anchor = startOfWeek(new Date(), { weekStartsOn: 1 });
+
+  return Array.from({ length: WEEKS_IN_MINI_CHART }, (_, index) => {
+    const shift = future ? index : index - (WEEKS_IN_MINI_CHART - 1);
+    const periodStart = addWeeks(anchor, shift);
+    const periodEnd = endOfWeek(periodStart, { weekStartsOn: 1 });
+
+    const value = items.filter((item) => {
+      const rawDate = getDate(item);
+      if (!rawDate) return false;
+
+      const parsedDate = parseISO(rawDate);
+      if (Number.isNaN(parsedDate.getTime())) return false;
+
+      return isWithinInterval(parsedDate, {
+        start: periodStart,
+        end: periodEnd,
+      });
+    }).length;
+
+    return { value };
+  });
 };
 
 const quickLinks: QuickLinkItem[] = [
@@ -144,93 +197,6 @@ const actionCards = [
   },
 ];
 
-const statCards: StatCardItem[] = [
-  {
-    key: "roomCount",
-    label: "Logements configurés",
-    help: "Vos biens actuellement reliés au compte",
-    icon: LayoutGrid,
-    chartColor: "#3B82F6",
-    trendAccentClass: "text-emerald-600",
-    trendLabel: "Vue stable",
-    sparkline: [
-      { value: 22 },
-      { value: 31 },
-      { value: 28 },
-      { value: 18 },
-      { value: 20 },
-      { value: 34 },
-      { value: 42 },
-      { value: 40 },
-      { value: 36 },
-      { value: 51 },
-    ],
-  },
-  {
-    key: "unreadNotifications",
-    label: "Notifications non lues",
-    help: "À consulter depuis votre centre de notifications",
-    icon: Bell,
-    chartColor: "#60A5FA",
-    trendAccentClass: "text-sky-600",
-    trendLabel: "Flux actif",
-    sparkline: [
-      { value: 14 },
-      { value: 24 },
-      { value: 21 },
-      { value: 23 },
-      { value: 17 },
-      { value: 12 },
-      { value: 19 },
-      { value: 22 },
-      { value: 21 },
-      { value: 30 },
-    ],
-  },
-  {
-    key: "openReports",
-    label: "Incidents ouverts",
-    help: "Demandes nécessitant encore un suivi",
-    icon: TriangleAlert,
-    chartColor: "#F59E0B",
-    trendAccentClass: "text-amber-600",
-    trendLabel: "Sous contrôle",
-    sparkline: [
-      { value: 12 },
-      { value: 17 },
-      { value: 15 },
-      { value: 13 },
-      { value: 10 },
-      { value: 8 },
-      { value: 11 },
-      { value: 14 },
-      { value: 12 },
-      { value: 16 },
-    ],
-  },
-  {
-    key: "upcomingCount",
-    label: "Arrivées à venir",
-    help: "Séjours futurs déjà remontés au dashboard",
-    icon: Clock3,
-    chartColor: "#0EA5E9",
-    trendAccentClass: "text-cyan-600",
-    trendLabel: "Bonne dynamique",
-    sparkline: [
-      { value: 10 },
-      { value: 15 },
-      { value: 17 },
-      { value: 16 },
-      { value: 20 },
-      { value: 23 },
-      { value: 19 },
-      { value: 24 },
-      { value: 22 },
-      { value: 31 },
-    ],
-  },
-];
-
 const DashboardPageV2: React.FC = () => {
   const { profile, session } = useSession();
   const [loading, setLoading] = useState(true);
@@ -239,6 +205,11 @@ const DashboardPageV2: React.FC = () => {
     unreadNotifications: 0,
     openReports: 0,
     upcomingCount: 0,
+  });
+  const [series, setSeries] = useState<DashboardSeries>({
+    notifications: emptySeries,
+    reports: emptySeries,
+    arrivals: emptySeries,
   });
   const [nextArrivals, setNextArrivals] = useState<KrossbookingReservation[]>([]);
 
@@ -279,6 +250,23 @@ const DashboardPageV2: React.FC = () => {
           ).length,
           upcomingCount: upcomingReservations.length,
         });
+
+        setSeries({
+          notifications: buildWeeklySeries<Notification>(
+            notifications,
+            (notification) => notification.created_at,
+          ),
+          reports: buildWeeklySeries<TechnicalReport>(
+            reports,
+            (report) => report.created_at,
+          ),
+          arrivals: buildWeeklySeries<KrossbookingReservation>(
+            upcomingReservations,
+            (reservation) => reservation.check_in_date,
+            true,
+          ),
+        });
+
         setNextArrivals(upcomingReservations.slice(0, 3));
       } finally {
         if (isMounted) {
@@ -300,6 +288,50 @@ const DashboardPageV2: React.FC = () => {
     if (hour < 18) return "Bon après-midi";
     return "Bonsoir";
   }, []);
+
+  const statCards: StatCardItem[] = useMemo(
+    () => [
+      {
+        key: "roomCount",
+        label: "Logements configurés",
+        help: "Aucun historique fiable disponible pour ce KPI.",
+        icon: LayoutGrid,
+        trendAccentClass: "text-slate-600",
+        trendLabel: "Instantané actuel",
+      },
+      {
+        key: "unreadNotifications",
+        label: "Notifications non lues",
+        help: "Activité réelle sur les 10 dernières semaines",
+        icon: Bell,
+        chartColor: "#60A5FA",
+        trendAccentClass: "text-sky-600",
+        trendLabel: "Historique réel",
+        sparkline: series.notifications,
+      },
+      {
+        key: "openReports",
+        label: "Incidents ouverts",
+        help: "Créations réelles sur les 10 dernières semaines",
+        icon: TriangleAlert,
+        chartColor: "#F59E0B",
+        trendAccentClass: "text-amber-600",
+        trendLabel: "Historique réel",
+        sparkline: series.reports,
+      },
+      {
+        key: "upcomingCount",
+        label: "Arrivées à venir",
+        help: "Répartition réelle sur les 10 prochaines semaines",
+        icon: Clock3,
+        chartColor: "#0EA5E9",
+        trendAccentClass: "text-cyan-600",
+        trendLabel: "Projection réelle",
+        sparkline: series.arrivals,
+      },
+    ],
+    [series],
+  );
 
   return (
     <MainLayout>
@@ -373,11 +405,17 @@ const DashboardPageV2: React.FC = () => {
                             <p className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">
                               {value.toLocaleString("fr-FR")}
                             </p>
-                            <MiniStatChart
-                              data={item.sparkline}
-                              color={item.chartColor}
-                              gradientId={`mini-stat-${item.key}`}
-                            />
+                            {item.sparkline && item.chartColor ? (
+                              <MiniStatChart
+                                data={item.sparkline}
+                                color={item.chartColor}
+                                gradientId={`mini-stat-${item.key}`}
+                              />
+                            ) : (
+                              <div className="mt-3 flex h-16 items-center rounded-2xl border border-dashed border-sky-100 bg-sky-50/50 px-3 text-xs text-slate-500">
+                                Pas de série historique exploitable pour ce bloc.
+                              </div>
+                            )}
                             <div className="mt-2 flex items-center gap-2 text-xs">
                               <span className={`font-semibold ${item.trendAccentClass}`}>
                                 {item.trendLabel}

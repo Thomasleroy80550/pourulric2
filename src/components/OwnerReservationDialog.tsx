@@ -122,6 +122,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
           }
         }
 
+        setSelectedRoomId(initialBooking.krossbooking_room_id);
         form.reset({
           roomId: initialBooking.krossbooking_room_id,
           blockType: blockTypeFound,
@@ -134,6 +135,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
           phone: initialBooking.phone || '',
         });
       } else {
+        setSelectedRoomId('');
         form.reset({
           roomId: '',
           blockType: '',
@@ -252,7 +254,14 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Chambre</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingKrossbookingRoomTypes}>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setSelectedRoomId(value);
+                    }} 
+                    value={field.value} 
+                    disabled={loadingKrossbookingRoomTypes}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionner une chambre" />

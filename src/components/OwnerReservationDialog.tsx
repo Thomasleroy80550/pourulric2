@@ -169,9 +169,9 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       const checkOut = isValid(parseISO(res.check_out_date)) ? parseISO(res.check_out_date) : null;
 
       if (checkIn && checkOut) {
-        // Désactiver toutes les dates de checkIn à checkOut (inclus)
-        if (isSameDay(date, checkIn) || isSameDay(date, checkOut) || 
-            (isAfter(date, checkIn) && isBefore(date, checkOut))) {
+        // Désactiver uniquement les dates STRICTEMENT entre checkIn et checkOut
+        // Le propriétaire peut arriver le jour du checkOut et partir le jour du checkIn
+        if (isAfter(date, checkIn) && isBefore(date, checkOut)) {
           return true;
         }
       }

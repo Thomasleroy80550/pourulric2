@@ -327,7 +327,7 @@ const DashboardPage = () => {
             name: monthData.name,
             benefit: monthData.benef,
             ca: monthData.ca,
-            reservations: monthlyReservationsData[index].reservations,
+            reservations: newMonthlyReservationsData[index].reservations,
           };
         }
       }
@@ -1075,136 +1075,6 @@ const DashboardPage = () => {
                     Aucun mois avec bénéfice positif cette année
                   </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
-          {/* Statistiques Financières Mensuelles Card */}
-          <Card id="tour-monthly-financials" className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                monthlyFinancialData,
-                'line',
-                'Statistiques Financières Mensuelles',
-                [
-                  { key: 'ca', name: 'CA', color: 'hsl(var(--primary))' },
-                  { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
-                  { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
-                  { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
-                  ...(expensesModuleEnabled ? [{ key: 'depenses', name: 'Autres Dépenses', color: '#9333EA' }] : []),
-                  { key: 'prixParNuit', name: 'Prix / nuit', color: '#0ea5e9' }, // AJOUT: série prix / nuit
-                ],
-                '€'
-              )}>
-                Agrandir
-              </Button>
-            </CardHeader>
-            <CardContent className="h-72">
-              {loadingFinancialData ? (
-                <Skeleton className="h-full w-full" />
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyFinancialData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorBenef" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                    <XAxis dataKey="name" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="left" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
-                    <YAxis yAxisId="right" orientation="right" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
-                    <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Line type="monotone" yAxisId="left" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" yAxisId="left" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" yAxisId="left" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    {expensesModuleEnabled && (
-                      <Line type="monotone" yAxisId="left" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    )}
-                    <Line type="monotone" yAxisId="right" dataKey="prixParNuit" stroke="#0ea5e9" name="Prix / nuit" strokeWidth={2} dot={false} strokeDasharray="3 3" animationDuration={1500} animationEasing="ease-in-out" />
-                    <Area type="monotone" yAxisId="left" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Réservation / mois Card */}
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Réservations / mois — {yearLabel}</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                monthlyReservationsData,
-                'bar',
-                'Réservations par mois',
-                [{ key: 'reservations', name: 'Réservations', color: '#8b5cf6' }]
-              )}>
-                Agrandir
-              </Button>
-            </CardHeader>
-            <CardContent className="h-72">
-              {loadingFinancialData ? (
-                <Skeleton className="h-full w-full" />
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyReservationsData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorReservations" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.2}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} className="text-xs" tickLine={false} axisLine={false} />
-                    <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Occupation Mensuelle Card */}
-          <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Taux d'Occupation — {yearLabel}</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => openChartDialog(
-                monthlyOccupancyData,
-                'line',
-                'Taux d\'Occupation Mensuel',
-                [{ key: 'occupation', name: 'Occupation', color: '#14b8a6' }],
-                '%'
-              )}>
-                Agrandir
-              </Button>
-            </CardHeader>
-            <CardContent className="h-72">
-              {loadingFinancialData ? (
-                <Skeleton className="h-full w-full" />
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#14b8a6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                    <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
-                    <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
-                  </AreaChart>
-                </ResponsiveContainer>
               )}
             </CardContent>
           </Card>

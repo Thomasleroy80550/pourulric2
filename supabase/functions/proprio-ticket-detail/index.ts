@@ -46,7 +46,7 @@ function getFirst(source: JsonRecord, keys: string[]): unknown {
 
 function normalizeTicketSummary(source: JsonRecord) {
   return {
-    id: stringOrNull(getFirst(source, ["id", "ticket_id"])) ?? "",
+    id: stringOrNull(getFirst(source, ["ticket_id", "display_id", "reference", "reference_id", "ticket_number", "number", "id"])) ?? "",
     subject: stringOrNull(source.subject) ?? "Sans objet",
     from_email: stringOrNull(getFirst(source, ["from_email", "email", "requester_email"])),
     status: stringOrNull(source.status) ?? "open",

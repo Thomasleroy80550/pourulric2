@@ -28,16 +28,26 @@ function numberOrZero(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function getFirst(source: JsonRecord, keys: string[]): unknown {
+  for (const key of keys) {
+    if (source[key] !== undefined && source[key] !== null) {
+      return source[key];
+    }
+  }
+
+  return null;
+}
+
 function normalizeTicketSummary(source: JsonRecord) {
   return {
-    id: stringOrNull(source.id) ?? "",
+    id: stringOrNull(getFirst(source, ["ticket_id", "display_id", "reference", "reference_id", "ticket_number", "number", "id"])) ?? "",
     subject: stringOrNull(source.subject) ?? "Sans objet",
-    from_email: stringOrNull(source.from_email),
+    from_email: stringOrNull(getFirst(source, ["from_email", "email", "requester_email"])),
     status: stringOrNull(source.status) ?? "open",
     priority: stringOrNull(source.priority),
-    preview: stringOrNull(source.preview),
+    preview: stringOrNull(getFirst(source, ["preview", "snippet", "description_text", "description"])),
     created_at: stringOrNull(source.created_at) ?? new Date().toISOString(),
-    last_activity_at: stringOrNull(source.last_activity_at),
+    last_activity_at: stringOrNull(getFirst(source, ["last_activity_at", "updated_at", "last_message_at"])),
     unread_count: numberOrZero(source.unread_count),
     source_provider: stringOrNull(source.source_provider),
     source_email_id: stringOrNull(source.source_email_id),

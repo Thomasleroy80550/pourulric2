@@ -73,11 +73,11 @@ function getDirectionLabel(direction: OwnerTicketConversationDirection) {
 function getMessageTone(direction: OwnerTicketConversationDirection) {
   switch (direction) {
     case 'outgoing':
-      return 'bg-slate-50';
+      return 'border-l-slate-300';
     case 'internal':
-      return 'bg-amber-50';
+      return 'border-l-amber-300';
     default:
-      return 'bg-white';
+      return 'border-l-sky-300';
   }
 }
 
@@ -89,7 +89,7 @@ const MailMessage = ({
   body,
   bodyHtml,
   isPrivate = false,
-  tone = 'bg-white',
+  tone = 'border-l-slate-300',
 }: {
   authorName: string;
   authorEmail?: string | null;
@@ -103,36 +103,44 @@ const MailMessage = ({
   const safeHtml = bodyHtml ? DOMPurify.sanitize(bodyHtml) : null;
 
   return (
-    <article className={`border-b border-slate-200 px-5 py-5 last:border-b-0 ${tone}`}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+    <article className={`border-b border-l-4 border-slate-200 bg-white last:border-b-0 ${tone}`}>
+      <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium text-slate-900">{authorName}</p>
-            <Badge variant="outline" className="text-slate-600">
+            <p className="text-base font-semibold text-slate-900">{authorName}</p>
+            <Badge variant="outline" className="rounded-full text-slate-600">
               {label}
             </Badge>
             {isPrivate && (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="rounded-full">
                 <Shield className="mr-1 h-3 w-3" />
                 Privé
               </Badge>
             )}
           </div>
 
-          {authorEmail && (
-            <div className="mt-1 inline-flex items-center gap-1 text-sm text-slate-500">
-              <Mail className="h-3.5 w-3.5" />
-              {authorEmail}
-            </div>
-          )}
+          <div className="mt-2 space-y-1 text-sm text-slate-500">
+            {authorEmail && (
+              <div className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5" />
+                <span className="truncate">De : {authorEmail}</span>
+              </div>
+            )}
+            <div>Envoyé le {formatDate(date)}</div>
+          </div>
         </div>
 
-        <div className="text-sm text-slate-500">{formatDate(date)}</div>
+        <div className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+          Message
+        </div>
       </div>
 
-      <div className="mt-4 text-sm leading-7 text-slate-700">
+      <div className="border-t border-slate-100 px-5 py-5 text-[15px] leading-7 text-slate-700">
         {safeHtml ? (
-          <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: safeHtml }} />
+          <div
+            className="prose prose-sm max-w-none text-slate-700 prose-p:leading-7 prose-p:text-slate-700 prose-a:text-slate-900 prose-strong:text-slate-900"
+            dangerouslySetInnerHTML={{ __html: safeHtml }}
+          />
         ) : (
           <p className="whitespace-pre-wrap">{body || 'Message sans contenu.'}</p>
         )}
@@ -198,10 +206,10 @@ const TicketDetailPage = () => {
       await replyToTicket(ticket.id, ticket.subject, message);
       setReplyBody('');
       toast.success('Réponse envoyée.', {
-        description: 'Elle peut prendre quelques instants avant d’apparaître dans le fil.',
+        description: 'Elle peut prendre quelques instants avant d\'apparaître dans le fil.',
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Impossible d’envoyer votre réponse.');
+      toast.error(err instanceof Error ? err.message : 'Impossible d\'envoyer votre réponse.');
     } finally {
       setSendingReply(false);
     }
@@ -276,8 +284,8 @@ const TicketDetailPage = () => {
           ) : ticket ? (
             <>
               <Card className="overflow-hidden border-slate-200 shadow-sm">
-                <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
-                  <div className="text-sm font-medium text-slate-900">Conversation</div>
+                <div className="border-b border-slate-200 bg-white px-5 py-4">
+                  <div className="text-sm font-semibold text-slate-900">Fil de conversation</div>
                   <div className="mt-1 text-sm text-slate-500">
                     {conversationMessages.length + 1} message{conversationMessages.length + 1 > 1 ? 's' : ''}
                   </div>

@@ -38,9 +38,28 @@ export interface OwnerTicketDetail extends OwnerTicketSummary {
   conversations: OwnerTicketConversation[];
 }
 
+async function getAccessToken(): Promise<string> {
+  const { data: { session }, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw new Error('Impossible de récupérer la session utilisateur.');
+  }
+
+  if (!session?.access_token) {
+    throw new Error('Utilisateur non authentifié.');
+  }
+
+  return session.access_token;
+}
+
 export async function getTickets(): Promise<OwnerTicketSummary[]> {
+  const accessToken = await getAccessToken();
+
   const { data, error } = await supabase.functions.invoke('proprio-tickets-list', {
     body: {},
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 
   if (error) {
@@ -55,8 +74,13 @@ export async function getTickets(): Promise<OwnerTicketSummary[]> {
 }
 
 export async function getTicketDetails(ticketId: string): Promise<OwnerTicketDetail> {
+  const accessToken = await getAccessToken();
+
   const { data, error } = await supabase.functions.invoke('proprio-ticket-detail', {
     body: { ticket_id: ticketId },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 
   if (error) {

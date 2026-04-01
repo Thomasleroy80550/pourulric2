@@ -233,7 +233,7 @@ serve(async (req) => {
       });
 
       const userMessage = remoteResponse.status === 401
-        ? "L'API distante des tickets a refusé le token serveur ORDER_TICKET_API_TOKEN."
+        ? "L'API distante des tickets a refusé le token serveur PROPRIO_TICKETS_API_TOKEN."
         : message ?? "Impossible de récupérer le détail du ticket.";
 
       return new Response(JSON.stringify({ error: userMessage }), {

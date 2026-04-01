@@ -1,80 +1,88 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export interface FreshdeskTicket {
-  id: number;
+const OWNER_TICKETS_LIST_URL = 'https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/proprio-tickets-list';
+const OWNER_TICKET_DETAIL_URL = 'https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/proprio-ticket-detail';
+
+export type OwnerTicketStatus = 'open' | 'pending' | 'closed' | string;
+export type OwnerTicketPriority = 'low' | 'medium' | 'high' | string;
+export type OwnerTicketConversationDirection = 'incoming' | 'outgoing' | 'internal' | 'unknown';
+
+export interface OwnerTicketSummary {
+  id: string;
   subject: string;
-  description: string;
-  description_text?: string;
-  description_html?: string;
-  description_content?: string;
-  status: number;
-  priority: number;
+  from_email: string | null;
+  status: OwnerTicketStatus;
+  priority: OwnerTicketPriority | null;
+  preview: string | null;
   created_at: string;
-  updated_at: string;
-  requester_id: number;
-  responder_id?: number;
-  group_id?: number;
-  ticket_type?: string;
-  source: number;
-  spam: boolean;
-  deleted: boolean;
+  last_activity_at: string | null;
+  unread_count: number;
+  source_provider: string | null;
+  source_email_id: string | null;
+  reopened_by_client_at: string | null;
+  archived_at: string | null;
+  spam_at: string | null;
 }
 
-export interface FreshdeskConversation {
-  id: number;
-  body: string;
-  body_text?: string;
-  from_agent: boolean;
-  created_at: string;
-  updated_at: string;
-  user_id: number;
-  ticket_id: number;
-  incoming: boolean;
-  private: boolean;
-  support_email?: string;
+export interface OwnerTicketConversation {
+  id: string;
+  created_at: string | null;
+  author_name: string | null;
+  author_email: string | null;
+  direction: OwnerTicketConversationDirection;
+  is_private: boolean;
+  body: string | null;
+  body_html: string | null;
 }
 
-export interface FreshdeskNote {
-  id: number;
-  body: string;
-  body_text?: string;
-  from_email?: string;
-  user_id?: number;
-  created_at: string;
-  updated_at: string;
-  ticket_id: number;
-  private: boolean;
+export interface OwnerTicketDetail extends OwnerTicketSummary {
+  description: string | null;
+  description_html: string | null;
+  conversations: OwnerTicketConversation[];
 }
 
-export interface FreshdeskTicketDetails extends FreshdeskTicket {
-  conversations?: FreshdeskConversation[];
-  notes?: FreshdeskNote[];
+async function getAccessToken(): Promise<string> {
+  const { data: { session }, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw new Error("Impossible de récupérer la session utilisateur.");
+  }
+
+  if (!session?.access_token) {
+    throw new Error("Utilisateur non authentifié.");
+  }
+
+  return session.access_token;
 }
 
-export interface CreateTicketPayload {
-  subject: string;
-  description: string;
-  priority: number;
+async function callTicketsApi<T>(url: string): Promise<T> {
+  const accessToken = await getAccessToken();
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => ({ error: 'Réponse serveur invalide.' }));
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Une erreur est survenue lors du chargement des tickets.');
+  }
+
+  return payload as T;
 }
 
-export interface ReplyToTicketPayload {
-  ticketId: number;
-  body: string;
+export async function getTickets(): Promise<OwnerTicketSummary[]> {
+  const payload = await callTicketsApi<{ ok: true; tickets: OwnerTicketSummary[] }>(OWNER_TICKETS_LIST_URL);
+  return Array.isArray(payload.tickets) ? payload.tickets : [];
 }
 
-// Fonctions mock pour éviter les erreurs
-export const getTickets = async (): Promise<FreshdeskTicket[]> => {
-  return [];
-};
+export async function getTicketDetails(ticketId: string): Promise<OwnerTicketDetail> {
+  const detailUrl = new URL(OWNER_TICKET_DETAIL_URL);
+  detailUrl.searchParams.set('ticket_id', ticketId);
 
-export const getTicketDetails = async (ticketId: number): Promise<FreshdeskTicketDetails> => {
-  throw new Error('La fonctionnalité des tickets est temporairement indisponible');
-};
-
-export const createTicket = async (payload: CreateTicketPayload) => {
-  throw new Error('La fonctionnalité des tickets est temporairement indisponible');
-};
-
-export const replyToTicket = async (payload: ReplyToTicketPayload) => {
-  throw new Error('La fonctionnalité des tickets est temporairement indisponible');
-};
+  const payload = await callTicketsApi<{ ok: true; ticket: OwnerTicketDetail }>(detailUrl.toString());
+  return payload.ticket;
+}

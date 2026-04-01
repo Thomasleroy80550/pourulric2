@@ -28,6 +28,8 @@ import {
   ChevronDown,
   Menu,
   Gift,
+  MessageSquare,
+
   Lock,
   Copy, // Add new icon
   LayoutDashboard,
@@ -78,9 +80,11 @@ const defaultSidebarSections = (isPaymentSuspended: boolean) => [
       { name: 'Calendrier', href: '/calendar', icon: Calendar, disabled: isPaymentSuspended },
       { name: 'Réservations', href: '/bookings', icon: Book, disabled: isPaymentSuspended },
       { name: 'Incidents', href: '/reports', icon: Wrench },
+      { name: 'Mes tickets', href: '/tickets', icon: MessageSquare },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
       { name: 'Saison 2026', href: '/season-2026', icon: CalendarDays },
+
     ],
   },
   {

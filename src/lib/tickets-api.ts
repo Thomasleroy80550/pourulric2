@@ -58,7 +58,11 @@ async function getAccessToken(): Promise<string> {
   return session.access_token;
 }
 
-async function callInternalTicketsFunction<T>(path: string, body: Record<string, unknown>): Promise<T> {
+async function callInternalFunction<T>(
+  path: string,
+  body: Record<string, unknown>,
+  fallbackErrorMessage: string,
+): Promise<T> {
   const accessToken = await getAccessToken();
 
   const response = await fetch(`${SUPABASE_FUNCTIONS_BASE_URL}/${path}`, {
@@ -74,25 +78,40 @@ async function callInternalTicketsFunction<T>(path: string, body: Record<string,
   const payload = await response.json().catch(() => ({ error: 'Réponse serveur invalide.' }));
 
   if (!response.ok) {
-    throw new Error(payload.error || 'Une erreur est survenue lors du chargement des tickets.');
+    throw new Error(payload.error || fallbackErrorMessage);
   }
 
   return payload as T;
 }
 
 export async function getTickets(): Promise<OwnerTicketSummary[]> {
-  const data = await callInternalTicketsFunction<{ ok: true; tickets: OwnerTicketSummary[] }>('proprio-tickets-list', {});
+  const data = await callInternalFunction<{ ok: true; tickets: OwnerTicketSummary[] }>(
+    'proprio-tickets-list',
+    {},
+    'Une erreur est survenue lors du chargement des tickets.',
+  );
+
   return Array.isArray(data.tickets) ? data.tickets : [];
 }
 
 export async function getTicketDetails(ticketId: string): Promise<OwnerTicketDetail> {
-  const data = await callInternalTicketsFunction<{ ok: true; ticket: OwnerTicketDetail }>('proprio-ticket-detail', {
-    ticket_id: ticketId,
-  });
+  const data = await callInternalFunction<{ ok: true; ticket: OwnerTicketDetail }>(
+    'proprio-ticket-detail',
+    { ticket_id: ticketId },
+    'Une erreur est survenue lors du chargement du ticket.',
+  );
 
   if (!data.ticket) {
     throw new Error('Ticket introuvable.');
   }
 
   return data.ticket;
+}
+
+export async function replyToTicket(ticketId: string, subject: string, body: string): Promise<void> {
+  await callInternalFunction(
+    'freshdesk-reply-by-email',
+    { ticketId, subject, body },
+    'Impossible d’envoyer votre réponse.',
+  );
 }

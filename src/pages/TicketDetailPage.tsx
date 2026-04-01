@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertCircle, ArrowLeft, Mail, MessageSquare, Shield } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Loader2, Mail, Send, Shield } from 'lucide-react';
+import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import {
   getTicketDetails,
   OwnerTicketConversation,
@@ -17,6 +19,7 @@ import {
   OwnerTicketDetail,
   OwnerTicketPriority,
   OwnerTicketStatus,
+  replyToTicket,
 } from '@/lib/tickets-api';
 
 function formatDate(date: string | null) {
@@ -67,19 +70,48 @@ function getDirectionLabel(direction: OwnerTicketConversationDirection) {
   }
 }
 
-const ConversationItem = ({ message }: { message: OwnerTicketConversation }) => {
-  const safeHtml = message.body_html ? DOMPurify.sanitize(message.body_html) : null;
+function getMessageTone(direction: OwnerTicketConversationDirection) {
+  switch (direction) {
+    case 'outgoing':
+      return 'bg-slate-50';
+    case 'internal':
+      return 'bg-amber-50';
+    default:
+      return 'bg-white';
+  }
+}
+
+const MailMessage = ({
+  authorName,
+  authorEmail,
+  date,
+  label,
+  body,
+  bodyHtml,
+  isPrivate = false,
+  tone = 'bg-white',
+}: {
+  authorName: string;
+  authorEmail?: string | null;
+  date: string | null;
+  label: string;
+  body?: string | null;
+  bodyHtml?: string | null;
+  isPrivate?: boolean;
+  tone?: string;
+}) => {
+  const safeHtml = bodyHtml ? DOMPurify.sanitize(bodyHtml) : null;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <article className={`border-b border-slate-200 px-5 py-5 last:border-b-0 ${tone}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium text-slate-900">{message.author_name || 'Support'}</p>
+            <p className="font-medium text-slate-900">{authorName}</p>
             <Badge variant="outline" className="text-slate-600">
-              {getDirectionLabel(message.direction)}
+              {label}
             </Badge>
-            {message.is_private && (
+            {isPrivate && (
               <Badge variant="secondary">
                 <Shield className="mr-1 h-3 w-3" />
                 Privé
@@ -87,40 +119,35 @@ const ConversationItem = ({ message }: { message: OwnerTicketConversation }) => 
             )}
           </div>
 
-          {message.author_email && (
-            <div className="inline-flex items-center gap-1 text-sm text-slate-500">
+          {authorEmail && (
+            <div className="mt-1 inline-flex items-center gap-1 text-sm text-slate-500">
               <Mail className="h-3.5 w-3.5" />
-              {message.author_email}
+              {authorEmail}
             </div>
           )}
         </div>
 
-        <div className="text-sm text-slate-500">{formatDate(message.created_at)}</div>
+        <div className="text-sm text-slate-500">{formatDate(date)}</div>
       </div>
 
-      <div className="mt-4 text-sm leading-6 text-slate-700">
+      <div className="mt-4 text-sm leading-7 text-slate-700">
         {safeHtml ? (
           <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: safeHtml }} />
         ) : (
-          <p className="whitespace-pre-wrap">{message.body || 'Message sans contenu.'}</p>
+          <p className="whitespace-pre-wrap">{body || 'Message sans contenu.'}</p>
         )}
       </div>
-    </div>
+    </article>
   );
 };
-
-const InfoItem = ({ label, value }: { label: string; value: string }) => (
-  <div className="space-y-1">
-    <dt className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">{label}</dt>
-    <dd className="text-sm text-slate-900 break-all">{value}</dd>
-  </div>
-);
 
 const TicketDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<OwnerTicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -153,10 +180,37 @@ const TicketDetailPage = () => {
     };
   }, [id]);
 
+  const conversationMessages = useMemo(() => ticket?.conversations ?? [], [ticket]);
+
+  const handleReplySubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!ticket) return;
+
+    const message = replyBody.trim();
+    if (!message) {
+      toast.error('Votre réponse est vide.');
+      return;
+    }
+
+    try {
+      setSendingReply(true);
+      await replyToTicket(ticket.id, ticket.subject, message);
+      setReplyBody('');
+      toast.success('Réponse envoyée.', {
+        description: 'Elle peut prendre quelques instants avant d’apparaître dans le fil.',
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Impossible d’envoyer votre réponse.');
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
-        <div className="mb-6 space-y-4">
+        <div className="mb-5 space-y-4">
           <Button asChild variant="ghost" size="sm" className="w-fit px-0 text-slate-600 hover:bg-transparent hover:text-slate-900">
             <Link to="/tickets">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -164,16 +218,18 @@ const TicketDetailPage = () => {
             </Link>
           </Button>
 
-          <div className="space-y-3">
+          <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
               {loading ? 'Chargement du ticket…' : ticket?.subject || 'Ticket'}
             </h1>
 
             {ticket && (
-              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                 <span>Ticket #{ticket.id}</span>
                 <span className="text-slate-300">•</span>
-                <span>{formatDate(ticket.last_activity_at)}</span>
+                <span>{ticket.from_email || 'Email inconnu'}</span>
+                <span className="text-slate-300">•</span>
+                <span>{formatDate(ticket.created_at)}</span>
                 <Badge variant="outline">{getStatusLabel(ticket.status)}</Badge>
                 <Badge variant="outline">Priorité {getPriorityLabel(ticket.priority)}</Badge>
               </div>
@@ -192,96 +248,106 @@ const TicketDetailPage = () => {
 
           {loading ? (
             <>
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-40" />
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-4/5" />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-32" />
-                </CardHeader>
-                <CardContent className="grid gap-4 sm:grid-cols-2">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <Skeleton key={index} className="h-14 w-full rounded-md" />
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-56" />
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <Card className="overflow-hidden border-slate-200 shadow-sm">
+                <div className="border-b border-slate-200 px-5 py-4">
+                  <Skeleton className="h-6 w-2/3" />
+                  <Skeleton className="mt-3 h-4 w-48" />
+                </div>
+                <div className="space-y-0">
                   {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={index} className="h-28 w-full rounded-md" />
+                    <div key={index} className="border-b border-slate-200 px-5 py-5 last:border-b-0">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="mt-4 h-4 w-full" />
+                      <Skeleton className="mt-2 h-4 w-5/6" />
+                      <Skeleton className="mt-2 h-4 w-3/4" />
+                    </div>
                   ))}
+                </div>
+              </Card>
+
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="p-5">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="mt-4 h-36 w-full" />
+                  <Skeleton className="mt-4 h-10 w-36" />
                 </CardContent>
               </Card>
             </>
           ) : ticket ? (
             <>
-              {(ticket.description_html || ticket.description || ticket.preview) && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Résumé</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm leading-6 text-slate-700">
-                    {ticket.description_html ? (
-                      <div
-                        className="prose prose-sm max-w-none text-foreground"
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.description_html) }}
-                      />
-                    ) : (
-                      <p className="whitespace-pre-wrap">{ticket.description || ticket.preview}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+              <Card className="overflow-hidden border-slate-200 shadow-sm">
+                <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+                  <div className="text-sm font-medium text-slate-900">Conversation</div>
+                  <div className="mt-1 text-sm text-slate-500">
+                    {conversationMessages.length + 1} message{conversationMessages.length + 1 > 1 ? 's' : ''}
+                  </div>
+                </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Informations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <dl className="grid gap-4 sm:grid-cols-2">
-                    <InfoItem label="Statut" value={getStatusLabel(ticket.status)} />
-                    <InfoItem label="Priorité" value={getPriorityLabel(ticket.priority)} />
-                    <InfoItem label="Créé le" value={formatDate(ticket.created_at)} />
-                    <InfoItem label="Dernière activité" value={formatDate(ticket.last_activity_at)} />
-                    <InfoItem label="Email source" value={ticket.from_email || '—'} />
-                    <InfoItem label="Source" value={ticket.source_provider || '—'} />
-                  </dl>
-                </CardContent>
+                {(ticket.description_html || ticket.description || ticket.preview) && (
+                  <MailMessage
+                    authorName={ticket.from_email || 'Expéditeur'}
+                    authorEmail={ticket.from_email}
+                    date={ticket.created_at}
+                    label="Message initial"
+                    body={ticket.description || ticket.preview}
+                    bodyHtml={ticket.description_html}
+                  />
+                )}
+
+                {conversationMessages.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-sm text-slate-600">
+                    Aucun message supplémentaire pour ce ticket.
+                  </div>
+                ) : (
+                  conversationMessages.map((message: OwnerTicketConversation) => (
+                    <MailMessage
+                      key={message.id}
+                      authorName={message.author_name || 'Support'}
+                      authorEmail={message.author_email}
+                      date={message.created_at}
+                      label={getDirectionLabel(message.direction)}
+                      body={message.body}
+                      bodyHtml={message.body_html}
+                      isPrivate={message.is_private}
+                      tone={getMessageTone(message.direction)}
+                    />
+                  ))
+                )}
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-slate-700" />
-                    <div>
-                      <CardTitle>Historique des échanges</CardTitle>
-                      <p className="mt-1 text-sm font-normal text-slate-500">
-                        {ticket.conversations.length} message{ticket.conversations.length > 1 ? 's' : ''}
-                      </p>
+              <Card className="border-slate-200 shadow-sm">
+                <CardContent className="p-5">
+                  <div className="mb-4">
+                    <h2 className="text-base font-semibold text-slate-900">Répondre</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Écris ta réponse comme un mail. Elle sera envoyée au support sur ce ticket.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleReplySubmit} className="space-y-4">
+                    <Textarea
+                      value={replyBody}
+                      onChange={(event) => setReplyBody(event.target.value)}
+                      placeholder="Écrivez votre réponse..."
+                      className="min-h-[180px] resize-y"
+                    />
+
+                    <div className="flex justify-end">
+                      <Button type="submit" disabled={sendingReply || replyBody.trim().length === 0}>
+                        {sendingReply ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Envoi...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="mr-2 h-4 w-4" />
+                            Envoyer
+                          </>
+                        )}
+                      </Button>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {ticket.conversations.length === 0 ? (
-                      <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-600">
-                        Aucun message n’a été remonté pour ce ticket.
-                      </div>
-                    ) : (
-                      ticket.conversations.map((message) => <ConversationItem key={message.id} message={message} />)
-                    )}
-                  </div>
+                  </form>
                 </CardContent>
               </Card>
             </>

@@ -129,8 +129,13 @@ serve(async (req) => {
         message,
         userId: user.id,
       });
-      return new Response(JSON.stringify({ error: message ?? "Impossible de récupérer vos tickets." }), {
-        status: remoteResponse.status,
+
+      const userMessage = remoteResponse.status === 401
+        ? "L'API distante des tickets a refusé le token serveur ORDER_TICKET_API_TOKEN."
+        : message ?? "Impossible de récupérer vos tickets.";
+
+      return new Response(JSON.stringify({ error: userMessage }), {
+        status: remoteResponse.status === 401 ? 502 : remoteResponse.status,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }

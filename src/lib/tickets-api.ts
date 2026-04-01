@@ -1,5 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
+const SUPABASE_FUNCTIONS_BASE_URL = 'https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1';
+const SUPABASE_PUBLISHABLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRramFlanp3bW13d3pob2twYmdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0MTQwMjAsImV4cCI6MjA2NDk5MDAyMH0.aTOtiL49-BYCyO4K3Bek37i5XQD3fWzim59j9fEMtJs';
+
 export type OwnerTicketStatus = 'open' | 'pending' | 'closed' | string;
 export type OwnerTicketPriority = 'low' | 'medium' | 'high' | string;
 export type OwnerTicketConversationDirection = 'incoming' | 'outgoing' | 'internal' | 'unknown';
@@ -39,7 +42,10 @@ export interface OwnerTicketDetail extends OwnerTicketSummary {
 }
 
 async function getAccessToken(): Promise<string> {
-  const { data: { session }, error } = await supabase.auth.getSession();
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
 
   if (error) {
     throw new Error('Impossible de récupérer la session utilisateur.');
@@ -52,46 +58,39 @@ async function getAccessToken(): Promise<string> {
   return session.access_token;
 }
 
-export async function getTickets(): Promise<OwnerTicketSummary[]> {
+async function callInternalTicketsFunction<T>(path: string, body: Record<string, unknown>): Promise<T> {
   const accessToken = await getAccessToken();
 
-  const { data, error } = await supabase.functions.invoke('proprio-tickets-list', {
-    body: {},
+  const response = await fetch(`${SUPABASE_FUNCTIONS_BASE_URL}/${path}`, {
+    method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_PUBLISHABLE_KEY,
       Authorization: `Bearer ${accessToken}`,
     },
+    body: JSON.stringify(body),
   });
 
-  if (error) {
-    throw new Error(error.message || 'Une erreur est survenue lors du chargement des tickets.');
+  const payload = await response.json().catch(() => ({ error: 'Réponse serveur invalide.' }));
+
+  if (!response.ok) {
+    throw new Error(payload.error || 'Une erreur est survenue lors du chargement des tickets.');
   }
 
-  if (data?.error) {
-    throw new Error(data.error);
-  }
+  return payload as T;
+}
 
-  return Array.isArray(data?.tickets) ? data.tickets : [];
+export async function getTickets(): Promise<OwnerTicketSummary[]> {
+  const data = await callInternalTicketsFunction<{ ok: true; tickets: OwnerTicketSummary[] }>('proprio-tickets-list', {});
+  return Array.isArray(data.tickets) ? data.tickets : [];
 }
 
 export async function getTicketDetails(ticketId: string): Promise<OwnerTicketDetail> {
-  const accessToken = await getAccessToken();
-
-  const { data, error } = await supabase.functions.invoke('proprio-ticket-detail', {
-    body: { ticket_id: ticketId },
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+  const data = await callInternalTicketsFunction<{ ok: true; ticket: OwnerTicketDetail }>('proprio-ticket-detail', {
+    ticket_id: ticketId,
   });
 
-  if (error) {
-    throw new Error(error.message || 'Une erreur est survenue lors du chargement du ticket.');
-  }
-
-  if (data?.error) {
-    throw new Error(data.error);
-  }
-
-  if (!data?.ticket) {
+  if (!data.ticket) {
     throw new Error('Ticket introuvable.');
   }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -54,32 +54,6 @@ function getPriorityLabel(priority: OwnerTicketPriority | null) {
   }
 }
 
-function getStatusClasses(status: OwnerTicketStatus) {
-  switch (status) {
-    case 'open':
-      return 'border-sky-200 bg-sky-50 text-sky-700';
-    case 'pending':
-      return 'border-amber-200 bg-amber-50 text-amber-700';
-    case 'closed':
-      return 'border-slate-200 bg-slate-100 text-slate-600';
-    default:
-      return 'border-slate-200 bg-slate-100 text-slate-700';
-  }
-}
-
-function getPriorityClasses(priority: OwnerTicketPriority | null) {
-  switch (priority) {
-    case 'low':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    case 'medium':
-      return 'border-amber-200 bg-amber-50 text-amber-700';
-    case 'high':
-      return 'border-rose-200 bg-rose-50 text-rose-700';
-    default:
-      return 'border-slate-200 bg-slate-100 text-slate-600';
-  }
-}
-
 function getDirectionLabel(direction: OwnerTicketConversationDirection) {
   switch (direction) {
     case 'incoming':
@@ -93,24 +67,13 @@ function getDirectionLabel(direction: OwnerTicketConversationDirection) {
   }
 }
 
-function getDirectionClasses(direction: OwnerTicketConversationDirection) {
-  switch (direction) {
-    case 'outgoing':
-      return 'border-sky-200 bg-sky-50';
-    case 'internal':
-      return 'border-amber-200 bg-amber-50';
-    default:
-      return 'border-slate-200 bg-white';
-  }
-}
-
 const ConversationItem = ({ message }: { message: OwnerTicketConversation }) => {
   const safeHtml = message.body_html ? DOMPurify.sanitize(message.body_html) : null;
 
   return (
-    <div className={`rounded-lg border p-4 ${getDirectionClasses(message.direction)}`}>
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-slate-900">{message.author_name || 'Support'}</p>
             <Badge variant="outline" className="text-slate-600">
@@ -125,7 +88,7 @@ const ConversationItem = ({ message }: { message: OwnerTicketConversation }) => 
           </div>
 
           {message.author_email && (
-            <div className="mt-1 inline-flex items-center gap-1 text-sm text-slate-500">
+            <div className="inline-flex items-center gap-1 text-sm text-slate-500">
               <Mail className="h-3.5 w-3.5" />
               {message.author_email}
             </div>
@@ -145,6 +108,13 @@ const ConversationItem = ({ message }: { message: OwnerTicketConversation }) => 
     </div>
   );
 };
+
+const InfoItem = ({ label, value }: { label: string; value: string }) => (
+  <div className="space-y-1">
+    <dt className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">{label}</dt>
+    <dd className="text-sm text-slate-900 break-all">{value}</dd>
+  </div>
+);
 
 const TicketDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -183,54 +153,35 @@ const TicketDetailPage = () => {
     };
   }, [id]);
 
-  const metadata = useMemo(
-    () =>
-      ticket
-        ? [
-            { label: 'Statut', value: getStatusLabel(ticket.status) },
-            { label: 'Priorité', value: getPriorityLabel(ticket.priority) },
-            { label: 'Créé le', value: formatDate(ticket.created_at) },
-            { label: 'Dernière activité', value: formatDate(ticket.last_activity_at) },
-            { label: 'Email source', value: ticket.from_email || '—' },
-            { label: 'Source', value: ticket.source_provider || '—' },
-          ]
-        : [],
-    [ticket],
-  );
-
   return (
     <MainLayout>
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
-        <div className="mb-6 space-y-3">
-          <Button asChild variant="outline" size="sm">
+      <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+        <div className="mb-6 space-y-4">
+          <Button asChild variant="ghost" size="sm" className="w-fit px-0 text-slate-600 hover:bg-transparent hover:text-slate-900">
             <Link to="/tickets">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Retour aux tickets
             </Link>
           </Button>
 
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+          <div className="space-y-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
               {loading ? 'Chargement du ticket…' : ticket?.subject || 'Ticket'}
             </h1>
-            <p className="mt-2 text-sm text-slate-600 sm:text-base">
-              Vue détaillée du ticket avec son résumé et l’historique des échanges.
-            </p>
-          </div>
 
-          {ticket && (
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className={getStatusClasses(ticket.status)}>
-                {getStatusLabel(ticket.status)}
-              </Badge>
-              <Badge variant="outline" className={getPriorityClasses(ticket.priority)}>
-                Priorité {getPriorityLabel(ticket.priority)}
-              </Badge>
-            </div>
-          )}
+            {ticket && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                <span>Ticket #{ticket.id}</span>
+                <span className="text-slate-300">•</span>
+                <span>{formatDate(ticket.last_activity_at)}</span>
+                <Badge variant="outline">{getStatusLabel(ticket.status)}</Badge>
+                <Badge variant="outline">Priorité {getPriorityLabel(ticket.priority)}</Badge>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-5">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -243,25 +194,32 @@ const TicketDetailPage = () => {
             <>
               <Card>
                 <CardHeader>
-                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-6 w-40" />
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-4/5" />
                 </CardContent>
               </Card>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <Skeleton key={index} className="h-20 w-full rounded-lg" />
-                ))}
-              </div>
+
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent className="grid gap-4 sm:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <Skeleton key={index} className="h-14 w-full rounded-md" />
+                  ))}
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <Skeleton className="h-6 w-56" />
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={index} className="h-32 w-full rounded-lg" />
+                    <Skeleton key={index} className="h-28 w-full rounded-md" />
                   ))}
                 </CardContent>
               </Card>
@@ -275,7 +233,10 @@ const TicketDetailPage = () => {
                   </CardHeader>
                   <CardContent className="text-sm leading-6 text-slate-700">
                     {ticket.description_html ? (
-                      <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.description_html) }} />
+                      <div
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.description_html) }}
+                      />
                     ) : (
                       <p className="whitespace-pre-wrap">{ticket.description || ticket.preview}</p>
                     )}
@@ -288,14 +249,14 @@ const TicketDetailPage = () => {
                   <CardTitle>Informations</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {metadata.map((item) => (
-                      <div key={item.label} className="rounded-lg border border-slate-200 p-4">
-                        <div className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">{item.label}</div>
-                        <div className="mt-2 break-all text-sm font-medium text-slate-900">{item.value}</div>
-                      </div>
-                    ))}
-                  </div>
+                  <dl className="grid gap-4 sm:grid-cols-2">
+                    <InfoItem label="Statut" value={getStatusLabel(ticket.status)} />
+                    <InfoItem label="Priorité" value={getPriorityLabel(ticket.priority)} />
+                    <InfoItem label="Créé le" value={formatDate(ticket.created_at)} />
+                    <InfoItem label="Dernière activité" value={formatDate(ticket.last_activity_at)} />
+                    <InfoItem label="Email source" value={ticket.from_email || '—'} />
+                    <InfoItem label="Source" value={ticket.source_provider || '—'} />
+                  </dl>
                 </CardContent>
               </Card>
 
@@ -304,7 +265,7 @@ const TicketDetailPage = () => {
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-5 w-5 text-slate-700" />
                     <div>
-                      <CardTitle>Historique des conversations</CardTitle>
+                      <CardTitle>Historique des échanges</CardTitle>
                       <p className="mt-1 text-sm font-normal text-slate-500">
                         {ticket.conversations.length} message{ticket.conversations.length > 1 ? 's' : ''}
                       </p>

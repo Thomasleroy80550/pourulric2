@@ -94,9 +94,9 @@ serve(async (req) => {
       });
     }
 
-    const apiToken = Deno.env.get("ORDER_TICKET_API_TOKEN")?.trim();
+    const apiToken = Deno.env.get("PROPRIO_TICKETS_API_TOKEN")?.trim();
     if (!apiToken) {
-      console.error("[proprio-tickets-list] missing ORDER_TICKET_API_TOKEN secret");
+      console.error("[proprio-tickets-list] missing PROPRIO_TICKETS_API_TOKEN secret");
       return new Response(JSON.stringify({ error: "Configuration serveur incomplète." }), {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

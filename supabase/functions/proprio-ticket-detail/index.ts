@@ -121,12 +121,30 @@ function collectConversationSources(payload: JsonRecord, ticketSource: JsonRecor
   return collection;
 }
 
+async function extractTicketId(req: Request): Promise<string | null> {
+  if (req.method === "GET") {
+    return new URL(req.url).searchParams.get("ticket_id")?.trim() ?? null;
+  }
+
+  const contentType = req.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return null;
+  }
+
+  const body = await req.json().catch(() => null);
+  if (!isRecord(body)) {
+    return null;
+  }
+
+  return stringOrNull(body.ticket_id);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== "GET") {
+  if (req.method !== "GET" && req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed." }), {
       status: 405,
       headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -143,7 +161,7 @@ serve(async (req) => {
       });
     }
 
-    const ticketId = new URL(req.url).searchParams.get("ticket_id")?.trim();
+    const ticketId = await extractTicketId(req);
     if (!ticketId) {
       return new Response(JSON.stringify({ error: "Le paramètre ticket_id est requis." }), {
         status: 400,

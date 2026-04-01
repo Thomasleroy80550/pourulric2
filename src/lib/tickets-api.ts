@@ -1,8 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 
-const OWNER_TICKETS_LIST_URL = 'https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/proprio-tickets-list';
-const OWNER_TICKET_DETAIL_URL = 'https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/proprio-ticket-detail';
-
 export type OwnerTicketStatus = 'open' | 'pending' | 'closed' | string;
 export type OwnerTicketPriority = 'low' | 'medium' | 'high' | string;
 export type OwnerTicketConversationDirection = 'incoming' | 'outgoing' | 'internal' | 'unknown';
@@ -41,48 +38,38 @@ export interface OwnerTicketDetail extends OwnerTicketSummary {
   conversations: OwnerTicketConversation[];
 }
 
-async function getAccessToken(): Promise<string> {
-  const { data: { session }, error } = await supabase.auth.getSession();
-
-  if (error) {
-    throw new Error("Impossible de récupérer la session utilisateur.");
-  }
-
-  if (!session?.access_token) {
-    throw new Error("Utilisateur non authentifié.");
-  }
-
-  return session.access_token;
-}
-
-async function callTicketsApi<T>(url: string): Promise<T> {
-  const accessToken = await getAccessToken();
-
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
+export async function getTickets(): Promise<OwnerTicketSummary[]> {
+  const { data, error } = await supabase.functions.invoke('proprio-tickets-list', {
+    body: {},
   });
 
-  const payload = await response.json().catch(() => ({ error: 'Réponse serveur invalide.' }));
-
-  if (!response.ok) {
-    throw new Error(payload.error || 'Une erreur est survenue lors du chargement des tickets.');
+  if (error) {
+    throw new Error(error.message || 'Une erreur est survenue lors du chargement des tickets.');
   }
 
-  return payload as T;
-}
+  if (data?.error) {
+    throw new Error(data.error);
+  }
 
-export async function getTickets(): Promise<OwnerTicketSummary[]> {
-  const payload = await callTicketsApi<{ ok: true; tickets: OwnerTicketSummary[] }>(OWNER_TICKETS_LIST_URL);
-  return Array.isArray(payload.tickets) ? payload.tickets : [];
+  return Array.isArray(data?.tickets) ? data.tickets : [];
 }
 
 export async function getTicketDetails(ticketId: string): Promise<OwnerTicketDetail> {
-  const detailUrl = new URL(OWNER_TICKET_DETAIL_URL);
-  detailUrl.searchParams.set('ticket_id', ticketId);
+  const { data, error } = await supabase.functions.invoke('proprio-ticket-detail', {
+    body: { ticket_id: ticketId },
+  });
 
-  const payload = await callTicketsApi<{ ok: true; ticket: OwnerTicketDetail }>(detailUrl.toString());
-  return payload.ticket;
+  if (error) {
+    throw new Error(error.message || 'Une erreur est survenue lors du chargement du ticket.');
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  if (!data?.ticket) {
+    throw new Error('Ticket introuvable.');
+  }
+
+  return data.ticket;
 }

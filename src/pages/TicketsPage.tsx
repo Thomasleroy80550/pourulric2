@@ -234,7 +234,6 @@ const TicketsPage = () => {
                     <TableHead>Sujet</TableHead>
                     <TableHead>Priorité</TableHead>
                     <TableHead>Statut</TableHead>
-                    <TableHead>Source</TableHead>
                     <TableHead>Dernière activité</TableHead>
                     <TableHead className="pr-6 text-right">Accès</TableHead>
                   </TableRow>
@@ -263,7 +262,6 @@ const TicketsPage = () => {
                           {getStatusLabel(ticket.status)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">{ticket.source_provider || '—'}</TableCell>
                       <TableCell className="text-slate-600">{formatDate(ticket.last_activity_at, 'dd MMM yyyy à HH:mm')}</TableCell>
                       <TableCell className="pr-6 text-right">
                         <Button asChild variant="ghost" size="sm">

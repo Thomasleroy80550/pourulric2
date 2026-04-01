@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { Link, useParams } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -22,6 +22,41 @@ import {
   OwnerTicketStatus,
   replyToTicket,
 } from '@/lib/tickets-api';
+
+function getPendingRepliesStorageKey(ticketId: string) {
+  return `ticket-pending-replies:${ticketId}`;
+}
+
+function areMessagesEquivalent(left: OwnerTicketConversation, right: OwnerTicketConversation) {
+  return left.direction === right.direction
+    && (left.author_email || '') === (right.author_email || '')
+    && (left.body || '') === (right.body || '');
+}
+
+function readPendingReplies(ticketId: string): OwnerTicketConversation[] {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const rawValue = window.localStorage.getItem(getPendingRepliesStorageKey(ticketId));
+    if (!rawValue) return [];
+
+    const parsed = JSON.parse(rawValue);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistPendingReplies(ticketId: string, replies: OwnerTicketConversation[]) {
+  if (typeof window === 'undefined') return;
+
+  if (replies.length === 0) {
+    window.localStorage.removeItem(getPendingRepliesStorageKey(ticketId));
+    return;
+  }
+
+  window.localStorage.setItem(getPendingRepliesStorageKey(ticketId), JSON.stringify(replies));
+}
 
 function formatDate(date: string | null) {
   if (!date) return '—';
@@ -160,6 +195,28 @@ const TicketDetailPage = () => {
   const [sendingReply, setSendingReply] = useState(false);
   const [optimisticReplies, setOptimisticReplies] = useState<OwnerTicketConversation[]>([]);
 
+  const loadTicket = useCallback(async (showLoader = false) => {
+    if (!id) return;
+
+    try {
+      if (showLoader) setLoading(true);
+      setError(null);
+      const data = await getTicketDetails(id);
+      setTicket(data);
+      setOptimisticReplies((current) => {
+        const nextReplies = current.filter(
+          (localReply) => !data.conversations.some((remoteReply) => areMessagesEquivalent(localReply, remoteReply)),
+        );
+        persistPendingReplies(id, nextReplies);
+        return nextReplies;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Impossible de charger ce ticket.');
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (!id) {
       setLoading(false);
@@ -167,30 +224,21 @@ const TicketDetailPage = () => {
       return;
     }
 
-    let isMounted = true;
-    setOptimisticReplies([]);
+    setOptimisticReplies(readPendingReplies(id));
+    void loadTicket(true);
+  }, [id, loadTicket]);
 
-    const loadTicket = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getTicketDetails(id);
-        if (isMounted) setTicket(data);
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Impossible de charger ce ticket.');
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
+  useEffect(() => {
+    if (!id) return;
 
-    loadTicket();
+    const interval = window.setInterval(() => {
+      void loadTicket(false);
+    }, 15000);
 
     return () => {
-      isMounted = false;
+      window.clearInterval(interval);
     };
-  }, [id]);
+  }, [id, loadTicket]);
 
   const conversationMessages = useMemo(
     () => [...(ticket?.conversations ?? []), ...optimisticReplies],
@@ -200,7 +248,7 @@ const TicketDetailPage = () => {
   const handleReplySubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!ticket) return;
+    if (!ticket || !id) return;
 
     const message = replyBody.trim();
     if (!message) {
@@ -215,9 +263,8 @@ const TicketDetailPage = () => {
       const sentAt = new Date().toISOString();
       const displayName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Vous';
 
-      setOptimisticReplies((current) => [
-        ...current,
-        {
+      setOptimisticReplies((current) => {
+        const localReply: OwnerTicketConversation = {
           id: `local-reply-${Date.now()}`,
           created_at: sentAt,
           author_name: displayName,
@@ -226,8 +273,12 @@ const TicketDetailPage = () => {
           is_private: false,
           body: message,
           body_html: null,
-        },
-      ]);
+        };
+
+        const nextReplies = [...current, localReply];
+        persistPendingReplies(id, nextReplies);
+        return nextReplies;
+      });
 
       setTicket((current) =>
         current
@@ -242,6 +293,10 @@ const TicketDetailPage = () => {
       toast.success('Réponse envoyée.', {
         description: 'Elle apparaît maintenant dans le fil de discussion.',
       });
+
+      window.setTimeout(() => {
+        void loadTicket(false);
+      }, 1500);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Impossible d’envoyer votre réponse.');
     } finally {

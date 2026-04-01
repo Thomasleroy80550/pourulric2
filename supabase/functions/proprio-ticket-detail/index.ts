@@ -106,17 +106,90 @@ function normalizeConversation(source: JsonRecord, index: number) {
   };
 }
 
+function isMessageLikeRecord(source: JsonRecord) {
+  return Boolean(
+    getFirst(source, [
+      "body",
+      "body_html",
+      "message",
+      "message_html",
+      "text",
+      "body_text",
+      "content",
+      "author_email",
+      "from_email",
+      "sender_email",
+      "author_name",
+      "from_name",
+      "created_at",
+      "sent_at",
+      "date",
+    ]),
+  );
+}
+
+function buildConversationSignature(source: JsonRecord) {
+  return [
+    stringOrNull(getFirst(source, ["id", "conversation_id", "message_id"])) ?? "",
+    stringOrNull(getFirst(source, ["created_at", "sent_at", "date", "updated_at"])) ?? "",
+    stringOrNull(getFirst(source, ["body", "body_html", "message", "message_html", "text", "body_text", "content"])) ?? "",
+    stringOrNull(getFirst(source, ["author_email", "from_email", "sender_email", "email", "user_email"])) ?? "",
+  ].join("::");
+}
+
 function collectConversationSources(payload: JsonRecord, ticketSource: JsonRecord) {
   const collection: JsonRecord[] = [];
+  const seen = new Set<string>();
+  const collectionKeys = new Set(["conversations", "messages", "history", "thread", "notes", "replies", "comments", "activities", "events", "timeline"]);
 
-  for (const source of [ticketSource, payload]) {
-    for (const key of ["conversations", "messages", "history", "thread", "notes"]) {
-      const candidate = source[key];
-      if (Array.isArray(candidate)) {
-        collection.push(...candidate.filter(isRecord));
+  function pushRecord(source: JsonRecord) {
+    const signature = buildConversationSignature(source);
+    if (seen.has(signature)) {
+      return;
+    }
+
+    seen.add(signature);
+    collection.push(source);
+  }
+
+  function visit(value: unknown, depth = 0) {
+    if (depth > 5) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      const records = value.filter(isRecord);
+      if (records.length === 0) {
+        return;
+      }
+
+      const messageLikeRecords = records.filter(isMessageLikeRecord);
+      if (messageLikeRecords.length > 0) {
+        messageLikeRecords.forEach(pushRecord);
+      }
+
+      records.forEach((record) => visit(record, depth + 1));
+      return;
+    }
+
+    if (!isRecord(value)) {
+      return;
+    }
+
+    for (const [key, nested] of Object.entries(value)) {
+      if (collectionKeys.has(key)) {
+        visit(nested, depth + 1);
+        continue;
+      }
+
+      if (Array.isArray(nested) || isRecord(nested)) {
+        visit(nested, depth + 1);
       }
     }
   }
+
+  visit(ticketSource);
+  visit(payload);
 
   return collection;
 }

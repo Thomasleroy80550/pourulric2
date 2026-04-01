@@ -6,6 +6,7 @@ import { fr } from 'date-fns/locale';
 import { AlertCircle, ArrowLeft, Loader2, Mail, Send, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
+import { useSession } from '@/components/SessionContextProvider';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,7 +63,7 @@ function getDirectionLabel(direction: OwnerTicketConversationDirection) {
     case 'incoming':
       return 'Message reçu';
     case 'outgoing':
-      return 'Réponse support';
+      return 'Réponse';
     case 'internal':
       return 'Note interne';
     default:
@@ -151,11 +152,13 @@ const MailMessage = ({
 
 const TicketDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  const { profile, session } = useSession();
   const [ticket, setTicket] = useState<OwnerTicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
+  const [optimisticReplies, setOptimisticReplies] = useState<OwnerTicketConversation[]>([]);
 
   useEffect(() => {
     if (!id) {
@@ -165,6 +168,7 @@ const TicketDetailPage = () => {
     }
 
     let isMounted = true;
+    setOptimisticReplies([]);
 
     const loadTicket = async () => {
       try {
@@ -188,7 +192,10 @@ const TicketDetailPage = () => {
     };
   }, [id]);
 
-  const conversationMessages = useMemo(() => ticket?.conversations ?? [], [ticket]);
+  const conversationMessages = useMemo(
+    () => [...(ticket?.conversations ?? []), ...optimisticReplies],
+    [ticket, optimisticReplies],
+  );
 
   const handleReplySubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -204,12 +211,39 @@ const TicketDetailPage = () => {
     try {
       setSendingReply(true);
       await replyToTicket(ticket.id, ticket.subject, message);
+
+      const sentAt = new Date().toISOString();
+      const displayName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Vous';
+
+      setOptimisticReplies((current) => [
+        ...current,
+        {
+          id: `local-reply-${Date.now()}`,
+          created_at: sentAt,
+          author_name: displayName,
+          author_email: session?.user?.email || ticket.from_email,
+          direction: 'outgoing',
+          is_private: false,
+          body: message,
+          body_html: null,
+        },
+      ]);
+
+      setTicket((current) =>
+        current
+          ? {
+              ...current,
+              last_activity_at: sentAt,
+            }
+          : current,
+      );
+
       setReplyBody('');
       toast.success('Réponse envoyée.', {
-        description: 'Elle peut prendre quelques instants avant d\'apparaître dans le fil.',
+        description: 'Elle apparaît maintenant dans le fil de discussion.',
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Impossible d\'envoyer votre réponse.');
+      toast.error(err instanceof Error ? err.message : 'Impossible d’envoyer votre réponse.');
     } finally {
       setSendingReply(false);
     }

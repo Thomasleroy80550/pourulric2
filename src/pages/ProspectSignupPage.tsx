@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Sparkles, CheckCircle2, TrendingUp, Calendar, Wand2, Stars, PhoneCall } from "lucide-react";
+import { Shield, Sparkles, CheckCircle2, TrendingUp, Calendar, Wand2, Stars, PhoneCall, CalendarCheck } from "lucide-react";
 import { sendUnauthenticatedEmail } from "@/lib/unauthenticated-email-api";
 import EmailSendEffect from "@/components/EmailSendEffect";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ const ProspectSignupPage: React.FC = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const transition = (location.state as TransitionState)?.transition;
+  const calendlyUrl = "https://calendly.com/contach-hellokeys";
 
   const utm = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -164,9 +165,18 @@ const ProspectSignupPage: React.FC = () => {
                   <Sparkles className="mr-2 h-4 w-4" />
                   Demander mon inscription
                 </Button>
-                <Button variant="outline" size="lg" onClick={() => document.getElementById("highlights")?.scrollIntoView({ behavior: "smooth" })}>
+                <Button asChild variant="outline" size="lg">
+                  <a href={calendlyUrl} target="_blank" rel="noreferrer">
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    Prendre rendez-vous
+                  </a>
+                </Button>
+                <Button variant="ghost" size="lg" onClick={() => document.getElementById("highlights")?.scrollIntoView({ behavior: "smooth" })}>
                   En savoir plus
                 </Button>
+              </div>
+              <div className="mt-3 text-sm text-muted-foreground">
+                Vous préférez échanger directement ? Réservez un créneau avec nous sur Calendly.
               </div>
               <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
                 <Stars className="h-4 w-4 text-yellow-500" />
@@ -309,6 +319,22 @@ const ProspectSignupPage: React.FC = () => {
       {/* Signup form */}
       <section id="signup-form">
         <div className="mx-auto max-w-3xl px-4 py-12">
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-base font-semibold">Besoin d'un échange rapide avant de vous inscrire ?</p>
+                <p className="text-sm text-muted-foreground">
+                  Planifiez directement un rendez-vous avec notre équipe via Calendly.
+                </p>
+              </div>
+              <Button asChild>
+                <a href={calendlyUrl} target="_blank" rel="noreferrer">
+                  <CalendarCheck className="mr-2 h-4 w-4" />
+                  Ouvrir Calendly
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Demander mon inscription</CardTitle>

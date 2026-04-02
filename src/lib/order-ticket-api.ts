@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 export interface OrderTicketCreatePayload {
   customer_email: string;
   customer_name: string;
@@ -16,22 +18,20 @@ interface OrderTicketCreateResponse {
   error?: string;
 }
 
-const ORDER_TICKET_CREATE_URL = 'https://hnvaqfcfjqhjupellfhk.supabase.co/functions/v1/order-ticket-create';
-
-export async function createExternalOrderTicket(payload: OrderTicketCreatePayload): Promise<OrderTicketCreateResponse> {
-  const response = await fetch(ORDER_TICKET_CREATE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+export async function createExternalOrderTicket(
+  payload: OrderTicketCreatePayload,
+): Promise<OrderTicketCreateResponse> {
+  const { data, error } = await supabase.functions.invoke('proprio-ticket-create', {
+    body: payload,
   });
 
-  const data = (await response.json()) as OrderTicketCreateResponse;
-
-  if (!response.ok || !data.ok) {
-    throw new Error(data.error || 'Impossible de créer le ticket.');
+  if (error) {
+    throw new Error(error.message || 'Impossible de créer le ticket.');
   }
 
-  return data;
+  if (!data?.ok) {
+    throw new Error(data?.error || 'Impossible de créer le ticket.');
+  }
+
+  return data as OrderTicketCreateResponse;
 }

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { sendUnauthenticatedEmail } from '@/lib/unauthenticated-email-api';
+import { createExternalOrderTicket } from '@/lib/order-ticket-api';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères.'),
@@ -17,15 +17,6 @@ const formSchema = z.object({
   subject: z.string().min(5, 'Le sujet doit contenir au moins 5 caractères.'),
   message: z.string().min(20, 'Le message doit contenir au moins 20 caractères.'),
 });
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
 const IdeaSubmissionForm: React.FC = () => {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -40,29 +31,25 @@ const IdeaSubmissionForm: React.FC = () => {
 
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      const safeName = escapeHtml(values.name);
-      const safeEmail = escapeHtml(values.email);
-      const safeSubject = escapeHtml(values.subject);
-      const safeMessage = escapeHtml(values.message).replace(/\n/g, '<br />');
-
-      const html = `
-        <h2>Nouveau ticket depuis la page Aide</h2>
-        <p><strong>Nom :</strong> ${safeName}</p>
-        <p><strong>Email :</strong> ${safeEmail}</p>
-        <p><strong>Sujet :</strong> ${safeSubject}</p>
-        <p><strong>Message :</strong><br />${safeMessage}</p>
-      `;
-
-      await sendUnauthenticatedEmail('contact@hellokeys.fr', `[Aide] ${values.subject}`, html, values.email);
+      return createExternalOrderTicket({
+        customer_email: values.email,
+        customer_name: values.name,
+        subject: values.subject,
+        message: values.message,
+        reference: `HELP-${Date.now()}`,
+        source_provider: 'hellokeys-help',
+        priority: 'medium',
+        status: 'open',
+      });
     },
     onSuccess: () => {
-      toast.success('Ticket envoyé avec succès !', {
-        description: 'Votre message a bien été transmis à contact@hellokeys.fr.',
+      toast.success('Ticket créé avec succès !', {
+        description: 'Votre demande a bien été envoyée à notre plateforme support.',
       });
       form.reset();
     },
     onError: (error: Error) => {
-      toast.error('Erreur lors de l’envoi', {
+      toast.error('Erreur lors de la création du ticket', {
         description: error.message,
       });
     },
@@ -77,7 +64,7 @@ const IdeaSubmissionForm: React.FC = () => {
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Formulaire de contact</CardTitle>
         <CardDescription>
-          Envoyez-nous votre demande et nous créerons un ticket à partir de votre message. Les réponses partiront vers l'adresse email renseignée.
+          Envoyez-nous votre demande et nous créerons un ticket sur notre plateforme support avec votre email de contact.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -144,7 +131,7 @@ const IdeaSubmissionForm: React.FC = () => {
             />
 
             <Button type="submit" disabled={mutation.isPending} className="w-full">
-              {mutation.isPending ? 'Envoi en cours...' : 'Envoyer mon message'}
+              {mutation.isPending ? 'Envoi en cours...' : 'Créer mon ticket'}
             </Button>
           </form>
         </Form>

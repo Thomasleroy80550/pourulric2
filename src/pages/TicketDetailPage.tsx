@@ -80,6 +80,34 @@ function buildConversationDedupKey(message: Pick<OwnerTicketConversation, 'autho
   ].join('::');
 }
 
+function isEquivalentToInitialTicketMessage(ticket: OwnerTicketDetail | null, message: OwnerTicketConversation) {
+  if (!ticket) return false;
+  if (message.direction === 'outgoing' || message.direction === 'internal') return false;
+
+  const initialBody = normalizeComparableText(ticket.description_html || ticket.description || ticket.preview);
+  const messageBody = normalizeComparableText(message.body_html || message.body);
+
+  if (!initialBody || !messageBody || initialBody !== messageBody) {
+    return false;
+  }
+
+  const ticketEmail = (ticket.from_email || '').trim().toLowerCase();
+  const messageEmail = (message.author_email || '').trim().toLowerCase();
+
+  if (ticketEmail && messageEmail && ticketEmail !== messageEmail) {
+    return false;
+  }
+
+  const ticketDate = normalizeComparableDate(ticket.created_at);
+  const messageDate = normalizeComparableDate(message.created_at);
+
+  if (ticketDate && messageDate && ticketDate !== messageDate) {
+    return false;
+  }
+
+  return true;
+}
+
 function formatDate(date: string | null) {
   if (!date) return '—';
 
@@ -264,20 +292,15 @@ const TicketDetailPage = () => {
 
   const conversationMessages = useMemo(() => {
     const mergedMessages = [...(ticket?.conversations ?? []), ...optimisticReplies];
-    const initialMessageKey = ticket
-      ? [
-          'incoming',
-          (ticket.from_email || '').trim().toLowerCase(),
-          normalizeComparableDate(ticket.created_at),
-          normalizeComparableText(ticket.description_html || ticket.description || ticket.preview),
-        ].join('::')
-      : '';
-
     const seen = new Set<string>();
 
     return mergedMessages.filter((message) => {
+      if (isEquivalentToInitialTicketMessage(ticket, message)) {
+        return false;
+      }
+
       const key = buildConversationDedupKey(message);
-      if (!key || seen.has(key) || key === initialMessageKey) {
+      if (!key || seen.has(key)) {
         return false;
       }
 

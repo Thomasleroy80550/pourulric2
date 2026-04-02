@@ -150,9 +150,18 @@ serve(async (req) => {
       });
     }
 
-    const tickets = isRecord(remotePayload) && Array.isArray(remotePayload.tickets)
+    const remoteTickets = isRecord(remotePayload) && Array.isArray(remotePayload.tickets)
       ? remotePayload.tickets.filter(isRecord).map(normalizeTicketSummary)
       : [];
+
+    const tickets = Array.from(
+      new Map(
+        remoteTickets.map((ticket) => [
+          `${ticket.id}::${ticket.subject}::${ticket.created_at}`,
+          ticket,
+        ]),
+      ).values(),
+    );
 
     console.info("[proprio-tickets-list] tickets loaded", { userId: user.id, count: tickets.length });
 

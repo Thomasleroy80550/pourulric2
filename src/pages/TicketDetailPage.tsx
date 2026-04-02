@@ -58,6 +58,28 @@ function persistPendingReplies(ticketId: string, replies: OwnerTicketConversatio
   window.localStorage.setItem(getPendingRepliesStorageKey(ticketId), JSON.stringify(replies));
 }
 
+function normalizeComparableText(value: string | null | undefined) {
+  return (value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function normalizeComparableDate(value: string | null | undefined) {
+  if (!value) return '';
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toISOString().slice(0, 16);
+}
+
+function buildConversationDedupKey(message: Pick<OwnerTicketConversation, 'author_email' | 'body' | 'body_html' | 'created_at' | 'direction'>) {
+  return [
+    message.direction,
+    (message.author_email || '').trim().toLowerCase(),
+    normalizeComparableDate(message.created_at),
+    normalizeComparableText(message.body_html || message.body),
+  ].join('::');
+}
+
 function formatDate(date: string | null) {
   if (!date) return '—';
 
@@ -240,10 +262,29 @@ const TicketDetailPage = () => {
     };
   }, [id, loadTicket]);
 
-  const conversationMessages = useMemo(
-    () => [...(ticket?.conversations ?? []), ...optimisticReplies],
-    [ticket, optimisticReplies],
-  );
+  const conversationMessages = useMemo(() => {
+    const mergedMessages = [...(ticket?.conversations ?? []), ...optimisticReplies];
+    const initialMessageKey = ticket
+      ? [
+          'incoming',
+          (ticket.from_email || '').trim().toLowerCase(),
+          normalizeComparableDate(ticket.created_at),
+          normalizeComparableText(ticket.description_html || ticket.description || ticket.preview),
+        ].join('::')
+      : '';
+
+    const seen = new Set<string>();
+
+    return mergedMessages.filter((message) => {
+      const key = buildConversationDedupKey(message);
+      if (!key || seen.has(key) || key === initialMessageKey) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }, [ticket, optimisticReplies]);
 
   const handleReplySubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

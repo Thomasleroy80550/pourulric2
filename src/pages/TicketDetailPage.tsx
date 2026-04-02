@@ -114,6 +114,63 @@ function isEquivalentToInitialTicketMessage(ticket: OwnerTicketDetail | null, me
   return true;
 }
 
+function isClientOpeningMessage(ticket: OwnerTicketDetail | null, message: OwnerTicketConversation) {
+  if (!ticket || message.direction === 'internal') {
+    return false;
+  }
+
+  const ticketEmail = (ticket.from_email || '').trim().toLowerCase();
+  const messageEmail = (message.author_email || '').trim().toLowerCase();
+
+  if (ticketEmail && messageEmail && ticketEmail === messageEmail) {
+    return true;
+  }
+
+  if (ticket.source_provider !== 'hellokeys-help') {
+    return false;
+  }
+
+  const initialBody = normalizeComparableText(ticket.description_html || ticket.description || ticket.preview);
+  const messageBody = normalizeComparableText(message.body_html || message.body);
+
+  if (!initialBody || !messageBody || initialBody !== messageBody) {
+    return false;
+  }
+
+  const ticketTime = parseTimestamp(ticket.created_at);
+  const messageTime = parseTimestamp(message.created_at);
+
+  if (Number.isNaN(ticketTime) || Number.isNaN(messageTime)) {
+    return true;
+  }
+
+  return Math.abs(messageTime - ticketTime) <= 30 * 60 * 1000;
+}
+
+function getDisplayDirection(ticket: OwnerTicketDetail | null, message: OwnerTicketConversation) {
+  if (isClientOpeningMessage(ticket, message)) {
+    return 'incoming' satisfies OwnerTicketConversationDirection;
+  }
+
+  return message.direction;
+}
+
+function getDisplayAuthorName(ticket: OwnerTicketDetail | null, message: OwnerTicketConversation) {
+  if (isClientOpeningMessage(ticket, message)) {
+    return ticket?.from_email || message.author_name || message.author_email || 'Client';
+  }
+
+  if (message.direction === 'outgoing') {
+    return message.author_name || 'Support';
+  }
+
+  if (message.direction === 'internal') {
+    return message.author_name || 'Note interne';
+  }
+
+  return message.author_name || message.author_email || 'Client';
+}
+
 function isLikelyAutomaticReply(ticket: OwnerTicketDetail | null, message: OwnerTicketConversation) {
   if (!ticket || message.direction !== 'outgoing') return false;
   if (message.is_automated) return true;
@@ -540,19 +597,23 @@ const TicketDetailPage = () => {
                     Aucun message supplémentaire pour ce ticket.
                   </div>
                 ) : (
-                  conversationMessages.map((message: OwnerTicketConversation) => (
-                    <MailMessage
-                      key={message.id}
-                      authorName={message.author_name || 'Support'}
-                      authorEmail={message.author_email}
-                      date={message.created_at}
-                      label={getDirectionLabel(message.direction)}
-                      body={message.body}
-                      bodyHtml={message.body_html}
-                      isPrivate={message.is_private}
-                      tone={getMessageTone(message.direction)}
-                    />
-                  ))
+                  conversationMessages.map((message: OwnerTicketConversation) => {
+                    const displayDirection = getDisplayDirection(ticket, message);
+
+                    return (
+                      <MailMessage
+                        key={message.id}
+                        authorName={getDisplayAuthorName(ticket, message)}
+                        authorEmail={message.author_email}
+                        date={message.created_at}
+                        label={getDirectionLabel(displayDirection)}
+                        body={message.body}
+                        bodyHtml={message.body_html}
+                        isPrivate={message.is_private}
+                        tone={getMessageTone(displayDirection)}
+                      />
+                    );
+                  })
                 )}
               </Card>
 

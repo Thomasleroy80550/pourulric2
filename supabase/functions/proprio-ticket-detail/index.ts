@@ -88,6 +88,29 @@ function normalizeDirection(source: JsonRecord): TicketMessageDirection {
   return "unknown";
 }
 
+function isAutomatedConversation(source: JsonRecord) {
+  if (
+    source.automated === true
+    || source.is_automated === true
+    || source.auto_generated === true
+    || source.auto_reply === true
+    || source.is_auto_reply === true
+    || source.system_generated === true
+    || source.is_system_message === true
+    || source.is_bot === true
+    || source.bot === true
+  ) {
+    return true;
+  }
+
+  const type = stringOrNull(getFirst(source, ["type", "message_type", "event_type", "category", "subtype"]));
+  if (type && /auto|system|bot|ack/i.test(type)) {
+    return true;
+  }
+
+  return false;
+}
+
 function normalizeConversation(source: JsonRecord, index: number) {
   const htmlCandidate = stringOrNull(getFirst(source, ["body_html", "html", "message_html"]));
   const rawBody = stringOrNull(getFirst(source, ["body_text", "text", "body", "content", "message", "preview"]));
@@ -101,6 +124,7 @@ function normalizeConversation(source: JsonRecord, index: number) {
     author_email: stringOrNull(getFirst(source, ["author_email", "from_email", "sender_email", "email", "user_email"])),
     direction: normalizeDirection(source),
     is_private: Boolean(source.private ?? source.is_private),
+    is_automated: isAutomatedConversation(source),
     body,
     body_html: bodyHtml,
   };

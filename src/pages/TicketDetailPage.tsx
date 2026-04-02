@@ -108,6 +108,27 @@ function isEquivalentToInitialTicketMessage(ticket: OwnerTicketDetail | null, me
   return true;
 }
 
+function isLikelyAutomaticReply(ticket: OwnerTicketDetail | null, message: OwnerTicketConversation) {
+  if (!ticket || message.direction !== 'outgoing') return false;
+  if (message.is_automated) return true;
+
+  const normalizedBody = normalizeComparableText(message.body_html || message.body);
+  const looksLikeAutoReply = /merci pour votre message|nous avons bien reçu|votre demande a bien été reçue|ticket a bien été créé|accusé de réception|nous reviendrons vers vous|automatic reply|auto reply|thank you for your message|we have received your request/.test(normalizedBody);
+
+  if (!looksLikeAutoReply) {
+    return false;
+  }
+
+  const ticketTime = ticket.created_at ? Date.parse(ticket.created_at) : Number.NaN;
+  const messageTime = message.created_at ? Date.parse(message.created_at) : Number.NaN;
+
+  if (Number.isNaN(ticketTime) || Number.isNaN(messageTime)) {
+    return true;
+  }
+
+  return Math.abs(messageTime - ticketTime) <= 10 * 60 * 1000;
+}
+
 function formatDate(date: string | null) {
   if (!date) return '—';
 
@@ -295,7 +316,7 @@ const TicketDetailPage = () => {
     const seen = new Set<string>();
 
     return mergedMessages.filter((message) => {
-      if (isEquivalentToInitialTicketMessage(ticket, message)) {
+      if (isEquivalentToInitialTicketMessage(ticket, message) || isLikelyAutomaticReply(ticket, message)) {
         return false;
       }
 

@@ -31,6 +31,7 @@ export interface OwnerTicketConversation {
   author_email: string | null;
   direction: OwnerTicketConversationDirection;
   is_private: boolean;
+  is_automated?: boolean;
   body: string | null;
   body_html: string | null;
 }

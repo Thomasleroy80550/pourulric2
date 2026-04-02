@@ -71,6 +71,12 @@ function normalizeComparableDate(value: string | null | undefined) {
   return parsed.toISOString().slice(0, 16);
 }
 
+function parseTimestamp(value: string | null | undefined) {
+  if (!value) return Number.NaN;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? Number.NaN : parsed;
+}
+
 function buildConversationDedupKey(message: Pick<OwnerTicketConversation, 'author_email' | 'body' | 'body_html' | 'created_at' | 'direction'>) {
   return [
     message.direction,
@@ -127,6 +133,47 @@ function isLikelyAutomaticReply(ticket: OwnerTicketDetail | null, message: Owner
   }
 
   return Math.abs(messageTime - ticketTime) <= 10 * 60 * 1000;
+}
+
+function isLikelyInitialSupportAutoMessage(
+  ticket: OwnerTicketDetail | null,
+  message: OwnerTicketConversation,
+  allMessages: OwnerTicketConversation[],
+) {
+  if (!ticket || ticket.source_provider !== 'hellokeys-help' || message.direction !== 'outgoing') {
+    return false;
+  }
+
+  const ticketTime = parseTimestamp(ticket.created_at);
+  const messageTime = parseTimestamp(message.created_at);
+
+  if (Number.isNaN(ticketTime) || Number.isNaN(messageTime)) {
+    return false;
+  }
+
+  if (messageTime < ticketTime - 60_000 || messageTime > ticketTime + 30 * 60_000) {
+    return false;
+  }
+
+  const firstOutgoingMessage = allMessages.find((candidate) => candidate.direction === 'outgoing');
+  if (firstOutgoingMessage !== message) {
+    return false;
+  }
+
+  const hasClientFollowUpBefore = allMessages.some((candidate) => {
+    if (candidate === message || candidate.direction !== 'incoming') {
+      return false;
+    }
+
+    if (isEquivalentToInitialTicketMessage(ticket, candidate)) {
+      return false;
+    }
+
+    const candidateTime = parseTimestamp(candidate.created_at);
+    return !Number.isNaN(candidateTime) && candidateTime <= messageTime;
+  });
+
+  return !hasClientFollowUpBefore;
 }
 
 function formatDate(date: string | null) {
@@ -312,11 +359,23 @@ const TicketDetailPage = () => {
   }, [id, loadTicket]);
 
   const conversationMessages = useMemo(() => {
-    const mergedMessages = [...(ticket?.conversations ?? []), ...optimisticReplies];
+    const mergedMessages = [...(ticket?.conversations ?? []), ...optimisticReplies].sort((left, right) => {
+      const leftTime = parseTimestamp(left.created_at);
+      const rightTime = parseTimestamp(right.created_at);
+
+      if (Number.isNaN(leftTime) && Number.isNaN(rightTime)) return 0;
+      if (Number.isNaN(leftTime)) return 1;
+      if (Number.isNaN(rightTime)) return -1;
+      return leftTime - rightTime;
+    });
     const seen = new Set<string>();
 
     return mergedMessages.filter((message) => {
-      if (isEquivalentToInitialTicketMessage(ticket, message) || isLikelyAutomaticReply(ticket, message)) {
+      if (
+        isEquivalentToInitialTicketMessage(ticket, message)
+        || isLikelyAutomaticReply(ticket, message)
+        || isLikelyInitialSupportAutoMessage(ticket, message, mergedMessages)
+      ) {
         return false;
       }
 

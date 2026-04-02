@@ -3,7 +3,7 @@ import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { Mail, Phone } from 'lucide-react';
+import { Mail, Phone, CalendarCheck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@tanstack/react-query';
 import { getPublishedFaqs } from '@/lib/faq-api';
@@ -18,6 +18,7 @@ import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import IdeaSubmissionForm from '@/components/IdeaSubmissionForm';
 
 const HelpPage: React.FC = () => {
+  const calendlyUrl = 'https://calendly.com/contach-hellokeys';
   const { data: faqs, isLoading, isError, error } = useQuery({
     queryKey: ['publishedFaqsHelpPage'],
     queryFn: getPublishedFaqs,
@@ -108,6 +109,12 @@ const HelpPage: React.FC = () => {
                     Nos horaires : 9h-12h / 14h-18h du lundi au samedi
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3">
+                    <Button asChild className="w-full sm:w-auto">
+                      <a href={calendlyUrl} target="_blank" rel="noreferrer">
+                        <CalendarCheck className="h-4 w-4 mr-2" />
+                        Prendre rendez-vous
+                      </a>
+                    </Button>
                     <Button variant="outline" className="w-full sm:w-auto">
                       <Mail className="h-4 w-4 mr-2" />
                       Envoyer un Email

@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Star, Users, DollarSign, CalendarDays, Home, Sparkles, MessageSquare, Handshake, ShieldCheck } from 'lucide-react';
+import { CheckCircle, Star, Users, DollarSign, CalendarDays, Home, Sparkles, MessageSquare, Handshake, ShieldCheck, CalendarCheck } from 'lucide-react';
 
 const PromotionPage: React.FC = () => {
+  const calendlyUrl = 'https://calendly.com/contach-hellokeys';
   const features = [
     {
       icon: CalendarDays,
@@ -65,9 +66,15 @@ const PromotionPage: React.FC = () => {
             avec intelligence, maximisez vos revenus et offrez une expérience inoubliable à vos locataires.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Button asChild size="lg" className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+              <a href={calendlyUrl} target="_blank" rel="noreferrer">
+                <CalendarCheck className="mr-2 h-5 w-5" />
+                Prendre rendez-vous
+              </a>
+            </Button>
             <Link to="/login">
-              <Button size="lg" className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
-                Commencer Gratuitement
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-800 px-8 py-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+                Commencer gratuitement
               </Button>
             </Link>
             <Link to="/help">
@@ -117,11 +124,19 @@ const PromotionPage: React.FC = () => {
         <p className="text-lg md:text-xl mb-8">
           Rejoignez des centaines de propriétaires satisfaits et prenez le contrôle de vos biens.
         </p>
-        <Link to="/login">
-          <Button size="lg" className="bg-white text-blue-700 hover:bg-gray-100 px-10 py-4 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
-            Je m'inscris maintenant
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Button asChild size="lg" className="bg-white text-blue-700 hover:bg-gray-100 px-10 py-4 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+            <a href={calendlyUrl} target="_blank" rel="noreferrer">
+              <CalendarCheck className="mr-2 h-5 w-5" />
+              Prendre rendez-vous
+            </a>
           </Button>
-        </Link>
+          <Link to="/login">
+            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-700 px-10 py-4 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+              Je m'inscris maintenant
+            </Button>
+          </Link>
+        </div>
       </section>
 
       {/* Footer */}

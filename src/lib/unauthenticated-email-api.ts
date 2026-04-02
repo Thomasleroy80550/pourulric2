@@ -1,4 +1,9 @@
-export async function sendUnauthenticatedEmail(to: string, subject: string, html: string): Promise<void> {
+export async function sendUnauthenticatedEmail(
+  to: string,
+  subject: string,
+  html: string,
+  replyTo?: string,
+): Promise<void> {
   const SEND_UNAUTHENTICATED_EMAIL_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/send-unauthenticated-email";
 
   const response = await fetch(SEND_UNAUTHENTICATED_EMAIL_URL, {
@@ -6,7 +11,7 @@ export async function sendUnauthenticatedEmail(to: string, subject: string, html
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ to, subject, html }),
+    body: JSON.stringify({ to, subject, html, replyTo }),
   });
 
   if (!response.ok) {

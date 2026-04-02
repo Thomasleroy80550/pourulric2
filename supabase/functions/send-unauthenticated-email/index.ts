@@ -19,7 +19,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, subject, html } = await req.json();
+    const { to, subject, html, replyTo } = await req.json();
 
     if (!to || !subject || !html) {
       return new Response(JSON.stringify({ error: 'Missing parameters: to, subject, and html are required.' }), {
@@ -33,10 +33,11 @@ serve(async (req) => {
       to: [to],
       subject: subject,
       html: html,
+      ...(replyTo ? { replyTo } : {}),
     });
 
     if (error) {
-      console.error('Resend API Error:', error);
+      console.error('[send-unauthenticated-email] Resend API Error:', error);
       return new Response(JSON.stringify({ error: `Failed to send email: ${error.message || 'Unknown Resend error'}` }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -49,7 +50,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Server Error:', error);
+    console.error('[send-unauthenticated-email] Server Error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

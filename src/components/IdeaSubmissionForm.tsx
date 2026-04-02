@@ -53,7 +53,7 @@ const IdeaSubmissionForm: React.FC = () => {
         <p><strong>Message :</strong><br />${safeMessage}</p>
       `;
 
-      await sendUnauthenticatedEmail('contact@hellokeys.fr', `[Aide] ${values.subject}`, html);
+      await sendUnauthenticatedEmail('contact@hellokeys.fr', `[Aide] ${values.subject}`, html, values.email);
     },
     onSuccess: () => {
       toast.success('Ticket envoyé avec succès !', {
@@ -77,7 +77,7 @@ const IdeaSubmissionForm: React.FC = () => {
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Formulaire de contact</CardTitle>
         <CardDescription>
-          Envoyez-nous votre demande et nous créerons un ticket à partir de votre message.
+          Envoyez-nous votre demande et nous créerons un ticket à partir de votre message. Les réponses partiront vers l'adresse email renseignée.
         </CardDescription>
       </CardHeader>
       <CardContent>

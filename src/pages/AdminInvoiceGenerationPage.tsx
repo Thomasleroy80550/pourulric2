@@ -14,13 +14,13 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import EditReservationDialog from '@/components/EditReservationDialog';
-import { getAllProfiles } from '@/lib/admin-api';
-import { UserProfile } from '@/lib/profile-api';
+import { getAllProfiles, type UserProfile } from '@/lib/admin-api';
 import { useInvoiceGeneration, ProcessedReservation } from '@/contexts/InvoiceGenerationContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 const AdminInvoiceGenerationPage: React.FC = () => {
   const {
@@ -72,7 +72,16 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     fetchProfiles();
   }, []);
 
+  const selectedProfile = profiles.find((profile) => profile.id === selectedClientId);
+  const hasPennylaneId = !!selectedProfile?.pennylane_customer_id?.trim();
+  const shouldBlockInvoiceCreation = !!selectedClientId && !hasPennylaneId;
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (shouldBlockInvoiceCreation) {
+      toast.error("Impossible d'importer un relevé tant que l'ID Pennylane du client n'est pas renseigné.");
+      return;
+    }
+
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       const selectedProfile = profiles.find(p => p.id === selectedClientId);
@@ -86,12 +95,21 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     }
   };
 
+  const handleGenerateInvoiceAction = async (sendEmail: boolean) => {
+    if (shouldBlockInvoiceCreation) {
+      toast.error("Création du relevé bloquée : ce client n'a pas d'ID Pennylane.");
+      return;
+    }
+
+    await handleGenerateInvoice(sendEmail);
+  };
+
   const handleEditClick = (reservation: ProcessedReservation, index: number) => {
     setEditingReservation({ data: reservation, index });
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateReservation = (updatedData: Omit<ProcessedReservation, 'revenuGenere' | 'commissionHelloKeys' | 'montantVerse' | 'nuits' | 'voyageurs'>, index: number) => {
+  const handleUpdateReservation = (updatedData: Pick<ProcessedReservation, 'portail' | 'voyageur' | 'prixSejour' | 'fraisMenage' | 'taxeDeSejour'>, index: number) => {
     const newData = [...processedData];
     const originalReservation = newData[index];
 
@@ -195,6 +213,18 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                       <Label htmlFor="invoice-period">Période de facturation</Label>
                       <Input id="invoice-period" placeholder="Ex: Juillet 2024" value={invoicePeriod} onChange={(e) => setInvoicePeriod(e.target.value)} />
                     </div>
+                    {shouldBlockInvoiceCreation && (
+                      <Alert variant="destructive">
+                        <Terminal className="h-4 w-4" />
+                        <AlertTitle>Création bloquée</AlertTitle>
+                        <AlertDescription className="space-y-2">
+                          <p>Impossible de créer un relevé pour ce client tant que son ID Pennylane n'est pas renseigné.</p>
+                          <Button asChild size="sm" variant="outline">
+                            <Link to="/admin/pennylane-missing">Compléter l'ID Pennylane</Link>
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </>
                 )}
               </CardContent>
@@ -203,10 +233,10 @@ const AdminInvoiceGenerationPage: React.FC = () => {
             <Card className="shadow-md">
               <CardHeader><CardTitle>2. Importer le relevé</CardTitle><CardDescription>Importez le fichier Excel (.xlsx) de Krossbooking.</CardDescription></CardHeader>
               <CardContent>
-                <Label htmlFor="file-upload" className={`cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg ${!selectedClientId || !invoicePeriod ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
-                  <Upload className="h-8 w-8 text-gray-500 mb-2" /><span className="text-sm text-gray-500">{!selectedClientId || !invoicePeriod ? 'Sélectionnez d\'abord un client et une période' : 'Cliquez pour choisir un fichier'}</span>
+                <Label htmlFor="file-upload" className={`cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg ${!selectedClientId || !invoicePeriod || shouldBlockInvoiceCreation ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                  <Upload className="h-8 w-8 text-gray-500 mb-2" /><span className="text-sm text-gray-500">{!selectedClientId || !invoicePeriod ? 'Sélectionnez d\'abord un client et une période' : shouldBlockInvoiceCreation ? "Ce client n'a pas d'ID Pennylane" : 'Cliquez pour choisir un fichier'}</span>
                 </Label>
-                <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".xlsx, .xls" disabled={!selectedClientId || !invoicePeriod} />
+                <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".xlsx, .xls" disabled={!selectedClientId || !invoicePeriod || shouldBlockInvoiceCreation} />
                 {fileName && <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-2">Fichier: {fileName}</p>}
               </CardContent>
             </Card>
@@ -251,17 +281,17 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button className="w-full" disabled={processedData.length === 0}>
+                        <Button className="w-full" disabled={processedData.length === 0 || shouldBlockInvoiceCreation}>
                           <FileText className="h-4 w-4 mr-2" />
                           Actions
                           <ChevronDown className="h-4 w-4 ml-2" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-full">
-                        <DropdownMenuItem onClick={() => handleGenerateInvoice(false)}>
+                        <DropdownMenuItem onClick={() => handleGenerateInvoiceAction(false)} disabled={shouldBlockInvoiceCreation}>
                           Sauvegarder le Relevé
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGenerateInvoice(true)}>
+                        <DropdownMenuItem onClick={() => handleGenerateInvoiceAction(true)} disabled={shouldBlockInvoiceCreation}>
                           Sauvegarder et Envoyer par Email
                         </DropdownMenuItem>
                       </DropdownMenuContent>

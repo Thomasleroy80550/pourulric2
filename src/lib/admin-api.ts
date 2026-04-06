@@ -512,6 +512,9 @@ export async function saveInvoice(userId: any, period: string, invoiceData: any,
 
   // Fetch krossbooking_property_id from the user's profile
   const userProfile = await getProfileById(actualUserId);
+  if (!userProfile?.pennylane_customer_id?.trim()) {
+    throw new Error("Impossible de créer un relevé pour ce client tant que l'ID Pennylane n'est pas renseigné.");
+  }
   const krossbookingPropertyId = userProfile?.krossbooking_property_id || null;
 
   // Récupère l'admin connecté pour l'attribuer à created_by

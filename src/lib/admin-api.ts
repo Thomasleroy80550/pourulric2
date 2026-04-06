@@ -134,7 +134,9 @@ export interface UserProfile {
   revyoos_holding_ids?: string[] | null;
   cguv_signed_document_url?: string | null;
   last_seen_at?: string | null;
+  created_at?: string | null;
   referral_code?: string | null;
+
   referral_credits: number;
   digital_booklet_enabled?: boolean | null;
   krossbooking_property_id?: number | null;

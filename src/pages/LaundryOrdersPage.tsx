@@ -5,6 +5,7 @@ import { AlertTriangle, BedDouble, CalendarDays, Copy, Package, RefreshCw, Save,
 import { toast } from 'sonner';
 
 import MainLayout from '@/components/MainLayout';
+import AdminLayout from '@/components/AdminLayout';
 import BannedUserMessage from '@/components/BannedUserMessage';
 import SuspendedAccountMessage from '@/components/SuspendedAccountMessage';
 import { useSession } from '@/components/SessionContextProvider';
@@ -44,6 +45,10 @@ type ReservationWithLinen = {
   hasConfiguration: boolean;
 };
 
+interface LaundryOrdersPageProps {
+  adminView?: boolean;
+}
+
 const emptyTotals = (): LinenTotals => ({
   linen_single_bed_qty: 0,
   linen_double_bed_qty: 0,
@@ -79,8 +84,10 @@ const formatLinenDetails = (totals: LinenTotals) => {
     : 'Configuration linge non renseignée';
 };
 
-const LaundryOrdersPage: React.FC = () => {
+const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false }) => {
   const { profile } = useSession();
+  const Layout = adminView ? AdminLayout : MainLayout;
+
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [roomDrafts, setRoomDrafts] = useState<Record<string, LinenDraft>>({});
@@ -98,9 +105,7 @@ const LaundryOrdersPage: React.FC = () => {
 
       setUserRooms(rooms);
       setReservations(bookingData);
-      setRoomDrafts(
-        Object.fromEntries(rooms.map((room) => [room.id, getRoomLinenDraft(room)])),
-      );
+      setRoomDrafts(Object.fromEntries(rooms.map((room) => [room.id, getRoomLinenDraft(room)])));
     } catch (error: any) {
       toast.error(error.message || 'Impossible de charger la blanchisserie.');
     } finally {
@@ -178,7 +183,7 @@ const LaundryOrdersPage: React.FC = () => {
 
   const orderPreview = useMemo(() => {
     const lines = [
-      `Commande blanchisserie`,
+      'Commande blanchisserie',
       `Prestataire : ${profile?.linen_type || 'Blanchisserie'}`,
       `Période : du ${format(parseISO(startDate), 'dd/MM/yyyy')} au ${format(parseISO(endDate), 'dd/MM/yyyy')}`,
       `Réservations prises en compte : ${reservationsWithLinen.length}`,
@@ -245,23 +250,23 @@ const LaundryOrdersPage: React.FC = () => {
 
   if (profile?.is_banned) {
     return (
-      <MainLayout>
+      <Layout>
         <BannedUserMessage />
-      </MainLayout>
+      </Layout>
     );
   }
 
   if (profile?.is_payment_suspended) {
     return (
-      <MainLayout>
+      <Layout>
         <SuspendedAccountMessage />
-      </MainLayout>
+      </Layout>
     );
   }
 
   if (profile?.role !== 'admin') {
     return (
-      <MainLayout>
+      <Layout>
         <div className="container mx-auto py-6">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -271,12 +276,12 @@ const LaundryOrdersPage: React.FC = () => {
             </AlertDescription>
           </Alert>
         </div>
-      </MainLayout>
+      </Layout>
     );
   }
 
   return (
-    <MainLayout>
+    <Layout>
       <div className="container mx-auto space-y-6 py-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -399,7 +404,7 @@ const LaundryOrdersPage: React.FC = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Configurations linge incomplètes</AlertTitle>
             <AlertDescription>
-              Complétez les quantités pour {roomsMissingConfiguration.map((room) => room.room_name).join(', ')} afin d'obtenir une commande exacte.
+              Complétez les quantités pour {roomsMissingConfiguration.map((room) => room.room_name).join(', ')} afin d’obtenir une commande exacte.
             </AlertDescription>
           </Alert>
         )}
@@ -465,7 +470,7 @@ const LaundryOrdersPage: React.FC = () => {
             <CardHeader>
               <CardTitle>Commande prête à envoyer</CardTitle>
               <CardDescription>
-                Copiez ce récapitulatif pour l'envoyer à votre blanchisserie.
+                Copiez ce récapitulatif pour l’envoyer à votre blanchisserie.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -608,7 +613,7 @@ const LaundryOrdersPage: React.FC = () => {
           </AlertDescription>
         </Alert>
       </div>
-    </MainLayout>
+    </Layout>
   );
 };
 

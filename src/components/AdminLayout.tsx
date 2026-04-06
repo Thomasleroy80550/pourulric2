@@ -38,8 +38,10 @@ import {
   Zap,
   AlertTriangle,
   Thermometer,
-  Sparkles
+  Sparkles,
+  Package
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -71,7 +73,10 @@ const adminNavigationCategories = [
     items: [
       { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
+      { name: 'Blanchisserie', href: '/admin/laundry', icon: Package, description: 'Calculer les commandes de linge à partir des réservations.' },
+
       { name: 'Compteurs coupés', href: '/admin/utility-cuts', icon: PlugZap, description: 'Liste des logements où électricité/eau sont coupées.' },
+
       { name: 'Temperature', href: '/admin/temperature', icon: Thermometer, description: 'Température des logements (Thermostats & Stations).' },
       { name: 'Réponses IA', href: '/admin/smart-replies', icon: Sparkles, description: 'Analyse les messages Krossbooking et prépare des réponses semi-automatiques.' },
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },

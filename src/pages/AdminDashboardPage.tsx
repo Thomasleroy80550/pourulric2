@@ -3,7 +3,8 @@ import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning, FilePlus, Settings, Puzzle, Mail, FileText, Thermometer } from 'lucide-react';
+import { Users, BedDouble, DollarSign, UserPlus, Wrench, AlertTriangle, Lightbulb, FileCheck, MailWarning, FilePlus, Settings, Puzzle, Mail, FileText, Thermometer, Package } from 'lucide-react';
+
 import { getAdminReportsByStatus, TechnicalReport } from '@/lib/technical-reports-api';
 import { getAdminReservationReports, ReservationReport } from '@/lib/reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -346,7 +347,9 @@ const AdminDashboardPage: React.FC = () => {
               <Button asChild variant="outline"><Link to="/admin/strategies"><Wrench className="mr-2 h-4 w-4" /> Gérer les Stratégies</Link></Button>
               <Button asChild variant="outline"><Link to="/admin/settings"><Settings className="mr-2 h-4 w-4" /> Paramètres</Link></Button>
               <Button asChild variant="outline"><Link to="/admin/newsletter"><Mail className="mr-2 h-4 w-4" /> Créer une newsletter</Link></Button>
+              <Button asChild variant="outline"><Link to="/admin/laundry"><Package className="mr-2 h-4 w-4" /> Ouvrir la blanchisserie</Link></Button>
               <Button asChild variant="outline"><Link to="/admin/missing-2025-stats"><FileText className="mr-2 h-4 w-4" /> Stats 2025 manquantes</Link></Button>
+
             </CardContent>
           </Card>
           <NewsFeed />

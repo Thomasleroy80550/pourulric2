@@ -145,7 +145,9 @@ function App() {
                       <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                       <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                       <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
+                      <Route path="/admin/laundry" element={<LaundryOrdersPage adminView />} />
                       <Route path="/admin/faq" element={<AdminFaqPage />} />
+
                       <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
                       <Route path="/admin/changelog" element={<AdminChangelogPage />} />
                       <Route path="/admin/ideas" element={<AdminIdeasPage />} />

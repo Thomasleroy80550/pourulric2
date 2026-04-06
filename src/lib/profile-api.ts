@@ -56,7 +56,9 @@ export interface UserProfile {
   last_sign_in_at?: string;
   referral_code?: string;
   referral_credits?: number;
+  created_at?: string;
   krossbooking_property_id?: number;
+
   stripe_account_id?: string;
   conso_prm?: string;
   conso_token?: string;

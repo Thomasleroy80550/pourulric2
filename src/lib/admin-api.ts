@@ -75,6 +75,7 @@ export interface AdminUserRoom extends UserRoom {
   profiles: {
     first_name: string;
     last_name: string;
+    krossbooking_property_id?: number | null;
   } | null;
 }
 
@@ -907,7 +908,8 @@ export async function getAllUserRooms(): Promise<AdminUserRoom[]> {
       *,
       profiles (
         first_name,
-        last_name
+        last_name,
+        krossbooking_property_id
       )
     `)
     .order('room_name', { ascending: true });

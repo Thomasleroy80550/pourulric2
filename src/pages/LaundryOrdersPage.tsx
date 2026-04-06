@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { AdminUserRoom, getAllUserRooms } from '@/lib/admin-api';
-import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { fetchKrossbookingReservationsForAdminRooms, KrossbookingReservation } from '@/lib/krossbooking';
 import { updateUserRoom } from '@/lib/user-room-api';
 
 const defaultEndDate = format(addDays(new Date(), 14), 'yyyy-MM-dd');
@@ -156,7 +156,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
     setLoading(true);
     try {
       const rooms = await getAllUserRooms();
-      const bookingData = await fetchKrossbookingReservations(rooms, true);
+      const bookingData = await fetchKrossbookingReservationsForAdminRooms(rooms, true);
 
       setUserRooms(rooms);
       setReservations(bookingData);
@@ -457,7 +457,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             <CardHeader>
               <CardTitle>Détail des réservations prises en compte</CardTitle>
               <CardDescription>
-                L’admin voit ici l’ensemble des logements et le détail de linge calculé réservation par réservation.
+                L'admin voit ici l'ensemble des logements et le détail de linge calculé réservation par réservation.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -511,7 +511,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             <CardHeader>
               <CardTitle>Commande prête à envoyer</CardTitle>
               <CardDescription>
-                Copiez ce récapitulatif pour l’envoyer à votre blanchisserie.
+                Copiez ce récapitulatif pour l'envoyer à votre blanchisserie.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

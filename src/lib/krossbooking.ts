@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRoom } from "./user-room-api";
+import { AdminUserRoom } from "./admin-api";
 import { createNotification, sendEmail } from "./notifications-api";
 import { getProfile } from "./profile-api";
 import { format, parseISO, isValid, isAfter, subDays, startOfDay } from 'date-fns';
@@ -275,6 +276,82 @@ export async function fetchKrossbookingReservations(
     console.error(`Error fetching all reservations:`, error);
     if (reservationsCache) {
       console.warn("Returning stale reservations cache due to API error.");
+      return reservationsCache.data;
+    }
+    return [];
+  }
+}
+
+export async function fetchKrossbookingReservationsForAdminRooms(
+  rooms: AdminUserRoom[],
+  forceRefresh: boolean = false
+): Promise<KrossbookingReservation[]> {
+  const now = Date.now();
+
+  if (!forceRefresh && reservationsCache && (now - reservationsCache.timestamp < RESERVATION_CACHE_DURATION)) {
+    console.log("Returning cached Krossbooking reservations for admin rooms.");
+    return reservationsCache.data;
+  }
+
+  try {
+    if (rooms.length === 0) {
+      return [];
+    }
+
+    const roomTypes = await fetchKrossbookingRoomTypes(forceRefresh);
+    const roomIdToRoomTypeMap = new Map<string, string>();
+    roomTypes.forEach(type => {
+      type.rooms.forEach(room => {
+        roomIdToRoomTypeMap.set(room.id_room.toString(), type.id_room_type.toString());
+      });
+    });
+
+    const data = await callKrossbookingProxy('get_reservations_for_user_rooms', {
+      rooms: rooms.map((room) => ({
+        room_id: room.room_id,
+        room_name: room.room_name,
+        user_id: room.user_id,
+        id_property: room.profiles?.krossbooking_property_id ?? undefined,
+      })),
+    });
+
+    if (!Array.isArray(data)) {
+      console.warn('Unexpected Krossbooking API response for admin rooms:', data);
+      return [];
+    }
+
+    const reservations = data.map((res: any): KrossbookingReservation => {
+      const matchedRoom = rooms.find((room) => room.room_id === String(res.room_id || res.id_room || ''));
+
+      return {
+        id: String(res.id_reservation),
+        guest_name: res.label || 'N/A',
+        property_name: matchedRoom?.room_name || res.room_name || 'N/A',
+        krossbooking_room_id: matchedRoom?.room_id || String(res.room_id || res.id_room || ''),
+        check_in_date: res.arrival || '',
+        check_out_date: res.departure || '',
+        status: res.cod_reservation_status,
+        amount: res.charge_total_amount ? `${res.charge_total_amount}€` : '0€',
+        cod_channel: res.cod_channel,
+        ota_id: res.ota_id,
+        channel_identifier: res.cod_channel || 'UNKNOWN',
+        email: res.email || '',
+        phone: res.phone || '',
+        tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+        property_id: res.property_id || matchedRoom?.profiles?.krossbooking_property_id || 0,
+        id_room_type: res.id_room_type ? String(res.id_room_type) : roomIdToRoomTypeMap.get(matchedRoom?.room_id || String(res.room_id || res.id_room || '')),
+      };
+    });
+
+    reservationsCache = {
+      data: reservations,
+      timestamp: now,
+    };
+
+    return reservations;
+  } catch (error) {
+    console.error('Error fetching admin reservations:', error);
+    if (reservationsCache) {
       return reservationsCache.data;
     }
     return [];

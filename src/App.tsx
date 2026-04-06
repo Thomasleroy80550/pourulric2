@@ -76,6 +76,7 @@ import AdminHivernageEmailPage from './pages/AdminHivernageEmailPage';
 import Hivernage2026Page from "./pages/Hivernage2026Page";
 import AdminHivernageRequestsPage from "./pages/AdminHivernageRequestsPage";
 import AdminRevyoosMissingPage from "./pages/AdminRevyoosMissingPage";
+import AdminPennylaneMissingPage from "./pages/AdminPennylaneMissingPage";
 import AdminCRMPage from "./pages/AdminCRMPage";
 import MessagesPage from "./pages/MessagesPage";
 import SmartRepliesPage from "./pages/SmartRepliesPage";
@@ -161,6 +162,7 @@ function App() {
                       <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                       <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
                       <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />
+                      <Route path="/admin/pennylane-missing" element={<AdminPennylaneMissingPage />} />
                       <Route path="/admin/crm" element={<AdminCRMPage />} />
                       <Route path="/admin/temperature" element={<AdminTemperaturePage />} />
                       <Route path="/admin/error-logs" element={<AdminErrorLogsPage />} />

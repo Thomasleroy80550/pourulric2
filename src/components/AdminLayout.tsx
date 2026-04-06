@@ -103,6 +103,7 @@ const adminNavigationCategories = [
       { name: 'Statuts de facturation', href: '/admin/billing-status', icon: FileText, description: 'Dernier relevé par client pour contrôler la facturation.' },
       { name: 'Stats 2025 manquantes', href: '/admin/missing-2025-stats', icon: FileText, description: 'Voir les mois 2025 manquants par client.' },
       { name: 'Créer Facture (Pennylane)', href: '/admin/create-pennylane-invoice', icon: FilePlus, description: 'Créer une facture client via Pennylane.' },
+      { name: 'IDs Pennylane manquants', href: '/admin/pennylane-missing', icon: Link2, description: 'Voir les clients sans ID Pennylane renseigné.' },
       { name: 'Synthèse des Virements', href: '/admin/transfer-summary', icon: Banknote, description: 'Voir le total des virements à effectuer par client.' },
       { name: 'Transactions Stripe', href: '/admin/stripe-transactions', icon: CreditCard, description: 'Consulter les transactions Stripe.' },
       { name: 'Transferts Stripe', href: '/admin/stripe-transfers', icon: ArrowRightLeft, description: 'Consulter les transferts Stripe.' },

@@ -74,14 +74,14 @@ const housekeepingSidebarSections = [
   },
 ];
 
-const defaultSidebarSections = (isPaymentSuspended: boolean) => [
+const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) => [
   {
     title: 'Pilotage',
     items: [
       { name: 'Aperçu', href: '/', icon: Home },
       { name: 'Calendrier', href: '/calendar', icon: Calendar, disabled: isPaymentSuspended },
       { name: 'Réservations', href: '/bookings', icon: Book, disabled: isPaymentSuspended },
-      { name: 'Blanchisserie', href: '/laundry', icon: Package, disabled: isPaymentSuspended },
+      ...(isAdmin ? [{ name: 'Blanchisserie', href: '/laundry', icon: Package, disabled: isPaymentSuspended }] : []),
       { name: 'Incidents', href: '/reports', icon: Wrench },
 
       { name: 'Mes tickets', href: '/tickets', icon: MessageSquare },
@@ -141,7 +141,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
   } else if (profile?.role === 'accountant') {
     sidebarSections = accountantSidebarSections(isPaymentSuspended);
   } else {
-    sidebarSections = defaultSidebarSections(isPaymentSuspended);
+    sidebarSections = defaultSidebarSections(isPaymentSuspended, profile?.role === 'admin');
   }
 
   return (

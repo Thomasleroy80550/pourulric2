@@ -674,25 +674,27 @@ const DashboardPage = () => {
 
         {/* REMOVED: Bloc Nouveautés (public) qui affichait <NewsFeedPublic /> */}
 
-        <Card className="mt-6 shadow-md border-primary/20 bg-gradient-to-r from-primary/5 via-background to-background">
-          <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-primary">
-                <Package className="h-5 w-5" />
-                <span className="text-sm font-semibold uppercase tracking-[0.2em]">Blanchisserie</span>
+        {profile?.role === 'admin' && (
+          <Card className="mt-6 shadow-md border-primary/20 bg-gradient-to-r from-primary/5 via-background to-background">
+            <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-primary">
+                  <Package className="h-5 w-5" />
+                  <span className="text-sm font-semibold uppercase tracking-[0.2em]">Blanchisserie</span>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold">Préparez vos commandes de linge depuis vos réservations</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Calculez automatiquement les quantités à commander par période et par logement.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold">Préparez vos commandes de linge depuis vos réservations</h2>
-                <p className="text-sm text-muted-foreground">
-                  Calculez automatiquement les quantités à commander par période et par logement.
-                </p>
-              </div>
-            </div>
-            <Button asChild>
-              <Link to="/laundry">Ouvrir le module blanchisserie</Link>
-            </Button>
-          </CardContent>
-        </Card>
+              <Button asChild>
+                <Link to="/laundry">Ouvrir le module blanchisserie</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
 

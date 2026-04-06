@@ -109,12 +109,12 @@ const LaundryOrdersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!profile?.is_banned && !profile?.is_payment_suspended) {
+    if (profile?.role === 'admin' && !profile?.is_banned && !profile?.is_payment_suspended) {
       loadData();
     } else {
       setLoading(false);
     }
-  }, [profile?.is_banned, profile?.is_payment_suspended]);
+  }, [profile?.role, profile?.is_banned, profile?.is_payment_suspended]);
 
   const roomByKrossbookingId = useMemo(
     () => new Map(userRooms.map((room) => [room.room_id, room])),
@@ -259,6 +259,22 @@ const LaundryOrdersPage: React.FC = () => {
     );
   }
 
+  if (profile?.role !== 'admin') {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-6">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Accès non autorisé</AlertTitle>
+            <AlertDescription>
+              Le module blanchisserie est réservé aux administrateurs.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="container mx-auto space-y-6 py-6">
@@ -383,7 +399,7 @@ const LaundryOrdersPage: React.FC = () => {
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Configurations linge incomplètes</AlertTitle>
             <AlertDescription>
-              Complétez les quantités pour {roomsMissingConfiguration.map((room) => room.room_name).join(', ')} afin d’obtenir une commande exacte.
+              Complétez les quantités pour {roomsMissingConfiguration.map((room) => room.room_name).join(', ')} afin d'obtenir une commande exacte.
             </AlertDescription>
           </Alert>
         )}
@@ -449,7 +465,7 @@ const LaundryOrdersPage: React.FC = () => {
             <CardHeader>
               <CardTitle>Commande prête à envoyer</CardTitle>
               <CardDescription>
-                Copiez ce récapitulatif pour l’envoyer à votre blanchisserie.
+                Copiez ce récapitulatif pour l'envoyer à votre blanchisserie.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

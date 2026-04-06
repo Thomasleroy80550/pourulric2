@@ -5,7 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Eye } from "lucide-react";
 import { getAllProfiles, getAllUserRooms, updateUser } from "@/lib/admin-api";
 
 type ProfileRow = {
@@ -13,6 +21,12 @@ type ProfileRow = {
   first_name?: string | null;
   last_name?: string | null;
   email?: string | null;
+  phone_number?: string | null;
+  property_address?: string | null;
+  property_city?: string | null;
+  property_zip_code?: string | null;
+  agency?: string | null;
+  contract_start_date?: string | null;
   pennylane_customer_id?: string | null;
 };
 
@@ -23,6 +37,7 @@ const AdminPennylaneMissingPage: React.FC = () => {
   const [inputs, setInputs] = React.useState<Record<string, string>>({});
   const [savingId, setSavingId] = React.useState<string | null>(null);
   const [roomsByUser, setRoomsByUser] = React.useState<Record<string, string[]>>({});
+  const [selectedProfile, setSelectedProfile] = React.useState<ProfileRow | null>(null);
 
   const loadProfiles = React.useCallback(async () => {
     setLoading(true);
@@ -55,6 +70,7 @@ const AdminPennylaneMissingPage: React.FC = () => {
       setProfiles(missing);
       setInputs(nextInputs);
       setRoomsByUser(nextRoomsByUser);
+      setSelectedProfile((current) => current ? missing.find((profile) => profile.id === current.id) ?? null : null);
     } catch (error: any) {
       toast.error(`Erreur de chargement : ${error.message}`);
     } finally {
@@ -91,12 +107,15 @@ const AdminPennylaneMissingPage: React.FC = () => {
       await updateUser({ user_id: profile.id, pennylane_customer_id: pennylaneCustomerId });
       toast.success("ID Pennylane enregistré.");
       setProfiles((current) => current.filter((item) => item.id !== profile.id));
+      setSelectedProfile((current) => (current?.id === profile.id ? null : current));
     } catch (error: any) {
       toast.error(`Erreur lors de l'enregistrement : ${error.message}`);
     } finally {
       setSavingId(null);
     }
   };
+
+  const fullName = (profile: ProfileRow) => `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "Sans nom";
 
   return (
     <AdminLayout>
@@ -157,7 +176,19 @@ const AdminPennylaneMissingPage: React.FC = () => {
                     {filteredProfiles.map((profile) => (
                       <TableRow key={profile.id}>
                         <TableCell className="whitespace-nowrap font-medium">
-                          {`${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || "Sans nom"}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setSelectedProfile(profile)}
+                              title="Voir les informations du client"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <span>{fullName(profile)}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{profile.email || "—"}</TableCell>
                         <TableCell className="max-w-[280px]">
@@ -198,6 +229,66 @@ const AdminPennylaneMissingPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={!!selectedProfile} onOpenChange={(open) => !open && setSelectedProfile(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Informations client</DialogTitle>
+              <DialogDescription>
+                Vérifiez ces informations avant de créer le client dans Pennylane.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedProfile && (
+              <div className="grid gap-4 text-sm">
+                <div className="grid gap-3 rounded-lg border p-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Nom</div>
+                    <div className="font-medium">{fullName(selectedProfile)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Email</div>
+                    <div>{selectedProfile.email || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Téléphone</div>
+                    <div>{selectedProfile.phone_number || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Adresse</div>
+                    <div>
+                      {selectedProfile.property_address
+                        ? `${selectedProfile.property_address}${selectedProfile.property_zip_code || selectedProfile.property_city ? ", " : ""}${selectedProfile.property_zip_code ?? ""} ${selectedProfile.property_city ?? ""}`.trim()
+                        : "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Agence</div>
+                    <div>{selectedProfile.agency || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Début de contrat</div>
+                    <div>{selectedProfile.contract_start_date || "—"}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Logements</div>
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {(roomsByUser[selectedProfile.id] ?? []).length > 0 ? (
+                        roomsByUser[selectedProfile.id].map((roomName) => (
+                          <Badge key={roomName} variant="secondary">
+                            {roomName}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

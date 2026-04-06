@@ -23,7 +23,7 @@ import { AdminUserRoom, getAllUserRooms } from '@/lib/admin-api';
 import { fetchKrossbookingReservationsForAdminRooms, KrossbookingReservation } from '@/lib/krossbooking';
 import { updateUserRoom } from '@/lib/user-room-api';
 
-const defaultEndDate = format(addDays(new Date(), 14), 'yyyy-MM-dd');
+const defaultEndDate = format(addDays(new Date(), 90), 'yyyy-MM-dd');
 const defaultStartDate = format(new Date(), 'yyyy-MM-dd');
 const excludedStatuses = new Set(['CANC', 'PROP0']);
 
@@ -194,6 +194,11 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
       .filter((reservation) => filterRoomId === 'all' || reservation.krossbooking_room_id === filterRoomId)
       .sort((a, b) => parseISO(a.check_in_date).getTime() - parseISO(b.check_in_date).getTime());
   }, [endDate, filterRoomId, reservations, startDate]);
+
+  const totalActiveReservations = useMemo(
+    () => reservations.filter((reservation) => !excludedStatuses.has((reservation.status || '').toUpperCase())).length,
+    [reservations],
+  );
 
   const reservationsWithLinen = useMemo<ReservationWithLinen[]>(() => {
     return filteredReservations.map((reservation) => {
@@ -411,12 +416,12 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Réservations à traiter</CardDescription>
-                <CardTitle className="text-3xl">{reservationsWithLinen.length}</CardTitle>
+                <CardDescription>Réservations chargées</CardDescription>
+                <CardTitle className="text-3xl">{totalActiveReservations}</CardTitle>
               </CardHeader>
               <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarDays className="h-4 w-4" />
-                Arrivées dans la période
+                Réservations actives récupérées
               </CardContent>
             </Card>
             <Card>
@@ -431,15 +436,35 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Total pièces</CardDescription>
-                <CardTitle className="text-3xl">{totalPiecesToOrder}</CardTitle>
+                <CardDescription>Arrivées dans la période</CardDescription>
+                <CardTitle className="text-3xl">{reservationsWithLinen.length}</CardTitle>
               </CardHeader>
               <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
                 <ShoppingCart className="h-4 w-4" />
-                Quantité globale à commander
+                Réservations utilisées pour la commande
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {!loading && totalActiveReservations > 0 && reservationsWithLinen.length === 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Réservations trouvées, mais hors période</AlertTitle>
+            <AlertDescription>
+              {totalActiveReservations} réservation(s) active(s) ont bien été chargées, mais aucune arrivée n'est comprise entre le {format(parseISO(startDate), 'dd/MM/yyyy')} et le {format(parseISO(endDate), 'dd/MM/yyyy')}. Élargissez la période pour les afficher.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!loading && totalActiveReservations === 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Aucune réservation chargée</AlertTitle>
+            <AlertDescription>
+              Le module n'a récupéré aucune réservation active depuis Krossbooking pour les logements visibles dans l'admin.
+            </AlertDescription>
+          </Alert>
         )}
 
         {roomsMissingConfiguration.length > 0 && (
@@ -469,7 +494,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
                 </div>
               ) : reservationsWithLinen.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                  Aucune réservation active sur cette période.
+                  Aucune arrivée dans la période sélectionnée.
                 </div>
               ) : (
                 <div className="overflow-x-auto">

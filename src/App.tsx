@@ -93,8 +93,10 @@ import AdminStatusPage from "./pages/AdminStatusPage";
 import StatusPage from "./pages/StatusPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import MySeasonPricesPage from "./pages/MySeasonPricesPage";
+import LaundryOrdersPage from "./pages/LaundryOrdersPage";
 import AdminRecoveryPage from "./pages/AdminRecoveryPage";
 import NetatmoConnectPage from "./pages/NetatmoConnectPage";
+
 import NetatmoCallbackPage from "./pages/NetatmoCallbackPage";
 import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
 import NetatmoStationsPage from "./pages/NetatmoStationsPage";
@@ -198,8 +200,10 @@ function App() {
                       <Route path="/calendar" element={<CalendarPage />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                                           <Route path="/bookings" element={<BookingsPage />} />
-                      <Route path="/performance" element={<PerformancePage />} />
-                      <Route path="/reviews" element={<ReviewsPage />} />
+                                          <Route path="/laundry" element={<LaundryOrdersPage />} />
+                                          <Route path="/performance" element={<PerformancePage />} />
+                                          <Route path="/reviews" element={<ReviewsPage />} />
+                    
                       <Route path="/finances" element={<FinancePage />} />
                       <Route path="/tourist-tax" element={<TouristTaxPage />} />
                       <Route path="/reports" element={<TechnicalReportsPage />} />

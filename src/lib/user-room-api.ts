@@ -43,6 +43,13 @@ export interface UserRoom {
   has_smoke_detector?: boolean;
   has_co_detector?: boolean;
 
+  linen_single_bed_qty?: number;
+  linen_double_bed_qty?: number;
+  linen_bath_towel_qty?: number;
+  linen_hand_towel_qty?: number;
+  linen_bath_mat_qty?: number;
+  linen_kitchen_towel_qty?: number;
+
   // Nouveaux champs pour statut des compteurs
   is_electricity_cut?: boolean;
   is_water_cut?: boolean;

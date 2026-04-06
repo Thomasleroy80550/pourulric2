@@ -43,6 +43,11 @@ export interface UserRoom {
   has_smoke_detector?: boolean;
   has_co_detector?: boolean;
 
+  linen_guest_capacity?: number;
+  linen_large_sheet_qty?: number;
+  linen_large_duvet_cover_qty?: number;
+  linen_small_sheet_qty?: number;
+  linen_small_duvet_cover_qty?: number;
   linen_single_bed_qty?: number;
   linen_double_bed_qty?: number;
   linen_bath_towel_qty?: number;

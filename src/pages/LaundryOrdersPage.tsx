@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { format, parseISO, startOfDay, endOfDay, addDays } from 'date-fns';
+import { addDays, endOfDay, format, parseISO, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, BedDouble, CalendarDays, Copy, Package, RefreshCw, Save, ShoppingCart } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Copy, Package, RefreshCw, Save, ShoppingCart, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-import MainLayout from '@/components/MainLayout';
 import AdminLayout from '@/components/AdminLayout';
+import MainLayout from '@/components/MainLayout';
 import BannedUserMessage from '@/components/BannedUserMessage';
 import SuspendedAccountMessage from '@/components/SuspendedAccountMessage';
 import { useSession } from '@/components/SessionContextProvider';
@@ -19,64 +19,119 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { AdminUserRoom, getAllUserRooms } from '@/lib/admin-api';
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
-import { getUserRooms, updateUserRoom, UserRoom } from '@/lib/user-room-api';
+import { updateUserRoom } from '@/lib/user-room-api';
 
 const defaultEndDate = format(addDays(new Date(), 14), 'yyyy-MM-dd');
 const defaultStartDate = format(new Date(), 'yyyy-MM-dd');
 const excludedStatuses = new Set(['CANC', 'PROP0']);
 
-type LinenDraft = {
-  linen_single_bed_qty: number;
-  linen_double_bed_qty: number;
-  linen_bath_towel_qty: number;
-  linen_hand_towel_qty: number;
-  linen_bath_mat_qty: number;
-  linen_kitchen_towel_qty: number;
-};
-
-type LinenTotals = LinenDraft;
-
-type ReservationWithLinen = {
-  reservation: KrossbookingReservation;
-  room: UserRoom | undefined;
-  totals: LinenTotals;
-  totalPieces: number;
-  hasConfiguration: boolean;
-};
-
 interface LaundryOrdersPageProps {
   adminView?: boolean;
 }
 
-const emptyTotals = (): LinenTotals => ({
-  linen_single_bed_qty: 0,
-  linen_double_bed_qty: 0,
-  linen_bath_towel_qty: 0,
-  linen_hand_towel_qty: 0,
-  linen_bath_mat_qty: 0,
-  linen_kitchen_towel_qty: 0,
+type LinenDraft = {
+  linen_guest_capacity: number;
+  linen_large_sheet_qty: number;
+  linen_large_duvet_cover_qty: number;
+  linen_small_sheet_qty: number;
+  linen_small_duvet_cover_qty: number;
+};
+
+type ReservationLinenTotals = {
+  guest_capacity: number;
+  pillowcase_qty: number;
+  bath_sheet_qty: number;
+  towel_qty: number;
+  linen_large_sheet_qty: number;
+  linen_large_duvet_cover_qty: number;
+  linen_small_sheet_qty: number;
+  linen_small_duvet_cover_qty: number;
+};
+
+type ReservationWithLinen = {
+  reservation: KrossbookingReservation;
+  room?: AdminUserRoom;
+  totals: ReservationLinenTotals;
+  totalPieces: number;
+  hasConfiguration: boolean;
+};
+
+const emptyDraft = (): LinenDraft => ({
+  linen_guest_capacity: 0,
+  linen_large_sheet_qty: 0,
+  linen_large_duvet_cover_qty: 0,
+  linen_small_sheet_qty: 0,
+  linen_small_duvet_cover_qty: 0,
 });
 
-const getRoomLinenDraft = (room: UserRoom): LinenDraft => ({
-  linen_single_bed_qty: room.linen_single_bed_qty ?? 0,
-  linen_double_bed_qty: room.linen_double_bed_qty ?? 0,
-  linen_bath_towel_qty: room.linen_bath_towel_qty ?? 0,
-  linen_hand_towel_qty: room.linen_hand_towel_qty ?? 0,
-  linen_bath_mat_qty: room.linen_bath_mat_qty ?? 0,
-  linen_kitchen_towel_qty: room.linen_kitchen_towel_qty ?? 0,
+const emptyReservationTotals = (): ReservationLinenTotals => ({
+  guest_capacity: 0,
+  pillowcase_qty: 0,
+  bath_sheet_qty: 0,
+  towel_qty: 0,
+  linen_large_sheet_qty: 0,
+  linen_large_duvet_cover_qty: 0,
+  linen_small_sheet_qty: 0,
+  linen_small_duvet_cover_qty: 0,
 });
 
-const sumLinen = (totals: LinenTotals) => Object.values(totals).reduce((sum, value) => sum + value, 0);
+const getRoomDraft = (room: AdminUserRoom): LinenDraft => ({
+  linen_guest_capacity: room.linen_guest_capacity ?? 0,
+  linen_large_sheet_qty: room.linen_large_sheet_qty ?? 0,
+  linen_large_duvet_cover_qty: room.linen_large_duvet_cover_qty ?? 0,
+  linen_small_sheet_qty: room.linen_small_sheet_qty ?? 0,
+  linen_small_duvet_cover_qty: room.linen_small_duvet_cover_qty ?? 0,
+});
 
-const formatLinenDetails = (totals: LinenTotals) => {
+const computeReservationTotals = (room?: AdminUserRoom): ReservationLinenTotals => {
+  if (!room) return emptyReservationTotals();
+
+  const guestCapacity = room.linen_guest_capacity ?? 0;
+
+  return {
+    guest_capacity: guestCapacity,
+    pillowcase_qty: guestCapacity,
+    bath_sheet_qty: guestCapacity,
+    towel_qty: guestCapacity,
+    linen_large_sheet_qty: room.linen_large_sheet_qty ?? 0,
+    linen_large_duvet_cover_qty: room.linen_large_duvet_cover_qty ?? 0,
+    linen_small_sheet_qty: room.linen_small_sheet_qty ?? 0,
+    linen_small_duvet_cover_qty: room.linen_small_duvet_cover_qty ?? 0,
+  };
+};
+
+const countPieces = (totals: ReservationLinenTotals) =>
+  totals.pillowcase_qty +
+  totals.bath_sheet_qty +
+  totals.towel_qty +
+  totals.linen_large_sheet_qty +
+  totals.linen_large_duvet_cover_qty +
+  totals.linen_small_sheet_qty +
+  totals.linen_small_duvet_cover_qty;
+
+const isConfigured = (draft: LinenDraft) =>
+  draft.linen_guest_capacity > 0 ||
+  draft.linen_large_sheet_qty > 0 ||
+  draft.linen_large_duvet_cover_qty > 0 ||
+  draft.linen_small_sheet_qty > 0 ||
+  draft.linen_small_duvet_cover_qty > 0;
+
+const ownerName = (room?: AdminUserRoom) => {
+  if (!room?.profiles) return 'Non attribué';
+  return [room.profiles.first_name, room.profiles.last_name].filter(Boolean).join(' ') || 'Sans nom';
+};
+
+const formatLinenDetails = (totals: ReservationLinenTotals) => {
   const items = [
-    { label: 'Lits simples', value: totals.linen_single_bed_qty },
-    { label: 'Lits doubles', value: totals.linen_double_bed_qty },
-    { label: 'Serviettes bain', value: totals.linen_bath_towel_qty },
-    { label: 'Serviettes mains', value: totals.linen_hand_towel_qty },
-    { label: 'Tapis de bain', value: totals.linen_bath_mat_qty },
-    { label: 'Torchons', value: totals.linen_kitchen_towel_qty },
+    { label: 'Taies', value: totals.pillowcase_qty },
+    { label: 'Draps de bain', value: totals.bath_sheet_qty },
+    { label: 'Serviettes', value: totals.towel_qty },
+    { label: 'Grands draps', value: totals.linen_large_sheet_qty },
+    { label: 'Grandes housses', value: totals.linen_large_duvet_cover_qty },
+    { label: 'Petits draps', value: totals.linen_small_sheet_qty },
+    { label: 'Petites housses', value: totals.linen_small_duvet_cover_qty },
   ].filter((item) => item.value > 0);
 
   return items.length > 0
@@ -88,7 +143,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
   const { profile } = useSession();
   const Layout = adminView ? AdminLayout : MainLayout;
 
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [userRooms, setUserRooms] = useState<AdminUserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [roomDrafts, setRoomDrafts] = useState<Record<string, LinenDraft>>({});
   const [loading, setLoading] = useState(true);
@@ -100,12 +155,12 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
   const loadData = async () => {
     setLoading(true);
     try {
-      const rooms = await getUserRooms();
+      const rooms = await getAllUserRooms();
       const bookingData = await fetchKrossbookingReservations(rooms, true);
 
       setUserRooms(rooms);
       setReservations(bookingData);
-      setRoomDrafts(Object.fromEntries(rooms.map((room) => [room.id, getRoomLinenDraft(room)])));
+      setRoomDrafts(Object.fromEntries(rooms.map((room) => [room.id, getRoomDraft(room)])));
     } catch (error: any) {
       toast.error(error.message || 'Impossible de charger la blanchisserie.');
     } finally {
@@ -143,32 +198,34 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
   const reservationsWithLinen = useMemo<ReservationWithLinen[]>(() => {
     return filteredReservations.map((reservation) => {
       const room = roomByKrossbookingId.get(reservation.krossbooking_room_id);
-      const totals = room ? getRoomLinenDraft(room) : emptyTotals();
+      const totals = computeReservationTotals(room);
 
       return {
         reservation,
         room,
         totals,
-        totalPieces: sumLinen(totals),
-        hasConfiguration: sumLinen(totals) > 0,
+        totalPieces: countPieces(totals),
+        hasConfiguration: room ? isConfigured(getRoomDraft(room)) : false,
       };
     });
   }, [filteredReservations, roomByKrossbookingId]);
 
   const aggregatedTotals = useMemo(() => {
-    return reservationsWithLinen.reduce<LinenTotals>((acc, item) => {
-      acc.linen_single_bed_qty += item.totals.linen_single_bed_qty;
-      acc.linen_double_bed_qty += item.totals.linen_double_bed_qty;
-      acc.linen_bath_towel_qty += item.totals.linen_bath_towel_qty;
-      acc.linen_hand_towel_qty += item.totals.linen_hand_towel_qty;
-      acc.linen_bath_mat_qty += item.totals.linen_bath_mat_qty;
-      acc.linen_kitchen_towel_qty += item.totals.linen_kitchen_towel_qty;
+    return reservationsWithLinen.reduce<ReservationLinenTotals>((acc, item) => {
+      acc.guest_capacity += item.totals.guest_capacity;
+      acc.pillowcase_qty += item.totals.pillowcase_qty;
+      acc.bath_sheet_qty += item.totals.bath_sheet_qty;
+      acc.towel_qty += item.totals.towel_qty;
+      acc.linen_large_sheet_qty += item.totals.linen_large_sheet_qty;
+      acc.linen_large_duvet_cover_qty += item.totals.linen_large_duvet_cover_qty;
+      acc.linen_small_sheet_qty += item.totals.linen_small_sheet_qty;
+      acc.linen_small_duvet_cover_qty += item.totals.linen_small_duvet_cover_qty;
       return acc;
-    }, emptyTotals());
+    }, emptyReservationTotals());
   }, [reservationsWithLinen]);
 
   const roomsMissingConfiguration = useMemo(() => {
-    const missingRooms = new Map<string, UserRoom>();
+    const missingRooms = new Map<string, AdminUserRoom>();
 
     reservationsWithLinen.forEach((item) => {
       if (item.room && !item.hasConfiguration) {
@@ -179,22 +236,22 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
     return Array.from(missingRooms.values());
   }, [reservationsWithLinen]);
 
-  const totalPiecesToOrder = sumLinen(aggregatedTotals);
+  const totalPiecesToOrder = countPieces(aggregatedTotals);
 
   const orderPreview = useMemo(() => {
     const lines = [
       'Commande blanchisserie',
-      `Prestataire : ${profile?.linen_type || 'Blanchisserie'}`,
       `Période : du ${format(parseISO(startDate), 'dd/MM/yyyy')} au ${format(parseISO(endDate), 'dd/MM/yyyy')}`,
       `Réservations prises en compte : ${reservationsWithLinen.length}`,
       '',
       'Quantités à prévoir :',
-      `- Lits simples : ${aggregatedTotals.linen_single_bed_qty}`,
-      `- Lits doubles : ${aggregatedTotals.linen_double_bed_qty}`,
-      `- Serviettes bain : ${aggregatedTotals.linen_bath_towel_qty}`,
-      `- Serviettes mains : ${aggregatedTotals.linen_hand_towel_qty}`,
-      `- Tapis de bain : ${aggregatedTotals.linen_bath_mat_qty}`,
-      `- Torchons : ${aggregatedTotals.linen_kitchen_towel_qty}`,
+      `- Taies : ${aggregatedTotals.pillowcase_qty}`,
+      `- Draps de bain : ${aggregatedTotals.bath_sheet_qty}`,
+      `- Serviettes : ${aggregatedTotals.towel_qty}`,
+      `- Grands draps : ${aggregatedTotals.linen_large_sheet_qty}`,
+      `- Grandes housses : ${aggregatedTotals.linen_large_duvet_cover_qty}`,
+      `- Petits draps : ${aggregatedTotals.linen_small_sheet_qty}`,
+      `- Petites housses : ${aggregatedTotals.linen_small_duvet_cover_qty}`,
       '',
       'Détail par arrivée :',
     ];
@@ -204,13 +261,13 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
     } else {
       reservationsWithLinen.forEach((item) => {
         lines.push(
-          `- ${format(parseISO(item.reservation.check_in_date), 'dd/MM/yyyy', { locale: fr })} • ${item.reservation.property_name} • ${item.reservation.guest_name} • ${formatLinenDetails(item.totals)}`,
+          `- ${format(parseISO(item.reservation.check_in_date), 'dd/MM/yyyy', { locale: fr })} • ${ownerName(item.room)} • ${item.reservation.property_name} • ${item.reservation.guest_name} • ${formatLinenDetails(item.totals)}`,
         );
       });
     }
 
     return lines.join('\n');
-  }, [aggregatedTotals, endDate, profile?.linen_type, reservationsWithLinen, startDate]);
+  }, [aggregatedTotals, endDate, reservationsWithLinen, startDate]);
 
   const handleDraftChange = (roomId: string, field: keyof LinenDraft, value: string) => {
     const parsedValue = Number.isNaN(Number(value)) ? 0 : Math.max(0, Number(value));
@@ -218,19 +275,21 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
     setRoomDrafts((prev) => ({
       ...prev,
       [roomId]: {
-        ...(prev[roomId] || emptyTotals()),
+        ...(prev[roomId] || emptyDraft()),
         [field]: parsedValue,
       },
     }));
   };
 
-  const handleSaveRoom = async (room: UserRoom) => {
-    const draft = roomDrafts[room.id] || emptyTotals();
+  const handleSaveRoom = async (room: AdminUserRoom) => {
+    const draft = roomDrafts[room.id] || emptyDraft();
     setSavingRoomId(room.id);
 
     try {
       const updatedRoom = await updateUserRoom(room.id, draft);
-      setUserRooms((prev) => prev.map((item) => (item.id === room.id ? updatedRoom : item)));
+      setUserRooms((prev) =>
+        prev.map((item) => (item.id === room.id ? { ...item, ...updatedRoom, profiles: item.profiles } : item)),
+      );
       toast.success(`Configuration linge enregistrée pour ${room.room_name}.`);
     } catch (error: any) {
       toast.error(error.message || 'Impossible d’enregistrer la configuration.');
@@ -287,44 +346,30 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
           <div>
             <h1 className="text-3xl font-bold">Blanchisserie</h1>
             <p className="text-muted-foreground">
-              Calculez automatiquement le linge à commander à partir des réservations à venir.
+              Tous les logements sont visibles ici. La capacité voyageurs sert automatiquement à calculer les taies, draps de bain et serviettes.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">Prestataire : {profile?.linen_type || 'Blanchisserie'}</Badge>
-            <Button variant="outline" onClick={loadData} disabled={loading}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Actualiser
-            </Button>
-          </div>
+          <Button variant="outline" onClick={loadData} disabled={loading}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualiser
+          </Button>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Filtrer la période de commande</CardTitle>
             <CardDescription>
-              Les quantités sont calculées à partir des arrivées comprises dans la période sélectionnée.
+              Les quantités sont calculées à partir des arrivées actives comprises dans la période sélectionnée.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="laundry-start-date">Début</Label>
-              <Input
-                id="laundry-start-date"
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-              />
+              <Input id="laundry-start-date" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="laundry-end-date">Fin</Label>
-              <Input
-                id="laundry-end-date"
-                type="date"
-                value={endDate}
-                min={startDate}
-                onChange={(event) => setEndDate(event.target.value)}
-              />
+              <Input id="laundry-end-date" type="date" value={endDate} min={startDate} onChange={(event) => setEndDate(event.target.value)} />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Logement</Label>
@@ -336,7 +381,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
                   <SelectItem value="all">Tous les logements</SelectItem>
                   {userRooms.map((room) => (
                     <SelectItem key={room.id} value={room.room_id}>
-                      {room.room_name}
+                      {room.room_name} — {ownerName(room)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -346,7 +391,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
         </Card>
 
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Skeleton className="h-28 w-full" />
             <Skeleton className="h-28 w-full" />
             <Skeleton className="h-28 w-full" />
@@ -354,6 +399,16 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Logements visibles</CardDescription>
+                <CardTitle className="text-3xl">{userRooms.length}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Package className="h-4 w-4" />
+                Tous les logements admin
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Réservations à traiter</CardDescription>
@@ -366,34 +421,22 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             </Card>
             <Card>
               <CardHeader className="pb-2">
+                <CardDescription>Capacité cumulée</CardDescription>
+                <CardTitle className="text-3xl">{aggregatedTotals.guest_capacity}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                Base de calcul linge / personnes
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
                 <CardDescription>Total pièces</CardDescription>
                 <CardTitle className="text-3xl">{totalPiecesToOrder}</CardTitle>
               </CardHeader>
               <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="h-4 w-4" />
+                <ShoppingCart className="h-4 w-4" />
                 Quantité globale à commander
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Lits à préparer</CardDescription>
-                <CardTitle className="text-3xl">
-                  {aggregatedTotals.linen_single_bed_qty + aggregatedTotals.linen_double_bed_qty}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-                <BedDouble className="h-4 w-4" />
-                Simples + doubles
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Configurations manquantes</CardDescription>
-                <CardTitle className="text-3xl">{roomsMissingConfiguration.length}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
-                <AlertTriangle className="h-4 w-4" />
-                Logements à compléter
               </CardContent>
             </Card>
           </div>
@@ -404,7 +447,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Configurations linge incomplètes</AlertTitle>
             <AlertDescription>
-              Complétez les quantités pour {roomsMissingConfiguration.map((room) => room.room_name).join(', ')} afin d’obtenir une commande exacte.
+              Complétez les logements suivants pour obtenir une commande exacte : {roomsMissingConfiguration.map((room) => `${room.room_name} (${ownerName(room)})`).join(', ')}.
             </AlertDescription>
           </Alert>
         )}
@@ -414,7 +457,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             <CardHeader>
               <CardTitle>Détail des réservations prises en compte</CardTitle>
               <CardDescription>
-                Une ligne de commande est calculée pour chaque arrivée active sur la période.
+                L’admin voit ici l’ensemble des logements et le détail de linge calculé réservation par réservation.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -434,6 +477,7 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
                     <TableHeader>
                       <TableRow>
                         <TableHead>Arrivée</TableHead>
+                        <TableHead>Propriétaire</TableHead>
                         <TableHead>Logement</TableHead>
                         <TableHead>Voyageur</TableHead>
                         <TableHead>Quantités</TableHead>
@@ -443,17 +487,14 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
                     <TableBody>
                       {reservationsWithLinen.map((item) => (
                         <TableRow key={item.reservation.id}>
-                          <TableCell>
-                            {format(parseISO(item.reservation.check_in_date), 'dd/MM/yyyy', { locale: fr })}
-                          </TableCell>
+                          <TableCell>{format(parseISO(item.reservation.check_in_date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                          <TableCell>{ownerName(item.room)}</TableCell>
                           <TableCell>{item.reservation.property_name}</TableCell>
                           <TableCell>{item.reservation.guest_name}</TableCell>
                           <TableCell>
                             <div className="space-y-1">
                               <p className="text-sm">{formatLinenDetails(item.totals)}</p>
-                              {!item.hasConfiguration && (
-                                <Badge variant="outline">Configuration manquante</Badge>
-                              )}
+                              {!item.hasConfiguration && <Badge variant="outline">Configuration manquante</Badge>}
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-medium">{item.totalPieces}</TableCell>
@@ -476,12 +517,32 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-lg border p-3">
-                  <p className="text-muted-foreground">Serviettes bain</p>
-                  <p className="text-2xl font-semibold">{aggregatedTotals.linen_bath_towel_qty}</p>
+                  <p className="text-muted-foreground">Taies</p>
+                  <p className="text-2xl font-semibold">{aggregatedTotals.pillowcase_qty}</p>
                 </div>
                 <div className="rounded-lg border p-3">
-                  <p className="text-muted-foreground">Torchons</p>
-                  <p className="text-2xl font-semibold">{aggregatedTotals.linen_kitchen_towel_qty}</p>
+                  <p className="text-muted-foreground">Draps de bain</p>
+                  <p className="text-2xl font-semibold">{aggregatedTotals.bath_sheet_qty}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground">Serviettes</p>
+                  <p className="text-2xl font-semibold">{aggregatedTotals.towel_qty}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground">Grands draps</p>
+                  <p className="text-2xl font-semibold">{aggregatedTotals.linen_large_sheet_qty}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground">Grandes housses</p>
+                  <p className="text-2xl font-semibold">{aggregatedTotals.linen_large_duvet_cover_qty}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-muted-foreground">Petits draps</p>
+                  <p className="text-2xl font-semibold">{aggregatedTotals.linen_small_sheet_qty}</p>
+                </div>
+                <div className="rounded-lg border p-3 md:col-span-2">
+                  <p className="text-muted-foreground">Petites housses</p>
+                  <p className="text-2xl font-semibold">{aggregatedTotals.linen_small_duvet_cover_qty}</p>
                 </div>
               </div>
               <Textarea value={orderPreview} readOnly className="min-h-[320px] font-mono text-xs" />
@@ -495,9 +556,9 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
 
         <Card>
           <CardHeader>
-            <CardTitle>Configuration linge par logement</CardTitle>
+            <CardTitle>Configuration linge des logements</CardTitle>
             <CardDescription>
-              Renseignez les quantités à prévoir pour une réservation de chaque logement.
+              Capacité voyageurs = nombre de taies + draps de bain + serviettes par réservation. Les draps et housses sont saisis séparément.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -513,8 +574,8 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             ) : (
               <div className="grid gap-4 lg:grid-cols-2">
                 {userRooms.map((room) => {
-                  const draft = roomDrafts[room.id] || emptyTotals();
-                  const configured = sumLinen(draft) > 0;
+                  const draft = roomDrafts[room.id] || emptyDraft();
+                  const configured = isConfigured(draft);
 
                   return (
                     <Card key={room.id} className="border-dashed">
@@ -522,7 +583,9 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <CardTitle className="text-lg">{room.room_name}</CardTitle>
-                            <CardDescription>ID chambre : {room.room_id}</CardDescription>
+                            <CardDescription>
+                              {ownerName(room)} • ID chambre : {room.room_id}
+                            </CardDescription>
                           </div>
                           <Badge variant={configured ? 'secondary' : 'outline'}>
                             {configured ? 'Configuré' : 'À compléter'}
@@ -531,65 +594,62 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Lits simples</Label>
+                          <div className="space-y-2 col-span-2">
+                            <Label>Capacité voyageurs</Label>
                             <Input
                               type="number"
                               min={0}
-                              value={draft.linen_single_bed_qty}
-                              onChange={(event) => handleDraftChange(room.id, 'linen_single_bed_qty', event.target.value)}
+                              value={draft.linen_guest_capacity}
+                              onChange={(event) => handleDraftChange(room.id, 'linen_guest_capacity', event.target.value)}
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Lits doubles</Label>
+                            <Label>Grand drap</Label>
                             <Input
                               type="number"
                               min={0}
-                              value={draft.linen_double_bed_qty}
-                              onChange={(event) => handleDraftChange(room.id, 'linen_double_bed_qty', event.target.value)}
+                              value={draft.linen_large_sheet_qty}
+                              onChange={(event) => handleDraftChange(room.id, 'linen_large_sheet_qty', event.target.value)}
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Serviettes bain</Label>
+                            <Label>Grande housse</Label>
                             <Input
                               type="number"
                               min={0}
-                              value={draft.linen_bath_towel_qty}
-                              onChange={(event) => handleDraftChange(room.id, 'linen_bath_towel_qty', event.target.value)}
+                              value={draft.linen_large_duvet_cover_qty}
+                              onChange={(event) => handleDraftChange(room.id, 'linen_large_duvet_cover_qty', event.target.value)}
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Serviettes mains</Label>
+                            <Label>Petit drap</Label>
                             <Input
                               type="number"
                               min={0}
-                              value={draft.linen_hand_towel_qty}
-                              onChange={(event) => handleDraftChange(room.id, 'linen_hand_towel_qty', event.target.value)}
+                              value={draft.linen_small_sheet_qty}
+                              onChange={(event) => handleDraftChange(room.id, 'linen_small_sheet_qty', event.target.value)}
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Tapis de bain</Label>
+                            <Label>Petite housse</Label>
                             <Input
                               type="number"
                               min={0}
-                              value={draft.linen_bath_mat_qty}
-                              onChange={(event) => handleDraftChange(room.id, 'linen_bath_mat_qty', event.target.value)}
+                              value={draft.linen_small_duvet_cover_qty}
+                              onChange={(event) => handleDraftChange(room.id, 'linen_small_duvet_cover_qty', event.target.value)}
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label>Torchons</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={draft.linen_kitchen_towel_qty}
-                              onChange={(event) => handleDraftChange(room.id, 'linen_kitchen_towel_qty', event.target.value)}
-                            />
-                          </div>
+                        </div>
+                        <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
+                          <p className="font-medium">Calcul automatique par réservation</p>
+                          <p className="text-muted-foreground">Taies : {draft.linen_guest_capacity}</p>
+                          <p className="text-muted-foreground">Draps de bain : {draft.linen_guest_capacity}</p>
+                          <p className="text-muted-foreground">Serviettes : {draft.linen_guest_capacity}</p>
                         </div>
                         <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-sm">
                           <div>
                             <p className="font-medium">Quantité totale par réservation</p>
-                            <p className="text-muted-foreground">{sumLinen(draft)} pièce(s)</p>
+                            <p className="text-muted-foreground">{countPieces(computeReservationTotals({ ...room, ...draft }))} pièce(s)</p>
                           </div>
                           <Button onClick={() => handleSaveRoom(room)} disabled={savingRoomId === room.id}>
                             <Save className="mr-2 h-4 w-4" />
@@ -604,14 +664,6 @@ const LaundryOrdersPage: React.FC<LaundryOrdersPageProps> = ({ adminView = false
             )}
           </CardContent>
         </Card>
-
-        <Alert>
-          <ShoppingCart className="h-4 w-4" />
-          <AlertTitle>Comment ça fonctionne ?</AlertTitle>
-          <AlertDescription>
-            Chaque réservation active de la période reprend automatiquement la configuration de linge du logement concerné. Vous obtenez ainsi la quantité totale à commander pour votre blanchisserie.
-          </AlertDescription>
-        </Alert>
       </div>
     </Layout>
   );

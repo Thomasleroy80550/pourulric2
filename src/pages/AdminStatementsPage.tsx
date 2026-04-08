@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil, CheckCircle2, XCircle } from 'lucide-react';
+import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles, sendPaymentReminder, setInvoicePaidStatus } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -17,6 +17,7 @@ import { generateStatementPdf } from '@/lib/pdf-utils';
 import { uploadStatementPdf } from '@/lib/storage-api';
 import StatusBadge from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Pagination,
   PaginationContent,
@@ -208,6 +209,31 @@ const AdminStatementsPage: React.FC = () => {
     loadStatements();
   };
 
+  const buildDuplicateKey = (statement: SavedInvoice) => `${statement.user_id}::${statement.period.trim().toLowerCase()}`;
+
+  const duplicateGroups = Object.values(
+    statements.reduce<Record<string, SavedInvoice[]>>((acc, statement) => {
+      const key = buildDuplicateKey(statement);
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(statement);
+      return acc;
+    }, {})
+  ).filter(group => group.length > 1);
+
+  const duplicateStatementIds = new Set(duplicateGroups.flatMap(group => group.map(statement => statement.id)));
+  const filteredDuplicateGroups = duplicateGroups.filter(group =>
+    group.some(statement => {
+      const term = searchTerm.toLowerCase();
+      if (!term) return true;
+      const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}`.toLowerCase() : 'client supprimé';
+      const period = statement.period.toLowerCase();
+      const pennylaneStatus = statement.pennylane_status.toLowerCase();
+      return clientName.includes(term) || period.includes(term) || pennylaneStatus.includes(term);
+    })
+  );
+
   const filteredStatements = statements.filter(statement => {
     const term = searchTerm.toLowerCase();
     const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}`.toLowerCase() : 'client supprimé';
@@ -249,11 +275,55 @@ const AdminStatementsPage: React.FC = () => {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-3xl font-bold mb-6">Gestion des Relevés</h1>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex flex-col gap-3">
+          <h1 className="text-3xl font-bold">Gestion des Relevés</h1>
+          {duplicateGroups.length > 0 && (
+            <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Doublons détectés</AlertTitle>
+              <AlertDescription className="space-y-3">
+                <p>
+                  {duplicateGroups.length} doublon(s) client/période détecté(s). Les relevés concernés sont signalés dans le tableau.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {filteredDuplicateGroups.slice(0, 8).map((group) => {
+                    const reference = group[0];
+                    const clientName = reference.profiles
+                      ? `${reference.profiles.first_name} ${reference.profiles.last_name}`
+                      : 'Client supprimé';
+
+                    return (
+                      <Badge key={`${reference.user_id}-${reference.period}`} variant="secondary" className="bg-amber-100 text-amber-900 hover:bg-amber-100">
+                        {clientName} • {reference.period} ({group.length})
+                      </Badge>
+                    );
+                  })}
+                  {filteredDuplicateGroups.length > 8 && (
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-900 hover:bg-amber-100">
+                      +{filteredDuplicateGroups.length - 8} autre(s)
+                    </Badge>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle>Historique de tous les relevés générés ({filteredStatements.length} relevé(s))</CardTitle>
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-1">
+                <CardTitle>Historique de tous les relevés générés ({filteredStatements.length} relevé(s))</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Les lignes en orange indiquent un doublon pour un même client et une même période.
+                </p>
+              </div>
+              <Badge variant={filteredDuplicateGroups.length > 0 ? 'destructive' : 'secondary'} className="w-fit">
+                {filteredDuplicateGroups.length > 0
+                  ? `${filteredDuplicateGroups.length} doublon(s) détecté(s)`
+                  : 'Aucun doublon détecté'}
+              </Badge>
+            </div>
             <div className="relative mt-2">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -305,9 +375,19 @@ const AdminStatementsPage: React.FC = () => {
                       const creator = statement.created_by ? profilesMap[statement.created_by] : null;
                       const creatorName = creator ? `${creator.first_name ?? ''} ${creator.last_name ?? ''}`.trim() || statement.created_by : '—';
                       const totalFacture = statement.totals?.totalFacture ?? 0;
+                      const isDuplicate = duplicateStatementIds.has(statement.id);
                       return (
-                        <TableRow key={statement.id}>
-                          <TableCell className="font-medium">{clientName}</TableCell>
+                        <TableRow key={statement.id} className={isDuplicate ? 'bg-amber-50/80 hover:bg-amber-100/80' : undefined}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <span>{clientName}</span>
+                              {isDuplicate && (
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-900 hover:bg-amber-100">
+                                  Doublon
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>{statement.period}</TableCell>
                           <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
                           <TableCell>{creatorName}</TableCell>
@@ -358,7 +438,6 @@ const AdminStatementsPage: React.FC = () => {
                             <Button variant="outline" size="icon" onClick={() => handleResendToPennylane(statement.id)} disabled={retriggeringPennylaneId === statement.id} title="Relancer la création Pennylane">
                               {retriggeringPennylaneId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                             </Button>
-                            {/* Actions Paiement */}
                             {statement.is_paid ? (
                               <Button variant="outline" size="icon" onClick={() => handleMarkUnpaid(statement.id)} title="Marquer non payé">
                                 <XCircle className="h-4 w-4" />
@@ -378,9 +457,18 @@ const AdminStatementsPage: React.FC = () => {
                 <Pagination className="mt-4">
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} />
+                      <PaginationPrevious
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage === 1) return;
+                          setCurrentPage(prev => Math.max(1, prev - 1));
+                        }}
+                        aria-disabled={currentPage === 1}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
                     </PaginationItem>
                     {getPaginationItems().map((page, index) => (
+
                       <PaginationItem key={index}>
                         {page === '...' ? (
                           <PaginationEllipsis />
@@ -395,10 +483,19 @@ const AdminStatementsPage: React.FC = () => {
                       </PaginationItem>
                     ))}
                     <PaginationItem>
-                      <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} />
+                      <PaginationNext
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (currentPage === totalPages) return;
+                          setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                        }}
+                        aria-disabled={currentPage === totalPages}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>
+
               </>
             )}
           </CardContent>

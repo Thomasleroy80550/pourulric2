@@ -689,15 +689,27 @@ const DashboardPage = () => {
           <Badge variant="secondary">{yearLabel}</Badge>
           {selectedYear === 2025 && (
             <BilanPdfButton
-              year={selectedYear}
-              totals={{
-                ca: financialData.caAnnee,
-                montantVerse: financialData.rentreeArgentAnnee,
-                frais: financialData.fraisAnnee,
-                depenses: financialData.depensesAnnee,
-                resultatNet: financialData.resultatAnnee,
+              payload={{
+                clientName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Client',
+                year: selectedYear,
+                yearlyTotals: {
+                  totalCA: financialData.caAnnee,
+                  totalMontantVerse: financialData.rentreeArgentAnnee,
+                  totalFacture: financialData.fraisAnnee,
+                  net: financialData.rentreeArgentAnnee - financialData.fraisAnnee,
+                  adr: totalNightsCurrentYear > 0 ? financialData.caAnnee / totalNightsCurrentYear : 0,
+                  revpar: totalNightsCurrentYear > 0 ? (financialData.caAnnee / totalNightsCurrentYear) * (occupancyRateCurrentYear / 100) : 0,
+                  yearlyOccupation: occupancyRateCurrentYear,
+                  totalNuits: totalNightsCurrentYear,
+                  totalReservations: totalReservationsCurrentYear,
+                  totalVoyageurs: totalGuestsCurrentYear,
+                },
+                monthly: monthlyFinancialData.map((month, index) => ({
+                  month: month.name,
+                  totalCA: month.ca || 0,
+                  occupation: monthlyOccupancyData[index]?.occupation || 0,
+                })),
               }}
-              monthly={buildMonthlyForPdf()}
               className="ml-2"
             />
           )}

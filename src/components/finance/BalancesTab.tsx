@@ -7,38 +7,16 @@ import { useSession } from '@/components/SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { triggerBlobDownload } from '@/lib/download-utils';
 import { getMyStatements } from '@/lib/statements-api';
-import { getExpenses, getRecurringExpenses, generateRecurringInstances } from '@/lib/expenses-api';
+import { getUserRooms } from '@/lib/user-room-api';
 import BilanPdfButton from '@/components/BilanPdfButton';
-import { SavedInvoice } from '@/lib/admin-api';
+import type { SavedInvoice } from '@/lib/admin-api';
+import type { AdminBilan2025PreviewData } from '@/components/admin/AdminBilan2025PreviewDialog';
 import { Download, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { eachMonthOfInterval, endOfMonth, format, isValid, parse, parseISO, startOfMonth } from 'date-fns';
+import { eachMonthOfInterval, endOfMonth, format, getDaysInMonth, isValid, parse, startOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const BILAN_YEAR = 2025;
-
-type BilanMonthlyRow = {
-  name: string;
-  ca: number;
-  montantVerse: number;
-  frais: number;
-  benef: number;
-  depenses: number;
-  nuits: number;
-  reservations: number;
-  prixParNuit: number;
-};
-
-type BilanGenerationData = {
-  totals: {
-    ca: number;
-    montantVerse: number;
-    frais: number;
-    depenses: number;
-    resultatNet: number;
-  };
-  monthly: BilanMonthlyRow[];
-};
 
 const BalancesTab: React.FC = () => {
   const { session, profile } = useSession();
@@ -46,7 +24,7 @@ const BalancesTab: React.FC = () => {
   const [isBilanAvailable, setIsBilanAvailable] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isLoadingGenerationData, setIsLoadingGenerationData] = useState(true);
-  const [generationData, setGenerationData] = useState<BilanGenerationData | null>(null);
+  const [generationPayload, setGenerationPayload] = useState<AdminBilan2025PreviewData | null>(null);
 
   useEffect(() => {
     const checkBilanAvailability = async () => {
@@ -82,49 +60,33 @@ const BalancesTab: React.FC = () => {
       setIsLoadingGenerationData(true);
 
       try {
-        const statements = await getMyStatements();
-        const monthly = buildMonthlyForPdf(
-          statements,
-          BILAN_YEAR,
-          profile?.expenses_module_enabled ? await getAllExpensesForYear(BILAN_YEAR) : [],
-        );
+        const [statements, userRooms] = await Promise.all([
+          getMyStatements(),
+          getUserRooms(),
+        ]);
 
-        const totals = monthly.reduce(
-          (acc, month) => ({
-            ca: acc.ca + month.ca,
-            montantVerse: acc.montantVerse + month.montantVerse,
-            frais: acc.frais + month.frais,
-            depenses: acc.depenses + month.depenses,
-            resultatNet: acc.resultatNet + month.benef,
-          }),
-          { ca: 0, montantVerse: 0, frais: 0, depenses: 0, resultatNet: 0 },
-        );
-
-        setGenerationData({ totals, monthly });
+        const clientName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Client';
+        setGenerationPayload(buildBilanPayload(statements, BILAN_YEAR, clientName, userRooms.length));
       } catch (error: any) {
         toast.error(error?.message || 'Impossible de préparer le bilan 2025.');
-        setGenerationData(null);
+        setGenerationPayload(null);
       } finally {
         setIsLoadingGenerationData(false);
       }
     };
 
     loadGenerationData();
-  }, [profile?.expenses_module_enabled]);
+  }, [profile?.first_name, profile?.last_name]);
 
   const hasStatementData = useMemo(() => {
-    if (!generationData) return false;
+    if (!generationPayload) return false;
 
-    return generationData.monthly.some(
-      (month) =>
-        month.ca > 0 ||
-        month.montantVerse > 0 ||
-        month.frais > 0 ||
-        month.depenses > 0 ||
-        month.reservations > 0 ||
-        month.nuits > 0,
+    return (
+      generationPayload.yearlyTotals.totalCA > 0 ||
+      generationPayload.yearlyTotals.totalReservations > 0 ||
+      generationPayload.yearlyTotals.totalNuits > 0
     );
-  }, [generationData]);
+  }, [generationPayload]);
 
   const handleDownloadBilan = async () => {
     if (!session?.user.id) return;
@@ -162,16 +124,16 @@ const BalancesTab: React.FC = () => {
             Bilans disponibles
           </CardTitle>
           <CardDescription>
-            Retrouvez ici vos bilans annuels au format PDF, en téléchargement ou en génération immédiate.
+            Retrouvez ici vos bilans annuels au format PDF, avec un rendu identique à celui préparé côté admin.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {hasStatementData ? (
+          {hasStatementData && generationPayload ? (
             <div className="flex flex-col gap-4 rounded-lg border p-4">
               <div>
                 <p className="font-semibold">Bilan {BILAN_YEAR}</p>
                 <p className="text-sm text-muted-foreground">
-                  Téléchargez le bilan déposé par Hello Keys ou générez instantanément votre propre PDF.
+                  Téléchargez le bilan déposé par Hello Keys ou générez la même version de PDF avec une mise en page propre.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -188,18 +150,11 @@ const BalancesTab: React.FC = () => {
                     </>
                   )}
                 </Button>
-                {generationData && (
-                  <BilanPdfButton
-                    year={BILAN_YEAR}
-                    totals={generationData.totals}
-                    monthly={generationData.monthly}
-                    className="sm:w-auto w-full"
-                  />
-                )}
+                <BilanPdfButton payload={generationPayload} className="sm:w-auto w-full" />
               </div>
               {!isBilanAvailable && (
                 <p className="text-sm text-muted-foreground">
-                  Le PDF déposé par Hello Keys n'est pas encore disponible, mais vous pouvez générer votre bilan ci-dessus.
+                  Le PDF déposé par Hello Keys n'est pas encore disponible, mais vous pouvez générer le même format ici.
                 </p>
               )}
             </div>
@@ -217,16 +172,12 @@ const BalancesTab: React.FC = () => {
   );
 };
 
-async function getAllExpensesForYear(year: number) {
-  const [expenses, recurringExpenses] = await Promise.all([
-    getExpenses(year),
-    getRecurringExpenses(),
-  ]);
-
-  return [...expenses, ...generateRecurringInstances(recurringExpenses, year)];
-}
-
-function buildMonthlyForPdf(statements: SavedInvoice[], year: number, expenses: Array<{ amount: number; expense_date: string }>): BilanMonthlyRow[] {
+function buildBilanPayload(
+  statements: SavedInvoice[],
+  year: number,
+  clientName: string,
+  roomsCount: number,
+): AdminBilan2025PreviewData {
   const statementsForYear = statements.filter((statement) => statement.period.includes(year.toString()));
 
   const monthsOfYear = eachMonthOfInterval({
@@ -235,16 +186,18 @@ function buildMonthlyForPdf(statements: SavedInvoice[], year: number, expenses: 
   });
 
   const monthly = monthsOfYear.map((month) => ({
-    name: format(month, 'MMM', { locale: fr }),
-    ca: 0,
-    montantVerse: 0,
-    frais: 0,
-    benef: 0,
-    depenses: 0,
-    nuits: 0,
-    reservations: 0,
-    prixParNuit: 0,
+    month: format(month, 'MMM', { locale: fr }),
+    totalCA: 0,
+    totalNuits: 0,
+    occupation: 0,
   }));
+
+  let totalCA = 0;
+  let totalMontantVerse = 0;
+  let totalFacture = 0;
+  let totalNuits = 0;
+  let totalReservations = 0;
+  let totalVoyageurs = 0;
 
   const monthMapFallback: Record<string, number> = {
     janvier: 0,
@@ -266,16 +219,22 @@ function buildMonthlyForPdf(statements: SavedInvoice[], year: number, expenses: 
 
   statementsForYear.forEach((statement) => {
     const invoiceData = Array.isArray(statement.invoice_data) ? statement.invoice_data : [];
-    const statementCA = statement.totals?.totalCA ?? invoiceData.reduce(
-      (sum: number, item: any) => sum + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0),
-      0,
-    );
-    const montantVerse = statement.totals?.totalMontantVerse || 0;
-    const frais = statement.totals?.totalFacture || 0;
-    const nuits = statement.totals?.totalNuits || 0;
-    const reservations = typeof statement.totals?.totalReservations === 'number'
-      ? statement.totals.totalReservations
-      : invoiceData.length;
+    const totals = statement.totals || {};
+    const statementCA = typeof totals.totalCA === 'number'
+      ? totals.totalCA
+      : (typeof totals.totalRevenuGenere === 'number'
+        ? totals.totalRevenuGenere
+        : invoiceData.reduce(
+            (sum: number, item: any) => sum + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0),
+            0,
+          ));
+
+    totalCA += statementCA;
+    totalMontantVerse += typeof totals.totalMontantVerse === 'number' ? totals.totalMontantVerse : 0;
+    totalFacture += typeof totals.totalFacture === 'number' ? totals.totalFacture : 0;
+    totalNuits += typeof totals.totalNuits === 'number' ? totals.totalNuits : 0;
+    totalReservations += typeof totals.totalReservations === 'number' ? totals.totalReservations : invoiceData.length;
+    totalVoyageurs += typeof totals.totalVoyageurs === 'number' ? totals.totalVoyageurs : 0;
 
     let monthIndex: number | undefined;
     let parsed = parse(statement.period, 'MMMM yyyy', new Date(), { locale: fr });
@@ -293,28 +252,43 @@ function buildMonthlyForPdf(statements: SavedInvoice[], year: number, expenses: 
 
     if (monthIndex === undefined) return;
 
-    monthly[monthIndex].ca += statementCA;
-    monthly[monthIndex].montantVerse += montantVerse;
-    monthly[monthIndex].frais += frais;
-    monthly[monthIndex].benef += montantVerse - frais;
-    monthly[monthIndex].nuits += nuits;
-    monthly[monthIndex].reservations += reservations;
+    monthly[monthIndex].totalCA += statementCA;
+    monthly[monthIndex].totalNuits += typeof totals.totalNuits === 'number' ? totals.totalNuits : 0;
   });
 
-  expenses.forEach((expense) => {
-    const expenseDate = parseISO(expense.expense_date);
-    if (!isValid(expenseDate) || expenseDate.getFullYear() !== year) return;
-
-    const monthIndex = expenseDate.getMonth();
-    monthly[monthIndex].depenses += expense.amount || 0;
+  monthly.forEach((month, index) => {
+    const monthDate = monthsOfYear[index];
+    const availableNightsInMonth = roomsCount > 0 ? roomsCount * getDaysInMonth(monthDate) : 0;
+    month.occupation = availableNightsInMonth > 0 ? (month.totalNuits / availableNightsInMonth) * 100 : 0;
   });
 
-  monthly.forEach((month) => {
-    month.benef -= month.depenses;
-    month.prixParNuit = month.nuits > 0 ? month.benef / month.nuits : 0;
-  });
+  const daysInYear = year % 4 === 0 ? 366 : 365;
+  const totalAvailableNights = roomsCount > 0 ? roomsCount * daysInYear : 0;
+  const adr = totalNuits > 0 ? totalCA / totalNuits : 0;
+  const revpar = totalAvailableNights > 0 ? totalCA / totalAvailableNights : 0;
+  const yearlyOccupation = totalAvailableNights > 0 ? (totalNuits / totalAvailableNights) * 100 : 0;
 
-  return monthly;
+  return {
+    clientName,
+    year,
+    yearlyTotals: {
+      totalCA,
+      totalMontantVerse,
+      totalFacture,
+      net: totalMontantVerse - totalFacture,
+      adr,
+      revpar,
+      yearlyOccupation,
+      totalNuits,
+      totalReservations,
+      totalVoyageurs,
+    },
+    monthly: monthly.map(({ month, totalCA: monthlyCA, occupation }) => ({
+      month,
+      totalCA: monthlyCA,
+      occupation,
+    })),
+  };
 }
 
 export default BalancesTab;

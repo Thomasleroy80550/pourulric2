@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, Mail } from 'lucide-react';
-import PerformanceSummaryPrintLayout from '@/components/PerformanceSummaryPrintLayout';
+import AdminBilan2025PrintLayout from '@/components/admin/AdminBilan2025PrintLayout';
 
 export interface AdminBilan2025PreviewData {
   clientName: string;
@@ -32,7 +32,6 @@ export interface AdminBilan2025PreviewData {
     totalCA: number;
     occupation: number;
   }>;
-  summaryText: string;
 }
 
 interface AdminBilan2025PreviewDialogProps {
@@ -69,12 +68,11 @@ const AdminBilan2025PreviewDialog: React.FC<AdminBilan2025PreviewDialogProps> = 
 
         <div className="flex-1 overflow-auto rounded-md border bg-muted/30 p-4">
           <div className="mx-auto w-fit overflow-hidden rounded-md bg-white shadow-sm">
-            <PerformanceSummaryPrintLayout
+            <AdminBilan2025PrintLayout
               clientName={preview.clientName}
               year={preview.year}
               yearlyTotals={preview.yearlyTotals}
               monthly={preview.monthly}
-              summaryText={preview.summaryText}
             />
           </div>
         </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import PerformanceSummaryPrintLayout from '@/components/PerformanceSummaryPrintLayout';
+import AdminBilan2025PrintLayout from '@/components/admin/AdminBilan2025PrintLayout';
 import type { AdminBilan2025PreviewData } from '@/components/admin/AdminBilan2025PreviewDialog';
 
 export async function generateBilan2025PdfFile(payload: AdminBilan2025PreviewData): Promise<File> {
@@ -24,7 +24,7 @@ export async function generateBilan2025PdfFile(payload: AdminBilan2025PreviewDat
 
     const captureAndResolve = async () => {
       try {
-        const element = container.querySelector('#performance-summary-to-print');
+        const element = container.querySelector('#admin-bilan-2025-to-print');
         if (!element) {
           throw new Error("Impossible de trouver l'aperçu du bilan à imprimer.");
         }
@@ -77,12 +77,11 @@ export async function generateBilan2025PdfFile(payload: AdminBilan2025PreviewDat
 
     root.render(
       <React.StrictMode>
-        <PerformanceSummaryPrintLayout
+        <AdminBilan2025PrintLayout
           clientName={payload.clientName}
           year={payload.year}
           yearlyTotals={payload.yearlyTotals}
           monthly={payload.monthly}
-          summaryText={payload.summaryText}
         />
       </React.StrictMode>
     );

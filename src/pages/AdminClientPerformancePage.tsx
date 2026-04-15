@@ -390,14 +390,12 @@ const AdminClientPerformancePage: React.FC = () => {
 
     setPreparingBilan2025(true);
     try {
-      const summaryText = await generatePerformanceSummary(summaryPayload);
       setBilanPreview({
         clientName: summaryPayload.clientName,
         email: selectedProfile?.email ?? null,
         year: summaryPayload.year,
         yearlyTotals: summaryPayload.yearlyTotals,
         monthly: monthlySeries.map(m => ({ month: m.month, totalCA: m.totalCA, occupation: m.occupation })),
-        summaryText,
       });
       setIsBilanPreviewOpen(true);
     } catch (e: any) {

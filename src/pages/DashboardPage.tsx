@@ -150,6 +150,7 @@ const DashboardPage = () => {
     ca: number;
     reservations: number;
   } | null>(null);
+  const showComparisonTo2025 = selectedYear !== 2025;
 
   // ADD: function to build monthly rows for PDF from state
   const buildMonthlyForPdf = () => {
@@ -206,10 +207,15 @@ const DashboardPage = () => {
     setIsChartDialogOpen(true);
   };
 
-  const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[], expenses: Expense[]) => {
+  const buildYearlyMetrics = (statements: SavedInvoice[], year: number, userRooms: UserRoom[], expenses: Expense[]) => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
 
-    let totalCA = 0, totalRentree = 0, totalFrais = 0, totalNights = 0, totalGuests = 0, totalReservations = 0;
+    let totalCA = 0;
+    let totalRentree = 0;
+    let totalFrais = 0;
+    let totalNights = 0;
+    let totalGuests = 0;
+    let totalReservations = 0;
     const totalDepenses = expenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
     let totalResultat = 0;
 
@@ -221,19 +227,18 @@ const DashboardPage = () => {
       end: endOfMonth(new Date(year, 11, 1)),
     });
 
-    const newMonthlyFinancialData = monthsOfYear.map(m => ({
+    const monthlyFinancialData = monthsOfYear.map(m => ({
       name: format(m, 'MMM', { locale: fr }),
       ca: 0,
       montantVerse: 0,
       frais: 0,
       benef: 0,
       depenses: 0,
-      prixParNuit: 0, // AJOUT: prix / nuit par mois
+      prixParNuit: 0,
     }));
-    const newMonthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
+    const monthlyReservationsData = monthsOfYear.map(m => ({ name: format(m, 'MMM', { locale: fr }), reservations: 0 }));
     const monthlyNights = Array(12).fill(0);
-    
-    // REPLACED: mois FR -> index static mapping by robust parsing with fallback
+
     const monthMapFallback: { [key: string]: number } = {
       'janvier': 0, 'février': 1, 'fevrier': 1, 'mars': 2, 'avril': 3, 'mai': 4,
       'juin': 5, 'juillet': 6, 'août': 7, 'aout': 7, 'septembre': 8, 'octobre': 9,
@@ -255,7 +260,6 @@ const DashboardPage = () => {
       totalGuests += s.totals.totalVoyageurs || 0;
       totalReservations += s.totals.totalReservations ?? invoiceData.length;
 
-      // ADDED: Parse "period" to get month index (fr), with fallback
       let monthIndex: number | undefined;
       let parsed = parse(s.period, 'MMMM yyyy', new Date(), { locale: fr });
       if (!isValid(parsed)) {
@@ -269,16 +273,15 @@ const DashboardPage = () => {
       }
 
       if (monthIndex !== undefined) {
-        newMonthlyFinancialData[monthIndex].ca += statementCA;
-        newMonthlyFinancialData[monthIndex].montantVerse += moneyIn;
-        newMonthlyFinancialData[monthIndex].frais += managementFees;
-        newMonthlyFinancialData[monthIndex].benef += netFromStatement;
+        monthlyFinancialData[monthIndex].ca += statementCA;
+        monthlyFinancialData[monthIndex].montantVerse += moneyIn;
+        monthlyFinancialData[monthIndex].frais += managementFees;
+        monthlyFinancialData[monthIndex].benef += netFromStatement;
 
-        // CHANGED: utiliser totals.totalReservations si présent (pour les stats manuelles), sinon la longueur des réservations générées
         const reservationsCount = (s.totals && typeof s.totals.totalReservations === 'number')
           ? s.totals.totalReservations
           : invoiceData.length;
-        newMonthlyReservationsData[monthIndex].reservations += reservationsCount;
+        monthlyReservationsData[monthIndex].reservations += reservationsCount;
 
         monthlyNights[monthIndex] += s.totals.totalNuits || 0;
       }
@@ -294,70 +297,102 @@ const DashboardPage = () => {
       });
     });
 
-    // Distribute expenses across months
     expenses.forEach(exp => {
       const expenseDate = parseISO(exp.expense_date);
       if (isValid(expenseDate) && expenseDate.getFullYear() === year) {
-        const monthIndex = expenseDate.getMonth(); // 0-indexed month
+        const monthIndex = expenseDate.getMonth();
         if (monthIndex >= 0 && monthIndex < 12) {
-          newMonthlyFinancialData[monthIndex].depenses += exp.amount;
+          monthlyFinancialData[monthIndex].depenses += exp.amount;
         }
       }
     });
 
-    // Calculate final net benefit for each month by subtracting monthly expenses
-    newMonthlyFinancialData.forEach((monthData, index) => {
+    monthlyFinancialData.forEach((monthData, index) => {
       monthData.benef -= monthData.depenses;
-      // AJOUT: calcul du prix / nuit pour chaque mois (bénéfice net ÷ nuits)
       const nights = monthlyNights[index] || 0;
       monthData.prixParNuit = nights > 0 ? monthData.benef / nights : 0;
     });
 
-    const newMonthlyOccupancyData = monthsOfYear.map((m, index) => {
+    const monthlyOccupancyData = monthsOfYear.map((m, index) => {
       const daysInMonth = getDaysInMonth(m);
       const totalAvailableNightsInMonth = userRooms.length * daysInMonth;
       const occupation = totalAvailableNightsInMonth > 0 ? (monthlyNights[index] / totalAvailableNightsInMonth) * 100 : 0;
       return { name: format(m, 'MMM', { locale: fr }), occupation };
     });
 
-    // Calculer le meilleur mois de l'année (basé sur le bénéfice net)
     let bestMonthOfYear: { name: string; benefit: number; ca: number; reservations: number } | null = null;
-    newMonthlyFinancialData.forEach((monthData, index) => {
+    monthlyFinancialData.forEach((monthData, index) => {
       if (monthData.benef > 0) {
         if (!bestMonthOfYear || monthData.benef > bestMonthOfYear.benefit) {
           bestMonthOfYear = {
             name: monthData.name,
             benefit: monthData.benef,
             ca: monthData.ca,
-            reservations: newMonthlyReservationsData[index].reservations,
+            reservations: monthlyReservationsData[index].reservations,
           };
         }
       }
     });
-    setBestMonth(bestMonthOfYear);
 
+    return {
+      totalCA,
+      totalRentree,
+      totalFrais,
+      totalDepenses,
+      totalResultat,
+      totalNights,
+      totalGuests,
+      totalReservations,
+      monthlyFinancialData,
+      monthlyReservationsData,
+      monthlyOccupancyData,
+      activityData: DONUT_CATEGORIES.map(cat => ({
+        ...cat,
+        value: channelCounts[cat.name.toLowerCase()] || 0,
+      })),
+      bestMonth: bestMonthOfYear,
+    };
+  };
+
+  const processStatements = (statements: SavedInvoice[], year: number, userRooms: UserRoom[], expenses: Expense[]) => {
+    const selectedMetrics = buildYearlyMetrics(statements, year, userRooms, expenses);
+    const comparisonMetrics = showComparisonTo2025
+      ? buildYearlyMetrics(statements, 2025, userRooms, [])
+      : null;
+
+    const mergedMonthlyFinancialData = selectedMetrics.monthlyFinancialData.map((month, index) => ({
+      ...month,
+      ca2025: comparisonMetrics?.monthlyFinancialData[index]?.ca ?? null,
+    }));
+
+    const mergedMonthlyReservationsData = selectedMetrics.monthlyReservationsData.map((month, index) => ({
+      ...month,
+      reservations2025: comparisonMetrics?.monthlyReservationsData[index]?.reservations ?? null,
+    }));
+
+    const mergedMonthlyOccupancyData = selectedMetrics.monthlyOccupancyData.map((month, index) => ({
+      ...month,
+      occupation2025: comparisonMetrics?.monthlyOccupancyData[index]?.occupation ?? null,
+    }));
+
+    setBestMonth(selectedMetrics.bestMonth);
     setFinancialData(prev => ({
       ...prev,
-      caAnnee: totalCA,
-      rentreeArgentAnnee: totalRentree,
-      fraisAnnee: totalFrais,
-      depensesAnnee: totalDepenses,
-      resultatAnnee: totalResultat - totalDepenses,
+      caAnnee: selectedMetrics.totalCA,
+      rentreeArgentAnnee: selectedMetrics.totalRentree,
+      fraisAnnee: selectedMetrics.totalFrais,
+      depensesAnnee: selectedMetrics.totalDepenses,
+      resultatAnnee: selectedMetrics.totalResultat - selectedMetrics.totalDepenses,
     }));
-    setTotalNightsCurrentYear(totalNights);
-    setTotalReservationsCurrentYear(totalReservations);
-    setTotalGuestsCurrentYear(totalGuests);
-    setMonthlyFinancialData(newMonthlyFinancialData);
-    setMonthlyReservationsData(newMonthlyReservationsData);
-    setMonthlyOccupancyData(newMonthlyOccupancyData);
+    setTotalNightsCurrentYear(selectedMetrics.totalNights);
+    setTotalReservationsCurrentYear(selectedMetrics.totalReservations);
+    setTotalGuestsCurrentYear(selectedMetrics.totalGuests);
+    setMonthlyFinancialData(mergedMonthlyFinancialData);
+    setMonthlyReservationsData(mergedMonthlyReservationsData);
+    setMonthlyOccupancyData(mergedMonthlyOccupancyData);
+    setActivityData(selectedMetrics.activityData);
 
-    const newActivityData = DONUT_CATEGORIES.map(cat => ({
-      ...cat,
-      value: channelCounts[cat.name.toLowerCase()] || 0
-    }));
-    setActivityData(newActivityData);
-
-    return { totalNights };
+    return { totalNights: selectedMetrics.totalNights };
   };
 
   const fetchData = useCallback(async () => {
@@ -918,19 +953,23 @@ const DashboardPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6 w-full max-w-full">
           {/* Statistiques Financières Mensuelles Card */}
           <Card id="tour-monthly-financials" className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Finances Mensuelles</CardTitle>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg font-semibold">Finances Mensuelles — {yearLabel}</CardTitle>
+                {showComparisonTo2025 && <Badge variant="secondary">Comparé à 2025</Badge>}
+              </div>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyFinancialData,
                 'line',
                 'Statistiques Financières Mensuelles',
                 [
                   { key: 'ca', name: 'CA', color: 'hsl(var(--primary))' },
+                  ...(showComparisonTo2025 ? [{ key: 'ca2025', name: 'CA 2025', color: '#94a3b8' }] : []),
                   { key: 'montantVerse', name: 'Montant Versé', color: '#FACC15' },
                   { key: 'frais', name: 'Frais', color: 'hsl(var(--destructive))' },
                   { key: 'benef', name: 'Bénéfice', color: '#22c55e' },
                   ...(expensesModuleEnabled ? [{ key: 'depenses', name: 'Autres Dépenses', color: '#9333EA' }] : []),
-                  { key: 'prixParNuit', name: 'Prix / nuit', color: '#0ea5e9' }, // AJOUT: série prix / nuit
+                  { key: 'prixParNuit', name: 'Prix / nuit', color: '#0ea5e9' },
                 ],
                 '€'
               )}>
@@ -956,6 +995,9 @@ const DashboardPage = () => {
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line type="monotone" yAxisId="left" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    {showComparisonTo2025 && (
+                      <Line type="monotone" yAxisId="left" dataKey="ca2025" stroke="#94a3b8" name="CA 2025" strokeWidth={2} dot={false} strokeDasharray="6 4" animationDuration={1500} animationEasing="ease-in-out" />
+                    )}
                     <Line type="monotone" yAxisId="left" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     <Line type="monotone" yAxisId="left" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
                     {expensesModuleEnabled && (
@@ -971,13 +1013,19 @@ const DashboardPage = () => {
 
           {/* Réservation / mois Card */}
           <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Réservations / mois — {yearLabel}</CardTitle>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg font-semibold">Réservations / mois — {yearLabel}</CardTitle>
+                {showComparisonTo2025 && <Badge variant="secondary">Comparé à 2025</Badge>}
+              </div>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyReservationsData,
                 'bar',
                 'Réservations par mois',
-                [{ key: 'reservations', name: 'Réservations', color: '#8b5cf6' }]
+                [
+                  { key: 'reservations', name: 'Réservations', color: '#8b5cf6' },
+                  ...(showComparisonTo2025 ? [{ key: 'reservations2025', name: 'Réservations 2025', color: '#cbd5e1' }] : []),
+                ]
               )}>
                 Agrandir
               </Button>
@@ -999,6 +1047,9 @@ const DashboardPage = () => {
                     <YAxis allowDecimals={false} className="text-xs" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    {showComparisonTo2025 && (
+                      <Bar dataKey="reservations2025" fill="#cbd5e1" name="Réservations 2025" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
+                    )}
                     <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -1008,13 +1059,19 @@ const DashboardPage = () => {
 
           {/* Occupation Mensuelle Card */}
           <Card className="shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Taux d'Occupation — {yearLabel}</CardTitle>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg font-semibold">Taux d'Occupation — {yearLabel}</CardTitle>
+                {showComparisonTo2025 && <Badge variant="secondary">Comparé à 2025</Badge>}
+              </div>
               <Button variant="outline" size="sm" onClick={() => openChartDialog(
                 monthlyOccupancyData,
                 'line',
                 'Taux d\'Occupation Mensuel',
-                [{ key: 'occupation', name: 'Occupation', color: '#14b8a6' }],
+                [
+                  { key: 'occupation', name: 'Occupation', color: '#14b8a6' },
+                  ...(showComparisonTo2025 ? [{ key: 'occupation2025', name: 'Occupation 2025', color: '#94a3b8' }] : []),
+                ],
                 '%'
               )}>
                 Agrandir
@@ -1025,7 +1082,7 @@ const DashboardPage = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyOccupancyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <ComposedChart data={monthlyOccupancyData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorOccupation" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.8}/>
@@ -1038,7 +1095,10 @@ const DashboardPage = () => {
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
-                  </AreaChart>
+                    {showComparisonTo2025 && (
+                      <Line type="monotone" dataKey="occupation2025" stroke="#94a3b8" name="Occupation 2025" strokeWidth={2} dot={false} strokeDasharray="6 4" animationDuration={1500} animationEasing="ease-in-out" />
+                    )}
+                  </ComposedChart>
                 </ResponsiveContainer>
               )}
             </CardContent>

@@ -278,9 +278,9 @@ const SoftMetricCard = ({
   label: string;
   value: string;
 }) => (
-  <div className="min-w-0 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-5">
-    <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500">{label}</div>
-    <div className="mt-2 break-words text-[18px] font-semibold leading-snug tracking-normal text-slate-950">{value}</div>
+  <div className="min-w-0 rounded-[24px] border border-slate-200 bg-slate-50 px-3 py-4">
+    <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">{label}</div>
+    <div className="mt-2 whitespace-nowrap text-[16px] font-semibold leading-tight tracking-normal text-slate-950">{value}</div>
   </div>
 );
 

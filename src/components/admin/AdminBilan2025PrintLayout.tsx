@@ -280,7 +280,7 @@ const SoftMetricCard = ({
 }) => (
   <div className="min-w-0 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-5">
     <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500">{label}</div>
-    <div className="mt-2 break-words text-[20px] font-semibold leading-snug tracking-[-0.01em] text-slate-950">{value}</div>
+    <div className="mt-2 break-words text-[18px] font-semibold leading-snug tracking-normal text-slate-950">{value}</div>
   </div>
 );
 

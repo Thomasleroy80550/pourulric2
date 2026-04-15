@@ -222,12 +222,10 @@ function buildBilanPayload(
     const totals = statement.totals || {};
     const statementCA = typeof totals.totalCA === 'number'
       ? totals.totalCA
-      : (typeof totals.totalRevenuGenere === 'number'
-        ? totals.totalRevenuGenere
-        : invoiceData.reduce(
-            (sum: number, item: any) => sum + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0),
-            0,
-          ));
+      : invoiceData.reduce(
+          (sum: number, item: any) => sum + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0),
+          0,
+        );
 
     totalCA += statementCA;
     totalMontantVerse += typeof totals.totalMontantVerse === 'number' ? totals.totalMontantVerse : 0;

@@ -60,8 +60,8 @@ const AdminBilan2025PrintLayout = ({
                 Bilan annuel propriétaire
               </div>
               <div className="mt-6 flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-white/10 text-lg font-semibold tracking-[0.18em] text-white backdrop-blur-sm">
-                  HK
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-white/10 p-2 backdrop-blur-sm">
+                  <img src="/logo.png" alt="Hello Keys" className="max-h-full max-w-full object-contain" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm uppercase tracking-[0.22em] text-white/70">Hello Keys</p>

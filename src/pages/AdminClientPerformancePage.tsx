@@ -56,6 +56,20 @@ function formatCurrencyEUR(value: number) {
   return value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 }
 
+function getStatementCA(invoice: SavedInvoice): number {
+  const totals = invoice.totals || {};
+  const invoiceData = Array.isArray(invoice.invoice_data) ? invoice.invoice_data : [];
+
+  if (typeof totals.totalCA === 'number') {
+    return totals.totalCA;
+  }
+
+  return invoiceData.reduce(
+    (sum: number, item: any) => sum + (item.prixSejour || 0) + (item.fraisMenage || 0) + (item.taxeDeSejour || 0),
+    0,
+  );
+}
+
 const KpiCard = ({ title, value, icon: Icon, colorClass = "" }: { title: string; value: string; icon: any; colorClass?: string }) => (
   <Card className="shadow-sm">
     <CardHeader>
@@ -200,7 +214,7 @@ const AdminClientPerformancePage: React.FC = () => {
 
     yearInvoices.forEach(inv => {
       const t = inv.totals || {};
-      totalCA += typeof t.totalCA === 'number' ? t.totalCA : (typeof t.totalRevenuGenere === 'number' ? t.totalRevenuGenere : 0);
+      totalCA += getStatementCA(inv);
       totalMontantVerse += typeof t.totalMontantVerse === 'number' ? t.totalMontantVerse : 0;
       totalFacture += typeof t.totalFacture === 'number' ? t.totalFacture : (typeof t.totalCommission === 'number' ? t.totalCommission : 0);
       totalNuits += typeof t.totalNuits === 'number' ? t.totalNuits : 0;
@@ -236,9 +250,7 @@ const AdminClientPerformancePage: React.FC = () => {
       return null;
     }
     const t = selectedInvoice.totals || {};
-    const totalCA = typeof t.totalCA === 'number'
-      ? t.totalCA
-      : (typeof t.totalRevenuGenere === 'number' ? t.totalRevenuGenere : 0);
+    const totalCA = getStatementCA(selectedInvoice);
 
     const totalMontantVerse = typeof t.totalMontantVerse === 'number' ? t.totalMontantVerse : 0;
     const totalFacture = typeof t.totalFacture === 'number' ? t.totalFacture : (typeof t.totalCommission === 'number' ? t.totalCommission : 0);
@@ -283,9 +295,7 @@ const AdminClientPerformancePage: React.FC = () => {
       const period = `${monthLabel} ${selectedYear}`;
       const inv = userInvoices.find(i => i.period === period);
       const t = inv?.totals || {};
-      const ca = typeof t.totalCA === 'number'
-        ? t.totalCA
-        : (typeof t.totalRevenuGenere === 'number' ? t.totalRevenuGenere : 0);
+      const ca = inv ? getStatementCA(inv) : 0;
       const verse = typeof t.totalMontantVerse === 'number' ? t.totalMontantVerse : 0;
       const hkFees = typeof t.totalFacture === 'number' ? t.totalFacture : (typeof t.totalCommission === 'number' ? t.totalCommission : 0);
       const nuits = typeof t.totalNuits === 'number' ? t.totalNuits : 0;

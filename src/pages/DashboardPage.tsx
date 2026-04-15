@@ -151,6 +151,9 @@ const DashboardPage = () => {
     reservations: number;
   } | null>(null);
   const showComparisonTo2025 = selectedYear !== 2025;
+  const [hiddenFinancialKeys, setHiddenFinancialKeys] = useState<string[]>([]);
+  const [hiddenReservationKeys, setHiddenReservationKeys] = useState<string[]>([]);
+  const [hiddenOccupancyKeys, setHiddenOccupancyKeys] = useState<string[]>([]);
 
   // ADD: function to build monthly rows for PDF from state
   const buildMonthlyForPdf = () => {
@@ -206,6 +209,52 @@ const DashboardPage = () => {
     setDialogChartYAxisUnit(yAxisUnit);
     setIsChartDialogOpen(true);
   };
+
+  const toggleLegendKey = (
+    key: string,
+    hiddenKeys: string[],
+    setHiddenKeys: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setHiddenKeys((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
+    );
+  };
+
+  const renderInteractiveLegend = (
+    hiddenKeys: string[],
+    setHiddenKeys: React.Dispatch<React.SetStateAction<string[]>>
+  ) => ({ payload }: any) => {
+    if (!payload?.length) return null;
+
+    return (
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+        {payload.map((entry: any) => {
+          const key = entry.dataKey;
+          const isHidden = hiddenKeys.includes(key);
+
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggleLegendKey(key, hiddenKeys, setHiddenKeys)}
+              className={`inline-flex items-center gap-2 rounded-md px-2 py-1 transition-opacity ${isHidden ? 'opacity-40' : 'opacity-100'}`}
+              title={isHidden ? 'Afficher la série' : 'Masquer la série'}
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span>{entry.value}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const financialLegendContent = renderInteractiveLegend(hiddenFinancialKeys, setHiddenFinancialKeys);
+  const reservationLegendContent = renderInteractiveLegend(hiddenReservationKeys, setHiddenReservationKeys);
+  const occupancyLegendContent = renderInteractiveLegend(hiddenOccupancyKeys, setHiddenOccupancyKeys);
 
   const buildYearlyMetrics = (statements: SavedInvoice[], year: number, userRooms: UserRoom[], expenses: Expense[]) => {
     const statementsForYear = statements.filter(s => s.period.includes(year.toString()));
@@ -560,6 +609,12 @@ const DashboardPage = () => {
       fetchData();
     }
   }, [fetchData, profile]);
+
+  useEffect(() => {
+    setHiddenFinancialKeys([]);
+    setHiddenReservationKeys([]);
+    setHiddenOccupancyKeys([]);
+  }, [selectedYear, showComparisonTo2025]);
 
   // Removed the useEffect that starts the dashboard tour automatically
 
@@ -993,18 +1048,18 @@ const DashboardPage = () => {
                     <YAxis yAxisId="left" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
                     <YAxis yAxisId="right" orientation="right" className="text-xs text-gray-600 dark:text-gray-400" tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}€`} />} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Line type="monotone" yAxisId="left" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Legend content={financialLegendContent} />
+                    <Line type="monotone" yAxisId="left" dataKey="ca" stroke="hsl(var(--primary))" name="CA" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenFinancialKeys.includes('ca')} />
                     {showComparisonTo2025 && (
-                      <Line type="monotone" yAxisId="left" dataKey="ca2025" stroke="#94a3b8" name="CA 2025" strokeWidth={2} dot={false} strokeDasharray="6 4" animationDuration={1500} animationEasing="ease-in-out" />
+                      <Line type="monotone" yAxisId="left" dataKey="ca2025" stroke="#94a3b8" name="CA 2025" strokeWidth={2} dot={false} strokeDasharray="6 4" animationDuration={1500} animationEasing="ease-in-out" hide={hiddenFinancialKeys.includes('ca2025')} />
                     )}
-                    <Line type="monotone" yAxisId="left" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
-                    <Line type="monotone" yAxisId="left" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" yAxisId="left" dataKey="montantVerse" stroke="#FACC15" name="Montant Versé" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenFinancialKeys.includes('montantVerse')} />
+                    <Line type="monotone" yAxisId="left" dataKey="frais" stroke="hsl(var(--destructive))" name="Frais" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenFinancialKeys.includes('frais')} />
                     {expensesModuleEnabled && (
-                      <Line type="monotone" yAxisId="left" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" />
+                      <Line type="monotone" yAxisId="left" dataKey="depenses" stroke="#9333EA" name="Autres Dépenses" strokeWidth={2} dot={false} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenFinancialKeys.includes('depenses')} />
                     )}
-                    <Line type="monotone" yAxisId="right" dataKey="prixParNuit" stroke="#0ea5e9" name="Prix / nuit" strokeWidth={2} dot={false} strokeDasharray="3 3" animationDuration={1500} animationEasing="ease-in-out" />
-                    <Area type="monotone" yAxisId="left" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Line type="monotone" yAxisId="right" dataKey="prixParNuit" stroke="#0ea5e9" name="Prix / nuit" strokeWidth={2} dot={false} strokeDasharray="3 3" animationDuration={1500} animationEasing="ease-in-out" hide={hiddenFinancialKeys.includes('prixParNuit')} />
+                    <Area type="monotone" yAxisId="left" dataKey="benef" stroke="#22c55e" fillOpacity={1} fill="url(#colorBenef)" name="Bénéfice" strokeWidth={3} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenFinancialKeys.includes('benef')} />
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
@@ -1046,11 +1101,11 @@ const DashboardPage = () => {
                     <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
                     <YAxis allowDecimals={false} className="text-xs" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Legend content={reservationLegendContent} />
                     {showComparisonTo2025 && (
-                      <Bar dataKey="reservations2025" fill="#cbd5e1" name="Réservations 2025" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
+                      <Bar dataKey="reservations2025" fill="#cbd5e1" name="Réservations 2025" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenReservationKeys.includes('reservations2025')} />
                     )}
-                    <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Bar dataKey="reservations" fill="url(#colorReservations)" name="Réservations" radius={[4, 4, 0, 0]} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenReservationKeys.includes('reservations')} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -1093,10 +1148,10 @@ const DashboardPage = () => {
                     <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
                     <YAxis unit="%" className="text-xs" tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomChartTooltip formatter={(value) => `${value.toFixed(2)}%`} />} />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                    <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" />
+                    <Legend content={occupancyLegendContent} />
+                    <Area type="monotone" dataKey="occupation" stroke="#14b8a6" fill="url(#colorOccupation)" name="Occupation" strokeWidth={2} animationDuration={1500} animationEasing="ease-in-out" hide={hiddenOccupancyKeys.includes('occupation')} />
                     {showComparisonTo2025 && (
-                      <Line type="monotone" dataKey="occupation2025" stroke="#94a3b8" name="Occupation 2025" strokeWidth={2} dot={false} strokeDasharray="6 4" animationDuration={1500} animationEasing="ease-in-out" />
+                      <Line type="monotone" dataKey="occupation2025" stroke="#94a3b8" name="Occupation 2025" strokeWidth={2} dot={false} strokeDasharray="6 4" animationDuration={1500} animationEasing="ease-in-out" hide={hiddenOccupancyKeys.includes('occupation2025')} />
                     )}
                   </ComposedChart>
                 </ResponsiveContainer>

@@ -53,11 +53,11 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
   const { width, height } = useWindowSize();
 
   useEffect(() => {
     if (showConfetti) {
-      // Auto close dialog after confetti animation (3 seconds)
       const timer = setTimeout(() => {
         setShowConfetti(false);
         onOpenChange(false);
@@ -65,6 +65,47 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
       return () => clearTimeout(timer);
     }
   }, [showConfetti, onOpenChange]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHiddenKeys([]);
+    }
+  }, [isOpen, title, dataKeys]);
+
+  const toggleLegendKey = (key: string) => {
+    setHiddenKeys((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
+    );
+  };
+
+  const renderInteractiveLegend = ({ payload }: any) => {
+    if (!payload?.length) return null;
+
+    return (
+      <div className="mb-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+        {payload.map((entry: any) => {
+          const key = entry.dataKey;
+          const isHidden = hiddenKeys.includes(key);
+
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggleLegendKey(key)}
+              className={`inline-flex items-center gap-2 rounded-md px-2 py-1 transition-opacity ${isHidden ? 'opacity-40' : 'opacity-100'}`}
+              title={isHidden ? 'Afficher la série' : 'Masquer la série'}
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span>{entry.value}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   const handleExportPdf = async () => {
     if (!chartContainerRef.current) {
@@ -101,7 +142,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
 
       pdf.save(`${title.replace(/\s/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`);
       toast.success("PDF généré avec succès !", { id: 'pdf-export' });
-      setShowConfetti(true); // Trigger confetti on success
+      setShowConfetti(true);
     } catch (error: any) {
       console.error("Error generating PDF:", error);
       toast.error(`Erreur lors de la génération du PDF : ${error.message}`, { id: 'pdf-export' });
@@ -117,18 +158,18 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
           width={width}
           height={height}
           recycle={false}
-          numberOfPieces={200} // Reduced confetti pieces for a single explosion
-          gravity={0.15} // Slightly slower fall
-          initialVelocityX={{ min: -15, max: 15 }} // Moderate horizontal spread
-          initialVelocityY={{ min: -40, max: -80 }} // Moderate upward velocity
-          tweenDuration={3000} // Duration matches auto close timer
-          confettiSource={{ // Center of screen
+          numberOfPieces={200}
+          gravity={0.15}
+          initialVelocityX={{ min: -15, max: 15 }}
+          initialVelocityY={{ min: -40, max: -80 }}
+          tweenDuration={3000}
+          confettiSource={{
             x: width / 2,
             y: height / 2,
             w: 0,
             h: 0,
           }}
-          style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 9999 }} // Ensure confetti is on top
+          style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 9999 }}
         />
       )}
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -146,7 +187,6 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
                     <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
                       <XAxis dataKey="name" className="text-sm text-gray-600 dark:text-gray-400" />
-                      {/* Axes */}
                       <YAxis yAxisId="left" unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
                       {hasSecondary && (
                         <YAxis yAxisId="right" orientation="right" unit={yAxisUnit} className="text-sm text-gray-600 dark:text-gray-400" />
@@ -157,7 +197,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
                         itemStyle={{ color: 'hsl(var(--foreground))' }}
                         formatter={(value: number) => `${value.toFixed(2)}${yAxisUnit || ''}`}
                       />
-                      <Legend />
+                      <Legend content={renderInteractiveLegend} />
                       {dataKeys.map((item) => {
                         const axisId = item.key === 'prixParNuit' ? 'right' : 'left';
                         return (
@@ -173,6 +213,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
                             animationEasing="ease-in-out"
                             yAxisId={hasSecondary ? axisId : 'left'}
                             strokeDasharray={item.key === 'prixParNuit' ? '3 3' : undefined}
+                            hide={hiddenKeys.includes(item.key)}
                           />
                         );
                       })}
@@ -196,7 +237,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
                         itemStyle={{ color: 'hsl(var(--foreground))' }}
                         formatter={(value: number) => `${value.toFixed(2)}${yAxisUnit || ''}`}
                       />
-                      <Legend />
+                      <Legend content={renderInteractiveLegend} />
                       {dataKeys.map((item) => {
                         const axisId = item.key === 'prixParNuit' ? 'right' : 'left';
                         return (
@@ -208,6 +249,7 @@ const ChartFullScreenDialog: React.FC<ChartFullScreenDialogProps> = ({
                             animationDuration={1500}
                             animationEasing="ease-in-out"
                             yAxisId={hasSecondary ? axisId : 'left'}
+                            hide={hiddenKeys.includes(item.key)}
                           />
                         );
                       })}

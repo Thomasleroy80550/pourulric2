@@ -46,7 +46,7 @@ const AdminBilan2025PrintLayout = ({
 
   return (
     <div id="admin-bilan-2025-to-print" className="w-[980px] overflow-hidden bg-white text-slate-900">
-      <div className="relative overflow-hidden bg-[linear-gradient(135deg,#0A2540_0%,#163A5C_55%,#255F85_100%)] px-12 pb-12 pt-12 text-white">
+      <div className="relative overflow-hidden bg-[linear-gradient(135deg,#176282_0%,#255F85_100%)] px-12 pb-12 pt-12 text-white">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute left-[-8%] top-8 h-64 w-64 rounded-full border border-white/20" />
           <div className="absolute right-[-6%] top-[-8%] h-80 w-80 rounded-full border border-white/10" />
@@ -59,16 +59,12 @@ const AdminBilan2025PrintLayout = ({
               <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.24em] text-white/90">
                 Bilan annuel propriétaire
               </div>
-              <div className="mt-6 flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-white/10 p-2 backdrop-blur-sm">
-                  <img src="/logo.png" alt="Hello Keys" className="max-h-full max-w-full object-contain" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm uppercase tracking-[0.22em] text-white/70">Hello Keys</p>
-                  <h1 className="mt-2 break-words text-4xl font-semibold leading-tight tracking-[-0.03em] text-white">
-                    Bilan de performance {year}
-                  </h1>
-                </div>
+
+              <div className="mt-6 min-w-0">
+                <img src="/logo.png" alt="Hello Keys" className="h-14 w-auto max-w-[260px] object-contain rounded-none bg-transparent" />
+                <h1 className="mt-5 break-words text-4xl font-semibold leading-tight tracking-[-0.03em] text-white">
+                  Bilan de performance {year}
+                </h1>
               </div>
             </div>
 
@@ -193,7 +189,7 @@ const AdminBilan2025PrintLayout = ({
           <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-200">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-[linear-gradient(90deg,#0A2540_0%,#163A5C_55%,#255F85_100%)] text-white">
+                <tr className="bg-[linear-gradient(90deg,#176282_0%,#255F85_100%)] text-white">
                   <th className="px-5 py-4 text-left text-[12px] font-medium uppercase tracking-[0.16em]">Mois</th>
                   <th className="px-5 py-4 text-right text-[12px] font-medium uppercase tracking-[0.16em]">Chiffre d'affaires</th>
                   <th className="px-5 py-4 text-right text-[12px] font-medium uppercase tracking-[0.16em]">Occupation</th>

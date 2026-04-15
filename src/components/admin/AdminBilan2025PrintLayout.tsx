@@ -61,7 +61,9 @@ const AdminBilan2025PrintLayout = ({
               </div>
 
               <div className="mt-6 min-w-0">
-                <img src="/logo.png" alt="Hello Keys" className="h-14 w-auto max-w-[260px] object-contain rounded-none bg-transparent" />
+                <div className="inline-flex rounded-2xl bg-white px-5 py-3 shadow-lg">
+                  <img src="/logo.png" alt="Hello Keys" className="h-14 w-auto max-w-[260px] object-contain" />
+                </div>
                 <h1 className="mt-5 break-words text-4xl font-semibold leading-tight tracking-[-0.03em] text-white">
                   Bilan de performance {year}
                 </h1>

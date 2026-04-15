@@ -1,71 +1,125 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getMyStatements } from '@/lib/statements-api';
-import { getExpenses, getRecurringExpenses, generateRecurringInstances } from '@/lib/expenses-api';
-import { SavedInvoice } from '@/lib/admin-api';
-import { Expense } from '@/lib/expenses-api';
-import { startOfYear, startOfQuarter, startOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { useSession } from '@/components/SessionContextProvider';
+import { supabase } from '@/integrations/supabase/client';
+import { triggerBlobDownload } from '@/lib/download-utils';
+import { Download, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface BalanceSummary {
-  revenues: number;
-  expenses: number;
-  net: number;
-}
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
-};
+const BILAN_YEAR = 2025;
 
 const BalancesTab: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [annualBalance, setAnnualBalance] = useState<BalanceSummary>({ revenues: 0, expenses: 0, net: 0 });
-  const [quarterlyBalance, setQuarterlyBalance] = useState<BalanceSummary>({ revenues: 0, expenses: 0, net: 0 });
-  const [monthlyBalance, setMonthlyBalance] = useState<BalanceSummary>({ revenues: 0, expenses: 0, net: 0 });
+  const { session } = useSession();
+  const [checkingAvailability, setCheckingAvailability] = useState(true);
+  const [isBilanAvailable, setIsBilanAvailable] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  // Temporarily disable data fetching and show "in development"
   useEffect(() => {
-    setLoading(false); // Set loading to false immediately
-  }, []);
+    const checkBilanAvailability = async () => {
+      if (!session?.user.id) {
+        setCheckingAvailability(false);
+        setIsBilanAvailable(false);
+        return;
+      }
+
+      setCheckingAvailability(true);
+
+      const { data, error } = await supabase.storage
+        .from('statements')
+        .list(`bilans/${session.user.id}`, {
+          limit: 100,
+          search: `bilan-${BILAN_YEAR}.pdf`,
+        });
+
+      if (error) {
+        setIsBilanAvailable(false);
+      } else {
+        setIsBilanAvailable(
+          (data ?? []).some((file) => file.name === `bilan-${BILAN_YEAR}.pdf`),
+        );
+      }
+
+      setCheckingAvailability(false);
+    };
+
+    checkBilanAvailability();
+  }, [session?.user.id]);
+
+  const handleDownloadBilan = async () => {
+    if (!session?.user.id) return;
+
+    setIsDownloading(true);
+
+    const filePath = `bilans/${session.user.id}/bilan-${BILAN_YEAR}.pdf`;
+    const { data, error } = await supabase.storage.from('statements').download(filePath);
+
+    if (error || !data) {
+      toast.error(`Le bilan ${BILAN_YEAR} n'est pas encore disponible au téléchargement.`);
+      setIsDownloading(false);
+      return;
+    }
+
+    triggerBlobDownload(data, `Bilan_${BILAN_YEAR}.pdf`);
+    toast.success(`Le bilan ${BILAN_YEAR} a été téléchargé.`);
+    setIsDownloading(false);
+  };
+
+  if (checkingAvailability) {
+    return (
+      <div className="mt-6 space-y-4">
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-6 relative">
-      <div className="absolute inset-0 bg-white bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
-        <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">Fonctionnalité en développement</p>
-      </div>
-      <div className="opacity-50 pointer-events-none"> {/* Grays out and disables interaction */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
-            <>
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-48 w-full" />
-            </>
-          ) : (
-            <>
-              {renderBalanceCard(`Bilan Annuel (${new Date().getFullYear()})`, annualBalance)}
-              {renderBalanceCard(`Bilan Trimestriel (En cours)`, quarterlyBalance)}
-              {renderBalanceCard(`Bilan Mensuel (En cours)`, monthlyBalance)}
-            </>
-          )}
-        </div>
-        <Card className="shadow-md mt-6">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Rapports Détaillés</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Consultez ou générez des rapports financiers détaillés pour une analyse approfondie via l'onglet "Rapports".
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" disabled>Télécharger Bilan Annuel (Bientôt)</Button>
-              <Button variant="outline" disabled>Générer Rapport Personnalisé (Bientôt)</Button>
+    <div className="mt-6 space-y-6">
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Bilans disponibles
+          </CardTitle>
+          <CardDescription>
+            Retrouvez ici vos bilans annuels mis à disposition au format PDF.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isBilanAvailable ? (
+            <div className="flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold">Bilan {BILAN_YEAR}</p>
+                <p className="text-sm text-muted-foreground">
+                  Téléchargez votre bilan annuel au format PDF.
+                </p>
+              </div>
+              <Button onClick={handleDownloadBilan} disabled={isDownloading} className="sm:w-auto w-full">
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Téléchargement...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Télécharger
+                  </>
+                )}
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <Alert>
+              <AlertTitle>Bilan {BILAN_YEAR} indisponible</AlertTitle>
+              <AlertDescription>
+                Votre bilan {BILAN_YEAR} n'a pas encore été déposé dans votre espace client.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

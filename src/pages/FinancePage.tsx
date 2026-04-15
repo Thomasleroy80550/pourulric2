@@ -136,7 +136,7 @@ const FinancePage: React.FC = () => {
                     <SelectItem value="statements">Relevés</SelectItem>
                     <SelectItem value="invoices">Factures</SelectItem>
                     <SelectItem value="rehousing">Relogements</SelectItem>
-                    <SelectItem value="balances" disabled>Bilans (En développement)</SelectItem>
+                    <SelectItem value="balances">Bilans</SelectItem>
                     <SelectItem value="reports" disabled>Rapports (En développement)</SelectItem>
                     {showExpensesTab && <SelectItem value="expenses">Dépenses</SelectItem>}
                   </SelectContent>
@@ -147,7 +147,7 @@ const FinancePage: React.FC = () => {
                 <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relevés</TabsTrigger>
                 <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0">Factures</TabsTrigger>
                 <TabsTrigger value="rehousing" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relogements</TabsTrigger>
-                <TabsTrigger value="balances" disabled className="flex-shrink-0 min-w-[180px] md:min-w-0">Bilans (En développement)</TabsTrigger>
+                <TabsTrigger value="balances" className="flex-shrink-0 min-w-[140px] md:min-w-0">Bilans</TabsTrigger>
                 <TabsTrigger value="reports" disabled className="flex-shrink-0 min-w-[200px] md:min-w-0">Rapports (En développement)</TabsTrigger>
                 {showExpensesTab && <TabsTrigger value="expenses" className="flex-shrink-0 min-w-[140px] md:min-w-0">Dépenses</TabsTrigger>}
               </TabsList>

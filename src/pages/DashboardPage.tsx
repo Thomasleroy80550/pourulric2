@@ -780,8 +780,9 @@ const DashboardPage = () => {
                 </div>
               </div>
               <Button asChild>
-                <Link to="/laundry">Ouvrir le module blanchisserie</Link>
+                <Link to="/admin/laundry">Ouvrir le module blanchisserie</Link>
               </Button>
+
             </CardContent>
           </Card>
         )}

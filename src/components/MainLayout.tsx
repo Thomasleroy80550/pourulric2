@@ -81,7 +81,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
       { name: 'Aperçu', href: '/', icon: Home },
       { name: 'Calendrier', href: '/calendar', icon: Calendar, disabled: isPaymentSuspended },
       { name: 'Réservations', href: '/bookings', icon: Book, disabled: isPaymentSuspended },
-      ...(isAdmin ? [{ name: 'Blanchisserie', href: '/laundry', icon: Package, disabled: isPaymentSuspended }] : []),
+      ...(isAdmin ? [{ name: 'Blanchisserie', href: '/admin/laundry', icon: Package, disabled: isPaymentSuspended }] : []),
       { name: 'Incidents', href: '/reports', icon: Wrench },
 
       { name: 'Mes tickets', href: '/tickets', icon: MessageSquare },

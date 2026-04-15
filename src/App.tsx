@@ -202,7 +202,6 @@ function App() {
                       <Route path="/calendar" element={<CalendarPage />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                                           <Route path="/bookings" element={<BookingsPage />} />
-                                          <Route path="/laundry" element={<LaundryOrdersPage />} />
                                           <Route path="/performance" element={<PerformancePage />} />
                                           <Route path="/reviews" element={<ReviewsPage />} />
                     

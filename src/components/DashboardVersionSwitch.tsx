@@ -43,18 +43,17 @@ const DashboardVersionSwitch = ({
         </Link>
       </Button>
       <Button
-        asChild
+        type="button"
         size="sm"
         variant={isV2 ? "default" : "ghost"}
+        disabled
         className={cn(
           "rounded-full",
           !isV2 && isInverted && "text-slate-200 hover:bg-white/10 hover:text-white",
         )}
       >
-        <Link to="/home-v2">
-          <Sparkles className="mr-2 h-4 w-4" />
-          Dashboard V2
-        </Link>
+        <Sparkles className="mr-2 h-4 w-4" />
+        Dashboard V2
       </Button>
     </div>
   );

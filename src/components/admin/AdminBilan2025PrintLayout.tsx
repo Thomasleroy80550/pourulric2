@@ -84,8 +84,8 @@ const AdminBilan2025PrintLayout = ({
           <div className="grid grid-cols-[1.45fr_0.95fr] gap-8">
             <div className="min-w-0">
               <p className="max-w-2xl text-[15px] leading-7 text-white/80">
-                Une synthèse claire et élégante de votre activité locative annuelle, construite pour refléter
-                fidèlement les performances affichées dans votre espace Hello Keys.
+                Ce bilan annuel présente de manière synthétique les principaux indicateurs financiers et
+                opérationnels de votre activité sur l'année {year}.
               </p>
 
               <div className="mt-8 flex items-center gap-5">

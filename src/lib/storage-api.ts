@@ -74,3 +74,21 @@ export async function uploadStatementPdf(userId: string, invoiceId: string, pdfF
 
   return { path: data.path };
 }
+
+export async function uploadBilanPdf(userId: string, year: number, pdfFile: File): Promise<{ path: string }> {
+  const filePath = `bilans/${userId}/bilan-${year}.pdf`;
+
+  const { error, data } = await supabase.storage
+    .from('statements')
+    .upload(filePath, pdfFile, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) {
+    console.error('Error uploading bilan PDF:', error);
+    throw new Error(`Erreur lors du téléversement du bilan : ${error.message}`);
+  }
+
+  return { path: data.path };
+}

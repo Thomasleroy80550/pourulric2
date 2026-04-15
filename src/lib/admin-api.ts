@@ -616,6 +616,17 @@ export async function sendStatementByEmail(invoiceId: string, pdfPath: string): 
   }
 }
 
+export async function sendBilan2025ByEmail(userId: string, year: number, pdfPath: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('send-bilan-2025-email', {
+    body: { userId, year, pdfPath },
+  });
+
+  if (error) {
+    console.error('Error sending bilan 2025 email:', error);
+    throw new Error(`Erreur lors de l'envoi du bilan : ${error.message}`);
+  }
+}
+
 /**
  * Adds or updates an admin comment on a specific invoice.
  * @param invoiceId The ID of the invoice to update.

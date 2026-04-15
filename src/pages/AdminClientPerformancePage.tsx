@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getAllProfiles, getInvoicesByUserId, type SavedInvoice } from '@/lib/admin-api';
+import { getAllProfiles, getInvoicesByUserId, sendBilan2025ByEmail, type SavedInvoice } from '@/lib/admin-api';
 import { getUserRoomsByUserId } from '@/lib/user-room-api';
 import { useNavigate } from 'react-router-dom';
 import { generatePerformanceSummary } from '@/lib/performance-api';
@@ -21,6 +21,10 @@ import {
   ChartLegendContent,
 } from '@/components/ui/chart';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import AdminBilan2025PreviewDialog, { type AdminBilan2025PreviewData } from '@/components/admin/AdminBilan2025PreviewDialog';
+import { generateBilan2025PdfFile } from '@/lib/bilan-2025-api';
+import { uploadBilanPdf } from '@/lib/storage-api';
+import { triggerBlobDownload } from '@/lib/download-utils';
 
 type SimpleProfile = {
   id: string;
@@ -87,6 +91,11 @@ const AdminClientPerformancePage: React.FC = () => {
 
   const { toast } = useToast();
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [preparingBilan2025, setPreparingBilan2025] = useState(false);
+  const [downloadingBilan2025, setDownloadingBilan2025] = useState(false);
+  const [sendingBilan2025, setSendingBilan2025] = useState(false);
+  const [isBilanPreviewOpen, setIsBilanPreviewOpen] = useState(false);
+  const [bilanPreview, setBilanPreview] = useState<AdminBilan2025PreviewData | null>(null);
 
   // Fetch clients
   useEffect(() => {
@@ -143,6 +152,11 @@ const AdminClientPerformancePage: React.FC = () => {
       setRoomsCount(rooms?.length || 0);
     }).finally(() => setLoadingRooms(false));
   }, [selectedUserId]);
+
+  useEffect(() => {
+    setIsBilanPreviewOpen(false);
+    setBilanPreview(null);
+  }, [selectedUserId, globalYearFilter]);
 
   const filteredProfiles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -306,54 +320,52 @@ const AdminClientPerformancePage: React.FC = () => {
     return profiles.find(p => p.id === selectedUserId) || null;
   }, [profiles, selectedUserId]);
 
+  const buildSummaryPayload = () => {
+    if (!selectedUserId || !selectedProfile || !yearlyTotals) {
+      return null;
+    }
+
+    return {
+      clientName: `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim() || 'Client',
+      year: globalYearFilter || (selectedYear || new Date().getFullYear()),
+      yearlyTotals: {
+        totalCA: yearlyTotals.totalCA,
+        totalMontantVerse: yearlyTotals.totalMontantVerse,
+        totalFacture: yearlyTotals.totalFacture,
+        net: yearlyTotals.net,
+        adr: yearlyTotals.adr,
+        revpar: yearlyTotals.revpar,
+        yearlyOccupation: yearlyTotals.yearlyOccupation,
+        totalNuits: yearlyTotals.totalNuits,
+        totalReservations: yearlyTotals.totalReservations,
+        totalVoyageurs: yearlyTotals.totalVoyageurs,
+      },
+      monthlySeries: monthlySeries.map(m => ({
+        month: m.month,
+        totalCA: m.totalCA,
+        totalMontantVerse: m.totalMontantVerse,
+        totalFacture: m.totalFacture,
+        totalNuits: m.totalNuits,
+        adr: m.adr,
+        revpar: m.revpar,
+        occupation: m.occupation,
+      })),
+    };
+  };
+
   const handleGenerateSummaryPdf = async () => {
-    if (!selectedUserId || !selectedProfile || !yearlyTotals) return;
+    const summaryPayload = buildSummaryPayload();
+    if (!summaryPayload || !yearlyTotals) return;
     setGeneratingPdf(true);
     toast({ title: 'Génération du PDF…', description: `Synthèse annuelle ${globalYearFilter} en cours` });
 
     try {
-      const summaryText = await generatePerformanceSummary({
-        clientName: `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim() || 'Client',
-        year: globalYearFilter || (selectedYear || new Date().getFullYear()),
-        yearlyTotals: {
-          totalCA: yearlyTotals.totalCA,
-          totalMontantVerse: yearlyTotals.totalMontantVerse,
-          totalFacture: yearlyTotals.totalFacture,
-          net: yearlyTotals.net,
-          adr: yearlyTotals.adr,
-          revpar: yearlyTotals.revpar,
-          yearlyOccupation: yearlyTotals.yearlyOccupation,
-          totalNuits: yearlyTotals.totalNuits,
-          totalReservations: yearlyTotals.totalReservations,
-          totalVoyageurs: yearlyTotals.totalVoyageurs,
-        },
-        monthlySeries: monthlySeries.map(m => ({
-          month: m.month,
-          totalCA: m.totalCA,
-          totalMontantVerse: m.totalMontantVerse,
-          totalFacture: m.totalFacture,
-          totalNuits: m.totalNuits,
-          adr: m.adr,
-          revpar: m.revpar,
-          occupation: m.occupation,
-        })),
-      });
+      const summaryText = await generatePerformanceSummary(summaryPayload);
 
       await generatePerformanceSummaryPdf({
-        clientName: `${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`.trim() || 'Client',
-        year: globalYearFilter || (selectedYear || new Date().getFullYear()),
-        yearlyTotals: {
-          totalCA: yearlyTotals.totalCA,
-          totalMontantVerse: yearlyTotals.totalMontantVerse,
-          totalFacture: yearlyTotals.totalFacture,
-          net: yearlyTotals.net,
-          adr: yearlyTotals.adr,
-          revpar: yearlyTotals.revpar,
-          yearlyOccupation: yearlyTotals.yearlyOccupation,
-          totalNuits: yearlyTotals.totalNuits,
-          totalReservations: yearlyTotals.totalReservations,
-          totalVoyageurs: yearlyTotals.totalVoyageurs,
-        },
+        clientName: summaryPayload.clientName,
+        year: summaryPayload.year,
+        yearlyTotals: summaryPayload.yearlyTotals,
         monthly: monthlySeries.map(m => ({ month: m.month, totalCA: m.totalCA, occupation: m.occupation })),
         summaryText,
       });
@@ -367,6 +379,70 @@ const AdminClientPerformancePage: React.FC = () => {
     }
   };
 
+  const handleOpenBilan2025Preview = async () => {
+    const summaryPayload = buildSummaryPayload();
+    if (!summaryPayload || !yearlyTotals) return;
+
+    if (summaryPayload.year !== 2025) {
+      toast({ title: 'Année non disponible', description: 'L\'aperçu avec envoi est disponible uniquement pour 2025.' });
+      return;
+    }
+
+    setPreparingBilan2025(true);
+    try {
+      const summaryText = await generatePerformanceSummary(summaryPayload);
+      setBilanPreview({
+        clientName: summaryPayload.clientName,
+        email: selectedProfile?.email ?? null,
+        year: summaryPayload.year,
+        yearlyTotals: summaryPayload.yearlyTotals,
+        monthly: monthlySeries.map(m => ({ month: m.month, totalCA: m.totalCA, occupation: m.occupation })),
+        summaryText,
+      });
+      setIsBilanPreviewOpen(true);
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message || 'Impossible de préparer le bilan 2025.' });
+    } finally {
+      setPreparingBilan2025(false);
+    }
+  };
+
+  const handleDownloadBilan2025 = async () => {
+    if (!bilanPreview) return;
+
+    setDownloadingBilan2025(true);
+    try {
+      const pdfFile = await generateBilan2025PdfFile(bilanPreview);
+      triggerBlobDownload(pdfFile, pdfFile.name);
+      toast({ title: 'PDF téléchargé', description: 'Le bilan 2025 a été téléchargé.' });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message || 'Le téléchargement du bilan a échoué.' });
+    } finally {
+      setDownloadingBilan2025(false);
+    }
+  };
+
+  const handleSendBilan2025 = async () => {
+    if (!bilanPreview || !selectedUserId) return;
+    if (!selectedProfile?.email) {
+      toast({ title: 'Email manquant', description: 'Ce client n\'a pas d\'email renseigné.' });
+      return;
+    }
+
+    setSendingBilan2025(true);
+    try {
+      const pdfFile = await generateBilan2025PdfFile(bilanPreview);
+      const { path } = await uploadBilanPdf(selectedUserId, bilanPreview.year, pdfFile);
+      await sendBilan2025ByEmail(selectedUserId, bilanPreview.year, path);
+      toast({ title: 'Bilan envoyé', description: `Le bilan 2025 a été envoyé à ${selectedProfile.email}.` });
+      setIsBilanPreviewOpen(false);
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message || 'L\'envoi du bilan a échoué.' });
+    } finally {
+      setSendingBilan2025(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-6">
@@ -375,6 +451,13 @@ const AdminClientPerformancePage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => navigate('/admin/statements' + (selectedUserId ? `?userId=${selectedUserId}` : ''))}>
               Voir les relevés
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleOpenBilan2025Preview}
+              disabled={!selectedUserId || !yearlyTotals || globalYearFilter !== 2025 || preparingBilan2025}
+            >
+              {preparingBilan2025 ? 'Préparation…' : 'Prévisualiser bilan 2025'}
             </Button>
             <Button
               onClick={handleGenerateSummaryPdf}
@@ -622,7 +705,7 @@ const AdminClientPerformancePage: React.FC = () => {
 
               {/* Occupation (%) */}
               <div>
-                <div className="mb-2 text-sm text-muted-foreground">Taux d’occupation mensuel (%)</div>
+                <div className="mb-2 text-sm text-muted-foreground">Taux d'occupation mensuel (%)</div>
                 <ChartContainer config={chartConfig} className="h-72">
                   <BarChart
                     data={monthlySeries}
@@ -655,6 +738,15 @@ const AdminClientPerformancePage: React.FC = () => {
           </Card>
         )}
       </div>
+      <AdminBilan2025PreviewDialog
+        isOpen={isBilanPreviewOpen}
+        onOpenChange={setIsBilanPreviewOpen}
+        preview={bilanPreview}
+        onDownload={handleDownloadBilan2025}
+        onSend={handleSendBilan2025}
+        isDownloading={downloadingBilan2025}
+        isSending={sendingBilan2025}
+      />
     </AdminLayout>
   );
 };

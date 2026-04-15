@@ -45,74 +45,72 @@ const AdminBilan2025PrintLayout = ({
   });
 
   return (
-    <div id="admin-bilan-2025-to-print" className="w-[980px] overflow-hidden bg-white text-slate-950">
-      <div className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(255,255,255,0.14),_transparent_20%),linear-gradient(135deg,#020617_0%,#0f172a_52%,#052e2b_100%)] px-12 pb-12 pt-12 text-white">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute left-[-8%] top-10 h-64 w-64 rounded-full border border-white/20" />
-          <div className="absolute right-[-4%] top-[-2%] h-80 w-80 rounded-full border border-white/10" />
-          <div className="absolute bottom-[-18%] left-[38%] h-72 w-72 rounded-full border border-white/10" />
+    <div id="admin-bilan-2025-to-print" className="w-[980px] overflow-hidden bg-white text-slate-900">
+      <div className="relative overflow-hidden bg-[linear-gradient(135deg,#0A2540_0%,#163A5C_55%,#255F85_100%)] px-12 pb-12 pt-12 text-white">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute left-[-8%] top-8 h-64 w-64 rounded-full border border-white/20" />
+          <div className="absolute right-[-6%] top-[-8%] h-80 w-80 rounded-full border border-white/10" />
+          <div className="absolute bottom-[-20%] left-[42%] h-72 w-72 rounded-full border border-white/10" />
         </div>
 
-        <div className="relative z-10 flex min-h-[420px] flex-col justify-between">
+        <div className="relative z-10 flex min-h-[360px] flex-col justify-between gap-10">
           <div className="flex items-start justify-between gap-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/15 bg-white/10 text-xl font-semibold tracking-[0.18em] text-white backdrop-blur-sm">
-                HK
+            <div className="min-w-0 flex-1">
+              <div className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.24em] text-white/90">
+                Bilan annuel propriétaire
               </div>
-              <div>
-                <div className="inline-flex items-center rounded-full border border-emerald-300/30 bg-emerald-400/10 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.28em] text-emerald-200">
-                  Annual Owner Report
+              <div className="mt-6 flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-white/10 text-lg font-semibold tracking-[0.18em] text-white backdrop-blur-sm">
+                  HK
                 </div>
-                <p className="mt-4 text-sm uppercase tracking-[0.28em] text-slate-300">Hello Keys</p>
+                <div className="min-w-0">
+                  <p className="text-sm uppercase tracking-[0.22em] text-white/70">Hello Keys</p>
+                  <h1 className="mt-2 break-words text-4xl font-semibold leading-tight tracking-[-0.03em] text-white">
+                    Bilan de performance {year}
+                  </h1>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-white/10 bg-white/5 px-5 py-4 text-right shadow-2xl backdrop-blur-sm">
-              <div className="text-[11px] uppercase tracking-[0.24em] text-slate-300">Édition</div>
-              <div className="mt-2 text-sm font-medium text-white">{generatedAt}</div>
-              <div className="mt-3 h-px bg-white/10" />
-              <div className="mt-3 text-[11px] uppercase tracking-[0.2em] text-slate-400">Rapport patrimonial</div>
+            <div className="w-[240px] shrink-0 rounded-[24px] border border-white/15 bg-white/10 px-5 py-4 text-right shadow-xl backdrop-blur-sm">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-white/70">Édition</div>
+              <div className="mt-2 break-words text-sm font-medium text-white">{generatedAt}</div>
+              <div className="mt-4 border-t border-white/10 pt-4 text-[11px] uppercase tracking-[0.16em] text-white/65">
+                Synthèse annuelle
+              </div>
             </div>
           </div>
 
-          <div className="mt-14 grid grid-cols-[1.5fr_0.9fr] gap-10">
-            <div>
-              <div className="text-[12px] uppercase tracking-[0.34em] text-emerald-200">Bilan annuel</div>
-              <h1 className="mt-5 max-w-2xl text-5xl font-semibold leading-[1.02] tracking-[-0.04em] text-white">
-                Rapport luxe
-                <br />
-                de performance {year}
-              </h1>
-              <p className="mt-6 max-w-2xl text-[15px] leading-7 text-slate-300">
-                Une synthèse haut de gamme de votre activité locative, conçue pour offrir une lecture claire,
-                structurée et valorisante de vos performances annuelles.
+          <div className="grid grid-cols-[1.45fr_0.95fr] gap-8">
+            <div className="min-w-0">
+              <p className="max-w-2xl text-[15px] leading-7 text-white/80">
+                Une synthèse claire et élégante de votre activité locative annuelle, construite pour refléter
+                fidèlement les performances affichées dans votre espace Hello Keys.
               </p>
 
-              <div className="mt-10 flex items-center gap-5">
-                <div className="h-px w-16 bg-emerald-300/50" />
-                <div>
-                  <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Propriétaire</div>
-                  <div className="mt-1 text-xl font-medium text-white">{clientName}</div>
+              <div className="mt-8 flex items-center gap-5">
+                <div className="h-px w-16 shrink-0 bg-white/35" />
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-white/60">Propriétaire</div>
+                  <div className="mt-1 break-words text-xl font-medium text-white">{clientName}</div>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col justify-end">
-              <div className="rounded-[30px] border border-white/10 bg-white/6 p-7 shadow-2xl backdrop-blur-sm">
-                <div className="text-[11px] uppercase tracking-[0.24em] text-emerald-200">Résultat net</div>
-                <div className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-white">
-                  {formatCurrencyEUR(yearlyTotals.net)}
-                </div>
-                <p className="mt-3 text-sm leading-6 text-slate-300">
-                  Montant net annuel consolidé après prise en compte des montants versés et des frais Hello Keys.
-                </p>
+            <div className="rounded-[28px] border border-white/15 bg-white/10 p-6 shadow-2xl backdrop-blur-sm">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-white/70">Résultat net</div>
+              <div className="mt-3 break-words text-4xl font-semibold leading-tight tracking-[-0.04em] text-white">
+                {formatCurrencyEUR(yearlyTotals.net)}
+              </div>
+              <p className="mt-3 text-sm leading-6 text-white/75">
+                Montant net annuel après versements et frais de gestion Hello Keys.
+              </p>
 
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <DarkStat label="CA total" value={formatCurrencyEUR(yearlyTotals.totalCA)} />
-                  <DarkStat label="Occupation" value={formatPercent(yearlyTotals.yearlyOccupation)} />
-                  <DarkStat label="ADR" value={formatCurrencyEUR(yearlyTotals.adr)} />
-                  <DarkStat label="RevPAR" value={formatCurrencyEUR(yearlyTotals.revpar)} />
-                </div>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <DarkStat label="CA total" value={formatCurrencyEUR(yearlyTotals.totalCA)} />
+                <DarkStat label="Occupation" value={formatPercent(yearlyTotals.yearlyOccupation)} />
+                <DarkStat label="ADR" value={formatCurrencyEUR(yearlyTotals.adr)} />
+                <DarkStat label="RevPAR" value={formatCurrencyEUR(yearlyTotals.revpar)} />
               </div>
             </div>
           </div>
@@ -121,13 +119,12 @@ const AdminBilan2025PrintLayout = ({
 
       <div className="bg-white px-12 py-10">
         <div className="grid grid-cols-[1.05fr_0.95fr] gap-6">
-          <LuxuryPanel>
-            <SectionEyebrow>Lecture exécutive</SectionEyebrow>
-            <PanelTitle>Les grands marqueurs de l'année</PanelTitle>
+          <Panel>
+            <SectionEyebrow>Vue d'ensemble</SectionEyebrow>
+            <PanelTitle>Les indicateurs clés de l'année</PanelTitle>
             <p className="mt-3 text-sm leading-7 text-slate-600">
-              Ce document présente une lecture claire de la performance annuelle de votre bien : revenus,
-              rentabilité, intensité d&apos;occupation et volumes d&apos;activité. L&apos;objectif est d&apos;offrir un rapport à la fois
-              élégant, lisible et directement exploitable.
+              Ce document regroupe les principaux indicateurs financiers et opérationnels de votre activité,
+              avec une présentation cohérente avec votre espace client Hello Keys.
             </p>
 
             <div className="mt-6 grid grid-cols-3 gap-4">
@@ -135,24 +132,24 @@ const AdminBilan2025PrintLayout = ({
               <SoftMetricCard label="Frais Hello Keys" value={formatCurrencyEUR(yearlyTotals.totalFacture)} />
               <SoftMetricCard label="Réservations" value={formatNumber(yearlyTotals.totalReservations)} />
             </div>
-          </LuxuryPanel>
+          </Panel>
 
-          <LuxuryPanel accent>
-            <SectionEyebrow>Signature annuelle</SectionEyebrow>
-            <PanelTitle>Bénéfice & volumes consolidés</PanelTitle>
+          <Panel accent>
+            <SectionEyebrow>Volumes annuels</SectionEyebrow>
+            <PanelTitle>Activité consolidée</PanelTitle>
 
             <div className="mt-6 grid grid-cols-1 gap-3">
               <VolumeRow label="Bénéfice net annuel" value={formatCurrencyEUR(yearlyTotals.net)} highlight />
               <VolumeRow label="Nuits vendues" value={formatNumber(yearlyTotals.totalNuits)} />
               <VolumeRow label="Voyageurs accueillis" value={formatNumber(yearlyTotals.totalVoyageurs)} />
             </div>
-          </LuxuryPanel>
+          </Panel>
         </div>
       </div>
 
       <div className="px-12 pb-10">
         <div className="grid grid-cols-[1.15fr_0.85fr] gap-6">
-          <LuxuryPanel>
+          <Panel>
             <SectionEyebrow>Repères financiers</SectionEyebrow>
             <PanelTitle>Structure de la performance</PanelTitle>
 
@@ -162,33 +159,33 @@ const AdminBilan2025PrintLayout = ({
               <KeyValueRow label="Frais Hello Keys" value={formatCurrencyEUR(yearlyTotals.totalFacture)} />
               <KeyValueRow label="Bénéfice net" value={formatCurrencyEUR(yearlyTotals.net)} strong />
             </div>
-          </LuxuryPanel>
+          </Panel>
 
-          <LuxuryPanel>
+          <Panel>
             <SectionEyebrow>Performance commerciale</SectionEyebrow>
-            <PanelTitle>Indicateurs premium</PanelTitle>
+            <PanelTitle>Indicateurs de pilotage</PanelTitle>
 
             <div className="mt-6 grid grid-cols-2 gap-4">
-              <PremiumKpi title="ADR" value={formatCurrencyEUR(yearlyTotals.adr)} note="Tarif moyen / nuit vendue" />
-              <PremiumKpi title="RevPAR" value={formatCurrencyEUR(yearlyTotals.revpar)} note="Revenu / nuit disponible" />
+              <PremiumKpi title="ADR" value={formatCurrencyEUR(yearlyTotals.adr)} note="Tarif moyen par nuit vendue" />
+              <PremiumKpi title="RevPAR" value={formatCurrencyEUR(yearlyTotals.revpar)} note="Revenu par nuit disponible" />
               <PremiumKpi title="Occupation" value={formatPercent(yearlyTotals.yearlyOccupation)} note="Taux d'occupation annuel" />
-              <PremiumKpi title="Réservations" value={formatNumber(yearlyTotals.totalReservations)} note="Nombre de séjours" />
+              <PremiumKpi title="Réservations" value={formatNumber(yearlyTotals.totalReservations)} note="Nombre total de séjours" />
             </div>
-          </LuxuryPanel>
+          </Panel>
         </div>
       </div>
 
       <div className="px-12 pb-12">
-        <LuxuryPanel>
+        <Panel>
           <div className="flex items-end justify-between gap-6">
-            <div>
+            <div className="min-w-0">
               <SectionEyebrow>Tendance mensuelle</SectionEyebrow>
               <PanelTitle>Évolution du chiffre d'affaires et de l'occupation</PanelTitle>
               <p className="mt-2 text-sm text-slate-600">
-                Une lecture mois par mois pour apprécier la saisonnalité de l'activité et son intensité sur l'ensemble de l'année.
+                Une lecture mois par mois pour visualiser la saisonnalité de l'activité.
               </p>
             </div>
-            <div className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-emerald-700">
+            <div className="shrink-0 rounded-full border border-[#255F85]/15 bg-[#255F85]/5 px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-[#255F85]">
               Synthèse {year}
             </div>
           </div>
@@ -196,7 +193,7 @@ const AdminBilan2025PrintLayout = ({
           <div className="mt-6 overflow-hidden rounded-[24px] border border-slate-200">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-[linear-gradient(90deg,#0f172a_0%,#111827_55%,#064e3b_100%)] text-white">
+                <tr className="bg-[linear-gradient(90deg,#0A2540_0%,#163A5C_55%,#255F85_100%)] text-white">
                   <th className="px-5 py-4 text-left text-[12px] font-medium uppercase tracking-[0.16em]">Mois</th>
                   <th className="px-5 py-4 text-right text-[12px] font-medium uppercase tracking-[0.16em]">Chiffre d'affaires</th>
                   <th className="px-5 py-4 text-right text-[12px] font-medium uppercase tracking-[0.16em]">Occupation</th>
@@ -210,7 +207,7 @@ const AdminBilan2025PrintLayout = ({
                       {formatCurrencyEUR(monthRow.totalCA)}
                     </td>
                     <td className="border-t border-slate-200 px-5 py-4 text-right">
-                      <span className="inline-flex min-w-[96px] items-center justify-center rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800">
+                      <span className="inline-flex min-w-[96px] items-center justify-center rounded-full bg-[#255F85]/10 px-3 py-1.5 text-xs font-semibold text-[#255F85]">
                         {formatPercent(monthRow.occupation)}
                       </span>
                     </td>
@@ -219,17 +216,17 @@ const AdminBilan2025PrintLayout = ({
               </tbody>
             </table>
           </div>
-        </LuxuryPanel>
+        </Panel>
       </div>
 
       <div className="border-t border-slate-200 bg-slate-50 px-12 py-6">
         <div className="flex items-center justify-between gap-6">
-          <div>
+          <div className="min-w-0">
             <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Hello Keys</div>
-            <div className="mt-1 text-sm text-slate-600">Rapport annuel propriétaire — édition {year}</div>
+            <div className="mt-1 text-sm text-slate-600">Bilan annuel propriétaire — édition {year}</div>
           </div>
-          <div className="text-right text-xs leading-6 text-slate-500">
-            Document de synthèse haut de gamme généré à partir des données annuelles disponibles.
+          <div className="max-w-[340px] text-right text-xs leading-6 text-slate-500">
+            Document de synthèse généré à partir des données annuelles disponibles dans votre espace Hello Keys.
           </div>
         </div>
       </div>
@@ -237,7 +234,7 @@ const AdminBilan2025PrintLayout = ({
   );
 };
 
-const LuxuryPanel = ({
+const Panel = ({
   children,
   accent = false,
 }: {
@@ -246,7 +243,7 @@ const LuxuryPanel = ({
 }) => (
   <div
     className={accent
-      ? 'rounded-[30px] border border-emerald-100 bg-[linear-gradient(180deg,#ffffff_0%,#f0fdf4_100%)] p-7 shadow-[0_18px_50px_rgba(16,185,129,0.10)]'
+      ? 'rounded-[30px] border border-[#255F85]/10 bg-[linear-gradient(180deg,#ffffff_0%,#f4f8fb_100%)] p-7 shadow-[0_18px_50px_rgba(37,95,133,0.08)]'
       : 'rounded-[30px] border border-slate-200 bg-white p-7 shadow-[0_18px_50px_rgba(15,23,42,0.07)]'}
   >
     {children}
@@ -254,11 +251,11 @@ const LuxuryPanel = ({
 );
 
 const SectionEyebrow = ({ children }: { children: React.ReactNode }) => (
-  <div className="text-[11px] font-medium uppercase tracking-[0.24em] text-emerald-700">{children}</div>
+  <div className="text-[11px] font-medium uppercase tracking-[0.24em] text-[#255F85]">{children}</div>
 );
 
 const PanelTitle = ({ children }: { children: React.ReactNode }) => (
-  <h2 className="mt-3 text-[28px] font-semibold tracking-[-0.03em] text-slate-950">{children}</h2>
+  <h2 className="mt-3 break-words text-[28px] font-semibold tracking-[-0.03em] text-slate-950">{children}</h2>
 );
 
 const DarkStat = ({
@@ -268,9 +265,9 @@ const DarkStat = ({
   label: string;
   value: string;
 }) => (
-  <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-    <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{label}</div>
-    <div className="mt-2 text-base font-semibold text-white">{value}</div>
+  <div className="min-w-0 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+    <div className="text-[10px] uppercase tracking-[0.18em] text-white/60">{label}</div>
+    <div className="mt-2 break-words text-base font-semibold leading-tight text-white">{value}</div>
   </div>
 );
 
@@ -281,9 +278,9 @@ const SoftMetricCard = ({
   label: string;
   value: string;
 }) => (
-  <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-5">
+  <div className="min-w-0 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-5">
     <div className="text-xs uppercase tracking-[0.18em] text-slate-500">{label}</div>
-    <div className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-slate-950">{value}</div>
+    <div className="mt-3 break-words text-2xl font-semibold leading-tight tracking-[-0.03em] text-slate-950">{value}</div>
   </div>
 );
 
@@ -298,11 +295,11 @@ const VolumeRow = ({
 }) => (
   <div
     className={highlight
-      ? 'flex items-center justify-between rounded-[24px] border border-emerald-200 bg-white px-5 py-4 shadow-sm'
-      : 'flex items-center justify-between rounded-[24px] border border-white/60 bg-white/70 px-5 py-4'}
+      ? 'flex items-start justify-between gap-4 rounded-[24px] border border-[#255F85]/15 bg-white px-5 py-4 shadow-sm'
+      : 'flex items-start justify-between gap-4 rounded-[24px] border border-slate-200 bg-white/80 px-5 py-4'}
   >
-    <span className="text-sm text-slate-600">{label}</span>
-    <span className="text-lg font-semibold tracking-[-0.02em] text-slate-950">{value}</span>
+    <span className="min-w-0 flex-1 text-sm leading-6 text-slate-600">{label}</span>
+    <span className="max-w-[50%] break-words text-right text-lg font-semibold leading-tight tracking-[-0.02em] text-slate-950">{value}</span>
   </div>
 );
 
@@ -317,11 +314,11 @@ const KeyValueRow = ({
 }) => (
   <div
     className={strong
-      ? 'flex items-center justify-between rounded-[24px] border border-emerald-200 bg-emerald-50 px-5 py-4'
-      : 'flex items-center justify-between rounded-[24px] bg-slate-50 px-5 py-4'}
+      ? 'flex items-start justify-between gap-4 rounded-[24px] border border-[#255F85]/15 bg-[#255F85]/5 px-5 py-4'
+      : 'flex items-start justify-between gap-4 rounded-[24px] bg-slate-50 px-5 py-4'}
   >
-    <span className="text-sm text-slate-600">{label}</span>
-    <span className="text-base font-semibold text-slate-950">{value}</span>
+    <span className="min-w-0 flex-1 text-sm leading-6 text-slate-600">{label}</span>
+    <span className="max-w-[50%] break-words text-right text-base font-semibold leading-tight text-slate-950">{value}</span>
   </div>
 );
 
@@ -334,9 +331,9 @@ const PremiumKpi = ({
   value: string;
   note: string;
 }) => (
-  <div className="rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5">
+  <div className="min-w-0 rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5">
     <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500">{title}</div>
-    <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-950">{value}</div>
+    <div className="mt-3 break-words text-[28px] font-semibold leading-tight tracking-[-0.04em] text-slate-950">{value}</div>
     <div className="mt-2 text-xs leading-5 text-slate-500">{note}</div>
   </div>
 );

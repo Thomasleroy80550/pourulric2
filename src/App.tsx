@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import DashboardPage from "./pages/DashboardPage";
 import CalendarPage from "./pages/CalendarPage";
 import CalendarPageMobile from "./pages/CalendarPageMobile";
 import BookingsPage from "./pages/BookingsPage";
@@ -196,7 +197,7 @@ function App() {
                       <Route path="/integrations/netatmo/dashboard" element={<NetatmoDashboardPage />} />
                       <Route path="/integrations/netatmo/stations" element={<NetatmoStationsPage />} />
                       <Route path="/integrations/netatmo/override" element={<NetatmoTokenOverridePage />} />
-                      <Route path="/" element={<DashboardPageV2 />} />
+                      <Route path="/" element={<DashboardPage />} />
                       <Route path="/home-v2" element={<DashboardPageV2 />} />
                       <Route path="/calendar" element={<CalendarPage />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

@@ -279,8 +279,8 @@ const SoftMetricCard = ({
   value: string;
 }) => (
   <div className="min-w-0 rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-5">
-    <div className="text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</div>
-    <div className="mt-2 break-words text-[22px] font-semibold leading-snug tracking-[-0.02em] text-slate-950">{value}</div>
+    <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500">{label}</div>
+    <div className="mt-2 break-words text-[20px] font-semibold leading-snug tracking-[-0.01em] text-slate-950">{value}</div>
   </div>
 );
 
@@ -332,9 +332,9 @@ const PremiumKpi = ({
   note: string;
 }) => (
   <div className="min-w-0 rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-5">
-    <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{title}</div>
-    <div className="mt-2 break-words text-[24px] font-semibold leading-snug tracking-[-0.03em] text-slate-950">{value}</div>
-    <div className="mt-2 text-[11px] leading-5 text-slate-500">{note}</div>
+    <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500">{title}</div>
+    <div className="mt-2 break-words text-[22px] font-semibold leading-snug tracking-[-0.02em] text-slate-950">{value}</div>
+    <div className="mt-2 text-[10px] leading-4 text-slate-500">{note}</div>
   </div>
 );
 

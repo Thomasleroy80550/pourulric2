@@ -397,22 +397,39 @@ export async function getAllProfiles(): Promise<UserProfile[]> {
  * @returns A promise that resolves to an array of SavedInvoice objects.
  */
 export async function getSavedInvoices(): Promise<SavedInvoice[]> {
-  const { data, error } = await supabase
-    .from('invoices')
-    .select(`
-      *,
-      profiles!user_id (
-        first_name,
-        last_name
-      )
-    `)
-    .order('created_at', { ascending: false });
+  const statements: SavedInvoice[] = [];
+  const pageSize = 1000;
+  let from = 0;
 
-  if (error) {
-    console.error("Error fetching all statements:", error);
-    throw new Error(`Erreur lors de la récupération des relevés : ${error.message}`);
+  while (true) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select(`
+        *,
+        profiles!user_id (
+          first_name,
+          last_name
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error("Error fetching all statements:", error);
+      throw new Error(`Erreur lors de la récupération des relevés : ${error.message}`);
+    }
+
+    const batch = data || [];
+    statements.push(...batch);
+
+    if (batch.length < pageSize) {
+      break;
+    }
+
+    from += pageSize;
   }
-  return data || [];
+
+  return statements;
 }
 
 /**
@@ -421,17 +438,34 @@ export async function getSavedInvoices(): Promise<SavedInvoice[]> {
  * @returns A promise that resolves to an array of SavedInvoice objects.
  */
 export async function getInvoicesByUserId(userId: string): Promise<SavedInvoice[]> {
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true });
+  const statements: SavedInvoice[] = [];
+  const pageSize = 1000;
+  let from = 0;
 
-  if (error) {
-    console.error(`Error fetching invoices for user ${userId}:`, error);
-    throw new Error(`Erreur lors de la récupération des relevés pour l'utilisateur : ${error.message}`);
+  while (true) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error(`Error fetching invoices for user ${userId}:`, error);
+      throw new Error(`Erreur lors de la récupération des relevés pour l'utilisateur : ${error.message}`);
+    }
+
+    const batch = data || [];
+    statements.push(...batch);
+
+    if (batch.length < pageSize) {
+      break;
+    }
+
+    from += pageSize;
   }
-  return data || [];
+
+  return statements;
 }
 
 /**

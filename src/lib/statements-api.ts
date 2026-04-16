@@ -1,26 +1,46 @@
 import { supabase } from "@/integrations/supabase/client";
-import { SavedInvoice } from "./admin-api"; // Re-using the same type
+import { SavedInvoice } from "./admin-api";
+
+const STATEMENTS_PAGE_SIZE = 1000;
 
 /**
  * Fetches all saved invoices/statements for the currently logged-in user.
  * @returns A promise that resolves to an array of SavedInvoice objects.
  */
 export async function getMyStatements(): Promise<SavedInvoice[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
-    // If no user, return empty array as this might be called during logout transition
     return [];
   }
 
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('user_id', user.id) // Filtrer strictement sur l'utilisateur courant
-    .order('created_at', { ascending: false });
+  const statements: SavedInvoice[] = [];
+  let from = 0;
 
-  if (error) {
-    console.error("Error fetching user's statements:", error);
-    throw new Error(`Erreur lors de la récupération de vos relevés : ${error.message}`);
+  while (true) {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .range(from, from + STATEMENTS_PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("Error fetching user's statements:", error);
+      throw new Error(`Erreur lors de la récupération de vos relevés : ${error.message}`);
+    }
+
+    const batch = data || [];
+    statements.push(...batch);
+
+    if (batch.length < STATEMENTS_PAGE_SIZE) {
+      break;
+    }
+
+    from += STATEMENTS_PAGE_SIZE;
   }
-  return data || [];
+
+  return statements;
 }

@@ -154,6 +154,9 @@ const AdminHelloKeysStatsPage: React.FC = () => {
     return selectedYearSummary;
   }, [selectedYear, stats, yearlyData]);
 
+  const totalCommissionMenage =
+    (displayedSummary?.totalCommission ?? 0) + (displayedSummary?.totalCleaningFees ?? 0);
+
   if (loading) {
     return (
       <AdminLayout>
@@ -342,6 +345,9 @@ const AdminHelloKeysStatsPage: React.FC = () => {
             <CardDescription>
               Cliquez sur une année pour filtrer rapidement les statistiques.
             </CardDescription>
+            <p className="text-sm font-medium text-foreground">
+              Total commission + ménage {selectedYear === 'all' ? 'sur tout l’historique' : `en ${selectedYear}`} : {formatCurrency(totalCommissionMenage)}
+            </p>
           </CardHeader>
           <CardContent>
             {yearlyData.length === 0 ? (
@@ -372,6 +378,10 @@ const AdminHelloKeysStatsPage: React.FC = () => {
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-muted-foreground">Ménage</span>
                           <span className="font-medium">{formatCurrency(item.totalCleaningFees)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-muted-foreground">Total com. + ménage</span>
+                          <span className="font-semibold">{formatCurrency(item.totalCommission + item.totalCleaningFees)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-muted-foreground">Revenu</span>

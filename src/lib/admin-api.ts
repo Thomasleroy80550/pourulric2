@@ -191,6 +191,7 @@ export interface BillingStats {
     totalRevenue: number;
     totalCommission: number;
     totalCleaningFees: number; // Nouveau champ
+    invoiceCount: number;
   }[];
 }
 
@@ -285,7 +286,7 @@ export async function getBillingStats(period?: string): Promise<BillingStats> {
   let totalRevenue = 0;
   let totalCommission = 0;
   let totalCleaningFees = 0;
-  const monthlyMap = new Map<string, { totalRevenue: number; totalCommission: number; totalCleaningFees: number }>();
+  const monthlyMap = new Map<string, { totalRevenue: number; totalCommission: number; totalCleaningFees: number; invoiceCount: number }>();
 
   const monthNames: { [key: string]: number } = {
     "Janvier": 0, "Février": 1, "Mars": 2, "Avril": 3, "Mai": 4, "Juin": 5,
@@ -303,12 +304,13 @@ export async function getBillingStats(period?: string): Promise<BillingStats> {
     totalCleaningFees += cleaningFees;
 
     if (!monthlyMap.has(invoicePeriod)) {
-      monthlyMap.set(invoicePeriod, { totalRevenue: 0, totalCommission: 0, totalCleaningFees: 0 });
+      monthlyMap.set(invoicePeriod, { totalRevenue: 0, totalCommission: 0, totalCleaningFees: 0, invoiceCount: 0 });
     }
     const currentMonthData = monthlyMap.get(invoicePeriod)!;
     currentMonthData.totalRevenue += revenue;
     currentMonthData.totalCommission += commission;
     currentMonthData.totalCleaningFees += cleaningFees;
+    currentMonthData.invoiceCount += 1;
   });
 
   const monthlyData = Array.from(monthlyMap.entries())
@@ -329,6 +331,7 @@ export async function getBillingStats(period?: string): Promise<BillingStats> {
         totalRevenue: data.totalRevenue,
         totalCommission: data.totalCommission,
         totalCleaningFees: data.totalCleaningFees,
+        invoiceCount: data.invoiceCount,
       };
     })
     .filter(item => item !== null)

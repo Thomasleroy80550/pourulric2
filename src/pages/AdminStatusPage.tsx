@@ -160,6 +160,7 @@ const AdminStatusPage: React.FC = () => {
   const [syncRuns, setSyncRuns] = useState<ReservationEmailSyncRun[]>([]);
   const [reservationEvents, setReservationEvents] = useState<ReservationEmailEvent[]>([]);
   const [monitoringError, setMonitoringError] = useState<string | null>(null);
+  const [reservationSearch, setReservationSearch] = useState("");
 
   const [newServiceKey, setNewServiceKey] = useState("");
   const [newServiceName, setNewServiceName] = useState("");
@@ -421,7 +422,28 @@ const AdminStatusPage: React.FC = () => {
   const latestRunDuplicates = latestRun?.details?.duplicates ?? 0;
   const latestRunIgnored = latestRun?.details?.ignored ?? 0;
   const latestRunFailed = latestRun?.details?.failed ?? 0;
-  const latestRunProcessed = latestRun?.details?.processed ?? [];
+  const latestRunProcessed = useMemo<ProcessedEmailDebugItem[]>(() => {
+    const latest = syncRuns[0];
+    if (!latest?.details?.processed || !Array.isArray(latest.details.processed)) {
+      return [];
+    }
+    return latest.details.processed;
+  }, [syncRuns]);
+
+  const filteredReservationEvents = useMemo(() => {
+    const query = reservationSearch.trim().toLowerCase();
+
+    if (!query) {
+      return reservationEvents;
+    }
+
+    return reservationEvents.filter((event) => event.room_name.toLowerCase().includes(query));
+  }, [reservationEvents, reservationSearch]);
+
+  const matchedFilteredCount = useMemo(
+    () => filteredReservationEvents.filter((event) => event.processing_status === "matched").length,
+    [filteredReservationEvents]
+  );
 
   return (
     <AdminLayout>
@@ -585,8 +607,27 @@ const AdminStatusPage: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Derniers événements de réservation</CardTitle>
+            <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="w-full max-w-md space-y-2">
+                <label htmlFor="reservation-room-search" className="text-sm font-medium">
+                  Rechercher un logement
+                </label>
+                <Input
+                  id="reservation-room-search"
+                  placeholder="Ex : Baie des Dunes"
+                  value={reservationSearch}
+                  onChange={(e) => setReservationSearch(e.target.value)}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {filteredReservationEvents.length} résultat(s) · {matchedFilteredCount} matché(s)
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 text-sm text-muted-foreground">
+              Filtre par nom de logement pour vérifier rapidement si un événement a été matché.
+            </div>
             <div className="rounded-lg border">
               <Table>
                 <TableHeader>
@@ -608,14 +649,16 @@ const AdminStatusPage: React.FC = () => {
                         Chargement des événements...
                       </TableCell>
                     </TableRow>
-                  ) : reservationEvents.length === 0 ? (
+                  ) : filteredReservationEvents.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="py-6 text-center text-sm text-muted-foreground">
-                        Aucun événement importé pour le moment.
+                        {reservationSearch.trim()
+                          ? "Aucun événement trouvé pour ce logement."
+                          : "Aucun événement importé pour le moment."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    reservationEvents.map((event) => (
+                    filteredReservationEvents.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell className="text-sm">{formatDateTime(event.created_at)}</TableCell>
                         <TableCell>{getEventTypeBadge(event.event_type)}</TableCell>

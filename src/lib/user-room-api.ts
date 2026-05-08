@@ -60,6 +60,46 @@ export interface UserRoom {
   is_water_cut?: boolean;
 }
 
+export interface MonthlyFeaturedRoom {
+  id: string;
+  user_room_id: string;
+  featured_month: string;
+  message: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function toMonthStartString(value: string | Date): string {
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      return `${value}-01`;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return `${value.slice(0, 7)}-01`;
+    }
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+}
+
+export function getCurrentMonthInputValue(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function formatMonthLabel(value: string): string {
+  const monthStart = toMonthStartString(value);
+  return new Intl.DateTimeFormat('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${monthStart}T00:00:00`));
+}
+
 /**
  * Adds a new room configuration for the current user.
  * @param room_id The Krossbooking room ID.
@@ -108,6 +148,73 @@ export async function getUserRooms(): Promise<UserRoom[]> {
     throw new Error(`Erreur lors de la récupération des chambres : ${error.message}`);
   }
   return data || [];
+}
+
+export async function getMonthlyFeaturedRooms(featuredMonth: string | Date): Promise<MonthlyFeaturedRoom[]> {
+  const normalizedMonth = toMonthStartString(featuredMonth);
+
+  const { data, error } = await supabase
+    .from('monthly_featured_rooms')
+    .select('*')
+    .eq('featured_month', normalizedMonth)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error(`Erreur lors du chargement des logements mis en avant : ${error.message}`);
+  }
+
+  return data || [];
+}
+
+export async function upsertMonthlyFeaturedRoom(params: {
+  userRoomId: string;
+  featuredMonth: string | Date;
+  message?: string;
+}): Promise<MonthlyFeaturedRoom> {
+  const normalizedMonth = toMonthStartString(params.featuredMonth);
+  const trimmedMessage = params.message?.trim() || null;
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error('Utilisateur non authentifié.');
+  }
+
+  const { data, error } = await supabase
+    .from('monthly_featured_rooms')
+    .upsert(
+      {
+        user_room_id: params.userRoomId,
+        featured_month: normalizedMonth,
+        message: trimmedMessage,
+        created_by: user.id,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'user_room_id,featured_month',
+      }
+    )
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(`Erreur lors de l'enregistrement du logement mis en avant : ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function deleteMonthlyFeaturedRoom(userRoomId: string, featuredMonth: string | Date): Promise<void> {
+  const normalizedMonth = toMonthStartString(featuredMonth);
+
+  const { error } = await supabase
+    .from('monthly_featured_rooms')
+    .delete()
+    .eq('user_room_id', userRoomId)
+    .eq('featured_month', normalizedMonth);
+
+  if (error) {
+    throw new Error(`Erreur lors de la suppression du logement mis en avant : ${error.message}`);
+  }
 }
 
 /**

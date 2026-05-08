@@ -112,6 +112,7 @@ const queryClient = new QueryClient();
 
 function App() {
   return (
+
     <div className="notranslate" translate="no" data-hk-app-shell="true">
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

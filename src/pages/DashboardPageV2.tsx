@@ -32,7 +32,9 @@ import {
 import BrandBackdrop from "@/components/BrandBackdrop";
 import MainLayout from "@/components/MainLayout";
 import DashboardVersionSwitch from "@/components/DashboardVersionSwitch";
+import ConnectivityMaintenanceAlert from "@/components/ConnectivityMaintenanceAlert";
 import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -374,7 +376,10 @@ const DashboardPageV2: React.FC = () => {
                   <DashboardVersionSwitch className="self-start" />
                 </div>
 
+                <ConnectivityMaintenanceAlert />
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+
                   {loading
                     ? Array.from({ length: 4 }).map((_, index) => (
                         <div

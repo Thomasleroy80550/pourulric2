@@ -2,7 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
+const KROSSBOOKING_UPSTREAM_PROXY_URL = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_URL") ?? "").trim();
+const KROSSBOOKING_UPSTREAM_PROXY_SECRET = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_SECRET") ?? "").trim();
 const CRON_SECRETS = [
+
   Deno.env.get("CRON_SECRET"),
   Deno.env.get("CRON_SECRET_2"),
   Deno.env.get("CRONSECRETNOTIFYNEWRESA"),
@@ -107,7 +110,36 @@ function isThreadWithinDateRange(thread: Record<string, unknown>, startDate?: st
   return true;
 }
 
+function hasUpstreamProxy() {
+  return !!KROSSBOOKING_UPSTREAM_PROXY_URL && !!KROSSBOOKING_UPSTREAM_PROXY_SECRET;
+}
+
+async function callUpstreamProxy(action: string, payload: Record<string, unknown>) {
+  if (!hasUpstreamProxy()) {
+    throw new Error("Krossbooking upstream proxy is not configured.");
+  }
+
+  const response = await fetch(KROSSBOOKING_UPSTREAM_PROXY_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-proxy-secret": KROSSBOOKING_UPSTREAM_PROXY_SECRET,
+    },
+    body: JSON.stringify({ action, ...payload }),
+  });
+
+  const responseText = await response.text();
+  const parsed = responseText ? JSON.parse(responseText) : null;
+
+  if (!response.ok) {
+    throw new Error(parsed?.error || `Upstream proxy error: ${response.status}`);
+  }
+
+  return parsed;
+}
+
 async function getAuthToken(): Promise<string> {
+
   const KROSSBOOKING_API_KEY = Deno.env.get("KROSSBOOKING_API_KEY");
   const KROSSBOOKING_HOTEL_ID = Deno.env.get("KROSSBOOKING_HOTEL_ID");
   const KROSSBOOKING_USERNAME = Deno.env.get("KROSSBOOKING_USERNAME");
@@ -141,7 +173,27 @@ async function getAuthToken(): Promise<string> {
   return data.auth_token;
 }
 
-async function postToKrossbooking(authToken: string, path: string, payload: Record<string, unknown>) {
+async function postToKrossbooking(authToken: string | null, path: string, payload: Record<string, unknown>) {
+
+  if (hasUpstreamProxy() && path === "/reservations/get-list" && typeof payload.id_room === "number") {
+    console.log(`[krossbooking-proxy] using upstream proxy action=get_reservations_for_room roomId=${payload.id_room}`);
+    return callUpstreamProxy("get_reservations_for_room", {
+      id_room: payload.id_room,
+      ...(typeof payload.id_property === "number" ? { id_property: payload.id_property } : {}),
+    });
+  }
+
+  if (hasUpstreamProxy() && path === "/rooms/get-rooms") {
+    console.log("[krossbooking-proxy] using upstream proxy action=get_room_types");
+    return callUpstreamProxy("get_room_types", {
+      ...(typeof payload.id_property === "number" ? { id_property: payload.id_property } : {}),
+    });
+  }
+
+  if (!authToken) {
+    throw new Error(`Missing Krossbooking auth token for path: ${path}`);
+  }
+
   const response = await fetch(`${KROSSBOOKING_API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
@@ -333,9 +385,17 @@ serve(async (req) => {
     }
 
     const userContext = !isCron ? await getUserContext(authHeader) : null;
-    const authToken = await getAuthToken();
+    let authToken: string | null = null;
+    const getOrCreateAuthToken = async () => {
+      if (!authToken) {
+        authToken = await getAuthToken();
+      }
+
+      return authToken;
+    };
 
     if (action === "get_reservations_for_user_rooms") {
+
       const rooms = Array.isArray(requestBody.rooms) ? (requestBody.rooms as RoomRequest[]) : [];
       if (rooms.length === 0) {
         throw new Error("Missing rooms for get_reservations_for_user_rooms.");
@@ -351,7 +411,7 @@ serve(async (req) => {
           continue;
         }
 
-        const response = await postToKrossbooking(authToken, "/reservations/get-list", {
+        const response = await postToKrossbooking(hasUpstreamProxy() ? null : await getOrCreateAuthToken(), "/reservations/get-list", {
           with_rooms: true,
           id_room: roomId,
           id_property: room.id_property ? Number(room.id_property) : undefined,
@@ -385,7 +445,7 @@ serve(async (req) => {
 
       const lastUpdate = typeof requestBody.last_update === "string" ? requestBody.last_update : undefined;
       const dateTo = typeof requestBody.date_to === "string" ? requestBody.date_to : undefined;
-      const response = await postToKrossbooking(authToken, "/messaging/get-threads", {
+      const response = await postToKrossbooking(await getOrCreateAuthToken(), "/messaging/get-threads", {
         ...(lastUpdate ? { last_update: lastUpdate } : {}),
         ...(typeof requestBody.to_read === "boolean" ? { to_read: requestBody.to_read } : {}),
         ...(typeof requestBody.search === "string" && requestBody.search.trim() ? { search: requestBody.search.trim() } : {}),
@@ -419,7 +479,8 @@ serve(async (req) => {
         });
       }
 
-      const authorizedReservations = await getAuthorizedReservations(authToken, userContext);
+      const authorizedReservations = await getAuthorizedReservations(await getOrCreateAuthToken(), userContext);
+
       const filteredThreads = threads.filter((thread) => {
         const reservationId = parseNumericReservationId(extractReservationId(thread));
         return !!reservationId && authorizedReservations.has(reservationId);
@@ -462,7 +523,7 @@ serve(async (req) => {
       }
 
       const authorizedThread = await getAuthorizedThread(
-        authToken,
+        await getOrCreateAuthToken(),
         userContext,
         idThread,
         fallbackReservationId,
@@ -494,13 +555,13 @@ serve(async (req) => {
       }
 
       await getAuthorizedThread(
-        authToken,
+        await getOrCreateAuthToken(),
         userContext,
         idThread,
         fallbackReservationId,
       );
 
-      const sendResponse = await postToKrossbooking(authToken, "/messaging/send-message", {
+      const sendResponse = await postToKrossbooking(await getOrCreateAuthToken(), "/messaging/send-message", {
         id_thread: idThread,
         message,
       });
@@ -609,7 +670,14 @@ serve(async (req) => {
         throw new Error(`Unsupported action: ${action}`);
     }
 
-    const data = await postToKrossbooking(authToken, krossbookingPath, payload);
+    const data = await postToKrossbooking(
+      hasUpstreamProxy() && (krossbookingPath === "/rooms/get-rooms" || krossbookingPath === "/reservations/get-list")
+        ? null
+        : await getOrCreateAuthToken(),
+      krossbookingPath,
+      payload,
+    );
+
     const normalizedData = normalizeKrossData(data);
 
     const responsePayload = returnFullData

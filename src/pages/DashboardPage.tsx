@@ -668,13 +668,32 @@ const DashboardPage = () => {
 
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Version actuelle</p>
         </div>
+        <Alert className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900/40 dark:bg-blue-950/30">
+          <Sparkles className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
+            <Badge className="bg-blue-600 text-white hover:bg-blue-600">Nouveau</Badge>
+            Prévisions de chiffre d&apos;affaires
+          </AlertTitle>
+          <AlertDescription className="mt-2 flex flex-col gap-3 text-blue-800 dark:text-blue-200 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Afin de compenser la panne, on vous a ajouté une nouvelle fonctionnalité qui avait été demandée pour voir vos prévisions de chiffre d&apos;affaires.
+            </span>
+            <Button asChild size="sm" className="w-full sm:w-auto">
+              <Link to="/prevision-ca">Voir mes prévisions</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
         <div className="mb-6 flex flex-wrap items-center gap-3">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/prevision-ca">Prévision</Link>
+          </Button>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-700 dark:text-gray-300">Année:</span>
             <Tabs
               value={selectedYear === currentYear ? 'current' : '2025'}
               onValueChange={(val) => setSelectedYear(val === 'current' ? currentYear : 2025)}
             >
+
               <TabsList className="flex gap-1 bg-transparent p-0 border-0 shadow-none">
                 <TabsTrigger
                   value="2025"

@@ -448,7 +448,7 @@ const CalendarPage: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="ical">
-                <IcalCalendarTab userRooms={userRooms} />
+                <IcalCalendarTab userRooms={userRooms} profile={profile} />
               </TabsContent>
 
               <TabsContent value="debug">

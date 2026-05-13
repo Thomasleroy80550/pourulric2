@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import TwelveMonthView from '@/components/TwelveMonthView';
+import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
 import { fetchIcalReservationsForRoom } from '@/lib/ical';
 import { KrossbookingReservation } from '@/lib/krossbooking';
+import { UserProfile } from '@/lib/profile-api';
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 
 interface IcalCalendarTabProps {
   userRooms: UserRoom[];
+  profile: UserProfile | null;
 }
 
-const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms }) => {
+const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms, profile }) => {
   const [loadingIcal, setLoadingIcal] = useState(false);
   const [icalReservations, setIcalReservations] = useState<KrossbookingReservation[]>([]);
 
@@ -54,31 +56,33 @@ const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms }) => {
   }, [linkedRooms]);
 
   if (userRooms.length === 0) {
-    return (
-      <p className="text-muted-foreground">
-        Aucune chambre configurée.
-      </p>
-    );
+    return <p className="text-muted-foreground">Aucune chambre configurée.</p>;
   }
 
   if (loadingIcal) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-[360px] w-full" />
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
   if (linkedRooms.length === 0) {
-    return (
-      <p className="text-muted-foreground">
-        Aucun flux iCal n’est configuré pour ces logements.
-      </p>
-    );
+    return <p className="text-muted-foreground">Aucun flux iCal n’est configuré pour ces logements.</p>;
   }
 
-  return <TwelveMonthView userRooms={userRooms} reservations={icalReservations} />;
+  return (
+    <div className="w-full min-w-0 overflow-x-visible">
+      <BookingPlanningGridStudio
+        refreshTrigger={0}
+        userRooms={userRooms}
+        reservations={icalReservations}
+        onReservationChange={() => undefined}
+        profile={profile}
+      />
+    </div>
+  );
 };
 
 export default IcalCalendarTab;

@@ -13,8 +13,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarDays, FileSpreadsheet, Link2, RefreshCw, Save, Upload } from 'lucide-react';
+import { CalendarDays, FileSpreadsheet, Link2, RefreshCw, Save, Upload, WandSparkles } from 'lucide-react';
 import { toast } from 'sonner';
+
+type MatchStatus = 'matched' | 'ambiguous' | 'unmatched';
 
 interface ParsedImportRow {
   roomName: string;
@@ -22,12 +24,20 @@ interface ParsedImportRow {
   roomId2: string;
   icalUrl: string;
   matchedRoom: AdminUserRoom | null;
+  suggestedRoom: AdminUserRoom | null;
+  matchStatus: MatchStatus;
+  matchReason: string;
+  matchScore: number;
 }
+
+const SAMPLE_IMPORT_PATH = '/imports/Export_2026-05-13.xlsx';
 
 const normalizeText = (value?: string | null) =>
   (value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, ' ')
+    .replace(/[^a-z0-9]+/gi, ' ')
     .trim()
     .toLowerCase();
 
@@ -68,6 +78,199 @@ const toStringValue = (value: unknown) => {
   return String(value).trim();
 };
 
+const getRowValues = (row: Record<string, unknown>) =>
+  Object.values(row)
+    .map((value) => toStringValue(value))
+    .filter(Boolean);
+
+const findIcalUrlInValues = (values: string[]) => {
+  const preferred = values.find((value) => {
+    if (!isValidIcalUrl(value)) {
+      return false;
+    }
+
+    const normalized = value.toLowerCase();
+    return normalized.includes('.ics')
+      || normalized.includes('ical')
+      || normalized.includes('calendar')
+      || normalized.includes('airbnb')
+      || normalized.includes('booking')
+      || normalized.includes('abritel')
+      || normalized.includes('vrbo');
+  });
+
+  if (preferred) {
+    return preferred;
+  }
+
+  return values.find((value) => isValidIcalUrl(value)) || '';
+};
+
+const getSignificantTokens = (value?: string | null) => {
+  const stopWords = new Set([
+    'appartement',
+    'appart',
+    'studio',
+    'maison',
+    'villa',
+    'gite',
+    'le',
+    'la',
+    'les',
+    'de',
+    'du',
+    'des',
+    'd',
+    'au',
+    'aux',
+    'et',
+    'sur',
+    'mer',
+  ]);
+
+  return normalizeText(value)
+    .split(' ')
+    .filter((token) => token.length >= 3 && !stopWords.has(token));
+};
+
+const unique = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+
+const buildRowDetails = (
+  row: Record<string, unknown>,
+  roomNameColumn: string,
+  roomIdColumn: string,
+  roomId2Column: string,
+  icalUrlColumn: string,
+) => {
+  const allValues = getRowValues(row);
+  const roomName = toStringValue(roomNameColumn ? row[roomNameColumn] : '');
+  const roomId = toStringValue(roomIdColumn ? row[roomIdColumn] : '');
+  const roomId2 = toStringValue(roomId2Column ? row[roomId2Column] : '');
+  const explicitIcalUrl = toStringValue(icalUrlColumn ? row[icalUrlColumn] : '');
+
+  return {
+    roomName,
+    roomId,
+    roomId2,
+    icalUrl: explicitIcalUrl || findIcalUrlInValues(allValues),
+    allValues,
+    combinedText: normalizeText(allValues.join(' ')),
+    nameTokens: unique([
+      ...getSignificantTokens(roomName),
+      ...allValues.flatMap((value) => getSignificantTokens(value)),
+    ]),
+  };
+};
+
+const scoreRoomMatch = (
+  room: AdminUserRoom,
+  rowDetails: ReturnType<typeof buildRowDetails>,
+) => {
+  let score = 0;
+  const reasons: string[] = [];
+
+  const roomId = normalizeText(room.room_id);
+  const roomId2 = normalizeText(room.room_id_2);
+  const roomName = normalizeText(room.room_name);
+  const rowRoomId = normalizeText(rowDetails.roomId);
+  const rowRoomId2 = normalizeText(rowDetails.roomId2);
+  const rowRoomName = normalizeText(rowDetails.roomName);
+  const combinedText = rowDetails.combinedText;
+
+  if (roomId && rowRoomId && roomId === rowRoomId) {
+    score += 140;
+    reasons.push('match exact room_id');
+  }
+
+  if (roomId2 && rowRoomId2 && roomId2 === rowRoomId2) {
+    score += 135;
+    reasons.push('match exact room_id_2');
+  }
+
+  if (roomId && combinedText.includes(roomId)) {
+    score += 90;
+    reasons.push('room_id trouvé dans la ligne');
+  }
+
+  if (roomId2 && combinedText.includes(roomId2)) {
+    score += 85;
+    reasons.push('room_id_2 trouvé dans la ligne');
+  }
+
+  if (roomName && rowRoomName && roomName === rowRoomName) {
+    score += 90;
+    reasons.push('nom exact');
+  } else if (roomName && rowRoomName && (roomName.includes(rowRoomName) || rowRoomName.includes(roomName))) {
+    score += 65;
+    reasons.push('nom proche');
+  }
+
+  const roomTokens = unique(getSignificantTokens(room.room_name));
+  const sharedTokens = roomTokens.filter((token) => rowDetails.nameTokens.includes(token));
+
+  if (sharedTokens.length > 0) {
+    score += Math.min(60, sharedTokens.length * 15);
+    reasons.push(`tokens communs: ${sharedTokens.join(', ')}`);
+  }
+
+  return {
+    room,
+    score,
+    reason: reasons.join(' • '),
+  };
+};
+
+const resolveRoomMatch = (
+  rooms: AdminUserRoom[],
+  rowDetails: ReturnType<typeof buildRowDetails>,
+) => {
+  const ranked = rooms
+    .map((room) => scoreRoomMatch(room, rowDetails))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  const best = ranked[0];
+  const second = ranked[1];
+
+  if (!best) {
+    return {
+      matchedRoom: null,
+      suggestedRoom: null,
+      matchStatus: 'unmatched' as const,
+      matchScore: 0,
+      matchReason: 'Aucune correspondance trouvée',
+    };
+  }
+
+  const isStrongIdMatch = best.score >= 135;
+  const isSafeMatch = best.score >= 90 && (!second || best.score - second.score >= 15);
+
+  if (isStrongIdMatch || isSafeMatch) {
+    return {
+      matchedRoom: best.room,
+      suggestedRoom: best.room,
+      matchStatus: 'matched' as const,
+      matchScore: best.score,
+      matchReason: best.reason || 'Correspondance trouvée',
+    };
+  }
+
+  return {
+    matchedRoom: null,
+    suggestedRoom: best.room,
+    matchStatus: 'ambiguous' as const,
+    matchScore: best.score,
+    matchReason: second
+      ? `Ambigu : ${best.room.room_name} (${best.score}) / ${second.room.room_name} (${second.score})`
+      : `Correspondance trop faible : ${best.room.room_name} (${best.score})`,
+  };
+};
+
+const parseWorkbookRows = (workbook: WorkBook) => {
+  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+  return utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
+};
+
 const AdminIcalConfigPage: React.FC = () => {
   const { data: userRooms = [], isLoading, error, refetch } = useQuery<AdminUserRoom[]>({
     queryKey: ['adminUserRooms', 'ical-config'],
@@ -78,6 +281,7 @@ const AdminIcalConfigPage: React.FC = () => {
   const [manualValues, setManualValues] = useState<Record<string, string>>({});
   const [savingRoomId, setSavingRoomId] = useState<string | null>(null);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [loadingSample, setLoadingSample] = useState(false);
   const [fileName, setFileName] = useState('');
   const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [importRows, setImportRows] = useState<Record<string, unknown>[]>([]);
@@ -112,77 +316,81 @@ const AdminIcalConfigPage: React.FC = () => {
     }
 
     return importRows.map((row) => {
-      const roomName = toStringValue(roomNameColumn ? row[roomNameColumn] : '');
-      const roomId = toStringValue(roomIdColumn ? row[roomIdColumn] : '');
-      const roomId2 = toStringValue(roomId2Column ? row[roomId2Column] : '');
-      const icalUrl = toStringValue(icalUrlColumn ? row[icalUrlColumn] : '');
-
-      const matchedRoom = userRooms.find((room) => {
-        if (roomId && normalizeText(room.room_id) === normalizeText(roomId)) {
-          return true;
-        }
-
-        if (roomId2 && normalizeText(room.room_id_2) === normalizeText(roomId2)) {
-          return true;
-        }
-
-        if (roomName && normalizeText(room.room_name) === normalizeText(roomName)) {
-          return true;
-        }
-
-        return false;
-      }) || null;
+      const rowDetails = buildRowDetails(row, roomNameColumn, roomIdColumn, roomId2Column, icalUrlColumn);
+      const match = resolveRoomMatch(userRooms, rowDetails);
 
       return {
-        roomName,
-        roomId,
-        roomId2,
-        icalUrl,
-        matchedRoom,
+        roomName: rowDetails.roomName,
+        roomId: rowDetails.roomId,
+        roomId2: rowDetails.roomId2,
+        icalUrl: rowDetails.icalUrl,
+        matchedRoom: match.matchedRoom,
+        suggestedRoom: match.suggestedRoom,
+        matchStatus: match.matchStatus,
+        matchReason: match.matchReason,
+        matchScore: match.matchScore,
       };
     });
   }, [icalUrlColumn, importRows, roomId2Column, roomIdColumn, roomNameColumn, userRooms]);
 
-  const importSummary = useMemo(() => {
-    const matched = parsedImportRows.filter((row) => row.matchedRoom).length;
-    const valid = parsedImportRows.filter((row) => row.matchedRoom && isValidIcalUrl(row.icalUrl)).length;
-    return {
-      total: parsedImportRows.length,
-      matched,
-      valid,
-    };
-  }, [parsedImportRows]);
+  const importSummary = useMemo(() => ({
+    total: parsedImportRows.length,
+    matched: parsedImportRows.filter((row) => row.matchStatus === 'matched').length,
+    ambiguous: parsedImportRows.filter((row) => row.matchStatus === 'ambiguous').length,
+    unmatched: parsedImportRows.filter((row) => row.matchStatus === 'unmatched').length,
+    valid: parsedImportRows.filter((row) => row.matchStatus === 'matched' && isValidIcalUrl(row.icalUrl)).length,
+  }), [parsedImportRows]);
 
-  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const applyDetectedHeaders = (headers: string[]) => {
+    setRoomNameColumn(inferColumn(headers, ['room_name', 'nom logement', 'nom du logement', 'logement', 'room', 'property', 'listing']));
+    setRoomIdColumn(inferColumn(headers, ['room_id', 'id chambre', 'id kross', 'krossbooking']));
+    setRoomId2Column(inferColumn(headers, ['room_id_2', 'id 2', 'id secondaire', 'prix restrictions', 'prix/restrictions']));
+    setIcalUrlColumn(inferColumn(headers, ['ical_url', 'ical', 'ics', 'calendar', 'url', 'lien']));
+  };
+
+  const loadWorkbook = (workbook: WorkBook, nextFileName: string) => {
+    const rows = parseWorkbookRows(workbook);
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+    setFileName(nextFileName);
+    setImportRows(rows);
+    setImportHeaders(headers);
+    applyDetectedHeaders(headers);
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
-    setFileName(file.name);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = read(buffer, { type: 'array' });
+      loadWorkbook(workbook, file.name);
+      toast.success(`Fichier ${file.name} chargé.`);
+    } catch (importError: any) {
+      toast.error(importError.message || 'Impossible de lire le fichier Excel.');
+    }
+  };
 
-    const reader = new FileReader();
-    reader.onload = (loadEvent) => {
-      try {
-        const data = loadEvent.target?.result;
-        const workbook: WorkBook = read(data, { type: 'binary' });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: '' });
-        const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
-
-        setImportRows(rows);
-        setImportHeaders(headers);
-        setRoomNameColumn(inferColumn(headers, ['room_name', 'nom logement', 'nom du logement', 'logement', 'room', 'property']));
-        setRoomIdColumn(inferColumn(headers, ['room_id', 'id chambre', 'id kross', 'krossbooking']));
-        setRoomId2Column(inferColumn(headers, ['room_id_2', 'id 2', 'id secondaire', 'prix/restrictions']));
-        setIcalUrlColumn(inferColumn(headers, ['ical_url', 'ical', 'ics', 'calendar', 'url']));
-        toast.success(`Fichier ${file.name} chargé.`);
-      } catch (importError: any) {
-        toast.error(importError.message || 'Impossible de lire le fichier Excel.');
+  const handleLoadSampleFile = async () => {
+    setLoadingSample(true);
+    try {
+      const response = await fetch(SAMPLE_IMPORT_PATH);
+      if (!response.ok) {
+        throw new Error('Impossible de charger le fichier exemple.');
       }
-    };
 
-    reader.readAsBinaryString(file);
+      const buffer = await response.arrayBuffer();
+      const workbook = read(buffer, { type: 'array' });
+      loadWorkbook(workbook, 'Export_2026-05-13.xlsx');
+      toast.success('Fichier exemple chargé pour analyse.');
+    } catch (sampleError: any) {
+      toast.error(sampleError.message || 'Impossible de charger le fichier exemple.');
+    } finally {
+      setLoadingSample(false);
+    }
   };
 
   const handleSaveRoom = async (room: AdminUserRoom) => {
@@ -206,7 +414,7 @@ const AdminIcalConfigPage: React.FC = () => {
   };
 
   const handleApplyImport = async () => {
-    const rowsToUpdate = parsedImportRows.filter((row) => row.matchedRoom && isValidIcalUrl(row.icalUrl));
+    const rowsToUpdate = parsedImportRows.filter((row) => row.matchStatus === 'matched' && isValidIcalUrl(row.icalUrl));
 
     if (rowsToUpdate.length === 0) {
       toast.error('Aucune ligne exploitable à importer.');
@@ -250,24 +458,30 @@ const AdminIcalConfigPage: React.FC = () => {
               <p className="text-muted-foreground">Configurer les flux iCal logement par logement ou via import Excel.</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Actualiser
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={handleLoadSampleFile} disabled={loadingSample}>
+              <WandSparkles className="mr-2 h-4 w-4" />
+              {loadingSample ? 'Analyse...' : 'Analyser le fichier fourni'}
+            </Button>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Actualiser
+            </Button>
+          </div>
         </div>
 
         <Alert>
           <FileSpreadsheet className="h-4 w-4" />
           <AlertTitle>Import Excel</AlertTitle>
           <AlertDescription>
-            Tu peux utiliser directement ton fichier `.xlsx` ici. Le système essaie de faire la correspondance par `room_id`, `room_id_2` ou nom du logement, puis applique les URLs iCal trouvées.
+            Le matching ne repose plus uniquement sur une égalité stricte. Il compare maintenant `room_id`, `room_id_2`, le nom du logement et les tokens significatifs de chaque ligne pour mieux retrouver le bon logement.
           </AlertDescription>
         </Alert>
 
         <Card>
           <CardHeader>
             <CardTitle>Importer un fichier Excel</CardTitle>
-            <CardDescription>Charge ton export, choisis les colonnes si besoin, puis applique les iCal aux logements correspondants.</CardDescription>
+            <CardDescription>Charge ton export, ajuste les colonnes si besoin, puis vérifie les correspondances avant d’appliquer les iCal.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input type="file" accept=".xlsx,.xls" onChange={handleImportFile} />
@@ -325,8 +539,10 @@ const AdminIcalConfigPage: React.FC = () => {
               <>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">Lignes : {importSummary.total}</Badge>
-                  <Badge variant="outline">Correspondances : {importSummary.matched}</Badge>
-                  <Badge variant="outline">URLs valides : {importSummary.valid}</Badge>
+                  <Badge variant="secondary">Matches sûrs : {importSummary.matched}</Badge>
+                  <Badge variant="outline">Ambigus : {importSummary.ambiguous}</Badge>
+                  <Badge variant="outline">Non trouvés : {importSummary.unmatched}</Badge>
+                  <Badge variant="outline">Imports applicables : {importSummary.valid}</Badge>
                 </div>
 
                 <div className="overflow-x-auto rounded-md border">
@@ -337,22 +553,28 @@ const AdminIcalConfigPage: React.FC = () => {
                         <TableHead>room_id</TableHead>
                         <TableHead>room_id_2</TableHead>
                         <TableHead>URL iCal</TableHead>
-                        <TableHead>Correspondance</TableHead>
+                        <TableHead>Résultat</TableHead>
+                        <TableHead>Diagnostic</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {parsedImportRows.slice(0, 20).map((row, index) => (
+                      {parsedImportRows.slice(0, 30).map((row, index) => (
                         <TableRow key={`${row.roomName}-${row.roomId}-${index}`}>
                           <TableCell>{row.roomName || '—'}</TableCell>
                           <TableCell>{row.roomId || '—'}</TableCell>
                           <TableCell>{row.roomId2 || '—'}</TableCell>
                           <TableCell className="max-w-[320px] truncate">{row.icalUrl || '—'}</TableCell>
                           <TableCell>
-                            {row.matchedRoom ? (
+                            {row.matchStatus === 'matched' && row.matchedRoom ? (
                               <Badge>{row.matchedRoom.room_name}</Badge>
+                            ) : row.matchStatus === 'ambiguous' && row.suggestedRoom ? (
+                              <Badge variant="outline">Ambigu : {row.suggestedRoom.room_name}</Badge>
                             ) : (
-                              <Badge variant="outline">Non trouvé</Badge>
+                              <Badge variant="destructive">Non trouvé</Badge>
                             )}
+                          </TableCell>
+                          <TableCell className="max-w-[360px] text-xs text-muted-foreground">
+                            Score {row.matchScore} • {row.matchReason}
                           </TableCell>
                         </TableRow>
                       ))}

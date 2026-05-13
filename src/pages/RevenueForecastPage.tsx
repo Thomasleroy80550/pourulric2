@@ -56,8 +56,18 @@ import {
 
 const EXCLUDED_STATUSES = new Set(['PROPRI', 'PROP0']);
 const CHART_COLORS = ['#2563eb', '#14b8a6', '#f97316', '#8b5cf6', '#ec4899', '#eab308', '#06b6d4', '#ef4444'];
+const OTA_OFFICIAL_COLORS: Record<string, string> = {
+  'Airbnb': '#ff0000',
+  'Booking.com': '#013b94',
+  'Abritel / Vrbo': '#1668e3',
+  'Direct': '#255f85',
+  'Hello Keys': '#255f85',
+  'Autre': '#4b5563',
+  'Expedia': '#4b5563',
+};
 
 const currencyFormatter = new Intl.NumberFormat('fr-FR', {
+
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
@@ -113,13 +123,18 @@ function normalizeChannel(reservation: KrossbookingReservation): string {
 
   if (raw.includes('AIRBNB')) return 'Airbnb';
   if (raw.includes('BOOKING')) return 'Booking.com';
-  if (raw.includes('ABRITEL') || raw.includes('VRBO')) return 'Abritel / Vrbo';
-  if (raw.includes('EXPEDIA')) return 'Expedia';
+  if (raw.includes('ABRITEL') || raw.includes('VRBO') || raw.includes('HOMEAWAY')) return 'Abritel / Vrbo';
   if (raw.includes('DIRECT') || raw.includes('HELLOKEYS')) return 'Direct';
-  return raw;
+  if (raw.includes('EXPEDIA')) return 'Autre';
+  return 'Autre';
+}
+
+function getOtaColor(channel: string): string {
+  return OTA_OFFICIAL_COLORS[channel] || OTA_OFFICIAL_COLORS.Autre;
 }
 
 function RevenueStatCard({
+
   title,
   value,
   description,
@@ -259,6 +274,7 @@ const RevenueForecastPage: React.FC = () => {
     const otaBreakdown = Array.from(otaMap.values())
       .map((item) => ({
         ...item,
+        color: getOtaColor(item.channel),
         share: securedRevenue > 0 ? item.revenue / securedRevenue : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue);
@@ -307,7 +323,7 @@ const RevenueForecastPage: React.FC = () => {
     const otaTrendBase = otaBreakdown.slice(0, 5).map((ota, index) => ({
       ...ota,
       key: `ota_${index}`,
-      color: CHART_COLORS[index % CHART_COLORS.length],
+      color: ota.color,
     }));
 
     const otaTrendData = months.map((monthDate, monthIndex) => {
@@ -571,9 +587,10 @@ const RevenueForecastPage: React.FC = () => {
                         outerRadius={110}
                         paddingAngle={3}
                       >
-                        {forecastData.otaBreakdown.map((entry, index) => (
-                          <Cell key={entry.channel} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                        {forecastData.otaBreakdown.map((entry) => (
+                          <Cell key={entry.channel} fill={entry.color} />
                         ))}
+
                       </Pie>
                       <Tooltip formatter={(value: number) => currencyFormatter.format(value)} />
                       <Legend />
@@ -618,11 +635,11 @@ const RevenueForecastPage: React.FC = () => {
                       <CardDescription>Canaux qui portent le plus le CA.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {forecastData.otaBreakdown.map((ota, index) => (
+                      {forecastData.otaBreakdown.map((ota) => (
                         <div key={ota.channel} className="space-y-2 rounded-2xl border p-4">
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3">
-                              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+                              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: ota.color }} />
                               <div>
                                 <div className="font-medium">{ota.channel}</div>
                                 <div className="text-sm text-muted-foreground">{ota.reservations} réservation(s)</div>
@@ -633,12 +650,13 @@ const RevenueForecastPage: React.FC = () => {
                           <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                             <div
                               className="h-full rounded-full"
-                              style={{ width: `${Math.max(4, ota.share * 100)}%`, backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                              style={{ width: `${Math.max(4, ota.share * 100)}%`, backgroundColor: ota.color }}
                             />
                           </div>
                           <div className="text-right text-xs text-muted-foreground">{percentFormatter.format(ota.share)} du CA sécurisé</div>
                         </div>
                       ))}
+
                     </CardContent>
                   </Card>
                 </div>

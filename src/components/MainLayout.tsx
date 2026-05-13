@@ -40,7 +40,9 @@ import {
     Store, // Ajout de l'icône pour la marketplace
   Mail, // icône e-mail
   Zap, // icône éclair pour conso électricité
+  Globe,
 } from "lucide-react";
+
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -86,9 +88,11 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
       { name: 'Mes tickets', href: '/tickets', icon: MessageSquare },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
+      { name: 'Mini-site', href: '/mini-site', icon: Globe },
       { name: 'Saison 2026', href: '/season-2026', icon: CalendarDays, disabled: true },
 
     ],
+
   },
   {
     title: 'Analyse & Suivi',

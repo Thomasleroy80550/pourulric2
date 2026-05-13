@@ -39,7 +39,9 @@ import {
   AlertTriangle,
   Thermometer,
   Sparkles,
-  Package
+  Package,
+  LayoutTemplate,
+  Globe
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -86,7 +88,10 @@ const adminNavigationCategories = [
       { name: 'Demandes Saison 2026', href: '/admin/season-requests', icon: CalendarDays, description: 'Voir et traiter les demandes de prix saison.' },
       { name: 'Marketplace', href: '/admin/marketplace', icon: Store, description: 'Gérer les prestataires de la marketplace.' },
       { name: 'Demandes Hivernage', href: '/admin/hivernage-requests', icon: Snowflake, description: 'Voir et exporter les demandes d\"hivernage.' },
+      { name: 'Mini-sites', href: '/admin/mini-sites', icon: LayoutTemplate, description: 'Suivre les mini-sites créés et leur publication.' },
+      { name: 'Demandes de domaine', href: '/admin/domain-requests', icon: Globe, description: 'Traiter manuellement les demandes de domaine.' },
       { name: 'IDs Revyoos manquants', href: '/admin/revyoos-missing', icon: Link2, description: 'Complétez les IDs Revyoos manquants.' },
+
     ]
   },
   {

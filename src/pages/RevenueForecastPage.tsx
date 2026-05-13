@@ -78,7 +78,55 @@ const percentFormatter = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 1,
 });
 
+const FORECAST_CACHE_KEY = 'revenue_forecast_daily_cache_v1';
+
+interface RevenueForecastCachePayload {
+  dayKey: string;
+  roomSignature: string;
+  userRooms: UserRoom[];
+  reservations: KrossbookingReservation[];
+}
+
+function getDayKey(date: Date): string {
+  return format(date, 'yyyy-MM-dd');
+}
+
+function readForecastCache(dayKey: string, roomSignature: string): RevenueForecastCachePayload | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(FORECAST_CACHE_KEY);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as RevenueForecastCachePayload;
+    if (parsed.dayKey !== dayKey || parsed.roomSignature !== roomSignature) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeForecastCache(payload: RevenueForecastCachePayload) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(FORECAST_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 function parseAmount(amount: string): number {
+
   const normalized = (amount || '0').replace(',', '.').replace(/[^\d.-]/g, '');
   const parsed = Number.parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -185,10 +233,31 @@ const RevenueForecastPage: React.FC = () => {
 
       try {
         const fetchedRooms = await getUserRooms();
+        const dayKey = getDayKey(new Date());
+        const roomSignature = fetchedRooms
+          .map((room) => `${room.id}:${room.room_id}:${room.room_name}`)
+          .sort()
+          .join('|');
+
+        const cached = readForecastCache(dayKey, roomSignature);
+        if (cached) {
+          setUserRooms(cached.userRooms);
+          setReservations(cached.reservations);
+          setLoading(false);
+          return;
+        }
+
         setUserRooms(fetchedRooms);
 
         const fetchedReservations = await fetchKrossbookingReservations(fetchedRooms);
         setReservations(fetchedReservations);
+
+        writeForecastCache({
+          dayKey,
+          roomSignature,
+          userRooms: fetchedRooms,
+          reservations: fetchedReservations,
+        });
       } catch (err: any) {
         setError(`Erreur lors du chargement des réservations Krossbooking : ${err.message}`);
       } finally {
@@ -443,7 +512,7 @@ const RevenueForecastPage: React.FC = () => {
           <Info className="h-4 w-4" />
           <AlertTitle>Méthode de calcul</AlertTitle>
           <AlertDescription>
-            Le CA est rattaché à la <strong>date de départ</strong>. Les annulations et les blocs propriétaire sont exclus. La prévision additionnelle repose sur le taux d'occupation observé et le revenu moyen par nuit déjà constaté.
+            Le CA est rattaché à la <strong>date de départ</strong>. Les annulations et les blocs propriétaire sont exclus. La prévision additionnelle repose sur le taux d'occupation observé et le revenu moyen par nuit déjà constaté. Les données de prévision sont maintenant mises en cache <strong>pour la journée</strong> afin d'éviter des rechargements trop fréquents.
           </AlertDescription>
         </Alert>
 

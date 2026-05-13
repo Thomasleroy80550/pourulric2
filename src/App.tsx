@@ -108,6 +108,10 @@ import AdminTemperaturePage from "./pages/AdminTemperaturePage";
 import AdminErrorLogsPage from "./pages/AdminErrorLogsPage";
 import AdminIcalConfigPage from "./pages/AdminIcalConfigPage";
 import RevenueForecastPage from "./pages/RevenueForecastPage";
+import MiniSitePage from "./pages/MiniSitePage";
+import MiniSitePublicPage from "./pages/MiniSitePublicPage";
+import AdminMiniSitesPage from "./pages/AdminMiniSitesPage";
+import AdminDomainRequestsPage from "./pages/AdminDomainRequestsPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
 
@@ -179,10 +183,14 @@ function App() {
                       <Route path="/admin/hivernage-requests" element={<AdminHivernageRequestsPage />} />
                       <Route path="/admin/hivernage-email" element={<AdminHivernageEmailPage />} />
                       <Route path="/admin/status" element={<AdminStatusPage />} />
+                      <Route path="/admin/mini-sites" element={<AdminMiniSitesPage />} />
+                      <Route path="/admin/domain-requests" element={<AdminDomainRequestsPage />} />
                       <Route path="/status" element={<StatusPage />} />
                       <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
                       <Route path="/pages/:slug" element={<ContentPage />} />
+                      <Route path="/sites/:slug" element={<MiniSitePublicPage />} />
                       <Route path="/profile" element={<ProfilePage />} />
+
                       <Route path="/blog" element={<BlogPage />} />
                       <Route path="/blog/:slug" element={<BlogPostPage />} />
                       <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
@@ -223,8 +231,10 @@ function App() {
                       <Route path="/roadmap" element={<RoadmapPage />} />
                       <Route path="/my-rooms" element={<MyRoomsPage />} />
                       <Route path="/faq" element={<FaqPage />} />
+                      <Route path="/mini-site" element={<MiniSitePage />} />
                       <Route path="/comp-set" element={<CompSetPage />} />
                       <Route path="/tickets" element={<TicketsPage />} />
+
                       <Route path="/tickets/:id" element={<TicketDetailPage />} />
                       <Route path="/marketplace" element={<MarketplacePage />} /> {/* New route */}
                       <Route path="/admin-v2" element={<AdminV2Dashboard />} />

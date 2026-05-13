@@ -257,12 +257,13 @@ export async function getUserRoomsByUserId(userId: string): Promise<UserRoom[]> 
  * @param room_id The Krossbooking room ID.
  * @param room_name A user-friendly name for the room.
  * @param room_id_2 An optional secondary room ID.
+ * @param ical_url An optional iCal feed URL.
  * @returns The created UserRoom object.
  */
-export async function adminAddUserRoom(user_id: string, room_id: string, room_name: string, room_id_2?: string): Promise<UserRoom> {
+export async function adminAddUserRoom(user_id: string, room_id: string, room_name: string, room_id_2?: string, ical_url?: string): Promise<UserRoom> {
   const { data, error } = await supabase
     .from('user_rooms')
-    .insert({ user_id, room_id, room_name, room_id_2 })
+    .insert({ user_id, room_id, room_name, room_id_2, ical_url: ical_url || null })
     .select()
     .single();
 

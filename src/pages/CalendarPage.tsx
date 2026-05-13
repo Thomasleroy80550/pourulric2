@@ -448,14 +448,7 @@ const CalendarPage: React.FC = () => {
               </TabsContent>
 
               <TabsContent value="ical">
-                <IcalCalendarTab
-                  userRooms={userRooms}
-                  onUserRoomUpdated={(updatedRoom) => {
-                    setUserRooms((currentRooms) => currentRooms.map((room) => (
-                      room.id === updatedRoom.id ? updatedRoom : room
-                    )));
-                  }}
-                />
+                <IcalCalendarTab userRooms={userRooms} />
               </TabsContent>
 
               <TabsContent value="debug">

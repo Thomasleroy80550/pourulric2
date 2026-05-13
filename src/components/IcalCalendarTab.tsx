@@ -1,37 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CalendarDays, Link2, RefreshCw, Save } from 'lucide-react';
+import { CalendarDays, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import TwelveMonthView from '@/components/TwelveMonthView';
 import { fetchIcalReservationsForRoom } from '@/lib/ical';
 import { KrossbookingReservation } from '@/lib/krossbooking';
-import { updateUserRoom, UserRoom } from '@/lib/user-room-api';
+import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 
 interface IcalCalendarTabProps {
   userRooms: UserRoom[];
-  onUserRoomUpdated: (room: UserRoom) => void;
 }
 
-const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms, onUserRoomUpdated }) => {
-  const [urlByRoomId, setUrlByRoomId] = useState<Record<string, string>>({});
-  const [savingRoomId, setSavingRoomId] = useState<string | null>(null);
+const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms }) => {
   const [loadingIcal, setLoadingIcal] = useState(false);
   const [icalReservations, setIcalReservations] = useState<KrossbookingReservation[]>([]);
   const [syncError, setSyncError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setUrlByRoomId(
-      Object.fromEntries(userRooms.map((room) => [room.id, room.ical_url?.trim() || '']))
-    );
-  }, [userRooms]);
 
   const linkedRooms = useMemo(
     () => userRooms.filter((room) => room.ical_url?.trim()),
@@ -85,37 +74,6 @@ const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms, onUserRoom
     void syncIcalReservations();
   }, [userRooms]);
 
-  const handleSave = async (room: UserRoom) => {
-    const rawValue = (urlByRoomId[room.id] || '').trim();
-
-    if (rawValue) {
-      try {
-        const parsedUrl = new URL(rawValue);
-        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-          toast.error('L’URL iCal doit commencer par http:// ou https://');
-          return;
-        }
-      } catch {
-        toast.error('Veuillez saisir une URL iCal valide.');
-        return;
-      }
-    }
-
-    setSavingRoomId(room.id);
-    try {
-      const savedRoom = await updateUserRoom(room.id, {
-        ical_url: rawValue || null,
-      });
-      onUserRoomUpdated(savedRoom);
-      toast.success(rawValue ? 'Flux iCal enregistré.' : 'Flux iCal supprimé.');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erreur lors de l’enregistrement du flux iCal.';
-      toast.error(message);
-    } finally {
-      setSavingRoomId(null);
-    }
-  };
-
   if (userRooms.length === 0) {
     return (
       <p className="text-muted-foreground">
@@ -130,7 +88,7 @@ const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms, onUserRoom
         <CalendarDays className="h-4 w-4" />
         <AlertTitle>Calendrier iCal</AlertTitle>
         <AlertDescription>
-          Renseignez un lien iCal par logement pour afficher une vue calendrier indépendante de l’API Krossbooking.
+          Les liens iCal sont configurés par l’administrateur au niveau de chaque logement. Cet onglet affiche la synchronisation et la vue calendrier alternative.
         </AlertDescription>
       </Alert>
 
@@ -166,39 +124,17 @@ const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms, onUserRoom
 
       <Card>
         <CardHeader>
-          <CardTitle>Liens iCal par logement</CardTitle>
+          <CardTitle>Statut des flux iCal</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {userRooms.map((room) => (
-            <div key={room.id} className="rounded-lg border p-4 space-y-3">
+            <div key={room.id} className="rounded-lg border p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-medium">{room.room_name}</p>
                   <p className="text-sm text-muted-foreground">ID logement : {room.room_id}</p>
                 </div>
-                {room.ical_url?.trim() ? <Badge variant="secondary">Connecté</Badge> : <Badge variant="outline">Non connecté</Badge>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`ical-${room.id}`}>URL du flux iCal</Label>
-                <div className="flex flex-col gap-2 lg:flex-row">
-                  <div className="relative flex-1">
-                    <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id={`ical-${room.id}`}
-                      value={urlByRoomId[room.id] || ''}
-                      onChange={(event) => setUrlByRoomId((current) => ({
-                        ...current,
-                        [room.id]: event.target.value,
-                      }))}
-                      placeholder="https://.../calendar.ics"
-                      className="pl-9"
-                    />
-                  </div>
-                  <Button onClick={() => handleSave(room)} disabled={savingRoomId === room.id}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {savingRoomId === room.id ? 'Enregistrement...' : 'Enregistrer'}
-                  </Button>
-                </div>
+                {room.ical_url?.trim() ? <Badge variant="secondary">Connecté</Badge> : <Badge variant="outline">Non configuré</Badge>}
               </div>
             </div>
           ))}
@@ -219,9 +155,10 @@ const IcalCalendarTab: React.FC<IcalCalendarTabProps> = ({ userRooms, onUserRoom
         </div>
       ) : linkedRooms.length === 0 ? (
         <p className="text-muted-foreground">
-          Ajoutez au moins un lien iCal pour afficher le calendrier alternatif.
+          Aucun flux iCal n’est encore configuré par l’administrateur pour ces logements.
         </p>
       ) : (
+
         <div className="space-y-6">
           <Card>
             <CardHeader>

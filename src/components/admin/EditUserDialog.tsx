@@ -80,6 +80,7 @@ const addRoomFormSchema = z.object({
   room_id: z.string().min(1, "L'ID de la chambre est requis."),
   room_name: z.string().min(1, "Le nom de la chambre est requis."),
   room_id_2: z.string().optional().nullable(),
+  ical_url: z.string().optional().nullable(),
 });
 
 const onboardingStatusText: Record<OnboardingStatus, string> = {
@@ -117,7 +118,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
 
   const addRoomForm = useForm<z.infer<typeof addRoomFormSchema>>({
     resolver: zodResolver(addRoomFormSchema),
-    defaultValues: { room_id: '', room_name: '', room_id_2: '' },
+    defaultValues: { room_id: '', room_name: '', room_id_2: '', ical_url: '' },
   });
 
   useEffect(() => {
@@ -326,7 +327,13 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
   const handleAddRoom = async (values: z.infer<typeof addRoomFormSchema>) => {
     if (!user) return;
     try {
-        const newRoom = await adminAddUserRoom(user.id, values.room_id, values.room_name, values.room_id_2 || undefined);
+        const newRoom = await adminAddUserRoom(
+          user.id,
+          values.room_id,
+          values.room_name,
+          values.room_id_2 || undefined,
+          values.ical_url?.trim() || undefined,
+        );
         setUserRooms(prev => [...prev, newRoom]);
         addRoomForm.reset();
         toast.success("Chambre ajoutée avec succès !");
@@ -822,11 +829,13 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       <Form {...addRoomForm}>
                         <div>
                           <h3 className="text-lg font-medium mb-2">Ajouter une chambre</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <FormField control={addRoomForm.control} name="room_id" render={({ field }) => (<FormItem><FormLabel>ID Chambre (Krossbooking)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                               <FormField control={addRoomForm.control} name="room_name" render={({ field }) => (<FormItem><FormLabel>Nom de la chambre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                               <FormField control={addRoomForm.control} name="room_id_2" render={({ field }) => (<FormItem><FormLabel>ID Chambre Numéro 2 (Prix/Restrictions)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                              <FormField control={addRoomForm.control} name="ical_url" render={({ field }) => (<FormItem><FormLabel>URL iCal</FormLabel><FormControl><Input {...field} value={field.value ?? ''} placeholder="https://.../calendar.ics" /></FormControl><FormMessage /></FormItem>)} />
                           </div>
+
                           <div className="flex justify-end mt-4">
                             <Button
                               type="button"
@@ -849,6 +858,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                                 <TableHead>Nom</TableHead>
                                 <TableHead>ID Krossbooking</TableHead>
                                 <TableHead>ID 2</TableHead>
+                                <TableHead>iCal</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -858,7 +868,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                                   <TableCell>{room.room_name}</TableCell>
                                   <TableCell>{room.room_id}</TableCell>
                                   <TableCell>{room.room_id_2 || 'N/A'}</TableCell>
+                                  <TableCell>{room.ical_url ? 'Configuré' : 'Non configuré'}</TableCell>
                                   <TableCell className="text-right space-x-2">
+
                                     <Button variant="ghost" size="icon" onClick={() => handleEditRoomClick(room)} title="Modifier la chambre">
                                       <Edit className="h-4 w-4" />
                                     </Button>

@@ -151,8 +151,8 @@ const RevenueForecastPage: React.FC = () => {
         return false;
       }
 
-      const checkIn = parseISO(reservation.check_in_date);
-      return !Number.isNaN(checkIn.getTime()) && checkIn.getFullYear() === currentYear;
+      const checkOut = parseISO(reservation.check_out_date);
+      return !Number.isNaN(checkOut.getTime()) && checkOut.getFullYear() === currentYear;
     });
 
     const securedRevenue = revenueReservations.reduce(
@@ -161,8 +161,8 @@ const RevenueForecastPage: React.FC = () => {
     );
 
     const revenueToDate = revenueReservations.reduce((sum, reservation) => {
-      const checkIn = parseISO(reservation.check_in_date);
-      return checkIn <= today ? sum + parseAmount(reservation.amount) : sum;
+      const checkOut = parseISO(reservation.check_out_date);
+      return checkOut <= today ? sum + parseAmount(reservation.amount) : sum;
     }, 0);
 
     const futureSecuredRevenue = Math.max(0, securedRevenue - revenueToDate);
@@ -200,8 +200,8 @@ const RevenueForecastPage: React.FC = () => {
       const monthStart = startOfMonth(monthDate);
       const monthIndex = monthStart.getMonth();
       const reservationsForMonth = revenueReservations.filter((reservation) => {
-        const checkIn = parseISO(reservation.check_in_date);
-        return !Number.isNaN(checkIn.getTime()) && checkIn.getMonth() === monthIndex;
+        const checkOut = parseISO(reservation.check_out_date);
+        return !Number.isNaN(checkOut.getTime()) && checkOut.getMonth() === monthIndex;
       });
 
       return {
@@ -282,7 +282,8 @@ const RevenueForecastPage: React.FC = () => {
           <AlertDescription>
             La prévision = <strong>CA déjà sécurisé</strong> par les réservations présentes dans Krossbooking
             {' '}+ un <strong>complément estimé</strong> sur les nuits encore libres, calculé à partir du taux
-            d'occupation observé et du revenu moyen par nuit. Les réservations annulées et les blocs propriétaire ne sont pas comptés.
+            d'occupation observé et du revenu moyen par nuit. Le rattachement du CA se fait à la <strong>date de départ</strong>.
+            Les réservations annulées et les blocs propriétaire ne sont pas comptés.
           </AlertDescription>
         </Alert>
 
@@ -337,9 +338,10 @@ const RevenueForecastPage: React.FC = () => {
               <RevenueStatCard
                 title="CA à date"
                 value={currencyFormatter.format(forecastData.revenueToDate)}
-                description="Réservations dont l'arrivée est déjà passée ou en cours aujourd'hui."
+                description="Réservations dont la date de départ est passée ou égale à aujourd'hui."
                 icon={Euro}
               />
+
               <RevenueStatCard
                 title="CA restant sécurisé"
                 value={currencyFormatter.format(forecastData.futureSecuredRevenue)}
@@ -374,9 +376,10 @@ const RevenueForecastPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle>CA réservé par mois</CardTitle>
                   <CardDescription>
-                    Répartition du chiffre d'affaires sécurisé par mois d'arrivée.
+                    Répartition du chiffre d'affaires sécurisé par mois de départ.
                   </CardDescription>
                 </CardHeader>
+
                 <CardContent className="h-[340px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={forecastData.monthlyData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>

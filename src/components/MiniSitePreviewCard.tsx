@@ -27,13 +27,16 @@ const MiniSitePreviewCard = ({ site }: MiniSitePreviewCardProps) => {
             <Badge variant={site.status === "published" ? "default" : "secondary"}>
               {site.status === "published" ? "Publié" : "Brouillon"}
             </Badge>
-            <Button asChild size="sm" variant="outline">
-              <a href={publicUrl} target="_blank" rel="noreferrer noopener">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Ouvrir
-              </a>
-            </Button>
+            {site.status === "published" ? (
+              <Button asChild size="sm" variant="outline">
+                <a href={publicUrl} target="_blank" rel="noreferrer noopener">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Ouvrir
+                </a>
+              </Button>
+            ) : null}
           </div>
+
         </div>
       </CardHeader>
       <CardContent className="p-0">

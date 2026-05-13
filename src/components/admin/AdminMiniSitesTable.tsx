@@ -3,7 +3,9 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ExternalLink, Pencil } from "lucide-react";
 import { MiniSite, MiniSiteStatus, updateAdminMiniSite } from "@/lib/mini-site-api";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";

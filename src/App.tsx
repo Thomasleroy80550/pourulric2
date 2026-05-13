@@ -107,6 +107,7 @@ import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 import AdminTemperaturePage from "./pages/AdminTemperaturePage";
 import AdminErrorLogsPage from "./pages/AdminErrorLogsPage";
 import AdminIcalConfigPage from "./pages/AdminIcalConfigPage";
+import RevenueForecastPage from "./pages/RevenueForecastPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
 
@@ -208,10 +209,12 @@ function App() {
                       <Route path="/calendar" element={<CalendarPage />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                                           <Route path="/bookings" element={<BookingsPage />} />
+                                          <Route path="/prevision-ca" element={<RevenueForecastPage />} />
                                           <Route path="/performance" element={<PerformancePage />} />
                                           <Route path="/reviews" element={<ReviewsPage />} />
                     
                       <Route path="/finances" element={<FinancePage />} />
+
                       <Route path="/tourist-tax" element={<TouristTaxPage />} />
                       <Route path="/reports" element={<TechnicalReportsPage />} />
                       <Route path="/reports/:id" element={<TechnicalReportDetailPage />} />

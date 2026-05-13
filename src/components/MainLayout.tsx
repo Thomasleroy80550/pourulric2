@@ -79,7 +79,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
     title: 'Pilotage',
     items: [
       { name: 'Aperçu', href: '/', icon: Home },
-      { name: 'Calendrier', href: '/calendar', icon: Calendar, disabled: isPaymentSuspended },
+      { name: 'Calendrier', href: '/calendar', icon: Calendar, disabled: true },
       { name: 'Réservations', href: '/bookings', icon: Book, disabled: isPaymentSuspended },
       { name: 'Incidents', href: '/reports', icon: Wrench },
 

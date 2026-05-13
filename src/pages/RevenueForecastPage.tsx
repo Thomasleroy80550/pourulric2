@@ -117,7 +117,22 @@ const RevenueForecastPage: React.FC = () => {
 
   const currentYear = new Date().getFullYear();
   const today = startOfDay(new Date());
-  const yearStart = startOfYear(new Date(currentYear, 0, 1));
+
+  const availableYears = useMemo(() => {
+    const years = reservations
+      .filter((reservation) => !EXCLUDED_STATUSES.has(reservation.status))
+      .map((reservation) => parseISO(reservation.check_out_date))
+      .filter((date) => !Number.isNaN(date.getTime()))
+      .map((date) => date.getFullYear());
+
+    return Array.from(new Set(years)).sort((a, b) => b - a);
+  }, [reservations]);
+
+  const selectedYear = availableYears.includes(currentYear)
+    ? currentYear
+    : (availableYears[0] ?? currentYear);
+
+  const yearStart = startOfYear(new Date(selectedYear, 0, 1));
   const nextYearStart = startOfYear(addYears(yearStart, 1));
 
   useEffect(() => {
@@ -152,7 +167,7 @@ const RevenueForecastPage: React.FC = () => {
       }
 
       const checkOut = parseISO(reservation.check_out_date);
-      return !Number.isNaN(checkOut.getTime()) && checkOut.getFullYear() === currentYear;
+      return !Number.isNaN(checkOut.getTime()) && checkOut.getFullYear() === selectedYear;
     });
 
     const securedRevenue = revenueReservations.reduce(
@@ -195,7 +210,8 @@ const RevenueForecastPage: React.FC = () => {
 
     const monthlyData = eachMonthOfInterval({
       start: yearStart,
-      end: endOfMonth(new Date(currentYear, 11, 1)),
+      end: endOfMonth(new Date(selectedYear, 11, 1)),
+
     }).map((monthDate) => {
       const monthStart = startOfMonth(monthDate);
       const monthIndex = monthStart.getMonth();
@@ -247,7 +263,7 @@ const RevenueForecastPage: React.FC = () => {
       monthlyData,
       roomBreakdown,
     };
-  }, [currentYear, nextYearStart, reservations, today, userRooms, yearStart]);
+  }, [nextYearStart, reservations, selectedYear, today, userRooms, yearStart]);
 
   if (profile?.is_banned) {
     return (
@@ -270,13 +286,24 @@ const RevenueForecastPage: React.FC = () => {
       <div className="container mx-auto space-y-6 py-6">
         <div className="space-y-2">
           <Badge variant="outline">Krossbooking</Badge>
-          <h1 className="text-3xl font-bold tracking-tight">Prévision de CA {currentYear}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Prévision de CA {selectedYear}</h1>
           <p className="text-muted-foreground">
             Projection construite à partir des réservations téléchargées via l'API Krossbooking, sans modifier le reste de l'application.
           </p>
         </div>
 
+        {availableYears.length > 0 && selectedYear !== currentYear && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Année ajustée automatiquement</AlertTitle>
+            <AlertDescription>
+              Aucune réservation avec date de départ en {currentYear}. Affichage automatique des données disponibles pour {selectedYear}.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Alert>
+
           <Info className="h-4 w-4" />
           <AlertTitle>Méthode de calcul</AlertTitle>
           <AlertDescription>
@@ -316,7 +343,8 @@ const RevenueForecastPage: React.FC = () => {
             <CardHeader>
               <CardTitle>Aucune réservation exploitable</CardTitle>
               <CardDescription>
-                Aucune réservation générant du CA n'a été trouvée pour {currentYear} dans les données Krossbooking.
+                Aucune réservation générant du CA n'a été trouvée pour {selectedYear} dans les données Krossbooking.
+
               </CardDescription>
             </CardHeader>
           </Card>

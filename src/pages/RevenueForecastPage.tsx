@@ -43,9 +43,10 @@ import {
   YAxis,
 } from 'recharts';
 
-const EXCLUDED_STATUSES = new Set(['CANC', 'PROPRI', 'PROP0']);
+const EXCLUDED_STATUSES = new Set(['PROPRI', 'PROP0']);
 
 const currencyFormatter = new Intl.NumberFormat('fr-FR', {
+
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
@@ -81,7 +82,23 @@ function getOverlapNights(
   return Math.max(0, differenceInCalendarDays(overlapEnd, overlapStart));
 }
 
+function isRevenueReservation(reservation: KrossbookingReservation, yearStart: Date, nextYearStart: Date): boolean {
+  const status = (reservation.status || '').toUpperCase();
+  const checkOut = parseISO(reservation.check_out_date);
+
+  if (Number.isNaN(checkOut.getTime())) {
+    return false;
+  }
+
+  if (status.includes('CANC') || EXCLUDED_STATUSES.has(status)) {
+    return false;
+  }
+
+  return checkOut >= yearStart && checkOut < nextYearStart;
+}
+
 function RevenueStatCard({
+
   title,
   value,
   description,
@@ -117,22 +134,7 @@ const RevenueForecastPage: React.FC = () => {
 
   const currentYear = new Date().getFullYear();
   const today = startOfDay(new Date());
-
-  const availableYears = useMemo(() => {
-    const years = reservations
-      .filter((reservation) => !EXCLUDED_STATUSES.has(reservation.status))
-      .map((reservation) => parseISO(reservation.check_out_date))
-      .filter((date) => !Number.isNaN(date.getTime()))
-      .map((date) => date.getFullYear());
-
-    return Array.from(new Set(years)).sort((a, b) => b - a);
-  }, [reservations]);
-
-  const selectedYear = availableYears.includes(currentYear)
-    ? currentYear
-    : (availableYears[0] ?? currentYear);
-
-  const yearStart = startOfYear(new Date(selectedYear, 0, 1));
+  const yearStart = startOfYear(new Date(currentYear, 0, 1));
   const nextYearStart = startOfYear(addYears(yearStart, 1));
 
   useEffect(() => {
@@ -161,14 +163,9 @@ const RevenueForecastPage: React.FC = () => {
   }, [profile]);
 
   const forecastData = useMemo(() => {
-    const revenueReservations = reservations.filter((reservation) => {
-      if (EXCLUDED_STATUSES.has(reservation.status)) {
-        return false;
-      }
-
-      const checkOut = parseISO(reservation.check_out_date);
-      return !Number.isNaN(checkOut.getTime()) && checkOut.getFullYear() === selectedYear;
-    });
+    const revenueReservations = reservations.filter((reservation) =>
+      isRevenueReservation(reservation, yearStart, nextYearStart)
+    );
 
     const securedRevenue = revenueReservations.reduce(
       (sum, reservation) => sum + parseAmount(reservation.amount),
@@ -210,9 +207,9 @@ const RevenueForecastPage: React.FC = () => {
 
     const monthlyData = eachMonthOfInterval({
       start: yearStart,
-      end: endOfMonth(new Date(selectedYear, 11, 1)),
-
+      end: endOfMonth(new Date(currentYear, 11, 1)),
     }).map((monthDate) => {
+
       const monthStart = startOfMonth(monthDate);
       const monthIndex = monthStart.getMonth();
       const reservationsForMonth = revenueReservations.filter((reservation) => {
@@ -263,7 +260,7 @@ const RevenueForecastPage: React.FC = () => {
       monthlyData,
       roomBreakdown,
     };
-  }, [nextYearStart, reservations, selectedYear, today, userRooms, yearStart]);
+  }, [currentYear, nextYearStart, reservations, today, userRooms, yearStart]);
 
   if (profile?.is_banned) {
     return (
@@ -286,21 +283,11 @@ const RevenueForecastPage: React.FC = () => {
       <div className="container mx-auto space-y-6 py-6">
         <div className="space-y-2">
           <Badge variant="outline">Krossbooking</Badge>
-          <h1 className="text-3xl font-bold tracking-tight">Prévision de CA {selectedYear}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Prévision de CA {currentYear}</h1>
           <p className="text-muted-foreground">
             Projection construite à partir des réservations téléchargées via l'API Krossbooking, sans modifier le reste de l'application.
           </p>
         </div>
-
-        {availableYears.length > 0 && selectedYear !== currentYear && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertTitle>Année ajustée automatiquement</AlertTitle>
-            <AlertDescription>
-              Aucune réservation avec date de départ en {currentYear}. Affichage automatique des données disponibles pour {selectedYear}.
-            </AlertDescription>
-          </Alert>
-        )}
 
         <Alert>
 
@@ -343,7 +330,7 @@ const RevenueForecastPage: React.FC = () => {
             <CardHeader>
               <CardTitle>Aucune réservation exploitable</CardTitle>
               <CardDescription>
-                Aucune réservation générant du CA n'a été trouvée pour {selectedYear} dans les données Krossbooking.
+                Aucune réservation générant du CA n'a été trouvée pour {currentYear} dans les données Krossbooking.
 
               </CardDescription>
             </CardHeader>

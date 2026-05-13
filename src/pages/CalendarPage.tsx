@@ -253,12 +253,17 @@ const CalendarPage: React.FC = () => {
     toast.success("Le calendrier est en cours de rafraîchissement.");
   };
 
+  const handleOwnerReservationClick = () => {
+    setIsOwnerReservationDialogOpen(true);
+  };
+
   const handleFeatureUnavailableClick = (featureLabel: string) => {
     setUnavailableFeatureLabel(featureLabel);
     setIsFeatureUnavailableDialogOpen(true);
   };
 
   const handlePriceRestrictionClick = () => {
+
     if (profile?.can_manage_prices) {
       setIsPriceRestrictionDialogOpen(true);
     } else {
@@ -334,11 +339,12 @@ const CalendarPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button onClick={() => handleFeatureUnavailableClick('Réservation Propriétaire')} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Réservation Propriétaire
-              </Button>
-              <Button onClick={() => handleFeatureUnavailableClick('Configurer Prix')} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
+                <Button onClick={handleOwnerReservationClick} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Réservation Propriétaire
+                </Button>
+                <Button onClick={() => handleFeatureUnavailableClick('Configurer Prix')} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
+  
                 <DollarSign className="h-4 w-4 mr-2" />
                 Configurer Prix
               </Button>
@@ -453,11 +459,12 @@ const CalendarPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => handleFeatureUnavailableClick('Réservation Propriétaire')} className="flex items-center">
+            <Button onClick={handleOwnerReservationClick} className="flex items-center">
               <PlusCircle className="h-4 w-4 mr-2" />
               Réservation Propriétaire
             </Button>
             <Button onClick={() => handleFeatureUnavailableClick('Configurer Prix')} variant="outline" className="flex items-center">
+
               <DollarSign className="h-4 w-4 mr-2" />
               Configurer Prix
             </Button>

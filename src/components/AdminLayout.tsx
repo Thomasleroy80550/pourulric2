@@ -73,6 +73,7 @@ const adminNavigationCategories = [
     items: [
       { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
+      { name: 'Config iCal', href: '/admin/ical-config', icon: CalendarDays, description: 'Configurer et importer les flux iCal des logements.' },
       { name: 'Blanchisserie', href: '/admin/laundry', icon: Package, description: 'Calculer les commandes de linge à partir des réservations.' },
 
       { name: 'Compteurs coupés', href: '/admin/utility-cuts', icon: PlugZap, description: 'Liste des logements où électricité/eau sont coupées.' },
@@ -218,7 +219,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <div className="font-semibold">Admin Hello Keys</div>
         </div>
 
+        <Button asChild className="mb-4 justify-start">
+          <Link to="/admin/ical-config">
+            <CalendarDays className="h-4 w-4 mr-2" />
+            Configurer les iCal
+          </Link>
+        </Button>
+
         <nav className="flex-1 space-y-4 overflow-y-auto pr-1">
+
           {adminNavigationCategories.map((cat) => (
             <div key={cat.categoryName} className="space-y-1">
               <div className="px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wider">

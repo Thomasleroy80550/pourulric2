@@ -106,6 +106,7 @@ import ConnectivityMaintenancePage from "./pages/ConnectivityMaintenancePage";
 import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 import AdminTemperaturePage from "./pages/AdminTemperaturePage";
 import AdminErrorLogsPage from "./pages/AdminErrorLogsPage";
+import AdminIcalConfigPage from "./pages/AdminIcalConfigPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
 
@@ -147,6 +148,7 @@ function App() {
                       <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                       <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                       <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />
+                      <Route path="/admin/ical-config" element={<AdminIcalConfigPage />} />
                       <Route path="/admin/laundry" element={<LaundryOrdersPage adminView />} />
                       <Route path="/admin/faq" element={<AdminFaqPage />} />
 

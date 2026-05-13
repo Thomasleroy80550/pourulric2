@@ -1,0 +1,1 @@
+ALTER TABLE public.user_rooms ADD COLUMN IF NOT EXISTS ical_url text;

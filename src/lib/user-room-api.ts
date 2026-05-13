@@ -6,8 +6,10 @@ export interface UserRoom {
   room_id: string; // The Krossbooking room ID
   room_name: string; // A user-friendly name for the room
   room_id_2?: string; // New field for secondary room ID (e.g., for price/restriction systems)
+  ical_url?: string | null;
   keybox_code?: string;
   wifi_code?: string;
+
   property_type?: string;
   arrival_instructions?: string;
   parking_info?: string;

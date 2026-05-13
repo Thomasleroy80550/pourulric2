@@ -24,7 +24,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
 import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
+import IcalCalendarTab from '@/components/IcalCalendarTab';
 import { toast } from 'sonner';
+
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import EcowattForecastBox from "@/components/EcowattForecastBox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -52,7 +54,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-    const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug'>('planning');
+  const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'ical'>('planning');
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -83,6 +85,7 @@ const CalendarPage: React.FC = () => {
         // 1. Fetch the user's configured rooms from Supabase
         const configuredUserRooms = await getUserRooms();
         console.log("DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
+        setUserRooms(configuredUserRooms);
 
         if (configuredUserRooms.length === 0) {
           setUserRooms([]);
@@ -93,11 +96,11 @@ const CalendarPage: React.FC = () => {
 
         // 2. Fetch all room definitions from Krossbooking to validate configured rooms
         const krossbookingRoomTypes = await fetchKrossbookingRoomTypes(refreshTrigger > 0);
+
         console.log("DEBUG: krossbookingRoomTypes (from Krossbooking):", krossbookingRoomTypes);
 
         if (krossbookingRoomTypes.length === 0) {
-          console.warn("Krossbooking returned no room types. Calendar will be empty.");
-          setUserRooms([]);
+          console.warn("Krossbooking returned no room types. Le planning Krossbooking restera vide mais l'onglet iCal reste disponible.");
           setReservations([]);
           setLoadingData(false);
           return;
@@ -123,9 +126,11 @@ const CalendarPage: React.FC = () => {
               user_id: configuredRoom.user_id,
               room_id: matchingActualRoom.id_room.toString(),
               room_name: configuredRoom.room_name,
-              room_id_2: configuredRoom.room_id_2, // Ensure room_id_2 is passed along
+              room_id_2: configuredRoom.room_id_2,
+              ical_url: configuredRoom.ical_url,
             });
           } else {
+
             console.warn(`Configured room with ID "${configuredRoom.room_id}" and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
             console.warn(`DEBUG: Failed to match configured room:`, configuredRoom);
             console.warn(`DEBUG: Available Krossbooking room IDs:`, flattenedKrossbookingRooms.map(r => r.id_room));
@@ -394,12 +399,13 @@ const CalendarPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Calendrier</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug')} className="w-full">
-                          <TabsList className="mb-4">
-                            <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
-                            <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
-                            <TabsTrigger value="debug">Vue debug</TabsTrigger>
-                          </TabsList>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug' | 'ical')} className="w-full">
+              <TabsList className="mb-4 flex flex-wrap h-auto">
+                <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
+                <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
+                <TabsTrigger value="ical">iCal</TabsTrigger>
+                <TabsTrigger value="debug">Vue debug</TabsTrigger>
+              </TabsList>
 
               <TabsContent value="planning">
                 {loadingData ? (
@@ -441,29 +447,40 @@ const CalendarPage: React.FC = () => {
                 )}
               </TabsContent>
 
+              <TabsContent value="ical">
+                <IcalCalendarTab
+                  userRooms={userRooms}
+                  onUserRoomUpdated={(updatedRoom) => {
+                    setUserRooms((currentRooms) => currentRooms.map((room) => (
+                      room.id === updatedRoom.id ? updatedRoom : room
+                    )));
+                  }}
+                />
+              </TabsContent>
+
               <TabsContent value="debug">
-                                            {loadingData ? (
-                                              <div className="space-y-4">
-                                                <Skeleton className="h-8 w-48" />
-                                                <Skeleton className="h-[400px] w-full" />
-                                              </div>
-                                            ) : userRooms.length === 0 ? (
-                                              <p className="text-muted-foreground">Aucune chambre configurée.</p>
-                                            ) : (
-                                              // Debug = full width: on évite les marges négatives (qui peuvent créer un débordement global)
-                                              <div className="w-full overflow-x-hidden">
-                                                <BookingPlanningGridStudio
-                                                  refreshTrigger={refreshTrigger}
-                                                  userRooms={userRooms}
-                                                  reservations={reservations}
-                                                  onReservationChange={handleReservationChange}
-                                                  profile={profile}
-                                                  debugFullWidth
-                                                />
-                                              </div>
-                                            )}
-                                          </TabsContent>
-                                        </Tabs>
+                {loadingData ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-[400px] w-full" />
+                  </div>
+                ) : userRooms.length === 0 ? (
+                  <p className="text-muted-foreground">Aucune chambre configurée.</p>
+                ) : (
+                  <div className="w-full overflow-x-hidden">
+                    <BookingPlanningGridStudio
+                      refreshTrigger={refreshTrigger}
+                      userRooms={userRooms}
+                      reservations={reservations}
+                      onReservationChange={handleReservationChange}
+                      profile={profile}
+                      debugFullWidth
+                    />
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+
           </CardContent>
         </Card>
       </div>

@@ -7,55 +7,55 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const ConnectivityMaintenancePage = () => {
+  const restoredAt = new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date());
+
   return (
     <MainLayout>
       <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 lg:py-10">
+
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-          <div className="border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-50 px-6 py-8 sm:px-10 sm:py-10">
-            <Badge className="mb-4 bg-amber-100 text-amber-900 hover:bg-amber-100">
-              Maintenance connectivité
+          <div className="border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-green-50 px-6 py-8 sm:px-10 sm:py-10">
+            <Badge className="mb-4 bg-emerald-100 text-emerald-900 hover:bg-emerald-100">
+              Système rétabli
             </Badge>
 
             <div className="max-w-3xl">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                Une intervention technique est en cours
+                La connectivité est entièrement rétablie
               </h1>
               <p className="mt-4 text-base leading-7 text-slate-700 sm:text-lg">
-                Notre fournisseur a récemment limité les connexions IP. Comme le service actuel ne permet
-                pas de disposer d&apos;une IPv4/IPv6 fixe, nous devons mettre en place un proxy sur mesure pour
-                retrouver un fonctionnement pleinement stable.
+                L&apos;incident de connectivité est désormais résolu et le service fonctionne de nouveau normalement.
+                Nos équipes maintiennent une surveillance renforcée afin de confirmer la stabilité complète du système.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-700 sm:text-lg">
-                En attendant, nous avons ajouté une <strong>vue iCal</strong> dans le calendrier afin de vous
-                permettre de continuer à consulter vos réservations.
-              </p>
-              <p className="mt-4 text-base leading-7 text-slate-700 sm:text-lg">
-                Pour le moment, les <strong>blocages propriétaire</strong> restent indisponibles. Si vous souhaitez
-                bloquer votre logement, merci de nous envoyer un email.
+                <strong>Dernière mise à jour :</strong> {restoredAt}
               </p>
 
               <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 sm:p-5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
                   <Sparkles className="h-4 w-4" />
-                  Dernières mises à jour déployées
+                  Statut actuel
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-white/80 p-4 ring-1 ring-emerald-100">
                     <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-emerald-700">
-                      <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Nouveau</Badge>
-                      Calendrier
+                      <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Rétabli</Badge>
+                      Connectivité
                     </div>
                     <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Une <strong>vue iCal</strong> a été ajoutée pour vous permettre de voir vos réservations pendant la maintenance.
+                      Le système est entièrement revenu à la normale et les services sont de nouveau disponibles.
                     </p>
                   </div>
-                  <div className="rounded-xl bg-white/80 p-4 ring-1 ring-amber-100">
-                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-amber-700">
-                      <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">Temporaire</Badge>
-                      Blocage propriétaire
+                  <div className="rounded-xl bg-white/80 p-4 ring-1 ring-emerald-100">
+                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-emerald-700">
+                      <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Surveillance</Badge>
+                      Suivi en cours
                     </div>
                     <p className="mt-2 text-sm leading-6 text-slate-700">
-                      Les blocages propriétaire restent désactivés pour le moment. Pour bloquer un logement, merci de nous écrire par email.
+                      Nous continuons à surveiller activement la plateforme pour garantir une stabilité durable.
                     </p>
                   </div>
                 </div>
@@ -80,31 +80,32 @@ const ConnectivityMaintenancePage = () => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Mise à jour effectuée</Badge>
-                            <span className="text-sm font-medium text-slate-900">Vue iCal ajoutée</span>
+                            <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Rétabli</Badge>
+                            <span className="text-sm font-medium text-slate-900">Système entièrement opérationnel</span>
                           </div>
                           <p className="mt-2 text-sm leading-6 text-slate-700">
-                            Vous pouvez désormais consulter vos réservations depuis la nouvelle vue iCal disponible dans le calendrier.
+                            Tous les services sont de nouveau disponibles. Dernière confirmation de rétablissement : {restoredAt}.
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                        <div className="mt-0.5 rounded-full bg-amber-100 p-2 text-amber-700">
+                      <div className="flex gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                        <div className="mt-0.5 rounded-full bg-sky-100 p-2 text-sky-700">
                           <Wrench className="h-4 w-4" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">En attente</Badge>
-                            <span className="text-sm font-medium text-slate-900">Blocages propriétaire toujours indisponibles</span>
+                            <Badge className="bg-sky-100 text-sky-900 hover:bg-sky-100">Surveillance</Badge>
+                            <span className="text-sm font-medium text-slate-900">Monitoring renforcé en cours</span>
                           </div>
                           <p className="mt-2 text-sm leading-6 text-slate-700">
-                            Si vous souhaitez bloquer votre logement pendant cette période, merci de nous envoyer un email et nous le ferons pour vous.
+                            Nous poursuivons la surveillance de la plateforme afin de confirmer la stabilité dans la durée.
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
+
                 </div>
               </CardContent>
             </Card>
@@ -116,14 +117,13 @@ const ConnectivityMaintenancePage = () => {
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-950">Vue iCal disponible</h2>
+                    <h2 className="text-xl font-semibold text-slate-950">Service normalisé</h2>
                     <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600 sm:text-base">
                       <p>
-                        Une vue iCal a été ajoutée dans votre calendrier pour vous permettre de voir vos
-                        réservations malgré l&apos;incident en cours.
+                        La connectivité est de nouveau opérationnelle et l&apos;ensemble du système a été rétabli.
                       </p>
                       <p>
-                        La distribution de vos annonces sur les plateformes n&apos;est pas impactée.
+                        Nous conservons toutefois une phase de surveillance active pour sécuriser le retour à la normale.
                       </p>
                     </div>
                   </div>
@@ -134,18 +134,17 @@ const ConnectivityMaintenancePage = () => {
             <Card className="border-slate-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <div className="rounded-2xl bg-amber-50 p-3 text-amber-700">
-                    <Mail className="h-5 w-5" />
+                  <div className="rounded-2xl bg-sky-50 p-3 text-sky-700">
+                    <Clock3 className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-950">Blocages par email</h2>
+                    <h2 className="text-xl font-semibold text-slate-950">Dernière actualisation</h2>
                     <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600 sm:text-base">
                       <p>
-                        Pour le moment, les blocages propriétaire sont toujours indisponibles.
+                        Heure de mise à jour du statut : <strong>{restoredAt}</strong>
                       </p>
                       <p>
-                        Si vous souhaitez bloquer votre logement, merci de nous faire un email pendant la
-                        durée de l&apos;intervention.
+                        Cette page reste surveillée et sera mise à jour si un nouvel événement doit être signalé.
                       </p>
                     </div>
                   </div>

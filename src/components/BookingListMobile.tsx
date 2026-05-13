@@ -24,12 +24,19 @@ interface Reservation {
 interface BookingListMobileProps {
   reservations: Reservation[];
   isLoading?: boolean;
+  title?: string;
+  emptyMessage?: string;
+  showAmount?: boolean;
 }
 
 const BookingListMobile: React.FC<BookingListMobileProps> = ({
   reservations,
   isLoading = false,
+  title = 'Réservations à venir',
+  emptyMessage = 'Aucune réservation à venir',
+  showAmount = true,
 }) => {
+
   const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
@@ -106,6 +113,8 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
         return 'bg-red-100 text-red-800 border-red-200';
       case 'BLOCKED':
         return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'ICAL':
+        return 'bg-sky-100 text-sky-800 border-sky-200';
       default:
         return 'bg-blue-100 text-blue-800 border-blue-200';
     }
@@ -121,6 +130,8 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
         return 'Annulé';
       case 'BLOCKED':
         return 'Bloqué';
+      case 'ICAL':
+        return 'iCal';
       default:
         return status;
     }
@@ -142,12 +153,12 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
     return (
       <Card className="w-full">
         <CardHeader className="p-3">
-          <CardTitle className="text-lg">Réservations</CardTitle>
+          <CardTitle className="text-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           <div className="text-center py-8">
             <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aucune réservation à venir</p>
+            <p className="text-muted-foreground">{emptyMessage}</p>
           </div>
         </CardContent>
       </Card>
@@ -157,8 +168,8 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
   return (
     <Card className="w-full max-w-full overflow-hidden">
       <CardHeader className="p-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Réservations à venir</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-lg">{title}</CardTitle>
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
@@ -169,6 +180,7 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
             <option value="pending">En attente</option>
             <option value="cancelled">Annulés</option>
             <option value="BLOCKED">Bloqués</option>
+            <option value="ICAL">iCal</option>
           </select>
         </div>
       </CardHeader>
@@ -245,11 +257,16 @@ const BookingListMobile: React.FC<BookingListMobileProps> = ({
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                  <DollarSign className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-xs font-semibold">{reservation.total_amount}€</span>
-                                  <span className="text-xs text-muted-foreground">•</span>
+                                  {showAmount ? (
+                                    <>
+                                      <DollarSign className="h-3 w-3 text-muted-foreground" />
+                                      <span className="text-xs font-semibold">{reservation.total_amount}€</span>
+                                      <span className="text-xs text-muted-foreground">•</span>
+                                    </>
+                                  ) : null}
                                   <span className="text-xs text-muted-foreground">{reservation.platform}</span>
                                 </div>
+
                               </div>
 
                               <div className="flex flex-col items-end gap-1">

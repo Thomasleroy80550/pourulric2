@@ -25,6 +25,7 @@ import TwelveMonthView from '@/components/TwelveMonthView';
 import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
 import IcalCalendarTab from '@/components/IcalCalendarTab';
+import { fetchIcalReservationsForRoom } from '@/lib/ical';
 import { toast } from 'sonner';
 
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -48,7 +49,10 @@ const CalendarPage: React.FC = () => {
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
 
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [icalReservations, setIcalReservations] = useState<KrossbookingReservation[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingIcalData, setLoadingIcalData] = useState(false);
+
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const location = useLocation();
   const [cooldownEndTime, setCooldownEndTime] = useState<number>(() => {
@@ -90,10 +94,46 @@ const CalendarPage: React.FC = () => {
         console.log("DEBUG: configuredUserRooms (from Supabase):", configuredUserRooms);
         setUserRooms(configuredUserRooms);
 
+        if (isMobile) {
+          const linkedRooms = configuredUserRooms.filter((room) => room.ical_url?.trim());
+
+          if (linkedRooms.length === 0) {
+            setIcalReservations([]);
+            setLoadingIcalData(false);
+          } else {
+            setLoadingIcalData(true);
+
+            const icalResults = await Promise.allSettled(
+              linkedRooms.map(async (room) => fetchIcalReservationsForRoom(room))
+            );
+
+            const loadedIcalReservations = icalResults
+              .filter((result): result is PromiseFulfilledResult<KrossbookingReservation[]> => result.status === 'fulfilled')
+              .flatMap((result) => result.value);
+
+            const failedIcalResults = icalResults.filter(
+              (result): result is PromiseRejectedResult => result.status === 'rejected'
+            );
+
+            setIcalReservations(loadedIcalReservations);
+
+            if (failedIcalResults.length > 0) {
+              const message = failedIcalResults[0].reason instanceof Error
+                ? failedIcalResults[0].reason.message
+                : 'Impossible de synchroniser un ou plusieurs flux iCal.';
+              toast.error(message);
+            }
+
+            setLoadingIcalData(false);
+          }
+        } else {
+          setIcalReservations([]);
+          setLoadingIcalData(false);
+        }
+
         if (configuredUserRooms.length === 0) {
           setUserRooms([]);
           setReservations([]);
-          setLoadingData(false);
           return;
         }
 
@@ -105,7 +145,6 @@ const CalendarPage: React.FC = () => {
         if (krossbookingRoomTypes.length === 0) {
           console.warn("Krossbooking returned no room types. Le planning Krossbooking restera vide mais l'onglet iCal reste disponible.");
           setReservations([]);
-          setLoadingData(false);
           return;
         }
 
@@ -133,7 +172,6 @@ const CalendarPage: React.FC = () => {
               ical_url: configuredRoom.ical_url,
             });
           } else {
-
             console.warn(`Configured room with ID "${configuredRoom.room_id}" and name "${configuredRoom.room_name}" was not found as an individual room in Krossbooking. It will not be displayed.`);
             console.warn(`DEBUG: Failed to match configured room:`, configuredRoom);
             console.warn(`DEBUG: Available Krossbooking room IDs:`, flattenedKrossbookingRooms.map(r => r.id_room));
@@ -158,12 +196,11 @@ const CalendarPage: React.FC = () => {
         const closedBlocks = priceOverrides
           .filter(override => override.closed)
           .map((override): KrossbookingReservation => ({
-            id: `override-${override.id}`, // Prefix to avoid ID collision
+            id: `override-${override.id}`,
             guest_name: 'Période bloquée',
             property_name: override.room_name,
             krossbooking_room_id: override.room_id,
             check_in_date: override.start_date,
-            // end_date is inclusive, so checkout is the next day
             check_out_date: format(addDays(new Date(override.end_date), 1), 'yyyy-MM-dd'),
             status: 'BLOCKED',
             amount: '',
@@ -174,23 +211,24 @@ const CalendarPage: React.FC = () => {
             tourist_tax_amount: 0,
             property_id: 0,
           }));
-        
+
         console.log("DEBUG: Owner blocks created from overrides:", closedBlocks);
 
         setReservations([...fetchedReservations, ...closedBlocks]);
-
       } catch (error) {
         console.error("Error fetching data for CalendarPage:", error);
       } finally {
         setLoadingData(false);
+        setLoadingIcalData(false);
       }
     };
     if (!profile?.is_banned && !profile?.is_payment_suspended) {
       fetchData();
     } else {
       setLoadingData(false);
+      setLoadingIcalData(false);
     }
-  }, [refreshTrigger, profile, session]);
+  }, [isMobile, refreshTrigger, profile, session]);
 
   useEffect(() => {
     if (location.state?.openOwnerReservationDialog) {
@@ -318,8 +356,8 @@ const CalendarPage: React.FC = () => {
           </div>
           
           {/* Vue liste mobile directe avec contraintes de largeur */}
-          <div className="w-full max-w-full overflow-x-hidden">
-            <BookingListMobile 
+          <div className="w-full max-w-full space-y-4 overflow-x-hidden">
+            <BookingListMobile
               reservations={reservations.map(r => ({
                 id: r.id,
                 room_id: r.krossbooking_room_id || r.property_name,
@@ -330,10 +368,29 @@ const CalendarPage: React.FC = () => {
                 status: r.status,
                 platform: r.channel_identifier || 'Unknown',
                 total_amount: parseFloat(r.amount) || 0
-              }))} 
+              }))}
+              isLoading={loadingData}
+            />
+            <BookingListMobile
+              title="Réservations iCal à venir"
+              emptyMessage="Aucune réservation iCal à venir"
+              showAmount={false}
+              isLoading={loadingIcalData}
+              reservations={icalReservations.map(r => ({
+                id: r.id,
+                room_id: r.krossbooking_room_id || r.property_name,
+                room_name: r.property_name,
+                start_date: r.check_in_date,
+                end_date: r.check_out_date,
+                guest_name: r.guest_name,
+                status: r.status,
+                platform: 'iCal',
+                total_amount: 0,
+              }))}
             />
           </div>
         </div>
+
         <OwnerReservationDialog
           isOpen={isOwnerReservationDialogOpen}
           onOpenChange={setIsOwnerReservationDialogOpen}

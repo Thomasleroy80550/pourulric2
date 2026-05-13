@@ -2,7 +2,9 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { DomainRequest, DomainRequestStatus, getDomainRequestStatusLabel, updateDomainRequestStatus } from "@/lib/domain-request-api";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,6 +55,8 @@ const AdminDomainRequestsTable = ({ requests, onUpdated }: AdminDomainRequestsTa
         mini_sites: request.mini_sites,
       });
       setEditingId(null);
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la mise à jour de la demande.");
     } finally {
       setIsSaving(false);
     }

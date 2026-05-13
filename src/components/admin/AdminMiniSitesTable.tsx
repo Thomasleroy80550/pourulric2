@@ -67,6 +67,8 @@ const AdminMiniSitesTable = ({ sites, domainRequestCounts, onUpdated }: AdminMin
         profiles: editingSite.profiles,
       });
       setEditingSite(null);
+    } catch (error: any) {
+      toast.error(error.message || "Erreur lors de la mise à jour du mini-site.");
     } finally {
       setIsSaving(false);
     }

@@ -1,0 +1,1 @@
+CREATE POLICY "domain_requests_insert_own" ON public.domain_requests FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);

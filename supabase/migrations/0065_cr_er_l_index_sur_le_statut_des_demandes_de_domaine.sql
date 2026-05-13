@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS domain_requests_status_idx ON public.domain_requests (status);

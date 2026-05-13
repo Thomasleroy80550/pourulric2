@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS set_mini_sites_updated_at ON public.mini_sites;

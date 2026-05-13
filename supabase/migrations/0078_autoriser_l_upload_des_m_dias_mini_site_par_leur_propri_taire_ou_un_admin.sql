@@ -1,0 +1,1 @@
+CREATE POLICY "mini_site_media_insert_own" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'mini-site-media' AND (auth.uid()::text = (storage.foldername(name))[1] OR is_admin(auth.uid())));

@@ -1,0 +1,1 @@
+CREATE POLICY "mini_sites_public_read_published" ON public.mini_sites FOR SELECT USING (status = 'published');

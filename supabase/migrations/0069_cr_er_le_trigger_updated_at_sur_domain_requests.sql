@@ -1,0 +1,1 @@
+CREATE TRIGGER set_domain_requests_updated_at BEFORE UPDATE ON public.domain_requests FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();

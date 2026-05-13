@@ -1,0 +1,1 @@
+CREATE TRIGGER set_mini_sites_updated_at BEFORE UPDATE ON public.mini_sites FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();

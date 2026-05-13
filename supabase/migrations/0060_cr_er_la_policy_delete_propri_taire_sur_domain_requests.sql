@@ -1,0 +1,1 @@
+CREATE POLICY "domain_requests_delete_own" ON public.domain_requests FOR DELETE TO authenticated USING (auth.uid() = user_id);

@@ -1,0 +1,1 @@
+ALTER TABLE public.domain_requests ENABLE ROW LEVEL SECURITY;

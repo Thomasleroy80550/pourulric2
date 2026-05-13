@@ -1,0 +1,1 @@
+CREATE POLICY "domain_requests_update_own" ON public.domain_requests FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);

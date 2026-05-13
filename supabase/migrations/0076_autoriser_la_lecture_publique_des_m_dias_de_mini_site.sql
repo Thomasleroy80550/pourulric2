@@ -1,0 +1,1 @@
+CREATE POLICY "mini_site_media_public_read" ON storage.objects FOR SELECT USING (bucket_id = 'mini-site-media');

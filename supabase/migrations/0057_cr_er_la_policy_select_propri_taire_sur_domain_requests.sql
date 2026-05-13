@@ -1,0 +1,1 @@
+CREATE POLICY "domain_requests_select_own" ON public.domain_requests FOR SELECT TO authenticated USING (auth.uid() = user_id);

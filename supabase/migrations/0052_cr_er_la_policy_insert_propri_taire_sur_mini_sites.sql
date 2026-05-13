@@ -1,0 +1,1 @@
+CREATE POLICY "mini_sites_insert_own" ON public.mini_sites FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);

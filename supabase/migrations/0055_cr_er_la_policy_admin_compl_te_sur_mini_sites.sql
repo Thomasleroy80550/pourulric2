@@ -1,0 +1,1 @@
+CREATE POLICY "mini_sites_admin_manage_all" ON public.mini_sites FOR ALL TO authenticated USING (is_admin(auth.uid())) WITH CHECK (is_admin(auth.uid()));

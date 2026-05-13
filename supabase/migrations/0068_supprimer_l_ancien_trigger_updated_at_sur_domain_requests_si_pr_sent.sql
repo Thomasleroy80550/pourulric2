@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS set_domain_requests_updated_at ON public.domain_requests;

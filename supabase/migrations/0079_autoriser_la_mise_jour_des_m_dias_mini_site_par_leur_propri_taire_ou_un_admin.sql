@@ -1,0 +1,1 @@
+CREATE POLICY "mini_site_media_update_own" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'mini-site-media' AND (auth.uid()::text = (storage.foldername(name))[1] OR is_admin(auth.uid()))) WITH CHECK (bucket_id = 'mini-site-media' AND (auth.uid()::text = (storage.foldername(name))[1] OR is_admin(auth.uid())));

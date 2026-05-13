@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "mini_site_media_update_own" ON storage.objects;

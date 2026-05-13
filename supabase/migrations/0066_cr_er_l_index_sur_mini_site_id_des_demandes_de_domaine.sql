@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS domain_requests_mini_site_id_idx ON public.domain_requests (mini_site_id);

@@ -1,0 +1,1 @@
+CREATE POLICY "mini_sites_update_own" ON public.mini_sites FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);

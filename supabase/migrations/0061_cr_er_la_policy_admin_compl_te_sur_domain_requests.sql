@@ -1,0 +1,1 @@
+CREATE POLICY "domain_requests_admin_manage_all" ON public.domain_requests FOR ALL TO authenticated USING (is_admin(auth.uid())) WITH CHECK (is_admin(auth.uid()));

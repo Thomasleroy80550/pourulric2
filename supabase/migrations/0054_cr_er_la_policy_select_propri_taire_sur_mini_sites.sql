@@ -1,0 +1,1 @@
+CREATE POLICY "mini_sites_select_own" ON public.mini_sites FOR SELECT TO authenticated USING (auth.uid() = user_id);

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS mini_sites_slug_idx ON public.mini_sites (slug);

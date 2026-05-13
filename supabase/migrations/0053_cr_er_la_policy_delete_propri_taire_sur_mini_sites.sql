@@ -1,0 +1,1 @@
+CREATE POLICY "mini_sites_delete_own" ON public.mini_sites FOR DELETE TO authenticated USING (auth.uid() = user_id);

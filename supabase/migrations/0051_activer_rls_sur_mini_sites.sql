@@ -1,0 +1,1 @@
+ALTER TABLE public.mini_sites ENABLE ROW LEVEL SECURITY;

@@ -54,7 +54,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-  const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'ical'>('planning');
+  const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'ical'>('ical');
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -401,9 +401,9 @@ const CalendarPage: React.FC = () => {
           <CardContent>
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug' | 'ical')} className="w-full">
               <TabsList className="mb-4 flex flex-wrap h-auto">
+                <TabsTrigger value="ical">iCal</TabsTrigger>
                 <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
                 <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
-                <TabsTrigger value="ical">iCal</TabsTrigger>
                 <TabsTrigger value="debug">Vue debug</TabsTrigger>
               </TabsList>
 

@@ -26,10 +26,15 @@ const ConnectivityMaintenancePage = () => {
                 retrouver un fonctionnement pleinement stable.
               </p>
               <p className="mt-4 text-base leading-7 text-slate-700 sm:text-lg">
-                Nos équipes travaillent activement pour corriger ce problème et revenir à la normale le plus
-                rapidement possible.
+                En attendant, nous avons ajouté une <strong>vue iCal</strong> dans le calendrier afin de vous
+                permettre de continuer à consulter vos réservations.
+              </p>
+              <p className="mt-4 text-base leading-7 text-slate-700 sm:text-lg">
+                Pour le moment, les <strong>blocages propriétaire</strong> restent indisponibles. Si vous souhaitez
+                bloquer votre logement, merci de nous envoyer un email.
               </p>
             </div>
+
           </div>
 
           <div className="grid gap-4 p-6 sm:p-10 lg:grid-cols-2">
@@ -40,13 +45,14 @@ const ConnectivityMaintenancePage = () => {
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-950">Aucun impact sur vos annonces</h2>
+                    <h2 className="text-xl font-semibold text-slate-950">Vue iCal disponible</h2>
                     <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600 sm:text-base">
                       <p>
-                        Cette situation n&apos;impacte aucunement vos réservations propriétaires déjà passées.
+                        Une vue iCal a été ajoutée dans votre calendrier pour vous permettre de voir vos
+                        réservations malgré l&apos;incident en cours.
                       </p>
                       <p>
-                        Elle n&apos;impacte pas non plus la distribution de vos annonces sur les plateformes.
+                        La distribution de vos annonces sur les plateformes n&apos;est pas impactée.
                       </p>
                     </div>
                   </div>
@@ -61,14 +67,14 @@ const ConnectivityMaintenancePage = () => {
                     <Wrench className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-slate-950">Ce que nous faisons</h2>
+                    <h2 className="text-xl font-semibold text-slate-950">Blocages propriétaire</h2>
                     <div className="mt-3 space-y-3 text-sm leading-6 text-slate-600 sm:text-base">
                       <p>
-                        Nous développons actuellement une solution proxy dédiée afin de stabiliser les
-                        connexions malgré les nouvelles contraintes réseau.
+                        Pour le moment, les blocages propriétaire sont toujours indisponibles.
                       </p>
                       <p>
-                        Notre objectif est simple : rétablir rapidement un service fiable, propre et durable.
+                        Si vous souhaitez bloquer votre logement, merci de nous faire un email pendant la
+                        durée de l&apos;intervention.
                       </p>
                     </div>
                   </div>

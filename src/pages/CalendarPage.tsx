@@ -43,7 +43,10 @@ const CalendarPage: React.FC = () => {
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false);
   const [isAccessDeniedDialogOpen, setIsAccessDeniedDialogOpen] = useState(false);
+  const [isFeatureUnavailableDialogOpen, setIsFeatureUnavailableDialogOpen] = useState(false);
+  const [unavailableFeatureLabel, setUnavailableFeatureLabel] = useState('');
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -212,6 +215,11 @@ const CalendarPage: React.FC = () => {
     toast.success("Le calendrier est en cours de rafraîchissement.");
   };
 
+  const handleFeatureUnavailableClick = (featureLabel: string) => {
+    setUnavailableFeatureLabel(featureLabel);
+    setIsFeatureUnavailableDialogOpen(true);
+  };
+
   const handlePriceRestrictionClick = () => {
     if (profile?.can_manage_prices) {
       setIsPriceRestrictionDialogOpen(true);
@@ -288,14 +296,15 @@ const CalendarPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
+              <Button onClick={() => handleFeatureUnavailableClick('Réservation Propriétaire')} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Réservation Propriétaire
               </Button>
-              <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
+              <Button onClick={() => handleFeatureUnavailableClick('Configurer Prix')} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
                 <DollarSign className="h-4 w-4 mr-2" />
                 Configurer Prix
               </Button>
+
               <Button 
                 onClick={handleReservationChange} 
                 variant="outline" 
@@ -339,6 +348,19 @@ const CalendarPage: React.FC = () => {
           userRooms={userRooms}
           onSettingsSaved={handlePriceRestrictionSaved}
         />
+        <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Fonctionnalité temporairement hors service</AlertDialogTitle>
+              <AlertDialogDescription>
+                {unavailableFeatureLabel} est actuellement indisponible pendant la maintenance en cours. Nous la réactiverons dès que le service sera de nouveau opérationnel.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setIsFeatureUnavailableDialogOpen(false)}>Compris</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <AlertDialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -374,14 +396,15 @@ const CalendarPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setIsOwnerReservationDialogOpen(true)} className="flex items-center">
+            <Button onClick={() => handleFeatureUnavailableClick('Réservation Propriétaire')} className="flex items-center">
               <PlusCircle className="h-4 w-4 mr-2" />
               Réservation Propriétaire
             </Button>
-            <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center">
+            <Button onClick={() => handleFeatureUnavailableClick('Configurer Prix')} variant="outline" className="flex items-center">
               <DollarSign className="h-4 w-4 mr-2" />
               Configurer Prix
             </Button>
+
             <Button
               onClick={handleReservationChange}
               variant="outline"
@@ -493,6 +516,19 @@ const CalendarPage: React.FC = () => {
         userRooms={userRooms}
         onSettingsSaved={handlePriceRestrictionSaved}
       />
+      <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Fonctionnalité temporairement hors service</AlertDialogTitle>
+            <AlertDialogDescription>
+              {unavailableFeatureLabel} est actuellement indisponible pendant la maintenance en cours. Nous la réactiverons dès que le service sera de nouveau opérationnel.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsFeatureUnavailableDialogOpen(false)}>Compris</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

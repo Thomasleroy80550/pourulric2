@@ -26,8 +26,6 @@ import { fr } from 'date-fns/locale';
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   Legend,
@@ -38,6 +36,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
+
   YAxis,
 } from 'recharts';
 import {
@@ -1093,7 +1092,7 @@ const RevenueForecastPage: React.FC = () => {
 
                     <CardContent className="h-[380px] rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={forecastData.otaTrendData} margin={{ top: 12, right: 16, left: 0, bottom: 4 }} barGap={8} barCategoryGap="24%">
+                        <LineChart data={forecastData.otaTrendData} margin={{ top: 12, right: 16, left: 0, bottom: 4 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                           <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: '#64748b', fontSize: 12 }} />
                           <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: '#64748b', fontSize: 12 }} />
@@ -1108,9 +1107,18 @@ const RevenueForecastPage: React.FC = () => {
                           />
                           <Legend verticalAlign="top" align="left" height={30} iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
                           {forecastData.otaTrendBase.map((ota) => (
-                            <Bar key={ota.key} dataKey={ota.key} name={ota.channel} fill={ota.color} radius={[8, 8, 0, 0]} maxBarSize={26} />
+                            <Line
+                              key={ota.key}
+                              type="monotone"
+                              dataKey={ota.key}
+                              name={ota.channel}
+                              stroke={ota.color}
+                              strokeWidth={3}
+                              dot={false}
+                              activeDot={{ r: 5, fill: ota.color, stroke: '#fff', strokeWidth: 2 }}
+                            />
                           ))}
-                        </BarChart>
+                        </LineChart>
                       </ResponsiveContainer>
                     </CardContent>
 

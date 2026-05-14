@@ -506,71 +506,71 @@ const RevenueForecastPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="container mx-auto space-y-6 py-6">
-        <section className="relative overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-900 p-6 text-white shadow-2xl">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(34,211,238,0.22),transparent_30%)]" />
+        <section className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50 to-blue-100 p-6 text-slate-900 shadow-xl">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(125,211,252,0.28),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(191,219,254,0.35),transparent_35%)]" />
           <div className="relative space-y-6">
             <div className="flex flex-wrap items-center gap-3">
-              <Badge className="w-fit border-white/20 bg-white/10 text-white hover:bg-white/10">Prévision {currentYear}</Badge>
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm text-slate-200">Vue simplifiée</span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm text-slate-200">Canaux de vente inclus</span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm text-slate-200">Détail par logement</span>
+              <Badge className="w-fit border-sky-200 bg-white/80 text-sky-800 hover:bg-white/80">Prévision {currentYear}</Badge>
+              <span className="rounded-full border border-sky-200 bg-white/70 px-3 py-1 text-sm text-slate-700">Vue simplifiée</span>
+              <span className="rounded-full border border-sky-200 bg-white/70 px-3 py-1 text-sm text-slate-700">Canaux de vente inclus</span>
+              <span className="rounded-full border border-sky-200 bg-white/70 px-3 py-1 text-sm text-slate-700">Détail par logement</span>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.4fr,1fr] lg:items-start">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Prévisions de chiffre d'affaires</h1>
-                  <p className="max-w-2xl text-sm text-slate-200 md:text-base">
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-900 md:text-4xl">Prévisions de chiffre d'affaires</h1>
+                  <p className="max-w-2xl text-sm text-slate-600 md:text-base">
                     Cette page vous aide à voir rapidement où vous en êtes : ce qui est déjà réservé, ce qui est déjà réalisé et ce que vous pouvez encore viser d'ici la fin de l'année.
                   </p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-cyan-200">Déjà réservé</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">{currencyFormatter.format(forecastData.securedRevenue)}</div>
-                    <p className="mt-1 text-sm text-slate-200">Le montant déjà confirmé par les réservations existantes.</p>
+                  <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur-sm">
+                    <div className="text-xs uppercase tracking-[0.2em] text-sky-700">Déjà réservé</div>
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">{currencyFormatter.format(forecastData.securedRevenue)}</div>
+                    <p className="mt-1 text-sm text-slate-600">Le montant déjà confirmé par les réservations existantes.</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-cyan-200">Déjà réalisé</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">{currencyFormatter.format(forecastData.revenueToDate)}</div>
-                    <p className="mt-1 text-sm text-slate-200">Le montant lié aux séjours déjà terminés.</p>
+                  <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur-sm">
+                    <div className="text-xs uppercase tracking-[0.2em] text-sky-700">Déjà réalisé</div>
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">{currencyFormatter.format(forecastData.revenueToDate)}</div>
+                    <p className="mt-1 text-sm text-slate-600">Le montant lié aux séjours déjà terminés.</p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-                    <div className="text-xs uppercase tracking-[0.2em] text-cyan-200">Encore à aller chercher</div>
-                    <div className="mt-2 text-2xl font-semibold text-white">{currencyFormatter.format(forecastData.additionalProjectedRevenue)}</div>
-                    <p className="mt-1 text-sm text-slate-200">Le potentiel restant pour atteindre l'estimation.</p>
+                  <div className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur-sm">
+                    <div className="text-xs uppercase tracking-[0.2em] text-sky-700">Encore à aller chercher</div>
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">{currencyFormatter.format(forecastData.additionalProjectedRevenue)}</div>
+                    <p className="mt-1 text-sm text-slate-600">Le potentiel restant pour atteindre l'estimation.</p>
                   </div>
                 </div>
               </div>
 
               {!loading && !error && forecastData.reservationCount > 0 && (
-                <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+                <div className="grid gap-4 rounded-2xl border border-white/70 bg-white/75 p-5 shadow-sm backdrop-blur-sm">
                   <div>
-                    <div className="text-xs uppercase tracking-[0.25em] text-cyan-200">Estimation de fin d'année</div>
-                    <div className="mt-2 text-4xl font-bold">{currencyFormatter.format(forecastData.yearEndForecast)}</div>
-                    <p className="mt-2 text-sm leading-6 text-slate-200">
+                    <div className="text-xs uppercase tracking-[0.25em] text-sky-700">Estimation de fin d'année</div>
+                    <div className="mt-2 text-4xl font-bold text-slate-900">{currencyFormatter.format(forecastData.yearEndForecast)}</div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
                       Si l'année continue sur le même rythme, votre chiffre d'affaires total pourrait atteindre ce montant d'ici le 31 décembre.
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-slate-100">
-                    <div className="font-medium text-white">Lecture simple</div>
-                    <p className="mt-2 leading-6 text-slate-200">
+                  <div className="rounded-2xl border border-sky-100 bg-sky-50/90 p-4 text-sm text-slate-700">
+                    <div className="font-medium text-slate-900">Lecture simple</div>
+                    <p className="mt-2 leading-6 text-slate-600">
                       Une partie de cette estimation est déjà dans la poche grâce aux réservations enregistrées. Le reste correspond au potentiel encore à vendre.
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm text-slate-200">
+                    <div className="flex items-center justify-between text-sm text-slate-600">
                       <span>Part déjà sécurisée</span>
-                      <span>{percentFormatter.format(forecastData.securedShare)}</span>
+                      <span className="font-medium text-slate-900">{percentFormatter.format(forecastData.securedShare)}</span>
                     </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-white/15">
+                    <div className="h-3 overflow-hidden rounded-full bg-sky-100">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-emerald-400 transition-all duration-1000 ease-out"
+                        className="h-full rounded-full bg-gradient-to-r from-sky-400 via-blue-500 to-emerald-400 transition-all duration-1000 ease-out"
                         style={{ width: `${animatedSecuredShare}%` }}
                       />
                     </div>
-                    <p className="text-xs leading-5 text-slate-300">
+                    <p className="text-xs leading-5 text-slate-500">
                       Plus la barre est remplie, plus votre estimation est déjà couverte par des réservations existantes.
                     </p>
                   </div>

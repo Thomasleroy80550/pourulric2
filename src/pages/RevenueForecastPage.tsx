@@ -182,35 +182,28 @@ function getOtaColor(channel: string): string {
 }
 
 function ScenarioTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) {
+  if (!active || !payload?.length || !payload[0]?.payload) {
     return null;
   }
 
-  const labels: Record<string, string> = {
-    prudent: 'Prudent',
-    central: 'Central',
-    ambitious: 'Ambitieux',
-  };
-
-  const entries = Array.from(
-    new Map(
-      payload
-        .filter((item: any) => item?.dataKey && labels[item.dataKey])
-        .map((item: any) => [item.dataKey, item])
-    ).values()
-  );
+  const point = payload[0].payload;
+  const entries = [
+    { key: 'prudent', label: 'Prudent', color: '#f59e0b', value: Number(point.prudent || 0) },
+    { key: 'central', label: 'Central', color: '#0ea5e9', value: Number(point.central || 0) },
+    { key: 'ambitious', label: 'Ambitieux', color: '#10b981', value: Number(point.ambitious || 0) },
+  ];
 
   return (
     <div className="rounded-2xl border border-sky-100 bg-white/95 p-4 shadow-2xl backdrop-blur-sm">
       <div className="mb-3 text-sm font-semibold text-slate-900">{label}</div>
       <div className="space-y-2">
-        {entries.map((item: any) => (
-          <div key={item.dataKey} className="flex items-center justify-between gap-6 text-sm">
+        {entries.map((item) => (
+          <div key={item.key} className="flex items-center justify-between gap-6 text-sm">
             <div className="flex items-center gap-2 text-slate-700">
               <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-              <span>{labels[item.dataKey]}</span>
+              <span>{item.label}</span>
             </div>
-            <span className="font-semibold text-slate-900">{currencyFormatter.format(Number(item.value || 0))}</span>
+            <span className="font-semibold text-slate-900">{currencyFormatter.format(item.value)}</span>
           </div>
         ))}
       </div>

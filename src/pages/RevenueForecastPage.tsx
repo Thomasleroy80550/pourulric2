@@ -476,7 +476,32 @@ const RevenueForecastPage: React.FC = () => {
     };
   }, [currentYear, forecastData]);
 
+  const scenarioChartData = useMemo(
+    () => [
+      {
+        name: 'Prudent',
+        amount: forecastData.prudentForecast,
+        color: '#f59e0b',
+        description: 'Vision plus prudente du potentiel restant',
+      },
+      {
+        name: 'Central',
+        amount: forecastData.yearEndForecast,
+        color: '#0ea5e9',
+        description: 'Estimation principale basée sur le rythme actuel',
+      },
+      {
+        name: 'Ambitieux',
+        amount: forecastData.ambitiousForecast,
+        color: '#10b981',
+        description: 'Vision plus dynamique de la fin d’année',
+      },
+    ],
+    [forecastData.ambitiousForecast, forecastData.prudentForecast, forecastData.yearEndForecast]
+  );
+
   useEffect(() => {
+
     if (loading || error || forecastData.reservationCount === 0) {
       setAnimatedSecuredShare(0);
       return;
@@ -683,31 +708,35 @@ const RevenueForecastPage: React.FC = () => {
             <Card className="border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
               <CardHeader>
                 <CardTitle>Scénarios de fin d'année</CardTitle>
-                <CardDescription>Trois lectures simples pour se projeter selon un niveau de prudence différent.</CardDescription>
+                <CardDescription>Un graphique pour comparer rapidement une vision prudente, centrale et ambitieuse.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <div className="text-sm font-semibold text-amber-900">Scénario prudent</div>
-                    <div className="mt-2 text-3xl font-bold text-amber-950">{currencyFormatter.format(forecastData.prudentForecast)}</div>
-                    <p className="mt-2 text-sm leading-6 text-amber-800">
-                      Hypothèse plus prudente : vous transformez environ 70% du potentiel restant.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-                    <div className="text-sm font-semibold text-sky-900">Scénario central</div>
-                    <div className="mt-2 text-3xl font-bold text-sky-950">{currencyFormatter.format(forecastData.yearEndForecast)}</div>
-                    <p className="mt-2 text-sm leading-6 text-sky-800">
-                      C'est l'estimation principale de la page, basée sur votre rythme actuel.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                    <div className="text-sm font-semibold text-emerald-900">Scénario ambitieux</div>
-                    <div className="mt-2 text-3xl font-bold text-emerald-950">{currencyFormatter.format(forecastData.ambitiousForecast)}</div>
-                    <p className="mt-2 text-sm leading-6 text-emerald-800">
-                      Hypothèse plus dynamique : vous transformez environ 120% du potentiel restant.
-                    </p>
-                  </div>
+              <CardContent className="space-y-6">
+                <div className="h-[320px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={scenarioChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" />
+                      <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} />
+                      <Tooltip formatter={(value: number) => currencyFormatter.format(value)} />
+                      <Bar dataKey="amount" radius={[10, 10, 0, 0]}>
+                        {scenarioChartData.map((scenario) => (
+                          <Cell key={scenario.name} fill={scenario.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {scenarioChartData.map((scenario) => (
+                    <div key={scenario.name} className="rounded-2xl border bg-background/80 p-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: scenario.color }} />
+                        {scenario.name}
+                      </div>
+                      <div className="mt-2 text-2xl font-bold text-foreground">{currencyFormatter.format(scenario.amount)}</div>
+                      <p className="mt-2 text-sm text-muted-foreground">{scenario.description}</p>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

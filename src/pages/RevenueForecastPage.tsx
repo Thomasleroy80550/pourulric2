@@ -737,21 +737,94 @@ const RevenueForecastPage: React.FC = () => {
                 <CardDescription>Des courbes pour visualiser la trajectoire possible jusqu'à décembre selon trois niveaux de prudence.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="h-[340px]">
+                <div className="h-[360px] rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/70 to-emerald-50/50 p-3">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={forecastData.scenarioProjectionData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" />
-                      <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} />
-                      <Tooltip formatter={(value: number) => currencyFormatter.format(value)} />
-                      <Legend />
-                      <Line type="monotone" dataKey="prudent" name="Prudent" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} />
-                      <Line type="monotone" dataKey="central" name="Central" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} />
-                      <Line type="monotone" dataKey="ambitious" name="Ambitieux" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                    <LineChart data={forecastData.scenarioProjectionData} margin={{ top: 18, right: 20, left: 4, bottom: 6 }}>
+                      <defs>
+                        <linearGradient id="scenarioCentralStroke" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#38bdf8" />
+                          <stop offset="100%" stopColor="#2563eb" />
+                        </linearGradient>
+                        <filter id="scenarioGlowAmber" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+                          <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                        <filter id="scenarioGlowBlue" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="7" result="coloredBlur" />
+                          <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                        <filter id="scenarioGlowGreen" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="6" result="coloredBlur" />
+                          <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.45} />
+                      <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <Tooltip
+                        formatter={(value: number) => currencyFormatter.format(value)}
+                        contentStyle={{
+                          borderRadius: '18px',
+                          border: '1px solid rgba(186, 230, 253, 0.9)',
+                          boxShadow: '0 18px 45px rgba(14, 165, 233, 0.12)',
+                          background: 'rgba(255,255,255,0.96)',
+                        }}
+                      />
+                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
+
+                      <Line type="natural" dataKey="prudent" stroke="#f59e0b" strokeWidth={10} opacity={0.12} dot={false} activeDot={false} legendType="none" filter="url(#scenarioGlowAmber)" />
+                      <Line type="natural" dataKey="central" stroke="#38bdf8" strokeWidth={12} opacity={0.14} dot={false} activeDot={false} legendType="none" filter="url(#scenarioGlowBlue)" />
+                      <Line type="natural" dataKey="ambitious" stroke="#10b981" strokeWidth={10} opacity={0.12} dot={false} activeDot={false} legendType="none" filter="url(#scenarioGlowGreen)" />
+
+                      <Line
+                        type="natural"
+                        dataKey="prudent"
+                        name="Prudent"
+                        stroke="#f59e0b"
+                        strokeWidth={2.5}
+                        strokeDasharray="7 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        dot={false}
+                        activeDot={{ r: 6, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
+                      />
+                      <Line
+                        type="natural"
+                        dataKey="central"
+                        name="Central"
+                        stroke="url(#scenarioCentralStroke)"
+                        strokeWidth={4}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        dot={false}
+                        activeDot={{ r: 7, fill: '#0ea5e9', stroke: '#fff', strokeWidth: 2.5 }}
+                      />
+                      <Line
+                        type="natural"
+                        dataKey="ambitious"
+                        name="Ambitieux"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        strokeDasharray="7 7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        dot={false}
+                        activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
+
                   <div className="rounded-2xl border bg-background/80 p-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <span className="h-3 w-3 rounded-full bg-amber-500" />

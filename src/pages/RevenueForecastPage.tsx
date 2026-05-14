@@ -790,7 +790,27 @@ const RevenueForecastPage: React.FC = () => {
                 <CardDescription>Des courbes pour visualiser la trajectoire possible jusqu'à décembre selon trois niveaux de prudence.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-slate-700">
+                  <span className="font-medium text-slate-900">Légende :</span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
+                    <span className="h-3 w-3 rounded-full bg-amber-500" />
+                    Prudent
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
+                    <span className="h-3 w-3 rounded-full bg-sky-500" />
+                    Central
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
+                    <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                    Ambitieux
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1">
+                    <span className="h-3 w-8 rounded-full bg-gradient-to-r from-sky-300/70 to-emerald-300/60" />
+                    Zone de projection
+                  </span>
+                </div>
                 <div className="h-[400px] rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/70 to-emerald-50/50 p-4 md:p-5">
+
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={forecastData.scenarioProjectionData} margin={{ top: 10, right: 24, left: 8, bottom: 10 }}>
                       <defs>

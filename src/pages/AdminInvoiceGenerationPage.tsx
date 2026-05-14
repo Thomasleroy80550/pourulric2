@@ -72,9 +72,11 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     fetchProfiles();
   }, []);
 
+  const activeProfiles = profiles.filter((p) => !p.is_contract_terminated);
   const selectedProfile = profiles.find((profile) => profile.id === selectedClientId);
   const hasPennylaneId = !!selectedProfile?.pennylane_customer_id?.trim();
-  const shouldBlockInvoiceCreation = !!selectedClientId && !hasPennylaneId;
+  const isFormerClient = !!selectedProfile?.is_contract_terminated;
+  const shouldBlockInvoiceCreation = !!selectedClientId && (!hasPennylaneId || isFormerClient);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (shouldBlockInvoiceCreation) {
@@ -185,7 +187,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                             <CommandList>
                               <CommandEmpty>Aucun client trouvé.</CommandEmpty>
                               <CommandGroup>
-                                {profiles.map((profile) => (
+                                {activeProfiles.map((profile) => (
                                   <CommandItem
                                     key={profile.id}
                                     value={`${profile.first_name} ${profile.last_name}`} // Value for search
@@ -213,7 +215,16 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                       <Label htmlFor="invoice-period">Période de facturation</Label>
                       <Input id="invoice-period" placeholder="Ex: Juillet 2024" value={invoicePeriod} onChange={(e) => setInvoicePeriod(e.target.value)} />
                     </div>
-                    {shouldBlockInvoiceCreation && (
+                    {isFormerClient && (
+                      <Alert variant="destructive">
+                        <Terminal className="h-4 w-4" />
+                        <AlertTitle>Client sorti</AlertTitle>
+                        <AlertDescription>
+                          Ce client a été sorti définitivement. L'émission de facture est impossible.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {!isFormerClient && shouldBlockInvoiceCreation && (
                       <Alert variant="destructive">
                         <Terminal className="h-4 w-4" />
                         <AlertTitle>Création bloquée</AlertTitle>

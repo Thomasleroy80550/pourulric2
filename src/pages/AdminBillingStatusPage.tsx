@@ -157,6 +157,8 @@ const AdminBillingStatusPage: React.FC = () => {
   const filteredProfiles = React.useMemo(() => {
     const term = search.trim().toLowerCase();
     return profiles.filter((p) => {
+      // Exclure les anciens clients (contrat résilié)
+      if (p.is_contract_terminated) return false;
       const fullName = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim().toLowerCase();
       const email = (p.email ?? '').toLowerCase();
       const matches = !term || fullName.includes(term) || email.includes(term);
@@ -190,8 +192,9 @@ const AdminBillingStatusPage: React.FC = () => {
         : (p.agency ?? '').trim() === selectedAgency,
     [selectedAgency]
   );
-  const totalClients = profiles.filter(matchesAgency).length;
-  const notInvoicedCount = profiles
+  const activeProfiles = profiles.filter((p) => !p.is_contract_terminated);
+  const totalClients = activeProfiles.filter(matchesAgency).length;
+  const notInvoicedCount = activeProfiles
     .filter(matchesAgency)
     .filter((p) => !(invoicesByUserAndPeriod.get(p.id)?.has(selectedPeriod) ?? false)).length;
 

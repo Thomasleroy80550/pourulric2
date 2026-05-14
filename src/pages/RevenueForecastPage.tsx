@@ -305,10 +305,13 @@ const RevenueForecastPage: React.FC = () => {
     const observedAdr = bookedPastNights > 0 ? revenueToDate / bookedPastNights : 0;
     const remainingUnbookedNights = Math.max(0, remainingCapacityNights - futureBookedNights);
     const additionalProjectedRevenue = remainingUnbookedNights * observedOccupancyRate * observedAdr;
+    const prudentForecast = securedRevenue + additionalProjectedRevenue * 0.7;
     const yearEndForecast = securedRevenue + additionalProjectedRevenue;
+    const ambitiousForecast = securedRevenue + additionalProjectedRevenue * 1.2;
     const securedShare = yearEndForecast > 0 ? securedRevenue / yearEndForecast : 0;
 
     const months = eachMonthOfInterval({
+
       start: yearStart,
       end: endOfMonth(new Date(currentYear, 11, 1)),
     });
@@ -427,7 +430,9 @@ const RevenueForecastPage: React.FC = () => {
       observedOccupancyRate,
       observedAdr,
       additionalProjectedRevenue,
+      prudentForecast,
       yearEndForecast,
+      ambitiousForecast,
       securedShare,
       averageBookingValue,
       monthlyData,
@@ -438,6 +443,7 @@ const RevenueForecastPage: React.FC = () => {
       topRooms,
       roomTrendData,
     };
+
   }, [currentYear, nextYearStart, reservations, today, userRooms, yearStart]);
 
   const clientHighlights = useMemo(() => {
@@ -673,6 +679,38 @@ const RevenueForecastPage: React.FC = () => {
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
+              <CardHeader>
+                <CardTitle>Scénarios de fin d'année</CardTitle>
+                <CardDescription>Trois lectures simples pour se projeter selon un niveau de prudence différent.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="text-sm font-semibold text-amber-900">Scénario prudent</div>
+                    <div className="mt-2 text-3xl font-bold text-amber-950">{currencyFormatter.format(forecastData.prudentForecast)}</div>
+                    <p className="mt-2 text-sm leading-6 text-amber-800">
+                      Hypothèse plus prudente : vous transformez environ 70% du potentiel restant.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                    <div className="text-sm font-semibold text-sky-900">Scénario central</div>
+                    <div className="mt-2 text-3xl font-bold text-sky-950">{currencyFormatter.format(forecastData.yearEndForecast)}</div>
+                    <p className="mt-2 text-sm leading-6 text-sky-800">
+                      C'est l'estimation principale de la page, basée sur votre rythme actuel.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="text-sm font-semibold text-emerald-900">Scénario ambitieux</div>
+                    <div className="mt-2 text-3xl font-bold text-emerald-950">{currencyFormatter.format(forecastData.ambitiousForecast)}</div>
+                    <p className="mt-2 text-sm leading-6 text-emerald-800">
+                      Hypothèse plus dynamique : vous transformez environ 120% du potentiel restant.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <RevenueStatCard

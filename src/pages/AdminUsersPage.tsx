@@ -1225,25 +1225,8 @@ const AdminUsersPage: React.FC = () => {
               onClose={() => setIsConfettiOpen(false)}
             />
 
-            {/* Confirmation de sortie définitive */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Sortir définitivement ce client ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Cette action retire le client des listes actives et le déplace dans l’onglet « Anciens clients ».
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction onClick={performDeleteOnboardingClient}>
-                    Confirmer la sortie
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
           </TabsContent>
+
           <TabsContent value="requests" className="mt-4">
             <Card className="shadow-md">
               <CardHeader><CardTitle>Demandes d'accès comptable</CardTitle></CardHeader>
@@ -1297,6 +1280,25 @@ const AdminUsersPage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sortir définitivement ce client ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {userToDelete
+                ? `Le client ${userToDelete.first_name ?? ''} ${userToDelete.last_name ?? ''} sera retiré des listes actives et déplacé dans l’onglet « Anciens clients ».`
+                : 'Cette action retire le client des listes actives et le déplace dans l’onglet « Anciens clients ».'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={performDeleteOnboardingClient}>
+              Confirmer la sortie
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AddUserDialog
         isOpen={isAddUserDialogOpen}

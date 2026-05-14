@@ -336,7 +336,56 @@ const RevenueForecastPage: React.FC = () => {
       };
     });
 
+    const scenarioProjectionData = [
+      {
+        month: "Aujourd'hui",
+        prudent: revenueToDate,
+        central: revenueToDate,
+        ambitious: revenueToDate,
+      },
+    ];
+
+    let prudentCumulative = revenueToDate;
+    let centralCumulative = revenueToDate;
+    let ambitiousCumulative = revenueToDate;
+
+    months
+      .filter((monthDate) => monthDate >= startOfMonth(today))
+      .forEach((monthDate, index, remainingMonths) => {
+        const monthIndex = monthDate.getMonth();
+        const rangeStart = monthIndex === today.getMonth() ? today : startOfMonth(monthDate);
+        const nextMonthStart = index === remainingMonths.length - 1 ? nextYearStart : startOfMonth(remainingMonths[index + 1]);
+
+        const monthFutureSecuredRevenue = revenueReservations.reduce((sum, reservation) => {
+          const checkOut = parseISO(reservation.check_out_date);
+          if (Number.isNaN(checkOut.getTime()) || checkOut <= today || checkOut.getMonth() !== monthIndex) {
+            return sum;
+          }
+          return sum + parseAmount(reservation.amount);
+        }, 0);
+
+        const monthCapacityNights = userRooms.length > 0 ? userRooms.length * Math.max(0, differenceInCalendarDays(nextMonthStart, rangeStart)) : 0;
+        const monthFutureBookedNights = revenueReservations.reduce(
+          (sum, reservation) => sum + getOverlapNights(reservation.check_in_date, reservation.check_out_date, rangeStart, nextMonthStart),
+          0
+        );
+        const monthRemainingUnbookedNights = Math.max(0, monthCapacityNights - monthFutureBookedNights);
+        const monthAdditionalProjectedRevenue = monthRemainingUnbookedNights * observedOccupancyRate * observedAdr;
+
+        prudentCumulative += monthFutureSecuredRevenue + monthAdditionalProjectedRevenue * 0.7;
+        centralCumulative += monthFutureSecuredRevenue + monthAdditionalProjectedRevenue;
+        ambitiousCumulative += monthFutureSecuredRevenue + monthAdditionalProjectedRevenue * 1.2;
+
+        scenarioProjectionData.push({
+          month: format(monthDate, 'MMM', { locale: fr }),
+          prudent: prudentCumulative,
+          central: centralCumulative,
+          ambitious: ambitiousCumulative,
+        });
+      });
+
     const otaMap = new Map<string, { channel: string; revenue: number; reservations: number }>();
+
     revenueReservations.forEach((reservation) => {
       const channel = normalizeChannel(reservation);
       const current = otaMap.get(channel) || { channel, revenue: 0, reservations: 0 };
@@ -436,6 +485,7 @@ const RevenueForecastPage: React.FC = () => {
       securedShare,
       averageBookingValue,
       monthlyData,
+      scenarioProjectionData,
       otaBreakdown,
       otaTrendBase,
       otaTrendData,
@@ -475,30 +525,6 @@ const RevenueForecastPage: React.FC = () => {
         : 'Aucun mois fort ne se dégage encore dans les données.',
     };
   }, [currentYear, forecastData]);
-
-  const scenarioChartData = useMemo(
-    () => [
-      {
-        name: 'Prudent',
-        amount: forecastData.prudentForecast,
-        color: '#f59e0b',
-        description: 'Vision plus prudente du potentiel restant',
-      },
-      {
-        name: 'Central',
-        amount: forecastData.yearEndForecast,
-        color: '#0ea5e9',
-        description: 'Estimation principale basée sur le rythme actuel',
-      },
-      {
-        name: 'Ambitieux',
-        amount: forecastData.ambitiousForecast,
-        color: '#10b981',
-        description: 'Vision plus dynamique de la fin d’année',
-      },
-    ],
-    [forecastData.ambitiousForecast, forecastData.prudentForecast, forecastData.yearEndForecast]
-  );
 
   useEffect(() => {
 
@@ -708,35 +734,48 @@ const RevenueForecastPage: React.FC = () => {
             <Card className="border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
               <CardHeader>
                 <CardTitle>Scénarios de fin d'année</CardTitle>
-                <CardDescription>Un graphique pour comparer rapidement une vision prudente, centrale et ambitieuse.</CardDescription>
+                <CardDescription>Des courbes pour visualiser la trajectoire possible jusqu'à décembre selon trois niveaux de prudence.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="h-[320px]">
+                <div className="h-[340px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={scenarioChartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                    <LineChart data={forecastData.scenarioProjectionData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="month" />
                       <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} />
                       <Tooltip formatter={(value: number) => currencyFormatter.format(value)} />
-                      <Bar dataKey="amount" radius={[10, 10, 0, 0]}>
-                        {scenarioChartData.map((scenario) => (
-                          <Cell key={scenario.name} fill={scenario.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
+                      <Legend />
+                      <Line type="monotone" dataKey="prudent" name="Prudent" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="central" name="Central" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="ambitious" name="Ambitieux" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
-                  {scenarioChartData.map((scenario) => (
-                    <div key={scenario.name} className="rounded-2xl border bg-background/80 p-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: scenario.color }} />
-                        {scenario.name}
-                      </div>
-                      <div className="mt-2 text-2xl font-bold text-foreground">{currencyFormatter.format(scenario.amount)}</div>
-                      <p className="mt-2 text-sm text-muted-foreground">{scenario.description}</p>
+                  <div className="rounded-2xl border bg-background/80 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <span className="h-3 w-3 rounded-full bg-amber-500" />
+                      Prudent
                     </div>
-                  ))}
+                    <div className="mt-2 text-2xl font-bold text-foreground">{currencyFormatter.format(forecastData.prudentForecast)}</div>
+                    <p className="mt-2 text-sm text-muted-foreground">Scénario plus prudent pour la fin d'année.</p>
+                  </div>
+                  <div className="rounded-2xl border bg-background/80 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <span className="h-3 w-3 rounded-full bg-sky-500" />
+                      Central
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-foreground">{currencyFormatter.format(forecastData.yearEndForecast)}</div>
+                    <p className="mt-2 text-sm text-muted-foreground">Le scénario principal, basé sur la dynamique observée.</p>
+                  </div>
+                  <div className="rounded-2xl border bg-background/80 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                      Ambitieux
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-foreground">{currencyFormatter.format(forecastData.ambitiousForecast)}</div>
+                    <p className="mt-2 text-sm text-muted-foreground">Scénario plus offensif si la fin d'année accélère.</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -181,6 +181,43 @@ function getOtaColor(channel: string): string {
   return OTA_OFFICIAL_COLORS[channel] || OTA_OFFICIAL_COLORS.Autre;
 }
 
+function ScenarioTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const labels: Record<string, string> = {
+    prudent: 'Prudent',
+    central: 'Central',
+    ambitious: 'Ambitieux',
+  };
+
+  const entries = Array.from(
+    new Map(
+      payload
+        .filter((item: any) => item?.dataKey && labels[item.dataKey])
+        .map((item: any) => [item.dataKey, item])
+    ).values()
+  );
+
+  return (
+    <div className="rounded-2xl border border-sky-100 bg-white/95 p-4 shadow-2xl backdrop-blur-sm">
+      <div className="mb-3 text-sm font-semibold text-slate-900">{label}</div>
+      <div className="space-y-2">
+        {entries.map((item: any) => (
+          <div key={item.dataKey} className="flex items-center justify-between gap-6 text-sm">
+            <div className="flex items-center gap-2 text-slate-700">
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+              <span>{labels[item.dataKey]}</span>
+            </div>
+            <span className="font-semibold text-slate-900">{currencyFormatter.format(Number(item.value || 0))}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RevenueStatCard({
 
   title,
@@ -342,6 +379,8 @@ const RevenueForecastPage: React.FC = () => {
         prudent: revenueToDate,
         central: revenueToDate,
         ambitious: revenueToDate,
+        scenarioBandBase: revenueToDate,
+        scenarioBandRange: 0,
       },
     ];
 
@@ -381,6 +420,8 @@ const RevenueForecastPage: React.FC = () => {
           prudent: prudentCumulative,
           central: centralCumulative,
           ambitious: ambitiousCumulative,
+          scenarioBandBase: prudentCumulative,
+          scenarioBandRange: Math.max(0, ambitiousCumulative - prudentCumulative),
         });
       });
 
@@ -751,11 +792,15 @@ const RevenueForecastPage: React.FC = () => {
               <CardContent className="space-y-6">
                 <div className="h-[400px] rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/70 to-emerald-50/50 p-4 md:p-5">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={forecastData.scenarioProjectionData} margin={{ top: 10, right: 24, left: 8, bottom: 10 }}>
+                    <AreaChart data={forecastData.scenarioProjectionData} margin={{ top: 10, right: 24, left: 8, bottom: 10 }}>
                       <defs>
                         <linearGradient id="scenarioCentralStroke" x1="0" y1="0" x2="1" y2="0">
                           <stop offset="0%" stopColor="#38bdf8" />
                           <stop offset="100%" stopColor="#2563eb" />
+                        </linearGradient>
+                        <linearGradient id="scenarioRangeFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.18} />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0.05} />
                         </linearGradient>
                         <filter id="scenarioGlowAmber" x="-50%" y="-50%" width="200%" height="200%">
                           <feGaussianBlur stdDeviation="6" result="coloredBlur" />
@@ -789,15 +834,10 @@ const RevenueForecastPage: React.FC = () => {
                         tickMargin={10}
                         tick={{ fill: '#64748b', fontSize: 12 }}
                       />
-                      <Tooltip
-                        formatter={(value: number) => currencyFormatter.format(value)}
-                        contentStyle={{
-                          borderRadius: '18px',
-                          border: '1px solid rgba(186, 230, 253, 0.9)',
-                          boxShadow: '0 18px 45px rgba(14, 165, 233, 0.12)',
-                          background: 'rgba(255,255,255,0.96)',
-                        }}
-                      />
+                      <Tooltip content={<ScenarioTooltip />} />
+
+                      <Area type="natural" dataKey="scenarioBandBase" stackId="scenario-range" stroke="none" fill="transparent" isAnimationActive={false} />
+                      <Area type="natural" dataKey="scenarioBandRange" stackId="scenario-range" stroke="none" fill="url(#scenarioRangeFill)" fillOpacity={1} isAnimationActive={false} />
 
                       <Line type="natural" dataKey="prudent" stroke="#f59e0b" strokeWidth={10} opacity={0.12} dot={false} activeDot={false} legendType="none" filter="url(#scenarioGlowAmber)" />
                       <Line type="natural" dataKey="central" stroke="#38bdf8" strokeWidth={12} opacity={0.14} dot={false} activeDot={false} legendType="none" filter="url(#scenarioGlowBlue)" />
@@ -809,7 +849,7 @@ const RevenueForecastPage: React.FC = () => {
                         name="Prudent"
                         stroke="#f59e0b"
                         strokeWidth={2.5}
-                        strokeDasharray="7 7"
+                        strokeDasharray="4 8"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         dot={false}
@@ -834,15 +874,16 @@ const RevenueForecastPage: React.FC = () => {
                         name="Ambitieux"
                         stroke="#10b981"
                         strokeWidth={2.5}
-                        strokeDasharray="7 7"
+                        strokeDasharray="4 8"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         dot={false}
                         legendType="none"
                         activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
                       />
-                    </LineChart>
+                    </AreaChart>
                   </ResponsiveContainer>
+
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3">

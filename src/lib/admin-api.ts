@@ -682,12 +682,31 @@ export async function updateInvoiceComment(invoiceId: string, comment: string): 
   }
 }
 
+export async function updateInvoicePeriod(invoiceId: string, period: string): Promise<void> {
+  const trimmedPeriod = period.trim();
+
+  if (!trimmedPeriod) {
+    throw new Error("La période ne peut pas être vide.");
+  }
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({ period: trimmedPeriod, pennylane_invoice_url: null })
+    .eq('id', invoiceId);
+
+  if (error) {
+    console.error("Error updating invoice period:", error);
+    throw new Error(`Erreur lors de la mise à jour de la période : ${error.message}`);
+  }
+}
+
 /**
  * Deletes a specific invoice.
  * @param invoiceId The ID of the invoice to delete.
  * @returns A promise that resolves when the invoice is deleted.
  */
 export async function deleteInvoice(invoiceId: string): Promise<void> {
+
   const { error } = await supabase
     .from('invoices')
     .delete()

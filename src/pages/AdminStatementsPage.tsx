@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
-import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles, sendPaymentReminder, setInvoicePaidStatus } from '@/lib/admin-api';
+import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles, sendPaymentReminder, setInvoicePaidStatus, updateInvoicePeriod } from '@/lib/admin-api';
+
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -39,10 +40,12 @@ const AdminStatementsPage: React.FC = () => {
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
   const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
+  const [editingPeriodValue, setEditingPeriodValue] = useState('');
+  const [savingPeriodId, setSavingPeriodId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const navigate = useNavigate();
   const location = useLocation();
 
   // Charge tous les profils pour faire le mapping id -> nom (inclut admins)
@@ -101,11 +104,69 @@ const AdminStatementsPage: React.FC = () => {
     setIsCommentDialogOpen(true);
   };
 
-  const handleEdit = (statementId: string) => {
-    navigate(`/admin/generate-invoice/${statementId}`);
+  const handleEdit = (statement: SavedInvoice) => {
+    setEditingPeriodId(statement.id);
+    setEditingPeriodValue(statement.period);
+  };
+
+  const handleCancelEditPeriod = () => {
+    setEditingPeriodId(null);
+    setEditingPeriodValue('');
+  };
+
+  const handleSavePeriod = async (statement: SavedInvoice) => {
+    const trimmedPeriod = editingPeriodValue.trim();
+
+    if (!trimmedPeriod) {
+      toast.error("La période ne peut pas être vide.");
+      return;
+    }
+
+    if (trimmedPeriod === statement.period) {
+      handleCancelEditPeriod();
+      return;
+    }
+
+    const shouldRegeneratePennylane = statement.source_type !== 'manual' && statement.pennylane_status !== 'not_applicable';
+    const confirmationMessage = shouldRegeneratePennylane
+      ? "Mettre à jour la période et relancer la génération de la facture Pennylane ?"
+      : "Mettre à jour la période de ce relevé ?";
+
+    if (!window.confirm(confirmationMessage)) {
+      return;
+    }
+
+    setSavingPeriodId(statement.id);
+    const toastId = toast.loading(
+      shouldRegeneratePennylane
+        ? "Mise à jour de la période et relance de la facture..."
+        : "Mise à jour de la période..."
+    );
+
+    try {
+      await updateInvoicePeriod(statement.id, trimmedPeriod);
+
+      if (shouldRegeneratePennylane) {
+        await resendStatementToPennylane(statement.id);
+      }
+
+      toast.success(
+        shouldRegeneratePennylane
+          ? "Période mise à jour et facture relancée avec succès."
+          : "Période mise à jour avec succès.",
+        { id: toastId }
+      );
+      handleCancelEditPeriod();
+      loadStatements();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`, { id: toastId });
+    } finally {
+      setSavingPeriodId(null);
+    }
   };
 
   const handleDelete = async (statementId: string) => {
+
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce relevé ? Cette action est irréversible.")) {
       return;
     }
@@ -388,12 +449,62 @@ const AdminStatementsPage: React.FC = () => {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>{statement.period}</TableCell>
+                          <TableCell>
+                            {editingPeriodId === statement.id ? (
+                              <div className="flex min-w-[220px] items-center gap-2">
+                                <Input
+                                  value={editingPeriodValue}
+                                  onChange={(e) => setEditingPeriodValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      void handleSavePeriod(statement);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      handleCancelEditPeriod();
+                                    }
+                                  }}
+                                  disabled={savingPeriodId === statement.id}
+                                  className="h-8"
+                                  autoFocus
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => void handleSavePeriod(statement)}
+                                  disabled={savingPeriodId === statement.id}
+                                >
+                                  {savingPeriodId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'OK'}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleCancelEditPeriod}
+                                  disabled={savingPeriodId === statement.id}
+                                >
+                                  Annuler
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span>{statement.period}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleEdit(statement)}
+                                  title="Modifier la période"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
                           <TableCell>{creatorName}</TableCell>
                           <TableCell>
                             <StatusBadge status={statement.pennylane_status} />
                           </TableCell>
+
                           <TableCell>{statement.admin_comment ? 'Oui' : 'Non'}</TableCell>
                           <TableCell className="text-right font-bold">{totalFacture.toFixed(2)}€</TableCell>
                           <TableCell className="text-right">{totalFacture.toFixed(2)}€</TableCell>
@@ -410,8 +521,9 @@ const AdminStatementsPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-right space-x-1">
                             <Button variant="outline" size="icon" onClick={() => handleViewDetails(statement)} title="Voir les détails"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="outline" size="icon" onClick={() => handleEdit(statement.id)} title="Modifier le relevé"><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="outline" size="icon" onClick={() => handleEdit(statement)} title="Modifier la période"><Pencil className="h-4 w-4" /></Button>
                             <Button variant="outline" size="icon" onClick={() => handleOpenCommentDialog(statement)} title="Ajouter/Voir commentaire"><MessageSquare className="h-4 w-4" /></Button>
+
                             <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
                               {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                             </Button>

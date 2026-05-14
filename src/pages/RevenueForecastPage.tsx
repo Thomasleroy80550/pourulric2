@@ -526,6 +526,18 @@ const RevenueForecastPage: React.FC = () => {
     };
   }, [currentYear, forecastData]);
 
+  const scenarioChartBounds = useMemo(() => {
+    const values = forecastData.scenarioProjectionData.flatMap((point) => [point.prudent, point.central, point.ambitious]);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const padding = Math.max((maxValue - minValue) * 0.2, maxValue * 0.05, 1000);
+
+    return {
+      min: Math.max(0, minValue - padding),
+      max: maxValue + padding,
+    };
+  }, [forecastData.scenarioProjectionData]);
+
   useEffect(() => {
 
     if (loading || error || forecastData.reservationCount === 0) {
@@ -737,9 +749,9 @@ const RevenueForecastPage: React.FC = () => {
                 <CardDescription>Des courbes pour visualiser la trajectoire possible jusqu'à décembre selon trois niveaux de prudence.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="h-[360px] rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/70 to-emerald-50/50 p-3">
+                <div className="h-[400px] rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-sky-50/70 to-emerald-50/50 p-4 md:p-5">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={forecastData.scenarioProjectionData} margin={{ top: 18, right: 20, left: 4, bottom: 6 }}>
+                    <LineChart data={forecastData.scenarioProjectionData} margin={{ top: 10, right: 24, left: 8, bottom: 10 }}>
                       <defs>
                         <linearGradient id="scenarioCentralStroke" x1="0" y1="0" x2="1" y2="0">
                           <stop offset="0%" stopColor="#38bdf8" />
@@ -767,9 +779,16 @@ const RevenueForecastPage: React.FC = () => {
                           </feMerge>
                         </filter>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.45} />
-                      <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                      <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.35} />
+                      <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <YAxis
+                        domain={[scenarioChartBounds.min, scenarioChartBounds.max]}
+                        tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        tick={{ fill: '#64748b', fontSize: 12 }}
+                      />
                       <Tooltip
                         formatter={(value: number) => currencyFormatter.format(value)}
                         contentStyle={{
@@ -779,7 +798,6 @@ const RevenueForecastPage: React.FC = () => {
                           background: 'rgba(255,255,255,0.96)',
                         }}
                       />
-                      <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
 
                       <Line type="natural" dataKey="prudent" stroke="#f59e0b" strokeWidth={10} opacity={0.12} dot={false} activeDot={false} legendType="none" filter="url(#scenarioGlowAmber)" />
                       <Line type="natural" dataKey="central" stroke="#38bdf8" strokeWidth={12} opacity={0.14} dot={false} activeDot={false} legendType="none" filter="url(#scenarioGlowBlue)" />
@@ -795,6 +813,7 @@ const RevenueForecastPage: React.FC = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         dot={false}
+                        legendType="none"
                         activeDot={{ r: 6, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
                       />
                       <Line
@@ -806,6 +825,7 @@ const RevenueForecastPage: React.FC = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         dot={false}
+                        legendType="none"
                         activeDot={{ r: 7, fill: '#0ea5e9', stroke: '#fff', strokeWidth: 2.5 }}
                       />
                       <Line
@@ -818,11 +838,13 @@ const RevenueForecastPage: React.FC = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         dot={false}
+                        legendType="none"
                         activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+
                 <div className="grid gap-3 md:grid-cols-3">
 
                   <div className="rounded-2xl border bg-background/80 p-4">

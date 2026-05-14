@@ -438,6 +438,36 @@ const RevenueForecastPage: React.FC = () => {
     };
   }, [currentYear, nextYearStart, reservations, today, userRooms, yearStart]);
 
+  const clientHighlights = useMemo(() => {
+    const topChannel = forecastData.otaBreakdown[0];
+    const topRoom = forecastData.roomBreakdown[0];
+    const bestMonth = [...forecastData.monthlyData].sort((a, b) => b.ca - a.ca)[0];
+
+    return {
+      headline:
+        forecastData.yearEndForecast > 0
+          ? `Si le rythme actuel continue, vous pouvez viser environ ${currencyFormatter.format(forecastData.yearEndForecast)} de chiffre d'affaires sur ${currentYear}.`
+          : `Aucune estimation fiable n'est encore disponible pour ${currentYear}.`,
+      secured:
+        forecastData.securedRevenue > 0
+          ? `${percentFormatter.format(forecastData.securedShare)} de cette estimation est déjà réservé, soit ${currencyFormatter.format(forecastData.securedRevenue)}.`
+          : 'Aucun chiffre d\'affaires sécurisé pour le moment.',
+      remaining:
+        forecastData.remainingUnbookedNights > 0
+          ? `Il reste ${forecastData.remainingUnbookedNights.toLocaleString('fr-FR')} nuitées à vendre sur ${forecastData.remainingCapacityNights.toLocaleString('fr-FR')} nuitées restantes.`
+          : 'Tout le stock restant est déjà vendu pour cette année.',
+      topDriver: topChannel
+        ? `${topChannel.channel} apporte actuellement la plus grosse part du chiffre d'affaires avec ${currencyFormatter.format(topChannel.revenue)}.`
+        : 'Aucun canal de vente dominant à afficher pour le moment.',
+      topRoom: topRoom
+        ? `${topRoom.roomName} est le logement le plus contributeur avec ${currencyFormatter.format(topRoom.securedRevenue)} sécurisés.`
+        : 'Aucun logement dominant à afficher pour le moment.',
+      bestMonth: bestMonth && bestMonth.ca > 0
+        ? `${bestMonth.month} est pour l'instant le meilleur mois avec ${currencyFormatter.format(bestMonth.ca)} de chiffre d'affaires.`
+        : 'Aucun mois fort ne se dégage encore dans les données.',
+    };
+  }, [currentYear, forecastData]);
+
   if (profile?.is_banned) {
     return (
       <MainLayout>
@@ -463,27 +493,28 @@ const RevenueForecastPage: React.FC = () => {
             <div className="space-y-4">
               <Badge className="w-fit border-white/20 bg-white/10 text-white hover:bg-white/10">Krossbooking • Prévision {currentYear}</Badge>
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Prévision de CA premium</h1>
+                <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Prévisions de chiffre d'affaires</h1>
                 <p className="max-w-2xl text-sm text-slate-200 md:text-base">
-                  Lecture visuelle du chiffre d'affaires basé sur les réservations dont la date de départ est dans l'année en cours, avec zoom OTA et multi-logements.
+                  Cette page répond à 3 questions simples : combien est déjà réservé, combien a déjà été réalisé et combien vous pouvez viser d'ici la fin de l'année.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3 text-sm text-slate-200">
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Date de départ</span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">OTA inclus</span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Courbes par logement</span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Vue simplifiée</span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Canaux de vente inclus</span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1">Détail par logement</span>
               </div>
             </div>
 
             {!loading && !error && forecastData.reservationCount > 0 && (
               <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.25em] text-cyan-200">Prévision fin d'année</div>
+                  <div className="text-xs uppercase tracking-[0.25em] text-cyan-200">Estimation de fin d'année</div>
                   <div className="mt-2 text-4xl font-bold">{currencyFormatter.format(forecastData.yearEndForecast)}</div>
+                  <p className="mt-2 text-sm text-slate-200">C'est le montant visé si la dynamique actuelle continue jusqu'au 31 décembre.</p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm text-slate-200">
-                    <span>Part déjà sécurisée</span>
+                    <span>Déjà réservé</span>
                     <span>{percentFormatter.format(forecastData.securedShare)}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-white/15">
@@ -495,11 +526,11 @@ const RevenueForecastPage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                    <div className="text-slate-300">CA sécurisé</div>
+                    <div className="text-slate-300">Montant déjà réservé</div>
                     <div className="mt-1 font-semibold text-white">{currencyFormatter.format(forecastData.securedRevenue)}</div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                    <div className="text-slate-300">Upside estimé</div>
+                    <div className="text-slate-300">Potentiel restant</div>
                     <div className="mt-1 font-semibold text-white">{currencyFormatter.format(forecastData.additionalProjectedRevenue)}</div>
                   </div>
                 </div>
@@ -510,9 +541,9 @@ const RevenueForecastPage: React.FC = () => {
 
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Méthode de calcul</AlertTitle>
+          <AlertTitle>Comment lire cette page</AlertTitle>
           <AlertDescription>
-            Le CA est rattaché à la <strong>date de départ</strong>. Les annulations et les blocs propriétaire sont exclus. La prévision additionnelle repose sur le taux d'occupation observé et le revenu moyen par nuit déjà constaté. Les données de prévision sont maintenant mises en cache <strong>pour la journée</strong> afin d'éviter des rechargements trop fréquents.
+            Les chiffres sont calculés à partir des réservations dont la <strong>date de départ</strong> tombe sur l'année en cours. Les annulations et les séjours propriétaire sont retirés. La partie <strong>estimation</strong> projette ce qui pourrait encore être vendu en se basant sur votre rythme actuel. Les données sont conservées en cache <strong>sur la journée</strong> pour éviter des chargements trop fréquents.
           </AlertDescription>
         </Alert>
 
@@ -549,32 +580,86 @@ const RevenueForecastPage: React.FC = () => {
           </Card>
         ) : (
           <>
+            <div className="grid gap-4 xl:grid-cols-[1.4fr,1fr]">
+              <Card className="border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
+                <CardHeader>
+                  <CardTitle>En résumé</CardTitle>
+                  <CardDescription>Une lecture rapide pensée pour être comprise en quelques secondes.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 dark:bg-slate-900/70">
+                    <p className="font-semibold text-foreground">{clientHighlights.headline}</p>
+                    <p className="mt-2 text-muted-foreground">{clientHighlights.secured}</p>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border bg-background/80 p-4">
+                      <div className="text-sm font-medium">Ce qui reste à vendre</div>
+                      <p className="mt-2 text-sm text-muted-foreground">{clientHighlights.remaining}</p>
+                    </div>
+                    <div className="rounded-2xl border bg-background/80 p-4">
+                      <div className="text-sm font-medium">Canal principal</div>
+                      <p className="mt-2 text-sm text-muted-foreground">{clientHighlights.topDriver}</p>
+                    </div>
+                    <div className="rounded-2xl border bg-background/80 p-4">
+                      <div className="text-sm font-medium">Logement moteur</div>
+                      <p className="mt-2 text-sm text-muted-foreground">{clientHighlights.topRoom}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/60 bg-white/85 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
+                <CardHeader>
+                  <CardTitle>Glossaire rapide</CardTitle>
+                  <CardDescription>Les 4 notions les plus importantes de la page.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-medium text-foreground">Estimation de fin d'année :</span> le total visé si votre rythme actuel continue.
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Montant déjà réservé :</span> ce qui est déjà signé sur les réservations existantes.
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Déjà réalisé :</span> le chiffre d'affaires lié aux séjours déjà terminés.
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Nuits encore à vendre :</span> les nuitées restantes qui peuvent encore générer du chiffre d'affaires.
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900/70">
+                    <span className="font-medium text-foreground">Point à retenir :</span> {clientHighlights.bestMonth}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <RevenueStatCard
-                title="Prévision fin d'année"
+                title="Estimation de fin d'année"
                 value={currencyFormatter.format(forecastData.yearEndForecast)}
-                description="CA sécurisé + potentiel encore monétisable sur les nuits libres."
+                description="Le total que vous pouvez viser si la dynamique actuelle continue."
                 icon={TrendingUp}
                 accent="bg-gradient-to-r from-cyan-500 to-blue-600"
               />
+
               <RevenueStatCard
-                title="CA sécurisé"
+                title="Montant déjà réservé"
                 value={currencyFormatter.format(forecastData.securedRevenue)}
-                description={`${forecastData.reservationCount} réservation(s) déjà dans le pipe.`}
+                description={`${forecastData.reservationCount} réservation(s) sont déjà enregistrées.`}
                 icon={Wallet}
                 accent="bg-gradient-to-r from-emerald-500 to-teal-600"
               />
               <RevenueStatCard
-                title="CA à date"
+                title="Déjà réalisé"
                 value={currencyFormatter.format(forecastData.revenueToDate)}
-                description="Réservations terminées ou sortant aujourd'hui."
+                description="Correspond aux séjours déjà terminés ou se terminant aujourd'hui."
                 icon={Euro}
                 accent="bg-gradient-to-r from-fuchsia-500 to-purple-600"
               />
               <RevenueStatCard
-                title="Panier moyen"
+                title="Montant moyen par réservation"
                 value={currencyFormatter.format(forecastData.averageBookingValue)}
-                description="Montant moyen par réservation à date de départ dans l'année."
+                description="C'est le revenu moyen généré par chaque réservation comptée cette année."
                 icon={Sparkles}
                 accent="bg-gradient-to-r from-amber-500 to-orange-600"
               />
@@ -582,30 +667,30 @@ const RevenueForecastPage: React.FC = () => {
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <RevenueStatCard
-                title="Taux d'occupation observé"
+                title="Remplissage constaté"
                 value={percentFormatter.format(forecastData.observedOccupancyRate)}
-                description="Calculé sur les nuitées écoulées depuis le 1er janvier."
+                description="Part des nuits déjà occupées depuis le 1er janvier."
                 icon={Percent}
                 accent="bg-gradient-to-r from-blue-500 to-indigo-600"
               />
               <RevenueStatCard
-                title="ADR observé"
+                title="Revenu moyen par nuit vendue"
                 value={currencyFormatter.format(forecastData.observedAdr)}
-                description="Revenu moyen constaté par nuit vendue."
+                description="Prix moyen observé pour chaque nuit effectivement vendue."
                 icon={BarChart3}
                 accent="bg-gradient-to-r from-violet-500 to-purple-600"
               />
               <RevenueStatCard
-                title="CA restant sécurisé"
+                title="Déjà réservé sur la suite de l'année"
                 value={currencyFormatter.format(forecastData.futureSecuredRevenue)}
-                description="Montant déjà signé sur le reste de l'année."
+                description="Montant déjà signé pour les séjours à venir."
                 icon={CalendarClock}
                 accent="bg-gradient-to-r from-cyan-500 to-sky-600"
               />
               <RevenueStatCard
-                title="Nuits encore libres"
+                title="Nuits encore à vendre"
                 value={forecastData.remainingUnbookedNights.toLocaleString('fr-FR')}
-                description={`Sur ${forecastData.remainingCapacityNights.toLocaleString('fr-FR')} nuitées restantes.`}
+                description={`Sur ${forecastData.remainingCapacityNights.toLocaleString('fr-FR')} nuitées restantes au total.`}
                 icon={Home}
                 accent="bg-gradient-to-r from-rose-500 to-pink-600"
               />
@@ -614,11 +699,12 @@ const RevenueForecastPage: React.FC = () => {
             <div className="grid gap-6 xl:grid-cols-[1.8fr,1fr]">
               <Card className="overflow-hidden border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
                 <CardHeader>
-                  <CardTitle>Trajectoire du CA</CardTitle>
+                  <CardTitle>Évolution mois par mois</CardTitle>
                   <CardDescription>
-                    Évolution mensuelle du CA sécurisé et du cumul annuel rattaché aux dates de départ.
+                    En bleu, le chiffre d'affaires du mois. En vert, le cumul depuis le début de l'année.
                   </CardDescription>
                 </CardHeader>
+
                 <CardContent className="h-[360px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={forecastData.monthlyData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
@@ -642,9 +728,10 @@ const RevenueForecastPage: React.FC = () => {
 
               <Card className="overflow-hidden border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
                 <CardHeader>
-                  <CardTitle>Mix OTA</CardTitle>
-                  <CardDescription>Répartition du CA sécurisé par canal.</CardDescription>
+                  <CardTitle>D'où vient le chiffre d'affaires</CardTitle>
+                  <CardDescription>Chaque part représente le poids d'un canal de vente dans le montant déjà réservé.</CardDescription>
                 </CardHeader>
+
                 <CardContent className="h-[360px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -671,17 +758,18 @@ const RevenueForecastPage: React.FC = () => {
 
             <Tabs defaultValue="ota" className="space-y-6">
               <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="ota">OTA</TabsTrigger>
-                <TabsTrigger value="logements">Logements</TabsTrigger>
+                <TabsTrigger value="ota">Canaux de vente</TabsTrigger>
+                <TabsTrigger value="logements">Par logement</TabsTrigger>
               </TabsList>
 
               <TabsContent value="ota" className="space-y-6">
                 <div className="grid gap-6 xl:grid-cols-[1.4fr,1fr]">
                   <Card className="overflow-hidden border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-4 w-4" />Performance OTA</CardTitle>
-                      <CardDescription>CA par canal et dynamique mensuelle.</CardDescription>
+                      <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-4 w-4" />Canaux de vente mois par mois</CardTitle>
+                      <CardDescription>Compare visuellement le chiffre d'affaires apporté par chaque canal selon les mois.</CardDescription>
                     </CardHeader>
+
                     <CardContent className="h-[360px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={forecastData.otaTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
@@ -700,9 +788,10 @@ const RevenueForecastPage: React.FC = () => {
 
                   <Card className="border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
                     <CardHeader>
-                      <CardTitle>Classement OTA</CardTitle>
-                      <CardDescription>Canaux qui portent le plus le CA.</CardDescription>
+                      <CardTitle>Canaux qui rapportent le plus</CardTitle>
+                      <CardDescription>Classement simple des canaux qui apportent le plus de montant déjà réservé.</CardDescription>
                     </CardHeader>
+
                     <CardContent className="space-y-4">
                       {forecastData.otaBreakdown.map((ota) => (
                         <div key={ota.channel} className="space-y-2 rounded-2xl border p-4">
@@ -735,13 +824,14 @@ const RevenueForecastPage: React.FC = () => {
                 <div className="grid gap-6 xl:grid-cols-[1.5fr,1fr]">
                   <Card className="overflow-hidden border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2"><Building2 className="h-4 w-4" />Courbe par logement</CardTitle>
+                      <CardTitle className="flex items-center gap-2"><Building2 className="h-4 w-4" />Vos logements mois par mois</CardTitle>
                       <CardDescription>
                         {forecastData.topRooms.length > 1
-                          ? 'Comparaison mensuelle du CA sécurisé pour vos logements principaux.'
-                          : 'Le graphique apparaîtra dès que plusieurs logements auront du CA sur l\'année.'}
+                          ? 'Permet de voir quels logements génèrent le plus de chiffre d\'affaires selon les mois.'
+                          : 'Le graphique apparaîtra dès que plusieurs logements auront du chiffre d\'affaires sur l\'année.'}
                       </CardDescription>
                     </CardHeader>
+
                     <CardContent className="h-[360px]">
                       {forecastData.topRooms.length > 1 ? (
                         <ResponsiveContainer width="100%" height="100%">
@@ -766,9 +856,10 @@ const RevenueForecastPage: React.FC = () => {
 
                   <Card className="border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
                     <CardHeader>
-                      <CardTitle>Top logements</CardTitle>
-                      <CardDescription>Ceux qui contribuent le plus au CA sécurisé.</CardDescription>
+                      <CardTitle>Logements qui rapportent le plus</CardTitle>
+                      <CardDescription>Lecture simple du montant déjà réservé par logement.</CardDescription>
                     </CardHeader>
+
                     <CardContent>
                       <Table>
                         <TableHeader>

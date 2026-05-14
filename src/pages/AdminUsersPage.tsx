@@ -552,7 +552,7 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  // Suppression douce d'un client (contrat résilié) avec mise à jour optimiste
+  // Sortie définitive d'un client: on le retire des listes actives et on l'envoie dans "Anciens clients"
   const confirmDeleteOnboardingClient = (user: UserProfile) => {
     setUserToDelete(user);
     setIsDeleteDialogOpen(true);
@@ -564,21 +564,23 @@ const AdminUsersPage: React.FC = () => {
     setIsDeleteDialogOpen(false);
     setUserToDelete(null);
 
-    // Optimistic: retirer le client de la vue tout de suite
     const prevUsers = users;
-    setUsers(curr => curr.filter(u => u.id !== target.id));
+    setUsers(curr => curr.map(u => (
+      u.id === target.id ? { ...u, is_contract_terminated: true } : u
+    )));
 
     try {
       await updateUser({ user_id: target.id, is_contract_terminated: true });
-      toast.success('Client supprimé (contrat résilié).');
+      toast.success('Client déplacé dans l’onglet « Anciens clients ».');
     } catch (error: any) {
       setUsers(prevUsers);
-      toast.error(`Erreur lors de la suppression : ${error.message}`);
+      toast.error(`Erreur lors de la sortie du client : ${error.message}`);
     }
   };
 
   // Drag & drop façon HubSpot CRM sur l'onboarding
   const onboardingClients = users
+    .filter(user => !user.is_contract_terminated)
     .filter(user => (user.onboarding_status ?? 'estimation_sent') !== 'live')
     .filter(user => {
       const term = (searchTerm || '').toLowerCase();
@@ -650,16 +652,19 @@ const AdminUsersPage: React.FC = () => {
     return fullName.includes(term) || email.includes(term);
   });
 
-  const crotoyClients = filteredUsers.filter(user => user.krossbooking_property_id === 1);
-  const berckClients = filteredUsers.filter(user => user.krossbooking_property_id === 2);
-  const allClients = filteredUsers;
-  const smartPricingClients = filteredUsers.filter(user => !user.can_manage_prices);
-  const noAgencyClients = filteredUsers.filter(user => !user.agency || user.agency.trim() === '');
+  const activeClients = filteredUsers.filter(user => !user.is_contract_terminated);
+  const formerClients = filteredUsers.filter(user => user.is_contract_terminated);
+  const crotoyClients = activeClients.filter(user => user.krossbooking_property_id === 1);
+  const berckClients = activeClients.filter(user => user.krossbooking_property_id === 2);
+  const allClients = activeClients;
+  const smartPricingClients = activeClients.filter(user => !user.can_manage_prices);
+  const noAgencyClients = activeClients.filter(user => !user.agency || user.agency.trim() === '');
   const onboardingFilteredClients = onboardingFilter === 'all'
     ? onboardingClients
     : onboardingClients.filter(u => (u.onboarding_status ?? 'estimation_sent') === onboardingFilter);
 
-  const renderUserTable = (clientList: UserProfile[]) => (
+  const renderUserTable = (clientList: UserProfile[], options?: { showExitAction?: boolean }) => (
+
     <Table>
       <TableHeader>
         <TableRow>
@@ -682,13 +687,15 @@ const AdminUsersPage: React.FC = () => {
           const isOnline = user.last_seen_at && (new Date().getTime() - new Date(user.last_seen_at).getTime()) < 2 * 60 * 1000;
           const smartPricingActive = !user.can_manage_prices;
           return (
-            <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : ''}>
+            <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : user.is_contract_terminated ? 'bg-muted/40' : ''}>
               <TableCell>
                 <div className="flex items-center gap-2">
                   {isOnline && <span className="h-2 w-2 rounded-full bg-green-500" title="En ligne"></span>}
-                  {user.first_name} {user.last_name}
+                  <span>{user.first_name} {user.last_name}</span>
+                  {user.is_contract_terminated && <Badge variant="outline">Ancien client</Badge>}
                 </div>
               </TableCell>
+
               <TableCell>{user.email || 'N/A'}</TableCell>
               <TableCell>
                 <div className="flex min-w-[220px] items-center gap-2">
@@ -804,7 +811,18 @@ const AdminUsersPage: React.FC = () => {
                 >
                   {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                 </Button>
+                {options?.showExitAction !== false && !user.is_contract_terminated && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => confirmDeleteOnboardingClient(user)}
+                    title="Sortie définitive du client"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
               </TableCell>
+
             </TableRow>
           );
         })}
@@ -862,12 +880,19 @@ const AdminUsersPage: React.FC = () => {
                 <Badge className="ml-2">{noAgencyClients.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="formerClients">
+              Anciens clients
+              {formerClients.length > 0 && (
+                <Badge className="ml-2">{formerClients.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="onboarding">
               Onboarding
               {onboardingClients.length > 0 && (
                 <Badge className="ml-2">{onboardingClients.length}</Badge>
               )}
             </TabsTrigger>
+
             <TabsTrigger value="requests">
               Demandes Comptable
               {requests.filter(r => r.status === 'pending').length > 0 && (
@@ -1000,7 +1025,33 @@ const AdminUsersPage: React.FC = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="formerClients" className="mt-4">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle>Anciens clients</CardTitle>
+                <div className="relative mt-2">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom ou email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full md:w-1/3"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  renderUserTable(formerClients, { showExitAction: false })
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
           <TabsContent value="onboarding" className="mt-4">
+
             <Card className="shadow-md">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
@@ -1143,13 +1194,14 @@ const AdminUsersPage: React.FC = () => {
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => confirmDeleteOnboardingClient(user)}
-                                            title="Supprimer (résiliation douce)"
+                                            title="Sortie définitive du client"
                                           >
                                             <Trash2 className="h-4 w-4" />
                                           </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent>Supprimer le client</TooltipContent>
+                                        <TooltipContent>Sortie définitive</TooltipContent>
                                       </Tooltip>
+
                                     </div>
                                   </div>
                                 );
@@ -1173,23 +1225,24 @@ const AdminUsersPage: React.FC = () => {
               onClose={() => setIsConfettiOpen(false)}
             />
 
-            {/* Confirmation de suppression */}
+            {/* Confirmation de sortie définitive */}
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Supprimer ce client en onboarding ?</AlertDialogTitle>
+                  <AlertDialogTitle>Sortir définitivement ce client ?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Cette action marque le contrat comme résilié et retire le client de la vue. Vous pourrez le restaurer manuellement si nécessaire.
+                    Cette action retire le client des listes actives et le déplace dans l’onglet « Anciens clients ».
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
                   <AlertDialogAction onClick={performDeleteOnboardingClient}>
-                    Supprimer
+                    Confirmer la sortie
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
           </TabsContent>
           <TabsContent value="requests" className="mt-4">
             <Card className="shadow-md">

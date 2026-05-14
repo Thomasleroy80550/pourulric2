@@ -1001,25 +1001,45 @@ const RevenueForecastPage: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="h-[360px]">
+                <CardContent className="h-[380px] rounded-3xl bg-gradient-to-br from-slate-50 via-white to-sky-50/70 p-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={forecastData.monthlyData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                    <AreaChart data={forecastData.monthlyData} margin={{ top: 16, right: 20, left: 0, bottom: 4 }}>
                       <defs>
                         <linearGradient id="caGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.05} />
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.45} />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.04} />
                         </linearGradient>
+                        <linearGradient id="cumulativeStroke" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#2dd4bf" />
+                          <stop offset="100%" stopColor="#0f766e" />
+                        </linearGradient>
+                        <filter id="monthlyGlow" x="-50%" y="-50%" width="200%" height="200%">
+                          <feGaussianBlur stdDeviation="6" result="blur" />
+                          <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="month" />
-                      <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} />
-                      <Tooltip formatter={(value: number, name: string) => [currencyFormatter.format(value), name === 'ca' ? 'CA mensuel' : 'Cumul']} />
-                      <Legend />
-                      <Area type="monotone" dataKey="ca" name="CA mensuel" stroke="#2563eb" fill="url(#caGradient)" strokeWidth={2.5} />
-                      <Line type="monotone" dataKey="cumulativeRevenue" name="Cumul annuel" stroke="#14b8a6" strokeWidth={3} dot={false} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.35} />
+                      <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [currencyFormatter.format(value), name === 'ca' ? 'CA mensuel' : 'Cumul annuel']}
+                        contentStyle={{
+                          borderRadius: '18px',
+                          border: '1px solid rgba(191, 219, 254, 0.9)',
+                          boxShadow: '0 18px 45px rgba(37, 99, 235, 0.12)',
+                          background: 'rgba(255,255,255,0.96)',
+                        }}
+                      />
+                      <Legend verticalAlign="top" height={30} iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
+                      <Area type="natural" dataKey="ca" name="CA mensuel" stroke="#2563eb" fill="url(#caGradient)" strokeWidth={3} filter="url(#monthlyGlow)" activeDot={{ r: 6, fill: '#2563eb', stroke: '#fff', strokeWidth: 2 }} />
+                      <Line type="natural" dataKey="cumulativeRevenue" name="Cumul annuel" stroke="url(#cumulativeStroke)" strokeWidth={3.5} dot={false} activeDot={{ r: 6, fill: '#14b8a6', stroke: '#fff', strokeWidth: 2 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
+
               </Card>
 
               <Card className="overflow-hidden border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">
@@ -1066,20 +1086,34 @@ const RevenueForecastPage: React.FC = () => {
                       <CardDescription>Compare visuellement le chiffre d'affaires apporté par chaque canal selon les mois.</CardDescription>
                     </CardHeader>
 
-                    <CardContent className="h-[360px]">
+                    <CardContent className="h-[380px] rounded-3xl bg-gradient-to-br from-slate-50 via-white to-indigo-50/70 p-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={forecastData.otaTrendData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                          <XAxis dataKey="month" />
-                          <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} />
-                          <Tooltip formatter={(value: number) => currencyFormatter.format(value)} />
-                          <Legend />
+                        <BarChart data={forecastData.otaTrendData} margin={{ top: 16, right: 20, left: 0, bottom: 4 }} barGap={6} barCategoryGap="18%">
+                          <defs>
+                            <filter id="otaBarShadow" x="-50%" y="-50%" width="200%" height="200%">
+                              <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#0f172a" floodOpacity="0.08" />
+                            </filter>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.35} />
+                          <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: '#64748b', fontSize: 12 }} />
+                          <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k€`} tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: '#64748b', fontSize: 12 }} />
+                          <Tooltip
+                            formatter={(value: number) => currencyFormatter.format(value)}
+                            contentStyle={{
+                              borderRadius: '18px',
+                              border: '1px solid rgba(199, 210, 254, 0.9)',
+                              boxShadow: '0 18px 45px rgba(79, 70, 229, 0.12)',
+                              background: 'rgba(255,255,255,0.96)',
+                            }}
+                          />
+                          <Legend verticalAlign="top" height={30} iconType="circle" wrapperStyle={{ fontSize: '13px' }} />
                           {forecastData.otaTrendBase.map((ota) => (
-                            <Bar key={ota.key} dataKey={ota.key} name={ota.channel} fill={ota.color} radius={[6, 6, 0, 0]} />
+                            <Bar key={ota.key} dataKey={ota.key} name={ota.channel} fill={ota.color} radius={[10, 10, 4, 4]} filter="url(#otaBarShadow)" />
                           ))}
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
+
                   </Card>
 
                   <Card className="border-white/60 bg-white/80 shadow-lg backdrop-blur-sm dark:border-white/10 dark:bg-slate-950/60">

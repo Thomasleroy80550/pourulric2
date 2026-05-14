@@ -220,9 +220,11 @@ const RevenueForecastPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [animatedSecuredShare, setAnimatedSecuredShare] = useState(0);
 
   const currentYear = new Date().getFullYear();
   const today = startOfDay(new Date());
+
   const yearStart = startOfYear(new Date(currentYear, 0, 1));
   const nextYearStart = startOfYear(addYears(yearStart, 1));
 
@@ -468,7 +470,24 @@ const RevenueForecastPage: React.FC = () => {
     };
   }, [currentYear, forecastData]);
 
+  useEffect(() => {
+    if (loading || error || forecastData.reservationCount === 0) {
+      setAnimatedSecuredShare(0);
+      return;
+    }
+
+    const targetWidth = Math.min(100, Math.max(4, forecastData.securedShare * 100));
+    setAnimatedSecuredShare(0);
+
+    const timer = window.setTimeout(() => {
+      setAnimatedSecuredShare(targetWidth);
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [error, forecastData.reservationCount, forecastData.securedShare, loading]);
+
   if (profile?.is_banned) {
+
     return (
       <MainLayout>
         <BannedUserMessage />
@@ -506,36 +525,49 @@ const RevenueForecastPage: React.FC = () => {
             </div>
 
             {!loading && !error && forecastData.reservationCount > 0 && (
-              <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
+              <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.25em] text-cyan-200">Estimation de fin d'année</div>
+                  <div className="text-xs uppercase tracking-[0.25em] text-cyan-200">Ce que vous pouvez viser cette année</div>
                   <div className="mt-2 text-4xl font-bold">{currencyFormatter.format(forecastData.yearEndForecast)}</div>
-                  <p className="mt-2 text-sm text-slate-200">C'est le montant visé si la dynamique actuelle continue jusqu'au 31 décembre.</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-200">
+                    En clair : si l'année continue sur le même rythme, votre chiffre d'affaires total pourrait atteindre ce montant d'ici le 31 décembre.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-black/10 p-4 text-sm text-slate-100">
+                  <div className="font-medium text-white">Où en êtes-vous aujourd'hui ?</div>
+                  <p className="mt-2 leading-6 text-slate-200">
+                    Vous avez déjà <strong>{currencyFormatter.format(forecastData.securedRevenue)}</strong> de réservations enregistrées.
+                    Il reste donc <strong>{currencyFormatter.format(forecastData.additionalProjectedRevenue)}</strong> à aller chercher pour atteindre cette estimation.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm text-slate-200">
-                    <span>Déjà réservé</span>
+                    <span>Part déjà réservée dans l'estimation</span>
                     <span>{percentFormatter.format(forecastData.securedShare)}</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/15">
+                  <div className="h-3 overflow-hidden rounded-full bg-white/15">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-emerald-400"
-                      style={{ width: `${Math.min(100, Math.max(4, forecastData.securedShare * 100))}%` }}
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-emerald-400 transition-all duration-1000 ease-out"
+                      style={{ width: `${animatedSecuredShare}%` }}
                     />
                   </div>
+                  <p className="text-xs leading-5 text-slate-300">
+                    Plus la barre est remplie, plus une grande partie de votre estimation est déjà sécurisée par des réservations existantes.
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                    <div className="text-slate-300">Montant déjà réservé</div>
+                    <div className="text-slate-300">Déjà réservé</div>
                     <div className="mt-1 font-semibold text-white">{currencyFormatter.format(forecastData.securedRevenue)}</div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-                    <div className="text-slate-300">Potentiel restant</div>
+                    <div className="text-slate-300">Encore à aller chercher</div>
                     <div className="mt-1 font-semibold text-white">{currencyFormatter.format(forecastData.additionalProjectedRevenue)}</div>
                   </div>
                 </div>
               </div>
             )}
+
           </div>
         </section>
 

@@ -9,10 +9,11 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle, Mail } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle, Mail, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
+
 import { fr } from 'date-fns/locale';
 import AddUserDialog from '@/components/admin/AddUserDialog';
 import EditUserDialog from '@/components/admin/EditUserDialog';
@@ -578,7 +579,23 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleRestoreClient = async (user: UserProfile) => {
+    const prevUsers = users;
+    setUsers(curr => curr.map(u => (
+      u.id === user.id ? { ...u, is_contract_terminated: false } : u
+    )));
+
+    try {
+      await updateUser({ user_id: user.id, is_contract_terminated: false });
+      toast.success('Client remis dans la liste des clients actifs.');
+    } catch (error: any) {
+      setUsers(prevUsers);
+      toast.error(`Erreur lors de la restauration du client : ${error.message}`);
+    }
+  };
+
   // Drag & drop façon HubSpot CRM sur l'onboarding
+
   const onboardingClients = users
     .filter(user => !user.is_contract_terminated)
     .filter(user => (user.onboarding_status ?? 'estimation_sent') !== 'live')
@@ -811,7 +828,16 @@ const AdminUsersPage: React.FC = () => {
                 >
                   {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
                 </Button>
-                {options?.showExitAction !== false && !user.is_contract_terminated && (
+                {user.is_contract_terminated ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRestoreClient(user)}
+                    title="Remettre en client actif"
+                  >
+                    <RotateCcw className="h-4 w-4 text-emerald-600" />
+                  </Button>
+                ) : options?.showExitAction !== false && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -821,6 +847,7 @@ const AdminUsersPage: React.FC = () => {
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 )}
+
               </TableCell>
 
             </TableRow>

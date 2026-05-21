@@ -53,10 +53,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BilanPdfButton from "@/components/BilanPdfButton";
 import NewsNotificationsPopup from "@/components/NewsNotificationsPopup";
 import DashboardVersionSwitch from "@/components/DashboardVersionSwitch";
-import ConnectivityMaintenanceAlert from "@/components/ConnectivityMaintenanceAlert";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
+
   id: string; // ID unique pour la tâche
   title: string; // Titre principal de la tâche
   description?: string; // Description optionnelle
@@ -661,13 +661,11 @@ const DashboardPage = () => {
           </div>
           <DashboardVersionSwitch />
         </div>
-        <div className="mb-4">
-          <ConnectivityMaintenanceAlert />
-        </div>
         <div className="mb-3">
 
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Version actuelle</p>
         </div>
+
         <Alert className="mb-4 border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/30">
           <Sparkles className="h-4 w-4 text-orange-600" />
           <AlertTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">

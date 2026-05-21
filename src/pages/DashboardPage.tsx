@@ -668,21 +668,22 @@ const DashboardPage = () => {
 
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Version actuelle</p>
         </div>
-        <Alert className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900/40 dark:bg-blue-950/30">
-          <Sparkles className="h-4 w-4 text-blue-600" />
-          <AlertTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
-            <Badge className="bg-blue-600 text-white hover:bg-blue-600">Nouveau</Badge>
-            Prévisions de chiffre d&apos;affaires
+        <Alert className="mb-4 border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/30">
+          <Sparkles className="h-4 w-4 text-orange-600" />
+          <AlertTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
+            <Badge className="bg-orange-600 text-white hover:bg-orange-600">Nouveau</Badge>
+            Thermo Sync est enfin disponible
           </AlertTitle>
-          <AlertDescription className="mt-2 flex flex-col gap-3 text-blue-800 dark:text-blue-200 sm:flex-row sm:items-center sm:justify-between">
+          <AlertDescription className="mt-2 flex flex-col gap-3 text-orange-800 dark:text-orange-200 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Afin de compenser la panne, on vous a ajouté une nouvelle fonctionnalité qui avait été demandée pour voir vos prévisions de chiffre d&apos;affaires.
+              Découvrez la news Thermo Sync et accédez à la présentation du nouveau service directement depuis votre espace.
             </span>
-            <Button asChild size="sm" className="w-full sm:w-auto">
-              <Link to="/prevision-ca">Voir mes prévisions</Link>
+            <Button asChild size="sm" className="w-full bg-orange-600 hover:bg-orange-700 sm:w-auto">
+              <Link to="/thermo-sync">Voir la news</Link>
             </Button>
           </AlertDescription>
         </Alert>
+
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Button asChild variant="outline" size="sm">
             <Link to="/prevision-ca">Prévision</Link>

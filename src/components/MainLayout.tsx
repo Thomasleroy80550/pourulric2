@@ -35,7 +35,6 @@ import {
 
   Copy, // Add new icon
   LayoutDashboard,
-  CalendarDays,
   Ban, // Ajout de l'icône Ban
     Store, // Ajout de l'icône pour la marketplace
   Mail, // icône e-mail
@@ -88,7 +87,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
       { name: 'Mes tickets', href: '/tickets', icon: MessageSquare },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
-      { name: 'Saison 2026', href: '/season-2026', icon: CalendarDays, disabled: true },
+      { name: 'Thermo Sync', href: '/thermo-sync', icon: Globe },
 
     ],
 
@@ -205,7 +204,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
                                 >
                                   <item.icon className="h-5 w-5 mr-3" />
                                   <span className="flex-1">{item.name}</span>
-                                  {item.href === '/season-2026' && (
+                                  {item.href === '/thermo-sync' && (
                                     <span
                                       className="ml-2 inline-block h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"
                                       aria-label="Nouveau"
@@ -213,6 +212,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
                                     />
                                   )}
                                   {item.href === '/notifications' && unreadCount > 0 && (
+
                                     <span
                                       className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-blue-600 text-white text-[10px] px-1.5 font-bold"
                                       aria-label={`${unreadCount} notifications non lues`}

@@ -88,7 +88,9 @@ import PowerSenseLandingFull from "./pages/PowerSenseLandingFull";
 import Marvel2026Landing from "./pages/Marvel2026Landing";
 import ThermoBnBLandingPage from "./pages/ThermoBnBLandingPage";
 import ThermoBnBAccessPage from "./pages/ThermoBnBAccessPage";
+import ThermoSyncPage from "./pages/ThermoSyncPage";
 import AdminStripeDuplicatesPage from "./pages/AdminStripeDuplicatesPage";
+
 import AdminStatusPage from "./pages/AdminStatusPage";
 import StatusPage from "./pages/StatusPage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -202,7 +204,9 @@ function App() {
                       <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
                       <Route path="/powersense" element={<PowerSenseLandingFull />} />
                       <Route path="/marvel-2026" element={<Marvel2026Landing />} />
+                      <Route path="/thermo-sync" element={<ThermoSyncPage />} />
                       <Route path="/thermobnb" element={<ThermoBnBLandingPage />} />
+
                       <Route path="/thermobnb-access" element={<ThermoBnBAccessPage />} />
                       <Route path="/admin/recovery" element={<AdminRecoveryPage />} />
                       <Route path="/integrations/netatmo" element={<NetatmoConnectPage />} />

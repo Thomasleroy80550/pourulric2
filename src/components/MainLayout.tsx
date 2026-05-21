@@ -39,7 +39,6 @@ import {
     Store, // Ajout de l'icône pour la marketplace
   Mail, // icône e-mail
   Zap, // icône éclair pour conso électricité
-  Globe,
 } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
@@ -87,7 +86,6 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
       { name: 'Mes tickets', href: '/tickets', icon: MessageSquare },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
-      { name: 'Thermo Sync', href: '/thermo-sync', icon: Globe },
 
     ],
 
@@ -101,8 +99,9 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
       { name: 'Mes Avis', href: '/reviews', icon: Star },
       { name: 'Analyse Concurrentielle', href: '/comp-set', icon: Copy },
       { name: 'PowerSense', href: '/powersense', icon: Zap },
-      { name: 'ThermoBnB', href: '/integrations/netatmo/dashboard', icon: LayoutDashboard },
+      { name: 'Thermo Sync', href: '/thermo-sync', icon: LayoutDashboard },
     ],
+
   },
   {
     title: 'Ressources',

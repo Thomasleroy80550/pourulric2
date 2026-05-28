@@ -7,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { listStripeTransfers, StripeTransfer } from '@/lib/admin-api';
 import { ArrowRightLeft } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 const AdminStripeTransfersPage: React.FC = () => {
   const [transfers, setTransfers] = useState<StripeTransfer[]>([]);
@@ -18,50 +17,8 @@ const AdminStripeTransfersPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Note: listStripeTransfers currently requires an accountId.
-      // For now, we'll fetch all accounts and then all transfers for each.
-      // In a real scenario, you might want to filter by a specific account or aggregate.
-      // For simplicity, this example will fetch transfers for a dummy account ID or the first available.
-      // A more robust solution would involve fetching connected accounts first.
-      // For demonstration, let's assume we want to list all transfers across all connected accounts.
-      // This would require an update to the listStripeTransfers function or a new edge function.
-      // For now, I'll use a placeholder and note this limitation.
-
-      // As per the current `listStripeTransfers` definition in `admin-api.ts`, it expects an accountId.
-      // To list all transfers, we would need to first list all connected accounts,
-      // then iterate and call listStripeTransfers for each.
-      // For this initial implementation, I'll assume a single, primary connected account or
-      // that the `listStripeTransfers` edge function is capable of listing all if no ID is provided,
-      // or I'll use a placeholder if the edge function strictly requires an ID.
-
-      // Given the `listStripeTransfers` function in `admin-api.ts` takes `accountId: string`,
-      // we need to decide how to get this accountId.
-      // For now, let's assume we want to list transfers for a specific, known connected account ID.
-      // In a real admin panel, you'd likely have a way to select an account or list all.
-      // Let's fetch all connected accounts first to get their IDs.
-
-      const { data: accounts, error: accountsError } = await supabase.functions.invoke('list-stripe-accounts');
-
-      if (accountsError) {
-        throw new Error(`Erreur lors de la récupération des comptes Stripe : ${accountsError.message}`);
-      }
-
-      if (!accounts || accounts.length === 0) {
-        setTransfers([]);
-        setLoading(false);
-        return;
-      }
-
-      let allTransfers: StripeTransfer[] = [];
-      for (const account of accounts) {
-        const accountTransfers = await listStripeTransfers(account.id);
-        allTransfers = allTransfers.concat(accountTransfers);
-      }
-      
-      // Sort transfers by creation date, newest first
-      allTransfers.sort((a, b) => b.created - a.created);
-
-      setTransfers(allTransfers);
+      const allTransfers = await listStripeTransfers();
+      setTransfers(allTransfers.sort((a, b) => b.created - a.created));
     } catch (err: any) {
       setError(err.message);
       toast.error("Erreur lors de la récupération des transferts Stripe.");

@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
 serve(async (req) => {
@@ -16,99 +17,122 @@ serve(async (req) => {
   }
 
   try {
-    // Admin check
-    const userSupabaseClient = createClient(
-      SUPABASE_URL ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    );
-    const { data: { user }, error: authError } = await userSupabaseClient.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized: User not authenticated.");
-    
-    const { data: profile } = await userSupabaseClient.from('profiles').select('role').eq('id', user.id).single();
-    if (profile?.role !== 'admin') throw new Error("Forbidden: Admin access required.");
-
-    if (!STRIPE_SECRET_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error("Server configuration error: Missing required environment variables.");
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Server configuration error: Missing required Supabase environment variables.');
     }
 
-    // 1. Fetch recent transfers from Stripe
-    console.log("Fetching recent transfers from Stripe...");
-    const stripeResponse = await fetch('https://api.stripe.com/v1/transfers?limit=100', {
-        method: 'GET',
+    const userSupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: {
         headers: {
-            'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
-        }
+          Authorization: req.headers.get('Authorization') ?? '',
+        },
+      },
     });
 
-    if (!stripeResponse.ok) {
-        const errorBody = await stripeResponse.json();
-        throw new Error(`Stripe API error: ${errorBody.error.message}`);
+    const {
+      data: { user },
+      error: authError,
+    } = await userSupabaseClient.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error('Unauthorized: User not authenticated.');
     }
 
-    const { data: transfers } = await stripeResponse.json();
-    console.log(`Found ${transfers.length} Stripe transfers.`);
+    const { data: profile, error: profileError } = await userSupabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-    // 2. Filter transfers and collect invoice IDs
+    if (profileError || profile?.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Forbidden: Admin access required.' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    if (!STRIPE_SECRET_KEY) {
+      throw new Error('Stripe secret key is not configured.');
+    }
+
+    const transferResponse = await fetch('https://api.stripe.com/v1/transfers?limit=100', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      },
+    });
+
+    if (!transferResponse.ok) {
+      const errorBody = await transferResponse.json();
+      throw new Error(`Stripe API error: ${errorBody.error?.message || 'Unknown error'}`);
+    }
+
+    const { data: transfers } = await transferResponse.json();
     const invoiceIdsToUpdate = new Set<string>();
-    for (const transfer of transfers) {
-      if (transfer.metadata && transfer.metadata.invoice_ids && !transfer.reversed) {
-        const ids = transfer.metadata.invoice_ids.split(',');
-        ids.forEach((id: string) => invoiceIdsToUpdate.add(id.trim()));
+
+    for (const transfer of transfers ?? []) {
+      if (transfer.metadata?.invoice_ids && !transfer.reversed) {
+        for (const invoiceId of String(transfer.metadata.invoice_ids).split(',')) {
+          const trimmedInvoiceId = invoiceId.trim();
+          if (trimmedInvoiceId) {
+            invoiceIdsToUpdate.add(trimmedInvoiceId);
+          }
+        }
       }
     }
-    console.log(`Collected ${invoiceIdsToUpdate.size} unique invoice IDs from Stripe transfers metadata.`);
 
     if (invoiceIdsToUpdate.size === 0) {
-      return new Response(JSON.stringify({ updatedCount: 0, message: "No transfers found with reconciliation metadata." }), {
+      return new Response(JSON.stringify({ updatedCount: 0, message: 'No transfers found with reconciliation metadata.' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // 3. Find which of these invoices are not yet marked as completed
-    console.log("Querying Supabase for invoices to update...");
-    const { data: invoicesToUpdate, error: fetchError } = await supabaseAdmin
+    const { data: invoices, error: invoicesError } = await supabaseAdmin
       .from('invoices')
-      .select('id')
-      .in('id', Array.from(invoiceIdsToUpdate))
-      .eq('transfer_completed', false);
+      .select('id, transfer_statuses')
+      .in('id', Array.from(invoiceIdsToUpdate));
 
-    if (fetchError) {
-      throw new Error(`DB fetch error: ${fetchError.message}`);
+    if (invoicesError) {
+      throw new Error(`DB fetch error: ${invoicesError.message}`);
     }
-    console.log(`Found ${invoicesToUpdate?.length || 0} invoices in DB matching Stripe transfers and not yet completed.`);
 
-    if (!invoicesToUpdate || invoicesToUpdate.length === 0) {
-      return new Response(JSON.stringify({ updatedCount: 0, message: "All relevant invoices are already marked as completed." }), {
+    const invoicesNeedingUpdate = (invoices ?? []).filter((invoice) => !invoice.transfer_statuses?.stripe);
+
+    if (invoicesNeedingUpdate.length === 0) {
+      return new Response(JSON.stringify({ updatedCount: 0, message: 'All relevant invoices are already marked as completed.' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    const finalInvoiceIds = invoicesToUpdate.map(inv => inv.id);
-    console.log("Final invoice IDs to update:", finalInvoiceIds);
+    const results = await Promise.all(
+      invoicesNeedingUpdate.map((invoice) => {
+        const currentStatuses =
+          invoice.transfer_statuses && typeof invoice.transfer_statuses === 'object'
+            ? invoice.transfer_statuses
+            : {};
 
-    // 4. Update their status
-    const { error: updateError } = await supabaseAdmin
-      .from('invoices')
-      .update({ transfer_completed: true })
-      .in('id', finalInvoiceIds);
+        return supabaseAdmin
+          .from('invoices')
+          .update({ transfer_statuses: { ...currentStatuses, stripe: true } })
+          .eq('id', invoice.id);
+      })
+    );
 
-    if (updateError) {
-      throw new Error(`DB update error: ${updateError.message}`);
+    const failedUpdates = results.filter((result) => result.error);
+
+    if (failedUpdates.length > 0) {
+      throw new Error(`DB update error: ${failedUpdates[0].error?.message || 'Unknown error'}`);
     }
-    console.log(`Successfully updated ${finalInvoiceIds.length} invoices.`);
 
-    return new Response(JSON.stringify({ updatedCount: finalInvoiceIds.length }), {
+    return new Response(JSON.stringify({ updatedCount: invoicesNeedingUpdate.length }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
-
   } catch (error: any) {
-    console.error("Error in reconcile-stripe-transfers function:", error.message);
+    console.error('[reconcile-stripe-transfers] request failed', { message: error.message });
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

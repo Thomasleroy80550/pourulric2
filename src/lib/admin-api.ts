@@ -1095,7 +1095,7 @@ export async function updateIdeaStatus(ideaId: string, status: string): Promise<
     console.error('Error updating idea status:', error);
     throw new Error(`Erreur lors de la mise à jour du statut de l'idée : ${error.message}`);
   }
-  return data;
+  return data as Idea;
 }
 
 /**
@@ -1195,17 +1195,17 @@ export async function createStripeAccount(email: string, country: string): Promi
 }
 
 /**
- * Fetches a list of Stripe transfers for a given connected account. Admin only.
- * @param accountId The ID of the Stripe account to fetch transfers for.
+ * Fetches Stripe transfers, optionally filtered by connected account. Admin only.
+ * @param accountId Optional Stripe account ID to filter transfers by destination account.
  * @returns A promise that resolves to an array of StripeTransfer objects.
  */
-export async function listStripeTransfers(accountId: string): Promise<StripeTransfer[]> {
+export async function listStripeTransfers(accountId?: string): Promise<StripeTransfer[]> {
   const { data, error } = await supabase.functions.invoke('list-stripe-transfers', {
-    body: { account_id: accountId },
+    body: accountId ? { account_id: accountId } : {},
   });
 
   if (error) {
-    console.error(`Error fetching Stripe transfers for account ${accountId}:`, error);
+    console.error(`Error fetching Stripe transfers${accountId ? ` for account ${accountId}` : ''}:`, error);
     throw new Error(`Erreur lors de la récupération des transferts Stripe : ${error.message}`);
   }
 
@@ -1244,12 +1244,14 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
 
   invoices.forEach(invoice => {
     const userId = invoice.user_id;
-    const firstName = invoice.profiles?.first_name || 'N/A';
-    const lastName = invoice.profiles?.last_name || 'N/A';
-    const stripeAccountId = invoice.profiles?.stripe_account_id || null;
-    const userKrossbookingPropertyId = invoice.profiles?.krossbooking_property_id || null; // Get from profile
+    const profile = Array.isArray(invoice.profiles) ? invoice.profiles[0] : invoice.profiles;
+    const firstName = profile?.first_name || 'N/A';
+    const lastName = profile?.last_name || 'N/A';
+    const stripeAccountId = profile?.stripe_account_id || null;
+    const userKrossbookingPropertyId = profile?.krossbooking_property_id || null;
 
     if (!userSummariesMap.has(userId)) {
+
       userSummariesMap.set(userId, {
         user_id: userId,
         first_name: firstName,
@@ -1551,15 +1553,7 @@ export async function reconcileStripeTransfers(): Promise<{ updatedCount: number
  * @returns A promise that resolves when the status is updated.
  */
 export async function updateTransferStatus(invoiceId: string, completed: boolean): Promise<void> {
-  const { error } = await supabase
-    .from('invoices')
-    .update({ transfer_completed: completed })
-    .eq('id', invoiceId);
-
-  if (error) {
-    console.error("Error updating transfer status:", error);
-    throw new Error(`Erreur lors de la mise à jour du statut du virement : ${error.message}`);
-  }
+  await updateInvoiceSourceTransferStatus(invoiceId, 'stripe', completed);
 }
 
 /**

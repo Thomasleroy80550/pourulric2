@@ -51,8 +51,8 @@ const StripePayoutDialog: React.FC<StripePayoutDialogProps> = ({
   if (!summary) return null;
 
   const amountToPay = summary.details
-    .filter(d => !d.transfer_completed)
-    .reduce((acc, d) => acc + (d.amountsBySource['stripe'] || 0), 0);
+    .filter((detail) => !detail.transfer_statuses?.stripe)
+    .reduce((acc, detail) => acc + (detail.amountsBySource['stripe'] || 0), 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

@@ -31,6 +31,38 @@ const emailSchema = zod.object({
 
 type EmailFormValues = zod.infer<typeof emailSchema>;
 
+const AUTH_EMAIL_COOLDOWN_MS = 10 * 60 * 1000;
+const AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS = 60 * 60 * 1000;
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const getAuthEmailCooldown = (action: string, email: string) => {
+  try {
+    const key = `auth-email-cooldown:${action}:${email}`;
+    const until = Number(window.localStorage.getItem(key) || 0);
+    return Math.max(0, until - Date.now());
+  } catch {
+    return 0;
+  }
+};
+
+const startAuthEmailCooldown = (action: string, email: string, duration = AUTH_EMAIL_COOLDOWN_MS) => {
+  try {
+    const key = `auth-email-cooldown:${action}:${email}`;
+    window.localStorage.setItem(key, String(Date.now() + duration));
+  } catch {
+    // localStorage peut être indisponible en navigation privée stricte.
+  }
+};
+
+const formatCooldown = (milliseconds: number) => {
+  const minutes = Math.ceil(milliseconds / 60000);
+  return minutes <= 1 ? "1 minute" : `${minutes} minutes`;
+};
+
+const isEmailRateLimitError = (error: unknown) =>
+  String((error as any)?.message || error || "").toLowerCase().includes("email rate limit");
+
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [isMigrationHelpDialogOpen, setIsMigrationHelpDialogOpen] =
@@ -73,11 +105,18 @@ const Login = () => {
   };
 
   const handleMagicLink = async () => {
-    const email = form.getValues("email") as string;
+    const email = normalizeEmail(form.getValues("email") as string);
     if (!email) {
       toast.error("Veuillez saisir votre email avant d'envoyer le lien magique.");
       return;
     }
+
+    const cooldown = getAuthEmailCooldown("magic-link", email);
+    if (cooldown > 0) {
+      toast.error(`Lien magique déjà demandé. Réessayez dans ${formatCooldown(cooldown)}.`);
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -89,9 +128,15 @@ const Login = () => {
         },
       });
       if (error) throw error;
+      startAuthEmailCooldown("magic-link", email);
       toast.success("Lien magique envoyé ! Vérifiez votre email pour vous connecter.");
     } catch (error: any) {
-      toast.error(`Erreur: ${error.message || "Impossible d'envoyer le lien magique."}`);
+      if (isEmailRateLimitError(error)) {
+        startAuthEmailCooldown("magic-link", email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
+        toast.error("Trop de demandes d'e-mail. L'envoi est mis en pause pendant 1 heure pour éviter de spammer Supabase.");
+      } else {
+        toast.error(`Erreur: ${error.message || "Impossible d'envoyer le lien magique."}`);
+      }
       console.error("Magic link error:", error);
     } finally {
       setLoading(false);
@@ -99,20 +144,33 @@ const Login = () => {
   };
 
   const handleForgotPassword = async () => {
-    const email = form.getValues("email") as string;
+    const email = normalizeEmail(form.getValues("email") as string);
     if (!email) {
       toast.error("Saisissez votre email pour réinitialiser le mot de passe.");
       return;
     }
+
+    const cooldown = getAuthEmailCooldown("password-reset", email);
+    if (cooldown > 0) {
+      toast.error(`Email de réinitialisation déjà demandé. Réessayez dans ${formatCooldown(cooldown)}.`);
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/login`,
       });
       if (error) throw error;
+      startAuthEmailCooldown("password-reset", email);
       toast.success("Email de réinitialisation envoyé.");
     } catch (error: any) {
-      toast.error(`Erreur: ${error.message}`);
+      if (isEmailRateLimitError(error)) {
+        startAuthEmailCooldown("password-reset", email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
+        toast.error("Trop de demandes d'e-mail. L'envoi est mis en pause pendant 1 heure pour éviter de spammer Supabase.");
+      } else {
+        toast.error(`Erreur: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }

@@ -51,8 +51,21 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
   const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
     setLoading(true);
+    const isPasswordRecoveryRoute =
+      location.pathname === '/login' &&
+      (window.location.hash.includes('type=recovery') ||
+        window.location.search.includes('type=recovery') ||
+        window.sessionStorage.getItem('password-recovery-in-progress') === 'true');
+
     if (currentSession) {
       setSession(currentSession);
+
+      if (isPasswordRecoveryRoute) {
+        window.sessionStorage.setItem('password-recovery-in-progress', 'true');
+        setLoading(false);
+        return;
+      }
+
       const userProfile = await fetchUserProfile(currentSession);
 
       if (userProfile) {
@@ -134,6 +147,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
       console.log('Auth state changed:', event, currentSession);
+      if (event === 'PASSWORD_RECOVERY') {
+        window.sessionStorage.setItem('password-recovery-in-progress', 'true');
+      }
       revalidateSessionAndProfile(currentSession);
     });
 

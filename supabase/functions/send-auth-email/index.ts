@@ -15,9 +15,6 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-const EMAIL_COOLDOWN_MINUTES = 10;
-const IP_HOURLY_LIMIT = 20;
-
 type AuthEmailAction = "magic_link" | "password_reset";
 
 function isAuthEmailAction(value: unknown): value is AuthEmailAction {
@@ -30,15 +27,6 @@ function normalizeEmail(email: string) {
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function getClientIp(req: Request) {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("cf-connecting-ip") ||
-    req.headers.get("x-real-ip") ||
-    "unknown"
-  );
 }
 
 function buildEmail(action: AuthEmailAction, email: string, actionLink: string) {
@@ -71,64 +59,6 @@ function buildEmail(action: AuthEmailAction, email: string, actionLink: string) 
   return { subject, html };
 }
 
-async function applyRateLimit(email: string, action: AuthEmailAction, ipAddress: string) {
-  const cooldownSince = new Date(Date.now() - EMAIL_COOLDOWN_MINUTES * 60 * 1000).toISOString();
-  const hourlySince = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-
-  const { data: recentSameRequest, error: recentError } = await admin
-    .from("auth_email_requests")
-    .select("id")
-    .eq("email", email)
-    .eq("action", action)
-    .gte("created_at", cooldownSince)
-    .limit(1);
-
-  if (recentError) {
-    console.error("[send-auth-email] rate limit lookup failed", recentError);
-    throw new Error("Impossible de vérifier la limite d'envoi.");
-  }
-
-  if (recentSameRequest && recentSameRequest.length > 0) {
-    return { limited: true, status: 429, message: "Un e-mail a déjà été demandé récemment. Réessayez dans quelques minutes." };
-  }
-
-  if (ipAddress !== "unknown") {
-    const { count, error: ipError } = await admin
-      .from("auth_email_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("ip_address", ipAddress)
-      .gte("created_at", hourlySince);
-
-    if (ipError) {
-      console.error("[send-auth-email] ip rate limit lookup failed", ipError);
-      throw new Error("Impossible de vérifier la limite d'envoi.");
-    }
-
-    if ((count || 0) >= IP_HOURLY_LIMIT) {
-      return { limited: true, status: 429, message: "Trop de demandes depuis cette connexion. Réessayez plus tard." };
-    }
-  }
-
-  const { error: insertError } = await admin
-    .from("auth_email_requests")
-    .insert({ email, action, ip_address: ipAddress });
-
-  if (insertError) {
-    console.error("[send-auth-email] rate limit insert failed", insertError);
-    throw new Error("Impossible d'enregistrer la demande d'envoi.");
-  }
-
-  admin
-    .from("auth_email_requests")
-    .delete()
-    .lt("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    .then(({ error }) => {
-      if (error) console.warn("[send-auth-email] cleanup failed", error);
-    });
-
-  return { limited: false, status: 200, message: "OK" };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -157,15 +87,6 @@ serve(async (req) => {
     if (!isValidEmail(email) || !isAuthEmailAction(action)) {
       return new Response(JSON.stringify({ error: "Paramètres invalides" }), {
         status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    const ipAddress = getClientIp(req);
-    const rateLimit = await applyRateLimit(email, action, ipAddress);
-    if (rateLimit.limited) {
-      return new Response(JSON.stringify({ error: rateLimit.message }), {
-        status: rateLimit.status,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }

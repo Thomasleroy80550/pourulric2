@@ -32,13 +32,13 @@ const emailSchema = zod.object({
 type EmailFormValues = zod.infer<typeof emailSchema>;
 
 const AUTH_EMAIL_COOLDOWN_MS = 10 * 60 * 1000;
-const AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS = 60 * 60 * 1000;
+const AUTH_EMAIL_COOLDOWN_STORAGE_PREFIX = "auth-email-cooldown-resend-v2";
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 const getAuthEmailCooldown = (action: string, email: string) => {
   try {
-    const key = `auth-email-cooldown:${action}:${email}`;
+    const key = `${AUTH_EMAIL_COOLDOWN_STORAGE_PREFIX}:${action}:${email}`;
     const until = Number(window.localStorage.getItem(key) || 0);
     return Math.max(0, until - Date.now());
   } catch {
@@ -48,7 +48,7 @@ const getAuthEmailCooldown = (action: string, email: string) => {
 
 const startAuthEmailCooldown = (action: string, email: string, duration = AUTH_EMAIL_COOLDOWN_MS) => {
   try {
-    const key = `auth-email-cooldown:${action}:${email}`;
+    const key = `${AUTH_EMAIL_COOLDOWN_STORAGE_PREFIX}:${action}:${email}`;
     window.localStorage.setItem(key, String(Date.now() + duration));
   } catch {
     // localStorage peut être indisponible en navigation privée stricte.
@@ -148,8 +148,8 @@ const Login = () => {
       toast.success("Lien magique envoyé via Resend ! Vérifiez votre email pour vous connecter.");
     } catch (error: any) {
       if (isEmailRateLimitError(error)) {
-        startAuthEmailCooldown("magic-link", email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
-        toast.error("Trop de demandes d'e-mail. L'envoi est mis en pause pendant 1 heure pour éviter de spammer Supabase.");
+        startAuthEmailCooldown("magic-link", email);
+        toast.error("Trop de demandes d'e-mail. Réessayez dans quelques minutes.");
       } else {
         toast.error(`Erreur: ${error.message || "Impossible d'envoyer le lien magique."}`);
       }
@@ -179,8 +179,8 @@ const Login = () => {
       toast.success("Email de réinitialisation envoyé via Resend.");
     } catch (error: any) {
       if (isEmailRateLimitError(error)) {
-        startAuthEmailCooldown("password-reset", email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
-        toast.error("Trop de demandes d'e-mail. L'envoi est mis en pause pendant 1 heure pour éviter de spammer Supabase.");
+        startAuthEmailCooldown("password-reset", email);
+        toast.error("Trop de demandes d'e-mail. Réessayez dans quelques minutes.");
       } else {
         toast.error(`Erreur: ${error.message}`);
       }

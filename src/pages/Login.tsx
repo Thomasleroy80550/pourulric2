@@ -63,6 +63,30 @@ const formatCooldown = (milliseconds: number) => {
 const isEmailRateLimitError = (error: unknown) =>
   String((error as any)?.message || error || "").toLowerCase().includes("email rate limit");
 
+const sendAuthEmailViaResend = async (email: string, action: "magic_link" | "password_reset") => {
+  const { data, error } = await supabase.functions.invoke("send-auth-email", {
+    body: { email, action },
+  });
+
+  if (error) {
+    let message = error.message;
+    const response = (error as any).context;
+    if (response && typeof response.json === "function") {
+      try {
+        const body = await response.json();
+        message = body?.error || message;
+      } catch {
+        // Le corps de réponse n'est pas toujours du JSON.
+      }
+    }
+    throw new Error(message);
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+};
+
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [isMigrationHelpDialogOpen, setIsMigrationHelpDialogOpen] =
@@ -119,17 +143,9 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false,
-          // Redirection explicite vers production
-          emailRedirectTo: "https://beta.proprietaire.hellokeys.fr/login",
-        },
-      });
-      if (error) throw error;
+      await sendAuthEmailViaResend(email, "magic_link");
       startAuthEmailCooldown("magic-link", email);
-      toast.success("Lien magique envoyé ! Vérifiez votre email pour vous connecter.");
+      toast.success("Lien magique envoyé via Resend ! Vérifiez votre email pour vous connecter.");
     } catch (error: any) {
       if (isEmailRateLimitError(error)) {
         startAuthEmailCooldown("magic-link", email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
@@ -158,12 +174,9 @@ const Login = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`,
-      });
-      if (error) throw error;
+      await sendAuthEmailViaResend(email, "password_reset");
       startAuthEmailCooldown("password-reset", email);
-      toast.success("Email de réinitialisation envoyé.");
+      toast.success("Email de réinitialisation envoyé via Resend.");
     } catch (error: any) {
       if (isEmailRateLimitError(error)) {
         startAuthEmailCooldown("password-reset", email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);

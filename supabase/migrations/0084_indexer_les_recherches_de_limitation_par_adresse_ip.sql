@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS auth_email_requests_ip_idx ON public.auth_email_requests (ip_address, created_at DESC)

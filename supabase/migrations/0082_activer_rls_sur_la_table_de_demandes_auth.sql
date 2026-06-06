@@ -1,0 +1,1 @@
+ALTER TABLE public.auth_email_requests ENABLE ROW LEVEL SECURITY

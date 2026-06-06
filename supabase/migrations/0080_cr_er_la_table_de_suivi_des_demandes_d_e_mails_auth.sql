@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS public.auth_email_requests (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, email TEXT NOT NULL, action TEXT NOT NULL CHECK (action IN ('magic_link', 'password_reset')), ip_address TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())

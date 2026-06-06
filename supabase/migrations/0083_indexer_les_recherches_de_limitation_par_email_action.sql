@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS auth_email_requests_lookup_idx ON public.auth_email_requests (email, action, created_at DESC)

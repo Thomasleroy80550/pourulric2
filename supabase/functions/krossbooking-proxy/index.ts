@@ -132,6 +132,26 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = KROS
   }
 }
 
+function compactResponsePreview(responseText: string) {
+  return responseText.trim().replace(/\s+/g, " ").slice(0, 240);
+}
+
+function parseJsonResponse(responseText: string, source: string): any {
+  if (!responseText.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    throw new Error(`${source} returned a non-JSON response: ${compactResponsePreview(responseText)}`);
+  }
+}
+
+function getParsedError(parsed: any) {
+  return parsed && typeof parsed === "object" && "error" in parsed ? String(parsed.error) : "";
+}
+
 async function callUpstreamProxy(action: string, payload: Record<string, unknown>) {
   if (!hasUpstreamProxy()) {
     throw new Error("Krossbooking upstream proxy is not configured.");
@@ -148,10 +168,10 @@ async function callUpstreamProxy(action: string, payload: Record<string, unknown
   });
 
   const responseText = await response.text();
-  const parsed = responseText ? JSON.parse(responseText) : null;
+  const parsed = parseJsonResponse(responseText, `Upstream proxy action=${action}`);
 
   if (!response.ok) {
-    throw new Error(parsed?.error || `Upstream proxy error: ${response.status}`);
+    throw new Error(getParsedError(parsed) || `Upstream proxy error: ${response.status} - ${compactResponsePreview(responseText)}`);
   }
 
   return parsed;
@@ -180,12 +200,13 @@ async function getAuthToken(): Promise<string> {
     }),
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${errorText}`);
+    throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${compactResponsePreview(responseText)}`);
   }
 
-  const data = await response.json();
+  const data = parseJsonResponse(responseText, "Krossbooking auth");
   if (!data?.auth_token) {
     throw new Error("Krossbooking token not found in response.");
   }
@@ -224,12 +245,13 @@ async function postToKrossbooking(authToken: string | null, path: string, payloa
     body: JSON.stringify(payload),
   });
 
+  const responseText = await response.text();
+
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Krossbooking API error: ${response.status} - ${errorText}`);
+    throw new Error(`Krossbooking API error: ${response.status} - ${compactResponsePreview(responseText)}`);
   }
 
-  return response.json();
+  return parseJsonResponse(responseText, `Krossbooking API path=${path}`);
 }
 
 async function getUserContext(authHeader: string): Promise<UserContext> {

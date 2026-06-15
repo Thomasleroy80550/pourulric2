@@ -120,6 +120,7 @@ let roomTypesCache: {
   data: KrossbookingRoomType[];
   timestamp: number;
 } | null = null;
+let roomTypesInFlight: Promise<KrossbookingRoomType[]> | null = null;
 const ROOM_TYPE_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 let reservationsCache: {
@@ -504,67 +505,78 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
   return callKrossbookingProxy('save_channel_manager', payload);
 }
 
-export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> { // Add forceRefresh
+export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> {
   const now = Date.now();
   if (!forceRefresh && roomTypesCache && (now - roomTypesCache.timestamp < ROOM_TYPE_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking room types.");
     return roomTypesCache.data;
   }
 
-  try {
-    console.log("Fetching fresh Krossbooking room types from API.");
-    const profile = await getProfile(); // Fetch profile to get krossbooking_property_id
-    const flatRoomsData = await callKrossbookingProxy('get_room_types', {
-      id_property: profile?.krossbooking_property_id // Pass the property ID
-    });
-
-    if (!Array.isArray(flatRoomsData)) {
-      console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
-      return [];
-    }
-
-    const roomTypesMap = new Map<number, KrossbookingRoomType>();
-
-    for (const room of flatRoomsData) {
-      const typeId = room.id_room_type;
-      const typeLabel = room.room_type_label || `Type ${typeId}`;
-
-      if (!typeId) continue;
-
-      if (!roomTypesMap.has(typeId)) {
-        roomTypesMap.set(typeId, {
-          id_room_type: typeId,
-          label: typeLabel,
-          rooms: [],
-        });
-      }
-
-      const roomType = roomTypesMap.get(typeId);
-      if (roomType) {
-        roomType.rooms.push({
-          id_room: room.id_room,
-          label: room.label,
-        });
-      }
-    }
-
-    const processedRoomTypes = Array.from(roomTypesMap.values());
-    
-    roomTypesCache = {
-      data: processedRoomTypes,
-      timestamp: now,
-    };
-    console.log("Krossbooking room types cached successfully.");
-
-    return processedRoomTypes;
-  } catch (error) {
-    console.error('Error fetching and processing Krossbooking room types:', error);
-    if (roomTypesCache) {
-      console.warn("Returning stale cache due to API error.");
-      return roomTypesCache.data;
-    }
-    throw error;
+  if (!forceRefresh && roomTypesInFlight) {
+    console.log("Reusing pending Krossbooking room types request.");
+    return roomTypesInFlight;
   }
+
+  roomTypesInFlight = (async () => {
+    try {
+      console.log("Fetching fresh Krossbooking room types from API.");
+      const profile = await getProfile();
+      const flatRoomsData = await callKrossbookingProxy('get_room_types', {
+        id_property: profile?.krossbooking_property_id,
+      });
+
+      if (!Array.isArray(flatRoomsData)) {
+        console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
+        return [];
+      }
+
+      const roomTypesMap = new Map<number, KrossbookingRoomType>();
+
+      for (const room of flatRoomsData) {
+        const typeId = room.id_room_type;
+        const typeLabel = room.room_type_label || `Type ${typeId}`;
+
+        if (!typeId) continue;
+
+        if (!roomTypesMap.has(typeId)) {
+          roomTypesMap.set(typeId, {
+            id_room_type: typeId,
+            label: typeLabel,
+            rooms: [],
+          });
+        }
+
+        const roomType = roomTypesMap.get(typeId);
+        if (roomType) {
+          roomType.rooms.push({
+            id_room: room.id_room,
+            label: room.label,
+          });
+        }
+      }
+
+      const processedRoomTypes = Array.from(roomTypesMap.values());
+      
+      roomTypesCache = {
+        data: processedRoomTypes,
+        timestamp: now,
+      };
+      console.log("Krossbooking room types cached successfully.");
+
+      return processedRoomTypes;
+    } catch (error) {
+      console.error('Error fetching and processing Krossbooking room types:', error);
+      if (roomTypesCache) {
+        console.warn("Returning stale cache due to API error.");
+        return roomTypesCache.data;
+      }
+      throw error;
+    } finally {
+      roomTypesInFlight = null;
+    }
+  })();
+
+  return roomTypesInFlight;
 }
 
 export async function fetchChannelPricesAndAvailability(params: {

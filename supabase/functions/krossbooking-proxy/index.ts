@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
 const KROSSBOOKING_UPSTREAM_PROXY_URL = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_URL") ?? "").trim();
 const KROSSBOOKING_UPSTREAM_PROXY_SECRET = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_SECRET") ?? "").trim();
+const KROSSBOOKING_REQUEST_TIMEOUT_MS = 12_000;
 const CRON_SECRETS = [
 
   Deno.env.get("CRON_SECRET"),
@@ -114,12 +115,30 @@ function hasUpstreamProxy() {
   return !!KROSSBOOKING_UPSTREAM_PROXY_URL && !!KROSSBOOKING_UPSTREAM_PROXY_SECRET;
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = KROSSBOOKING_REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Krossbooking request timed out after ${Math.round(timeoutMs / 1000)}s.`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function callUpstreamProxy(action: string, payload: Record<string, unknown>) {
   if (!hasUpstreamProxy()) {
     throw new Error("Krossbooking upstream proxy is not configured.");
   }
 
-  const response = await fetch(KROSSBOOKING_UPSTREAM_PROXY_URL, {
+  console.log(`[krossbooking-proxy] calling upstream proxy action=${action}`);
+  const response = await fetchWithTimeout(KROSSBOOKING_UPSTREAM_PROXY_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -149,7 +168,8 @@ async function getAuthToken(): Promise<string> {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
   }
 
-  const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
+  console.log("[krossbooking-proxy] requesting Krossbooking auth token");
+  const response = await fetchWithTimeout(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -194,7 +214,8 @@ async function postToKrossbooking(authToken: string | null, path: string, payloa
     throw new Error(`Missing Krossbooking auth token for path: ${path}`);
   }
 
-  const response = await fetch(`${KROSSBOOKING_API_BASE_URL}${path}`, {
+  console.log(`[krossbooking-proxy] calling Krossbooking API path=${path}`);
+  const response = await fetchWithTimeout(`${KROSSBOOKING_API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

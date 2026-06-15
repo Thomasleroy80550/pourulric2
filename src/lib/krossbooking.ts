@@ -113,6 +113,7 @@ export interface ChannelPriceAvailabilityItem {
 }
 
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
+const KROSSBOOKING_PROXY_TIMEOUT_MS = 12_000;
 
 // Cache variables and durations
 let roomTypesCache: {
@@ -151,14 +152,28 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
       throw new Error("User not authenticated. Please log in.");
     }
 
-    const response = await fetch(KROSSBOOKING_PROXY_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ action, ...payload }),
-    });
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), KROSSBOOKING_PROXY_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(KROSSBOOKING_PROXY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action, ...payload }),
+        signal: controller.signal,
+      });
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error("Le service Krossbooking met trop de temps à répondre.");
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
 
     console.log(`Response status from Edge Function: ${response.status}`);
     const responseText = await response.text();

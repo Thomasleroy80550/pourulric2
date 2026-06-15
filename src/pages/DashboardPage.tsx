@@ -568,19 +568,6 @@ const DashboardPage = () => {
         setAverageRating(null);
       }
 
-      const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      let nextArrivalCandidate: KrossbookingReservation | null = null;
-      allReservations.forEach(res => {
-        const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-        if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
-          nextArrivalCandidate = res;
-        }
-      });
-      setNextArrival(nextArrivalCandidate);
-
       const totalDaysInSelectedYear = getDaysInYear(new Date(selectedYear, 0, 1));
       const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInSelectedYear;
       const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNights / totalAvailableNightsInYear) * 100 : 0;
@@ -591,6 +578,29 @@ const DashboardPage = () => {
         setNetPricePerNight(calculatedNetPricePerNight);
         return prev;
       });
+
+      setLoadingFinancialData(false);
+      setLoadingTasks(false);
+
+      try {
+        const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let nextArrivalCandidate: KrossbookingReservation | null = null;
+        allReservations.forEach(res => {
+          const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+          if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
+            nextArrivalCandidate = res;
+          }
+        });
+        setNextArrival(nextArrivalCandidate);
+      } catch (err: any) {
+        setKrossbookingStatsError(`Erreur lors du chargement des réservations : ${err.message}`);
+        console.error("Error fetching Krossbooking dashboard data:", err);
+      } finally {
+        setLoadingKrossbookingStats(false);
+      }
 
     } catch (err: any) {
       const errorMsg = `Erreur lors du chargement des données : ${err.message}`;

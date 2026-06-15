@@ -63,8 +63,6 @@ const CalendarPage: React.FC = () => {
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
   const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'ical'>('planning');
 
-  console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
-
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();

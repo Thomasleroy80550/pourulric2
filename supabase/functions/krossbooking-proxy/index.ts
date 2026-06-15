@@ -152,6 +152,10 @@ function getParsedError(parsed: any) {
   return parsed && typeof parsed === "object" && "error" in parsed ? String(parsed.error) : "";
 }
 
+function isProviderIpDeniedError(message: string) {
+  return /not allowed/i.test(message) || /IP.*allowed/i.test(message);
+}
+
 async function callUpstreamProxy(action: string, payload: Record<string, unknown>) {
   if (!hasUpstreamProxy()) {
     throw new Error("Krossbooking upstream proxy is not configured.");
@@ -227,6 +231,15 @@ async function postToKrossbooking(authToken: string | null, path: string, payloa
   if (hasUpstreamProxy() && path === "/rooms/get-rooms") {
     console.log("[krossbooking-proxy] using upstream proxy action=get_room_types");
     return callUpstreamProxy("get_room_types", {
+      ...(typeof payload.id_property === "number" ? { id_property: payload.id_property } : {}),
+    });
+  }
+
+  if (hasUpstreamProxy() && path === "/housekeeping/get-tasks") {
+    console.log("[krossbooking-proxy] using upstream proxy action=get_housekeeping_tasks");
+    return callUpstreamProxy("get_housekeeping_tasks", {
+      date_from: payload.date_from,
+      date_to: payload.date_to,
       ...(typeof payload.id_property === "number" ? { id_property: payload.id_property } : {}),
     });
   }
@@ -713,10 +726,14 @@ serve(async (req) => {
         throw new Error(`Unsupported action: ${action}`);
     }
 
+    const canUseUpstreamProxy =
+      hasUpstreamProxy() &&
+      (krossbookingPath === "/rooms/get-rooms" ||
+        krossbookingPath === "/reservations/get-list" ||
+        krossbookingPath === "/housekeeping/get-tasks");
+
     const data = await postToKrossbooking(
-      hasUpstreamProxy() && (krossbookingPath === "/rooms/get-rooms" || krossbookingPath === "/reservations/get-list")
-        ? null
-        : await getOrCreateAuthToken(),
+      canUseUpstreamProxy ? null : await getOrCreateAuthToken(),
       krossbookingPath,
       payload,
     );
@@ -745,9 +762,15 @@ serve(async (req) => {
     }
 
     const message = error instanceof Error ? error.message : String(error);
+    const providerIpDenied = isProviderIpDeniedError(message);
     console.error(`[krossbooking-proxy] error ${message}`);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+    return new Response(JSON.stringify({
+      error: providerIpDenied
+        ? "Le prestataire refuse actuellement les connexions depuis notre serveur. Notre équipe est déjà sur le problème."
+        : message,
+      code: providerIpDenied ? "PROVIDER_IP_DENIED" : "KROSSBOOKING_PROXY_ERROR",
+    }), {
+      status: providerIpDenied ? 503 : 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }

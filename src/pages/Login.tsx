@@ -20,6 +20,7 @@ import { Home, Mail, Lock, Eye, EyeOff, Loader2, KeyRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import MigrationHelpDialog from "@/components/MigrationHelpDialog";
+import KrossbookingMaintenanceNotice from "@/components/KrossbookingMaintenanceNotice";
 import { getServiceStatuses, ServiceStatus } from "@/lib/status-api";
 
 const emailSchema = zod.object({
@@ -294,6 +295,8 @@ const Login = () => {
               </h1>
               <p className="mt-1 text-sm text-gray-500">Bienvenue, connectez-vous à l'application</p>
 
+              <KrossbookingMaintenanceNotice className="mt-5" />
+
               <div className="mt-6">
                 <Form {...form}>
                   <form
@@ -549,6 +552,8 @@ const Login = () => {
               <p className="text-sm text-gray-500 mb-6">
                 Veuillez vous connecter à votre compte
               </p>
+
+              <KrossbookingMaintenanceNotice className="mb-6" />
 
               <Form {...form}>
                 <form

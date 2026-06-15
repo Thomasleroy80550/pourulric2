@@ -8,7 +8,7 @@ const KrossbookingMaintenanceNotice = ({ className = "" }: KrossbookingMaintenan
   return (
     <section
       className={`rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 shadow-sm ${className}`}
-      aria-label="Maintenance Krossbooking"
+      aria-label="Maintenance prestataire"
     >
       <div className="flex gap-3">
         <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800">
@@ -16,7 +16,7 @@ const KrossbookingMaintenanceNotice = ({ className = "" }: KrossbookingMaintenan
         </div>
         <div className="space-y-2 text-sm leading-relaxed">
           <div>
-            <p className="text-base font-semibold">Incident en cours chez notre prestataire Krossbooking</p>
+            <p className="text-base font-semibold">Incident en cours chez notre prestataire</p>
             <p className="mt-1 font-medium">Nous rencontrons une nouvelle coupure provenant de notre prestataire.</p>
           </div>
 

@@ -113,14 +113,12 @@ export interface ChannelPriceAvailabilityItem {
 }
 
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
-const KROSSBOOKING_PROXY_TIMEOUT_MS = 12_000;
 
 // Cache variables and durations
 let roomTypesCache: {
   data: KrossbookingRoomType[];
   timestamp: number;
 } | null = null;
-let roomTypesInFlight: Promise<KrossbookingRoomType[]> | null = null;
 const ROOM_TYPE_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 let reservationsCache: {
@@ -153,28 +151,14 @@ async function callKrossbookingProxy(action: string, payload?: any): Promise<any
       throw new Error("User not authenticated. Please log in.");
     }
 
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), KROSSBOOKING_PROXY_TIMEOUT_MS);
-
-    let response: Response;
-    try {
-      response = await fetch(KROSSBOOKING_PROXY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ action, ...payload }),
-        signal: controller.signal,
-      });
-    } catch (error: any) {
-      if (error?.name === 'AbortError') {
-        throw new Error("Le service Krossbooking met trop de temps à répondre.");
-      }
-      throw error;
-    } finally {
-      window.clearTimeout(timeoutId);
-    }
+    const response = await fetch(KROSSBOOKING_PROXY_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ action, ...payload }),
+    });
 
     console.log(`Response status from Edge Function: ${response.status}`);
     const responseText = await response.text();
@@ -505,78 +489,67 @@ export async function saveChannelManagerSettings(payload: ChannelManagerPayload)
   return callKrossbookingProxy('save_channel_manager', payload);
 }
 
-export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> {
+export async function fetchKrossbookingRoomTypes(forceRefresh: boolean = false): Promise<KrossbookingRoomType[]> { // Add forceRefresh
   const now = Date.now();
   if (!forceRefresh && roomTypesCache && (now - roomTypesCache.timestamp < ROOM_TYPE_CACHE_DURATION)) {
     console.log("Returning cached Krossbooking room types.");
     return roomTypesCache.data;
   }
 
-  if (!forceRefresh && roomTypesInFlight) {
-    console.log("Reusing pending Krossbooking room types request.");
-    return roomTypesInFlight;
-  }
+  try {
+    console.log("Fetching fresh Krossbooking room types from API.");
+    const profile = await getProfile(); // Fetch profile to get krossbooking_property_id
+    const flatRoomsData = await callKrossbookingProxy('get_room_types', {
+      id_property: profile?.krossbooking_property_id // Pass the property ID
+    });
 
-  roomTypesInFlight = (async () => {
-    try {
-      console.log("Fetching fresh Krossbooking room types from API.");
-      const profile = await getProfile();
-      const flatRoomsData = await callKrossbookingProxy('get_room_types', {
-        id_property: profile?.krossbooking_property_id,
-      });
-
-      if (!Array.isArray(flatRoomsData)) {
-        console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
-        return [];
-      }
-
-      const roomTypesMap = new Map<number, KrossbookingRoomType>();
-
-      for (const room of flatRoomsData) {
-        const typeId = room.id_room_type;
-        const typeLabel = room.room_type_label || `Type ${typeId}`;
-
-        if (!typeId) continue;
-
-        if (!roomTypesMap.has(typeId)) {
-          roomTypesMap.set(typeId, {
-            id_room_type: typeId,
-            label: typeLabel,
-            rooms: [],
-          });
-        }
-
-        const roomType = roomTypesMap.get(typeId);
-        if (roomType) {
-          roomType.rooms.push({
-            id_room: room.id_room,
-            label: room.label,
-          });
-        }
-      }
-
-      const processedRoomTypes = Array.from(roomTypesMap.values());
-      
-      roomTypesCache = {
-        data: processedRoomTypes,
-        timestamp: now,
-      };
-      console.log("Krossbooking room types cached successfully.");
-
-      return processedRoomTypes;
-    } catch (error) {
-      console.error('Error fetching and processing Krossbooking room types:', error);
-      if (roomTypesCache) {
-        console.warn("Returning stale cache due to API error.");
-        return roomTypesCache.data;
-      }
-      throw error;
-    } finally {
-      roomTypesInFlight = null;
+    if (!Array.isArray(flatRoomsData)) {
+      console.warn('Unexpected Krossbooking API response for rooms/get-rooms:', flatRoomsData);
+      return [];
     }
-  })();
 
-  return roomTypesInFlight;
+    const roomTypesMap = new Map<number, KrossbookingRoomType>();
+
+    for (const room of flatRoomsData) {
+      const typeId = room.id_room_type;
+      const typeLabel = room.room_type_label || `Type ${typeId}`;
+
+      if (!typeId) continue;
+
+      if (!roomTypesMap.has(typeId)) {
+        roomTypesMap.set(typeId, {
+          id_room_type: typeId,
+          label: typeLabel,
+          rooms: [],
+        });
+      }
+
+      const roomType = roomTypesMap.get(typeId);
+      if (roomType) {
+        roomType.rooms.push({
+          id_room: room.id_room,
+          label: room.label,
+        });
+      }
+    }
+
+    const processedRoomTypes = Array.from(roomTypesMap.values());
+    
+    roomTypesCache = {
+      data: processedRoomTypes,
+      timestamp: now,
+    };
+    console.log("Krossbooking room types cached successfully.");
+
+    return processedRoomTypes;
+  } catch (error) {
+    console.error('Error fetching and processing Krossbooking room types:', error);
+    if (roomTypesCache) {
+      console.warn("Returning stale cache due to API error.");
+      return roomTypesCache.data;
+    }
+    throw error;
+  }
 }
 
 export async function fetchChannelPricesAndAvailability(params: {

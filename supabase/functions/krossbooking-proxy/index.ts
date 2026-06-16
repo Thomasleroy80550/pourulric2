@@ -4,7 +4,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
 const KROSSBOOKING_UPSTREAM_PROXY_URL = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_URL") ?? "").trim();
 const KROSSBOOKING_UPSTREAM_PROXY_SECRET = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_SECRET") ?? "").trim();
-const KROSSBOOKING_REQUEST_TIMEOUT_MS = 12_000;
 const CRON_SECRETS = [
 
   Deno.env.get("CRON_SECRET"),
@@ -115,54 +114,12 @@ function hasUpstreamProxy() {
   return !!KROSSBOOKING_UPSTREAM_PROXY_URL && !!KROSSBOOKING_UPSTREAM_PROXY_SECRET;
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = KROSSBOOKING_REQUEST_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Krossbooking request timed out after ${Math.round(timeoutMs / 1000)}s.`);
-    }
-
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-function compactResponsePreview(responseText: string) {
-  return responseText.trim().replace(/\s+/g, " ").slice(0, 240);
-}
-
-function parseJsonResponse(responseText: string, source: string): any {
-  if (!responseText.trim()) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(responseText);
-  } catch {
-    throw new Error(`${source} returned a non-JSON response: ${compactResponsePreview(responseText)}`);
-  }
-}
-
-function getParsedError(parsed: any) {
-  return parsed && typeof parsed === "object" && "error" in parsed ? String(parsed.error) : "";
-}
-
-function isProviderIpDeniedError(message: string) {
-  return /not allowed/i.test(message) || /IP.*allowed/i.test(message);
-}
-
 async function callUpstreamProxy(action: string, payload: Record<string, unknown>) {
   if (!hasUpstreamProxy()) {
     throw new Error("Krossbooking upstream proxy is not configured.");
   }
 
-  console.log(`[krossbooking-proxy] calling upstream proxy action=${action}`);
-  const response = await fetchWithTimeout(KROSSBOOKING_UPSTREAM_PROXY_URL, {
+  const response = await fetch(KROSSBOOKING_UPSTREAM_PROXY_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -172,10 +129,10 @@ async function callUpstreamProxy(action: string, payload: Record<string, unknown
   });
 
   const responseText = await response.text();
-  const parsed = parseJsonResponse(responseText, `Upstream proxy action=${action}`);
+  const parsed = responseText ? JSON.parse(responseText) : null;
 
   if (!response.ok) {
-    throw new Error(getParsedError(parsed) || `Upstream proxy error: ${response.status} - ${compactResponsePreview(responseText)}`);
+    throw new Error(parsed?.error || `Upstream proxy error: ${response.status}`);
   }
 
   return parsed;
@@ -192,8 +149,7 @@ async function getAuthToken(): Promise<string> {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
   }
 
-  console.log("[krossbooking-proxy] requesting Krossbooking auth token");
-  const response = await fetchWithTimeout(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
+  const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -204,13 +160,12 @@ async function getAuthToken(): Promise<string> {
     }),
   });
 
-  const responseText = await response.text();
-
   if (!response.ok) {
-    throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${compactResponsePreview(responseText)}`);
+    const errorText = await response.text();
+    throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${errorText}`);
   }
 
-  const data = parseJsonResponse(responseText, "Krossbooking auth");
+  const data = await response.json();
   if (!data?.auth_token) {
     throw new Error("Krossbooking token not found in response.");
   }
@@ -235,21 +190,11 @@ async function postToKrossbooking(authToken: string | null, path: string, payloa
     });
   }
 
-  if (hasUpstreamProxy() && path === "/housekeeping/get-tasks") {
-    console.log("[krossbooking-proxy] using upstream proxy action=get_housekeeping_tasks");
-    return callUpstreamProxy("get_housekeeping_tasks", {
-      date_from: payload.date_from,
-      date_to: payload.date_to,
-      ...(typeof payload.id_property === "number" ? { id_property: payload.id_property } : {}),
-    });
-  }
-
   if (!authToken) {
     throw new Error(`Missing Krossbooking auth token for path: ${path}`);
   }
 
-  console.log(`[krossbooking-proxy] calling Krossbooking API path=${path}`);
-  const response = await fetchWithTimeout(`${KROSSBOOKING_API_BASE_URL}${path}`, {
+  const response = await fetch(`${KROSSBOOKING_API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -258,13 +203,12 @@ async function postToKrossbooking(authToken: string | null, path: string, payloa
     body: JSON.stringify(payload),
   });
 
-  const responseText = await response.text();
-
   if (!response.ok) {
-    throw new Error(`Krossbooking API error: ${response.status} - ${compactResponsePreview(responseText)}`);
+    const errorText = await response.text();
+    throw new Error(`Krossbooking API error: ${response.status} - ${errorText}`);
   }
 
-  return parseJsonResponse(responseText, `Krossbooking API path=${path}`);
+  return response.json();
 }
 
 async function getUserContext(authHeader: string): Promise<UserContext> {
@@ -726,14 +670,10 @@ serve(async (req) => {
         throw new Error(`Unsupported action: ${action}`);
     }
 
-    const canUseUpstreamProxy =
-      hasUpstreamProxy() &&
-      (krossbookingPath === "/rooms/get-rooms" ||
-        krossbookingPath === "/reservations/get-list" ||
-        krossbookingPath === "/housekeeping/get-tasks");
-
     const data = await postToKrossbooking(
-      canUseUpstreamProxy ? null : await getOrCreateAuthToken(),
+      hasUpstreamProxy() && (krossbookingPath === "/rooms/get-rooms" || krossbookingPath === "/reservations/get-list")
+        ? null
+        : await getOrCreateAuthToken(),
       krossbookingPath,
       payload,
     );
@@ -762,15 +702,9 @@ serve(async (req) => {
     }
 
     const message = error instanceof Error ? error.message : String(error);
-    const providerIpDenied = isProviderIpDeniedError(message);
     console.error(`[krossbooking-proxy] error ${message}`);
-    return new Response(JSON.stringify({
-      error: providerIpDenied
-        ? "Le prestataire refuse actuellement les connexions depuis notre serveur. Notre équipe est déjà sur le problème."
-        : message,
-      code: providerIpDenied ? "PROVIDER_IP_DENIED" : "KROSSBOOKING_PROXY_ERROR",
-    }), {
-      status: providerIpDenied ? 503 : 500,
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }

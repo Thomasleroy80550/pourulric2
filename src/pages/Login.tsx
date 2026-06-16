@@ -16,11 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Home, Mail, Lock, Eye, EyeOff, Loader2, KeyRound } from "lucide-react";
+import { Home, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import MigrationHelpDialog from "@/components/MigrationHelpDialog";
-import KrossbookingMaintenanceNotice from "@/components/KrossbookingMaintenanceNotice";
 import { getServiceStatuses, ServiceStatus } from "@/lib/status-api";
 
 const emailSchema = zod.object({
@@ -33,11 +32,6 @@ const emailSchema = zod.object({
 type EmailFormValues = zod.infer<typeof emailSchema>;
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
-const isPasswordRecoveryUrl = () =>
-  window.location.hash.includes("type=recovery") ||
-  window.location.search.includes("type=recovery") ||
-  window.sessionStorage.getItem("password-recovery-in-progress") === "true";
 
 const sendAuthEmailViaResend = async (email: string, action: "magic_link" | "password_reset") => {
   const { data, error } = await supabase.functions.invoke("send-auth-email", {
@@ -71,9 +65,6 @@ const Login = () => {
   const [statusesLoading, setStatusesLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState(false);
   const [keepSignedIn, setKeepSignedIn] = useState(true);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
 
   const form = useForm<EmailFormValues>({
     resolver: zodResolver(emailSchema),
@@ -88,19 +79,6 @@ const Login = () => {
     getServiceStatuses()
       .then((data) => setServiceStatuses(data))
       .finally(() => setStatusesLoading(false));
-  }, []);
-
-  useEffect(() => {
-    setIsPasswordRecovery(isPasswordRecoveryUrl());
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        window.sessionStorage.setItem("password-recovery-in-progress", "true");
-        setIsPasswordRecovery(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const handleEmailSubmit = async (values: EmailFormValues) => {
@@ -157,107 +135,9 @@ const Login = () => {
     }
   };
 
-  const handlePasswordRecoverySubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (newPassword.length < 6) {
-      toast.error("Le nouveau mot de passe doit contenir au moins 6 caractères.");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-
-      window.sessionStorage.removeItem("password-recovery-in-progress");
-      setIsPasswordRecovery(false);
-      setNewPassword("");
-      setConfirmPassword("");
-      toast.success("Mot de passe mis à jour. Vous pouvez maintenant vous connecter.");
-      await supabase.auth.signOut();
-    } catch (error: any) {
-      toast.error(`Erreur: ${error.message || "Impossible de mettre à jour le mot de passe."}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="notranslate min-h-[100svh] bg-white md:bg-gradient-to-b md:from-gray-50 md:via-white md:to-[#EAF4FF]" translate="no">
       {loading && <LoadingOverlay message="Connexion en cours..." />}
-
-      {isPasswordRecovery ? (
-        <div className="min-h-[100svh] flex items-center justify-center px-5 py-10">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-lg border border-gray-100">
-            <div className="flex justify-center mb-5">
-              <img src="/logo.png" alt="Hello Keys" className="h-10 w-auto" />
-            </div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <KeyRound className="h-5 w-5" />
-              </span>
-              <h1 className="text-2xl font-bold text-gray-900">Nouveau mot de passe</h1>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">
-              Choisissez un nouveau mot de passe pour finaliser la réinitialisation.
-            </p>
-
-            <form onSubmit={handlePasswordRecoverySubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="new-recovery-password" className="text-sm font-medium text-gray-700">
-                  Nouveau mot de passe
-                </label>
-                <Input
-                  id="new-recovery-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  minLength={6}
-                  required
-                  disabled={loading}
-                  placeholder="Votre nouveau mot de passe"
-                  className="h-12 rounded-xl"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="confirm-recovery-password" className="text-sm font-medium text-gray-700">
-                  Confirmer le mot de passe
-                </label>
-                <Input
-                  id="confirm-recovery-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  minLength={6}
-                  required
-                  disabled={loading}
-                  placeholder="Confirmez le nouveau mot de passe"
-                  className="h-12 rounded-xl"
-                />
-              </div>
-
-              <Button type="submit" className="w-full h-12 rounded-full" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Mise à jour…
-                  </>
-                ) : (
-                  "Mettre à jour mon mot de passe"
-                )}
-              </Button>
-            </form>
-          </div>
-        </div>
-      ) : (
-      <>
 
       {/* Mobile: plein écran, style "app" */}
       <div className="md:hidden min-h-[100svh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -294,8 +174,6 @@ const Login = () => {
                 Connexion
               </h1>
               <p className="mt-1 text-sm text-gray-500">Bienvenue, connectez-vous à l'application</p>
-
-              <KrossbookingMaintenanceNotice className="mt-5" />
 
               <div className="mt-6">
                 <Form {...form}>
@@ -553,8 +431,6 @@ const Login = () => {
                 Veuillez vous connecter à votre compte
               </p>
 
-              <KrossbookingMaintenanceNotice className="mb-6" />
-
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(handleEmailSubmit)}
@@ -728,8 +604,6 @@ const Login = () => {
           </div>
         </div>
       </div>
-      </>
-      )}
 
       <MigrationHelpDialog
         isOpen={isMigrationHelpDialogOpen}

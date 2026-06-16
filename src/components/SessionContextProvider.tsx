@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -26,16 +26,14 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const hasCompletedInitialSessionCheck = useRef(false);
-  const locationPathRef = useRef(location.pathname);
 
-  useEffect(() => {
-    locationPathRef.current = location.pathname;
-  }, [location.pathname]);
+  console.log("SessionContextProvider rendering. Loading:", loading, "Path:", location.pathname);
 
-  const fetchUserProfile = useCallback(async (_userSession: Session) => {
+  const fetchUserProfile = useCallback(async (userSession: Session) => {
+    console.log("Fetching user profile...");
     try {
       const userProfile = await getProfile();
+      console.log("User profile fetched:", userProfile);
       
       // Vérifier si le contrat est résilié
       if (userProfile?.is_contract_terminated) {
@@ -52,82 +50,61 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, []);
 
   const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
-    const shouldShowInitialLoader = !hasCompletedInitialSessionCheck.current;
-    if (shouldShowInitialLoader) {
-      setLoading(true);
-    }
+    setLoading(true);
+    if (currentSession) {
+      setSession(currentSession);
+      const userProfile = await fetchUserProfile(currentSession);
 
-    const currentPath = locationPathRef.current;
-    const isPasswordRecoveryRoute =
-      currentPath === '/login' &&
-      (window.location.hash.includes('type=recovery') ||
-        window.location.search.includes('type=recovery') ||
-        window.sessionStorage.getItem('password-recovery-in-progress') === 'true');
+      if (userProfile) {
+        const isAdmin = userProfile.role === 'admin';
+        const isOnboardingComplete = userProfile.onboarding_status === 'live';
 
-    try {
-      if (currentSession) {
-        setSession(currentSession);
-
-        if (isPasswordRecoveryRoute) {
-          window.sessionStorage.setItem('password-recovery-in-progress', 'true');
-          return;
-        }
-
-        const userProfile = await fetchUserProfile(currentSession);
-
-        if (userProfile) {
-          const isAdmin = userProfile.role === 'admin';
-          const isOnboardingComplete = userProfile.onboarding_status === 'live';
-
-          // --- Redirection Logic ---
-          if (isAdmin) {
-            // Admins are redirected to their dashboard from login/onboarding pages
-            if (currentPath === '/login' || currentPath === '/onboarding-status') {
-              navigate('/admin');
+        // --- Redirection Logic ---
+        if (isAdmin) {
+          // Admins are redirected to their dashboard from login/onboarding pages
+          if (location.pathname === '/login' || location.pathname === '/onboarding-status') {
+            navigate('/admin');
+          }
+        } else {
+          // Regular user logic
+          if (!isOnboardingComplete) {
+            // Autoriser l'invitation même si l'onboarding n'est pas terminé
+            if (location.pathname !== '/onboarding-status' && !location.pathname.startsWith('/redeem-invite')) {
+              navigate('/onboarding-status');
             }
           } else {
-            // Regular user logic
-            if (!isOnboardingComplete) {
-              // Autoriser l'invitation même si l'onboarding n'est pas terminé
-              if (currentPath !== '/onboarding-status' && !currentPath.startsWith('/redeem-invite')) {
-                navigate('/onboarding-status');
-              }
-            } else {
-              // Si onboarding terminé, ne pas rediriger s'il est sur /redeem-invite
-              if ((currentPath === '/onboarding-status' || currentPath === '/login') && !currentPath.startsWith('/redeem-invite')) {
-                navigate('/');
-              }
+            // Si onboarding terminé, ne pas rediriger s'il est sur /redeem-invite
+            if ((location.pathname === '/onboarding-status' || location.pathname === '/login') && !location.pathname.startsWith('/redeem-invite')) {
+              navigate('/');
             }
           }
-
-          // --- CGUV Check ---
-          const cguvAccepted = userProfile.cguv_accepted_at;
-          const cguvVersion = userProfile.cguv_version;
-          if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
-            setShowCguvModal(true);
-          } else {
-            setShowCguvModal(false);
-          }
         }
-      } else {
-        // No session, redirect to login if not already there
-        setSession(null);
-        setProfile(null);
-        setShowCguvModal(false);
-        setShowOnboardingConfetti(false);
-        // Whitelist des pages publiques (pas de redirection)
-        const publicPaths = ['/login', '/prospect-signup', '/redeem-invite', '/sites/'];
-        const isPublicPath = publicPaths.some((p) => currentPath.startsWith(p));
 
-        if (!isPublicPath) {
-          navigate('/login');
+        // --- CGUV Check ---
+        const cguvAccepted = userProfile.cguv_accepted_at;
+        const cguvVersion = userProfile.cguv_version;
+        if (!cguvAccepted || cguvVersion !== CURRENT_CGUV_VERSION) {
+          setShowCguvModal(true);
+        } else {
+          setShowCguvModal(false);
         }
       }
-    } finally {
-      hasCompletedInitialSessionCheck.current = true;
-      setLoading(false);
+    } else {
+      // No session, redirect to login if not already there
+      setSession(null);
+      setProfile(null);
+      setShowCguvModal(false);
+      setShowOnboardingConfetti(false);
+      // Whitelist des pages publiques (pas de redirection)
+      const publicPaths = ['/login', '/prospect-signup', '/redeem-invite', '/sites/'];
+      const isPublicPath = publicPaths.some((p) => location.pathname.startsWith(p));
+
+      if (!isPublicPath) {
+        navigate('/login');
+      }
     }
-  }, [fetchUserProfile, navigate]);
+    setLoading(false);
+  }, [fetchUserProfile, location.pathname, navigate]);
 
   // Heartbeat effect to update last_seen_at
   useEffect(() => {
@@ -151,18 +128,24 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, [session]);
 
   useEffect(() => {
+    console.log("SessionContextProvider useEffect running.");
     let isMounted = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
-      if (event === 'PASSWORD_RECOVERY') {
-        window.sessionStorage.setItem('password-recovery-in-progress', 'true');
-      }
+      console.log('Auth state changed:', event, currentSession);
       revalidateSessionAndProfile(currentSession);
+    });
+
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (!isMounted) return;
+      console.log("Initial getSession result:", initialSession);
+      revalidateSessionAndProfile(initialSession);
     });
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
+        console.log('Tab became visible. Re-checking session...');
         const { data: { session: refreshedSession } } = await supabase.auth.getSession();
         if (!isMounted) return;
         revalidateSessionAndProfile(refreshedSession);
@@ -179,6 +162,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, [revalidateSessionAndProfile]);
 
   const handleAcceptCguv = async () => {
+    console.log("Handling CGUV acceptance...");
     try {
       const wasFirstTimeAccepting = !profile?.cguv_accepted_at;
 
@@ -192,6 +176,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       toast.success("Merci d'avoir accepté les conditions générales.");
 
       if (wasFirstTimeAccepting) {
+        console.log("First time accepting CGUV, showing confetti.");
         setShowOnboardingConfetti(true);
       }
     } catch (error: any) {

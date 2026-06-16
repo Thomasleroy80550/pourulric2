@@ -28,10 +28,10 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType, SaveReservationPayload } from '@/lib/krossbooking';
+import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking'; // Import KrossbookingRoomType
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
-import { UserProfile } from '@/lib/profile-api';
+import { Profile } from '@/lib/profile-api';
 
 interface OwnerReservationDialogProps {
   isOpen: boolean;
@@ -40,7 +40,7 @@ interface OwnerReservationDialogProps {
   allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null;
-  profile: UserProfile | null;
+  profile: Profile | null;
 }
 
 const blockTypes = [
@@ -151,7 +151,9 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
   }, [isOpen, initialBooking, form]);
 
+  console.log("OwnerReservationDialog - Profile prop:", profile);
   const krossbookingPropertyId = profile?.krossbooking_property_id;
+  console.log("OwnerReservationDialog - krossbooking_property_id from profile:", krossbookingPropertyId);
 
   const getDisabledDates = React.useCallback((date: Date) => {
     if (!selectedRoomId) return false;
@@ -341,7 +343,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                         initialFocus
                         mode="range"
                         defaultMonth={field.value.from}
-                        selected={field.value.from ? { from: field.value.from, to: field.value.to } : undefined}
+                        selected={field.value}
                         onSelect={field.onChange}
                         numberOfMonths={1}
                         locale={fr}

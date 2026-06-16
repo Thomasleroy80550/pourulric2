@@ -53,7 +53,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BilanPdfButton from "@/components/BilanPdfButton";
 import NewsNotificationsPopup from "@/components/NewsNotificationsPopup";
 import DashboardVersionSwitch from "@/components/DashboardVersionSwitch";
-import KrossbookingMaintenanceNotice from "@/components/KrossbookingMaintenanceNotice";
 
 // Nouvelle interface pour les tâches à faire
 interface TodoTask {
@@ -569,6 +568,19 @@ const DashboardPage = () => {
         setAverageRating(null);
       }
 
+      const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let nextArrivalCandidate: KrossbookingReservation | null = null;
+      allReservations.forEach(res => {
+        const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
+        if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
+          nextArrivalCandidate = res;
+        }
+      });
+      setNextArrival(nextArrivalCandidate);
+
       const totalDaysInSelectedYear = getDaysInYear(new Date(selectedYear, 0, 1));
       const totalAvailableNightsInYear = fetchedUserRooms.length * totalDaysInSelectedYear;
       const calculatedOccupancyRate = totalAvailableNightsInYear > 0 ? (totalNights / totalAvailableNightsInYear) * 100 : 0;
@@ -579,29 +591,6 @@ const DashboardPage = () => {
         setNetPricePerNight(calculatedNetPricePerNight);
         return prev;
       });
-
-      setLoadingFinancialData(false);
-      setLoadingTasks(false);
-
-      try {
-        const allReservations = await fetchKrossbookingReservations(fetchedUserRooms);
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        let nextArrivalCandidate: KrossbookingReservation | null = null;
-        allReservations.forEach(res => {
-          const checkIn = isValid(parseISO(res.check_in_date)) ? parseISO(res.check_in_date) : null;
-          if (checkIn && (isSameDay(checkIn, today) || isAfter(checkIn, today)) && (!nextArrivalCandidate || isBefore(checkIn, parseISO(nextArrivalCandidate.check_in_date)))) {
-            nextArrivalCandidate = res;
-          }
-        });
-        setNextArrival(nextArrivalCandidate);
-      } catch (err: any) {
-        setKrossbookingStatsError(`Erreur lors du chargement des réservations : ${err.message}`);
-        console.error("Error fetching Krossbooking dashboard data:", err);
-      } finally {
-        setLoadingKrossbookingStats(false);
-      }
 
     } catch (err: any) {
       const errorMsg = `Erreur lors du chargement des données : ${err.message}`;
@@ -676,8 +665,6 @@ const DashboardPage = () => {
 
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Version actuelle</p>
         </div>
-
-        <KrossbookingMaintenanceNotice className="mb-4" />
 
         <Alert className="mb-4 border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/30">
           <Sparkles className="h-4 w-4 text-orange-600" />

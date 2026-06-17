@@ -80,6 +80,7 @@ import AdminPennylaneMissingPage from "./pages/AdminPennylaneMissingPage";
 import AdminCRMPage from "./pages/AdminCRMPage";
 import MessagesPage from "./pages/MessagesPage";
 import SmartRepliesPage from "./pages/SmartRepliesPage";
+import SmartPricingPage from "./pages/SmartPricingPage";
 import AdminV2Dashboard from "./pages/admin-v2/Dashboard";
 import AdminV2Users from "./pages/admin-v2/Users";
 import ElectricityConsumptionPage from "./pages/ElectricityConsumptionPage";
@@ -245,6 +246,7 @@ function App() {
                       <Route path="/admin-v2/users" element={<AdminV2Users />} />
                       <Route path="/messages" element={<MessagesPage />} />
                       <Route path="/smart-replies" element={<SmartRepliesPage />} />
+                      <Route path="/smart-pricing" element={<SmartPricingPage />} />
                       <Route path="/electricity-start" element={<ElectricityServiceLanding />} />
                       <Route path="/electricity" element={<ElectricityConsumptionPage />} />
                       <Route path="/notifications" element={<NotificationsPage />} />

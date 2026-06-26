@@ -1217,27 +1217,43 @@ export async function listStripeTransfers(accountId?: string): Promise<StripeTra
  * @returns A promise that resolves to an array of UserTransferSummary objects.
  */
 export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
-  const { data: invoices, error } = await supabase
-    .from('invoices')
-    .select(`
-      id,
-      user_id,
-      period,
-      totals,
-      transfer_statuses,
-      krossbooking_property_id,
-      profiles!user_id (
-        first_name,
-        last_name,
-        stripe_account_id,
-        krossbooking_property_id
-      )
-    `)
-    .order('created_at', { ascending: false });
+  const invoices: any[] = [];
+  const pageSize = 1000;
+  let from = 0;
 
-  if (error) {
-    console.error("Error fetching invoices for transfer summary:", error);
-    throw new Error(`Erreur lors de la récupération des relevés pour la synthèse des virements : ${error.message}`);
+  while (true) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select(`
+        id,
+        user_id,
+        period,
+        totals,
+        transfer_statuses,
+        krossbooking_property_id,
+        profiles!user_id (
+          first_name,
+          last_name,
+          stripe_account_id,
+          krossbooking_property_id
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error("Error fetching invoices for transfer summary:", error);
+      throw new Error(`Erreur lors de la récupération des relevés pour la synthèse des virements : ${error.message}`);
+    }
+
+    const batch = data || [];
+    invoices.push(...batch);
+
+    if (batch.length < pageSize) {
+      break;
+    }
+
+    from += pageSize;
   }
 
   const userSummariesMap = new Map<string, UserTransferSummary>();

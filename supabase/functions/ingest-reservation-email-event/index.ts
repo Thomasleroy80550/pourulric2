@@ -148,6 +148,10 @@ function getRoomMatchScore(inputRoomName: string, existingRoomName: string): num
   }
 
   if (inputNumbers.length > 0 || existingNumbers.length > 0) {
+    if (inputNumbers.length === 0 && existingNumbers.length > 0 && basesCompatible) {
+      return 100;
+    }
+
     return -1;
   }
 

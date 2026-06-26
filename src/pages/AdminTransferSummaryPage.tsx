@@ -64,10 +64,12 @@ const AdminTransferSummaryPage: React.FC = () => {
   }, [fetchData]);
 
   const handleSourceStatusChange = async (invoiceId: string, source: string, newStatus: boolean) => {
+    const statusKey = `${invoiceId}-${source}`;
     const originalSummaries = JSON.parse(JSON.stringify(summaries));
+    setUpdatingStatus(statusKey);
     
     // Optimistic UI update
-    setSummaries(currentSummaries => 
+    setSummaries(currentSummaries =>
       currentSummaries.map(summary => ({
         ...summary,
         details: summary.details.map(detail => {
@@ -87,6 +89,8 @@ const AdminTransferSummaryPage: React.FC = () => {
       toast.error(`Erreur lors de la mise à jour du statut pour "${source}".`);
       // Revert UI on error
       setSummaries(originalSummaries);
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
@@ -480,12 +484,21 @@ const AdminTransferSummaryPage: React.FC = () => {
                                      (selectedPropertyFilter === 'crotoy' && summary.krossbooking_property_id === 1) ||
                                      (selectedPropertyFilter === 'berck' && summary.krossbooking_property_id === 2))
                                   )
-                                  .flatMap((detail) => 
+                                  .flatMap((detail) =>
                                     Object.entries(detail.amountsBySource).map(([source, amount], index) => {
                                       const isCompleted = detail.transfer_statuses?.[source] ?? false;
                                       const sourceCapitalized = source.charAt(0).toUpperCase() + source.slice(1);
+                                      const statusKey = `${detail.invoice_id}-${source}`;
+                                      const isVerifying = updatingStatus === statusKey;
                                       return (
-                                        <TableRow key={`${detail.invoice_id}-${source}`} className={cn(isCompleted && "bg-green-50/50 text-gray-500")}>
+                                        <TableRow
+                                          key={statusKey}
+                                          className={cn(
+                                            "transition-colors duration-300",
+                                            isVerifying && "bg-amber-50 text-amber-900 animate-pulse",
+                                            !isVerifying && isCompleted && "bg-green-50/50 text-gray-500"
+                                          )}
+                                        >
                                           {index === 0 && (
                                             <TableCell rowSpan={Object.keys(detail.amountsBySource).length} className="font-medium align-top border-b">
                                               {detail.period}
@@ -498,13 +511,19 @@ const AdminTransferSummaryPage: React.FC = () => {
                                               <Checkbox
                                                 id={`transfer-completed-${detail.invoice_id}-${source}`}
                                                 checked={isCompleted}
+                                                disabled={isVerifying}
                                                 onCheckedChange={(checked) => handleSourceStatusChange(detail.invoice_id, source, checked as boolean)}
                                               />
                                               <label
                                                 htmlFor={`transfer-completed-${detail.invoice_id}-${source}`}
-                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                className="flex items-center gap-1.5 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                               >
-                                                {isCompleted ? 'Effectué' : 'En attente'}
+                                                {isVerifying ? (
+                                                  <>
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    En cours de vérification...
+                                                  </>
+                                                ) : isCompleted ? 'Effectué' : 'En attente'}
                                               </label>
                                             </div>
                                           </TableCell>

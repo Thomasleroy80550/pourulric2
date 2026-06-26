@@ -1,0 +1,1 @@
+ALTER TABLE public.transfer_verification_statuses ENABLE ROW LEVEL SECURITY

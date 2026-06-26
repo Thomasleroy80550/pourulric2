@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.set_profile_transfer_verification(uuid, boolean) TO authenticated

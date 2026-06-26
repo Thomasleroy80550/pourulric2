@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS transfer_verification_in_progress boolean NOT NULL DEFAULT false

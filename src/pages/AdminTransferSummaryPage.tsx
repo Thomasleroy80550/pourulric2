@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { getTransferSummaries, UserTransferSummary, updateInvoiceSourceTransferStatus, getInvoiceById, SavedInvoice, initiateStripePayout, reconcileStripeTransfers } from '@/lib/admin-api';
+import { getTransferSummaries, UserTransferSummary, updateInvoiceSourceTransferStatus, updateUserTransferVerificationStatus, getInvoiceById, SavedInvoice, initiateStripePayout, reconcileStripeTransfers } from '@/lib/admin-api';
 import { Terminal, Banknote, CheckCircle2, Loader2, RefreshCw, Mail } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from '@/components/ui/checkbox';
@@ -36,6 +36,7 @@ const AdminTransferSummaryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState(''); // New state for search query
   const [sendingEmailForUserId, setSendingEmailForUserId] = useState<string | null>(null);
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [updatingVerificationUserId, setUpdatingVerificationUserId] = useState<string | null>(null);
 
   const getPropertyName = (id: number | null | undefined) => {
     switch (id) {
@@ -91,6 +92,29 @@ const AdminTransferSummaryPage: React.FC = () => {
       setSummaries(originalSummaries);
     } finally {
       setUpdatingStatus(null);
+    }
+  };
+
+  const handleVerificationStatusChange = async (userId: string, inProgress: boolean) => {
+    const originalSummaries = summaries;
+    setUpdatingVerificationUserId(userId);
+
+    setSummaries(currentSummaries =>
+      currentSummaries.map(summary =>
+        summary.user_id === userId
+          ? { ...summary, transfer_verification_in_progress: inProgress }
+          : summary
+      )
+    );
+
+    try {
+      await updateUserTransferVerificationStatus(userId, inProgress);
+      toast.success(inProgress ? "Virement marqué en cours de vérification." : "Vérification du virement retirée.");
+    } catch (err: any) {
+      toast.error("Erreur lors de la mise à jour du statut de vérification.");
+      setSummaries(originalSummaries);
+    } finally {
+      setUpdatingVerificationUserId(null);
     }
   };
 
@@ -429,22 +453,52 @@ const AdminTransferSummaryPage: React.FC = () => {
                         }
                         return userAcc + detailPendingAmount;
                       }, 0);
+                      const isVerificationInProgress = summary.transfer_verification_in_progress ?? false;
+                      const isUpdatingVerification = updatingVerificationUserId === summary.user_id;
 
                       return (
-                        <AccordionItem value={summary.user_id} key={summary.user_id}>
-                          <AccordionTrigger className="hover:no-underline">
-                            <div className="flex justify-between w-full pr-4 items-center">
-                              <div className="flex items-center gap-2">
-                                {allTransfersDone && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-                                <span className={cn("font-medium text-left", allTransfersDone && "text-gray-400")}>
-                                  {summary.first_name} {summary.last_name}
+                        <AccordionItem
+                          value={summary.user_id}
+                          key={summary.user_id}
+                          className={cn(
+                            "mb-2 rounded-lg border px-3 transition-colors",
+                            isVerificationInProgress && "border-amber-300 bg-amber-50",
+                            !isVerificationInProgress && allTransfersDone && "bg-green-50/40"
+                          )}
+                        >
+                          <div className="flex items-center gap-3 [&>h3]:flex-1">
+                            <AccordionTrigger className="hover:no-underline">
+                              <div className="flex justify-between w-full pr-4 items-center">
+                                <div className="flex items-center gap-2">
+                                  {allTransfersDone && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                                  <span className={cn("font-medium text-left", allTransfersDone && "text-gray-400")}>
+                                    {summary.first_name} {summary.last_name}
+                                  </span>
+                                </div>
+                                <span className={cn("font-bold text-lg", userPendingTotalAmount === 0 ? "text-gray-400 line-through" : "text-green-600")}>
+                                  {userPendingTotalAmount.toFixed(2)}€
                                 </span>
                               </div>
-                              <span className={cn("font-bold text-lg", userPendingTotalAmount === 0 ? "text-gray-400 line-through" : "text-green-600")}>
-                                {userPendingTotalAmount.toFixed(2)}€
-                              </span>
+                            </AccordionTrigger>
+                            <div
+                              className="flex shrink-0 items-center gap-2 pr-2"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {isUpdatingVerification && <Loader2 className="h-4 w-4 animate-spin text-amber-600" />}
+                              <Checkbox
+                                id={`transfer-verification-${summary.user_id}`}
+                                checked={isVerificationInProgress}
+                                disabled={isUpdatingVerification}
+                                onCheckedChange={(checked) => handleVerificationStatusChange(summary.user_id, checked === true)}
+                              />
+                              <label
+                                htmlFor={`transfer-verification-${summary.user_id}`}
+                                className="cursor-pointer text-sm font-medium text-amber-800"
+                              >
+                                En vérification
+                              </label>
                             </div>
-                          </AccordionTrigger>
+                          </div>
                           <AccordionContent>
                             <div className="mb-3 flex items-center justify-between gap-2">
                               <div className="text-sm text-muted-foreground">

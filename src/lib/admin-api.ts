@@ -170,6 +170,7 @@ export interface UserTransferSummary {
   last_name: string | null;
   stripe_account_id: string | null; // Ajout de l'ID de compte Stripe
   krossbooking_property_id?: number | null; // Ajout de l'ID de la propriété au niveau du résumé de l'utilisateur
+  transfer_verification_in_progress?: boolean;
   total_amount_to_transfer: number;
   details: {
     period: string;
@@ -1256,6 +1257,25 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     from += pageSize;
   }
 
+  const userIds = Array.from(new Set(invoices.map(invoice => invoice.user_id).filter(Boolean)));
+  const verificationByUserId = new Map<string, boolean>();
+
+  if (userIds.length > 0) {
+    const { data: verificationStatuses, error: verificationError } = await supabase
+      .from('transfer_verification_statuses')
+      .select('user_id, in_progress')
+      .in('user_id', userIds);
+
+    if (verificationError) {
+      console.error("Error fetching transfer verification statuses:", verificationError);
+      throw new Error(`Erreur lors de la récupération des statuts de vérification : ${verificationError.message}`);
+    }
+
+    verificationStatuses?.forEach(status => {
+      verificationByUserId.set(status.user_id, status.in_progress);
+    });
+  }
+
   const userSummariesMap = new Map<string, UserTransferSummary>();
 
   invoices.forEach(invoice => {
@@ -1265,6 +1285,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
     const lastName = profile?.last_name || 'N/A';
     const stripeAccountId = profile?.stripe_account_id || null;
     const userKrossbookingPropertyId = profile?.krossbooking_property_id || null;
+    const transferVerificationInProgress = verificationByUserId.get(userId) ?? false;
 
     if (!userSummariesMap.has(userId)) {
 
@@ -1274,6 +1295,7 @@ export async function getTransferSummaries(): Promise<UserTransferSummary[]> {
         last_name: lastName,
         stripe_account_id: stripeAccountId,
         krossbooking_property_id: userKrossbookingPropertyId, // Assign to user summary
+        transfer_verification_in_progress: transferVerificationInProgress,
         total_amount_to_transfer: 0,
         details: [],
       });
@@ -1589,6 +1611,18 @@ export async function updateInvoiceSourceTransferStatus(invoiceId: string, sourc
   if (error) {
     console.error("Error updating source transfer status:", error);
     throw new Error(`Erreur lors de la mise à jour du statut du virement pour la source ${source} : ${error.message}`);
+  }
+}
+
+export async function updateUserTransferVerificationStatus(userId: string, inProgress: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_profile_transfer_verification', {
+    p_user_id: userId,
+    p_in_progress: inProgress,
+  });
+
+  if (error) {
+    console.error("Error updating transfer verification status:", error);
+    throw new Error(`Erreur lors de la mise à jour du statut de vérification : ${error.message}`);
   }
 }
 

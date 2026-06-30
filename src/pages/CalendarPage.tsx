@@ -343,7 +343,7 @@ const CalendarPage: React.FC = () => {
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Réservation Propriétaire
                 </Button>
-                <Button onClick={() => handleFeatureUnavailableClick('Configurer Prix')} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
+                <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
   
                 <DollarSign className="h-4 w-4 mr-2" />
                 Configurer Prix
@@ -463,7 +463,7 @@ const CalendarPage: React.FC = () => {
               <PlusCircle className="h-4 w-4 mr-2" />
               Réservation Propriétaire
             </Button>
-            <Button onClick={() => handleFeatureUnavailableClick('Configurer Prix')} variant="outline" className="flex items-center">
+            <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center">
 
               <DollarSign className="h-4 w-4 mr-2" />
               Configurer Prix

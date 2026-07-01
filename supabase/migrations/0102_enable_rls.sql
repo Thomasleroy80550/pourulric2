@@ -1,0 +1,1 @@
+ALTER TABLE public.krossbooking_reviews ENABLE ROW LEVEL SECURITY;

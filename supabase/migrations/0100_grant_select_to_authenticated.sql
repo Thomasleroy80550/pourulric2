@@ -1,0 +1,1 @@
+GRANT SELECT ON TABLE public.krossbooking_reviews TO authenticated;

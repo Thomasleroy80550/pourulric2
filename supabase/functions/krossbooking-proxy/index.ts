@@ -588,6 +588,21 @@ serve(async (req) => {
         payload = { id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined };
         break;
 
+      case "get_all_reservations":
+        // Récupère les réservations de l'hôtel (tous logements) de façon paginée,
+        // pour construire les correspondances réservation -> logement côté scan.
+        krossbookingPath = "/reservations/get-list";
+        payload = {
+          with_rooms: true,
+          limit: typeof requestBody.limit === "number" ? requestBody.limit : 1000,
+          offset: typeof requestBody.offset === "number" ? requestBody.offset : 0,
+          ...(typeof requestBody.page === "number" ? { page: requestBody.page } : {}),
+          ...(typeof requestBody.date_from === "string" && requestBody.date_from.trim() ? { date_from: requestBody.date_from.trim() } : {}),
+          ...(typeof requestBody.date_to === "string" && requestBody.date_to.trim() ? { date_to: requestBody.date_to.trim() } : {}),
+          ...(requestBody.id_property ? { id_property: Number(requestBody.id_property) } : {}),
+        };
+        break;
+
       case "get_reviews": {
         // Collecte des avis OTA via Krossbooking (remplace Revyoos).
         // Passe par postToKrossbooking => utilise le proxy client comme toutes les autres actions.

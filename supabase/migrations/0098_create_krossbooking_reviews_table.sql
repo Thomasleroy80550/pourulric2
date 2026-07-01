@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS public.krossbooking_reviews (
+  id_review integer PRIMARY KEY,
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  room_id text,
+  room_name text,
+  id_reservation bigint,
+  external_reservation_reference text,
+  external_listing_reference text,
+  id_room_type integer,
+  name_room_type text,
+  review_date date,
+  cod_channel text,
+  review_title text,
+  review_text text,
+  rating numeric,
+  ratings jsonb,
+  raw jsonb,
+  scanned_at timestamptz DEFAULT now(),
+  created_at timestamptz DEFAULT now()
+);

@@ -1,9 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getUserRooms } from './user-room-api';
-import { fetchKrossbookingReservations } from './krossbooking';
-import { getProfile } from './profile-api';
 
 export interface Review {
   id: string;
@@ -15,126 +12,68 @@ export interface Review {
   source: string;
 }
 
-interface KrossReviewDTO {
+interface KrossbookingReviewRow {
   id_review: number;
-  id_reservation?: number;
-  external_reservation_reference?: string;
-  id_room_type?: number;
-  name_room_type?: string;
-  date?: string;
-  cod_channel?: string;
-  review_title?: string;
-  review_text?: string;
-  rating?: number;
+  room_name: string | null;
+  name_room_type: string | null;
+  review_date: string | null;
+  cod_channel: string | null;
+  review_title: string | null;
+  review_text: string | null;
+  rating: number | null;
 }
 
 // Certaines OTA (ex: Booking) notent sur 10, on ramène tout sur une échelle de 5.
-function normalizeRatingToFive(rating: number): number {
-  if (!Number.isFinite(rating) || rating <= 0) return 0;
+function normalizeRatingToFive(rating: number | null): number {
+  if (rating === null || !Number.isFinite(rating) || rating <= 0) return 0;
   const normalized = rating > 5 ? rating / 2 : rating;
   return Math.round(normalized * 10) / 10;
 }
 
-function formatReviewDate(value?: string): string {
+function formatReviewDate(value: string | null): string {
   if (!value) return '';
   const parsed = parseISO(value);
   return isValid(parsed) ? format(parsed, 'd MMMM yyyy', { locale: fr }) : value;
 }
 
-function mapKrossReview(dto: KrossReviewDTO): Review {
-  const title = (dto.review_title || '').trim();
-  const text = (dto.review_text || '').trim();
+function mapRow(row: KrossbookingReviewRow): Review {
+  const title = (row.review_title || '').trim();
+  const text = (row.review_text || '').trim();
   const comment = [title, text].filter(Boolean).join(' — ');
 
   return {
-    id: String(dto.id_review),
-    author: dto.name_room_type?.trim() || 'Client',
+    id: String(row.id_review),
+    author: row.room_name?.trim() || row.name_room_type?.trim() || 'Client',
     avatar: '',
-    rating: normalizeRatingToFive(Number(dto.rating)),
-    date: formatReviewDate(dto.date),
+    rating: normalizeRatingToFive(row.rating),
+    date: formatReviewDate(row.review_date),
     comment,
-    source: dto.cod_channel || '',
+    source: row.cod_channel || '',
   };
 }
 
 /**
- * Récupère les avis OTA via Krossbooking (remplace Revyoos).
- * Les avis sont filtrés selon les logements attribués à l'utilisateur :
- * on ne garde que les avis dont la réservation appartient à l'un de ses logements.
- * Les administrateurs voient tous les avis.
+ * Récupère les avis OTA de l'utilisateur depuis la table `krossbooking_reviews`,
+ * alimentée quotidiennement par le scan global (edge function scan-krossbooking-reviews).
+ * Le RLS garantit que chaque utilisateur ne voit que ses avis (les admins voient tout).
  */
 export async function getReviews(): Promise<Review[]> {
-  try {
-    const [userRooms, profile] = await Promise.all([getUserRooms(), getProfile()]);
+  const { data, error } = await supabase
+    .from('krossbooking_reviews')
+    .select('id_review, room_name, name_room_type, review_date, cod_channel, review_title, review_text, rating')
+    .order('review_date', { ascending: false });
 
-    const isAdmin = profile?.role === 'admin';
-
-    if (!isAdmin && userRooms.length === 0) {
-      return [];
-    }
-
-    const { data, error } = await supabase.functions.invoke('krossbooking-proxy', {
-      body: { action: 'get_reviews' },
-    });
-
-    if (error) {
-      console.error('Error fetching reviews from Krossbooking proxy:', error);
-      return [];
-    }
-
-    const rawReviews = (data?.data ?? []) as KrossReviewDTO[];
-
-    let scopedReviews = rawReviews;
-
-    if (!isAdmin) {
-      // Filtrage précis par logement : on récupère les réservations des logements
-      // de l'utilisateur, puis on ne garde que les avis liés à ces réservations.
-      // Les avis Krossbooking référencent la réservation soit via `id_reservation`
-      // (ID interne Krossbooking), soit via `external_reservation_reference`
-      // (référence OTA, ex. numéro de réservation Booking = `ota_id`).
-      const reservations = await fetchKrossbookingReservations(userRooms);
-
-      const allowedReservationIds = new Set(
-        reservations.map((reservation) => String(reservation.id).trim()).filter(Boolean),
-      );
-      const allowedOtaRefs = new Set(
-        reservations
-          .map((reservation) => (reservation.ota_id ? String(reservation.ota_id).trim() : ''))
-          .filter(Boolean),
-      );
-
-      scopedReviews = rawReviews.filter((review) => {
-        const byInternalId =
-          review.id_reservation != null && allowedReservationIds.has(String(review.id_reservation).trim());
-        const byOtaRef =
-          !!review.external_reservation_reference &&
-          allowedOtaRefs.has(String(review.external_reservation_reference).trim());
-        return byInternalId || byOtaRef;
-      });
-
-      console.log(
-        '[reviews-api] reservations=%d otaRefsSample=%s rawReviews=%d scoped=%d',
-        reservations.length,
-        JSON.stringify(Array.from(allowedOtaRefs).slice(0, 5)),
-        rawReviews.length,
-        scopedReviews.length,
-      );
-    }
-
-    const uniqueReviews = Array.from(
-      new Map(scopedReviews.map((review) => [String(review.id_review), review])).values(),
-    );
-
-    return uniqueReviews.map(mapKrossReview);
-  } catch (err) {
-    console.error('Error fetching Krossbooking reviews:', err);
+  if (error) {
+    console.error('Error fetching reviews from krossbooking_reviews:', error);
     return [];
   }
+
+  return ((data ?? []) as KrossbookingReviewRow[]).map(mapRow);
 }
 
 /**
  * Génère une synthèse des avis via l'Edge Function review-analyzer,
- * à partir des commentaires des avis récupérés via Krossbooking.
+ * à partir des commentaires des avis récupérés.
  */
 export async function getReviewSynthesis(reviews: Review[]): Promise<string> {
   const comments = reviews.map((review) => review.comment).filter(Boolean);

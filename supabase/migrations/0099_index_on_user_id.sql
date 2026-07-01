@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_krossbooking_reviews_user_id ON public.krossbooking_reviews (user_id);

@@ -42,11 +42,12 @@ function formatSource(source: string): string {
   const map: Record<string, string> = {
     AIRBNB: 'Airbnb',
     BOOKING: 'Booking.com',
-    HOMEAWAY: 'Abritel',
+    HOMEAWAY: 'Vrbo / Abritel',
+    VRBO: 'Vrbo / Abritel',
     EXPEDIA: 'Expedia',
     DIRECT: 'Direct',
+    BE: 'Site web',
     GOOGLE: 'Google',
-    VRBO: 'Vrbo',
   };
   return map[source.toUpperCase()] ?? source.charAt(0).toUpperCase() + source.slice(1).toLowerCase();
 }
@@ -57,8 +58,10 @@ function sourceClasses(source: string): string {
     AIRBNB: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
     BOOKING: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
     HOMEAWAY: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
+    VRBO: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
     EXPEDIA: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
     DIRECT: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+    BE: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
     GOOGLE: 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300',
   };
   return map[key] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
@@ -70,8 +73,10 @@ function sourceDot(source: string): string {
     AIRBNB: 'bg-rose-500',
     BOOKING: 'bg-blue-500',
     HOMEAWAY: 'bg-indigo-500',
+    VRBO: 'bg-indigo-500',
     EXPEDIA: 'bg-amber-500',
     DIRECT: 'bg-emerald-500',
+    BE: 'bg-emerald-500',
     GOOGLE: 'bg-violet-500',
   };
   return map[key] ?? 'bg-gray-400';

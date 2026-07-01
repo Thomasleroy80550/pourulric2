@@ -22,6 +22,11 @@ const corsHeaders = {
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+// L'API réservations accepte jusqu'à 1000 lignes/page.
+const RESERVATIONS_PAGE_LIMIT = 1000;
+// L'API avis plafonne à 200 lignes/page (le limit demandé au-delà est ignoré).
+const REVIEWS_PAGE_LIMIT = 200;
+
 function isAllowedCronSecret(value: string): boolean {
   return !!value && CRON_SECRETS.includes(value.trim());
 }
@@ -43,21 +48,37 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function callKrossProxy(action: string, cronSecret: string, extra: Record<string, unknown> = {}) {
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/krossbooking-proxy`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${cronSecret}`,
-    },
-    body: JSON.stringify({ action, cron_secret: cronSecret, ...extra }),
-  });
+  const maxAttempts = 4;
 
-  const text = await response.text();
-  if (!response.ok) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/krossbooking-proxy`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${cronSecret}`,
+      },
+      body: JSON.stringify({ action, cron_secret: cronSecret, ...extra }),
+    });
+
+    const text = await response.text();
+
+    if (response.ok) {
+      return text ? JSON.parse(text) : null;
+    }
+
+    // Réessai avec backoff en cas de rate limiting (429) ou d'erreur transitoire.
+    const isRetryable = /429|too many requests/i.test(text) || response.status >= 500;
+    if (isRetryable && attempt < maxAttempts) {
+      const backoff = 1500 * attempt;
+      console.warn(`[scan-krossbooking-reviews] ${action} retryable error (attempt ${attempt}) status=${response.status}; waiting ${backoff}ms`);
+      await sleep(backoff);
+      continue;
+    }
+
     throw new Error(`krossbooking-proxy ${action} error: ${response.status} - ${text.slice(0, 240)}`);
   }
 
-  return text ? JSON.parse(text) : null;
+  throw new Error(`krossbooking-proxy ${action} failed after ${maxAttempts} attempts`);
 }
 
 serve(async (req) => {
@@ -92,45 +113,49 @@ serve(async (req) => {
     unmatchedReviews: 0,
     reservationsScanned: 0,
     reservationPages: 0,
+    reviewPages: 0,
     upserted: 0,
   };
 
   try {
     console.log("[scan-krossbooking-reviews] start");
 
-    // 1. Récupérer TOUS les avis (scan global).
     const dateFrom = typeof body.date_from === "string" && body.date_from.trim() ? body.date_from.trim() : "2000-01-01";
     const dateTo = typeof body.date_to === "string" && body.date_to.trim()
       ? body.date_to.trim()
       : new Date().toISOString().slice(0, 10);
 
-    const reviewsResponse = await callKrossProxy("get_reviews", cronSecret, {
-      date_from: dateFrom,
-      date_to: dateTo,
-      limit: 5000,
-    });
-    const reviews: Record<string, unknown>[] = Array.isArray(reviewsResponse?.data) ? reviewsResponse.data : [];
-    stats.totalReviews = reviews.length;
-    console.log(`[scan-krossbooking-reviews] fetched reviews=${reviews.length}`);
+    // 1. Correspondance logement -> propriétaire (depuis la base).
+    const { data: userRooms, error: roomsError } = await supabaseAdmin
+      .from("user_rooms")
+      .select("room_id, room_name, user_id");
 
-    // 2. Récupérer TOUTES les réservations (paginées) et construire les correspondances
-    //    reference OTA (ota_id) -> id_room et id_reservation -> id_room.
+    if (roomsError) {
+      throw roomsError;
+    }
+
+    const roomToOwner = new Map<string, { user_id: string; room_name: string | null }>();
+    for (const room of userRooms || []) {
+      roomToOwner.set(cleanKey(room.room_id), { user_id: room.user_id, room_name: room.room_name ?? null });
+    }
+
+    // 2. Récupérer TOUTES les réservations (paginées) pour construire les correspondances
+    //    référence OTA (ota_id) -> id_room et id_reservation -> id_room.
     const otaToRoom = new Map<string, string>();
     const resIdToRoom = new Map<string, string>();
 
-    const pageLimit = 1000;
-    let offset = 0;
+    let resOffset = 0;
     let totalReservations = Infinity;
 
-    while (offset < totalReservations) {
-      const resp = await callKrossProxy("get_all_reservations", cronSecret, { limit: pageLimit, offset });
+    while (resOffset < totalReservations) {
+      const resp = await callKrossProxy("get_all_reservations", cronSecret, { limit: RESERVATIONS_PAGE_LIMIT, offset: resOffset });
       const list: Record<string, unknown>[] = Array.isArray(resp?.data) ? resp.data : [];
       stats.reservationPages += 1;
 
       if (typeof resp?.total_count === "number") {
         totalReservations = resp.total_count;
-      } else if (list.length < pageLimit) {
-        totalReservations = offset + list.length;
+      } else if (list.length < RESERVATIONS_PAGE_LIMIT) {
+        totalReservations = resOffset + list.length;
       }
 
       for (const reservation of list) {
@@ -148,102 +173,109 @@ serve(async (req) => {
       }
 
       if (list.length === 0) break;
-      offset += pageLimit;
-
-      // Petite pause pour éviter le rate limiting de l'API Krossbooking.
-      await sleep(400);
+      resOffset += RESERVATIONS_PAGE_LIMIT;
+      await sleep(300);
     }
 
     console.log(
       `[scan-krossbooking-reviews] reservations scanned=${stats.reservationsScanned} pages=${stats.reservationPages} otaKeys=${otaToRoom.size} resKeys=${resIdToRoom.size}`,
     );
 
-    // 3. Correspondance logement -> propriétaire.
-    const { data: userRooms, error: roomsError } = await supabaseAdmin
-      .from("user_rooms")
-      .select("room_id, room_name, user_id");
+    // 3. Récupérer TOUS les avis (paginés) et upserter au fil de l'eau.
+    let reviewOffset = 0;
+    let totalReviewCount = Infinity;
 
-    if (roomsError) {
-      throw roomsError;
-    }
+    while (reviewOffset < totalReviewCount) {
+      const resp = await callKrossProxy("get_reviews", cronSecret, {
+        date_from: dateFrom,
+        date_to: dateTo,
+        limit: REVIEWS_PAGE_LIMIT,
+        offset: reviewOffset,
+      });
+      const list: Record<string, unknown>[] = Array.isArray(resp?.data) ? resp.data : [];
+      stats.reviewPages += 1;
 
-    const roomToOwner = new Map<string, { user_id: string; room_name: string | null }>();
-    for (const room of userRooms || []) {
-      roomToOwner.set(cleanKey(room.room_id), { user_id: room.user_id, room_name: room.room_name ?? null });
-    }
-
-    // 4. Associer chaque avis à un propriétaire et préparer les lignes.
-    const rows = reviews
-      .map((review) => {
-        const idReview = Number(review.id_review);
-        if (!Number.isFinite(idReview)) return null;
-
-        const resId = cleanKey(review.id_reservation);
-        const otaRef = cleanKey(review.external_reservation_reference);
-
-        const idRoom =
-          (resId && resIdToRoom.get(resId)) ||
-          (otaRef && otaToRoom.get(otaRef)) ||
-          null;
-
-        const owner = idRoom ? roomToOwner.get(idRoom) ?? null : null;
-
-        if (owner) {
-          stats.matchedReviews += 1;
-        } else {
-          stats.unmatchedReviews += 1;
-        }
-
-        return {
-          id_review: idReview,
-          user_id: owner?.user_id ?? null,
-          room_id: idRoom,
-          room_name: owner?.room_name ?? null,
-          id_reservation: resId ? Number(resId) : null,
-          external_reservation_reference: otaRef || null,
-          external_listing_reference: cleanKey(review.external_listing_reference) || null,
-          id_room_type: Number.isFinite(Number(review.id_room_type)) ? Number(review.id_room_type) : null,
-          name_room_type: cleanKey(review.name_room_type) || null,
-          review_date: parseDate(review.date),
-          cod_channel: cleanKey(review.cod_channel) || null,
-          review_title: cleanKey(review.review_title) || null,
-          review_text: cleanKey(review.review_text) || null,
-          rating: Number.isFinite(Number(review.rating)) ? Number(review.rating) : null,
-          ratings: {
-            rating_clean: review.rating_clean ?? null,
-            rating_comfort: review.rating_comfort ?? null,
-            rating_facilities: review.rating_facilities ?? null,
-            rating_location: review.rating_location ?? null,
-            rating_staff: review.rating_staff ?? null,
-            rating_value: review.rating_value ?? null,
-            rating_respect_house_rules: review.rating_respect_house_rules ?? null,
-            rating_communication: review.rating_communication ?? null,
-            rating_checkin: review.rating_checkin ?? null,
-            rating_accuracy: review.rating_accuracy ?? null,
-          },
-          raw: review,
-          scanned_at: new Date().toISOString(),
-        };
-      })
-      .filter((row): row is NonNullable<typeof row> => row !== null);
-
-    // 5. Upsert par lots.
-    const chunkSize = 500;
-    for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize);
-      const { error: upsertError } = await supabaseAdmin
-        .from("krossbooking_reviews")
-        .upsert(chunk, { onConflict: "id_review" });
-
-      if (upsertError) {
-        console.error(`[scan-krossbooking-reviews] upsert error chunk=${i}: ${upsertError.message}`);
-      } else {
-        stats.upserted += chunk.length;
+      if (typeof resp?.total_count === "number") {
+        totalReviewCount = resp.total_count;
+      } else if (list.length < REVIEWS_PAGE_LIMIT) {
+        totalReviewCount = reviewOffset + list.length;
       }
+
+      const rows = list
+        .map((review) => {
+          const idReview = Number(review.id_review);
+          if (!Number.isFinite(idReview)) return null;
+
+          stats.totalReviews += 1;
+
+          const resId = cleanKey(review.id_reservation);
+          const otaRef = cleanKey(review.external_reservation_reference);
+
+          const idRoom =
+            (resId && resIdToRoom.get(resId)) ||
+            (otaRef && otaToRoom.get(otaRef)) ||
+            null;
+
+          const owner = idRoom ? roomToOwner.get(idRoom) ?? null : null;
+
+          if (owner) {
+            stats.matchedReviews += 1;
+          } else {
+            stats.unmatchedReviews += 1;
+          }
+
+          return {
+            id_review: idReview,
+            user_id: owner?.user_id ?? null,
+            room_id: idRoom,
+            room_name: owner?.room_name ?? null,
+            id_reservation: resId ? Number(resId) : null,
+            external_reservation_reference: otaRef || null,
+            external_listing_reference: cleanKey(review.external_listing_reference) || null,
+            id_room_type: Number.isFinite(Number(review.id_room_type)) ? Number(review.id_room_type) : null,
+            name_room_type: cleanKey(review.name_room_type) || null,
+            review_date: parseDate(review.date),
+            cod_channel: cleanKey(review.cod_channel) || null,
+            review_title: cleanKey(review.review_title) || null,
+            review_text: cleanKey(review.review_text) || null,
+            rating: Number.isFinite(Number(review.rating)) ? Number(review.rating) : null,
+            ratings: {
+              rating_clean: review.rating_clean ?? null,
+              rating_comfort: review.rating_comfort ?? null,
+              rating_facilities: review.rating_facilities ?? null,
+              rating_location: review.rating_location ?? null,
+              rating_staff: review.rating_staff ?? null,
+              rating_value: review.rating_value ?? null,
+              rating_respect_house_rules: review.rating_respect_house_rules ?? null,
+              rating_communication: review.rating_communication ?? null,
+              rating_checkin: review.rating_checkin ?? null,
+              rating_accuracy: review.rating_accuracy ?? null,
+            },
+            raw: review,
+            scanned_at: new Date().toISOString(),
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => row !== null);
+
+      if (rows.length > 0) {
+        const { error: upsertError } = await supabaseAdmin
+          .from("krossbooking_reviews")
+          .upsert(rows, { onConflict: "id_review" });
+
+        if (upsertError) {
+          console.error(`[scan-krossbooking-reviews] upsert error offset=${reviewOffset}: ${upsertError.message}`);
+        } else {
+          stats.upserted += rows.length;
+        }
+      }
+
+      if (list.length === 0) break;
+      reviewOffset += REVIEWS_PAGE_LIMIT;
+      await sleep(300);
     }
 
     console.log(
-      `[scan-krossbooking-reviews] done total=${stats.totalReviews} matched=${stats.matchedReviews} unmatched=${stats.unmatchedReviews} upserted=${stats.upserted}`,
+      `[scan-krossbooking-reviews] done reviews=${stats.totalReviews} pages=${stats.reviewPages} matched=${stats.matchedReviews} unmatched=${stats.unmatchedReviews} upserted=${stats.upserted}`,
     );
 
     return new Response(JSON.stringify({ success: true, stats }), { status: 200, headers: corsHeaders });

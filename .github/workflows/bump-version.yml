@@ -11,13 +11,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Bump version
         run: |
-          # récupère la dernière version ou commence à 1.0.0.0
-          OLD=$(git tag --sort=-version:refname | head -n1 || echo "v1.0.0.0")
-          # incrémente le dernier segment
+          # récupère la dernière version, ou vide s'il n'y a aucun tag
+          OLD=$(git tag --sort=-version:refname | head -n1)
+          # valeur de départ si aucun tag n'existe encore
+          if [ -z "$OLD" ]; then
+            OLD="v1.0.0.0"
+          fi
+          # incrémente le dernier segment (chaque segment par défaut à 0)
           IFS='.' read -r major minor patch build <<<"${OLD#v}"
+          major=${major:-1}
+          minor=${minor:-0}
+          patch=${patch:-0}
+          build=${build:-0}
           build=$((build + 1))
           NEW="v${major}.${minor}.${patch}.${build}"
           echo "NEW=$NEW" >> $GITHUB_ENV

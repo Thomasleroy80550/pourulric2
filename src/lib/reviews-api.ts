@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getUserRooms } from './user-room-api';
-import { fetchKrossbookingRoomTypes } from './krossbooking';
+import { fetchKrossbookingReservations } from './krossbooking';
 import { getProfile } from './profile-api';
 
 export interface Review {
@@ -58,33 +58,19 @@ function mapKrossReview(dto: KrossReviewDTO): Review {
 
 /**
  * Récupère les avis OTA via Krossbooking (remplace Revyoos).
- * Les avis sont filtrés selon les types de logement de l'utilisateur.
+ * Les avis sont filtrés selon les logements attribués à l'utilisateur :
+ * on ne garde que les avis dont la réservation appartient à l'un de ses logements.
  * Les administrateurs voient tous les avis.
  */
 export async function getReviews(): Promise<Review[]> {
   try {
-    const [userRooms, roomTypes, profile] = await Promise.all([
-      getUserRooms(),
-      fetchKrossbookingRoomTypes(),
-      getProfile(),
-    ]);
+    const [userRooms, profile] = await Promise.all([getUserRooms(), getProfile()]);
 
     const isAdmin = profile?.role === 'admin';
 
     if (!isAdmin && userRooms.length === 0) {
       return [];
     }
-
-    // Construire l'ensemble des id_room_type autorisés pour cet utilisateur.
-    const allowedRoomIds = new Set(userRooms.map((room) => String(room.room_id)));
-    const allowedRoomTypeIds = new Set<string>();
-    roomTypes.forEach((type) => {
-      type.rooms.forEach((room) => {
-        if (allowedRoomIds.has(String(room.id_room))) {
-          allowedRoomTypeIds.add(String(type.id_room_type));
-        }
-      });
-    });
 
     const { data, error } = await supabase.functions.invoke('krossbooking-proxy', {
       body: { action: 'get_reviews' },
@@ -97,9 +83,18 @@ export async function getReviews(): Promise<Review[]> {
 
     const rawReviews = (data?.data ?? []) as KrossReviewDTO[];
 
-    const scopedReviews = isAdmin
-      ? rawReviews
-      : rawReviews.filter((review) => allowedRoomTypeIds.has(String(review.id_room_type)));
+    let scopedReviews = rawReviews;
+
+    if (!isAdmin) {
+      // Filtrage précis par logement : on récupère les réservations des logements
+      // de l'utilisateur, puis on ne garde que les avis liés à ces réservations.
+      const reservations = await fetchKrossbookingReservations(userRooms);
+      const allowedReservationIds = new Set(reservations.map((reservation) => String(reservation.id)));
+
+      scopedReviews = rawReviews.filter(
+        (review) => review.id_reservation != null && allowedReservationIds.has(String(review.id_reservation)),
+      );
+    }
 
     const uniqueReviews = Array.from(
       new Map(scopedReviews.map((review) => [String(review.id_review), review])).values(),

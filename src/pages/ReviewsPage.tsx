@@ -3,7 +3,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, AlertTriangle, Languages, Sparkles, MessageSquareQuote, Search, Quote } from 'lucide-react';
+import {
+  Star,
+  AlertTriangle,
+  Languages,
+  Sparkles,
+  MessageSquareQuote,
+  Search,
+  Quote,
+  TrendingUp,
+  Award,
+  Building2,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getReviews, getReviewSynthesis, Review } from '@/lib/reviews-api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -57,15 +68,29 @@ function sourceClasses(source: string): string {
   return map[key] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
 }
 
-function StarRating({ rating, className }: { rating: number; className?: string }) {
+function sourceDot(source: string): string {
+  const key = source.toUpperCase();
+  const map: Record<string, string> = {
+    AIRBNB: 'bg-rose-500',
+    BOOKING: 'bg-blue-500',
+    HOMEAWAY: 'bg-indigo-500',
+    EXPEDIA: 'bg-amber-500',
+    DIRECT: 'bg-emerald-500',
+    GOOGLE: 'bg-violet-500',
+  };
+  return map[key] ?? 'bg-gray-400';
+}
+
+function StarRating({ rating, className, size = 'sm' }: { rating: number; className?: string; size?: 'sm' | 'md' }) {
   const rounded = Math.round(rating);
+  const dim = size === 'md' ? 'h-5 w-5' : 'h-4 w-4';
   return (
-    <div className={cn('flex items-center', className)}>
+    <div className={cn('flex items-center gap-0.5', className)}>
       {[...Array(5)].map((_, i) => (
         <Star
           key={i}
           className={cn(
-            'h-4 w-4',
+            dim,
             i < rounded ? 'fill-amber-400 text-amber-400' : 'fill-transparent text-gray-300 dark:text-gray-600',
           )}
         />
@@ -129,6 +154,8 @@ const ReviewsPage: React.FC = () => {
     return buckets;
   }, [reviews]);
 
+  const fiveStarPct = reviews.length > 0 ? Math.round((distribution[4] / reviews.length) * 100) : 0;
+
   const sources = useMemo(() => {
     const set = new Set<string>();
     reviews.forEach((review) => review.source && set.add(review.source));
@@ -177,7 +204,7 @@ const ReviewsPage: React.FC = () => {
   };
 
   const renderSkeletons = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       {[...Array(6)].map((_, index) => (
         <Card key={index} className="p-5">
           <div className="flex items-center mb-3">
@@ -200,11 +227,71 @@ const ReviewsPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary mb-2">
+            <MessageSquareQuote className="h-4 w-4" />
+            Satisfaction voyageurs
+          </div>
           <h1 className="text-3xl font-bold tracking-tight">Mes Avis</h1>
           <p className="text-muted-foreground mt-1">
             Retrouvez tous les commentaires laissés par vos voyageurs, toutes plateformes confondues.
           </p>
         </div>
+
+        {/* Quick stats strip */}
+        {!error && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[
+              {
+                label: 'Note moyenne',
+                value: loading ? null : averageRating,
+                suffix: loading ? '' : '/ 5',
+                icon: Star,
+                color: 'text-amber-500',
+                bg: 'bg-amber-100 dark:bg-amber-950/40',
+              },
+              {
+                label: "Total d'avis",
+                value: loading ? null : reviews.length.toString(),
+                icon: MessageSquareQuote,
+                color: 'text-primary',
+                bg: 'bg-primary/10',
+              },
+              {
+                label: 'Avis 5 étoiles',
+                value: loading ? null : `${fiveStarPct}%`,
+                icon: Award,
+                color: 'text-emerald-500',
+                bg: 'bg-emerald-100 dark:bg-emerald-950/40',
+              },
+              {
+                label: 'Plateformes',
+                value: loading ? null : sources.length.toString(),
+                icon: Building2,
+                color: 'text-violet-500',
+                bg: 'bg-violet-100 dark:bg-violet-950/40',
+              },
+            ].map((stat) => (
+              <Card key={stat.label} className="overflow-hidden">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={cn('flex h-11 w-11 items-center justify-center rounded-xl shrink-0', stat.bg)}>
+                    <stat.icon className={cn('h-5 w-5', stat.color)} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground truncate">{stat.label}</p>
+                    {stat.value === null ? (
+                      <Skeleton className="h-6 w-16 mt-1" />
+                    ) : (
+                      <p className="text-xl font-bold leading-tight">
+                        {stat.value}
+                        {stat.suffix && <span className="text-sm font-normal text-muted-foreground ml-1">{stat.suffix}</span>}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Summary + Synthesis */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -219,27 +306,31 @@ const ReviewsPage: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-end gap-3">
-                    <span className="text-5xl font-bold leading-none">{averageRating}</span>
-                    <span className="text-muted-foreground mb-1">/ 5</span>
-                  </div>
-                  <div className="mt-2">
-                    <StarRating rating={averageRatingNum} />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Basé sur {reviews.length} avis
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 flex-col items-center justify-center rounded-2xl bg-amber-50 dark:bg-amber-950/40 shrink-0">
+                      <span className="text-2xl font-bold leading-none text-amber-600 dark:text-amber-400">{averageRating}</span>
+                      <span className="text-[10px] text-amber-600/70 dark:text-amber-400/70">sur 5</span>
+                    </div>
+                    <div>
+                      <StarRating rating={averageRatingNum} size="md" />
+                      <p className="text-sm text-muted-foreground mt-1.5">
+                        Basé sur <span className="font-medium text-foreground">{reviews.length}</span> avis
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="mt-5 space-y-2">
+                  <div className="mt-6 space-y-2.5">
                     {[5, 4, 3, 2, 1].map((star) => {
                       const count = distribution[star - 1];
                       const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
                       return (
                         <div key={star} className="flex items-center gap-2 text-sm">
-                          <span className="w-3 text-muted-foreground">{star}</span>
-                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                          <span className="flex items-center gap-1 w-8 text-muted-foreground">
+                            {star}
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
+                          </span>
                           <Progress value={pct} className="h-2 flex-1" />
-                          <span className="w-8 text-right text-xs text-muted-foreground tabular-nums">{count}</span>
+                          <span className="w-9 text-right text-xs text-muted-foreground tabular-nums">{count}</span>
                         </div>
                       );
                     })}
@@ -251,13 +342,17 @@ const ReviewsPage: React.FC = () => {
 
           {/* AI synthesis */}
           <Card className="lg:col-span-2 relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-transparent">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-3">
+            <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/5 blur-2xl" />
+            <CardContent className="p-6 relative">
+              <div className="flex items-center gap-2 mb-4">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                   <Sparkles className="h-4 w-4 text-primary" />
                 </div>
                 <h2 className="text-lg font-semibold">Synthèse intelligente</h2>
-                <Badge variant="secondary" className="ml-auto">IA</Badge>
+                <Badge variant="secondary" className="ml-auto gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  IA
+                </Badge>
               </div>
 
               {loadingSynthesis ? (
@@ -268,8 +363,8 @@ const ReviewsPage: React.FC = () => {
                 </div>
               ) : reviewSynthesis ? (
                 <div className="relative">
-                  <Quote className="absolute -left-1 -top-1 h-6 w-6 text-primary/15" />
-                  <p className="pl-6 text-[15px] leading-relaxed text-foreground/90">
+                  <Quote className="absolute -left-1 -top-1 h-7 w-7 text-primary/15" />
+                  <p className="pl-7 text-[15px] leading-relaxed text-foreground/90">
                     {reviewSynthesis}
                   </p>
                 </div>
@@ -320,6 +415,17 @@ const ReviewsPage: React.FC = () => {
           </div>
         )}
 
+        {/* Results count */}
+        {!loading && !error && reviews.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+            <TrendingUp className="h-4 w-4" />
+            <span>
+              <span className="font-medium text-foreground">{filteredReviews.length}</span>{' '}
+              avis {(searchQuery || sourceFilter !== 'all') ? 'trouvés' : 'au total'}
+            </span>
+          </div>
+        )}
+
         {/* Reviews grid */}
         {loading ? (
           renderSkeletons()
@@ -346,7 +452,7 @@ const ReviewsPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {currentReviews.map((review) => {
                 const isExpanded = expandedReviews.has(review.id);
                 const sanitizedComment = DOMPurify.sanitize(review.comment);
@@ -358,23 +464,24 @@ const ReviewsPage: React.FC = () => {
                 return (
                   <Card
                     key={review.id}
-                    className="flex flex-col p-5 transition-shadow hover:shadow-md"
+                    className="group flex flex-col p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 border-border/60"
                   >
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <Avatar className="h-10 w-10 shrink-0">
+                        <Avatar className="h-10 w-10 shrink-0 ring-2 ring-background shadow-sm">
                           <AvatarImage src={review.avatar} alt={review.author} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
                             {review.author.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="font-medium truncate">{review.author}</p>
-                          <p className="text-xs text-muted-foreground">{review.date}</p>
+                          <p className="font-semibold truncate leading-tight">{review.author}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{review.date}</p>
                         </div>
                       </div>
                       {review.source && (
-                        <Badge variant="secondary" className={cn('shrink-0 border-0 font-medium', sourceClasses(review.source))}>
+                        <Badge variant="secondary" className={cn('shrink-0 border-0 font-medium gap-1.5', sourceClasses(review.source))}>
+                          <span className={cn('h-1.5 w-1.5 rounded-full', sourceDot(review.source))} />
                           {formatSource(review.source)}
                         </Badge>
                       )}
@@ -390,7 +497,7 @@ const ReviewsPage: React.FC = () => {
                       dangerouslySetInnerHTML={{ __html: displayedComment }}
                     />
 
-                    <div className="flex items-center gap-4 mt-4 pt-3 border-t text-sm">
+                    <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/60 text-sm">
                       {needsTruncation && (
                         <button
                           onClick={() => toggleExpand(review.id)}

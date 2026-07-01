@@ -18,6 +18,7 @@ export interface Review {
 interface KrossReviewDTO {
   id_review: number;
   id_reservation?: number;
+  external_reservation_reference?: string;
   id_room_type?: number;
   name_room_type?: string;
   date?: string;
@@ -83,26 +84,41 @@ export async function getReviews(): Promise<Review[]> {
 
     const rawReviews = (data?.data ?? []) as KrossReviewDTO[];
 
-    console.log('[reviews-api] role=%s isAdmin=%s userRooms=%d rawReviews=%d', profile?.role, isAdmin, userRooms.length, rawReviews.length);
-    if (rawReviews.length > 0) {
-      console.log('[reviews-api] sample review =', JSON.stringify(rawReviews[0]));
-    }
-
     let scopedReviews = rawReviews;
 
     if (!isAdmin) {
       // Filtrage précis par logement : on récupère les réservations des logements
       // de l'utilisateur, puis on ne garde que les avis liés à ces réservations.
+      // Les avis Krossbooking référencent la réservation soit via `id_reservation`
+      // (ID interne Krossbooking), soit via `external_reservation_reference`
+      // (référence OTA, ex. numéro de réservation Booking = `ota_id`).
       const reservations = await fetchKrossbookingReservations(userRooms);
-      const allowedReservationIds = new Set(reservations.map((reservation) => String(reservation.id)));
 
-      console.log('[reviews-api] reservations=%d allowedReservationIds sample=%s', reservations.length, JSON.stringify(Array.from(allowedReservationIds).slice(0, 5)));
-
-      scopedReviews = rawReviews.filter(
-        (review) => review.id_reservation != null && allowedReservationIds.has(String(review.id_reservation)),
+      const allowedReservationIds = new Set(
+        reservations.map((reservation) => String(reservation.id).trim()).filter(Boolean),
+      );
+      const allowedOtaRefs = new Set(
+        reservations
+          .map((reservation) => (reservation.ota_id ? String(reservation.ota_id).trim() : ''))
+          .filter(Boolean),
       );
 
-      console.log('[reviews-api] scopedReviews after filter=%d', scopedReviews.length);
+      scopedReviews = rawReviews.filter((review) => {
+        const byInternalId =
+          review.id_reservation != null && allowedReservationIds.has(String(review.id_reservation).trim());
+        const byOtaRef =
+          !!review.external_reservation_reference &&
+          allowedOtaRefs.has(String(review.external_reservation_reference).trim());
+        return byInternalId || byOtaRef;
+      });
+
+      console.log(
+        '[reviews-api] reservations=%d otaRefsSample=%s rawReviews=%d scoped=%d',
+        reservations.length,
+        JSON.stringify(Array.from(allowedOtaRefs).slice(0, 5)),
+        rawReviews.length,
+        scopedReviews.length,
+      );
     }
 
     const uniqueReviews = Array.from(

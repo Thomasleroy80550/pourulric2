@@ -8,6 +8,8 @@ export interface Review {
   avatar: string;
   rating: number;
   date: string;
+  /** Date ISO brute (review_date) pour les agrégations/graphiques. */
+  rawDate: string;
   comment: string;
   source: string;
 }
@@ -47,6 +49,7 @@ function mapRow(row: KrossbookingReviewRow): Review {
     avatar: '',
     rating: normalizeRatingToFive(row.rating),
     date: formatReviewDate(row.review_date),
+    rawDate: row.review_date || '',
     comment,
     source: row.cod_channel || '',
   };

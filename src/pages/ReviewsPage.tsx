@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Star,
@@ -12,9 +12,12 @@ import {
   Award,
   Building2,
   ChevronDown,
+  TrendingUp,
+  PieChart,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getReviews, Review } from '@/lib/reviews-api';
+import ReviewsTrendChart from '@/components/reviews/ReviewsTrendChart';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Pagination,
@@ -149,6 +152,17 @@ const ReviewsPage: React.FC = () => {
     return Array.from(set).sort();
   }, [reviews]);
 
+  const platformBreakdown = useMemo(() => {
+    const counts = new Map<string, number>();
+    reviews.forEach((review) => {
+      const key = review.source || 'AUTRE';
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [reviews]);
+
   const filteredReviews = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     let result = reviews.filter((review) => {
@@ -210,15 +224,19 @@ const ReviewsPage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 text-sm font-medium text-primary mb-2">
-            <MessageSquareQuote className="h-4 w-4" />
-            Satisfaction voyageurs
+        <div className="relative mb-8 overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute right-16 bottom-0 h-24 w-24 rounded-full bg-amber-400/10 blur-2xl" />
+          <div className="relative">
+            <div className="inline-flex items-center gap-2 rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-primary shadow-sm backdrop-blur">
+              <MessageSquareQuote className="h-3.5 w-3.5" />
+              Satisfaction voyageurs
+            </div>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Mes Avis</h1>
+            <p className="mt-2 max-w-2xl text-muted-foreground">
+              Retrouvez tous les commentaires laissés par vos voyageurs, toutes plateformes confondues.
+            </p>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Mes Avis</h1>
-          <p className="text-muted-foreground mt-1">
-            Retrouvez tous les commentaires laissés par vos voyageurs, toutes plateformes confondues.
-          </p>
         </div>
 
         {/* Quick stats strip */}
@@ -274,6 +292,90 @@ const ReviewsPage: React.FC = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Charts */}
+        {!error && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+            {/* Trend chart */}
+            <Card className="lg:col-span-2 overflow-hidden">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      Évolution des avis
+                    </CardTitle>
+                    <CardDescription>12 derniers mois</CardDescription>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-4 text-xs">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                      Volume
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="h-2 w-2 rounded-full bg-amber-400" />
+                      Note moyenne
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-2">
+                {loading ? (
+                  <Skeleton className="h-[260px] w-full" />
+                ) : (
+                  <ReviewsTrendChart reviews={reviews} />
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Platform breakdown */}
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <PieChart className="h-4 w-4 text-primary" />
+                  Par plateforme
+                </CardTitle>
+                <CardDescription>Répartition des avis</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-4">
+                    {[...Array(4)].map((_, i) => (
+                      <Skeleton key={i} className="h-8 w-full" />
+                    ))}
+                  </div>
+                ) : platformBreakdown.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">Aucune donnée</p>
+                ) : (
+                  <div className="space-y-4">
+                    {platformBreakdown.map(({ source, count }) => {
+                      const pct = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
+                      return (
+                        <div key={source}>
+                          <div className="flex items-center justify-between mb-1.5 text-sm">
+                            <span className="flex items-center gap-2 font-medium">
+                              <span className={cn('h-2.5 w-2.5 rounded-full', sourceDot(source))} />
+                              {formatSource(source)}
+                            </span>
+                            <span className="text-muted-foreground tabular-nums">
+                              {count} <span className="text-xs">({pct}%)</span>
+                            </span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={cn('h-full rounded-full transition-all', sourceDot(source))}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
 

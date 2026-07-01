@@ -666,6 +666,29 @@ serve(async (req) => {
         };
         break;
 
+      case "get_reviews": {
+        // Collecte des avis OTA via Krossbooking (remplace Revyoos).
+        // Appel direct via auth token: n'utilise PAS le proxy amont, donc
+        // ne modifie pas le fonctionnement existant du proxy.
+        const todayIso = new Date().toISOString().slice(0, 10);
+        krossbookingPath = "/reviews/get-list";
+        payload = {
+          date_from: typeof requestBody.date_from === "string" && requestBody.date_from.trim()
+            ? requestBody.date_from.trim()
+            : "2000-01-01",
+          date_to: typeof requestBody.date_to === "string" && requestBody.date_to.trim()
+            ? requestBody.date_to.trim()
+            : todayIso,
+          ...(typeof requestBody.cod_channel === "string" && requestBody.cod_channel.trim()
+            ? { cod_channel: requestBody.cod_channel.trim() }
+            : {}),
+          limit: typeof requestBody.limit === "number" ? requestBody.limit : 1000,
+          offset: typeof requestBody.offset === "number" ? requestBody.offset : 0,
+          ...(typeof requestBody.page === "number" ? { page: requestBody.page } : {}),
+        };
+        break;
+      }
+
       default:
         throw new Error(`Unsupported action: ${action}`);
     }

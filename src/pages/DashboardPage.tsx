@@ -43,7 +43,7 @@ import { getExpenses, getRecurringExpenses, generateRecurringInstances, Expense 
 import { toast } from 'sonner';
 import { useSession } from "@/components/SessionContextProvider";
 import BannedUserMessage from "@/components/BannedUserMessage";
-import { getReviews, Review } from '@/lib/revyoos-api';
+import { getReviews, Review } from '@/lib/reviews-api';
 import { getTechnicalReportsByUserId, TechnicalReport } from '@/lib/technical-reports-api';
 import { Badge } from "@/components/ui/badge";
 import NewYear2026Cinematic from "@/components/NewYear2026Cinematic";
@@ -485,7 +485,7 @@ const DashboardPage = () => {
       const [statements, fetchedUserRooms, reviews, technicalReports] = await Promise.all([
         getMyStatements(),
         getUserRooms(),
-        getReviews(userProfile.revyoos_holding_ids),
+        getReviews(),
         getTechnicalReportsByUserId(userProfile.id)
       ]);
 

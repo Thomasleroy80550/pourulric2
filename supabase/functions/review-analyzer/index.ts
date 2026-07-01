@@ -36,9 +36,15 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const { holdingIds } = await req.json();
-    if (!holdingIds || !Array.isArray(holdingIds) || holdingIds.length === 0) {
-      return new Response(JSON.stringify({ error: "Missing or invalid holdingIds" }), {
+    const { holdingIds, comments } = await req.json();
+
+    const providedComments: string[] = Array.isArray(comments)
+      ? comments.filter((c: unknown): c is string => typeof c === "string" && c.trim().length > 0)
+      : [];
+    const hasComments = providedComments.length > 0;
+
+    if (!hasComments && (!holdingIds || !Array.isArray(holdingIds) || holdingIds.length === 0)) {
+      return new Response(JSON.stringify({ error: "Missing or invalid input: provide 'comments' or 'holdingIds'." }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
@@ -49,8 +55,11 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const sortedHoldingIds = [...holdingIds].sort();
-    const holdingIdsHash = await sha1Hex(JSON.stringify(sortedHoldingIds));
+    // Clé de cache: basée sur les commentaires (Krossbooking) ou les holdingIds (legacy Revyoos).
+    const sortedHoldingIds = hasComments ? [] : [...holdingIds].sort();
+    const holdingIdsHash = hasComments
+      ? await sha1Hex(JSON.stringify([...providedComments].sort()))
+      : await sha1Hex(JSON.stringify(sortedHoldingIds));
 
     // 1. Check cache
     const { data: cachedData, error: cacheError } = await adminSupabaseClient
@@ -80,26 +89,36 @@ serve(async (req) => {
       }
     }
 
-    // 2. If not in cache or expired, fetch reviews and analyze
-    const { data: reviewsData, error: reviewsError } = await adminSupabaseClient.functions.invoke('revyoos-proxy', {
-      body: { holdingIds },
-      headers: { Authorization: authorization }
-    });
+    // 2. If not in cache or expired, gather review comments and analyze.
+    let reviewComments: string[] = [];
 
-    if (reviewsError) {
-      console.error("Error from revyoos-proxy:", reviewsError.message);
-      throw new Error(`Error fetching reviews via proxy: ${reviewsError.message}`);
+    if (hasComments) {
+      // Nouveau flux: commentaires fournis directement (avis Krossbooking).
+      reviewComments = providedComments;
+    } else {
+      // Ancien flux (legacy Revyoos): récupération via revyoos-proxy.
+      const { data: reviewsData, error: reviewsError } = await adminSupabaseClient.functions.invoke('revyoos-proxy', {
+        body: { holdingIds },
+        headers: { Authorization: authorization }
+      });
+
+      if (reviewsError) {
+        console.error("Error from revyoos-proxy:", reviewsError.message);
+        throw new Error(`Error fetching reviews via proxy: ${reviewsError.message}`);
+      }
+
+      const reviews = (reviewsData as { comment: string }[]) ?? [];
+      reviewComments = reviews.map((r) => r.comment).filter(Boolean);
     }
 
-    const reviews = reviewsData as { comment: string }[];
-    if (!reviews || reviews.length === 0) {
+    if (reviewComments.length === 0) {
       return new Response(JSON.stringify(""), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     }
 
-    const allComments = reviews.map(r => r.comment).join("\n\n");
+    const allComments = reviewComments.join("\n\n");
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not set in environment variables.");

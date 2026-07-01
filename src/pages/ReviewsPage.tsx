@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, AlertTriangle, Languages, Lightbulb } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getReviews, getReviewSynthesis, Review } from '@/lib/revyoos-api';
+import { getReviews, getReviewSynthesis, Review } from '@/lib/reviews-api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useSession } from '@/components/SessionContextProvider';
 import {
   Pagination,
   PaginationContent,
@@ -18,9 +17,6 @@ import {
 import { cn } from '@/lib/utils';
 import DOMPurify from 'dompurify';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
-import { createModuleActivationRequest } from '@/lib/module-activation-api';
 
 const ReviewsPage: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -28,9 +24,6 @@ const ReviewsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
-  const { profile } = useSession();
-  const [isRequestingActivation, setIsRequestingActivation] = useState(false);
-  const [requestSent, setRequestSent] = useState(false);
   const [reviewSynthesis, setReviewSynthesis] = useState<string>("");
   const [loadingSynthesis, setLoadingSynthesis] = useState(false);
 
@@ -51,21 +44,16 @@ const ReviewsPage: React.FC = () => {
 
   useEffect(() => {
     const fetchReviewsAndSynthesis = async () => {
-      if (!profile?.revyoos_holding_ids || profile.revyoos_holding_ids.length === 0) {
-        setLoading(false);
-        setLoadingSynthesis(false);
-        return;
-      }
       setLoading(true);
       setLoadingSynthesis(true);
       setError(null);
       try {
-        const fetchedReviews = await getReviews(profile.revyoos_holding_ids);
+        const fetchedReviews = await getReviews();
         setReviews(fetchedReviews);
+        setLoading(false);
 
-        const fetchedSynthesis = await getReviewSynthesis(profile.revyoos_holding_ids);
+        const fetchedSynthesis = await getReviewSynthesis(fetchedReviews);
         setReviewSynthesis(fetchedSynthesis);
-
       } catch (err: any) {
         const errorMessage = `Erreur lors de la récupération des avis ou de la synthèse : ${err.message}`;
         setError(errorMessage);
@@ -77,7 +65,7 @@ const ReviewsPage: React.FC = () => {
     };
 
     fetchReviewsAndSynthesis();
-  }, [profile]);
+  }, []);
 
   const indexOfLastReview = currentPage * reviewsPerPage;
   const indexOfFirstReview = indexOfLastReview - reviewsPerPage;
@@ -99,27 +87,6 @@ const ReviewsPage: React.FC = () => {
   const handleTranslate = (text: string) => {
     const url = `https://translate.google.com/?sl=auto&tl=fr&text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleRequestActivation = async () => {
-    setIsRequestingActivation(true);
-    try {
-      await createModuleActivationRequest('revyoos');
-      toast({
-        title: "Demande envoyée",
-        description: "Votre demande d'activation du module Revyoos a été envoyée.",
-        variant: "default",
-      });
-      setRequestSent(true);
-    } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.message || "Une erreur est survenue.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRequestingActivation(false);
-    }
   };
 
   const renderSkeletons = () => (
@@ -186,21 +153,6 @@ const ReviewsPage: React.FC = () => {
                 <AlertTitle>Erreur</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
-            ) : (!profile?.revyoos_holding_ids || profile.revyoos_holding_ids.length === 0) ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  Le module Revyoos n'est pas encore activé pour votre compte.
-                </p>
-                {requestSent ? (
-                  <p className="text-green-600 dark:text-green-400">
-                    Votre demande a été envoyée.
-                  </p>
-                ) : (
-                  <Button onClick={handleRequestActivation} disabled={isRequestingActivation}>
-                    {isRequestingActivation ? "Envoi en cours..." : "Demander l'activation"}
-                  </Button>
-                )}
-              </div>
             ) : reviews.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

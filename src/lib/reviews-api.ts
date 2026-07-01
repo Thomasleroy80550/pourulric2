@@ -83,6 +83,11 @@ export async function getReviews(): Promise<Review[]> {
 
     const rawReviews = (data?.data ?? []) as KrossReviewDTO[];
 
+    console.log('[reviews-api] role=%s isAdmin=%s userRooms=%d rawReviews=%d', profile?.role, isAdmin, userRooms.length, rawReviews.length);
+    if (rawReviews.length > 0) {
+      console.log('[reviews-api] sample review =', JSON.stringify(rawReviews[0]));
+    }
+
     let scopedReviews = rawReviews;
 
     if (!isAdmin) {
@@ -91,9 +96,13 @@ export async function getReviews(): Promise<Review[]> {
       const reservations = await fetchKrossbookingReservations(userRooms);
       const allowedReservationIds = new Set(reservations.map((reservation) => String(reservation.id)));
 
+      console.log('[reviews-api] reservations=%d allowedReservationIds sample=%s', reservations.length, JSON.stringify(Array.from(allowedReservationIds).slice(0, 5)));
+
       scopedReviews = rawReviews.filter(
         (review) => review.id_reservation != null && allowedReservationIds.has(String(review.id_reservation)),
       );
+
+      console.log('[reviews-api] scopedReviews after filter=%d', scopedReviews.length);
     }
 
     const uniqueReviews = Array.from(

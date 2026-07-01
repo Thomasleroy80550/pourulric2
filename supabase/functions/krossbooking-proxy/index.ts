@@ -3,9 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const KROSSBOOKING_API_BASE_URL = "https://api.krossbooking.com/v5";
 const KROSSBOOKING_UPSTREAM_PROXY_URL = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_URL") ?? "").trim();
-const KROSSBOOKING_UPSTREAM_PROXY_SECRET = (Deno.env.get("KROSSBOOKING_UPSTREAM_PROXY_SECRET") ?? "").trim();
-const CRON_SECRETS = [
 
+const CRON_SECRETS = [
   Deno.env.get("CRON_SECRET"),
   Deno.env.get("CRON_SECRET_2"),
   Deno.env.get("CRONSECRETNOTIFYNEWRESA"),
@@ -38,14 +37,10 @@ function isAllowedCronSecret(value: string): boolean {
 }
 
 function normalizeKrossData<T>(payload: T | { data?: T } | null | undefined): T | null {
-  if (!payload) {
-    return null;
-  }
-
+  if (!payload) return null;
   if (typeof payload === "object" && "data" in payload) {
     return (payload as { data?: T }).data ?? null;
   }
-
   return payload as T;
 }
 
@@ -59,87 +54,56 @@ function extractReservationId(payload: Record<string, unknown> | null | undefine
   ];
 
   for (const candidate of candidates) {
-    if (candidate === null || candidate === undefined) {
-      continue;
-    }
-
+    if (candidate === null || candidate === undefined) continue;
     const value = String(candidate).trim();
-    if (value) {
-      return value;
-    }
+    if (value) return value;
   }
-
   return null;
 }
 
 function parseNumericReservationId(value: unknown) {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
+  if (value === null || value === undefined) return null;
   const normalized = Number(String(value).trim());
   return Number.isFinite(normalized) ? normalized : null;
 }
 
 function parseDateTime(value: unknown): number | null {
-  if (typeof value !== "string" || !value.trim()) {
-    return null;
-  }
-
+  if (typeof value !== "string" || !value.trim()) return null;
   const timestamp = Date.parse(value.replace(" ", "T"));
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
 function isThreadWithinDateRange(thread: Record<string, unknown>, startDate?: string, endDate?: string) {
   const threadDate = parseDateTime(String(thread.last_message_date || thread.last_update || ""));
-  if (threadDate === null) {
-    return true;
-  }
+  if (threadDate === null) return true;
 
   const startTimestamp = parseDateTime(startDate);
   const endTimestamp = parseDateTime(endDate);
 
-  if (startTimestamp !== null && threadDate < startTimestamp) {
-    return false;
-  }
-
-  if (endTimestamp !== null && threadDate > endTimestamp) {
-    return false;
-  }
+  if (startTimestamp !== null && threadDate < startTimestamp) return false;
+  if (endTimestamp !== null && threadDate > endTimestamp) return false;
 
   return true;
 }
 
-function hasUpstreamProxy() {
-  return !!KROSSBOOKING_UPSTREAM_PROXY_URL && !!KROSSBOOKING_UPSTREAM_PROXY_SECRET;
+function compactResponsePreview(responseText: string) {
+  return responseText.trim().replace(/\s+/g, " ").slice(0, 240);
 }
 
-async function callUpstreamProxy(action: string, payload: Record<string, unknown>) {
-  if (!hasUpstreamProxy()) {
-    throw new Error("Krossbooking upstream proxy is not configured.");
+function parseJsonResponse(responseText: string, source: string): any {
+  if (!responseText.trim()) return null;
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    throw new Error(`${source} returned a non-JSON response: ${compactResponsePreview(responseText)}`);
   }
+}
 
-  const response = await fetch(KROSSBOOKING_UPSTREAM_PROXY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-proxy-secret": KROSSBOOKING_UPSTREAM_PROXY_SECRET,
-    },
-    body: JSON.stringify({ action, ...payload }),
-  });
-
-  const responseText = await response.text();
-  const parsed = responseText ? JSON.parse(responseText) : null;
-
-  if (!response.ok) {
-    throw new Error(parsed?.error || `Upstream proxy error: ${response.status}`);
-  }
-
-  return parsed;
+function isProviderIpDeniedError(message: string) {
+  return /not allowed/i.test(message) || /IP.*allowed/i.test(message);
 }
 
 async function getAuthToken(): Promise<string> {
-
   const KROSSBOOKING_API_KEY = Deno.env.get("KROSSBOOKING_API_KEY");
   const KROSSBOOKING_HOTEL_ID = Deno.env.get("KROSSBOOKING_HOTEL_ID");
   const KROSSBOOKING_USERNAME = Deno.env.get("KROSSBOOKING_USERNAME");
@@ -149,66 +113,74 @@ async function getAuthToken(): Promise<string> {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
   }
 
-  const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      api_key: KROSSBOOKING_API_KEY,
-      hotel_id: KROSSBOOKING_HOTEL_ID,
-      username: KROSSBOOKING_USERNAME,
-      password: KROSSBOOKING_PASSWORD,
-    }),
+  console.log("[krossbooking-proxy] Requesting Krossbooking auth token via proxy client");
+  
+  const client = Deno.createHttpClient({
+    proxy: { url: KROSSBOOKING_UPSTREAM_PROXY_URL },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${errorText}`);
-  }
+  try {
+    const response = await fetch(`${KROSSBOOKING_API_BASE_URL}/auth/get-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: KROSSBOOKING_API_KEY,
+        hotel_id: KROSSBOOKING_HOTEL_ID,
+        username: KROSSBOOKING_USERNAME,
+        password: KROSSBOOKING_PASSWORD,
+      }),
+      client: client
+    });
 
-  const data = await response.json();
-  if (!data?.auth_token) {
-    throw new Error("Krossbooking token not found in response.");
-  }
+    const responseText = await response.text();
 
-  return data.auth_token;
+    if (!response.ok) {
+      throw new Error(`Failed to get Krossbooking token: ${response.statusText} - ${responseText}`);
+    }
+
+    const data = parseJsonResponse(responseText, "Krossbooking auth");
+    if (!data?.auth_token) {
+      throw new Error("Krossbooking token not found in response.");
+    }
+
+    return data.auth_token;
+  } finally {
+    client.close();
+  }
 }
 
 async function postToKrossbooking(authToken: string | null, path: string, payload: Record<string, unknown>) {
-
-  if (hasUpstreamProxy() && path === "/reservations/get-list" && typeof payload.id_room === "number") {
-    console.log(`[krossbooking-proxy] using upstream proxy action=get_reservations_for_room roomId=${payload.id_room}`);
-    return callUpstreamProxy("get_reservations_for_room", {
-      id_room: payload.id_room,
-      ...(typeof payload.id_property === "number" ? { id_property: payload.id_property } : {}),
-    });
-  }
-
-  if (hasUpstreamProxy() && path === "/rooms/get-rooms") {
-    console.log("[krossbooking-proxy] using upstream proxy action=get_room_types");
-    return callUpstreamProxy("get_room_types", {
-      ...(typeof payload.id_property === "number" ? { id_property: payload.id_property } : {}),
-    });
-  }
-
   if (!authToken) {
     throw new Error(`Missing Krossbooking auth token for path: ${path}`);
   }
 
-  const response = await fetch(`${KROSSBOOKING_API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${authToken}`,
-    },
-    body: JSON.stringify(payload),
+  console.log(`[krossbooking-proxy] calling Krossbooking API path=${path} via proxy client`);
+  
+  const client = Deno.createHttpClient({
+    proxy: { url: KROSSBOOKING_UPSTREAM_PROXY_URL },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Krossbooking API error: ${response.status} - ${errorText}`);
-  }
+  try {
+    const response = await fetch(`${KROSSBOOKING_API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${authToken}`,
+      },
+      body: JSON.stringify(payload),
+      client: client
+    });
 
-  return response.json();
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`Krossbooking API error: ${response.status} - ${compactResponsePreview(responseText)}`);
+    }
+
+    return parseJsonResponse(responseText, `Krossbooking API path=${path}`);
+  } finally {
+    client.close();
+  }
 }
 
 async function getUserContext(authHeader: string): Promise<UserContext> {
@@ -262,34 +234,37 @@ async function getUserContext(authHeader: string): Promise<UserContext> {
 
 async function getAuthorizedReservations(authToken: string, userContext: UserContext) {
   const reservationsById = new Map<number, Record<string, unknown>>();
-
+  
+  // Boucle synchrone et linéaire stricte
   for (const room of userContext.rooms) {
     const roomId = Number(room.room_id);
     if (!Number.isFinite(roomId)) {
-      console.warn(`[krossbooking-proxy] skipped invalid room_id=${String(room.room_id)} userId=${userContext.userId}`);
+      console.warn(`[krossbooking-proxy] skipped invalid room_id=${String(room.room_id)}`);
       continue;
     }
 
-    const response = await postToKrossbooking(authToken, "/reservations/get-list", {
-      with_rooms: true,
-      id_room: roomId,
-      id_property: userContext.role === "admin" ? undefined : userContext.propertyId ?? undefined,
-    });
-
-    const reservations = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
-
-    for (const reservation of reservations) {
-      const reservationId = Number((reservation as { id_reservation?: unknown }).id_reservation);
-      if (!Number.isFinite(reservationId)) {
-        continue;
-      }
-
-      reservationsById.set(reservationId, {
-        ...reservation,
-        room_id: room.room_id,
-        room_name: room.room_name ?? null,
-        user_id: room.user_id ?? null,
+    try {
+      const response = await postToKrossbooking(authToken, "/reservations/get-list", {
+        with_rooms: true,
+        id_room: roomId,
+        id_property: userContext.role === "admin" ? undefined : userContext.propertyId ?? undefined,
       });
+
+      const reservations = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
+
+      for (const reservation of reservations) {
+        const reservationId = Number((reservation as { id_reservation?: unknown }).id_reservation);
+        if (!Number.isFinite(reservationId)) continue;
+
+        reservationsById.set(reservationId, {
+          ...reservation,
+          room_id: room.room_id,
+          room_name: room.room_name ?? null,
+          user_id: room.user_id ?? null,
+        });
+      }
+    } catch (err) {
+      console.error(`[krossbooking-proxy] error fetching room ${roomId} sequentially:`, err);
     }
   }
 
@@ -311,20 +286,14 @@ async function getAuthorizedThread(
     throw new Error("Thread not found.");
   }
 
-  console.log(`[krossbooking-proxy] get_authorized_thread payload_keys=${Object.keys(thread).join(",")} nested_thread_keys=${thread.thread && typeof thread.thread === "object" ? Object.keys(thread.thread as Record<string, unknown>).join(",") : "none"}`);
-
   const reservationId = extractReservationId(thread, fallbackReservationId);
   if (!reservationId) {
-    console.warn(`[krossbooking-proxy] thread without reservation idThread=${idThread} fallback=${fallbackReservationId ?? "none"}`);
     throw new Error("Thread does not contain a valid reservation.");
   }
 
   if (userContext.role === "admin") {
     return {
-      thread: {
-        ...thread,
-        id_reservation: reservationId,
-      },
+      thread: { ...thread, id_reservation: reservationId },
       reservation: null,
     };
   }
@@ -332,7 +301,6 @@ async function getAuthorizedThread(
   const authorizedReservations = await getAuthorizedReservations(authToken, userContext);
   const numericReservationId = parseNumericReservationId(reservationId);
   if (!numericReservationId || !authorizedReservations.has(numericReservationId)) {
-    console.warn(`[krossbooking-proxy] forbidden thread access userId=${userContext.userId} idThread=${idThread} reservationId=${reservationId}`);
     throw new Response(JSON.stringify({ error: "Forbidden" }), {
       status: 403,
       headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -340,10 +308,7 @@ async function getAuthorizedThread(
   }
 
   return {
-    thread: {
-      ...thread,
-      id_reservation: reservationId,
-    },
+    thread: { ...thread, id_reservation: reservationId },
     reservation: authorizedReservations.get(numericReservationId) ?? null,
   };
 }
@@ -361,7 +326,6 @@ serve(async (req) => {
   }
 
   let requestBody: Record<string, unknown> = {};
-
   try {
     requestBody = await req.json();
   } catch {
@@ -386,48 +350,44 @@ serve(async (req) => {
 
     const userContext = !isCron ? await getUserContext(authHeader) : null;
     let authToken: string | null = null;
+    
     const getOrCreateAuthToken = async () => {
-      if (!authToken) {
-        authToken = await getAuthToken();
-      }
-
+      if (!authToken) authToken = await getAuthToken();
       return authToken;
     };
 
     if (action === "get_reservations_for_user_rooms") {
-
       const rooms = Array.isArray(requestBody.rooms) ? (requestBody.rooms as RoomRequest[]) : [];
       if (rooms.length === 0) {
         throw new Error("Missing rooms for get_reservations_for_user_rooms.");
       }
 
-      console.log(`[krossbooking-proxy] fetching reservations for ${rooms.length} rooms`);
+      console.log(`[krossbooking-proxy] fetching reservations sequentially for ${rooms.length} rooms`);
       const reservationsById = new Map<string, unknown>();
 
+      // Traitement strictement linéaire synchrone
       for (const room of rooms) {
         const roomId = Number(room.room_id);
-        if (!Number.isFinite(roomId)) {
-          console.warn(`[krossbooking-proxy] skipped invalid room_id=${String(room.room_id)}`);
-          continue;
-        }
+        if (!Number.isFinite(roomId)) continue;
 
-        const response = await postToKrossbooking(hasUpstreamProxy() ? null : await getOrCreateAuthToken(), "/reservations/get-list", {
-          with_rooms: true,
-          id_room: roomId,
-          id_property: room.id_property ? Number(room.id_property) : undefined,
-        });
+        try {
+          const token = await getOrCreateAuthToken();
+          const response = await postToKrossbooking(token, "/reservations/get-list", {
+            with_rooms: true,
+            id_room: roomId,
+            id_property: room.id_property ? Number(room.id_property) : undefined,
+          });
 
-        const roomReservations = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
-        console.log(`[krossbooking-proxy] room_id=${roomId} reservations=${roomReservations.length}`);
-
-        for (const reservation of roomReservations) {
-          reservationsById.set(String((reservation as { id_reservation?: string | number }).id_reservation), reservation);
+          const roomReservations = normalizeKrossData<Record<string, unknown>[]>(response) ?? [];
+          for (const reservation of roomReservations) {
+            reservationsById.set(String((reservation as { id_reservation?: string | number }).id_reservation), reservation);
+          }
+        } catch (err) {
+          console.error(`[krossbooking-proxy] error fetching room ${roomId} sequentially:`, err);
         }
       }
 
       const aggregatedReservations = Array.from(reservationsById.values());
-      console.log(`[krossbooking-proxy] aggregated reservations=${aggregatedReservations.length}`);
-
       return new Response(JSON.stringify({
         data: aggregatedReservations,
         total_count: aggregatedReservations.length,
@@ -439,9 +399,7 @@ serve(async (req) => {
     }
 
     if (action === "list_message_threads") {
-      if (!userContext) {
-        throw new Error("Unauthorized");
-      }
+      if (!userContext) throw new Error("Unauthorized");
 
       const lastUpdate = typeof requestBody.last_update === "string" ? requestBody.last_update : undefined;
       const dateTo = typeof requestBody.date_to === "string" ? requestBody.date_to : undefined;
@@ -467,8 +425,6 @@ serve(async (req) => {
           reservation: null,
         }));
 
-        console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${adminThreads.length} last_update=${lastUpdate ?? "none"} date_to=${dateTo ?? "none"}`);
-
         return new Response(JSON.stringify({
           data: adminThreads,
           total_count: adminThreads.length,
@@ -489,15 +445,12 @@ serve(async (req) => {
       const enrichedThreads = filteredThreads.map((thread) => {
         const reservationId = extractReservationId(thread);
         const numericReservationId = parseNumericReservationId(reservationId);
-        const reservation = numericReservationId ? authorizedReservations.get(numericReservationId) ?? null : null;
         return {
           ...thread,
           id_reservation: reservationId,
-          reservation,
+          reservation: numericReservationId ? authorizedReservations.get(numericReservationId) ?? null : null,
         };
       });
-
-      console.log(`[krossbooking-proxy] list_message_threads userId=${userContext.userId} role=${userContext.role} returned=${enrichedThreads.length} last_update=${lastUpdate ?? "none"} date_to=${dateTo ?? "none"}`);
 
       return new Response(JSON.stringify({
         data: enrichedThreads,
@@ -510,17 +463,13 @@ serve(async (req) => {
     }
 
     if (action === "get_authorized_message_thread") {
-      if (!userContext) {
-        throw new Error("Unauthorized");
-      }
+      if (!userContext) throw new Error("Unauthorized");
 
       const idThread = Number(requestBody.id_thread);
       const fallbackReservationId = typeof requestBody.id_reservation === "string" || typeof requestBody.id_reservation === "number"
         ? String(requestBody.id_reservation).trim()
         : null;
-      if (!Number.isFinite(idThread)) {
-        throw new Error("Missing id_thread for get_authorized_message_thread.");
-      }
+      if (!Number.isFinite(idThread)) throw new Error("Missing id_thread for get_authorized_message_thread.");
 
       const authorizedThread = await getAuthorizedThread(
         await getOrCreateAuthToken(),
@@ -536,9 +485,7 @@ serve(async (req) => {
     }
 
     if (action === "send_message_to_thread") {
-      if (!userContext) {
-        throw new Error("Unauthorized");
-      }
+      if (!userContext) throw new Error("Unauthorized");
 
       const idThread = Number(requestBody.id_thread);
       const fallbackReservationId = typeof requestBody.id_reservation === "string" || typeof requestBody.id_reservation === "number"
@@ -546,27 +493,15 @@ serve(async (req) => {
         : null;
       const message = typeof requestBody.message === "string" ? requestBody.message.trim() : "";
 
-      if (!Number.isFinite(idThread)) {
-        throw new Error("Missing id_thread for send_message_to_thread.");
-      }
+      if (!Number.isFinite(idThread)) throw new Error("Missing id_thread for send_message_to_thread.");
+      if (!message) throw new Error("Missing message for send_message_to_thread.");
 
-      if (!message) {
-        throw new Error("Missing message for send_message_to_thread.");
-      }
-
-      await getAuthorizedThread(
-        await getOrCreateAuthToken(),
-        userContext,
-        idThread,
-        fallbackReservationId,
-      );
+      await getAuthorizedThread(await getOrCreateAuthToken(), userContext, idThread, fallbackReservationId);
 
       const sendResponse = await postToKrossbooking(await getOrCreateAuthToken(), "/messaging/send-message", {
         id_thread: idThread,
         message,
       });
-
-      console.log(`[krossbooking-proxy] send_message_to_thread userId=${userContext.userId} role=${userContext.role} idThread=${idThread}`);
 
       return new Response(JSON.stringify({ data: normalizeKrossData(sendResponse) ?? sendResponse }), {
         status: 200,
@@ -580,9 +515,7 @@ serve(async (req) => {
 
     switch (action) {
       case "get_reservations_for_room":
-        if (!requestBody.id_room) {
-          throw new Error("Missing id_room for get_reservations_for_room.");
-        }
+        if (!requestBody.id_room) throw new Error("Missing id_room for get_reservations_for_room.");
         krossbookingPath = "/reservations/get-list";
         payload = {
           with_rooms: true,
@@ -602,9 +535,7 @@ serve(async (req) => {
         break;
 
       case "get_housekeeping_tasks":
-        if (!requestBody.date_from || !requestBody.date_to) {
-          throw new Error("Missing date_from/date_to for get_housekeeping_tasks.");
-        }
+        if (!requestBody.date_from || !requestBody.date_to) throw new Error("Missing date_from/date_to for get_housekeeping_tasks.");
         krossbookingPath = "/housekeeping/get-tasks";
         payload = {
           date_from: requestBody.date_from,
@@ -616,9 +547,8 @@ serve(async (req) => {
       case "save_reservation": {
         const { id_reservation, label, arrival, departure, cod_reservation_status, id_room, id_room_type, property_id } = requestBody;
         if (!label || !arrival || !departure || !cod_reservation_status || !id_room || !id_room_type || property_id === undefined) {
-          throw new Error("Missing required parameters for save_reservation (label, arrival, departure, cod_reservation_status, id_room, id_room_type, property_id).");
+          throw new Error("Missing required parameters for save_reservation.");
         }
-
         krossbookingPath = "/reservations/save";
         payload = {
           label,
@@ -635,41 +565,32 @@ serve(async (req) => {
       }
 
       case "get_messages":
-        if (!requestBody.id_reservation) {
-          throw new Error("Missing id_reservation for get_messages.");
-        }
+        if (!requestBody.id_reservation) throw new Error("Missing id_reservation for get_messages.");
         krossbookingPath = "/messaging/get-threads";
         payload = { id_reservation: Number(requestBody.id_reservation) };
         break;
 
       case "get_single_message_thread":
-        if (!requestBody.id_thread) {
-          throw new Error("Missing id_thread for get_single_message_thread.");
-        }
+        if (!requestBody.id_thread) throw new Error("Missing id_thread for get_single_message_thread.");
         krossbookingPath = "/messaging/get-thread";
         payload = { id_thread: Number(requestBody.id_thread) };
         returnFullData = true;
         break;
 
       case "save_channel_manager":
-        if (!requestBody.cm || typeof requestBody.cm !== "object") {
-          throw new Error("Invalid 'cm' payload for save_channel_manager.");
-        }
+        if (!requestBody.cm || typeof requestBody.cm !== "object") throw new Error("Invalid 'cm' payload for save_channel_manager.");
         krossbookingPath = "/channel/save-cm";
         payload = { cm: requestBody.cm };
         break;
 
       case "get_room_types":
         krossbookingPath = "/rooms/get-rooms";
-        payload = {
-          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined,
-        };
+        payload = { id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined };
         break;
 
       case "get_reviews": {
         // Collecte des avis OTA via Krossbooking (remplace Revyoos).
-        // Appel direct via auth token: n'utilise PAS le proxy amont, donc
-        // ne modifie pas le fonctionnement existant du proxy.
+        // Passe par postToKrossbooking => utilise le proxy client comme toutes les autres actions.
         const todayIso = new Date().toISOString().slice(0, 10);
         krossbookingPath = "/reviews/get-list";
         payload = {
@@ -693,16 +614,8 @@ serve(async (req) => {
         throw new Error(`Unsupported action: ${action}`);
     }
 
-    const data = await postToKrossbooking(
-      hasUpstreamProxy() && (krossbookingPath === "/rooms/get-rooms" || krossbookingPath === "/reservations/get-list")
-        ? null
-        : await getOrCreateAuthToken(),
-      krossbookingPath,
-      payload,
-    );
-
+    const data = await postToKrossbooking(await getOrCreateAuthToken(), krossbookingPath, payload);
     const normalizedData = normalizeKrossData(data);
-
     const responsePayload = returnFullData
       ? { data: normalizedData ?? data }
       : {
@@ -714,20 +627,25 @@ serve(async (req) => {
         };
 
     console.log(`[krossbooking-proxy] success action=${action}`);
-
     return new Response(JSON.stringify(responsePayload), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
+
   } catch (error) {
-    if (error instanceof Response) {
-      return error;
-    }
+    if (error instanceof Response) return error;
 
     const message = error instanceof Error ? error.message : String(error);
+    const providerIpDenied = isProviderIpDeniedError(message);
     console.error(`[krossbooking-proxy] error ${message}`);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+    
+    return new Response(JSON.stringify({
+      error: providerIpDenied
+        ? "Le prestataire refuse actuellement les connexions depuis notre serveur."
+        : message,
+      code: providerIpDenied ? "PROVIDER_IP_DENIED" : "KROSSBOOKING_PROXY_ERROR",
+    }), {
+      status: providerIpDenied ? 503 : 500,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   }

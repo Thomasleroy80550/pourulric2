@@ -114,7 +114,7 @@ async function getAuthToken(): Promise<string> {
   }
 
   console.log("[krossbooking-proxy] Requesting Krossbooking auth token via proxy client");
-  
+
   const client = Deno.createHttpClient({
     proxy: { url: KROSSBOOKING_UPSTREAM_PROXY_URL },
   });
@@ -155,7 +155,7 @@ async function postToKrossbooking(authToken: string | null, path: string, payloa
   }
 
   console.log(`[krossbooking-proxy] calling Krossbooking API path=${path} via proxy client`);
-  
+
   const client = Deno.createHttpClient({
     proxy: { url: KROSSBOOKING_UPSTREAM_PROXY_URL },
   });
@@ -234,7 +234,7 @@ async function getUserContext(authHeader: string): Promise<UserContext> {
 
 async function getAuthorizedReservations(authToken: string, userContext: UserContext) {
   const reservationsById = new Map<number, Record<string, unknown>>();
-  
+
   // Boucle synchrone et linéaire stricte
   for (const room of userContext.rooms) {
     const roomId = Number(room.room_id);
@@ -350,7 +350,7 @@ serve(async (req) => {
 
     const userContext = !isCron ? await getUserContext(authHeader) : null;
     let authToken: string | null = null;
-    
+
     const getOrCreateAuthToken = async () => {
       if (!authToken) authToken = await getAuthToken();
       return authToken;
@@ -663,7 +663,7 @@ serve(async (req) => {
     const message = error instanceof Error ? error.message : String(error);
     const providerIpDenied = isProviderIpDeniedError(message);
     console.error(`[krossbooking-proxy] error ${message}`);
-    
+
     return new Response(JSON.stringify({
       error: providerIpDenied
         ? "Le prestataire refuse actuellement les connexions depuis notre serveur."

@@ -2,10 +2,31 @@ import React, { createContext, useState, useContext, useCallback, ReactNode, use
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
-import { saveInvoice, sendStatementByEmail, sendStatementDataToMakeWebhook, updateInvoice, SavedInvoice } from '@/lib/admin-api';
+import { saveInvoice, sendStatementByEmail, sendStatementDataToMakeWebhook, updateInvoice, SavedInvoice, getAllUserRooms } from '@/lib/admin-api';
+import { fetchKrossbookingReservationsForAdminRooms } from '@/lib/krossbooking';
 import { uploadStatementPdf } from '@/lib/storage-api';
 import { generateStatementPdf } from '@/lib/pdf-utils';
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format, parseISO, differenceInCalendarDays, isValid, startOfMonth, endOfMonth } from 'date-fns';
+
+// Alpha: mapping des mois français vers un index (0-11) pour interpréter la période
+const FRENCH_MONTHS: { [key: string]: number } = {
+  janvier: 0, février: 1, fevrier: 1, mars: 2, avril: 3, mai: 4, juin: 5,
+  juillet: 6, août: 7, aout: 7, septembre: 8, octobre: 9, novembre: 10,
+  décembre: 11, decembre: 11,
+};
+
+// Alpha: convertit une période texte ("Juillet 2024") en intervalle de dates
+function parseFrenchPeriodToRange(period: string): { start: Date; end: Date } | null {
+  if (!period) return null;
+  const parts = period.trim().toLowerCase().split(/\s+/);
+  if (parts.length < 2) return null;
+  const month = FRENCH_MONTHS[parts[0]];
+  const year = parseInt(parts[1], 10);
+  if (month === undefined || !Number.isFinite(year)) return null;
+  const start = startOfMonth(new Date(year, month, 1));
+  const end = endOfMonth(start);
+  return { start, end };
+}
 
 // Interface for a processed reservation row
 export interface ProcessedReservation {
@@ -67,6 +88,7 @@ interface InvoiceGenerationContextType {
   
   recalculateTotals: (data: ProcessedReservation[]) => void;
   processFile: (fileToProcess: File, commissionRate: number) => Promise<void>;
+  processFromKrossbooking: (clientId: string, commissionRate: number, period: string) => Promise<void>;
   resetState: () => void;
   handleGenerateInvoice: (sendEmail?: boolean) => Promise<void>;
   loadInvoiceForEditing: (invoice: SavedInvoice) => void;
@@ -230,6 +252,108 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     }
   }, [recalculateTotals]);
 
+  // Alpha: génère le relevé directement depuis les réservations Krossbooking, sans fichier Excel.
+  const processFromKrossbooking = useCallback(async (clientId: string, commissionRate: number, period: string) => {
+    setIsLoading(true);
+    setError(null);
+    setProcessedData([]);
+    setSelectedReservations(new Set());
+
+    try {
+      const range = parseFrenchPeriodToRange(period);
+      if (!range) {
+        throw new Error('Période invalide. Utilisez le format "Mois AAAA" (ex : Juillet 2024).');
+      }
+      const { start, end } = range;
+
+      const allRooms = await getAllUserRooms();
+      const clientRooms = allRooms.filter((room) => room.user_id === clientId);
+      if (clientRooms.length === 0) {
+        throw new Error("Aucun logement configuré pour ce client.");
+      }
+
+      const reservations = await fetchKrossbookingReservationsForAdminRooms(clientRooms, true);
+
+      const processedReservations: ProcessedReservation[] = [];
+      let taxWasModified = false;
+
+      reservations.forEach((res) => {
+        const status = (res.status || '').toUpperCase();
+        // Exclure les annulations et les blocages propriétaire
+        if (status === 'CANC' || status === 'PROPRI' || status === 'PROP0') return;
+
+        const checkIn = res.check_in_date ? parseISO(res.check_in_date) : null;
+        if (!checkIn || !isValid(checkIn)) return;
+        // Filtrer par mois de la date d'arrivée
+        if (checkIn < start || checkIn > end) return;
+
+        const portail = res.cod_channel || res.channel_identifier || 'N/A';
+        const nuits = res.check_out_date && isValid(parseISO(res.check_out_date))
+          ? Math.max(differenceInCalendarDays(parseISO(res.check_out_date), checkIn), 0)
+          : 0;
+        const voyageurs = res.n_guests || 0;
+
+        // Le montant Krossbooking (amount) est du type "123.45€"
+        const ca = parseFloat((res.amount || '0').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+        let taxeDeSejour = res.tourist_tax_amount || 0;
+        const fraisMenage = res.cleaning_fee_amount || 0;
+        const commissionPlateforme = res.ota_commissions_collected || 0;
+        const fraisPaiement = res.ota_commissions_deducted || 0;
+
+        const portailLower = portail.toLowerCase();
+        if (portailLower.includes('airbnb') || portailLower.includes('booking')) {
+          if (taxeDeSejour !== 0) taxWasModified = true;
+          taxeDeSejour = 0;
+        }
+
+        const prixSejour = ca - fraisMenage - taxeDeSejour;
+        const montantVerse = ca - commissionPlateforme - fraisPaiement;
+        const revenuGenere = montantVerse - fraisMenage - taxeDeSejour;
+        const commissionHelloKeys = revenuGenere * commissionRate;
+
+        processedReservations.push({
+          portail,
+          voyageur: res.guest_name || '',
+          arrivee: res.check_in_date || '',
+          depart: res.check_out_date || '',
+          nuits,
+          voyageurs,
+          prixSejour,
+          fraisMenage,
+          taxeDeSejour,
+          ca,
+          revenuGenere,
+          commissionHelloKeys,
+          montantVerse,
+          originalTotalPaye: ca,
+          originalCommissionPlateforme: commissionPlateforme,
+          originalFraisPaiement: fraisPaiement,
+        });
+      });
+
+      processedReservations.sort((a, b) => (a.arrivee > b.arrivee ? 1 : a.arrivee < b.arrivee ? -1 : 0));
+
+      setProcessedData(processedReservations);
+      recalculateTotals(processedReservations);
+      setFileName(`Généré depuis Krossbooking (Alpha) — ${period}`);
+
+      if (taxWasModified) {
+        toast.info("La taxe de séjour a été mise à 0 pour les réservations Airbnb et Booking.com.");
+      }
+
+      if (processedReservations.length === 0) {
+        toast.warning("Aucune réservation trouvée pour ce client sur cette période.");
+      } else {
+        toast.success(`${processedReservations.length} réservation(s) importée(s) depuis Krossbooking (Alpha). Vérifiez les montants avant de sauvegarder.`);
+      }
+    } catch (err: any) {
+      setError(`Erreur lors de la génération depuis Krossbooking : ${err.message}`);
+      toast.error(err.message || "Une erreur est survenue lors de la génération depuis Krossbooking.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [recalculateTotals]);
+
   const transfersBySource = useMemo(() => {
     const result: { [key: string]: { reservations: ProcessedReservation[], total: number } } = {};
     paymentSources.forEach(source => {
@@ -363,6 +487,7 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
     editingInvoiceId,
     recalculateTotals,
     processFile,
+    processFromKrossbooking,
     resetState,
     handleGenerateInvoice,
     loadInvoiceForEditing,

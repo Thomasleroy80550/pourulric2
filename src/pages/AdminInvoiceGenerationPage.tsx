@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, FileText, DollarSign, Loader2, Terminal, Pencil, ChevronDown } from 'lucide-react';
+import { Upload, FileText, DollarSign, Loader2, Terminal, Pencil, ChevronDown, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,6 +48,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     ownerCleaningFee, setOwnerCleaningFee, // Get from context
     recalculateTotals,
     processFile,
+    processFromKrossbooking,
     handleGenerateInvoice,
   } = useInvoiceGeneration();
 
@@ -104,6 +105,23 @@ const AdminInvoiceGenerationPage: React.FC = () => {
     }
 
     await handleGenerateInvoice(sendEmail);
+  };
+
+  const handleGenerateFromKrossbooking = async () => {
+    if (shouldBlockInvoiceCreation) {
+      toast.error("Génération bloquée : ce client n'a pas d'ID Pennylane.");
+      return;
+    }
+    if (!selectedClientId || !invoicePeriod) {
+      toast.error("Sélectionnez d'abord un client et une période.");
+      return;
+    }
+    const profile = profiles.find(p => p.id === selectedClientId);
+    const commissionRate = profile?.commission_rate || 0.26;
+    if (!profile?.commission_rate) {
+      toast.warning("Taux de commission non trouvé pour le client, utilisation de la valeur par défaut de 26%.");
+    }
+    await processFromKrossbooking(selectedClientId, commissionRate, invoicePeriod);
   };
 
   const handleEditClick = (reservation: ProcessedReservation, index: number) => {
@@ -249,6 +267,36 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                 </Label>
                 <Input id="file-upload" type="file" className="hidden" onChange={handleFileChange} accept=".xlsx, .xls" disabled={!selectedClientId || !invoicePeriod || shouldBlockInvoiceCreation} />
                 {fileName && <p className="text-sm text-center text-gray-600 dark:text-gray-400 mt-2">Fichier: {fileName}</p>}
+
+                {/* Mode Alpha : génération sans fichier Excel */}
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-gray-500">ou</span>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FlaskConical className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-800 dark:text-amber-300">Génération sans Excel</span>
+                    <span className="ml-auto inline-flex items-center rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Alpha</span>
+                  </div>
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    Récupère automatiquement les réservations du client depuis Krossbooking pour la période. Vérifiez et ajustez les montants avant de sauvegarder.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full border-amber-400 text-amber-800 hover:bg-amber-100 dark:text-amber-300"
+                    onClick={handleGenerateFromKrossbooking}
+                    disabled={!selectedClientId || !invoicePeriod || shouldBlockInvoiceCreation || isLoading}
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FlaskConical className="h-4 w-4 mr-2" />}
+                    Générer depuis Krossbooking
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

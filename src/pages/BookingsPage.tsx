@@ -39,6 +39,7 @@ interface Booking {
   status: string;
   amount: string;
   tourist_tax_amount?: number;
+  cleaning_fee_amount?: number;
   cod_channel?: string;
   email?: string;
   phone?: string;
@@ -575,6 +576,12 @@ const BookingsPage: React.FC = () => {
                 <Label className="text-right">Taxe de séjour:</Label>
                 <span className="col-span-2">
                   {(selectedBooking.tourist_tax_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Frais de ménage:</Label>
+                <span className="col-span-2">
+                  {(selectedBooking.cleaning_fee_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                 </span>
               </div>
               {(selectedBooking.ota_commissions_collected ?? 0) > 0 && (

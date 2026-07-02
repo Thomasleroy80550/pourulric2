@@ -21,6 +21,7 @@ export interface KrossbookingReservation {
   email?: string;
   phone?: string;
   tourist_tax_amount?: number;
+  cleaning_fee_amount?: number;
   property_id: number;
   id_room_type?: string; // Add this line
   // Occupation (pour la déclaration de taxe de séjour)
@@ -292,6 +293,7 @@ export async function fetchKrossbookingReservations(
         email: res.email || '',
         phone: res.phone || '',
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+        cleaning_fee_amount: res.cleaning_fee_amount != null ? parseFloat(res.cleaning_fee_amount) : 0,
         property_id: res.property_id || profile?.krossbooking_property_id, // Use profile's property_id as fallback
         id_room_type: res.id_room_type ? res.id_room_type.toString() : roomIdToRoomTypeMap.get(room.room_id),
         ota_commissions_collected: res.ota_commissions_collected != null ? parseFloat(res.ota_commissions_collected) : 0,
@@ -384,6 +386,7 @@ export async function fetchKrossbookingReservationsForAdminRooms(
         email: res.email || '',
         phone: res.phone || '',
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
+        cleaning_fee_amount: res.cleaning_fee_amount != null ? parseFloat(res.cleaning_fee_amount) : 0,
         property_id: res.property_id || matchedRoom?.profiles?.krossbooking_property_id || 0,
         id_room_type: res.id_room_type ? String(res.id_room_type) : roomIdToRoomTypeMap.get(matchedRoom?.room_id || String(res.room_id || res.id_room || '')),
         ota_commissions_collected: res.ota_commissions_collected != null ? parseFloat(res.ota_commissions_collected) : 0,

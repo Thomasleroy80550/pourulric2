@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { useQuery } from '@tanstack/react-query';
-import { getAllUserRooms, AdminUserRoom } from '@/lib/admin-api';
+import { getAllUserRooms, AdminUserRoom, updateRoomGuestCapacity } from '@/lib/admin-api';
 import {
   deleteMonthlyFeaturedRoom,
   formatMonthLabel,
@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlugZap, Droplet, Building, Edit, History, Settings, MessageSquare, Star, Sparkles } from 'lucide-react';
+import { PlugZap, Droplet, Building, Edit, History, Settings, MessageSquare, Star, Sparkles, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,47 @@ const AdminUserRoomsPage: React.FC = () => {
   const [messageDraft, setMessageDraft] = useState('');
   const [isSavingMessage, setIsSavingMessage] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthInputValue());
+
+  // Édition inline de la capacité
+  const [editingCapacityId, setEditingCapacityId] = useState<string | null>(null);
+  const [capacityDraft, setCapacityDraft] = useState('');
+  const [isSavingCapacity, setIsSavingCapacity] = useState(false);
+
+  const startEditingCapacity = (room: AdminUserRoom) => {
+    setEditingCapacityId(room.id);
+    setCapacityDraft(
+      typeof room.linen_guest_capacity === 'number' && room.linen_guest_capacity > 0
+        ? String(room.linen_guest_capacity)
+        : ''
+    );
+  };
+
+  const cancelEditingCapacity = () => {
+    setEditingCapacityId(null);
+    setCapacityDraft('');
+  };
+
+  const handleSaveCapacity = async (room: AdminUserRoom) => {
+    const trimmed = capacityDraft.trim();
+    const parsed = trimmed === '' ? null : parseInt(trimmed, 10);
+
+    if (parsed !== null && (isNaN(parsed) || parsed < 0)) {
+      toast.error('Veuillez saisir un nombre de voyageurs valide.');
+      return;
+    }
+
+    setIsSavingCapacity(true);
+    try {
+      await updateRoomGuestCapacity(room.id, parsed);
+      toast.success(`Capacité mise à jour pour ${room.room_name}.`);
+      cancelEditingCapacity();
+      await refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de mettre à jour la capacité.');
+    } finally {
+      setIsSavingCapacity(false);
+    }
+  };
 
   const {
     data: featuredRooms = [],
@@ -209,9 +250,53 @@ const AdminUserRoomsPage: React.FC = () => {
                           <TableCell>{room.keybox_code || '—'}</TableCell>
                           <TableCell>{room.wifi_code || '—'}</TableCell>
                           <TableCell>
-                            {typeof room.linen_guest_capacity === 'number' && room.linen_guest_capacity > 0
-                              ? `${room.linen_guest_capacity} pers.`
-                              : '—'}
+                            {editingCapacityId === room.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  autoFocus
+                                  value={capacityDraft}
+                                  onChange={(e) => setCapacityDraft(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveCapacity(room);
+                                    if (e.key === 'Escape') cancelEditingCapacity();
+                                  }}
+                                  disabled={isSavingCapacity}
+                                  className="h-8 w-20"
+                                />
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-green-600"
+                                  disabled={isSavingCapacity}
+                                  onClick={() => handleSaveCapacity(room)}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-muted-foreground"
+                                  disabled={isSavingCapacity}
+                                  onClick={cancelEditingCapacity}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => startEditingCapacity(room)}
+                                className="inline-flex items-center gap-1 rounded px-2 py-1 text-sm hover:bg-muted"
+                                title="Cliquer pour modifier"
+                              >
+                                {typeof room.linen_guest_capacity === 'number' && room.linen_guest_capacity > 0
+                                  ? `${room.linen_guest_capacity} pers.`
+                                  : '—'}
+                                <Edit className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            )}
                           </TableCell>
                           <TableCell>{room.arrival_instructions || '—'}</TableCell>
                           <TableCell>{room.parking_info || '—'}</TableCell>

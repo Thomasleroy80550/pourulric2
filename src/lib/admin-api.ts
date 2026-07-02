@@ -1645,6 +1645,26 @@ export async function setInvoicePaidStatus(invoiceId: string, paid: boolean): Pr
 }
 
 /**
+ * Met à jour la capacité voyageurs d'un logement.
+ * @param userRoomId ID du logement (user_rooms.id)
+ * @param capacity Nombre de voyageurs (null pour vider)
+ */
+export async function updateRoomGuestCapacity(
+  userRoomId: string,
+  capacity: number | null
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_rooms')
+    .update({ linen_guest_capacity: capacity })
+    .eq('id', userRoomId);
+
+  if (error) {
+    console.error("Error updating room guest capacity:", error);
+    throw new Error(`Erreur lors de la mise à jour de la capacité : ${error.message}`);
+  }
+}
+
+/**
  * Met à jour le statut de coupure d'un compteur et enregistre un événement d'historique.
  * @param userRoomId ID du logement (user_rooms.id)
  * @param utility 'electricity' | 'water'

@@ -23,6 +23,10 @@ export interface KrossbookingReservation {
   tourist_tax_amount?: number;
   property_id: number;
   id_room_type?: string; // Add this line
+  // Occupation (pour la déclaration de taxe de séjour)
+  n_adults?: number;
+  n_children?: number;
+  n_guests?: number;
 }
 
 export interface KrossbookingHousekeepingTask {
@@ -110,6 +114,42 @@ export interface ChannelPriceAvailabilityItem {
   closed?: boolean;          // fermé à la vente
   restrictions?: Restrictions; // règles (min stay, closed on arrival, etc.)
   occupancies?: { guests: number; price: number }[]; // prix par occupation si with_occupancies = true
+}
+
+/**
+ * Extrait le nombre d'adultes / enfants / total d'une réservation Krossbooking.
+ * Les données d'occupation peuvent se trouver soit au niveau de la réservation,
+ * soit dans le tableau `rooms` (réponse avec with_rooms=true). On lit plusieurs
+ * noms de champs possibles pour être robuste selon les configurations.
+ */
+function extractOccupancy(res: any): { adults: number; children: number; guests: number } {
+  const toInt = (v: unknown) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+  };
+
+  let adults = 0;
+  let children = 0;
+  let guests = 0;
+
+  const rooms = Array.isArray(res?.rooms) ? res.rooms : [];
+  for (const room of rooms) {
+    adults += toInt(room?.n_adults ?? room?.adults ?? room?.n_adult);
+    children += toInt(room?.n_children ?? room?.children ?? room?.n_child ?? room?.n_kids);
+    guests += toInt(room?.n_guests ?? room?.guests ?? room?.n_people ?? room?.occupancy);
+  }
+
+  // Repli sur les champs au niveau réservation si rien n'a été trouvé
+  if (adults === 0) adults = toInt(res?.n_adults ?? res?.adults ?? res?.n_adult);
+  if (children === 0) children = toInt(res?.n_children ?? res?.children ?? res?.n_child ?? res?.n_kids);
+  if (guests === 0) guests = toInt(res?.n_guests ?? res?.guests ?? res?.n_people ?? res?.occupancy);
+
+  // Si on connaît le total sans la répartition, on considère tout le monde adulte
+  if (guests > 0 && adults === 0 && children === 0) adults = guests;
+  // Si on a la répartition mais pas le total
+  if (guests === 0) guests = adults + children;
+
+  return { adults, children, guests };
 }
 
 const KROSSBOOKING_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/krossbooking-proxy";
@@ -251,6 +291,7 @@ export async function fetchKrossbookingReservations(
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
         property_id: res.property_id || profile?.krossbooking_property_id, // Use profile's property_id as fallback
         id_room_type: res.id_room_type ? res.id_room_type.toString() : roomIdToRoomTypeMap.get(room.room_id),
+        ...(() => { const occ = extractOccupancy(res); return { n_adults: occ.adults, n_children: occ.children, n_guests: occ.guests }; })(),
       }));
     });
 
@@ -340,6 +381,7 @@ export async function fetchKrossbookingReservationsForAdminRooms(
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
         property_id: res.property_id || matchedRoom?.profiles?.krossbooking_property_id || 0,
         id_room_type: res.id_room_type ? String(res.id_room_type) : roomIdToRoomTypeMap.get(matchedRoom?.room_id || String(res.room_id || res.id_room || '')),
+        ...(() => { const occ = extractOccupancy(res); return { n_adults: occ.adults, n_children: occ.children, n_guests: occ.guests }; })(),
       };
     });
 

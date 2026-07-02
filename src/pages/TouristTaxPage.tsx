@@ -281,10 +281,13 @@ const TouristTaxPage: React.FC = () => {
 
         <Alert className="mb-6 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-700">
           <Info className="h-4 w-4" />
-          <AlertTitle>Règle de calcul proportionnelle</AlertTitle>
+          <AlertTitle>Aide à la déclaration sur le portail gouvernemental</AlertTitle>
           <AlertDescription>
-            La taxe correspond à 5,00% du coût HT de la nuitée par occupant, plafonnée à 4,80€ par adulte et par nuit. 
-            Les enfants sont exonérés (0€). Les répartitions Adultes/Enfants ci-dessous sont calculées automatiquement à partir des montants fournis par Krossbooking.
+            Pour chaque réservation, reportez sur le portail : <strong>Arrivée</strong>, <strong>Départ</strong>,
+            {' '}<strong>Prix des nuits</strong>, nombre d'<strong>adultes</strong> et d'<strong>enfants</strong>.
+            La taxe est proportionnelle (5,00% + 10% de taxe additionnelle départementale de la Somme),
+            plafonnée à 4,80€ par adulte et par nuit. <strong>Les enfants sont exonérés</strong> (le syndicat applique l'abattement).
+            Les réservations Airbnb et Booking (taxe déjà collectée par la plateforme) ne sont pas listées.
           </AlertDescription>
         </Alert>
 
@@ -303,7 +306,7 @@ const TouristTaxPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Détail des réservations pour {selectedMonthName}</DialogTitle>
             <DialogDescription>
-              Copiez-collez les informations: Arrivée, Départ, Adultes, Enfants (0), Prix total des nuits. Les valeurs sont calculées automatiquement.
+              À reporter sur le portail pour chaque réservation : Arrivée, Départ, Nuits, Adultes, Enfants (exonérés) et Prix des nuits.
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
@@ -314,9 +317,10 @@ const TouristTaxPage: React.FC = () => {
                     <TableHead>Nom du voyageur</TableHead>
                     <TableHead>Arrivée</TableHead>
                     <TableHead>Départ</TableHead>
+                    <TableHead className="text-center">Nuits</TableHead>
                     <TableHead className="text-center">Adultes</TableHead>
                     <TableHead className="text-center">Enfants</TableHead>
-                    <TableHead className="text-right">Prix total des nuits</TableHead>
+                    <TableHead className="text-right">Prix des nuits</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -340,26 +344,41 @@ const TouristTaxPage: React.FC = () => {
                       ? nightsTotalFromStatements
                       : totalAmount; // fallback sur le total Kross si non trouvé
 
-                    // Conserver les calculs d'estimation adultes existants (basés sur TTC par nuit)
+                    // Occupation réelle fournie par Krossbooking
+                    const realAdults = reservation.n_adults ?? 0;
+                    const realChildren = reservation.n_children ?? 0;
+                    const hasRealOccupancy = (realAdults + realChildren) > 0;
+
+                    // Estimation de secours si l'occupation n'est pas renseignée
                     const pricePerNightTTC = nights > 0 ? totalAmount / nights : 0;
                     const pricePerNightHT = pricePerNightTTC / (1 + (TVA_PCT / 100));
                     const costPerNightPerOccupantHT = DEFAULT_OCCUPANTS_GUESS > 0 ? (pricePerNightHT / DEFAULT_OCCUPANTS_GUESS) : 0;
                     const taxPerAdultPerNight = Math.min((PROPORTIONAL_RATE_PCT / 100) * costPerNightPerOccupantHT, CAP_PER_ADULT_PER_NIGHT);
-
                     const totalTaxActual = reservation.tourist_tax_amount || 0;
                     const estimatedAdults = (nights > 0 && taxPerAdultPerNight > 0)
                       ? Math.max(Math.round(totalTaxActual / (taxPerAdultPerNight * nights)), 0)
                       : 0;
 
-                    const children = 0;
+                    const adults = hasRealOccupancy ? realAdults : estimatedAdults;
+                    const children = hasRealOccupancy ? realChildren : 0;
 
                     return (
                       <TableRow key={reservation.id}>
                         <TableCell className="font-medium">{reservation.guest_name || 'N/A'}</TableCell>
                         <TableCell>{format(checkIn, 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{format(checkOut, 'dd/MM/yyyy')}</TableCell>
-                        <TableCell className="text-center">{estimatedAdults}</TableCell>
-                        <TableCell className="text-center">{children}</TableCell>
+                        <TableCell className="text-center">{nights}</TableCell>
+                        <TableCell className="text-center">{adults}</TableCell>
+                        <TableCell className="text-center">
+                          {children > 0 ? (
+                            <span className="inline-flex items-center gap-1">
+                              {children}
+                              <span className="text-xs text-green-600 dark:text-green-400">(exonérés)</span>
+                            </span>
+                          ) : (
+                            children
+                          )}
+                        </TableCell>
                         <TableCell className="text-right font-medium">
                           {totalNightsPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                         </TableCell>

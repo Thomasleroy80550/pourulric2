@@ -27,6 +27,9 @@ export interface KrossbookingReservation {
   n_adults?: number;
   n_children?: number;
   n_guests?: number;
+  // Commissions OTA (uniquement pour les réservations OTA avec montant > 0)
+  ota_commissions_collected?: number;
+  ota_commissions_deducted?: number;
 }
 
 export interface KrossbookingHousekeepingTask {
@@ -291,6 +294,8 @@ export async function fetchKrossbookingReservations(
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
         property_id: res.property_id || profile?.krossbooking_property_id, // Use profile's property_id as fallback
         id_room_type: res.id_room_type ? res.id_room_type.toString() : roomIdToRoomTypeMap.get(room.room_id),
+        ota_commissions_collected: res.ota_commissions_collected != null ? parseFloat(res.ota_commissions_collected) : 0,
+        ota_commissions_deducted: res.ota_commissions_deducted != null ? parseFloat(res.ota_commissions_deducted) : 0,
         ...(() => { const occ = extractOccupancy(res); return { n_adults: occ.adults, n_children: occ.children, n_guests: occ.guests }; })(),
       }));
     });
@@ -381,6 +386,8 @@ export async function fetchKrossbookingReservationsForAdminRooms(
         tourist_tax_amount: res.city_tax_amount ? parseFloat(res.city_tax_amount) : 0,
         property_id: res.property_id || matchedRoom?.profiles?.krossbooking_property_id || 0,
         id_room_type: res.id_room_type ? String(res.id_room_type) : roomIdToRoomTypeMap.get(matchedRoom?.room_id || String(res.room_id || res.id_room || '')),
+        ota_commissions_collected: res.ota_commissions_collected != null ? parseFloat(res.ota_commissions_collected) : 0,
+        ota_commissions_deducted: res.ota_commissions_deducted != null ? parseFloat(res.ota_commissions_deducted) : 0,
         ...(() => { const occ = extractOccupancy(res); return { n_adults: occ.adults, n_children: occ.children, n_guests: occ.guests }; })(),
       };
     });

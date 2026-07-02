@@ -540,7 +540,17 @@ serve(async (req) => {
         payload = {
           date_from: requestBody.date_from,
           date_to: requestBody.date_to,
-          id_property: requestBody.id_property ? Number(requestBody.id_property) : undefined,
+          ...(requestBody.id_property ? { id_property: Number(requestBody.id_property) } : {}),
+          ...(requestBody.id_room ? { id_room: Number(requestBody.id_room) } : {}),
+          ...(typeof requestBody.cod_user === "string" && requestBody.cod_user.trim()
+            ? { cod_user: requestBody.cod_user.trim() }
+            : {}),
+          ...(typeof requestBody.task_type === "string" && requestBody.task_type.trim()
+            ? { task_type: requestBody.task_type.trim() }
+            : {}),
+          ...(requestBody.cod_status !== undefined && requestBody.cod_status !== null
+            ? { cod_status: requestBody.cod_status }
+            : {}),
         };
         break;
 

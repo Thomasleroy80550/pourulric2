@@ -42,6 +42,9 @@ interface Booking {
   cod_channel?: string;
   email?: string;
   phone?: string;
+  // Commissions OTA
+  ota_commissions_collected?: number;
+  ota_commissions_deducted?: number;
   // V2 fields (optionnels) pour compatibilité avec BookingPlanningGridV2
   krossbooking_room_id?: string;
   channel_identifier?: string;
@@ -574,6 +577,22 @@ const BookingsPage: React.FC = () => {
                   {(selectedBooking.tourist_tax_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                 </span>
               </div>
+              {(selectedBooking.ota_commissions_collected ?? 0) > 0 && (
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <Label className="text-right">Commissions OTA perçues:</Label>
+                  <span className="col-span-2">
+                    {(selectedBooking.ota_commissions_collected ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                  </span>
+                </div>
+              )}
+              {(selectedBooking.ota_commissions_deducted ?? 0) > 0 && (
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <Label className="text-right">Commissions OTA déduites:</Label>
+                  <span className="col-span-2">
+                    {(selectedBooking.ota_commissions_deducted ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

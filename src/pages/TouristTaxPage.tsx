@@ -388,16 +388,18 @@ const TouristTaxPage: React.FC = () => {
                       ? nightsTotalFromStatements
                       : totalAmount; // fallback sur le total Kross si non trouvé
 
-                    // Le montant réel de taxe (city_tax_amount) ne reflète que les
-                    // adultes (enfants exonérés). On calcule donc les adultes en sens inverse.
                     const totalTaxActual = reservation.tourist_tax_amount || 0;
-                    const adults = reverseCalcAdults({
-                      totalTax: totalTaxActual,
-                      nights,
-                      totalPriceTTC: totalNightsPrice || totalAmount,
-                    });
-                    // Les enfants ne génèrent pas de taxe : non déductibles du montant.
-                    const children = 0;
+
+                    // Occupation réelle renvoyée par Krossbooking (nécessaire pour le portail).
+                    const realAdults = reservation.n_adults ?? 0;
+                    const realChildren = reservation.n_children ?? 0;
+                    const hasRealOccupancy = (realAdults + realChildren) > 0;
+
+                    // Repli : si l'occupation n'est pas fournie, on déduit les adultes du montant de taxe.
+                    const adults = hasRealOccupancy
+                      ? realAdults
+                      : reverseCalcAdults({ totalTax: totalTaxActual, nights, totalPriceTTC: totalNightsPrice || totalAmount });
+                    const children = hasRealOccupancy ? realChildren : 0;
 
                     return (
                       <TableRow key={reservation.id}>

@@ -38,6 +38,7 @@ interface Booking {
   check_out_date: string;
   status: string;
   amount: string;
+  tourist_tax_amount?: number;
   cod_channel?: string;
   email?: string;
   phone?: string;
@@ -566,6 +567,12 @@ const BookingsPage: React.FC = () => {
               <div className="grid grid-cols-3 items-center gap-4">
                 <Label className="text-right">Montant:</Label>
                 <span className="col-span-2 font-bold text-gray-800 dark:text-gray-200">{selectedBooking.amount}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <Label className="text-right">Taxe de séjour:</Label>
+                <span className="col-span-2">
+                  {(selectedBooking.tourist_tax_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                </span>
               </div>
             </div>
           )}

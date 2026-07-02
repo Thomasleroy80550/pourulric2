@@ -71,13 +71,19 @@ function splitAdultsChildrenToMatch(params: {
   nightsPrice: number;
   nights: number;
   realGuests?: number;
+  maxCapacity?: number;
 }): { adults: number; children: number; portalTax: number } {
-  const { collectedTax, nightsPrice, nights, realGuests } = params;
+  const { collectedTax, nightsPrice, nights, realGuests, maxCapacity } = params;
   if (nightsPrice <= 0 || nights <= 0) return { adults: 0, children: 0, portalTax: 0 };
 
-  // Total d'occupants : réel si fourni, sinon on teste plusieurs tailles de groupe.
-  const maxPersons = realGuests && realGuests > 0 ? realGuests : MAX_DECLARED_PERSONS;
-  const minPersons = realGuests && realGuests > 0 ? realGuests : 1;
+  // Plafond d'occupants : on ne déclare JAMAIS plus que la capacité max du logement.
+  const capacityLimit = maxCapacity && maxCapacity > 0 ? maxCapacity : MAX_DECLARED_PERSONS;
+
+  // Total d'occupants : réel si fourni, sinon on teste plusieurs tailles de groupe,
+  // mais toujours borné par la capacité maximale du logement.
+  const desiredMax = realGuests && realGuests > 0 ? realGuests : MAX_DECLARED_PERSONS;
+  const maxPersons = Math.min(desiredMax, capacityLimit);
+  const minPersons = realGuests && realGuests > 0 ? Math.min(realGuests, capacityLimit) : 1;
 
   let best = { adults: 1, children: 0, portalTax: 0, diff: Infinity };
   for (let persons = minPersons; persons <= maxPersons; persons++) {
@@ -106,6 +112,9 @@ const TouristTaxPage: React.FC = () => {
 
   // Ajout: index pour retrouver le prixSejour depuis les relevés
   const [priceIndex, setPriceIndex] = useState<Map<string, number>>(new Map());
+
+  // Index capacité max par chambre Krossbooking (room_id -> capacité voyageurs)
+  const [capacityIndex, setCapacityIndex] = useState<Map<string, number>>(new Map());
 
   // Helpers pour normaliser et parser les dates
   const normalizeName = (s: string) =>
@@ -144,9 +153,19 @@ const TouristTaxPage: React.FC = () => {
         if (userRooms.length === 0) {
           setMonthlyData([]);
           setPriceIndex(new Map()); // reset index
+          setCapacityIndex(new Map());
           setLoading(false);
           return;
         }
+
+        // Construire l'index de capacité max par chambre (room_id -> capacité voyageurs)
+        const newCapacityIndex = new Map<string, number>();
+        for (const room of userRooms) {
+          if (typeof room.linen_guest_capacity === 'number' && room.linen_guest_capacity > 0) {
+            newCapacityIndex.set(room.room_id, room.linen_guest_capacity);
+          }
+        }
+        setCapacityIndex(newCapacityIndex);
 
         const bookings = await fetchKrossbookingReservations(userRooms);
 
@@ -414,13 +433,18 @@ const TouristTaxPage: React.FC = () => {
                     const totalTaxActual = reservation.tourist_tax_amount || 0;
                     const nightsPrice = totalNightsPrice || totalAmount;
 
+                    // Capacité max du logement : borne haute pour le nb d'occupants déclarés.
+                    const maxCapacity = capacityIndex.get(reservation.krossbooking_room_id);
+
                     // On garde le VRAI prix des nuits et on déclare des enfants (exonérés)
-                    // pour aligner la taxe du portail sur le montant réellement encaissé.
+                    // pour aligner la taxe du portail sur le montant réellement encaissé,
+                    // sans jamais dépasser la capacité maximale du logement.
                     const { adults, children, portalTax } = splitAdultsChildrenToMatch({
                       collectedTax: totalTaxActual,
                       nightsPrice,
                       nights,
                       realGuests: reservation.n_guests,
+                      maxCapacity,
                     });
 
                     return (

@@ -160,6 +160,20 @@ const TouristTaxPage: React.FC = () => {
           const nights = differenceInDays(checkOutDate, checkInDate);
           const monthIndex = getMonth(checkInDate);
 
+          // LOG TEMPORAIRE — inspection des données brutes pour calibrer le calcul de taxe
+          console.log('[TAXE-DEBUG]', {
+            voyageur: booking.guest_name,
+            arrivee: booking.check_in_date,
+            depart: booking.check_out_date,
+            nuits: nights,
+            montant_resa: booking.amount,
+            taxe_sejour: booking.tourist_tax_amount,
+            adultes_kross: booking.n_adults,
+            enfants_kross: booking.n_children,
+            occupants_kross: booking.n_guests,
+            canal: booking.cod_channel,
+          });
+
           if (nights > 0 && dataByMonth[monthIndex]) {
             dataByMonth[monthIndex].taxableNights += nights;
             dataByMonth[monthIndex].totalActualTax += (booking.tourist_tax_amount || 0);

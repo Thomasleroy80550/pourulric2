@@ -350,6 +350,7 @@ const TouristTaxPage: React.FC = () => {
                     <TableHead className="text-center">Adultes</TableHead>
                     <TableHead className="text-center">Enfants</TableHead>
                     <TableHead className="text-right">Prix des nuits</TableHead>
+                    <TableHead className="text-right">Taxe de séjour</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -403,6 +404,9 @@ const TouristTaxPage: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {totalNightsPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-primary">
+                          {totalTaxActual.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                         </TableCell>
                       </TableRow>
                     );

@@ -266,7 +266,7 @@ const HousekeepingTasksPage: React.FC = () => {
                   <Badge variant="secondary" className="ml-1">{dayTasks.length}</Badge>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {dayTasks.map((task) => {
                     const meta = taskTypeMeta(task.taskType);
                     const TypeIcon = meta.icon;
@@ -274,85 +274,95 @@ const HousekeepingTasksPage: React.FC = () => {
                       <Card
                         key={`${task.id}-${task.idRoom}`}
                         className={cn(
-                          'overflow-hidden transition-all hover:shadow-md border-l-4',
-                          task.completed ? 'border-l-emerald-400' : 'border-l-transparent',
+                          'group relative overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5',
+                          task.completed
+                            ? 'border-emerald-200 dark:border-emerald-900/50'
+                            : 'border-border/60',
                         )}
                       >
-                        <CardContent className="p-4 sm:p-5">
-                          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                            {/* Icon */}
-                            <div className={cn('flex h-11 w-11 items-center justify-center rounded-xl shrink-0', meta.classes)}>
+                        {/* Accent bar */}
+                        <div className={cn('absolute inset-y-0 left-0 w-1.5', task.completed ? 'bg-emerald-400' : meta.dot)} />
+
+                        <CardContent className="p-4 sm:p-5 pl-6 sm:pl-7">
+                          {/* Top row: icon + room + status */}
+                          <div className="flex items-start gap-3">
+                            <div className={cn('flex h-12 w-12 items-center justify-center rounded-2xl shrink-0 shadow-sm', meta.classes)}>
                               <TypeIcon className="h-5 w-5" />
                             </div>
 
-                            {/* Main */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className="flex items-center gap-1.5 font-semibold">
-                                  <Home className="h-3.5 w-3.5 text-muted-foreground" />
-                                  {task.room || `Logement ${task.idRoom}`}
-                                </span>
-                                <Badge variant="secondary" className={cn('border-0 font-medium gap-1.5', meta.classes)}>
-                                  <span className={cn('h-1.5 w-1.5 rounded-full', meta.dot)} />
-                                  {meta.label}
-                                </Badge>
-                                {task.completed ? (
-                                  <Badge className="border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 gap-1">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    Terminée
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="gap-1 text-muted-foreground">
-                                    <Clock className="h-3 w-3" />
-                                    À faire
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {/* Meta info */}
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                                {task.timeScheduled && (
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    {task.timeScheduled}
-                                    {task.timeEnd ? ` – ${task.timeEnd}` : ''}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <h3 className="font-semibold truncate leading-tight flex items-center gap-1.5">
+                                    <Home className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    {task.room || `Logement ${task.idRoom}`}
+                                  </h3>
+                                  <span className={cn('mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium', meta.classes)}>
+                                    <span className={cn('h-1.5 w-1.5 rounded-full', meta.dot)} />
+                                    {meta.label}
                                   </span>
-                                )}
-                                {task.users.length > 0 && (
-                                  <span className="flex items-center gap-1">
-                                    <Users className="h-3.5 w-3.5" />
-                                    {task.users.join(', ')}
-                                  </span>
-                                )}
-                              </div>
-
-                              {task.note && (
-                                <p className="mt-2 text-sm text-foreground/80 bg-muted/50 rounded-md px-3 py-2">
-                                  {task.note}
-                                </p>
-                              )}
-
-                              {/* Next reservation info */}
-                              {(task.nextArrivalDate || task.nextDepartureDate) && (
-                                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                                  {task.nextDepartureDate && (
-                                    <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
-                                      <LogOut className="h-3.5 w-3.5" />
-                                      Départ {formatShortDate(task.nextDepartureDate)}
-                                    </span>
-                                  )}
-                                  {task.nextArrivalDate && (
-                                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                                      <LogIn className="h-3.5 w-3.5" />
-                                      Arrivée {formatShortDate(task.nextArrivalDate)}
-                                      {task.nextArrivalTime ? ` à ${task.nextArrivalTime}` : ''}
-                                      {task.nextArrivalGuests ? ` · ${task.nextArrivalGuests} pers.` : ''}
-                                    </span>
-                                  )}
                                 </div>
-                              )}
+
+                                {task.completed ? (
+                                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-1 text-xs font-semibold">
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Terminée
+                                  </span>
+                                ) : (
+                                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300 px-2.5 py-1 text-xs font-semibold">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    À faire
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
+
+                          {/* Time + users chips */}
+                          {(task.timeScheduled || task.users.length > 0) && (
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                              {task.timeScheduled && (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-medium">
+                                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {task.timeScheduled}
+                                  {task.timeEnd ? ` – ${task.timeEnd}` : ''}
+                                </span>
+                              )}
+                              {task.users.length > 0 && (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1.5 text-xs font-medium">
+                                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {task.users.join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Note */}
+                          {task.note && (
+                            <p className="mt-3 text-sm text-foreground/80 bg-muted/50 rounded-lg px-3 py-2 border-l-2 border-border">
+                              {task.note}
+                            </p>
+                          )}
+
+                          {/* Next reservation info */}
+                          {(task.nextArrivalDate || task.nextDepartureDate) && (
+                            <div className="mt-4 pt-3 border-t border-border/60 flex flex-wrap items-center gap-2">
+                              {task.nextDepartureDate && (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 px-2.5 py-1 text-xs font-medium">
+                                  <LogOut className="h-3.5 w-3.5" />
+                                  Départ {formatShortDate(task.nextDepartureDate)}
+                                </span>
+                              )}
+                              {task.nextArrivalDate && (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 px-2.5 py-1 text-xs font-medium">
+                                  <LogIn className="h-3.5 w-3.5" />
+                                  Arrivée {formatShortDate(task.nextArrivalDate)}
+                                  {task.nextArrivalTime ? ` à ${task.nextArrivalTime}` : ''}
+                                  {task.nextArrivalGuests ? ` · ${task.nextArrivalGuests} pers.` : ''}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     );

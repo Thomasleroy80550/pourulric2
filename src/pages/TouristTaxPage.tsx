@@ -26,48 +26,52 @@ interface MonthlyTaxData {
 // Paramètres fixes pour le calcul proportionnel
 const PROPORTIONAL_RATE_PCT = 5;            // 5% du coût HT par occupant et par nuit
 const ADDITIONAL_TAX_PCT = 10;              // +10% de taxe additionnelle (conseil départemental de la Somme)
-const CAP_PER_ADULT_PER_NIGHT = 4.80;       // Plafond 4,80€ par adulte et par nuit (avant taxe additionnelle)
-const TVA_PCT = 10;                         // Hypothèse de TVA 10%
-const DEFAULT_OCCUPANTS_GUESS = 2;          // Hypothèse d'occupation par défaut (2 personnes)
+const MAX_DECLARED_PERSONS = 8;             // Nb max d'occupants testés pour la répartition adultes/enfants
 
 // Taux effectif appliqué par le portail : 5% × (1 + 10%) = 5,5% du prix des nuits.
 const EFFECTIVE_TAX_RATE = (PROPORTIONAL_RATE_PCT / 100) * (1 + ADDITIONAL_TAX_PCT / 100);
 
 /**
- * Prix des nuits à déclarer sur le portail pour que la taxe calculée corresponde
- * EXACTEMENT au montant réellement collecté auprès du voyageur.
- * prix_à_déclarer = taxe_collectée ÷ taux_effectif (5,5%)
- */
-function priceToDeclareFromTax(collectedTax: number): number {
-  if (collectedTax <= 0 || EFFECTIVE_TAX_RATE <= 0) return 0;
-  return collectedTax / EFFECTIVE_TAX_RATE;
-}
-
-/**
- * Déduit le nombre d'adultes à partir du montant réel de taxe de séjour.
- * Les enfants étant exonérés, la taxe ne reflète que les adultes payants.
+ * Répartition adultes / enfants à DÉCLARER pour que la taxe calculée par le portail
+ * (proportionnelle au prix des nuits) corresponde au montant réellement encaissé.
  *
- * taxe_par_adulte_par_nuit = min(5% × coût HT/occupant, plafond) × (1 + taxe additionnelle)
- * adultes = taxe_totale / (taxe_par_adulte_par_nuit × nuits)
+ * Le portail taxe uniquement les adultes : taxe = prix × 5,5% × adultes / (adultes + enfants).
+ * On cherche donc la répartition (avec le vrai prix) qui approche au plus près la taxe encaissée,
+ * en privilégiant un total d'occupants réel si Krossbooking le fournit.
  */
-function reverseCalcAdults(params: {
-  totalTax: number;
-  nights: number;
-  totalPriceTTC: number;
-  occupantsGuess?: number;
-}): number {
-  const { totalTax, nights, totalPriceTTC, occupantsGuess = DEFAULT_OCCUPANTS_GUESS } = params;
-  if (totalTax <= 0 || nights <= 0) return 0;
+function splitAdultsChildrenToMatch(params: {
+  collectedTax: number;
+  nightsPrice: number;
+  realGuests?: number;
+}): { adults: number; children: number; portalTax: number } {
+  const { collectedTax, nightsPrice, realGuests } = params;
+  const fullTax = nightsPrice * EFFECTIVE_TAX_RATE; // taxe si tous adultes
 
-  const pricePerNightTTC = totalPriceTTC / nights;
-  const pricePerNightHT = pricePerNightTTC / (1 + TVA_PCT / 100);
-  const costPerNightPerOccupantHT = occupantsGuess > 0 ? pricePerNightHT / occupantsGuess : 0;
+  if (fullTax <= 0) return { adults: 0, children: 0, portalTax: 0 };
 
-  const baseTaxPerAdult = Math.min((PROPORTIONAL_RATE_PCT / 100) * costPerNightPerOccupantHT, CAP_PER_ADULT_PER_NIGHT);
-  const taxPerAdultPerNight = baseTaxPerAdult * (1 + ADDITIONAL_TAX_PCT / 100);
+  // La taxe encaissée couvre déjà (ou dépasse) le calcul plein : tout le monde adulte.
+  if (collectedTax >= fullTax - 0.01) {
+    const guests = realGuests && realGuests > 0 ? realGuests : 1;
+    return { adults: guests, children: 0, portalTax: fullTax };
+  }
 
-  if (taxPerAdultPerNight <= 0) return 0;
-  return Math.max(Math.round(totalTax / (taxPerAdultPerNight * nights)), 1);
+  // On teste des répartitions et on garde celle dont la taxe est la plus proche de l'encaissé.
+  const maxPersons = realGuests && realGuests > 0 ? realGuests : MAX_DECLARED_PERSONS;
+  const minPersons = realGuests && realGuests > 0 ? realGuests : 2;
+
+  let best = { adults: 1, children: 0, portalTax: fullTax, diff: Infinity };
+  for (let persons = minPersons; persons <= maxPersons; persons++) {
+    for (let adults = 1; adults <= persons; adults++) {
+      const children = persons - adults;
+      const tax = fullTax * (adults / persons);
+      const diff = Math.abs(tax - collectedTax);
+      if (diff < best.diff) {
+        best = { adults, children, portalTax: tax, diff };
+      }
+    }
+  }
+
+  return { adults: best.adults, children: best.children, portalTax: best.portalTax };
 }
 
 const TouristTaxPage: React.FC = () => {
@@ -325,10 +329,10 @@ const TouristTaxPage: React.FC = () => {
           <AlertTitle>Aide à la déclaration sur le portail gouvernemental</AlertTitle>
           <AlertDescription>
             Le portail calcule la taxe (5,00% + 10% de taxe additionnelle départementale de la Somme = <strong>5,5%</strong>)
-            à partir du <strong>prix des nuits</strong> que vous saisissez. Or le montant réellement encaissé auprès du voyageur
-            peut être inférieur à ce calcul « théorique ». Pour ne pas payer plus que ce qui a été collecté, la colonne
-            {' '}<strong>« Prix des nuits à déclarer »</strong> est ajustée : en la saisissant sur le portail, la taxe obtenue
-            correspond exactement au montant encaissé. <strong>Les enfants sont exonérés.</strong>
+            à partir du <strong>prix des nuits</strong>, uniquement sur les <strong>adultes</strong> (les enfants sont exonérés).
+            Le montant réellement encaissé auprès du voyageur peut être inférieur au calcul « plein ». Pour aligner la déclaration
+            sur ce qui a été collecté, on garde le vrai prix des nuits et on déclare des <strong>enfants</strong> : le nombre
+            d'<strong>adultes</strong> et d'<strong>enfants</strong> ci-dessous est calculé pour retomber au plus près de la taxe encaissée.
             Les réservations Airbnb et Booking (taxe déjà collectée par la plateforme) ne sont pas listées.
           </AlertDescription>
         </Alert>
@@ -348,7 +352,7 @@ const TouristTaxPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Détail des réservations pour {selectedMonthName}</DialogTitle>
             <DialogDescription>
-              À reporter sur le portail : Arrivée, Départ, Adultes, Enfants (exonérés) et le « Prix des nuits à déclarer » (ajusté pour retomber sur la taxe réellement encaissée).
+              À reporter sur le portail : Arrivée, Départ, Prix des nuits, et le nombre d'Adultes / Enfants (calculé pour aligner la taxe sur le montant réellement encaissé).
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
@@ -362,8 +366,8 @@ const TouristTaxPage: React.FC = () => {
                     <TableHead className="text-center">Nuits</TableHead>
                     <TableHead className="text-center">Adultes</TableHead>
                     <TableHead className="text-center">Enfants</TableHead>
-                    <TableHead className="text-right">Prix des nuits à déclarer</TableHead>
-                    <TableHead className="text-right">Taxe à payer</TableHead>
+                    <TableHead className="text-right">Prix des nuits</TableHead>
+                    <TableHead className="text-right">Taxe à déclarer</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -388,21 +392,15 @@ const TouristTaxPage: React.FC = () => {
                       : totalAmount; // fallback sur le total Kross si non trouvé
 
                     const totalTaxActual = reservation.tourist_tax_amount || 0;
+                    const nightsPrice = totalNightsPrice || totalAmount;
 
-                    // Occupation réelle renvoyée par Krossbooking (nécessaire pour le portail).
-                    const realAdults = reservation.n_adults ?? 0;
-                    const realChildren = reservation.n_children ?? 0;
-                    const hasRealOccupancy = (realAdults + realChildren) > 0;
-
-                    // Repli : si l'occupation n'est pas fournie, on déduit les adultes du montant de taxe.
-                    const adults = hasRealOccupancy
-                      ? realAdults
-                      : reverseCalcAdults({ totalTax: totalTaxActual, nights, totalPriceTTC: totalNightsPrice || totalAmount });
-                    const children = hasRealOccupancy ? realChildren : 0;
-
-                    // Prix des nuits à DÉCLARER pour retomber sur la taxe réellement collectée
-                    // (évite de payer plus que ce qui a été encaissé auprès du voyageur).
-                    const priceToDeclare = priceToDeclareFromTax(totalTaxActual);
+                    // On garde le VRAI prix des nuits et on déclare des enfants (exonérés)
+                    // pour aligner la taxe du portail sur le montant réellement encaissé.
+                    const { adults, children, portalTax } = splitAdultsChildrenToMatch({
+                      collectedTax: totalTaxActual,
+                      nightsPrice,
+                      realGuests: reservation.n_guests,
+                    });
 
                     return (
                       <TableRow key={reservation.id}>
@@ -410,10 +408,10 @@ const TouristTaxPage: React.FC = () => {
                         <TableCell>{format(checkIn, 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{format(checkOut, 'dd/MM/yyyy')}</TableCell>
                         <TableCell className="text-center">{nights}</TableCell>
-                        <TableCell className="text-center">{adults}</TableCell>
+                        <TableCell className="text-center font-medium">{adults}</TableCell>
                         <TableCell className="text-center">
                           {children > 0 ? (
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 font-medium">
                               {children}
                               <span className="text-xs text-green-600 dark:text-green-400">(exonérés)</span>
                             </span>
@@ -422,10 +420,17 @@ const TouristTaxPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {priceToDeclare.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                          {nightsPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                         </TableCell>
-                        <TableCell className="text-right font-bold text-primary">
-                          {totalTaxActual.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                        <TableCell className="text-right">
+                          <span className="font-bold text-primary">
+                            {portalTax.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                          </span>
+                          {Math.abs(portalTax - totalTaxActual) > 0.01 && (
+                            <span className="block text-xs text-muted-foreground">
+                              encaissé : {totalTaxActual.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                            </span>
+                          )}
                         </TableCell>
                       </TableRow>
                     );

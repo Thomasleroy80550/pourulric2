@@ -35,6 +35,7 @@ import ReservationReportDetailPage from "./pages/ReservationReportDetailPage";
 import TouristTaxPage from "./pages/TouristTaxPage";
 import MyRoomsPage from "./pages/MyRoomsPage";
 import HousekeepingReportsPage from "./pages/HousekeepingReportsPage";
+import HousekeepingTasksPage from "./pages/HousekeepingTasksPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
@@ -190,6 +191,7 @@ function App() {
                       <Route path="/admin/domain-requests" element={<AdminDomainRequestsPage />} />
                       <Route path="/status" element={<StatusPage />} />
                       <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
+                      <Route path="/housekeeping" element={<HousekeepingTasksPage />} />
                       <Route path="/pages/:slug" element={<ContentPage />} />
                       <Route path="/sites/:slug" element={<MiniSitePublicPage />} />
                       <Route path="/profile" element={<ProfilePage />} />

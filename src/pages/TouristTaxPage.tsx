@@ -25,9 +25,37 @@ interface MonthlyTaxData {
 
 // Paramètres fixes pour le calcul proportionnel
 const PROPORTIONAL_RATE_PCT = 5;            // 5% du coût HT par occupant et par nuit
-const CAP_PER_ADULT_PER_NIGHT = 4.80;       // Plafond 4,80€ par adulte et par nuit
+const ADDITIONAL_TAX_PCT = 10;              // +10% de taxe additionnelle (conseil départemental de la Somme)
+const CAP_PER_ADULT_PER_NIGHT = 4.80;       // Plafond 4,80€ par adulte et par nuit (avant taxe additionnelle)
 const TVA_PCT = 10;                         // Hypothèse de TVA 10%
 const DEFAULT_OCCUPANTS_GUESS = 2;          // Hypothèse d'occupation par défaut (2 personnes)
+
+/**
+ * Déduit le nombre d'adultes à partir du montant réel de taxe de séjour.
+ * Les enfants étant exonérés, la taxe ne reflète que les adultes payants.
+ *
+ * taxe_par_adulte_par_nuit = min(5% × coût HT/occupant, plafond) × (1 + taxe additionnelle)
+ * adultes = taxe_totale / (taxe_par_adulte_par_nuit × nuits)
+ */
+function reverseCalcAdults(params: {
+  totalTax: number;
+  nights: number;
+  totalPriceTTC: number;
+  occupantsGuess?: number;
+}): number {
+  const { totalTax, nights, totalPriceTTC, occupantsGuess = DEFAULT_OCCUPANTS_GUESS } = params;
+  if (totalTax <= 0 || nights <= 0) return 0;
+
+  const pricePerNightTTC = totalPriceTTC / nights;
+  const pricePerNightHT = pricePerNightTTC / (1 + TVA_PCT / 100);
+  const costPerNightPerOccupantHT = occupantsGuess > 0 ? pricePerNightHT / occupantsGuess : 0;
+
+  const baseTaxPerAdult = Math.min((PROPORTIONAL_RATE_PCT / 100) * costPerNightPerOccupantHT, CAP_PER_ADULT_PER_NIGHT);
+  const taxPerAdultPerNight = baseTaxPerAdult * (1 + ADDITIONAL_TAX_PCT / 100);
+
+  if (taxPerAdultPerNight <= 0) return 0;
+  return Math.max(Math.round(totalTax / (taxPerAdultPerNight * nights)), 1);
+}
 
 const TouristTaxPage: React.FC = () => {
   const { profile } = useSession();
@@ -286,7 +314,8 @@ const TouristTaxPage: React.FC = () => {
             Pour chaque réservation, reportez sur le portail : <strong>Arrivée</strong>, <strong>Départ</strong>,
             {' '}<strong>Prix des nuits</strong>, nombre d'<strong>adultes</strong> et d'<strong>enfants</strong>.
             La taxe est proportionnelle (5,00% + 10% de taxe additionnelle départementale de la Somme),
-            plafonnée à 4,80€ par adulte et par nuit. <strong>Les enfants sont exonérés</strong> (le syndicat applique l'abattement).
+            plafonnée à 4,80€ par adulte et par nuit. <strong>Les enfants sont exonérés</strong> (abattement du syndicat) :
+            le nombre d'<strong>adultes</strong> est donc calculé automatiquement à partir du montant de taxe réellement collecté.
             Les réservations Airbnb et Booking (taxe déjà collectée par la plateforme) ne sont pas listées.
           </AlertDescription>
         </Alert>
@@ -344,23 +373,16 @@ const TouristTaxPage: React.FC = () => {
                       ? nightsTotalFromStatements
                       : totalAmount; // fallback sur le total Kross si non trouvé
 
-                    // Occupation réelle fournie par Krossbooking
-                    const realAdults = reservation.n_adults ?? 0;
-                    const realChildren = reservation.n_children ?? 0;
-                    const hasRealOccupancy = (realAdults + realChildren) > 0;
-
-                    // Estimation de secours si l'occupation n'est pas renseignée
-                    const pricePerNightTTC = nights > 0 ? totalAmount / nights : 0;
-                    const pricePerNightHT = pricePerNightTTC / (1 + (TVA_PCT / 100));
-                    const costPerNightPerOccupantHT = DEFAULT_OCCUPANTS_GUESS > 0 ? (pricePerNightHT / DEFAULT_OCCUPANTS_GUESS) : 0;
-                    const taxPerAdultPerNight = Math.min((PROPORTIONAL_RATE_PCT / 100) * costPerNightPerOccupantHT, CAP_PER_ADULT_PER_NIGHT);
+                    // Le montant réel de taxe (city_tax_amount) ne reflète que les
+                    // adultes (enfants exonérés). On calcule donc les adultes en sens inverse.
                     const totalTaxActual = reservation.tourist_tax_amount || 0;
-                    const estimatedAdults = (nights > 0 && taxPerAdultPerNight > 0)
-                      ? Math.max(Math.round(totalTaxActual / (taxPerAdultPerNight * nights)), 0)
-                      : 0;
-
-                    const adults = hasRealOccupancy ? realAdults : estimatedAdults;
-                    const children = hasRealOccupancy ? realChildren : 0;
+                    const adults = reverseCalcAdults({
+                      totalTax: totalTaxActual,
+                      nights,
+                      totalPriceTTC: totalNightsPrice || totalAmount,
+                    });
+                    // Les enfants ne génèrent pas de taxe : non déductibles du montant.
+                    const children = 0;
 
                     return (
                       <TableRow key={reservation.id}>

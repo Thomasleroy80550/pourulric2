@@ -186,6 +186,7 @@ const AdminUserRoomsPage: React.FC = () => {
                       <TableHead>Type de Propriété</TableHead>
                       <TableHead>Code Boîte à Clés</TableHead>
                       <TableHead>Code Wi-Fi</TableHead>
+                      <TableHead>Capacité</TableHead>
                       <TableHead>Instructions Arrivée</TableHead>
                       <TableHead>Infos Parking</TableHead>
                       <TableHead>Règlement Intérieur</TableHead>
@@ -207,6 +208,11 @@ const AdminUserRoomsPage: React.FC = () => {
                           <TableCell>{room.property_type || '—'}</TableCell>
                           <TableCell>{room.keybox_code || '—'}</TableCell>
                           <TableCell>{room.wifi_code || '—'}</TableCell>
+                          <TableCell>
+                            {typeof room.linen_guest_capacity === 'number' && room.linen_guest_capacity > 0
+                              ? `${room.linen_guest_capacity} pers.`
+                              : '—'}
+                          </TableCell>
                           <TableCell>{room.arrival_instructions || '—'}</TableCell>
                           <TableCell>{room.parking_info || '—'}</TableCell>
                           <TableCell>{room.house_rules || '—'}</TableCell>

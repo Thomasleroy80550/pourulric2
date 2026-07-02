@@ -23,47 +23,67 @@ interface MonthlyTaxData {
   reservations: KrossbookingReservation[];
 }
 
-// Paramètres fixes pour le calcul proportionnel
-const PROPORTIONAL_RATE_PCT = 5;            // 5% du coût HT par occupant et par nuit
+// Paramètres fixes pour le calcul proportionnel (barème du portail)
+const PROPORTIONAL_RATE_PCT = 5;            // 5% du coût par occupant et par nuit
 const ADDITIONAL_TAX_PCT = 10;              // +10% de taxe additionnelle (conseil départemental de la Somme)
+const CAP_PER_PERSON_PER_NIGHT = 4.80;      // Plafond 4,80€ par personne et par nuit (avant taxe additionnelle)
 const MAX_DECLARED_PERSONS = 8;             // Nb max d'occupants testés pour la répartition adultes/enfants
 
-// Taux effectif appliqué par le portail : 5% × (1 + 10%) = 5,5% du prix des nuits.
-const EFFECTIVE_TAX_RATE = (PROPORTIONAL_RATE_PCT / 100) * (1 + ADDITIONAL_TAX_PCT / 100);
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
 
 /**
- * Répartition adultes / enfants à DÉCLARER pour que la taxe calculée par le portail
- * (proportionnelle au prix des nuits) corresponde au montant réellement encaissé.
- *
- * Le portail taxe uniquement les adultes : taxe = prix × 5,5% × adultes / (adultes + enfants).
- * On cherche donc la répartition (avec le vrai prix) qui approche au plus près la taxe encaissée,
- * en privilégiant un total d'occupants réel si Krossbooking le fournit.
+ * Reproduit EXACTEMENT le calcul du portail gouvernemental (arrondis au centime inclus) :
+ *   prix/nuit          = prix des nuits ÷ nuits
+ *   coût/occupant/nuit = prix/nuit ÷ (adultes + enfants)
+ *   base               = arrondi( min(5% × coût/occupant, plafond 4,80€) )
+ *   additionnelle      = arrondi( 10% × base )
+ *   taxe/pers./nuit    = base + additionnelle
+ *   total              = taxe/pers./nuit × nuits × adultes   (les enfants sont exonérés)
+ */
+function computePortalTax(params: {
+  nightsPrice: number;
+  nights: number;
+  adults: number;
+  children: number;
+}): number {
+  const { nightsPrice, nights, adults, children } = params;
+  const occupants = adults + children;
+  if (adults <= 0 || nights <= 0 || nightsPrice <= 0 || occupants <= 0) return 0;
+
+  const pricePerNight = nightsPrice / nights;
+  const costPerOccupant = pricePerNight / occupants;
+  const base = round2(Math.min((PROPORTIONAL_RATE_PCT / 100) * costPerOccupant, CAP_PER_PERSON_PER_NIGHT));
+  const additional = round2(base * (ADDITIONAL_TAX_PCT / 100));
+  const taxPerPersonPerNight = base + additional;
+
+  return round2(taxPerPersonPerNight * nights * adults);
+}
+
+/**
+ * Cherche la répartition adultes / enfants (avec le VRAI prix des nuits) dont la taxe
+ * calculée par le portail est la plus proche du montant réellement encaissé.
+ * Les enfants étant exonérés, augmenter leur nombre fait baisser la taxe.
  */
 function splitAdultsChildrenToMatch(params: {
   collectedTax: number;
   nightsPrice: number;
+  nights: number;
   realGuests?: number;
 }): { adults: number; children: number; portalTax: number } {
-  const { collectedTax, nightsPrice, realGuests } = params;
-  const fullTax = nightsPrice * EFFECTIVE_TAX_RATE; // taxe si tous adultes
+  const { collectedTax, nightsPrice, nights, realGuests } = params;
+  if (nightsPrice <= 0 || nights <= 0) return { adults: 0, children: 0, portalTax: 0 };
 
-  if (fullTax <= 0) return { adults: 0, children: 0, portalTax: 0 };
-
-  // La taxe encaissée couvre déjà (ou dépasse) le calcul plein : tout le monde adulte.
-  if (collectedTax >= fullTax - 0.01) {
-    const guests = realGuests && realGuests > 0 ? realGuests : 1;
-    return { adults: guests, children: 0, portalTax: fullTax };
-  }
-
-  // On teste des répartitions et on garde celle dont la taxe est la plus proche de l'encaissé.
+  // Total d'occupants : réel si fourni, sinon on teste plusieurs tailles de groupe.
   const maxPersons = realGuests && realGuests > 0 ? realGuests : MAX_DECLARED_PERSONS;
-  const minPersons = realGuests && realGuests > 0 ? realGuests : 2;
+  const minPersons = realGuests && realGuests > 0 ? realGuests : 1;
 
-  let best = { adults: 1, children: 0, portalTax: fullTax, diff: Infinity };
+  let best = { adults: 1, children: 0, portalTax: 0, diff: Infinity };
   for (let persons = minPersons; persons <= maxPersons; persons++) {
     for (let adults = 1; adults <= persons; adults++) {
       const children = persons - adults;
-      const tax = fullTax * (adults / persons);
+      const tax = computePortalTax({ nightsPrice, nights, adults, children });
       const diff = Math.abs(tax - collectedTax);
       if (diff < best.diff) {
         best = { adults, children, portalTax: tax, diff };
@@ -399,6 +419,7 @@ const TouristTaxPage: React.FC = () => {
                     const { adults, children, portalTax } = splitAdultsChildrenToMatch({
                       collectedTax: totalTaxActual,
                       nightsPrice,
+                      nights,
                       realGuests: reservation.n_guests,
                     });
 

@@ -30,6 +30,19 @@ const CAP_PER_ADULT_PER_NIGHT = 4.80;       // Plafond 4,80€ par adulte et par
 const TVA_PCT = 10;                         // Hypothèse de TVA 10%
 const DEFAULT_OCCUPANTS_GUESS = 2;          // Hypothèse d'occupation par défaut (2 personnes)
 
+// Taux effectif appliqué par le portail : 5% × (1 + 10%) = 5,5% du prix des nuits.
+const EFFECTIVE_TAX_RATE = (PROPORTIONAL_RATE_PCT / 100) * (1 + ADDITIONAL_TAX_PCT / 100);
+
+/**
+ * Prix des nuits à déclarer sur le portail pour que la taxe calculée corresponde
+ * EXACTEMENT au montant réellement collecté auprès du voyageur.
+ * prix_à_déclarer = taxe_collectée ÷ taux_effectif (5,5%)
+ */
+function priceToDeclareFromTax(collectedTax: number): number {
+  if (collectedTax <= 0 || EFFECTIVE_TAX_RATE <= 0) return 0;
+  return collectedTax / EFFECTIVE_TAX_RATE;
+}
+
 /**
  * Déduit le nombre d'adultes à partir du montant réel de taxe de séjour.
  * Les enfants étant exonérés, la taxe ne reflète que les adultes payants.
@@ -159,20 +172,6 @@ const TouristTaxPage: React.FC = () => {
           const checkOutDate = parseISO(booking.check_out_date);
           const nights = differenceInDays(checkOutDate, checkInDate);
           const monthIndex = getMonth(checkInDate);
-
-          // LOG TEMPORAIRE — inspection des données brutes pour calibrer le calcul de taxe
-          console.log('[TAXE-DEBUG]', {
-            voyageur: booking.guest_name,
-            arrivee: booking.check_in_date,
-            depart: booking.check_out_date,
-            nuits: nights,
-            montant_resa: booking.amount,
-            taxe_sejour: booking.tourist_tax_amount,
-            adultes_kross: booking.n_adults,
-            enfants_kross: booking.n_children,
-            occupants_kross: booking.n_guests,
-            canal: booking.cod_channel,
-          });
 
           if (nights > 0 && dataByMonth[monthIndex]) {
             dataByMonth[monthIndex].taxableNights += nights;
@@ -325,11 +324,11 @@ const TouristTaxPage: React.FC = () => {
           <Info className="h-4 w-4" />
           <AlertTitle>Aide à la déclaration sur le portail gouvernemental</AlertTitle>
           <AlertDescription>
-            Pour chaque réservation, reportez sur le portail : <strong>Arrivée</strong>, <strong>Départ</strong>,
-            {' '}<strong>Prix des nuits</strong>, nombre d'<strong>adultes</strong> et d'<strong>enfants</strong>.
-            La taxe est proportionnelle (5,00% + 10% de taxe additionnelle départementale de la Somme),
-            plafonnée à 4,80€ par adulte et par nuit. <strong>Les enfants sont exonérés</strong> (abattement du syndicat) :
-            le nombre d'<strong>adultes</strong> est donc calculé automatiquement à partir du montant de taxe réellement collecté.
+            Le portail calcule la taxe (5,00% + 10% de taxe additionnelle départementale de la Somme = <strong>5,5%</strong>)
+            à partir du <strong>prix des nuits</strong> que vous saisissez. Or le montant réellement encaissé auprès du voyageur
+            peut être inférieur à ce calcul « théorique ». Pour ne pas payer plus que ce qui a été collecté, la colonne
+            {' '}<strong>« Prix des nuits à déclarer »</strong> est ajustée : en la saisissant sur le portail, la taxe obtenue
+            correspond exactement au montant encaissé. <strong>Les enfants sont exonérés.</strong>
             Les réservations Airbnb et Booking (taxe déjà collectée par la plateforme) ne sont pas listées.
           </AlertDescription>
         </Alert>
@@ -349,7 +348,7 @@ const TouristTaxPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Détail des réservations pour {selectedMonthName}</DialogTitle>
             <DialogDescription>
-              À reporter sur le portail pour chaque réservation : Arrivée, Départ, Nuits, Adultes, Enfants (exonérés) et Prix des nuits.
+              À reporter sur le portail : Arrivée, Départ, Adultes, Enfants (exonérés) et le « Prix des nuits à déclarer » (ajusté pour retomber sur la taxe réellement encaissée).
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
@@ -363,8 +362,8 @@ const TouristTaxPage: React.FC = () => {
                     <TableHead className="text-center">Nuits</TableHead>
                     <TableHead className="text-center">Adultes</TableHead>
                     <TableHead className="text-center">Enfants</TableHead>
-                    <TableHead className="text-right">Prix des nuits</TableHead>
-                    <TableHead className="text-right">Taxe de séjour</TableHead>
+                    <TableHead className="text-right">Prix des nuits à déclarer</TableHead>
+                    <TableHead className="text-right">Taxe à payer</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -401,6 +400,10 @@ const TouristTaxPage: React.FC = () => {
                       : reverseCalcAdults({ totalTax: totalTaxActual, nights, totalPriceTTC: totalNightsPrice || totalAmount });
                     const children = hasRealOccupancy ? realChildren : 0;
 
+                    // Prix des nuits à DÉCLARER pour retomber sur la taxe réellement collectée
+                    // (évite de payer plus que ce qui a été encaissé auprès du voyageur).
+                    const priceToDeclare = priceToDeclareFromTax(totalTaxActual);
+
                     return (
                       <TableRow key={reservation.id}>
                         <TableCell className="font-medium">{reservation.guest_name || 'N/A'}</TableCell>
@@ -419,7 +422,7 @@ const TouristTaxPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          {totalNightsPrice.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                          {priceToDeclare.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
                         </TableCell>
                         <TableCell className="text-right font-bold text-primary">
                           {totalTaxActual.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}

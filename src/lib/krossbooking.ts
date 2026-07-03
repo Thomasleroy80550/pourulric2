@@ -368,6 +368,20 @@ export async function fetchKrossbookingReservationsForAdminRooms(
       return [];
     }
 
+    // --- DEBUG: vérifier la présence des commissions et frais de ménage dans la réponse brute ---
+    if (data.length > 0) {
+      console.log('[KROSS DEBUG] Clés disponibles sur la 1ère réservation brute:', Object.keys(data[0]));
+      console.log('[KROSS DEBUG] Aperçu commissions/ménage par réservation:', data.slice(0, 20).map((res: any) => ({
+        id: res.id_reservation,
+        canal: res.cod_channel,
+        montant: res.charge_total_amount,
+        cleaning_fee_amount: res.cleaning_fee_amount,
+        ota_commissions_collected: res.ota_commissions_collected,
+        ota_commissions_deducted: res.ota_commissions_deducted,
+      })));
+    }
+    // --- FIN DEBUG ---
+
     const reservations = data.map((res: any): KrossbookingReservation => {
       const matchedRoom = rooms.find((room) => room.room_id === String(res.room_id || res.id_room || ''));
 

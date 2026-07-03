@@ -443,7 +443,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
               <CardHeader><CardTitle>4. Relevé Détaillé</CardTitle><CardDescription>Vérifiez les réservations et les commissions calculées.</CardDescription></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto h-[600px]">
-                  <Table>
+                  <Table className="w-full text-xs [&_th]:px-2 [&_th]:py-2 [&_th]:h-auto [&_td]:px-2 [&_td]:py-1.5">
                     <TableHeader>
                       <TableRow>
                         {helloKeysCollectsRent && <TableHead><Checkbox onCheckedChange={(checked) => handleSelectAll(!!checked)} /></TableHead>}
@@ -451,14 +451,14 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         <TableHead>Voyageur</TableHead>
                         <TableHead>Arrivée</TableHead>
                         <TableHead>Nuits</TableHead>
-                        <TableHead>Voyageurs</TableHead>
-                        <TableHead>Prix Séjour</TableHead>
-                        <TableHead>Frais Ménage</TableHead>
-                        <TableHead>Taxe Séjour</TableHead>
-                        <TableHead>Revenu Généré</TableHead>
-                        <TableHead>Montant Versé</TableHead>
+                        <TableHead>Voy.</TableHead>
+                        <TableHead>Prix</TableHead>
+                        <TableHead>Ménage</TableHead>
+                        <TableHead>Taxe</TableHead>
+                        <TableHead>Revenu</TableHead>
+                        <TableHead>Versé</TableHead>
                         <TableHead>Frais OTA</TableHead>
-                        <TableHead>Frais de paiement</TableHead>
+                        <TableHead>Frais paiement</TableHead>
                         <TableHead>Commission</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>

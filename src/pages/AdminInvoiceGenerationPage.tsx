@@ -14,7 +14,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import EditReservationDialog from '@/components/EditReservationDialog';
-import { getAllProfiles, type UserProfile } from '@/lib/admin-api';
+import { getAllProfiles, getSavedInvoices, type UserProfile } from '@/lib/admin-api';
 import { useInvoiceGeneration, ProcessedReservation } from '@/contexts/InvoiceGenerationContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
@@ -62,6 +62,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
 
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
+  const [lastStatementByClient, setLastStatementByClient] = useState<Record<string, string>>({});
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingReservation, setEditingReservation] = useState<{ data: ProcessedReservation; index: number } | null>(null);
   const [open, setOpen] = useState(false); // State for combobox open/close
@@ -79,6 +80,26 @@ const AdminInvoiceGenerationPage: React.FC = () => {
       }
     };
     fetchProfiles();
+  }, []);
+
+  // Récupère la dernière période de relevé générée par client (pour éviter les doublons)
+  useEffect(() => {
+    const fetchLastStatements = async () => {
+      try {
+        const invoices = await getSavedInvoices(); // triés par created_at décroissant
+        const map: Record<string, string> = {};
+        invoices.forEach((invoice) => {
+          // La première occurrence par client correspond au relevé le plus récent
+          if (invoice.user_id && !map[invoice.user_id]) {
+            map[invoice.user_id] = invoice.period;
+          }
+        });
+        setLastStatementByClient(map);
+      } catch (err: any) {
+        console.error('Erreur lors du chargement des derniers relevés:', err);
+      }
+    };
+    fetchLastStatements();
   }, []);
 
   const activeProfiles = profiles.filter((p) => !p.is_contract_terminated);
@@ -222,7 +243,16 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                                       setOpen(false);
                                     }}
                                   >
-                                    {profile.first_name} {profile.last_name}
+                                    <div className="flex flex-col">
+                                      <span>{profile.first_name} {profile.last_name}</span>
+                                      {lastStatementByClient[profile.id] ? (
+                                        <span className="text-xs text-muted-foreground">
+                                          Dernier relevé : {lastStatementByClient[profile.id]}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-amber-600">Aucun relevé</span>
+                                      )}
+                                    </div>
                                     <Check
                                       className={cn(
                                         "ml-auto h-4 w-4",
@@ -236,6 +266,15 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                           </Command>
                         </PopoverContent>
                       </Popover>
+                      {selectedClientId && (
+                        lastStatementByClient[selectedClientId] ? (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Dernier relevé pour ce client : <span className="font-medium">{lastStatementByClient[selectedClientId]}</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-600 mt-1">Aucun relevé encore généré pour ce client.</p>
+                        )
+                      )}
                     </div>
                     <div>
                       <Label>Période de facturation</Label>

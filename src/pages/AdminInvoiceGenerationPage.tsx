@@ -197,10 +197,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const totalFacture = totalCommission + totalFraisMenage + ownerCleaningFee; // Updated calculation for display
   const factureHT = totalFacture / 1.2;
   const tva = totalFacture - factureHT;
-  const totalCommissionOTA = processedData.reduce(
-    (sum, row) => sum + (row.originalCommissionPlateforme || 0) + (row.originalFraisPaiement || 0),
-    0
-  );
+  const totalFraisOTA = processedData.reduce((sum, row) => sum + (row.originalCommissionPlateforme || 0), 0);
+  const totalFraisPaiement = processedData.reduce((sum, row) => sum + (row.originalFraisPaiement || 0), 0);
 
   return (
     <AdminLayout>
@@ -459,13 +457,14 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         <TableHead>Taxe Séjour</TableHead>
                         <TableHead>Revenu Généré</TableHead>
                         <TableHead>Montant Versé</TableHead>
-                        <TableHead>Comm. OTA</TableHead>
+                        <TableHead>Frais OTA</TableHead>
+                        <TableHead>Frais de paiement</TableHead>
                         <TableHead>Commission</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 14 : 13}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
+                      {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 15 : 14}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
                         <TableRow key={index}>
                           {helloKeysCollectsRent && <TableCell><Checkbox checked={selectedReservations.has(index)} onCheckedChange={(checked) => { const newSet = new Set(selectedReservations); if (checked) newSet.add(index); else newSet.delete(index); setSelectedReservations(newSet); }} /></TableCell>}
                           <TableCell>{row.portail}</TableCell>
@@ -478,7 +477,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                           <TableCell>{row.taxeDeSejour.toFixed(2)}€</TableCell>
                           <TableCell>{row.revenuGenere.toFixed(2)}€</TableCell>
                           <TableCell>{row.montantVerse.toFixed(2)}€</TableCell>
-                          <TableCell>{(row.originalCommissionPlateforme + row.originalFraisPaiement).toFixed(2)}€</TableCell>
+                          <TableCell>{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
+                          <TableCell>{row.originalFraisPaiement.toFixed(2)}€</TableCell>
                           <TableCell>{row.commissionHelloKeys.toFixed(2)}€</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(row, index)}>
@@ -486,7 +486,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 14 : 13} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
+                      )) : <TableRow><TableCell colSpan={helloKeysCollectsRent ? 15 : 14} className="text-center text-gray-500 py-8">Aucun fichier importé.</TableCell></TableRow>}
                     </TableBody>
                     <TableFooter>
                       <TableRow className="font-bold">
@@ -498,7 +498,8 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         <TableCell>{totalTaxeDeSejour.toFixed(2)}€</TableCell>
                         <TableCell>{totalRevenuGenere.toFixed(2)}€</TableCell>
                         <TableCell>{totalMontantVerse.toFixed(2)}€</TableCell>
-                        <TableCell>{totalCommissionOTA.toFixed(2)}€</TableCell>
+                        <TableCell>{totalFraisOTA.toFixed(2)}€</TableCell>
+                        <TableCell>{totalFraisPaiement.toFixed(2)}€</TableCell>
                         <TableCell>{totalCommission.toFixed(2)}€</TableCell>
                         <TableCell></TableCell>
                       </TableRow>

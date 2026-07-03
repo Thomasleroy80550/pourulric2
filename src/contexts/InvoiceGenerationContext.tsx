@@ -299,12 +299,15 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
         const nuits = Math.max(differenceInCalendarDays(checkOut, checkIn), 0);
         const voyageurs = res.n_guests || 0;
 
-        // Le montant Krossbooking (amount) est du type "123.45€"
-        const ca = parseFloat((res.amount || '0').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
+        // Le montant total Krossbooking (amount, type "123.45€") inclut le prix, le ménage ET la taxe.
+        const totalAmount = parseFloat((res.amount || '0').replace(',', '.').replace(/[^\d.-]/g, '')) || 0;
         let taxeDeSejour = res.tourist_tax_amount || 0;
         const fraisMenage = res.cleaning_fee_amount || 0;
         const commissionPlateforme = res.ota_commissions_collected || 0;
         const fraisPaiement = res.ota_commissions_deducted || 0;
+
+        // On isole d'abord le prix séjour en retirant la VRAIE taxe (comme le XLS où le prix est déjà HT taxe).
+        const prixSejour = totalAmount - fraisMenage - taxeDeSejour;
 
         const portailLower = portail.toLowerCase();
         if (portailLower.includes('airbnb') || portailLower.includes('booking')) {
@@ -312,7 +315,8 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
           taxeDeSejour = 0;
         }
 
-        const prixSejour = ca - fraisMenage - taxeDeSejour;
+        // On reconstruit le CA exactement comme le XLS : prix + ménage + taxe (taxe = 0 pour Airbnb/Booking).
+        const ca = prixSejour + fraisMenage + taxeDeSejour;
         const montantVerse = ca - commissionPlateforme - fraisPaiement;
         const revenuGenere = montantVerse - fraisMenage - taxeDeSejour;
         // Pas de commission HelloKeys sur les séjours propriétaire

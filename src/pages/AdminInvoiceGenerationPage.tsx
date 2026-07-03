@@ -22,6 +22,14 @@ import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
+const PERIOD_MONTHS = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const PERIOD_YEARS = [CURRENT_YEAR + 1, CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+
 const AdminInvoiceGenerationPage: React.FC = () => {
   const {
     file, setFile,
@@ -230,8 +238,36 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                       </Popover>
                     </div>
                     <div>
-                      <Label htmlFor="invoice-period">Période de facturation</Label>
-                      <Input id="invoice-period" placeholder="Ex: Juillet 2024" value={invoicePeriod} onChange={(e) => setInvoicePeriod(e.target.value)} />
+                      <Label>Période de facturation</Label>
+                      {(() => {
+                        const [periodMonth, periodYear] = invoicePeriod.split(' ');
+                        return (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select
+                              value={PERIOD_MONTHS.includes(periodMonth) ? periodMonth : ''}
+                              onValueChange={(month) => setInvoicePeriod(`${month} ${periodYear || CURRENT_YEAR}`)}
+                            >
+                              <SelectTrigger><SelectValue placeholder="Mois" /></SelectTrigger>
+                              <SelectContent>
+                                {PERIOD_MONTHS.map((month) => (
+                                  <SelectItem key={month} value={month}>{month}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={periodYear || ''}
+                              onValueChange={(year) => setInvoicePeriod(`${periodMonth || PERIOD_MONTHS[0]} ${year}`)}
+                            >
+                              <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
+                              <SelectContent>
+                                {PERIOD_YEARS.map((year) => (
+                                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })()}
                     </div>
                     {isFormerClient && (
                       <Alert variant="destructive">

@@ -284,13 +284,14 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
 
         const checkIn = res.check_in_date ? parseISO(res.check_in_date) : null;
         if (!checkIn || !isValid(checkIn)) return;
-        // Filtrer par mois de la date d'arrivée
-        if (checkIn < start || checkIn > end) return;
+
+        const checkOut = res.check_out_date ? parseISO(res.check_out_date) : null;
+        if (!checkOut || !isValid(checkOut)) return;
+        // Filtrer par mois de la date de départ (check-out)
+        if (checkOut < start || checkOut > end) return;
 
         const portail = res.cod_channel || res.channel_identifier || 'N/A';
-        const nuits = res.check_out_date && isValid(parseISO(res.check_out_date))
-          ? Math.max(differenceInCalendarDays(parseISO(res.check_out_date), checkIn), 0)
-          : 0;
+        const nuits = Math.max(differenceInCalendarDays(checkOut, checkIn), 0);
         const voyageurs = res.n_guests || 0;
 
         // Le montant Krossbooking (amount) est du type "123.45€"

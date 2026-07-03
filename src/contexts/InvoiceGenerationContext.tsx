@@ -333,20 +333,6 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
 
       processedReservations.sort((a, b) => (a.arrivee > b.arrivee ? 1 : a.arrivee < b.arrivee ? -1 : 0));
 
-      // --- DEBUG: vérifier que les commissions sont bien remontées pour le relevé ---
-      console.log('[ALPHA DEBUG] Réservations retenues pour le relevé:', processedReservations.map((r) => ({
-        voyageur: r.voyageur,
-        canal: r.portail,
-        ca: r.ca,
-        commissionPlateforme: r.originalCommissionPlateforme,
-        fraisPaiement: r.originalFraisPaiement,
-        fraisMenage: r.fraisMenage,
-        montantVerse: r.montantVerse,
-      })));
-      const nbAvecCommission = processedReservations.filter((r) => (r.originalCommissionPlateforme + r.originalFraisPaiement) > 0).length;
-      console.log(`[ALPHA DEBUG] ${nbAvecCommission}/${processedReservations.length} réservation(s) avec des commissions OTA > 0`);
-      // --- FIN DEBUG ---
-
       setProcessedData(processedReservations);
       recalculateTotals(processedReservations);
       setFileName(`Généré depuis Krossbooking (Alpha) — ${period}`);

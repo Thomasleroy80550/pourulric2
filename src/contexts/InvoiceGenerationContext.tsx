@@ -279,8 +279,11 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
 
       reservations.forEach((res) => {
         const status = (res.status || '').toUpperCase();
-        // Exclure les annulations et les blocages propriétaire
-        if (status === 'CANC' || status === 'PROPRI' || status === 'PROP0') return;
+        // Exclure uniquement les annulations
+        if (status === 'CANC') return;
+
+        // Les séjours propriétaire sont inclus, mais sans commission HelloKeys
+        const isOwnerStay = status === 'PROPRI' || status === 'PROP0';
 
         const checkIn = res.check_in_date ? parseISO(res.check_in_date) : null;
         if (!checkIn || !isValid(checkIn)) return;
@@ -290,7 +293,9 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
         // Filtrer par mois de la date de départ (check-out)
         if (checkOut < start || checkOut > end) return;
 
-        const portail = res.cod_channel || res.channel_identifier || 'N/A';
+        const portail = isOwnerStay
+          ? 'Propriétaire'
+          : (res.cod_channel || res.channel_identifier || 'N/A');
         const nuits = Math.max(differenceInCalendarDays(checkOut, checkIn), 0);
         const voyageurs = res.n_guests || 0;
 
@@ -310,7 +315,8 @@ export const InvoiceGenerationProvider = ({ children }: { children: ReactNode })
         const prixSejour = ca - fraisMenage - taxeDeSejour;
         const montantVerse = ca - commissionPlateforme - fraisPaiement;
         const revenuGenere = montantVerse - fraisMenage - taxeDeSejour;
-        const commissionHelloKeys = revenuGenere * commissionRate;
+        // Pas de commission HelloKeys sur les séjours propriétaire
+        const commissionHelloKeys = isOwnerStay ? 0 : revenuGenere * commissionRate;
 
         processedReservations.push({
           portail,

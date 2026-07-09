@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays, Sparkles, Trophy } from "lucide-react";
+import { Terminal, ListChecks, ChevronRight, CheckCircle, AlertTriangle, FileText, CalendarDays, Sparkles, Trophy, Shell } from "lucide-react";
 
 import {
   ResponsiveContainer,
@@ -696,6 +696,24 @@ const DashboardPage = () => {
             </span>
             <Button asChild size="sm" className="w-full bg-orange-600 hover:bg-orange-700 sm:w-auto">
               <Link to="/thermo-sync">Voir la news</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+
+        <Alert className="mb-4 border-teal-200 bg-teal-50 dark:border-teal-900/40 dark:bg-teal-950/30">
+          <Shell className="h-4 w-4 text-teal-600" />
+          <AlertTitle className="flex flex-wrap items-center gap-2 text-teal-900 dark:text-teal-100">
+            <Badge className="bg-teal-600 text-white hover:bg-teal-600">Nouveau</Badge>
+            <Badge className="bg-green-600 text-white hover:bg-green-600">Inclus - 0 % de commission</Badge>
+            Go Baie de Somme : boostez vos réservations en direct
+          </AlertTitle>
+          <AlertDescription className="mt-2 flex flex-col gap-3 text-teal-800 dark:text-teal-200 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Une nouvelle plateforme dédiée pour développer vos réservations en direct — visibilité premium
+              incluse, sans aucune commission supplémentaire pour les propriétaires Hello Keys.
+            </span>
+            <Button asChild size="sm" className="w-full bg-teal-600 hover:bg-teal-700 sm:w-auto">
+              <Link to="/go-baie-de-somme">Voir la news</Link>
             </Button>
           </AlertDescription>
         </Alert>

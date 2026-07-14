@@ -22,7 +22,6 @@ import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import { addDays, format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwelveMonthView from '@/components/TwelveMonthView';
-import BookingPlanningGridV2 from '@/components/BookingPlanningGridV2';
 import BookingPlanningGridStudio from '@/components/BookingPlanningGridStudio';
 import IcalCalendarTab from '@/components/IcalCalendarTab';
 import { fetchIcalReservationsForRoom } from '@/lib/ical';
@@ -61,8 +60,7 @@ const CalendarPage: React.FC = () => {
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
   const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-  const [activeTab, setActiveTab] = useState<'planning' | 'new-planning' | 'twelve' | 'debug' | 'ical'>('planning');
-  const [showNewPlanningMobile, setShowNewPlanningMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'ical'>('planning');
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -341,11 +339,11 @@ const CalendarPage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
-                  onClick={() => setShowNewPlanningMobile((prev) => !prev)}
+                  onClick={() => navigate('/planning-v3')}
                   className="flex items-center w-full sm:w-auto text-sm sm:text-base bg-gradient-to-r from-[hsl(var(--sidebar-foreground))] to-[hsl(var(--accent))] text-white hover:opacity-90"
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
-                  {showNewPlanningMobile ? 'Vue liste' : 'Nouveau planning'}
+                  Nouveau planning
                 </Button>
                 <Button onClick={handleOwnerReservationClick} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
                   <PlusCircle className="h-4 w-4 mr-2" />
@@ -370,51 +368,39 @@ const CalendarPage: React.FC = () => {
           </div>
           
           {/* Vue liste mobile directe avec contraintes de largeur */}
-          {showNewPlanningMobile ? (
-            <div className="w-full max-w-full overflow-x-auto">
-              {userRooms.length === 0 ? (
-                <p className="text-muted-foreground">
-                  Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil".
-                </p>
-              ) : (
-                <BookingPlanningGridV2 userRooms={userRooms} reservations={reservations} />
-              )}
-            </div>
-          ) : (
-            <div className="w-full max-w-full space-y-4 overflow-x-hidden">
-              <BookingListMobile
-                reservations={reservations.map(r => ({
-                  id: r.id,
-                  room_id: r.krossbooking_room_id || r.property_name,
-                  room_name: r.property_name,
-                  start_date: r.check_in_date,
-                  end_date: r.check_out_date,
-                  guest_name: r.guest_name,
-                  status: r.status,
-                  platform: r.channel_identifier || 'Unknown',
-                  total_amount: parseFloat(r.amount) || 0
-                }))}
-                isLoading={loadingData}
-              />
-              <BookingListMobile
-                title="Réservations iCal à venir"
-                emptyMessage="Aucune réservation iCal à venir"
-                showAmount={false}
-                isLoading={loadingIcalData}
-                reservations={icalReservations.map(r => ({
-                  id: r.id,
-                  room_id: r.krossbooking_room_id || r.property_name,
-                  room_name: r.property_name,
-                  start_date: r.check_in_date,
-                  end_date: r.check_out_date,
-                  guest_name: r.guest_name,
-                  status: r.status,
-                  platform: 'iCal',
-                  total_amount: 0,
-                }))}
-              />
-            </div>
-          )}
+          <div className="w-full max-w-full space-y-4 overflow-x-hidden">
+            <BookingListMobile
+              reservations={reservations.map(r => ({
+                id: r.id,
+                room_id: r.krossbooking_room_id || r.property_name,
+                room_name: r.property_name,
+                start_date: r.check_in_date,
+                end_date: r.check_out_date,
+                guest_name: r.guest_name,
+                status: r.status,
+                platform: r.channel_identifier || 'Unknown',
+                total_amount: parseFloat(r.amount) || 0
+              }))}
+              isLoading={loadingData}
+            />
+            <BookingListMobile
+              title="Réservations iCal à venir"
+              emptyMessage="Aucune réservation iCal à venir"
+              showAmount={false}
+              isLoading={loadingIcalData}
+              reservations={icalReservations.map(r => ({
+                id: r.id,
+                room_id: r.krossbooking_room_id || r.property_name,
+                room_name: r.property_name,
+                start_date: r.check_in_date,
+                end_date: r.check_out_date,
+                guest_name: r.guest_name,
+                status: r.status,
+                platform: 'iCal',
+                total_amount: 0,
+              }))}
+            />
+          </div>
         </div>
 
         <OwnerReservationDialog
@@ -480,7 +466,7 @@ const CalendarPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
           <div className="flex flex-wrap gap-2">
             <Button
-              onClick={() => setActiveTab('new-planning')}
+              onClick={() => navigate('/planning-v3')}
               className="flex items-center bg-gradient-to-r from-[hsl(var(--sidebar-foreground))] to-[hsl(var(--accent))] text-white hover:opacity-90"
             >
               <Sparkles className="h-4 w-4 mr-2" />
@@ -514,37 +500,13 @@ const CalendarPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Calendrier</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'new-planning' | 'twelve' | 'debug' | 'ical')} className="w-full">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug' | 'ical')} className="w-full">
               <TabsList className="mb-4 flex flex-wrap h-auto">
-                <TabsTrigger value="new-planning" className="gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Nouveau planning
-                </TabsTrigger>
                 <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
                 <TabsTrigger value="ical">iCal</TabsTrigger>
                 <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
                 <TabsTrigger value="debug">Vue debug</TabsTrigger>
               </TabsList>
-
-              <TabsContent value="new-planning">
-                {loadingData ? (
-                  <div className="space-y-4">
-                    <Skeleton className="h-8 w-48" />
-                    <Skeleton className="h-[400px] w-full" />
-                  </div>
-                ) : userRooms.length === 0 ? (
-                  <p className="text-muted-foreground">
-                    Aucune chambre configurée. Veuillez ajouter des chambres via la page "Mon Profil" pour voir le nouveau planning ici.
-                  </p>
-                ) : (
-                  <div className="w-full min-w-0 overflow-x-auto">
-                    <BookingPlanningGridV2
-                      userRooms={userRooms}
-                      reservations={reservations}
-                    />
-                  </div>
-                )}
-              </TabsContent>
 
               <TabsContent value="planning">
                 {loadingData ? (

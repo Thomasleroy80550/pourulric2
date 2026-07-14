@@ -545,15 +545,15 @@ const DashboardPageV3: React.FC = () => {
             : kpis.map((kpi) => (
                 <div
                   key={kpi.label}
-                  className="min-w-0 rounded-2xl border border-[hsl(var(--sidebar-border))] bg-card p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4"
+                  className="min-w-0 rounded-2xl border bg-card p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4"
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <div className="rounded-lg bg-[hsl(var(--sidebar-background))] p-1.5 text-[hsl(var(--sidebar-foreground))]">
+                    <div className="rounded-lg bg-muted p-1.5 text-[hsl(var(--sidebar-foreground))]">
                       <kpi.icon className="h-4 w-4" />
                     </div>
                     {isComparing && <DeltaBadge delta={kpi.delta} />}
                   </div>
-                  <p className="mt-2 truncate text-lg font-bold text-[hsl(var(--sidebar-foreground))] sm:mt-3 sm:text-2xl">
+                  <p className="mt-2 truncate text-lg font-bold text-foreground sm:mt-3 sm:text-2xl">
                     {kpi.value}
                   </p>
                   <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:text-xs">

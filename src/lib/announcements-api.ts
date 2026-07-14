@@ -88,3 +88,30 @@ export const markAnnouncementAsRead = async (id: string): Promise<{ message: str
 export const markAllAnnouncementsAsRead = async (): Promise<{ message: string }> => {
   return callAnnouncementsProxy("mark_all_read");
 };
+
+const GENERATE_ANNOUNCEMENT_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/generate-announcement";
+
+export const generateAnnouncement = async (
+  topic: string,
+  level: AnnouncementLevel,
+): Promise<{ title: string; content: string }> => {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) {
+    throw new Error("User not authenticated. Please log in.");
+  }
+
+  const response = await fetch(GENERATE_ANNOUNCEMENT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ topic, level }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Échec de la génération de l'annonce.");
+  }
+  return { title: data.title || "", content: data.content || "" };
+};

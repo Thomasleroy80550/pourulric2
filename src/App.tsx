@@ -19,7 +19,6 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import PageCreator from "./components/PageCreator";
 import ContentPage from "./pages/ContentPage";
 import ProfilePage from "./pages/ProfilePage";
-import BlogPage from "./pages/BlogPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
@@ -39,8 +38,6 @@ import HousekeepingTasksPage from "./pages/HousekeepingTasksPage";
 import { SessionContextProvider } from "./components/SessionContextProvider";
 import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
-import BlogManager from "./components/BlogManager";
-import BlogPostPage from "./pages/BlogPostPage";
 import AdminAnnouncementsPage from "./pages/AdminAnnouncementsPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
 import AdminStrategiesPage from "./pages/AdminStrategiesPage";
@@ -149,7 +146,6 @@ function App() {
                       <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
                       <Route path="/admin" element={<AdminDashboardPage />} />
                       <Route path="/admin/pages" element={<PageCreator />} />
-                      <Route path="/admin/blog" element={<BlogManager />} />
                       <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />
                       <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
                       <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} />
@@ -203,8 +199,6 @@ function App() {
                       <Route path="/sites/:slug" element={<MiniSitePublicPage />} />
                       <Route path="/profile" element={<ProfilePage />} />
 
-                      <Route path="/blog" element={<BlogPage />} />
-                      <Route path="/blog/:slug" element={<BlogPostPage />} />
                       <Route path="/announcements" element={<AnnouncementsPage />} />
                       <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                       <Route path="/promotion" element={<PromotionPage />} />

@@ -22,14 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Terminal, Edit, Trash2, Pin } from "lucide-react";
+import { Terminal, Edit, Trash2, Pin, Sparkles, Loader2 } from "lucide-react";
 import RichTextEditor from "@/components/RichTextEditor";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Announcement,
   AnnouncementLevel,
   createAnnouncement,
   deleteAnnouncement,
+  generateAnnouncement,
   getAnnouncements,
   updateAnnouncement,
 } from "@/lib/announcements-api";
@@ -49,6 +51,8 @@ const AdminAnnouncementsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Partial<Announcement>>(emptyForm);
   const [isEditing, setIsEditing] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [generating, setGenerating] = useState(false);
 
   const fetchAnnouncements = async () => {
     setLoading(true);
@@ -110,6 +114,30 @@ const AdminAnnouncementsPage: React.FC = () => {
     }
   };
 
+  const handleGenerate = async () => {
+    if (!aiTopic.trim()) {
+      toast.error("Décrivez le sujet de l'annonce à générer.");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const result = await generateAnnouncement(
+        aiTopic.trim(),
+        (current.level as AnnouncementLevel) || "info",
+      );
+      setCurrent((p) => ({
+        ...p,
+        title: result.title || p.title,
+        content: result.content || p.content,
+      }));
+      toast.success("Annonce générée ! Vous pouvez la relire et l'ajuster avant de publier.");
+    } catch (err: any) {
+      toast.error(`Erreur IA : ${err.message}`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleEdit = (announcement: Announcement) => {
     setCurrent(announcement);
     setIsEditing(true);
@@ -145,6 +173,49 @@ const AdminAnnouncementsPage: React.FC = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        <Card className="mb-6 border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50 shadow-md dark:border-purple-900/40 dark:from-purple-950/20 dark:to-blue-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              Générer avec l'IA
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Label htmlFor="ai-topic">Décrivez le sujet de l'annonce</Label>
+            <Textarea
+              id="ai-topic"
+              placeholder="Ex: Maintenance de la plateforme dimanche soir de 22h à 23h, pas d'accès aux réservations pendant cette période."
+              value={aiTopic}
+              onChange={(e) => setAiTopic(e.target.value)}
+              disabled={generating}
+              rows={3}
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Génération…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Générer l'annonce
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Le titre et le contenu ci-dessous seront pré-remplis. Relisez avant de publier.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="shadow-md mb-6">
           <CardHeader>

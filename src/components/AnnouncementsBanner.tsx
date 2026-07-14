@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Announcement, getAnnouncements, markAnnouncementAsRead } from "@/lib/announcements-api";
 import { ANNOUNCEMENT_LEVELS } from "@/lib/announcement-levels";
@@ -50,17 +51,30 @@ const AnnouncementsBanner: React.FC = () => {
   return (
     <div
       className={cn(
-        "mb-6 rounded-xl border-l-4 bg-card p-4 shadow-sm flex items-start gap-3",
+        "relative mb-6 flex items-start gap-4 overflow-hidden rounded-2xl border-l-4 bg-card p-4 shadow-sm sm:p-5",
         level.cardClass,
       )}
     >
-      <Icon className={cn("h-5 w-5 shrink-0 mt-0.5", level.iconClass)} />
+      <div
+        className={cn(
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+          level.badgeClass,
+        )}
+      >
+        <Icon className={cn("h-5 w-5", level.iconClass)} />
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-foreground">{announcement.title}</p>
+        <div className="flex items-center gap-2">
+          <Badge className={level.badgeClass} variant="secondary">
+            {level.label}
+          </Badge>
+          <span className="text-xs font-medium text-orange-600">Nouveau</span>
+        </div>
+        <p className="mt-1.5 font-semibold text-foreground">{announcement.title}</p>
         {plainText && (
           <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">{plainText}</p>
         )}
-        <Button asChild variant="link" size="sm" className="h-auto p-0 mt-1">
+        <Button asChild variant="link" size="sm" className="mt-1 h-auto p-0 text-orange-600">
           <Link to="/announcements">
             Voir toutes les annonces
             <ArrowRight className="ml-1 h-3.5 w-3.5" />

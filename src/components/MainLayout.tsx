@@ -16,7 +16,6 @@ import {
   BookOpen,
   Wrench,
   Banknote,
-  Newspaper,
   Plug,
   Sparkles,
   User,
@@ -110,7 +109,6 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
     title: 'Ressources',
     items: [
       { name: 'Annonces', href: '/announcements', icon: Megaphone },
-      { name: 'Blog', href: '/blog', icon: Newspaper },
       { name: 'Aides', href: '/help', icon: HelpCircle },
       { name: 'Marketplace', href: '/marketplace', icon: Store },
       { name: 'Modules', href: '/modules', icon: Plug },

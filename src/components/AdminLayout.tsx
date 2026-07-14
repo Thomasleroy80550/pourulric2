@@ -100,7 +100,6 @@ const adminNavigationCategories = [
     items: [
       { name: 'Pages', href: '/admin/pages', icon: FileText, description: 'Créer et modifier les pages de contenu.' },
       { name: 'Annonces', href: '/admin/announcements', icon: Megaphone, description: 'Publier des annonces pour tous les utilisateurs.' },
-      { name: 'Blog', href: '/admin/blog', icon: FileText, description: 'Gérer les articles du blog.' },
       { name: 'FAQ', href: '/admin/faq', icon: HelpCircle, description: 'Gérer la foire aux questions.' },
       { name: 'Changelog', href: '/admin/changelog', icon: GitMerge, description: 'Publier les nouveautés de l\'application.' },
       { name: 'Idées', href: '/admin/ideas', icon: Lightbulb, description: 'Consulter les suggestions des utilisateurs.' },

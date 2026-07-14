@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import MainLayout from "@/components/MainLayout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCheck, Loader2, Pin, Terminal } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { CheckCheck, Loader2, Megaphone, Pin, Terminal } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import DOMPurify from "dompurify";
 import { cn } from "@/lib/utils";
 import {
   Announcement,
@@ -37,7 +37,6 @@ const AnnouncementsPage: React.FC = () => {
 
   useEffect(() => {
     fetchAnnouncements();
-    // Marque tout comme lu à l'ouverture de la page, après un court délai de lecture.
     const timer = setTimeout(async () => {
       try {
         await markAllAnnouncementsAsRead();
@@ -73,20 +72,34 @@ const AnnouncementsPage: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-6 max-w-3xl">
-        <div className="flex items-center justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Annonces</h1>
-            <p className="text-muted-foreground mt-1">
-              Retrouvez ici les dernières actualités et informations de l'équipe Hello Keys.
-            </p>
+      <div className="container mx-auto max-w-3xl py-6">
+        {/* ── En-tête ─────────────────────────────── */}
+        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-orange-500 to-amber-500 p-6 text-white shadow-lg sm:p-8">
+          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-10 -left-6 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-white/90">
+                <Megaphone className="h-5 w-5" />
+                <span className="text-xs font-semibold uppercase tracking-widest">Hello Keys</span>
+              </div>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Annonces</h1>
+              <p className="mt-1 max-w-xl text-sm text-white/85">
+                Les dernières actualités et informations importantes de l'équipe.
+              </p>
+            </div>
+            {unreadCount > 0 && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                className="shrink-0 bg-white/15 text-white hover:bg-white/25"
+              >
+                <CheckCheck className="mr-2 h-4 w-4" />
+                {unreadCount} non lue{unreadCount > 1 ? "s" : ""}
+              </Button>
+            )}
           </div>
-          {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
-              <CheckCheck className="h-4 w-4 mr-2" />
-              Tout marquer comme lu
-            </Button>
-          )}
         </div>
 
         {error && (
@@ -98,45 +111,62 @@ const AnnouncementsPage: React.FC = () => {
         )}
 
         {announcements.length === 0 ? (
-          <p className="text-muted-foreground text-center py-12">
-            Aucune annonce pour le moment.
-          </p>
+          <div className="rounded-2xl border border-dashed py-16 text-center">
+            <Megaphone className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+            <p className="text-muted-foreground">Aucune annonce pour le moment.</p>
+          </div>
         ) : (
-          <div className="space-y-4">
+          <div className="relative space-y-5 before:absolute before:left-[15px] before:top-2 before:h-[calc(100%-1rem)] before:w-px before:bg-border sm:before:left-[19px]">
             {announcements.map((a) => {
               const level = ANNOUNCEMENT_LEVELS[a.level] ?? ANNOUNCEMENT_LEVELS.info;
               const Icon = level.icon;
               return (
-                <Card key={a.id} className={cn("shadow-sm border-l-4", level.cardClass)}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <Icon className={cn("h-5 w-5 shrink-0", level.iconClass)} />
-                        <h2 className="text-lg font-semibold">{a.title}</h2>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {a.is_pinned && <Pin className="h-4 w-4 text-orange-600" />}
-                        {!a.is_read && (
-                          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" title="Non lu" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
+                <div key={a.id} className="relative pl-10 sm:pl-12">
+                  {/* Point sur la timeline */}
+                  <div
+                    className={cn(
+                      "absolute left-0 top-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-card shadow-sm sm:h-10 sm:w-10",
+                      level.cardClass,
+                    )}
+                  >
+                    <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", level.iconClass)} />
+                  </div>
+
+                  <article
+                    className={cn(
+                      "rounded-2xl border bg-card p-5 shadow-sm transition hover:shadow-md",
+                      !a.is_read && "ring-2 ring-orange-500/30",
+                      a.is_pinned && "border-orange-300 dark:border-orange-900/50",
+                    )}
+                  >
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
                       <Badge className={level.badgeClass} variant="secondary">
                         {level.label}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: fr })}
-                      </span>
+                      {a.is_pinned && (
+                        <Badge variant="outline" className="gap-1 border-orange-300 text-orange-700 dark:text-orange-300">
+                          <Pin className="h-3 w-3" /> Épinglée
+                        </Badge>
+                      )}
+                      {!a.is_read && (
+                        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300" variant="secondary">
+                          Nouveau
+                        </Badge>
+                      )}
                     </div>
-                  </CardHeader>
-                  <CardContent>
+
+                    <h2 className="text-xl font-semibold text-foreground">{a.title}</h2>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {format(new Date(a.created_at), "d MMMM yyyy", { locale: fr })} ·{" "}
+                      {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: fr })}
+                    </p>
+
                     <div
-                      className="prose prose-sm dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: a.content || "" }}
+                      className="prose prose-sm dark:prose-invert mt-3 max-w-none prose-a:text-orange-600"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(a.content || "") }}
                     />
-                  </CardContent>
-                </Card>
+                  </article>
+                </div>
               );
             })}
           </div>

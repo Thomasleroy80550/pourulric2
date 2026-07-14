@@ -120,6 +120,7 @@ import AdminMiniSitesPage from "./pages/AdminMiniSitesPage";
 import AdminDomainRequestsPage from "./pages/AdminDomainRequestsPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
+import PlanningV2Page from "./pages/PlanningV2Page";
 
 const queryClient = new QueryClient();
 
@@ -226,6 +227,7 @@ function App() {
                       <Route path="/home-v3" element={<DashboardPageV3 />} />
 
                       <Route path="/calendar" element={<CalendarPage />} />
+                      <Route path="/planning-v2" element={<PlanningV2Page />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                                           <Route path="/bookings" element={<BookingsPage />} />
                                           <Route path="/prevision-ca" element={<RevenueForecastPage />} />

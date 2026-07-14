@@ -40,6 +40,7 @@ import {
   Landmark,
   LayoutDashboard,
   PercentCircle,
+  RotateCcw,
   Sparkles,
   Star,
   TrendingDown,
@@ -51,6 +52,7 @@ import {
 
 import MainLayout from "@/components/MainLayout";
 import BannedUserMessage from "@/components/BannedUserMessage";
+import DashboardV3Reveal from "@/components/DashboardV3Reveal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,6 +93,8 @@ const MONTH_FALLBACK: Record<string, number> = {
 };
 
 // Palette alignée sur l'identité Hello Keys (tokens de marque)
+const REVEAL_STORAGE_KEY = "dashboard_v3_reveal_seen";
+
 const COMPARE_COLOR = "hsl(var(--muted-foreground))";
 const CA_COLOR = "hsl(var(--primary))";
 const BENEF_COLOR = "hsl(var(--accent))";
@@ -307,6 +311,7 @@ const DashboardPageV3: React.FC = () => {
 
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [compareYear, setCompareYear] = useState<number | null>(null);
+  const [showReveal, setShowReveal] = useState(false);
 
   const availableYears = useMemo(() => {
     const years = extractAvailableYears(statements);
@@ -395,6 +400,19 @@ const DashboardPageV3: React.FC = () => {
     }
   }, [fetchData, profile]);
 
+  // Affiche l'animation de révélation une seule fois par utilisateur.
+  useEffect(() => {
+    if (profile?.is_banned) return;
+    if (!localStorage.getItem(REVEAL_STORAGE_KEY)) {
+      setShowReveal(true);
+    }
+  }, [profile]);
+
+  const handleFinishReveal = () => {
+    setShowReveal(false);
+    localStorage.setItem(REVEAL_STORAGE_KEY, "1");
+  };
+
   if (profile?.is_banned) {
     return (
       <MainLayout>
@@ -449,6 +467,7 @@ const DashboardPageV3: React.FC = () => {
 
   return (
     <MainLayout>
+      {showReveal && <DashboardV3Reveal onFinish={handleFinishReveal} />}
       <div className="w-full max-w-full overflow-x-hidden break-words">
         {/* ── En-tête ─────────────────────────────────────── */}
         <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -472,7 +491,18 @@ const DashboardPageV3: React.FC = () => {
               {isComparing && ` vs ${compareYear}`}
             </p>
           </div>
-          <VersionSwitcher />
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => setShowReveal(true)}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Revoir l'intro
+            </Button>
+            <VersionSwitcher />
+          </div>
         </div>
 
         {/* ── Sélecteurs d'année ──────────────────────────── */}

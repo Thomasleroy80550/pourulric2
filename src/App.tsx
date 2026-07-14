@@ -107,6 +107,7 @@ import NetatmoDashboardPage from "./pages/NetatmoDashboardPage";
 import NetatmoStationsPage from "./pages/NetatmoStationsPage";
 import NetatmoTokenOverridePage from "./pages/NetatmoTokenOverridePage";
 import DashboardPageV2 from "./pages/DashboardPageV2";
+import DashboardPageV3 from "./pages/DashboardPageV3";
 import ConnectivityMaintenancePage from "./pages/ConnectivityMaintenancePage";
 import AdminMissing2025StatsPage from "./pages/AdminMissing2025StatsPage";
 import AdminTemperaturePage from "./pages/AdminTemperaturePage";
@@ -222,6 +223,7 @@ function App() {
                       <Route path="/maintenance/connectivite" element={<ConnectivityMaintenancePage />} />
                       <Route path="/" element={<DashboardPage />} />
                       <Route path="/home-v2" element={<DashboardPageV2 />} />
+                      <Route path="/home-v3" element={<DashboardPageV3 />} />
 
                       <Route path="/calendar" element={<CalendarPage />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

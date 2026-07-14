@@ -103,7 +103,28 @@ serve(async (req) => {
       transfer_group: `INVOICES-${invoice_ids[0]}`,
     });
 
-    transferParams.append('metadata[invoice_ids]', invoice_ids.join(','));
+    // Stripe limite chaque valeur de métadonnée à 500 caractères.
+    // On découpe donc la liste des IDs en plusieurs clés pour ne jamais dépasser cette limite.
+    const MAX_METADATA_VALUE_LENGTH = 500;
+    const invoiceIdChunks: string[] = [];
+    let currentChunk = '';
+
+    for (const id of invoice_ids) {
+      const candidate = currentChunk ? `${currentChunk},${id}` : String(id);
+      if (candidate.length > MAX_METADATA_VALUE_LENGTH) {
+        if (currentChunk) invoiceIdChunks.push(currentChunk);
+        currentChunk = String(id);
+      } else {
+        currentChunk = candidate;
+      }
+    }
+    if (currentChunk) invoiceIdChunks.push(currentChunk);
+
+    transferParams.append('metadata[invoice_count]', String(invoice_ids.length));
+    invoiceIdChunks.forEach((chunk, index) => {
+      const key = invoiceIdChunks.length === 1 ? 'invoice_ids' : `invoice_ids_${index + 1}`;
+      transferParams.append(`metadata[${key}]`, chunk);
+    });
 
     if (description) {
       transferParams.append('description', description);

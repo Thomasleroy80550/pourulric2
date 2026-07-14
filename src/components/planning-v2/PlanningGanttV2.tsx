@@ -16,24 +16,34 @@ import {
   startOfDay,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, CalendarDays, Search, Home, Repeat, LogIn, LogOut, Building2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Search, Repeat, LogIn, LogOut, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { UserRoom } from '@/lib/user-room-api';
 import { KrossbookingReservation } from '@/lib/krossbooking';
 
 /* -------------------------------------------------------------------------- */
-/*  Constantes de layout (à ajuster facilement)                               */
+/*  Constantes de layout (desktop) — versions mobiles calculées plus bas      */
 /* -------------------------------------------------------------------------- */
 const COL_WIDTH = 36; // largeur d'une colonne = 1 jour
 const ROW_HEIGHT = 60; // hauteur d'une ligne logement
 const LABEL_WIDTH = 240; // largeur de la colonne de gauche (sticky)
 const BAR_HEIGHT = 34; // hauteur d'une barre de réservation
 const HEADER_HEIGHT = 52; // hauteur de l'entête des jours
+const MONTH_BAND_HEIGHT = 28; // hauteur du bandeau des mois
+
+// Versions compactes pour mobile
+const COL_WIDTH_MOBILE = 30;
+const ROW_HEIGHT_MOBILE = 52;
+const LABEL_WIDTH_MOBILE = 112;
+const BAR_HEIGHT_MOBILE = 26;
+const HEADER_HEIGHT_MOBILE = 44;
+const MONTH_BAND_HEIGHT_MOBILE = 24;
 
 /* -------------------------------------------------------------------------- */
 /*  Couleurs par canal / source                                               */
@@ -135,6 +145,16 @@ interface PlanningGanttV2Props {
 }
 
 const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservations }) => {
+  const isMobile = useIsMobile();
+
+  // Dimensions responsives
+  const COL_W = isMobile ? COL_WIDTH_MOBILE : COL_WIDTH;
+  const ROW_H = isMobile ? ROW_HEIGHT_MOBILE : ROW_HEIGHT;
+  const LABEL_W = isMobile ? LABEL_WIDTH_MOBILE : LABEL_WIDTH;
+  const BAR_H = isMobile ? BAR_HEIGHT_MOBILE : BAR_HEIGHT;
+  const HEADER_H = isMobile ? HEADER_HEIGHT_MOBILE : HEADER_HEIGHT;
+  const MONTH_BAND_H = isMobile ? MONTH_BAND_HEIGHT_MOBILE : MONTH_BAND_HEIGHT;
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [containerWidth, setContainerWidth] = useState(0);
   const [search, setSearch] = useState('');
@@ -160,13 +180,13 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
 
   // Colonnes de débordement : on remplit avec le début du mois suivant
   const overflowDays = useMemo(() => {
-    const available = Math.max(0, containerWidth - LABEL_WIDTH);
-    const totalColsNeeded = Math.ceil(available / COL_WIDTH);
+    const available = Math.max(0, containerWidth - LABEL_W);
+    const totalColsNeeded = Math.ceil(available / COL_W);
     const extra = Math.max(0, totalColsNeeded - monthDays.length);
     if (extra === 0) return [];
     const nextStart = startOfMonth(addMonths(currentMonth, 1));
     return Array.from({ length: extra }, (_, i) => addDays(nextStart, i));
-  }, [containerWidth, monthDays.length, currentMonth]);
+  }, [containerWidth, monthDays.length, currentMonth, LABEL_W, COL_W]);
 
   const allDays = useMemo(() => [...monthDays, ...overflowDays], [monthDays, overflowDays]);
   const gridStart = allDays[0];
@@ -318,7 +338,7 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
   const goNext = () => setCurrentMonth((m) => addMonths(m, 1));
   const goToday = () => setCurrentMonth(new Date());
 
-  const gridContentWidth = LABEL_WIDTH + allDays.length * COL_WIDTH;
+  const gridContentWidth = LABEL_W + allDays.length * COL_W;
 
   /* -------------------------------------------------------------------------- */
   /*  Rendu                                                                     */
@@ -326,10 +346,10 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
   return (
     <div className="space-y-4">
       {/* En-tête + contrôles */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <CalendarDays className="h-6 w-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             Planning
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -337,28 +357,28 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goPrev}>
+        <div className="flex items-center gap-2 justify-between sm:justify-end">
+          <Button variant="outline" size="icon" onClick={goPrev} className="flex-shrink-0">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-semibold text-base min-w-[150px] text-center capitalize">
-            {format(currentMonth, 'MMMM yyyy', { locale: fr })}
+          <span className="font-semibold text-sm sm:text-base flex-1 sm:flex-none sm:min-w-[150px] text-center capitalize">
+            {format(currentMonth, isMobile ? 'MMM yyyy' : 'MMMM yyyy', { locale: fr })}
           </span>
-          <Button variant="outline" size="icon" onClick={goNext}>
+          <Button variant="outline" size="icon" onClick={goNext} className="flex-shrink-0">
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button variant="secondary" size="sm" onClick={goToday}>
-            Aujourd'hui
+          <Button variant="secondary" size="sm" onClick={goToday} className="flex-shrink-0 whitespace-nowrap">
+            Auj.
           </Button>
         </div>
       </div>
 
       {/* Cartes de stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Logements affichés" value={stats.rooms} color="text-blue-600" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <StatCard label="Logements" value={stats.rooms} color="text-blue-600" />
         <StatCard label="Réservations" value={stats.reservations} color="text-emerald-600" />
-        <StatCard label="Rotations du mois" value={stats.rotations} color="text-orange-500" />
-        <StatCard label="Taux d'occupation" value={`${stats.occupancy}%`} color="text-violet-600" />
+        <StatCard label="Rotations" value={stats.rotations} color="text-orange-500" />
+        <StatCard label="Occupation" value={`${stats.occupancy}%`} color="text-violet-600" />
       </div>
 
       {/* Recherche + filtres canaux */}
@@ -373,7 +393,8 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/* Filtres : défilement horizontal sur mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 lg:flex-wrap lg:overflow-visible lg:mx-0 lg:px-0 lg:pb-0">
           {availableChannels.map((key) => {
             const style = getChannelStyle(key);
             const active = activeChannels.has(key);
@@ -383,7 +404,7 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
                 type="button"
                 onClick={() => toggleChannel(key)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all',
+                  'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border transition-all whitespace-nowrap flex-shrink-0',
                   active
                     ? `${style.bar} text-white border-transparent shadow-sm`
                     : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800',
@@ -398,7 +419,7 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
             <button
               type="button"
               onClick={() => setActiveChannels(new Set())}
-              className="rounded-full px-3 py-1 text-xs font-medium border border-gray-200 dark:border-gray-700 text-muted-foreground hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="rounded-full px-3 py-1 text-xs font-medium border border-gray-200 dark:border-gray-700 text-muted-foreground hover:bg-gray-50 dark:hover:bg-gray-800 whitespace-nowrap flex-shrink-0"
             >
               Tout afficher
             </button>
@@ -406,37 +427,44 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
         </div>
       </div>
 
+      {/* Astuce scroll horizontal sur mobile */}
+      {isMobile && (
+        <p className="text-[11px] text-muted-foreground -mb-1 px-1">
+          Faites glisser horizontalement pour naviguer dans le calendrier →
+        </p>
+      )}
+
       {/* Grille Gantt */}
       <Card className="overflow-hidden border-slate-200 dark:border-slate-700">
         <div ref={wrapperRef} className="w-full overflow-x-auto">
           <div style={{ width: gridContentWidth, minWidth: '100%' }}>
             {/* Bandeau des mois */}
-            <div className="flex" style={{ height: 28 }}>
+            <div className="flex" style={{ height: MONTH_BAND_H }}>
               <div
                 className="sticky left-0 z-20 bg-white dark:bg-gray-950 border-b border-r border-slate-200 dark:border-slate-700 flex items-center px-3"
-                style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}
+                style={{ width: LABEL_W, minWidth: LABEL_W }}
               />
               <div
                 className="border-b border-r-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-gray-900 flex items-center justify-center text-xs font-semibold capitalize text-slate-700 dark:text-slate-200"
-                style={{ width: monthDaysCount * COL_WIDTH }}
+                style={{ width: monthDaysCount * COL_W }}
               >
                 {format(currentMonth, 'MMMM yyyy', { locale: fr })}
               </div>
               {overflowDays.length > 0 && (
                 <div
-                  className="border-b border-slate-200 dark:border-slate-700 bg-slate-100/60 dark:bg-gray-900/60 flex items-center justify-center text-xs font-semibold capitalize text-slate-500 dark:text-slate-400"
-                  style={{ width: overflowDays.length * COL_WIDTH }}
+                  className="border-b border-slate-200 dark:border-slate-700 bg-slate-100/60 dark:bg-gray-900/60 flex items-center justify-center text-xs font-semibold capitalize text-slate-500 dark:text-slate-400 overflow-hidden"
+                  style={{ width: overflowDays.length * COL_W }}
                 >
-                  {format(addMonths(currentMonth, 1), 'MMMM', { locale: fr })}
+                  {format(addMonths(currentMonth, 1), 'MMM', { locale: fr })}
                 </div>
               )}
             </div>
 
             {/* Entête des jours */}
-            <div className="flex" style={{ height: HEADER_HEIGHT }}>
+            <div className="flex" style={{ height: HEADER_H }}>
               <div
                 className="sticky left-0 z-20 bg-white dark:bg-gray-950 border-b border-r border-slate-200 dark:border-slate-700 flex items-center px-3 text-xs font-semibold text-muted-foreground"
-                style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}
+                style={{ width: LABEL_W, minWidth: LABEL_W }}
               >
                 Logement
               </div>
@@ -453,14 +481,14 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
                       isToday && 'bg-blue-50 dark:bg-blue-950/40',
                       isMonthBoundary && 'border-l-2 border-l-slate-300 dark:border-l-slate-600',
                     )}
-                    style={{ width: COL_WIDTH, minWidth: COL_WIDTH }}
+                    style={{ width: COL_W, minWidth: COL_W }}
                   >
                     <span className={cn('text-[10px] uppercase', isToday ? 'text-blue-600 font-semibold' : 'text-muted-foreground')}>
                       {format(day, 'EEEEE', { locale: fr })}
                     </span>
                     <span
                       className={cn(
-                        'text-sm',
+                        'text-xs sm:text-sm',
                         isToday ? 'font-bold text-blue-600' : 'font-medium text-slate-700 dark:text-slate-200',
                       )}
                     >
@@ -483,30 +511,30 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
                 const avatarColor = avatarColorFor(room.room_name || room.id);
 
                 return (
-                  <div key={room.id} className="flex" style={{ height: ROW_HEIGHT }}>
+                  <div key={room.id} className="flex" style={{ height: ROW_H }}>
                     {/* Colonne fixe logement */}
                     <div
                       className={cn(
-                        'sticky left-0 z-20 border-b border-r border-slate-200 dark:border-slate-700 flex items-center gap-2.5 px-3',
+                        'sticky left-0 z-20 border-b border-r border-slate-200 dark:border-slate-700 flex items-center gap-2 px-2 sm:gap-2.5 sm:px-3',
                         roomIndex % 2 === 0 ? 'bg-white dark:bg-gray-950' : 'bg-slate-50/70 dark:bg-gray-900/40',
                       )}
-                      style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH }}
+                      style={{ width: LABEL_W, minWidth: LABEL_W }}
                     >
                       <div
                         className={cn(
-                          'flex-shrink-0 flex items-center justify-center h-9 w-9 rounded-lg text-white text-xs font-bold shadow-sm',
+                          'flex-shrink-0 flex items-center justify-center h-7 w-7 sm:h-9 sm:w-9 rounded-lg text-white text-[10px] sm:text-xs font-bold shadow-sm',
                           avatarColor,
                         )}
                       >
                         {getInitials(room.room_name)}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold truncate text-slate-800 dark:text-slate-100">
+                        <div className="text-xs sm:text-sm font-semibold truncate text-slate-800 dark:text-slate-100 leading-tight">
                           {room.room_name}
                         </div>
-                        <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {room.property_type || `Chambre ${room.room_id}`}
+                        <div className="text-[10px] sm:text-[11px] text-muted-foreground truncate flex items-center gap-1">
+                          <Building2 className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{room.property_type || `Ch. ${room.room_id}`}</span>
                         </div>
                       </div>
                     </div>
@@ -517,7 +545,7 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
                         'relative border-b border-slate-100 dark:border-slate-800',
                         roomIndex % 2 === 0 ? 'bg-white dark:bg-gray-950' : 'bg-slate-50/40 dark:bg-gray-900/30',
                       )}
-                      style={{ width: allDays.length * COL_WIDTH }}
+                      style={{ width: allDays.length * COL_W }}
                     >
                       {/* Fonds de colonnes (week-end / aujourd'hui / séparateur) */}
                       {allDays.map((day, i) => {
@@ -533,7 +561,7 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
                               isToday && 'bg-blue-50/70 dark:bg-blue-950/30 border-l-2 border-l-blue-500',
                               isMonthBoundary && 'border-l-2 border-l-slate-300 dark:border-l-slate-600',
                             )}
-                            style={{ left: i * COL_WIDTH, width: COL_WIDTH }}
+                            style={{ left: i * COL_W, width: COL_W }}
                           />
                         );
                       })}
@@ -558,13 +586,14 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
                         endPos = Math.min(allDays.length, endPos);
                         if (endPos <= startPos) return null;
 
-                        const left = startPos * COL_WIDTH;
-                        const width = Math.max(10, (endPos - startPos) * COL_WIDTH);
+                        const left = startPos * COL_W;
+                        const width = Math.max(10, (endPos - startPos) * COL_W);
 
                         const channelKey = getChannelKey(res);
                         const style = getChannelStyle(channelKey);
                         const pending = isPendingRes(res);
                         const isBlock = channelKey === 'BLOCKED';
+                        const showIcons = width > 70;
 
                         return (
                           <button
@@ -572,33 +601,33 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
                             type="button"
                             onClick={() => setSelectedRes({ res, checkIn: ci, checkOut: co })}
                             className={cn(
-                              'absolute flex items-center overflow-hidden text-white text-[11px] font-medium shadow-sm transition-all hover:brightness-105 hover:-translate-y-[1px] hover:z-10',
+                              'absolute flex items-center overflow-hidden text-white text-[10px] sm:text-[11px] font-medium shadow-sm transition-all hover:brightness-105 hover:z-10',
                               pending ? style.barPending : style.bar,
                               pending && 'text-slate-700',
                               isBlock && 'bg-[repeating-linear-gradient(45deg,#94a3b8,#94a3b8_6px,#cbd5e1_6px,#cbd5e1_12px)] text-slate-700',
-                              arrivalVisible ? 'rounded-l-full pl-2.5' : 'pl-1.5',
-                              departureVisible ? 'rounded-r-full pr-2.5' : 'pr-1.5',
+                              arrivalVisible ? 'rounded-l-full pl-2' : 'pl-1',
+                              departureVisible ? 'rounded-r-full pr-2' : 'pr-1',
                             )}
                             style={{
                               left,
                               width,
-                              top: (ROW_HEIGHT - BAR_HEIGHT) / 2,
-                              height: BAR_HEIGHT,
+                              top: (ROW_H - BAR_H) / 2,
+                              height: BAR_H,
                             }}
                             title={`${res.guest_name} · ${nights} nuit(s)`}
                           >
-                            {arrivalVisible && <LogIn className="h-3 w-3 flex-shrink-0 mr-1 opacity-80" />}
+                            {arrivalVisible && showIcons && <LogIn className="h-3 w-3 flex-shrink-0 mr-1 opacity-80" />}
                             <span className="truncate flex-grow">
                               {isBlock ? 'Bloqué' : res.guest_name}
                             </span>
-                            {departureVisible && <LogOut className="h-3 w-3 flex-shrink-0 ml-1 opacity-80" />}
+                            {departureVisible && showIcons && <LogOut className="h-3 w-3 flex-shrink-0 ml-1 opacity-80" />}
                           </button>
                         );
                       })}
 
                       {/* Marqueurs de rotation (ménage) */}
                       {rotations.map((rot, ri) => {
-                        const centerLeft = (rot.dayIndex + 0.5) * COL_WIDTH;
+                        const centerLeft = (rot.dayIndex + 0.5) * COL_W;
                         return (
                           <button
                             key={`rot-${ri}`}
@@ -628,26 +657,26 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
       </Card>
 
       {/* Légende */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Légende :</span>
+      <Card className="p-3 sm:p-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-6 sm:gap-y-3">
+          <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">Légende :</span>
           {Object.entries(CHANNELS)
             .filter(([k]) => !['HOMEAWAY', 'PROP0', 'OWNER_BLOCK'].includes(k))
             .map(([key, style]) => (
-              <div key={key} className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div key={key} className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
                 <span className={cn('w-3 h-3 rounded-full', style.dot)} />
                 {style.label}
               </div>
             ))}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
             <span className="w-6 h-3 rounded-sm bg-[repeating-linear-gradient(45deg,#94a3b8,#94a3b8_4px,#cbd5e1_4px,#cbd5e1_8px)]" />
             Bloqué
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
             <span className="flex items-center justify-center h-5 w-5 rounded-full bg-orange-500 text-white">
               <Repeat className="h-3 w-3" />
             </span>
-            Rotation · Départ &amp; arrivée le même jour (ménage)
+            Rotation · Ménage (départ &amp; arrivée le même jour)
           </div>
         </div>
       </Card>
@@ -665,9 +694,9 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
 /*  Sous-composants                                                           */
 /* -------------------------------------------------------------------------- */
 const StatCard: React.FC<{ label: string; value: React.ReactNode; color: string }> = ({ label, value, color }) => (
-  <Card className="p-4">
-    <div className="text-xs text-muted-foreground">{label}</div>
-    <div className={cn('text-2xl font-bold mt-1', color)}>{value}</div>
+  <Card className="p-3 sm:p-4">
+    <div className="text-[11px] sm:text-xs text-muted-foreground truncate">{label}</div>
+    <div className={cn('text-xl sm:text-2xl font-bold mt-0.5 sm:mt-1', color)}>{value}</div>
   </Card>
 );
 

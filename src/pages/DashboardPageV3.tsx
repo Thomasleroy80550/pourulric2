@@ -90,7 +90,12 @@ const MONTH_FALLBACK: Record<string, number> = {
   novembre: 10, décembre: 11, decembre: 11,
 };
 
-const COMPARE_COLOR = "#94a3b8";
+// Palette alignée sur l'identité Hello Keys (tokens de marque)
+const COMPARE_COLOR = "hsl(var(--muted-foreground))";
+const CA_COLOR = "hsl(var(--primary))";
+const BENEF_COLOR = "hsl(var(--accent))";
+const OCC_COLOR = "hsl(var(--accent))";
+const RES_COLOR = "hsl(var(--sidebar-foreground))";
 
 type MonthRow = {
   name: string;
@@ -408,42 +413,36 @@ const DashboardPageV3: React.FC = () => {
           value: formatEuro(metrics.totalCA),
           delta: computeDelta(metrics.totalCA, compareMetrics?.totalCA),
           icon: Landmark,
-          accent: "from-blue-500/15 to-blue-500/5 text-blue-600 dark:text-blue-400",
         },
         {
           label: "Résultat net",
           value: formatEuro(metrics.totalNet),
           delta: computeDelta(metrics.totalNet, compareMetrics?.totalNet),
           icon: Wallet,
-          accent: "from-emerald-500/15 to-emerald-500/5 text-emerald-600 dark:text-emerald-400",
         },
         {
           label: "Réservations",
           value: String(metrics.totalReservations),
           delta: computeDelta(metrics.totalReservations, compareMetrics?.totalReservations),
           icon: CalendarDays,
-          accent: "from-violet-500/15 to-violet-500/5 text-violet-600 dark:text-violet-400",
         },
         {
           label: "Nuits",
           value: String(metrics.totalNights),
           delta: computeDelta(metrics.totalNights, compareMetrics?.totalNights),
           icon: BedDouble,
-          accent: "from-indigo-500/15 to-indigo-500/5 text-indigo-600 dark:text-indigo-400",
         },
         {
           label: "Occupation",
           value: `${metrics.occupancyRate.toFixed(1)} %`,
           delta: computeDelta(metrics.occupancyRate, compareMetrics?.occupancyRate),
           icon: PercentCircle,
-          accent: "from-teal-500/15 to-teal-500/5 text-teal-600 dark:text-teal-400",
         },
         {
           label: "Voyageurs",
           value: String(metrics.totalGuests),
           delta: computeDelta(metrics.totalGuests, compareMetrics?.totalGuests),
           icon: Users,
-          accent: "from-orange-500/15 to-orange-500/5 text-orange-600 dark:text-orange-400",
         },
       ]
     : [];
@@ -455,14 +454,17 @@ const DashboardPageV3: React.FC = () => {
         <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-gradient-to-r from-indigo-600 to-sky-500 text-white hover:from-indigo-600 hover:to-sky-500">
+              <Badge className="bg-[hsl(var(--sidebar-foreground))] text-white hover:bg-[hsl(var(--sidebar-foreground))]">
                 Proposition V3
               </Badge>
-              <Badge variant="outline" className="capitalize">
+              <Badge
+                variant="outline"
+                className="border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] capitalize text-[hsl(var(--sidebar-foreground))]"
+              >
                 {format(new Date(), "EEEE dd MMMM yyyy", { locale: fr })}
               </Badge>
             </div>
-            <h1 className="mt-3 break-words text-2xl font-bold tracking-tight sm:text-4xl">
+            <h1 className="mt-3 break-words text-2xl font-bold tracking-tight text-[hsl(var(--sidebar-foreground))] sm:text-4xl">
               Bonjour{profile?.first_name ? ` ${profile.first_name}` : ""} 👋
             </h1>
             <p className="mt-1 text-sm text-muted-foreground sm:text-base">
@@ -521,7 +523,7 @@ const DashboardPageV3: React.FC = () => {
           </div>
 
           {isComparing && (
-            <Badge variant="secondary" className="rounded-full">
+            <Badge className="rounded-full bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-background))]">
               Comparaison {selectedYear} vs {compareYear}
             </Badge>
           )}
@@ -543,15 +545,15 @@ const DashboardPageV3: React.FC = () => {
             : kpis.map((kpi) => (
                 <div
                   key={kpi.label}
-                  className={`min-w-0 rounded-2xl border bg-gradient-to-br p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${kpi.accent}`}
+                  className="min-w-0 rounded-2xl border border-[hsl(var(--sidebar-border))] bg-card p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4"
                 >
                   <div className="flex items-center justify-between gap-1">
-                    <div className="rounded-lg bg-background/50 p-1.5">
+                    <div className="rounded-lg bg-[hsl(var(--sidebar-background))] p-1.5 text-[hsl(var(--sidebar-foreground))]">
                       <kpi.icon className="h-4 w-4" />
                     </div>
                     {isComparing && <DeltaBadge delta={kpi.delta} />}
                   </div>
-                  <p className="mt-2 truncate text-lg font-bold text-foreground sm:mt-3 sm:text-2xl">
+                  <p className="mt-2 truncate text-lg font-bold text-[hsl(var(--sidebar-foreground))] sm:mt-3 sm:text-2xl">
                     {kpi.value}
                   </p>
                   <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:text-xs">
@@ -567,7 +569,9 @@ const DashboardPageV3: React.FC = () => {
           <Card className="min-w-0 shadow-sm xl:col-span-2">
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
               <div className="min-w-0">
-                <CardTitle className="text-base font-semibold sm:text-lg">Revenus mensuels</CardTitle>
+                <CardTitle className="text-base font-semibold text-[hsl(var(--sidebar-foreground))] sm:text-lg">
+                  Revenus mensuels
+                </CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Chiffre d'affaires et bénéfice net — {yearLabel}
                   {isComparing && ` vs ${compareYear}`}
@@ -590,25 +594,25 @@ const DashboardPageV3: React.FC = () => {
                     <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <defs>
                         <linearGradient id="v3-ca" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
+                          <stop offset="5%" stopColor={CA_COLOR} stopOpacity={0.35} />
+                          <stop offset="95%" stopColor={CA_COLOR} stopOpacity={0.02} />
                         </linearGradient>
                         <linearGradient id="v3-benef" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                          <stop offset="5%" stopColor={BENEF_COLOR} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={BENEF_COLOR} stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
                       <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
                       <YAxis className="text-xs" tickLine={false} axisLine={false} tickFormatter={(v) => `${v}€`} />
                       <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(2)}€`} />} />
-                      <Area type="monotone" dataKey="ca" name={`CA ${selectedYear}`} stroke="#6366f1" strokeWidth={2.5} fill="url(#v3-ca)" animationDuration={1200} />
-                      <Area type="monotone" dataKey="benef" name={`Bénéfice ${selectedYear}`} stroke="#10b981" strokeWidth={2.5} fill="url(#v3-benef)" animationDuration={1200} />
+                      <Area type="monotone" dataKey="ca" name={`CA ${selectedYear}`} stroke={CA_COLOR} strokeWidth={2.5} fill="url(#v3-ca)" animationDuration={1200} />
+                      <Area type="monotone" dataKey="benef" name={`Bénéfice ${selectedYear}`} stroke={BENEF_COLOR} strokeWidth={2.5} fill="url(#v3-benef)" animationDuration={1200} />
                       {isComparing && (
                         <Line type="monotone" dataKey="ca2" name={`CA ${compareYear}`} stroke={COMPARE_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
                       )}
                       {isComparing && (
-                        <Line type="monotone" dataKey="benef2" name={`Bénéfice ${compareYear}`} stroke="#34d399" strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
+                        <Line type="monotone" dataKey="benef2" name={`Bénéfice ${compareYear}`} stroke={RES_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
                       )}
                     </ComposedChart>
                   </ResponsiveContainer>
@@ -619,9 +623,9 @@ const DashboardPageV3: React.FC = () => {
 
           {/* Colonne droite : prochaine arrivée + note + prix/nuit */}
           <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-indigo-600 via-indigo-500 to-sky-500 text-white shadow-md">
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-[hsl(var(--sidebar-foreground))] via-[hsl(var(--primary))] to-[hsl(var(--accent))] text-white shadow-md">
               <CardContent className="p-5 sm:p-6">
-                <div className="flex items-center gap-2 text-indigo-100">
+                <div className="flex items-center gap-2 text-white/80">
                   <CalendarClock className="h-4 w-4 shrink-0" />
                   <span className="text-xs font-medium uppercase tracking-widest">Prochaine arrivée</span>
                 </div>
@@ -632,7 +636,7 @@ const DashboardPageV3: React.FC = () => {
                     <p className="mt-3 text-3xl font-bold">
                       {format(parseISO(nextArrival.check_in_date), "dd MMMM", { locale: fr })}
                     </p>
-                    <p className="mt-1 truncate text-sm text-indigo-100">
+                    <p className="mt-1 truncate text-sm text-white/80">
                       {nextArrival.guest_name} • {nextArrival.property_name}
                     </p>
                   </>
@@ -674,7 +678,7 @@ const DashboardPageV3: React.FC = () => {
               </Card>
               <Card className="min-w-0 shadow-sm">
                 <CardContent className="p-4 sm:p-5">
-                  <div className="flex items-center gap-2 text-sky-500">
+                  <div className="flex items-center gap-2 text-[hsl(var(--sidebar-foreground))]">
                     <Wallet className="h-4 w-4 shrink-0" />
                     <span className="truncate text-xs font-medium text-muted-foreground">Prix net / nuit</span>
                   </div>
@@ -714,7 +718,7 @@ const DashboardPageV3: React.FC = () => {
                       {isComparing && (
                         <Bar dataKey="reservations2" name={`Réservations ${compareYear}`} fill={COMPARE_COLOR} radius={[4, 4, 0, 0]} animationDuration={1200} />
                       )}
-                      <Bar dataKey="reservations" name={`Réservations ${selectedYear}`} fill="#8b5cf6" radius={[4, 4, 0, 0]} animationDuration={1200} />
+                      <Bar dataKey="reservations" name={`Réservations ${selectedYear}`} fill={RES_COLOR} radius={[4, 4, 0, 0]} animationDuration={1200} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartFrame>
@@ -735,15 +739,15 @@ const DashboardPageV3: React.FC = () => {
                     <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="v3-occ" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.02} />
+                          <stop offset="5%" stopColor={OCC_COLOR} stopOpacity={0.4} />
+                          <stop offset="95%" stopColor={OCC_COLOR} stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
                       <XAxis dataKey="name" className="text-[10px]" tickLine={false} axisLine={false} />
                       <YAxis unit="%" className="text-[10px]" tickLine={false} axisLine={false} />
                       <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(1)}%`} />} />
-                      <Area type="monotone" dataKey="occupation" name={`Occupation ${selectedYear}`} stroke="#14b8a6" strokeWidth={2.5} fill="url(#v3-occ)" animationDuration={1200} />
+                      <Area type="monotone" dataKey="occupation" name={`Occupation ${selectedYear}`} stroke={OCC_COLOR} strokeWidth={2.5} fill="url(#v3-occ)" animationDuration={1200} />
                       {isComparing && (
                         <Line type="monotone" dataKey="occupation2" name={`Occupation ${compareYear}`} stroke={COMPARE_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
                       )}
@@ -803,10 +807,10 @@ const DashboardPageV3: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="min-w-0 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm dark:border-amber-900 dark:from-amber-950/30 dark:to-orange-950/20">
+          <Card className="min-w-0 border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))]/50 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                <Trophy className="h-4 w-4 shrink-0 text-amber-500" />
+              <CardTitle className="flex items-center gap-2 text-base font-semibold text-[hsl(var(--sidebar-foreground))]">
+                <Trophy className="h-4 w-4 shrink-0 text-[hsl(var(--sidebar-foreground))]" />
                 Meilleur mois
               </CardTitle>
             </CardHeader>
@@ -815,13 +819,13 @@ const DashboardPageV3: React.FC = () => {
                 <Skeleton className="h-32 w-full" />
               ) : metrics?.bestMonth ? (
                 <div className="space-y-3">
-                  <p className="text-3xl font-bold capitalize text-amber-600 dark:text-amber-400">
+                  <p className="text-3xl font-bold capitalize text-[hsl(var(--sidebar-foreground))]">
                     {metrics.bestMonth.name}
                   </p>
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground">Bénéfice net</span>
-                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="font-semibold text-[hsl(var(--primary))]">
                         {formatEuro(metrics.bestMonth.benef)}
                       </span>
                     </div>

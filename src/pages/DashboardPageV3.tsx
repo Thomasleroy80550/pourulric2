@@ -38,10 +38,8 @@ import {
   CalendarClock,
   CalendarDays,
   Landmark,
-  LayoutDashboard,
   PercentCircle,
   RotateCcw,
-  Sparkles,
   Star,
   TrendingDown,
   TrendingUp,
@@ -277,27 +275,6 @@ const DeltaBadge = ({ delta }: { delta: number | null }) => {
   );
 };
 
-const VersionSwitcher = () => (
-  <div className="inline-flex w-full min-w-0 items-center gap-1 rounded-full border border-border bg-background/80 p-1 backdrop-blur sm:w-auto">
-    <Button asChild size="sm" variant="ghost" className="min-w-0 flex-1 rounded-full px-3 sm:flex-none">
-      <Link to="/">
-        <LayoutDashboard className="mr-1.5 h-4 w-4 shrink-0 sm:mr-2" />
-        <span className="truncate">
-          <span className="sm:hidden">Actuel</span>
-          <span className="hidden sm:inline">Dashboard actuel</span>
-        </span>
-      </Link>
-    </Button>
-    <Button size="sm" variant="default" className="pointer-events-none min-w-0 flex-1 rounded-full px-3 sm:flex-none">
-      <Sparkles className="mr-1.5 h-4 w-4 shrink-0 sm:mr-2" />
-      <span className="truncate">
-        <span className="sm:hidden">V3</span>
-        <span className="hidden sm:inline">Proposition V3</span>
-      </span>
-    </Button>
-  </div>
-);
-
 const DashboardPageV3: React.FC = () => {
   const { profile } = useSession();
   const currentYear = new Date().getFullYear();
@@ -473,9 +450,6 @@ const DashboardPageV3: React.FC = () => {
         <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-[hsl(var(--sidebar-foreground))] text-white hover:bg-[hsl(var(--sidebar-foreground))]">
-                Proposition V3
-              </Badge>
               <Badge
                 variant="outline"
                 className="border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] capitalize text-[hsl(var(--sidebar-foreground))]"
@@ -491,18 +465,15 @@ const DashboardPageV3: React.FC = () => {
               {isComparing && ` vs ${compareYear}`}
             </p>
           </div>
-          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full"
-              onClick={() => setShowReveal(true)}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Revoir l'intro
-            </Button>
-            <VersionSwitcher />
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => setShowReveal(true)}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Revoir l'intro
+          </Button>
         </div>
 
         {/* ── Sélecteurs d'année ──────────────────────────── */}

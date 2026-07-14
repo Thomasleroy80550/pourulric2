@@ -222,7 +222,8 @@ function App() {
                       <Route path="/integrations/netatmo/stations" element={<NetatmoStationsPage />} />
                       <Route path="/integrations/netatmo/override" element={<NetatmoTokenOverridePage />} />
                       <Route path="/maintenance/connectivite" element={<ConnectivityMaintenancePage />} />
-                      <Route path="/" element={<DashboardPage />} />
+                      <Route path="/" element={<DashboardPageV3 />} />
+                      <Route path="/home-classic" element={<DashboardPage />} />
                       <Route path="/home-v2" element={<DashboardPageV2 />} />
                       <Route path="/home-v3" element={<DashboardPageV3 />} />
 

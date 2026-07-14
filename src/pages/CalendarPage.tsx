@@ -339,7 +339,7 @@ const CalendarPage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
-                  onClick={() => navigate('/planning-v3')}
+                  onClick={() => navigate('/planning-v2')}
                   className="flex items-center w-full sm:w-auto text-sm sm:text-base bg-gradient-to-r from-[hsl(var(--sidebar-foreground))] to-[hsl(var(--accent))] text-white hover:opacity-90"
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
@@ -466,7 +466,7 @@ const CalendarPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
           <div className="flex flex-wrap gap-2">
             <Button
-              onClick={() => navigate('/planning-v3')}
+              onClick={() => navigate('/planning-v2')}
               className="flex items-center bg-gradient-to-r from-[hsl(var(--sidebar-foreground))] to-[hsl(var(--accent))] text-white hover:opacity-90"
             >
               <Sparkles className="h-4 w-4 mr-2" />

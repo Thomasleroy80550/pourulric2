@@ -148,8 +148,8 @@ const DashboardV3Reveal: React.FC<DashboardV3RevealProps> = ({ onFinish }) => {
             className="hk-anim mt-3 text-sm leading-relaxed text-muted-foreground"
             style={{ animation: "hkFadeUp 0.6s ease-out 0.7s forwards" }}
           >
-            Vos performances en un coup d'œil, la comparaison d'une année à l'autre,
-            et un design entièrement aux couleurs Hello Keys.
+            Un design plus aéré et plus simple, un tout nouveau planning,
+            et vos performances en un coup d'œil.
           </p>
 
           <div

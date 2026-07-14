@@ -46,14 +46,17 @@ type ChannelStyle = {
 };
 
 const CHANNELS: Record<string, ChannelStyle> = {
-  BOOKING: { label: 'Booking.com', bar: 'bg-blue-600', barPending: 'bg-blue-300', dot: 'bg-blue-600' },
-  AIRBNB: { label: 'Airbnb', bar: 'bg-pink-500', barPending: 'bg-pink-300', dot: 'bg-pink-500' },
-  ABRITEL: { label: 'Abritel', bar: 'bg-indigo-500', barPending: 'bg-indigo-300', dot: 'bg-indigo-500' },
-  HOMEAWAY: { label: 'Abritel', bar: 'bg-indigo-500', barPending: 'bg-indigo-300', dot: 'bg-indigo-500' },
-  DIRECT: { label: 'Direct', bar: 'bg-emerald-500', barPending: 'bg-emerald-300', dot: 'bg-emerald-500' },
-  HELLOKEYS: { label: 'Hello Keys', bar: 'bg-teal-500', barPending: 'bg-teal-300', dot: 'bg-teal-500' },
-  PROPRI: { label: 'Propriétaire (ménage)', bar: 'bg-amber-500', barPending: 'bg-amber-300', dot: 'bg-amber-500' },
-  PROP0: { label: 'Propriétaire', bar: 'bg-amber-400', barPending: 'bg-amber-200', dot: 'bg-amber-400' },
+  // Couleurs officielles des marques
+  BOOKING: { label: 'Booking.com', bar: 'bg-[#003580]', barPending: 'bg-[#003580]/40', dot: 'bg-[#003580]' },
+  AIRBNB: { label: 'Airbnb', bar: 'bg-[#FF5A5F]', barPending: 'bg-[#FF5A5F]/40', dot: 'bg-[#FF5A5F]' },
+  ABRITEL: { label: 'Abritel', bar: 'bg-[#1F66E5]', barPending: 'bg-[#1F66E5]/40', dot: 'bg-[#1F66E5]' },
+  HOMEAWAY: { label: 'Abritel', bar: 'bg-[#1F66E5]', barPending: 'bg-[#1F66E5]/40', dot: 'bg-[#1F66E5]' },
+  VRBO: { label: 'Vrbo', bar: 'bg-[#0E166E]', barPending: 'bg-[#0E166E]/40', dot: 'bg-[#0E166E]' },
+  EXPEDIA: { label: 'Expedia', bar: 'bg-[#FFC72C]', barPending: 'bg-[#FFC72C]/40', dot: 'bg-[#FFC72C]' },
+  DIRECT: { label: 'Direct', bar: 'bg-[#255f85]', barPending: 'bg-[#255f85]/40', dot: 'bg-[#255f85]' },
+  HELLOKEYS: { label: 'Hello Keys', bar: 'bg-[#255f85]', barPending: 'bg-[#255f85]/40', dot: 'bg-[#255f85]' },
+  PROPRI: { label: 'Propriétaire (ménage)', bar: 'bg-[#E11D48]', barPending: 'bg-[#E11D48]/40', dot: 'bg-[#E11D48]' },
+  PROP0: { label: 'Propriétaire', bar: 'bg-[#64748B]', barPending: 'bg-[#64748B]/40', dot: 'bg-[#64748B]' },
   OWNER_BLOCK: { label: 'Bloqué', bar: 'bg-slate-400', barPending: 'bg-slate-300', dot: 'bg-slate-400' },
   BLOCKED: { label: 'Bloqué', bar: 'bg-slate-400', barPending: 'bg-slate-300', dot: 'bg-slate-400' },
   UNKNOWN: { label: 'Autre', bar: 'bg-slate-500', barPending: 'bg-slate-300', dot: 'bg-slate-500' },

@@ -11,8 +11,6 @@ import {
 } from '@/lib/krossbooking';
 import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FlaskConical } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 
 /**
@@ -92,15 +90,6 @@ const PlanningV2Page: React.FC = () => {
   return (
     <MainLayout>
       <div className="w-full py-6 px-2 sm:px-4 space-y-4">
-        <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
-          <FlaskConical className="h-4 w-4 text-amber-600" />
-          <AlertTitle>Version privée (développement)</AlertTitle>
-          <AlertDescription>
-            Nouvelle version du planning en cours de développement. Accessible uniquement via{' '}
-            <code className="text-xs">/planning-v2</code>. La version actuelle n'est pas modifiée.
-          </AlertDescription>
-        </Alert>
-
         {loading ? (
           <div className="space-y-4">
             <Skeleton className="h-10 w-64" />

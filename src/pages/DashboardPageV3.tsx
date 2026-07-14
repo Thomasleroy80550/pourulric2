@@ -216,16 +216,16 @@ const formatEuro = (value: number) =>
   value.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " €";
 
 const VersionSwitcher = () => (
-  <div className="inline-flex items-center gap-1 rounded-full border border-border bg-background/80 p-1 backdrop-blur">
-    <Button asChild size="sm" variant="ghost" className="rounded-full">
+  <div className="inline-flex w-full items-center gap-1 rounded-full border border-border bg-background/80 p-1 backdrop-blur sm:w-auto">
+    <Button asChild size="sm" variant="ghost" className="flex-1 rounded-full sm:flex-none">
       <Link to="/">
         <LayoutDashboard className="mr-2 h-4 w-4" />
-        Dashboard actuel
+        <span className="truncate">Dashboard actuel</span>
       </Link>
     </Button>
-    <Button size="sm" variant="default" className="rounded-full pointer-events-none">
+    <Button size="sm" variant="default" className="pointer-events-none flex-1 rounded-full sm:flex-none">
       <Sparkles className="mr-2 h-4 w-4" />
-      Proposition V3
+      <span className="truncate">Proposition V3</span>
     </Button>
   </div>
 );
@@ -349,29 +349,32 @@ const DashboardPageV3: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="w-full px-3 py-5 sm:px-6 sm:py-8">
+      <div className="w-full overflow-x-hidden px-3 py-5 sm:px-6 sm:py-8">
         {/* ── En-tête ─────────────────────────────────────── */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="bg-gradient-to-r from-indigo-600 to-sky-500 text-white hover:from-indigo-600 hover:to-sky-500">
                 Proposition V3
               </Badge>
-              <Badge variant="outline">{format(new Date(), "EEEE dd MMMM yyyy", { locale: fr })}</Badge>
+              <Badge variant="outline" className="capitalize">
+                {format(new Date(), "EEEE dd MMMM yyyy", { locale: fr })}
+              </Badge>
             </div>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-4xl">
               Bonjour{profile?.first_name ? ` ${profile.first_name}` : ""} 👋
             </h1>
             <p className="mt-1 text-sm text-muted-foreground sm:text-base">
               Vue d'ensemble de votre activité — {yearLabel}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
             <Tabs
               value={selectedYear === currentYear ? "current" : "2025"}
               onValueChange={(val) => setSelectedYear(val === "current" ? currentYear : 2025)}
+              className="w-full sm:w-auto"
             >
-              <TabsList className="rounded-full">
+              <TabsList className="grid w-full grid-cols-2 rounded-full sm:flex sm:w-auto">
                 <TabsTrigger value="2025" className="rounded-full text-xs">
                   2025
                 </TabsTrigger>
@@ -395,44 +398,49 @@ const DashboardPageV3: React.FC = () => {
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+                <Skeleton key={i} className="h-24 w-full rounded-2xl sm:h-28" />
               ))
             : kpis.map((kpi) => (
                 <div
                   key={kpi.label}
-                  className={`rounded-2xl border bg-gradient-to-br p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${kpi.accent}`}
+                  className={`rounded-2xl border bg-gradient-to-br p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${kpi.accent}`}
                 >
                   <div className="flex items-center justify-between">
-                    <kpi.icon className="h-4 w-4" />
+                    <div className="rounded-lg bg-background/50 p-1.5">
+                      <kpi.icon className="h-4 w-4" />
+                    </div>
                     <ArrowUpRight className="h-3.5 w-3.5 opacity-40" />
                   </div>
-                  <p className="mt-3 truncate text-xl font-bold text-foreground sm:text-2xl">
+                  <p className="mt-2 truncate text-lg font-bold text-foreground sm:mt-3 sm:text-2xl">
                     {kpi.value}
                   </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{kpi.label}</p>
+                  <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:text-xs">
+                    {kpi.label}
+                  </p>
                 </div>
               ))}
         </div>
 
         {/* ── Bento grid principale ──────────────────────── */}
-        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-3">
           {/* Graphique CA / Bénéfice — large */}
           <Card className="shadow-sm xl:col-span-2">
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
-              <div>
-                <CardTitle className="text-lg font-semibold">Revenus mensuels</CardTitle>
+              <div className="min-w-0">
+                <CardTitle className="text-base font-semibold sm:text-lg">Revenus mensuels</CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Chiffre d'affaires et bénéfice net — {yearLabel}
                 </p>
               </div>
               <Button asChild variant="outline" size="sm" className="rounded-full">
                 <Link to="/finances">
-                  Mes finances
+                  <span className="hidden sm:inline">Mes finances</span>
+                  <span className="sm:hidden">Finances</span>
                   <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Link>
               </Button>
             </CardHeader>
-            <CardContent className="h-80 pt-4">
+            <CardContent className="h-64 pt-4 sm:h-80">
               {loading ? (
                 <Skeleton className="h-full w-full" />
               ) : (
@@ -461,9 +469,9 @@ const DashboardPageV3: React.FC = () => {
           </Card>
 
           {/* Colonne droite : prochaine arrivée + note + prix/nuit */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 sm:gap-6">
             <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-indigo-600 via-indigo-500 to-sky-500 text-white shadow-md">
-              <CardContent className="p-6">
+              <CardContent className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 text-indigo-100">
                   <CalendarClock className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase tracking-widest">Prochaine arrivée</span>
@@ -496,9 +504,9 @@ const DashboardPageV3: React.FC = () => {
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6">
               <Card className="shadow-sm">
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center gap-2 text-amber-500">
                     <Star className="h-4 w-4 fill-current" />
                     <span className="text-xs font-medium text-muted-foreground">Votre note</span>
@@ -516,7 +524,7 @@ const DashboardPageV3: React.FC = () => {
                 </CardContent>
               </Card>
               <Card className="shadow-sm">
-                <CardContent className="p-5">
+                <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center gap-2 text-sky-500">
                     <Wallet className="h-4 w-4" />
                     <span className="text-xs font-medium text-muted-foreground">Prix net / nuit</span>
@@ -538,7 +546,7 @@ const DashboardPageV3: React.FC = () => {
         </div>
 
         {/* ── Ligne 2 : réservations / occupation / plateformes / meilleur mois ── */}
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">Réservations / mois</CardTitle>
@@ -678,7 +686,7 @@ const DashboardPageV3: React.FC = () => {
         </div>
 
         {/* ── Accès rapides ──────────────────────────────── */}
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-4">
           {[
             { label: "Calendrier", to: "/calendar", icon: CalendarDays },
             { label: "Réservations", to: "/bookings", icon: BedDouble },

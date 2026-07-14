@@ -11,6 +11,8 @@ export interface Announcement {
   level: AnnouncementLevel;
   is_pinned: boolean;
   is_published: boolean;
+  link_url: string | null;
+  sort_order: number;
   author_id: string;
   created_at: string;
   updated_at: string;
@@ -23,6 +25,8 @@ interface CreateAnnouncementPayload {
   level?: AnnouncementLevel;
   is_pinned?: boolean;
   is_published?: boolean;
+  link_url?: string | null;
+  sort_order?: number;
 }
 
 interface UpdateAnnouncementPayload {
@@ -32,6 +36,8 @@ interface UpdateAnnouncementPayload {
   level?: AnnouncementLevel;
   is_pinned?: boolean;
   is_published?: boolean;
+  link_url?: string | null;
+  sort_order?: number;
 }
 
 async function callAnnouncementsProxy(action: string, payload?: any): Promise<any> {

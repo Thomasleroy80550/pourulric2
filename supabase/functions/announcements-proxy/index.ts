@@ -54,6 +54,8 @@ serve(async (req) => {
             level: payload.level ?? 'info',
             is_pinned: payload.is_pinned ?? false,
             is_published: payload.is_published ?? false,
+            link_url: payload.link_url ?? null,
+            sort_order: payload.sort_order ?? 0,
             author_id: user.id,
           })
           .select()
@@ -71,6 +73,7 @@ serve(async (req) => {
         }
         query = query
           .order('is_pinned', { ascending: false })
+          .order('sort_order', { ascending: true })
           .order('created_at', { ascending: false });
 
         const { data: announcements, error: readError } = await query;

@@ -22,7 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Terminal, Edit, Trash2, Pin, Sparkles, Loader2 } from "lucide-react";
+import {
+  Terminal,
+  Edit,
+  Trash2,
+  Pin,
+  Sparkles,
+  Loader2,
+  ArrowUp,
+  ArrowDown,
+  Link2,
+} from "lucide-react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -37,12 +47,28 @@ import {
 } from "@/lib/announcements-api";
 import { ANNOUNCEMENT_LEVELS } from "@/lib/announcement-levels";
 
+// Pages internes existantes pouvant être liées à une annonce.
+const PAGE_SHORTCUTS = [
+  { label: "Go Baie de Somme", value: "/go-baie-de-somme" },
+  { label: "PowerSense", value: "/powersense" },
+  { label: "Marvel 2026", value: "/marvel-2026" },
+  { label: "Thermo Sync", value: "/thermo-sync" },
+  { label: "ThermoBnB", value: "/thermobnb" },
+  { label: "Saison 2026", value: "/season-2026" },
+  { label: "Hivernage 2026", value: "/hivernage-2026" },
+  { label: "Nouveautés", value: "/new-version" },
+  { label: "Marketplace", value: "/marketplace" },
+  { label: "Modules", value: "/modules" },
+  { label: "FAQ", value: "/faq" },
+];
+
 const emptyForm: Partial<Announcement> = {
   title: "",
   content: "",
   level: "info",
   is_pinned: false,
   is_published: false,
+  link_url: "",
 };
 
 const AdminAnnouncementsPage: React.FC = () => {
@@ -53,6 +79,7 @@ const AdminAnnouncementsPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [aiTopic, setAiTopic] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const fetchAnnouncements = async () => {
     setLoading(true);
@@ -84,6 +111,7 @@ const AdminAnnouncementsPage: React.FC = () => {
     }
     setLoading(true);
     try {
+      const linkUrl = current.link_url?.trim() || null;
       if (isEditing && current.id) {
         await updateAnnouncement({
           id: current.id,
@@ -92,6 +120,7 @@ const AdminAnnouncementsPage: React.FC = () => {
           level: current.level as AnnouncementLevel,
           is_pinned: current.is_pinned,
           is_published: current.is_published,
+          link_url: linkUrl,
         });
         toast.success("Annonce mise à jour !");
       } else {
@@ -101,6 +130,7 @@ const AdminAnnouncementsPage: React.FC = () => {
           level: current.level as AnnouncementLevel,
           is_pinned: current.is_pinned,
           is_published: current.is_published,
+          link_url: linkUrl,
         });
         toast.success("Annonce créée !");
       }
@@ -157,6 +187,35 @@ const AdminAnnouncementsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleMove = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= announcements.length) return;
+
+    const reordered = [...announcements];
+    const [item] = reordered.splice(index, 1);
+    reordered.splice(target, 0, item);
+    setAnnouncements(reordered); // mise à jour optimiste
+
+    setReordering(true);
+    try {
+      await Promise.all(
+        reordered
+          .map((a, i) => ({ a, i }))
+          .filter(({ a, i }) => a.sort_order !== i)
+          .map(({ a, i }) => updateAnnouncement({ id: a.id, sort_order: i })),
+      );
+    } catch (err: any) {
+      toast.error(`Erreur lors du réordonnancement : ${err.message}`);
+      await fetchAnnouncements();
+    } finally {
+      setReordering(false);
+    }
+  };
+
+  const linkSelectValue = current.link_url && PAGE_SHORTCUTS.some((s) => s.value === current.link_url)
+    ? current.link_url
+    : "none";
 
   return (
     <AdminLayout>
@@ -279,6 +338,43 @@ const AdminAnnouncementsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Lien vers une page existante */}
+            <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
+              <Label className="flex items-center gap-2">
+                <Link2 className="h-4 w-4" />
+                Lier à une page (optionnel)
+              </Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Select
+                  value={linkSelectValue}
+                  onValueChange={(value) =>
+                    setCurrent((p) => ({ ...p, link_url: value === "none" ? "" : value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir une page…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucune page liée</SelectItem>
+                    {PAGE_SHORTCUTS.map((page) => (
+                      <SelectItem key={page.value} value={page.value}>
+                        {page.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="/go-baie-de-somme ou https://…"
+                  value={current.link_url || ""}
+                  onChange={(e) => setCurrent((p) => ({ ...p, link_url: e.target.value }))}
+                  disabled={loading}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Sélectionnez un raccourci ou saisissez un chemin interne (ex: <code>/go-baie-de-somme</code>) ou une URL complète. Un bouton « Découvrir » apparaîtra sur l'annonce.
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label>Contenu</Label>
               <RichTextEditor
@@ -304,6 +400,9 @@ const AdminAnnouncementsPage: React.FC = () => {
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Annonces existantes</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Utilisez les flèches pour organiser l'ordre d'affichage (les épinglées restent en haut).
+            </p>
           </CardHeader>
           <CardContent>
             {loading && announcements.length === 0 ? (
@@ -315,28 +414,65 @@ const AdminAnnouncementsPage: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-24">Ordre</TableHead>
                       <TableHead>Titre</TableHead>
                       <TableHead>Niveau</TableHead>
+                      <TableHead>Lien</TableHead>
                       <TableHead>Publiée</TableHead>
-                      <TableHead>Épinglée</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {announcements.map((a) => {
+                    {announcements.map((a, index) => {
                       const level = ANNOUNCEMENT_LEVELS[a.level] ?? ANNOUNCEMENT_LEVELS.info;
                       return (
                         <TableRow key={a.id}>
-                          <TableCell className="font-medium">{a.title}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleMove(index, -1)}
+                                disabled={reordering || index === 0}
+                                title="Monter"
+                              >
+                                <ArrowUp className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleMove(index, 1)}
+                                disabled={reordering || index === announcements.length - 1}
+                                title="Descendre"
+                              >
+                                <ArrowDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {a.is_pinned && <Pin className="h-3.5 w-3.5 text-orange-600" />}
+                              {a.title}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge className={level.badgeClass} variant="secondary">
                               {level.label}
                             </Badge>
                           </TableCell>
-                          <TableCell>{a.is_published ? "Oui" : "Non"}</TableCell>
                           <TableCell>
-                            {a.is_pinned ? <Pin className="h-4 w-4 text-orange-600" /> : "—"}
+                            {a.link_url ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                                <Link2 className="h-3.5 w-3.5" />
+                                <span className="max-w-[140px] truncate">{a.link_url}</span>
+                              </span>
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
+                          <TableCell>{a.is_published ? "Oui" : "Non"}</TableCell>
                           <TableCell className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(a)} disabled={loading}>
                               <Edit className="h-4 w-4" />

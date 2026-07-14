@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, Loader2, Pin, Terminal } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, Pin, Terminal } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import DOMPurify from "dompurify";
@@ -118,6 +118,26 @@ const AnnouncementDetailPage: React.FC = () => {
               className="prose prose-sm mt-6 max-w-none dark:prose-invert prose-a:text-orange-600 sm:prose-base"
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(announcement.content || "") }}
             />
+
+            {announcement.link_url && (
+              <div className="mt-8 border-t pt-6">
+                {announcement.link_url.startsWith("http") ? (
+                  <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
+                    <a href={announcement.link_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-5 w-5" />
+                      Découvrir la page
+                    </a>
+                  </Button>
+                ) : (
+                  <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
+                    <Link to={announcement.link_url}>
+                      <ExternalLink className="mr-2 h-5 w-5" />
+                      Découvrir la page
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </article>
       </div>

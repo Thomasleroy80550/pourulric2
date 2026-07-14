@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   CheckCheck,
   ChevronDown,
+  ExternalLink,
   Loader2,
   Maximize2,
   Megaphone,
@@ -213,12 +214,29 @@ const AnnouncementsPage: React.FC = () => {
                   )}
 
                   {/* Actions */}
-                  <div className="mt-4 flex items-center gap-2 border-t pt-3">
+                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
                     <Button variant="ghost" size="sm" onClick={() => toggleExpand(a.id)}>
                       <ChevronDown className={cn("mr-1.5 h-4 w-4 transition-transform", expanded && "rotate-180")} />
                       {expanded ? "Replier" : "Déplier"}
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="ml-auto">
+                    {a.link_url && (
+                      a.link_url.startsWith("http") ? (
+                        <Button asChild size="sm" className="ml-auto bg-orange-600 hover:bg-orange-700">
+                          <a href={a.link_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="mr-1.5 h-4 w-4" />
+                            Découvrir
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" className="ml-auto bg-orange-600 hover:bg-orange-700">
+                          <Link to={a.link_url}>
+                            <ExternalLink className="mr-1.5 h-4 w-4" />
+                            Découvrir
+                          </Link>
+                        </Button>
+                      )
+                    )}
+                    <Button asChild variant="outline" size="sm" className={cn(!a.link_url && "ml-auto")}>
                       <Link to={`/announcements/${a.id}`}>
                         <Maximize2 className="mr-1.5 h-4 w-4" />
                         Pleine page

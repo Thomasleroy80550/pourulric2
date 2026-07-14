@@ -1,0 +1,1 @@
+ALTER TABLE public.announcements ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;

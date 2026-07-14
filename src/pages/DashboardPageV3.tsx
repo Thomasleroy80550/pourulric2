@@ -349,7 +349,7 @@ const DashboardPageV3: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="mx-auto w-full max-w-[1400px] px-3 py-5 sm:px-6 sm:py-8">
+      <div className="w-full px-3 py-5 sm:px-6 sm:py-8">
         {/* ── En-tête ─────────────────────────────────────── */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

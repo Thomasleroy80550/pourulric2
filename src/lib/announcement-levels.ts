@@ -1,4 +1,4 @@
-import { Info, Megaphone, AlertTriangle } from "lucide-react";
+import { Info, Megaphone, AlertTriangle, Rocket } from "lucide-react";
 import type { AnnouncementLevel } from "@/lib/announcements-api";
 
 export const ANNOUNCEMENT_LEVELS: Record<
@@ -31,5 +31,12 @@ export const ANNOUNCEMENT_LEVELS: Record<
     badgeClass: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     cardClass: "border-red-300 dark:border-red-900/50",
     iconClass: "text-red-600 dark:text-red-400",
+  },
+  feature: {
+    label: "Nouvelle fonctionnalité",
+    icon: Rocket,
+    badgeClass: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+    cardClass: "border-violet-300 dark:border-violet-900/50",
+    iconClass: "text-violet-600 dark:text-violet-400",
   },
 };

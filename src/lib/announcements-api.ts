@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const ANNOUNCEMENTS_PROXY_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/announcements-proxy";
 
-export type AnnouncementLevel = "info" | "important" | "urgent";
+export type AnnouncementLevel = "info" | "important" | "urgent" | "feature";
 
 export interface Announcement {
   id: string;

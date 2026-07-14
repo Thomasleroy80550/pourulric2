@@ -1,0 +1,1 @@
+ALTER TABLE public.announcements ADD CONSTRAINT announcements_level_check CHECK (level IN ('info', 'important', 'urgent', 'feature'));

@@ -216,16 +216,22 @@ const formatEuro = (value: number) =>
   value.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " €";
 
 const VersionSwitcher = () => (
-  <div className="inline-flex w-full items-center gap-1 rounded-full border border-border bg-background/80 p-1 backdrop-blur sm:w-auto">
-    <Button asChild size="sm" variant="ghost" className="flex-1 rounded-full sm:flex-none">
+  <div className="inline-flex w-full min-w-0 items-center gap-1 rounded-full border border-border bg-background/80 p-1 backdrop-blur sm:w-auto">
+    <Button asChild size="sm" variant="ghost" className="min-w-0 flex-1 rounded-full px-3 sm:flex-none">
       <Link to="/">
-        <LayoutDashboard className="mr-2 h-4 w-4" />
-        <span className="truncate">Dashboard actuel</span>
+        <LayoutDashboard className="mr-1.5 h-4 w-4 shrink-0 sm:mr-2" />
+        <span className="truncate">
+          <span className="sm:hidden">Actuel</span>
+          <span className="hidden sm:inline">Dashboard actuel</span>
+        </span>
       </Link>
     </Button>
-    <Button size="sm" variant="default" className="pointer-events-none flex-1 rounded-full sm:flex-none">
-      <Sparkles className="mr-2 h-4 w-4" />
-      <span className="truncate">Proposition V3</span>
+    <Button size="sm" variant="default" className="pointer-events-none min-w-0 flex-1 rounded-full px-3 sm:flex-none">
+      <Sparkles className="mr-1.5 h-4 w-4 shrink-0 sm:mr-2" />
+      <span className="truncate">
+        <span className="sm:hidden">V3</span>
+        <span className="hidden sm:inline">Proposition V3</span>
+      </span>
     </Button>
   </div>
 );
@@ -351,7 +357,7 @@ const DashboardPageV3: React.FC = () => {
     <MainLayout>
       <div className="w-full max-w-full overflow-x-hidden">
         {/* ── En-tête ─────────────────────────────────────── */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="bg-gradient-to-r from-indigo-600 to-sky-500 text-white hover:from-indigo-600 hover:to-sky-500">
@@ -368,7 +374,7 @@ const DashboardPageV3: React.FC = () => {
               Vue d'ensemble de votre activité — {yearLabel}
             </p>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
             <Tabs
               value={selectedYear === currentYear ? "current" : "2025"}
               onValueChange={(val) => setSelectedYear(val === "current" ? currentYear : 2025)}

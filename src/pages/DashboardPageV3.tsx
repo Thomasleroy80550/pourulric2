@@ -349,7 +349,7 @@ const DashboardPageV3: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="w-full overflow-x-hidden px-3 py-5 sm:px-6 sm:py-8">
+      <div className="w-full max-w-full overflow-x-hidden">
         {/* ── En-tête ─────────────────────────────────────── */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
@@ -422,9 +422,9 @@ const DashboardPageV3: React.FC = () => {
         </div>
 
         {/* ── Bento grid principale ──────────────────────── */}
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-3">
+        <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-3">
           {/* Graphique CA / Bénéfice — large */}
-          <Card className="shadow-sm xl:col-span-2">
+          <Card className="min-w-0 shadow-sm xl:col-span-2">
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
               <div className="min-w-0">
                 <CardTitle className="text-base font-semibold sm:text-lg">Revenus mensuels</CardTitle>
@@ -469,7 +469,7 @@ const DashboardPageV3: React.FC = () => {
           </Card>
 
           {/* Colonne droite : prochaine arrivée + note + prix/nuit */}
-          <div className="flex flex-col gap-4 sm:gap-6">
+          <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
             <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-indigo-600 via-indigo-500 to-sky-500 text-white shadow-md">
               <CardContent className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 text-indigo-100">
@@ -546,8 +546,8 @@ const DashboardPageV3: React.FC = () => {
         </div>
 
         {/* ── Ligne 2 : réservations / occupation / plateformes / meilleur mois ── */}
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
-          <Card className="shadow-sm">
+        <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 sm:gap-6 xl:grid-cols-4">
+          <Card className="min-w-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">Réservations / mois</CardTitle>
             </CardHeader>
@@ -568,7 +568,7 @@ const DashboardPageV3: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="min-w-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">Taux d'occupation</CardTitle>
             </CardHeader>
@@ -595,7 +595,7 @@ const DashboardPageV3: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="min-w-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">Plateformes</CardTitle>
             </CardHeader>
@@ -604,7 +604,7 @@ const DashboardPageV3: React.FC = () => {
                 <Skeleton className="h-full w-full" />
               ) : (
                 <>
-                  <div className="h-full w-1/2">
+                  <div className="h-full w-1/2 min-w-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie

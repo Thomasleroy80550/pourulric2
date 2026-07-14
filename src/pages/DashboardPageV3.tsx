@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   eachMonthOfInterval,
@@ -19,11 +19,12 @@ import {
 import { fr } from "date-fns/locale";
 import {
   Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
+  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -33,7 +34,6 @@ import {
 } from "recharts";
 import {
   ArrowRight,
-  ArrowUpRight,
   BedDouble,
   CalendarClock,
   CalendarDays,
@@ -42,6 +42,8 @@ import {
   PercentCircle,
   Sparkles,
   Star,
+  TrendingDown,
+  TrendingUp,
   Trophy,
   Users,
   Wallet,
@@ -53,7 +55,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/components/SessionContextProvider";
@@ -82,6 +90,8 @@ const MONTH_FALLBACK: Record<string, number> = {
   novembre: 10, décembre: 11, decembre: 11,
 };
 
+const COMPARE_COLOR = "#94a3b8";
+
 type MonthRow = {
   name: string;
   ca: number;
@@ -93,7 +103,6 @@ type MonthRow = {
 type YearMetrics = {
   totalCA: number;
   totalNet: number;
-  totalFrais: number;
   totalNights: number;
   totalGuests: number;
   totalReservations: number;
@@ -102,6 +111,15 @@ type YearMetrics = {
   monthly: MonthRow[];
   channels: { name: string; color: string; value: number }[];
   bestMonth: { name: string; benef: number; ca: number; reservations: number } | null;
+};
+
+const extractAvailableYears = (statements: SavedInvoice[]): number[] => {
+  const years = new Set<number>();
+  statements.forEach((s) => {
+    const match = s.period.match(/(20\d{2})/);
+    if (match) years.add(parseInt(match[1], 10));
+  });
+  return Array.from(years).sort((a, b) => b - a);
 };
 
 const buildYearMetrics = (
@@ -127,7 +145,6 @@ const buildYearMetrics = (
 
   let totalCA = 0;
   let totalNet = 0;
-  let totalFrais = 0;
   let totalNights = 0;
   let totalGuests = 0;
   let totalReservations = 0;
@@ -150,7 +167,6 @@ const buildYearMetrics = (
     const reservations = s.totals.totalReservations ?? invoiceData.length;
 
     totalCA += ca;
-    totalFrais += frais;
     totalNet += net;
     totalNights += s.totals.totalNuits || 0;
     totalGuests += s.totals.totalVoyageurs || 0;
@@ -201,7 +217,6 @@ const buildYearMetrics = (
   return {
     totalCA,
     totalNet,
-    totalFrais,
     totalNights,
     totalGuests,
     totalReservations,
@@ -216,6 +231,11 @@ const buildYearMetrics = (
 const formatEuro = (value: number) =>
   value.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " €";
 
+const computeDelta = (current: number, previous?: number | null): number | null => {
+  if (previous === undefined || previous === null || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+};
+
 // Conteneur bulletproof : le graphique est en position absolue et ne peut
 // donc JAMAIS élargir la page ni déborder de sa carte.
 const ChartFrame = ({
@@ -229,6 +249,24 @@ const ChartFrame = ({
     <div className="absolute inset-0">{children}</div>
   </div>
 );
+
+const DeltaBadge = ({ delta }: { delta: number | null }) => {
+  if (delta === null) return null;
+  const positive = delta >= 0;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+        positive
+          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+          : "bg-red-500/15 text-red-600 dark:text-red-400",
+      )}
+    >
+      {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+      {Math.abs(delta).toFixed(0)}%
+    </span>
+  );
+};
 
 const VersionSwitcher = () => (
   <div className="inline-flex w-full min-w-0 items-center gap-1 rounded-full border border-border bg-background/80 p-1 backdrop-blur sm:w-auto">
@@ -255,28 +293,61 @@ const DashboardPageV3: React.FC = () => {
   const { profile } = useSession();
   const currentYear = new Date().getFullYear();
 
-  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<YearMetrics | null>(null);
+  const [statements, setStatements] = useState<SavedInvoice[]>([]);
+  const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
-  const [roomCount, setRoomCount] = useState(0);
 
-  const yearLabel = selectedYear === currentYear ? `Année en cours (${currentYear})` : String(selectedYear);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [compareYear, setCompareYear] = useState<number | null>(null);
+
+  const availableYears = useMemo(() => {
+    const years = extractAvailableYears(statements);
+    if (years.length === 0) return [currentYear];
+    return years;
+  }, [statements, currentYear]);
+
+  // Ajuste l'année sélectionnée si elle n'a pas de stats disponibles.
+  useEffect(() => {
+    if (availableYears.length && !availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[0]);
+    }
+  }, [availableYears, selectedYear]);
+
+  const metrics = useMemo(
+    () => (statements.length || rooms.length ? buildYearMetrics(statements, selectedYear, rooms) : null),
+    [statements, rooms, selectedYear],
+  );
+  const compareMetrics = useMemo(
+    () => (compareYear !== null ? buildYearMetrics(statements, compareYear, rooms) : null),
+    [statements, rooms, compareYear],
+  );
+
+  const chartData = useMemo(() => {
+    if (!metrics) return [];
+    return metrics.monthly.map((m, i) => ({
+      ...m,
+      ca2: compareMetrics?.monthly[i]?.ca ?? null,
+      benef2: compareMetrics?.monthly[i]?.benef ?? null,
+      reservations2: compareMetrics?.monthly[i]?.reservations ?? null,
+      occupation2: compareMetrics?.monthly[i]?.occupation ?? null,
+    }));
+  }, [metrics, compareMetrics]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [statements, rooms, reviews] = await Promise.all([
+      const [fetchedStatements, fetchedRooms, reviews] = await Promise.all([
         getMyStatements(),
         getUserRooms(),
         getReviews(),
       ]);
 
-      setRoomCount(rooms.length);
-      setMetrics(buildYearMetrics(statements, selectedYear, rooms));
+      setStatements(fetchedStatements);
+      setRooms(fetchedRooms);
 
       if (reviews && reviews.length > 0) {
         setAverageRating(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length);
@@ -289,7 +360,7 @@ const DashboardPageV3: React.FC = () => {
       // Prochaine arrivée (chargée en arrière-plan, non bloquante)
       try {
         const reservations =
-          rooms.length > 0 ? await fetchKrossbookingReservations(rooms) : [];
+          fetchedRooms.length > 0 ? await fetchKrossbookingReservations(fetchedRooms) : [];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let candidate: KrossbookingReservation | null = null;
@@ -311,7 +382,7 @@ const DashboardPageV3: React.FC = () => {
       setError(err instanceof Error ? err.message : "Erreur inconnue");
       setLoading(false);
     }
-  }, [selectedYear]);
+  }, []);
 
   useEffect(() => {
     if (!profile?.is_banned) {
@@ -327,41 +398,50 @@ const DashboardPageV3: React.FC = () => {
     );
   }
 
+  const yearLabel = selectedYear === currentYear ? `${currentYear} (en cours)` : String(selectedYear);
+  const isComparing = compareYear !== null;
+
   const kpis = metrics
     ? [
         {
           label: "Chiffre d'affaires",
           value: formatEuro(metrics.totalCA),
+          delta: computeDelta(metrics.totalCA, compareMetrics?.totalCA),
           icon: Landmark,
           accent: "from-blue-500/15 to-blue-500/5 text-blue-600 dark:text-blue-400",
         },
         {
           label: "Résultat net",
           value: formatEuro(metrics.totalNet),
+          delta: computeDelta(metrics.totalNet, compareMetrics?.totalNet),
           icon: Wallet,
           accent: "from-emerald-500/15 to-emerald-500/5 text-emerald-600 dark:text-emerald-400",
         },
         {
           label: "Réservations",
           value: String(metrics.totalReservations),
+          delta: computeDelta(metrics.totalReservations, compareMetrics?.totalReservations),
           icon: CalendarDays,
           accent: "from-violet-500/15 to-violet-500/5 text-violet-600 dark:text-violet-400",
         },
         {
           label: "Nuits",
           value: String(metrics.totalNights),
+          delta: computeDelta(metrics.totalNights, compareMetrics?.totalNights),
           icon: BedDouble,
           accent: "from-indigo-500/15 to-indigo-500/5 text-indigo-600 dark:text-indigo-400",
         },
         {
           label: "Occupation",
           value: `${metrics.occupancyRate.toFixed(1)} %`,
+          delta: computeDelta(metrics.occupancyRate, compareMetrics?.occupancyRate),
           icon: PercentCircle,
           accent: "from-teal-500/15 to-teal-500/5 text-teal-600 dark:text-teal-400",
         },
         {
           label: "Voyageurs",
           value: String(metrics.totalGuests),
+          delta: computeDelta(metrics.totalGuests, compareMetrics?.totalGuests),
           icon: Users,
           accent: "from-orange-500/15 to-orange-500/5 text-orange-600 dark:text-orange-400",
         },
@@ -387,25 +467,64 @@ const DashboardPageV3: React.FC = () => {
             </h1>
             <p className="mt-1 text-sm text-muted-foreground sm:text-base">
               Vue d'ensemble de votre activité — {yearLabel}
+              {isComparing && ` vs ${compareYear}`}
             </p>
           </div>
-          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
-            <Tabs
-              value={selectedYear === currentYear ? "current" : "2025"}
-              onValueChange={(val) => setSelectedYear(val === "current" ? currentYear : 2025)}
-              className="w-full sm:w-auto"
+          <VersionSwitcher />
+        </div>
+
+        {/* ── Sélecteurs d'année ──────────────────────────── */}
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-sm font-medium text-muted-foreground">Année</span>
+            <Select
+              value={String(selectedYear)}
+              onValueChange={(val) => {
+                const year = parseInt(val, 10);
+                setSelectedYear(year);
+                if (compareYear === year) setCompareYear(null);
+              }}
             >
-              <TabsList className="grid w-full grid-cols-2 rounded-full sm:flex sm:w-auto">
-                <TabsTrigger value="2025" className="rounded-full text-xs">
-                  2025
-                </TabsTrigger>
-                <TabsTrigger value="current" className="rounded-full text-xs">
-                  {currentYear}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <VersionSwitcher />
+              <SelectTrigger className="h-9 w-[150px] rounded-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map((year) => (
+                  <SelectItem key={year} value={String(year)}>
+                    {year === currentYear ? `${year} (en cours)` : year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-sm font-medium text-muted-foreground">Comparer à</span>
+            <Select
+              value={compareYear === null ? "none" : String(compareYear)}
+              onValueChange={(val) => setCompareYear(val === "none" ? null : parseInt(val, 10))}
+            >
+              <SelectTrigger className="h-9 w-[150px] rounded-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucune</SelectItem>
+                {availableYears
+                  .filter((year) => year !== selectedYear)
+                  .map((year) => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isComparing && (
+            <Badge variant="secondary" className="rounded-full">
+              Comparaison {selectedYear} vs {compareYear}
+            </Badge>
+          )}
         </div>
 
         {error && (
@@ -426,11 +545,11 @@ const DashboardPageV3: React.FC = () => {
                   key={kpi.label}
                   className={`min-w-0 rounded-2xl border bg-gradient-to-br p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${kpi.accent}`}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1">
                     <div className="rounded-lg bg-background/50 p-1.5">
                       <kpi.icon className="h-4 w-4" />
                     </div>
-                    <ArrowUpRight className="h-3.5 w-3.5 opacity-40" />
+                    {isComparing && <DeltaBadge delta={kpi.delta} />}
                   </div>
                   <p className="mt-2 truncate text-lg font-bold text-foreground sm:mt-3 sm:text-2xl">
                     {kpi.value}
@@ -451,6 +570,7 @@ const DashboardPageV3: React.FC = () => {
                 <CardTitle className="text-base font-semibold sm:text-lg">Revenus mensuels</CardTitle>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Chiffre d'affaires et bénéfice net — {yearLabel}
+                  {isComparing && ` vs ${compareYear}`}
                 </p>
               </div>
               <Button asChild variant="outline" size="sm" className="rounded-full">
@@ -467,7 +587,7 @@ const DashboardPageV3: React.FC = () => {
               ) : (
                 <ChartFrame className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                       <defs>
                         <linearGradient id="v3-ca" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
@@ -482,9 +602,15 @@ const DashboardPageV3: React.FC = () => {
                       <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
                       <YAxis className="text-xs" tickLine={false} axisLine={false} tickFormatter={(v) => `${v}€`} />
                       <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(2)}€`} />} />
-                      <Area type="monotone" dataKey="ca" name="CA" stroke="#6366f1" strokeWidth={2.5} fill="url(#v3-ca)" animationDuration={1200} />
-                      <Area type="monotone" dataKey="benef" name="Bénéfice" stroke="#10b981" strokeWidth={2.5} fill="url(#v3-benef)" animationDuration={1200} />
-                    </AreaChart>
+                      <Area type="monotone" dataKey="ca" name={`CA ${selectedYear}`} stroke="#6366f1" strokeWidth={2.5} fill="url(#v3-ca)" animationDuration={1200} />
+                      <Area type="monotone" dataKey="benef" name={`Bénéfice ${selectedYear}`} stroke="#10b981" strokeWidth={2.5} fill="url(#v3-benef)" animationDuration={1200} />
+                      {isComparing && (
+                        <Line type="monotone" dataKey="ca2" name={`CA ${compareYear}`} stroke={COMPARE_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
+                      )}
+                      {isComparing && (
+                        <Line type="monotone" dataKey="benef2" name={`Bénéfice ${compareYear}`} stroke="#34d399" strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
+                      )}
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </ChartFrame>
               )}
@@ -560,7 +686,7 @@ const DashboardPageV3: React.FC = () => {
                     </p>
                   )}
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {roomCount} logement{roomCount > 1 ? "s" : ""}
+                    {rooms.length} logement{rooms.length > 1 ? "s" : ""}
                   </p>
                 </CardContent>
               </Card>
@@ -580,12 +706,15 @@ const DashboardPageV3: React.FC = () => {
               ) : (
                 <ChartFrame className="h-52">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
                       <XAxis dataKey="name" className="text-[10px]" tickLine={false} axisLine={false} />
                       <YAxis allowDecimals={false} className="text-[10px]" tickLine={false} axisLine={false} />
                       <Tooltip content={<CustomChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-                      <Bar dataKey="reservations" name="Réservations" fill="#8b5cf6" radius={[4, 4, 0, 0]} animationDuration={1200} />
+                      {isComparing && (
+                        <Bar dataKey="reservations2" name={`Réservations ${compareYear}`} fill={COMPARE_COLOR} radius={[4, 4, 0, 0]} animationDuration={1200} />
+                      )}
+                      <Bar dataKey="reservations" name={`Réservations ${selectedYear}`} fill="#8b5cf6" radius={[4, 4, 0, 0]} animationDuration={1200} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartFrame>
@@ -603,7 +732,7 @@ const DashboardPageV3: React.FC = () => {
               ) : (
                 <ChartFrame className="h-52">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="v3-occ" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4} />
@@ -614,8 +743,11 @@ const DashboardPageV3: React.FC = () => {
                       <XAxis dataKey="name" className="text-[10px]" tickLine={false} axisLine={false} />
                       <YAxis unit="%" className="text-[10px]" tickLine={false} axisLine={false} />
                       <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(1)}%`} />} />
-                      <Area type="monotone" dataKey="occupation" name="Occupation" stroke="#14b8a6" strokeWidth={2.5} fill="url(#v3-occ)" animationDuration={1200} />
-                    </AreaChart>
+                      <Area type="monotone" dataKey="occupation" name={`Occupation ${selectedYear}`} stroke="#14b8a6" strokeWidth={2.5} fill="url(#v3-occ)" animationDuration={1200} />
+                      {isComparing && (
+                        <Line type="monotone" dataKey="occupation2" name={`Occupation ${compareYear}`} stroke={COMPARE_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
+                      )}
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </ChartFrame>
               )}

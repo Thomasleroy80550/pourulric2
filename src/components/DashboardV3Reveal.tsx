@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Confetti from "react-confetti";
-import { ArrowRight, BarChart3, LineChart, Sparkles, Star } from "lucide-react";
+import { ArrowRight, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type DashboardV3RevealProps = {
@@ -153,27 +153,8 @@ const DashboardV3Reveal: React.FC<DashboardV3RevealProps> = ({ onFinish }) => {
           </p>
 
           <div
-            className="hk-anim mt-5 flex flex-wrap items-center justify-center gap-2"
-            style={{ animation: "hkFadeUp 0.6s ease-out 0.85s forwards" }}
-          >
-            {[
-              { icon: BarChart3, label: "KPIs en direct" },
-              { icon: LineChart, label: "Comparaison d'années" },
-              { icon: Sparkles, label: "Design Hello Keys" },
-            ].map((f) => (
-              <div
-                key={f.label}
-                className="flex items-center gap-1.5 rounded-full bg-[hsl(var(--sidebar-background))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--sidebar-foreground))]"
-              >
-                <f.icon className="h-3.5 w-3.5" />
-                {f.label}
-              </div>
-            ))}
-          </div>
-
-          <div
             className="hk-anim mt-7"
-            style={{ animation: "hkFadeUp 0.6s ease-out 1s forwards" }}
+            style={{ animation: "hkFadeUp 0.6s ease-out 0.85s forwards" }}
           >
             <Button
               size="lg"

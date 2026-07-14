@@ -40,6 +40,7 @@ import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
 import AdminAnnouncementsPage from "./pages/AdminAnnouncementsPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
+import AnnouncementDetailPage from "./pages/AnnouncementDetailPage";
 import AdminStrategiesPage from "./pages/AdminStrategiesPage";
 import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
@@ -200,6 +201,7 @@ function App() {
                       <Route path="/profile" element={<ProfilePage />} />
 
                       <Route path="/announcements" element={<AnnouncementsPage />} />
+                      <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
                       <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                       <Route path="/promotion" element={<PromotionPage />} />
                       <Route path="/new-version" element={<NewVersionPage />} />

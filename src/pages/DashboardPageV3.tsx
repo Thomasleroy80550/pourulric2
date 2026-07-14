@@ -55,6 +55,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 import { useSession } from "@/components/SessionContextProvider";
 import { getMyStatements } from "@/lib/statements-api";
 import { SavedInvoice } from "@/lib/admin-api";
@@ -215,6 +216,20 @@ const buildYearMetrics = (
 const formatEuro = (value: number) =>
   value.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + " €";
 
+// Conteneur bulletproof : le graphique est en position absolue et ne peut
+// donc JAMAIS élargir la page ni déborder de sa carte.
+const ChartFrame = ({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) => (
+  <div className={cn("relative w-full overflow-hidden", className)}>
+    <div className="absolute inset-0">{children}</div>
+  </div>
+);
+
 const VersionSwitcher = () => (
   <div className="inline-flex w-full min-w-0 items-center gap-1 rounded-full border border-border bg-background/80 p-1 backdrop-blur sm:w-auto">
     <Button asChild size="sm" variant="ghost" className="min-w-0 flex-1 rounded-full px-3 sm:flex-none">
@@ -355,7 +370,7 @@ const DashboardPageV3: React.FC = () => {
 
   return (
     <MainLayout>
-      <div className="w-full max-w-full overflow-x-hidden">
+      <div className="w-full max-w-full overflow-x-hidden break-words">
         {/* ── En-tête ─────────────────────────────────────── */}
         <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
@@ -367,7 +382,7 @@ const DashboardPageV3: React.FC = () => {
                 {format(new Date(), "EEEE dd MMMM yyyy", { locale: fr })}
               </Badge>
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-4xl">
+            <h1 className="mt-3 break-words text-2xl font-bold tracking-tight sm:text-4xl">
               Bonjour{profile?.first_name ? ` ${profile.first_name}` : ""} 👋
             </h1>
             <p className="mt-1 text-sm text-muted-foreground sm:text-base">
@@ -409,7 +424,7 @@ const DashboardPageV3: React.FC = () => {
             : kpis.map((kpi) => (
                 <div
                   key={kpi.label}
-                  className={`rounded-2xl border bg-gradient-to-br p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${kpi.accent}`}
+                  className={`min-w-0 rounded-2xl border bg-gradient-to-br p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${kpi.accent}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="rounded-lg bg-background/50 p-1.5">
@@ -446,30 +461,32 @@ const DashboardPageV3: React.FC = () => {
                 </Link>
               </Button>
             </CardHeader>
-            <CardContent className="h-64 pt-4 sm:h-80">
+            <CardContent className="pt-4">
               {loading ? (
-                <Skeleton className="h-full w-full" />
+                <Skeleton className="h-64 w-full sm:h-80" />
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="v3-ca" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
-                      </linearGradient>
-                      <linearGradient id="v3-benef" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                    <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
-                    <YAxis className="text-xs" tickLine={false} axisLine={false} tickFormatter={(v) => `${v}€`} />
-                    <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(2)}€`} />} />
-                    <Area type="monotone" dataKey="ca" name="CA" stroke="#6366f1" strokeWidth={2.5} fill="url(#v3-ca)" animationDuration={1200} />
-                    <Area type="monotone" dataKey="benef" name="Bénéfice" stroke="#10b981" strokeWidth={2.5} fill="url(#v3-benef)" animationDuration={1200} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ChartFrame className="h-64 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="v3-ca" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
+                        </linearGradient>
+                        <linearGradient id="v3-benef" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                      <XAxis dataKey="name" className="text-xs" tickLine={false} axisLine={false} />
+                      <YAxis className="text-xs" tickLine={false} axisLine={false} tickFormatter={(v) => `${v}€`} />
+                      <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(2)}€`} />} />
+                      <Area type="monotone" dataKey="ca" name="CA" stroke="#6366f1" strokeWidth={2.5} fill="url(#v3-ca)" animationDuration={1200} />
+                      <Area type="monotone" dataKey="benef" name="Bénéfice" stroke="#10b981" strokeWidth={2.5} fill="url(#v3-benef)" animationDuration={1200} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartFrame>
               )}
             </CardContent>
           </Card>
@@ -479,7 +496,7 @@ const DashboardPageV3: React.FC = () => {
             <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-indigo-600 via-indigo-500 to-sky-500 text-white shadow-md">
               <CardContent className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 text-indigo-100">
-                  <CalendarClock className="h-4 w-4" />
+                  <CalendarClock className="h-4 w-4 shrink-0" />
                   <span className="text-xs font-medium uppercase tracking-widest">Prochaine arrivée</span>
                 </div>
                 {loading ? (
@@ -511,11 +528,11 @@ const DashboardPageV3: React.FC = () => {
             </Card>
 
             <div className="grid grid-cols-2 gap-4 sm:gap-6">
-              <Card className="shadow-sm">
+              <Card className="min-w-0 shadow-sm">
                 <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center gap-2 text-amber-500">
-                    <Star className="h-4 w-4 fill-current" />
-                    <span className="text-xs font-medium text-muted-foreground">Votre note</span>
+                    <Star className="h-4 w-4 shrink-0 fill-current" />
+                    <span className="truncate text-xs font-medium text-muted-foreground">Votre note</span>
                   </div>
                   {loading ? (
                     <Skeleton className="mt-3 h-8 w-16" />
@@ -529,11 +546,11 @@ const DashboardPageV3: React.FC = () => {
                   </Link>
                 </CardContent>
               </Card>
-              <Card className="shadow-sm">
+              <Card className="min-w-0 shadow-sm">
                 <CardContent className="p-4 sm:p-5">
                   <div className="flex items-center gap-2 text-sky-500">
-                    <Wallet className="h-4 w-4" />
-                    <span className="text-xs font-medium text-muted-foreground">Prix net / nuit</span>
+                    <Wallet className="h-4 w-4 shrink-0" />
+                    <span className="truncate text-xs font-medium text-muted-foreground">Prix net / nuit</span>
                   </div>
                   {loading ? (
                     <Skeleton className="mt-3 h-8 w-16" />
@@ -542,7 +559,7 @@ const DashboardPageV3: React.FC = () => {
                       {(metrics?.netPricePerNight ?? 0).toFixed(0)}€
                     </p>
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
                     {roomCount} logement{roomCount > 1 ? "s" : ""}
                   </p>
                 </CardContent>
@@ -557,19 +574,21 @@ const DashboardPageV3: React.FC = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">Réservations / mois</CardTitle>
             </CardHeader>
-            <CardContent className="h-52">
+            <CardContent>
               {loading ? (
-                <Skeleton className="h-full w-full" />
+                <Skeleton className="h-52 w-full" />
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                    <XAxis dataKey="name" className="text-[10px]" tickLine={false} axisLine={false} />
-                    <YAxis allowDecimals={false} className="text-[10px]" tickLine={false} axisLine={false} />
-                    <Tooltip content={<CustomChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-                    <Bar dataKey="reservations" name="Réservations" fill="#8b5cf6" radius={[4, 4, 0, 0]} animationDuration={1200} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ChartFrame className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                      <XAxis dataKey="name" className="text-[10px]" tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} className="text-[10px]" tickLine={false} axisLine={false} />
+                      <Tooltip content={<CustomChartTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
+                      <Bar dataKey="reservations" name="Réservations" fill="#8b5cf6" radius={[4, 4, 0, 0]} animationDuration={1200} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartFrame>
               )}
             </CardContent>
           </Card>
@@ -578,25 +597,27 @@ const DashboardPageV3: React.FC = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">Taux d'occupation</CardTitle>
             </CardHeader>
-            <CardContent className="h-52">
+            <CardContent>
               {loading ? (
-                <Skeleton className="h-full w-full" />
+                <Skeleton className="h-52 w-full" />
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="v3-occ" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                    <XAxis dataKey="name" className="text-[10px]" tickLine={false} axisLine={false} />
-                    <YAxis unit="%" className="text-[10px]" tickLine={false} axisLine={false} />
-                    <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(1)}%`} />} />
-                    <Area type="monotone" dataKey="occupation" name="Occupation" stroke="#14b8a6" strokeWidth={2.5} fill="url(#v3-occ)" animationDuration={1200} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <ChartFrame className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={metrics?.monthly ?? []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="v3-occ" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                      <XAxis dataKey="name" className="text-[10px]" tickLine={false} axisLine={false} />
+                      <YAxis unit="%" className="text-[10px]" tickLine={false} axisLine={false} />
+                      <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(1)}%`} />} />
+                      <Area type="monotone" dataKey="occupation" name="Occupation" stroke="#14b8a6" strokeWidth={2.5} fill="url(#v3-occ)" animationDuration={1200} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </ChartFrame>
               )}
             </CardContent>
           </Card>
@@ -605,12 +626,12 @@ const DashboardPageV3: React.FC = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">Plateformes</CardTitle>
             </CardHeader>
-            <CardContent className="flex h-52 items-center gap-3">
+            <CardContent>
               {loading ? (
-                <Skeleton className="h-full w-full" />
+                <Skeleton className="h-52 w-full" />
               ) : (
-                <>
-                  <div className="h-full w-1/2 min-w-0">
+                <div className="flex h-52 items-center gap-3">
+                  <ChartFrame className="h-full w-1/2 min-w-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -630,30 +651,30 @@ const DashboardPageV3: React.FC = () => {
                         <Tooltip />
                       </PieChart>
                     </ResponsiveContainer>
-                  </div>
-                  <div className="flex w-1/2 flex-col gap-1.5 text-xs">
+                  </ChartFrame>
+                  <div className="flex w-1/2 min-w-0 flex-col gap-1.5 text-xs">
                     {(metrics?.channels ?? [])
                       .filter((c) => c.value > 0)
                       .map((c) => (
                         <div key={c.name} className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
                           <span className="truncate">{c.name}</span>
-                          <span className="ml-auto font-semibold">{c.value}</span>
+                          <span className="ml-auto shrink-0 font-semibold">{c.value}</span>
                         </div>
                       ))}
                     {(metrics?.channels ?? []).every((c) => c.value === 0) && (
                       <p className="text-muted-foreground">Aucune donnée</p>
                     )}
                   </div>
-                </>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm dark:border-amber-900 dark:from-amber-950/30 dark:to-orange-950/20">
+          <Card className="min-w-0 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm dark:border-amber-900 dark:from-amber-950/30 dark:to-orange-950/20">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                <Trophy className="h-4 w-4 text-amber-500" />
+                <Trophy className="h-4 w-4 shrink-0 text-amber-500" />
                 Meilleur mois
               </CardTitle>
             </CardHeader>
@@ -666,17 +687,17 @@ const DashboardPageV3: React.FC = () => {
                     {metrics.bestMonth.name}
                   </p>
                   <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground">Bénéfice net</span>
                       <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatEuro(metrics.bestMonth.benef)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground">CA</span>
                       <span className="font-semibold">{formatEuro(metrics.bestMonth.ca)}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground">Réservations</span>
                       <span className="font-semibold">{metrics.bestMonth.reservations}</span>
                     </div>
@@ -702,13 +723,13 @@ const DashboardPageV3: React.FC = () => {
             <Link
               key={item.label}
               to={item.to}
-              className="group flex items-center gap-3 rounded-2xl border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="group flex min-w-0 items-center gap-3 rounded-2xl border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="rounded-xl bg-muted p-2.5 text-foreground transition group-hover:bg-primary group-hover:text-primary-foreground">
                 <item.icon className="h-4 w-4" />
               </div>
-              <span className="text-sm font-medium">{item.label}</span>
-              <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+              <span className="truncate text-sm font-medium">{item.label}</span>
+              <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5" />
             </Link>
           ))}
         </div>

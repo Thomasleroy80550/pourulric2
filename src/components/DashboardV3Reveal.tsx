@@ -22,173 +22,168 @@ const DashboardV3Reveal: React.FC<DashboardV3RevealProps> = ({ onFinish }) => {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Stoppe l'émission de confettis après quelques secondes (les pièces finissent de tomber).
   useEffect(() => {
-    const timer = setTimeout(() => setConfettiActive(false), 5000);
+    const timer = setTimeout(() => setConfettiActive(false), 4000);
     return () => clearTimeout(timer);
   }, []);
 
   const handleClose = () => {
     setClosing(true);
-    setTimeout(onFinish, 500);
+    setTimeout(onFinish, 650);
   };
 
   return (
     <div
-      className={`fixed inset-0 z-[120] flex items-center justify-center overflow-hidden bg-[hsl(var(--sidebar-foreground))] transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm transition-opacity duration-500 ${
         closing ? "opacity-0" : "opacity-100"
       }`}
+      style={{ perspective: "1400px" }}
     >
       <style>{`
+        @keyframes hkZoomIn {
+          0%   { opacity: 0; transform: translateZ(-680px) scale(0.6); filter: blur(10px); }
+          70%  { opacity: 1; }
+          100% { opacity: 1; transform: translateZ(0) scale(1); filter: blur(0); }
+        }
+        @keyframes hkDiveIn {
+          0%   { opacity: 1; transform: translateZ(0) scale(1); filter: blur(0); }
+          100% { opacity: 0; transform: translateZ(520px) scale(1.7); filter: blur(8px); }
+        }
         @keyframes hkFadeUp {
-          from { opacity: 0; transform: translateY(28px); }
+          from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes hkPop {
-          0%   { opacity: 0; transform: scale(0.5); }
-          60%  { opacity: 1; transform: scale(1.12); }
+          0%   { opacity: 0; transform: scale(0.4); }
+          60%  { opacity: 1; transform: scale(1.15); }
           100% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes hkBlob {
-          0%,100% { transform: translate(0,0) scale(1); }
-          33%     { transform: translate(6%, -8%) scale(1.15); }
-          66%     { transform: translate(-6%, 6%) scale(0.9); }
         }
         @keyframes hkShine {
           0%   { background-position: 0% 50%; }
           100% { background-position: 200% 50%; }
         }
-        @keyframes hkRing {
-          0%   { transform: scale(0.6); opacity: 0.7; }
-          100% { transform: scale(2.4); opacity: 0; }
-        }
         @keyframes hkSpinSlow {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
+        @keyframes hkBlob {
+          0%,100% { transform: translate(0,0) scale(1); }
+          50%     { transform: translate(-8%, 6%) scale(1.15); }
+        }
         .hk-anim { opacity: 0; animation-fill-mode: forwards; }
       `}</style>
 
-      {/* Aurore / blobs animés */}
-      <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[hsl(var(--primary))] opacity-40 blur-3xl"
-          style={{ animation: "hkBlob 9s ease-in-out infinite" }}
-        />
-        <div
-          className="absolute right-[-6rem] top-1/3 h-[28rem] w-[28rem] rounded-full bg-[hsl(var(--accent))] opacity-40 blur-3xl"
-          style={{ animation: "hkBlob 11s ease-in-out infinite reverse" }}
-        />
-        <div
-          className="absolute bottom-[-8rem] left-1/3 h-80 w-80 rounded-full bg-sky-300 opacity-30 blur-3xl"
-          style={{ animation: "hkBlob 13s ease-in-out infinite" }}
-        />
-      </div>
-
-      {/* Confettis */}
+      {/* Confettis (burst unique) */}
       {size.width > 0 && (
         <Confetti
           width={size.width}
           height={size.height}
-          numberOfPieces={confettiActive ? 260 : 0}
-          recycle={confettiActive}
-          gravity={0.22}
+          numberOfPieces={confettiActive ? 180 : 0}
+          recycle={false}
+          gravity={0.25}
           colors={["#ffffff", "#e1f2ff", "#7dd3fc", "#38bdf8", "#255F85", "#fbbf24"]}
         />
       )}
 
-      {/* Contenu central */}
-      <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center px-6 text-center">
-        {/* Halo + icône */}
-        <div className="relative mb-8">
-          <span
-            className="absolute inset-0 -z-10 m-auto h-24 w-24 rounded-full border border-white/40"
-            style={{ animation: "hkRing 2.4s ease-out infinite" }}
-          />
-          <span
-            className="absolute inset-0 -z-10 m-auto h-24 w-24 rounded-full border border-white/40"
-            style={{ animation: "hkRing 2.4s ease-out 1.2s infinite" }}
+      {/* Carte modale */}
+      <div
+        className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/60 bg-white shadow-[0_40px_120px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-slate-900"
+        style={{
+          transformStyle: "preserve-3d",
+          animation: closing
+            ? "hkDiveIn 0.65s cubic-bezier(.5,0,.75,0) forwards"
+            : "hkZoomIn 0.7s cubic-bezier(.2,.8,.2,1) forwards",
+        }}
+      >
+        {/* Bandeau dégradé de marque */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--sidebar-foreground))] via-[hsl(var(--primary))] to-[hsl(var(--accent))] px-6 pb-10 pt-9 text-center">
+          <div
+            className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/20 blur-2xl"
+            style={{ animation: "hkBlob 8s ease-in-out infinite" }}
           />
           <div
-            className="hk-anim relative flex h-24 w-24 items-center justify-center rounded-3xl bg-white/10 backdrop-blur-md ring-1 ring-white/30"
-            style={{ animation: "hkPop 0.9s cubic-bezier(.2,.8,.2,1) forwards" }}
+            className="pointer-events-none absolute -bottom-12 right-[-3rem] h-44 w-44 rounded-full bg-white/15 blur-2xl"
+            style={{ animation: "hkBlob 10s ease-in-out infinite reverse" }}
+          />
+
+          <div
+            className="hk-anim mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30 backdrop-blur"
+            style={{ animation: "hkPop 0.8s cubic-bezier(.2,.8,.2,1) 0.25s forwards" }}
           >
             <Sparkles
-              className="h-11 w-11 text-white"
+              className="h-8 w-8 text-white"
               style={{ animation: "hkSpinSlow 8s linear infinite" }}
             />
           </div>
-        </div>
 
-        {/* Badge */}
-        <span
-          className="hk-anim mb-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.25em] text-white ring-1 ring-white/25 backdrop-blur"
-          style={{ animation: "hkFadeUp 0.7s ease-out 0.3s forwards" }}
-        >
-          <Star className="h-3.5 w-3.5 fill-current" />
-          Nouveauté
-        </span>
-
-        {/* Titre avec shimmer */}
-        <h1
-          className="hk-anim text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl"
-          style={{ animation: "hkFadeUp 0.8s ease-out 0.5s forwards" }}
-        >
           <span
-            className="bg-clip-text text-transparent"
-            style={{
-              backgroundImage:
-                "linear-gradient(100deg, #ffffff 0%, #bae6fd 25%, #ffffff 50%, #bae6fd 75%, #ffffff 100%)",
-              backgroundSize: "200% auto",
-              animation: "hkShine 4s linear infinite",
-            }}
+            className="hk-anim mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-white ring-1 ring-white/25"
+            style={{ animation: "hkFadeUp 0.6s ease-out 0.45s forwards" }}
           >
-            Votre nouveau tableau de bord
+            <Star className="h-3 w-3 fill-current" />
+            Nouveauté
           </span>
-        </h1>
-
-        {/* Sous-titre */}
-        <p
-          className="hk-anim mt-5 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg"
-          style={{ animation: "hkFadeUp 0.8s ease-out 0.7s forwards" }}
-        >
-          Une expérience repensée : vos performances en un coup d'œil, la comparaison
-          d'une année à l'autre, et un design entièrement aux couleurs Hello Keys.
-        </p>
-
-        {/* Mini features */}
-        <div
-          className="hk-anim mt-8 flex flex-wrap items-center justify-center gap-3"
-          style={{ animation: "hkFadeUp 0.8s ease-out 0.9s forwards" }}
-        >
-          {[
-            { icon: BarChart3, label: "KPIs en direct" },
-            { icon: LineChart, label: "Comparaison d'années" },
-            { icon: Sparkles, label: "Design Hello Keys" },
-          ].map((f) => (
-            <div
-              key={f.label}
-              className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur"
-            >
-              <f.icon className="h-4 w-4" />
-              {f.label}
-            </div>
-          ))}
         </div>
 
-        {/* CTA */}
-        <div
-          className="hk-anim mt-10"
-          style={{ animation: "hkFadeUp 0.8s ease-out 1.15s forwards" }}
-        >
-          <Button
-            size="lg"
-            onClick={handleClose}
-            className="group rounded-full bg-white px-8 text-base font-semibold text-[hsl(var(--sidebar-foreground))] shadow-xl hover:bg-white/90"
+        {/* Corps */}
+        <div className="px-6 pb-7 pt-6 text-center">
+          <h1
+            className="hk-anim text-2xl font-extrabold tracking-tight sm:text-3xl"
+            style={{ animation: "hkFadeUp 0.6s ease-out 0.55s forwards" }}
           >
-            Découvrir mon dashboard
-            <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-          </Button>
+            <span
+              className="bg-clip-text text-transparent"
+              style={{
+                backgroundImage:
+                  "linear-gradient(100deg, hsl(var(--sidebar-foreground)) 0%, hsl(var(--accent)) 40%, hsl(var(--sidebar-foreground)) 60%, hsl(var(--accent)) 100%)",
+                backgroundSize: "200% auto",
+                animation: "hkShine 4s linear infinite",
+              }}
+            >
+              Votre nouveau tableau de bord
+            </span>
+          </h1>
+
+          <p
+            className="hk-anim mt-3 text-sm leading-relaxed text-muted-foreground"
+            style={{ animation: "hkFadeUp 0.6s ease-out 0.7s forwards" }}
+          >
+            Vos performances en un coup d'œil, la comparaison d'une année à l'autre,
+            et un design entièrement aux couleurs Hello Keys.
+          </p>
+
+          <div
+            className="hk-anim mt-5 flex flex-wrap items-center justify-center gap-2"
+            style={{ animation: "hkFadeUp 0.6s ease-out 0.85s forwards" }}
+          >
+            {[
+              { icon: BarChart3, label: "KPIs en direct" },
+              { icon: LineChart, label: "Comparaison d'années" },
+              { icon: Sparkles, label: "Design Hello Keys" },
+            ].map((f) => (
+              <div
+                key={f.label}
+                className="flex items-center gap-1.5 rounded-full bg-[hsl(var(--sidebar-background))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--sidebar-foreground))]"
+              >
+                <f.icon className="h-3.5 w-3.5" />
+                {f.label}
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="hk-anim mt-7"
+            style={{ animation: "hkFadeUp 0.6s ease-out 1s forwards" }}
+          >
+            <Button
+              size="lg"
+              onClick={handleClose}
+              className="group w-full rounded-full bg-[hsl(var(--sidebar-foreground))] text-base font-semibold text-white shadow-lg hover:bg-[hsl(var(--primary))]"
+            >
+              Découvrir mon dashboard
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

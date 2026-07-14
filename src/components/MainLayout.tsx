@@ -393,8 +393,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </aside>
             )}
 
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <header className="bg-background border-b h-16 flex items-center px-3 sm:px-6 justify-between">
             <div className="w-1/3 md:w-auto">
               {isMobile && (

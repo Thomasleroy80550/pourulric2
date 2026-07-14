@@ -87,10 +87,63 @@ serve(async (req) => {
         if (readsError) throw readsError;
 
         const readSet = new Set((reads ?? []).map((r: any) => r.announcement_id));
+
+        // Likes: count per announcement + whether current user liked
+        const announcementIds = (announcements ?? []).map((a: any) => a.id);
+        const likeCounts: Record<string, number> = {};
+        const likedSet = new Set<string>();
+        if (announcementIds.length > 0) {
+          const { data: likes, error: likesError } = await supabaseClient
+            .from('announcement_likes')
+            .select('announcement_id, user_id')
+            .in('announcement_id', announcementIds);
+          if (likesError) throw likesError;
+          for (const like of likes ?? []) {
+            likeCounts[like.announcement_id] = (likeCounts[like.announcement_id] || 0) + 1;
+            if (like.user_id === user.id) likedSet.add(like.announcement_id);
+          }
+        }
+
         responseData = (announcements ?? []).map((a: any) => ({
           ...a,
           is_read: readSet.has(a.id),
+          like_count: likeCounts[a.id] || 0,
+          is_liked: likedSet.has(a.id),
         }));
+        break;
+      }
+
+      case 'toggle_like': {
+        const { id } = payload;
+        const { data: existing, error: existingError } = await supabaseClient
+          .from('announcement_likes')
+          .select('announcement_id')
+          .eq('announcement_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (existingError) throw existingError;
+
+        if (existing) {
+          const { error: delError } = await supabaseClient
+            .from('announcement_likes')
+            .delete()
+            .eq('announcement_id', id)
+            .eq('user_id', user.id);
+          if (delError) throw delError;
+        } else {
+          const { error: insError } = await supabaseClient
+            .from('announcement_likes')
+            .insert({ announcement_id: id, user_id: user.id });
+          if (insError) throw insError;
+        }
+
+        const { count, error: countError } = await supabaseClient
+          .from('announcement_likes')
+          .select('*', { count: 'exact', head: true })
+          .eq('announcement_id', id);
+        if (countError) throw countError;
+
+        responseData = { is_liked: !existing, like_count: count ?? 0 };
         break;
       }
 

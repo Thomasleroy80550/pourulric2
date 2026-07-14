@@ -4,7 +4,7 @@ import MainLayout from "@/components/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ArrowLeft, ExternalLink, Loader2, Pin, Terminal } from "lucide-react";
+import { ArrowLeft, ExternalLink, Heart, Loader2, Pin, Terminal } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import DOMPurify from "dompurify";
@@ -13,7 +13,9 @@ import {
   Announcement,
   getAnnouncements,
   markAnnouncementAsRead,
+  toggleAnnouncementLike,
 } from "@/lib/announcements-api";
+import { toast } from "sonner";
 import { ANNOUNCEMENT_LEVELS } from "@/lib/announcement-levels";
 
 const AnnouncementDetailPage: React.FC = () => {
@@ -80,6 +82,26 @@ const AnnouncementDetailPage: React.FC = () => {
   const level = ANNOUNCEMENT_LEVELS[announcement.level] ?? ANNOUNCEMENT_LEVELS.info;
   const Icon = level.icon;
 
+  const handleToggleLike = async () => {
+    setAnnouncement((prev) =>
+      prev
+        ? {
+            ...prev,
+            is_liked: !prev.is_liked,
+            like_count: (prev.like_count || 0) + (prev.is_liked ? -1 : 1),
+          }
+        : prev,
+    );
+    try {
+      const result = await toggleAnnouncementLike(announcement.id);
+      setAnnouncement((prev) =>
+        prev ? { ...prev, is_liked: result.is_liked, like_count: result.like_count } : prev,
+      );
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="mx-auto w-full max-w-4xl py-2">
@@ -119,9 +141,19 @@ const AnnouncementDetailPage: React.FC = () => {
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(announcement.content || "") }}
             />
 
-            {announcement.link_url && (
-              <div className="mt-8 border-t pt-6">
-                {announcement.link_url.startsWith("http") ? (
+            <div className="mt-8 flex flex-wrap items-center gap-3 border-t pt-6">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleToggleLike}
+                className={cn(announcement.is_liked && "border-red-300 text-red-600 hover:text-red-600")}
+              >
+                <Heart className={cn("mr-2 h-5 w-5", announcement.is_liked && "fill-current")} />
+                J'aime · {announcement.like_count || 0}
+              </Button>
+
+              {announcement.link_url && (
+                announcement.link_url.startsWith("http") ? (
                   <Button asChild size="lg" className="bg-orange-600 hover:bg-orange-700">
                     <a href={announcement.link_url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-5 w-5" />
@@ -135,9 +167,9 @@ const AnnouncementDetailPage: React.FC = () => {
                       Découvrir la page
                     </Link>
                   </Button>
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </div>
         </article>
       </div>

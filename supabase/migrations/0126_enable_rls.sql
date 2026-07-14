@@ -1,0 +1,1 @@
+ALTER TABLE public.announcement_likes ENABLE ROW LEVEL SECURITY;

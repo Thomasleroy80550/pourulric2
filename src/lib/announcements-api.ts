@@ -17,6 +17,8 @@ export interface Announcement {
   created_at: string;
   updated_at: string;
   is_read?: boolean;
+  like_count?: number;
+  is_liked?: boolean;
 }
 
 interface CreateAnnouncementPayload {
@@ -93,6 +95,12 @@ export const markAnnouncementAsRead = async (id: string): Promise<{ message: str
 
 export const markAllAnnouncementsAsRead = async (): Promise<{ message: string }> => {
   return callAnnouncementsProxy("mark_all_read");
+};
+
+export const toggleAnnouncementLike = async (
+  id: string,
+): Promise<{ is_liked: boolean; like_count: number }> => {
+  return callAnnouncementsProxy("toggle_like", { id });
 };
 
 const GENERATE_ANNOUNCEMENT_URL = "https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/generate-announcement";

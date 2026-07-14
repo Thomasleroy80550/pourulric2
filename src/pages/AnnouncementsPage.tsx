@@ -8,6 +8,7 @@ import {
   CheckCheck,
   ChevronDown,
   ExternalLink,
+  Heart,
   Loader2,
   Maximize2,
   Megaphone,
@@ -23,6 +24,7 @@ import {
   Announcement,
   getAnnouncements,
   markAllAnnouncementsAsRead,
+  toggleAnnouncementLike,
 } from "@/lib/announcements-api";
 import { ANNOUNCEMENT_LEVELS } from "@/lib/announcement-levels";
 
@@ -74,6 +76,32 @@ const AnnouncementsPage: React.FC = () => {
       else next.add(id);
       return next;
     });
+  };
+
+  const handleToggleLike = async (id: string) => {
+    // Mise à jour optimiste
+    setAnnouncements((prev) =>
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              is_liked: !a.is_liked,
+              like_count: (a.like_count || 0) + (a.is_liked ? -1 : 1),
+            }
+          : a,
+      ),
+    );
+    try {
+      const result = await toggleAnnouncementLike(id);
+      setAnnouncements((prev) =>
+        prev.map((a) =>
+          a.id === id ? { ...a, is_liked: result.is_liked, like_count: result.like_count } : a,
+        ),
+      );
+    } catch (err: any) {
+      toast.error(err.message);
+      fetchAnnouncements();
+    }
   };
 
   const handleMarkAllAsRead = async () => {
@@ -218,6 +246,15 @@ const AnnouncementsPage: React.FC = () => {
                     <Button variant="ghost" size="sm" onClick={() => toggleExpand(a.id)}>
                       <ChevronDown className={cn("mr-1.5 h-4 w-4 transition-transform", expanded && "rotate-180")} />
                       {expanded ? "Replier" : "Déplier"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleLike(a.id)}
+                      className={cn(a.is_liked && "text-red-600 hover:text-red-600")}
+                    >
+                      <Heart className={cn("mr-1.5 h-4 w-4", a.is_liked && "fill-current")} />
+                      {a.like_count || 0}
                     </Button>
                     {a.link_url && (
                       a.link_url.startsWith("http") ? (

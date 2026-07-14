@@ -1,0 +1,1 @@
+GRANT SELECT, INSERT, DELETE ON TABLE public.announcement_likes TO authenticated;

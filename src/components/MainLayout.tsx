@@ -37,9 +37,10 @@ import {
   LayoutDashboard,
   Ban, // Ajout de l'icône Ban
     Store, // Ajout de l'icône pour la marketplace
-  Mail, // icône e-mail
-  Zap, // icône éclair pour conso électricité
-} from "lucide-react";
+    Mail, // icône e-mail
+    Zap, // icône éclair pour conso électricité
+    Megaphone, // icône annonces
+  } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,6 +53,7 @@ import { toast } from 'sonner';
 import AICopilotDialog from './AICopilotDialog';
 import { useSession } from './SessionContextProvider';
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, Notification } from '@/lib/notifications-api';
+import { getAnnouncements } from '@/lib/announcements-api';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -107,6 +109,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
   {
     title: 'Ressources',
     items: [
+      { name: 'Annonces', href: '/announcements', icon: Megaphone },
       { name: 'Blog', href: '/blog', icon: Newspaper },
       { name: 'Aides', href: '/help', icon: HelpCircle },
       { name: 'Marketplace', href: '/marketplace', icon: Store },
@@ -131,7 +134,7 @@ const accountNavigationItems = [
   { name: 'Mon Profil', href: '/profile', icon: User },
 ];
 
-const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: boolean; unreadCount?: number; hasImportant?: boolean; navigate?: (to: string) => void }> = ({ onLinkClick, isPaymentSuspended, unreadCount = 0, hasImportant = true, navigate }) => {
+const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: boolean; unreadCount?: number; announcementUnread?: number; hasImportant?: boolean; navigate?: (to: string) => void }> = ({ onLinkClick, isPaymentSuspended, unreadCount = 0, announcementUnread = 0, hasImportant = true, navigate }) => {
   const location = useLocation();
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
@@ -221,6 +224,15 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
                                       {unreadCount}
                                     </span>
                                   )}
+                                  {item.href === '/announcements' && announcementUnread > 0 && (
+                                    <span
+                                      className="ml-2 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-orange-600 text-white text-[10px] px-1.5 font-bold"
+                                      aria-label={`${announcementUnread} annonces non lues`}
+                                      title={`${announcementUnread} annonces non lues`}
+                                    >
+                                      {announcementUnread}
+                                    </span>
+                                  )}
                                   {item.href === '/notifications' && hasImportant && (
                                     <span
                                       className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-extrabold"
@@ -285,6 +297,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [announcementUnread, setAnnouncementUnread] = useState(0);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null);
   const hasImportant = true; // Support email + période Bilan = infos importantes
@@ -317,6 +330,18 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       console.error("Failed to fetch notifications", error);
     }
   };
+
+  useEffect(() => {
+    const fetchAnnouncementUnread = async () => {
+      try {
+        const data = await getAnnouncements();
+        setAnnouncementUnread(data.filter((a) => !a.is_read).length);
+      } catch (error) {
+        console.error("Failed to fetch announcements", error);
+      }
+    };
+    fetchAnnouncementUnread();
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
@@ -389,7 +414,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="flex min-h-screen overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
       {!isMobile && (
               <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
-                <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} navigate={navigate} />
+                <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} announcementUnread={announcementUnread} hasImportant={hasImportant} navigate={navigate} />
               </aside>
             )}
 
@@ -405,7 +430,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="w-72 p-0 bg-sidebar text-sidebar-foreground flex flex-col">
-                                      <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} hasImportant={hasImportant} navigate={navigate} />
+                                      <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} announcementUnread={announcementUnread} hasImportant={hasImportant} navigate={navigate} />
                                     </SheetContent>
                 </Sheet>
               )}

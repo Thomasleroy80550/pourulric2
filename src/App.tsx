@@ -41,6 +41,8 @@ import { ThemeProvider } from "next-themes";
 import { InvoiceGenerationProvider } from "./contexts/InvoiceGenerationContext";
 import BlogManager from "./components/BlogManager";
 import BlogPostPage from "./pages/BlogPostPage";
+import AdminAnnouncementsPage from "./pages/AdminAnnouncementsPage";
+import AnnouncementsPage from "./pages/AnnouncementsPage";
 import AdminStrategiesPage from "./pages/AdminStrategiesPage";
 import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
@@ -148,6 +150,7 @@ function App() {
                       <Route path="/admin" element={<AdminDashboardPage />} />
                       <Route path="/admin/pages" element={<PageCreator />} />
                       <Route path="/admin/blog" element={<BlogManager />} />
+                      <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />
                       <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
                       <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} />
                       <Route path="/admin/statements" element={<AdminStatementsPage />} />
@@ -202,6 +205,7 @@ function App() {
 
                       <Route path="/blog" element={<BlogPage />} />
                       <Route path="/blog/:slug" element={<BlogPostPage />} />
+                      <Route path="/announcements" element={<AnnouncementsPage />} />
                       <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                       <Route path="/promotion" element={<PromotionPage />} />
                       <Route path="/new-version" element={<NewVersionPage />} />

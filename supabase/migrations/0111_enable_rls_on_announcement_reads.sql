@@ -1,0 +1,1 @@
+ALTER TABLE public.announcement_reads ENABLE ROW LEVEL SECURITY;

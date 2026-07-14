@@ -51,6 +51,7 @@ import {
 import MainLayout from "@/components/MainLayout";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import DashboardV3Reveal from "@/components/DashboardV3Reveal";
+import AnnouncementsBanner from "@/components/AnnouncementsBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -446,6 +447,7 @@ const DashboardPageV3: React.FC = () => {
     <MainLayout>
       {showReveal && <DashboardV3Reveal onFinish={handleFinishReveal} />}
       <div className="w-full max-w-full overflow-x-hidden break-words">
+        <AnnouncementsBanner />
         {/* ── En-tête ─────────────────────────────────────── */}
         <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">

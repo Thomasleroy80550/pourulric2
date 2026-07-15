@@ -31,6 +31,8 @@ import {
   Euro,
   Maximize2,
   Gauge,
+  ReceiptText,
+  ArrowRight,
 } from 'lucide-react';
 import { getMyStatements } from '@/lib/statements-api';
 import { getUserRooms } from '@/lib/user-room-api';
@@ -42,6 +44,7 @@ import ChartFullScreenDialog from '@/components/ChartFullScreenDialog';
 import { Button } from '@/components/ui/button';
 import CustomChartTooltip from '@/components/CustomChartTooltip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Link } from 'react-router-dom';
 import {
   Select,
   SelectContent,
@@ -318,6 +321,27 @@ const PerformanceDashboard = () => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* ── Note : saisir ses dépenses ──────────────────── */}
+      <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400">
+            <ReceiptText className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Ajoutez vos dépenses mensuelles</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Crédit, taxe foncière, assurance, énergie… Saisissez vos charges pour obtenir vos <span className="font-medium text-foreground">vrais résultats</span> (bénéfice net réel).
+            </p>
+          </div>
+        </div>
+        <Button asChild size="sm" className="shrink-0 rounded-full">
+          <Link to="/finances">
+            Ajouter mes dépenses
+            <ArrowRight className="ml-2 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
 
       {/* ── Tuiles KPI ──────────────────────────────────── */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">

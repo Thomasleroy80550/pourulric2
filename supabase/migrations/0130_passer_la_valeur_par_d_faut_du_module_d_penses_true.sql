@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN expenses_module_enabled SET DEFAULT true;

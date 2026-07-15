@@ -61,17 +61,32 @@ function mapRow(row: KrossbookingReviewRow): Review {
  * Le RLS garantit que chaque utilisateur ne voit que ses avis (les admins voient tout).
  */
 export async function getReviews(): Promise<Review[]> {
-  const { data, error } = await supabase
-    .from('krossbooking_reviews')
-    .select('id_review, room_name, name_room_type, review_date, cod_channel, review_title, review_text, rating')
-    .order('review_date', { ascending: false });
+  // Supabase (PostgREST) plafonne chaque requête à 1000 lignes par défaut.
+  // On pagine donc par lots de 1000 pour récupérer la totalité des avis.
+  const PAGE_SIZE = 1000;
+  const allRows: KrossbookingReviewRow[] = [];
+  let from = 0;
 
-  if (error) {
-    console.error('Error fetching reviews from krossbooking_reviews:', error);
-    return [];
+  while (true) {
+    const { data, error } = await supabase
+      .from('krossbooking_reviews')
+      .select('id_review, room_name, name_room_type, review_date, cod_channel, review_title, review_text, rating')
+      .order('review_date', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('Error fetching reviews from krossbooking_reviews:', error);
+      return allRows.map(mapRow);
+    }
+
+    const rows = (data ?? []) as KrossbookingReviewRow[];
+    allRows.push(...rows);
+
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
   }
 
-  return ((data ?? []) as KrossbookingReviewRow[]).map(mapRow);
+  return allRows.map(mapRow);
 }
 
 /**

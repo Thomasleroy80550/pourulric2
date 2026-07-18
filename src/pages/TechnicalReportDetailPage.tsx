@@ -137,6 +137,17 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     }
   };
 
+  const handleTakeCharge = async () => {
+    if (!id) return;
+    try {
+      await updateTechnicalReport(id, { status: 'admin_will_manage' });
+      toast.success("Incident marqué comme pris en charge.");
+      fetchReport();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
   const handleOwnerResolve = async () => {
     if (!id || !profile?.id) return;
     try {
@@ -340,6 +351,9 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
             <Card>
               <CardHeader><CardTitle>Actions Admin</CardTitle></CardHeader>
               <CardContent className="space-y-2">
+                {report.status !== 'admin_will_manage' && report.status !== 'resolved' && report.status !== 'archived' && (
+                  <Button className="w-full" onClick={handleTakeCharge}><Wrench className="h-4 w-4 mr-2" />Marquer comme pris en charge</Button>
+                )}
                 {report.status !== 'resolved' && (
                   <Button className="w-full" onClick={handleResolve}><CheckCircle className="h-4 w-4 mr-2" />Marquer comme résolu</Button>
                 )}

@@ -16,7 +16,7 @@ import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { getAdminReportsByStatus, createTechnicalReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Archive, ArchiveRestore, Check, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, Loader2, Archive, ArchiveRestore, Check, ChevronsUpDown, QrCode } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -140,7 +140,17 @@ const AdminTechnicalReportsPage: React.FC = () => {
           <TableRow key={report.id} onClick={() => navigate(`/admin/technical-reports/${report.id}`)} className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800">
             <TableCell>{report.profiles?.first_name} {report.profiles?.last_name}</TableCell>
             <TableCell>{report.property_name}</TableCell>
-            <TableCell>{report.title}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <span>{report.title}</span>
+                {report.category === 'guest_qr_report' && (
+                  <Badge className="bg-blue-600 text-white hover:bg-blue-600">
+                    <QrCode className="mr-1 h-3 w-3" />
+                    Voyageur
+                  </Badge>
+                )}
+              </div>
+            </TableCell>
             <TableCell>{getStatusBadge(report.status)}</TableCell>
             <TableCell>{format(parseISO(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
             <TableCell className="text-right">

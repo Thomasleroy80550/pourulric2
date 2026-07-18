@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useSession } from '@/components/SessionContextProvider';
+import ReportActionFeedback, { FeedbackType } from '@/components/ReportActionFeedback';
 
 interface TechnicalReportDetailPageProps {
   isAdmin?: boolean;
@@ -31,6 +32,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const [error, setError] = useState<string | null>(null);
   const [newUpdate, setNewUpdate] = useState('');
   const [newMediaFiles, setNewMediaFiles] = useState<FileList | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchReport = async () => {
@@ -70,6 +72,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
         media_urls: null,
       });
       toast.success('Message envoyé au voyageur.');
+      setFeedback('message');
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -85,6 +88,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     try {
       await updateTechnicalReport(id, { status: response });
       toast.success("Votre réponse a été enregistrée.");
+      setFeedback(response === 'admin_will_manage' ? 'taken_charge' : 'assigned');
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -120,6 +124,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      setFeedback('message');
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -131,6 +136,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     try {
       await updateTechnicalReport(id, { status: 'resolved', resolved_at: new Date().toISOString() });
       toast.success("Rapport marqué comme résolu.");
+      setFeedback('resolved');
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -142,6 +148,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     try {
       await updateTechnicalReport(id, { status: 'admin_will_manage' });
       toast.success("Incident marqué comme pris en charge.");
+      setFeedback('taken_charge');
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -159,6 +166,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
       });
       await updateTechnicalReport(id, { status: 'resolved', resolved_at: new Date().toISOString() });
       toast.success("Rapport marqué comme résolu.");
+      setFeedback('resolved');
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -174,6 +182,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
       } else {
         await archiveReport(id);
         toast.success(`Rapport archivé avec succès !`);
+        setFeedback('archived');
       }
       fetchReport();
     } catch (err: any) {
@@ -186,6 +195,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     try {
       await requestOwnerAction(id, profile.id);
       toast.success("Demande d'action envoyée au propriétaire.");
+      setFeedback('assigned');
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
@@ -373,6 +383,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
 
   return (
     <Layout>
+      {feedback && <ReportActionFeedback type={feedback} onDone={() => setFeedback(null)} />}
       <Button variant="ghost" onClick={() => navigate(isAdmin ? '/admin/technical-reports' : '/reports')} className="mb-4">
         <ArrowLeft className="h-4 w-4 mr-2" />
         Retour à la liste

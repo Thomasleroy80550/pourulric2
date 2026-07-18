@@ -15,6 +15,9 @@ export interface TechnicalReport {
   category: string | null;
   media_urls: string[] | null;
   is_archived: boolean;
+  guest_rating: number | null;
+  guest_rating_comment: string | null;
+  guest_rated_at: string | null;
   profiles?: {
     first_name: string | null;
     last_name: string | null;

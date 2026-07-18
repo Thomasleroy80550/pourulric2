@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -14,6 +15,8 @@ import {
   MessageCircle,
   Shield,
   Home,
+  Star,
+  Heart,
 } from 'lucide-react';
 
 const GUEST_PORTAL_URL =
@@ -31,6 +34,8 @@ interface ReportStatus {
   property_name: string;
   owner_response: string | null;
   resolved_at: string | null;
+  guest_rating: number | null;
+  guest_rating_comment: string | null;
 }
 
 interface ReportMessage {
@@ -55,6 +60,15 @@ const t = {
     back: 'Retour',
     notFoundTitle: 'Signalement introuvable',
     notFoundDesc: "Cette référence n'existe pas ou n'est plus valide.",
+    rateTitle: 'Votre problème est résolu ?',
+    rateSubtitle: 'Notez la qualité de la prise en charge.',
+    ratePlaceholder: 'Un commentaire à ajouter ? (facultatif)',
+    rateSubmit: 'Envoyer ma note',
+    rateSending: 'Envoi...',
+    rateThanksTitle: 'Merci pour votre retour !',
+    rateThanksDesc: 'Votre avis nous aide à nous améliorer.',
+    rateYourNote: 'Votre note',
+    rateError: "Impossible d'enregistrer votre note.",
     statuses: {
       pending_owner_action: 'Reçu, en attente de traitement',
       admin_will_manage: 'Pris en charge',
@@ -77,6 +91,15 @@ const t = {
     back: 'Back',
     notFoundTitle: 'Report not found',
     notFoundDesc: 'This reference does not exist or is no longer valid.',
+    rateTitle: 'Is your issue resolved?',
+    rateSubtitle: 'Rate how it was handled.',
+    ratePlaceholder: 'Any comment to add? (optional)',
+    rateSubmit: 'Send my rating',
+    rateSending: 'Sending...',
+    rateThanksTitle: 'Thanks for your feedback!',
+    rateThanksDesc: 'Your review helps us improve.',
+    rateYourNote: 'Your rating',
+    rateError: 'Unable to save your rating.',
     statuses: {
       pending_owner_action: 'Received, awaiting handling',
       admin_will_manage: 'Being handled',
@@ -117,6 +140,12 @@ const GuestReportStatusPage = () => {
   const [messages, setMessages] = useState<ReportMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [justRated, setJustRated] = useState(false);
 
   const tr = t[lang];
 
@@ -143,6 +172,26 @@ const GuestReportStatusPage = () => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId]);
+
+  const submitRating = async () => {
+    if (!reportId || ratingValue < 1) return;
+    setSubmittingRating(true);
+    setRatingError(null);
+    try {
+      await callPortal({
+        action: 'rate',
+        report_id: reportId,
+        rating: ratingValue,
+        comment: ratingComment.trim() || undefined,
+      });
+      setJustRated(true);
+      await load();
+    } catch (err) {
+      setRatingError(err instanceof Error ? err.message : tr.rateError);
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
 
   const isResolved = report?.status === 'resolved' || report?.status === 'archived';
   const currentStepIndex = report
@@ -258,6 +307,81 @@ const GuestReportStatusPage = () => {
                   <p className="mb-1 text-sm font-semibold text-sky-900">{tr.ownerResponse}</p>
                   <p className="text-sm text-sky-950">{report.owner_response}</p>
                 </div>
+              )}
+
+              {/* Notation du voyageur, uniquement une fois résolu */}
+              {isResolved && (
+                report.guest_rating || justRated ? (
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-5 text-center">
+                    <Heart className="mx-auto mb-2 h-8 w-8 text-green-600" fill="currentColor" />
+                    <p className="text-base font-semibold text-green-900">{tr.rateThanksTitle}</p>
+                    <p className="mb-3 text-sm text-green-800">{tr.rateThanksDesc}</p>
+                    {report.guest_rating ? (
+                      <div className="flex items-center justify-center gap-1">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            className={`h-6 w-6 ${
+                              n <= (report.guest_rating || 0)
+                                ? 'text-amber-400'
+                                : 'text-muted-foreground/30'
+                            }`}
+                            fill={n <= (report.guest_rating || 0) ? 'currentColor' : 'none'}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    {report.guest_rating_comment && (
+                      <p className="mt-3 text-sm italic text-green-900">
+                        “{report.guest_rating_comment}”
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
+                    <p className="text-center text-base font-semibold">{tr.rateTitle}</p>
+                    <p className="mb-4 text-center text-sm text-muted-foreground">{tr.rateSubtitle}</p>
+                    <div className="mb-4 flex items-center justify-center gap-2">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setRatingValue(n)}
+                          onMouseEnter={() => setHoverRating(n)}
+                          onMouseLeave={() => setHoverRating(0)}
+                          className="transition-transform hover:scale-110 active:scale-95"
+                          aria-label={`${n} / 5`}
+                        >
+                          <Star
+                            className={`h-9 w-9 transition-colors ${
+                              n <= (hoverRating || ratingValue)
+                                ? 'text-amber-400'
+                                : 'text-muted-foreground/30'
+                            }`}
+                            fill={n <= (hoverRating || ratingValue) ? 'currentColor' : 'none'}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <Textarea
+                      value={ratingComment}
+                      onChange={(e) => setRatingComment(e.target.value)}
+                      placeholder={tr.ratePlaceholder}
+                      rows={3}
+                      className="mb-3 bg-background"
+                    />
+                    {ratingError && (
+                      <p className="mb-2 text-center text-sm text-destructive">{ratingError}</p>
+                    )}
+                    <Button
+                      className="w-full"
+                      disabled={ratingValue < 1 || submittingRating}
+                      onClick={submitRating}
+                    >
+                      {submittingRating ? tr.rateSending : tr.rateSubmit}
+                    </Button>
+                  </div>
+                )
               )}
 
               {/* Fil de discussion : notes de l'hôte / support */}

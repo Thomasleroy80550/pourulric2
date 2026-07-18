@@ -47,6 +47,93 @@ serve(async (req) => {
     const action = body.action as string | undefined;
     const roomId = body.room_id as string | undefined;
 
+    const cleanRef = (raw: unknown) => {
+      const ref = (raw as string | undefined)?.trim() ?? "";
+      return ref.replace(/-/g, "").toLowerCase();
+    };
+    const toUuid = (hex: string) =>
+      `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+
+    async function resolveReportId(raw: unknown): Promise<string | null> {
+      const clean = cleanRef(raw);
+      if (!/^[0-9a-f]{6,32}$/.test(clean)) return null;
+      if (clean.length === 32) {
+        const { data } = await supabaseAdmin
+          .from("technical_reports")
+          .select("id")
+          .eq("id", toUuid(clean))
+          .maybeSingle();
+        return (data as { id: string } | null)?.id ?? null;
+      }
+      const low = toUuid((clean + "0".repeat(32)).slice(0, 32));
+      const high = toUuid((clean + "f".repeat(32)).slice(0, 32));
+      const { data } = await supabaseAdmin
+        .from("technical_reports")
+        .select("id")
+        .gte("id", low)
+        .lte("id", high)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      return Array.isArray(data) && data[0] ? (data[0] as { id: string }).id : null;
+    }
+
+    // Action: guest leaves a rating (1-5 stars + optional comment) on a resolved report.
+    if (action === "rate") {
+      const rating = Number(body.rating);
+      const comment = (body.comment as string | undefined)?.trim().slice(0, 1000) || null;
+
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        return jsonResponse({ error: "Note invalide." }, 400);
+      }
+
+      const reportId = await resolveReportId(body.report_id ?? body.reference);
+      if (!reportId) {
+        return jsonResponse({ error: "Signalement introuvable." }, 404);
+      }
+
+      const { data: existing } = await supabaseAdmin
+        .from("technical_reports")
+        .select("id, status, guest_rating, user_id, property_name")
+        .eq("id", reportId)
+        .maybeSingle();
+
+      const row = existing as
+        | { id: string; status: string; guest_rating: number | null; user_id: string; property_name: string }
+        | null;
+
+      if (!row) {
+        return jsonResponse({ error: "Signalement introuvable." }, 404);
+      }
+      if (row.status !== "resolved" && row.status !== "archived") {
+        return jsonResponse({ error: "Ce signalement n'est pas encore résolu." }, 400);
+      }
+      if (row.guest_rating !== null) {
+        return jsonResponse({ error: "Vous avez déjà noté ce signalement.", already_rated: true }, 409);
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("technical_reports")
+        .update({
+          guest_rating: rating,
+          guest_rating_comment: comment,
+          guest_rated_at: new Date().toISOString(),
+        })
+        .eq("id", reportId);
+
+      if (updateError) {
+        console.error("[guest-logement-portal] rate update error", { error: updateError.message });
+        return jsonResponse({ error: "Impossible d'enregistrer votre note." }, 500);
+      }
+
+      await supabaseAdmin.from("notifications").insert({
+        user_id: row.user_id,
+        message: `Le voyageur a noté votre intervention (${rating}/5) pour ${row.property_name}.`,
+        link: `/reports/${reportId}`,
+      });
+
+      return jsonResponse({ ok: true });
+    }
+
     // Action: return the public status of a report so the guest can track it.
     // This action does NOT require a room_id, so it is handled first.
     // Accepts a full UUID or the short 8-char reference shown to the guest.
@@ -58,9 +145,8 @@ serve(async (req) => {
         return jsonResponse({ error: "Référence invalide." }, 400);
       }
 
-      const columns = "id, title, status, created_at, property_name, owner_response, resolved_at";
-      const toUuid = (hex: string) =>
-        `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+      const columns =
+        "id, title, status, created_at, property_name, owner_response, resolved_at, guest_rating, guest_rating_comment";
 
       let report: unknown = null;
 

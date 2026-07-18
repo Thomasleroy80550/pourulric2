@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle } from 'lucide-react';
+import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle, Star } from 'lucide-react';
 import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, getTechnicalReportUpdates, TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
 import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
@@ -338,6 +338,25 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
               <p><strong>Créé le:</strong> {format(new Date(report.created_at), 'dd MMMM yyyy', { locale: fr })}</p>
               <p><strong>Priorité:</strong> {getPriorityBadge(report.priority)}</p>
               <p><strong>Catégorie:</strong> <Badge variant="outline">{report.category || 'Non définie'}</Badge></p>
+              {report.guest_rating && (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="mb-1 flex items-center gap-2 font-medium text-amber-900">
+                    Note du voyageur
+                    <span className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star
+                          key={n}
+                          className={`h-4 w-4 ${n <= (report.guest_rating || 0) ? 'text-amber-500' : 'text-amber-200'}`}
+                          fill={n <= (report.guest_rating || 0) ? 'currentColor' : 'none'}
+                        />
+                      ))}
+                    </span>
+                  </p>
+                  {report.guest_rating_comment && (
+                    <p className="text-sm italic text-amber-900">“{report.guest_rating_comment}”</p>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
           {report.status === 'pending_owner_action' && !isAdmin && (

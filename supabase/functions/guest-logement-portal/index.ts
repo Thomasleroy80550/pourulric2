@@ -89,17 +89,33 @@ serve(async (req) => {
         return jsonResponse({ error: "Référence manquante." }, 400);
       }
 
+      const columns = "id, title, status, created_at, property_name, owner_response, resolved_at";
+
+      let report: unknown = null;
+
       const { data, error: statusError } = await supabaseAdmin.rpc(
         "find_technical_report_by_ref",
         { p_ref: ref },
       );
 
       if (statusError) {
-        console.error("[guest-logement-portal] status error", { error: statusError.message });
-        return jsonResponse({ error: "Impossible de récupérer le suivi." }, 500);
+        console.error("[guest-logement-portal] status rpc error", { error: statusError.message });
+      } else {
+        report = Array.isArray(data) ? data[0] : data;
       }
 
-      const report = Array.isArray(data) ? data[0] : data;
+      // Fallback : correspondance exacte si l'on dispose d'un identifiant complet.
+      if (!report) {
+        const isFullUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref);
+        if (isFullUuid) {
+          const { data: exact } = await supabaseAdmin
+            .from("technical_reports")
+            .select(columns)
+            .eq("id", ref)
+            .maybeSingle();
+          report = exact;
+        }
+      }
 
       if (!report) {
         return jsonResponse({ error: "Signalement introuvable." }, 404);

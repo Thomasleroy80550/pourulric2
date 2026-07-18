@@ -97,7 +97,34 @@ serve(async (req) => {
         return jsonResponse({ error: "Signalement introuvable." }, 404);
       }
 
-      return jsonResponse({ ok: true, report });
+      // Fetch the discussion thread (notes left by the host / support).
+      const reportRow = report as { id: string };
+      const { data: updates } = await supabaseAdmin
+        .from("technical_report_updates")
+        .select("id, content, created_at, user_id")
+        .eq("report_id", reportRow.id)
+        .order("created_at", { ascending: true });
+
+      let messages: { id: string; content: string; created_at: string; author: string }[] = [];
+      if (Array.isArray(updates) && updates.length > 0) {
+        const userIds = [...new Set(updates.map((u) => u.user_id).filter(Boolean))];
+        const { data: profiles } = await supabaseAdmin
+          .from("profiles")
+          .select("id, role")
+          .in("id", userIds);
+        const roleById = new Map((profiles ?? []).map((p) => [p.id, p.role]));
+
+        messages = updates
+          .filter((u) => typeof u.content === "string" && u.content.trim().length > 0)
+          .map((u) => ({
+            id: u.id,
+            content: u.content as string,
+            created_at: u.created_at as string,
+            author: roleById.get(u.user_id) === "admin" ? "support" : "host",
+          }));
+      }
+
+      return jsonResponse({ ok: true, report, messages });
     }
 
     // The remaining actions (info / report) require a valid room_id.

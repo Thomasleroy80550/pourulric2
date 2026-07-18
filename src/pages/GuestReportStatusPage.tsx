@@ -11,6 +11,9 @@ import {
   Inbox,
   ArrowLeft,
   RefreshCw,
+  MessageCircle,
+  Shield,
+  Home,
 } from 'lucide-react';
 
 const GUEST_PORTAL_URL =
@@ -30,6 +33,13 @@ interface ReportStatus {
   resolved_at: string | null;
 }
 
+interface ReportMessage {
+  id: string;
+  content: string;
+  created_at: string;
+  author: 'support' | 'host' | string;
+}
+
 const t = {
   fr: {
     title: 'Suivi de votre signalement',
@@ -37,6 +47,10 @@ const t = {
     property: 'Logement',
     createdAt: 'Envoyé le',
     ownerResponse: 'Réponse de votre hôte',
+    messages: 'Suivi & messages',
+    noMessages: "Aucun message pour l'instant. Vous serez informé dès qu'il y a du nouveau.",
+    support: 'Support',
+    host: 'Votre hôte',
     refresh: 'Actualiser',
     back: 'Retour',
     notFoundTitle: 'Signalement introuvable',
@@ -55,6 +69,10 @@ const t = {
     property: 'Property',
     createdAt: 'Sent on',
     ownerResponse: 'Reply from your host',
+    messages: 'Updates & messages',
+    noMessages: 'No message yet. You will be notified as soon as there is an update.',
+    support: 'Support',
+    host: 'Your host',
     refresh: 'Refresh',
     back: 'Back',
     notFoundTitle: 'Report not found',
@@ -96,6 +114,7 @@ const GuestReportStatusPage = () => {
       : 'en',
   );
   const [report, setReport] = useState<ReportStatus | null>(null);
+  const [messages, setMessages] = useState<ReportMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -111,6 +130,7 @@ const GuestReportStatusPage = () => {
     try {
       const data = await callPortal({ action: 'status', report_id: reportId });
       setReport(data.report);
+      setMessages(Array.isArray(data.messages) ? data.messages : []);
       setError(false);
     } catch {
       setError(true);
@@ -239,6 +259,51 @@ const GuestReportStatusPage = () => {
                   <p className="text-sm text-sky-950">{report.owner_response}</p>
                 </div>
               )}
+
+              {/* Fil de discussion : notes de l'hôte / support */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <MessageCircle className="h-4 w-4" />
+                  {tr.messages}
+                </div>
+                {messages.length === 0 ? (
+                  <p className="rounded-lg bg-muted px-3 py-3 text-sm text-muted-foreground">
+                    {tr.noMessages}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {messages.map((m) => {
+                      const isSupport = m.author === 'support';
+                      const Icon = isSupport ? Shield : Home;
+                      return (
+                        <div key={m.id} className="flex items-start gap-2.5">
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                              isSupport ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 rounded-lg border bg-background px-3 py-2">
+                            <div className="mb-0.5 flex items-center justify-between gap-2">
+                              <span className="text-xs font-semibold">
+                                {isSupport ? tr.support : tr.host}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">
+                                {new Intl.DateTimeFormat(lang === 'fr' ? 'fr-FR' : 'en-GB', {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short',
+                                }).format(new Date(m.created_at))}
+                              </span>
+                            </div>
+                            <p className="whitespace-pre-wrap text-sm">{m.content}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>

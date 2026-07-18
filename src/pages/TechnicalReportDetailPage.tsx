@@ -8,8 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore } from 'lucide-react';
-import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, TechnicalReport } from '@/lib/technical-reports-api';
+import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle } from 'lucide-react';
+import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, getTechnicalReportUpdates, TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
 import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const navigate = useNavigate();
   const { profile } = useSession();
   const [report, setReport] = useState<TechnicalReport | null>(null);
+  const [updates, setUpdates] = useState<TechnicalReportUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newUpdate, setNewUpdate] = useState('');
@@ -37,12 +38,41 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     setLoading(true);
     setError(null);
     try {
-      const data = await getTechnicalReportById(id);
+      const [data, updatesData] = await Promise.all([
+        getTechnicalReportById(id),
+        getTechnicalReportUpdates(id),
+      ]);
       setReport(data);
+      setUpdates([...updatesData].reverse());
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const isGuestReport = report?.category === 'guest_qr_report';
+
+  const quickReplies = [
+    'Nous avons bien reçu votre signalement, nous intervenons rapidement.',
+    'Un technicien a été prévenu et va intervenir prochainement.',
+    'Le problème est en cours de résolution.',
+    'Le problème est résolu, merci de votre patience.',
+  ];
+
+  const sendQuickReply = async (text: string) => {
+    if (!id || !profile?.id) return;
+    try {
+      await addTechnicalReportUpdate({
+        report_id: id,
+        user_id: profile.id,
+        content: text,
+        media_urls: null,
+      });
+      toast.success('Message envoyé au voyageur.');
+      fetchReport();
+    } catch (err: any) {
+      toast.error(`Erreur: ${err.message}`);
     }
   };
 
@@ -215,8 +245,10 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
           <Card>
             <CardHeader><CardTitle>Fil de discussion</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              {/* Ensure technical_report_updates is an array before mapping */}
-              {Array.isArray(report.technical_report_updates) && report.technical_report_updates.map(update => (
+              {updates.length === 0 && (
+                <p className="text-sm text-muted-foreground">Aucun message pour le moment.</p>
+              )}
+              {updates.map(update => (
                 <div key={update.id} className="flex items-start space-x-3">
                   <div className="flex-shrink-0">{update.profiles?.role === 'admin' ? <Shield className="h-5 w-5 text-blue-500" /> : <User className="h-5 w-5 text-gray-500" />}</div>
                   <div className="flex-1">
@@ -239,7 +271,28 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
               ))}
               {report.status !== 'resolved' && report.status !== 'archived' && (
                 <div className="pt-4 border-t space-y-2">
-                  <Textarea value={newUpdate} onChange={(e) => setNewUpdate(e.target.value)} placeholder="Ajouter une mise à jour..." />
+                  {isGuestReport && (
+                    <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        Réponses rapides au voyageur (visibles sur sa page de suivi)
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {quickReplies.map((text) => (
+                          <Button
+                            key={text}
+                            variant="outline"
+                            size="sm"
+                            className="h-auto whitespace-normal py-1.5 text-left text-xs"
+                            onClick={() => sendQuickReply(text)}
+                          >
+                            {text}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <Textarea value={newUpdate} onChange={(e) => setNewUpdate(e.target.value)} placeholder={isGuestReport ? "Écrire un message au voyageur..." : "Ajouter une mise à jour..."} />
                   <Input type="file" multiple onChange={(e) => setNewMediaFiles(e.target.files)} ref={fileInputRef} />
                   <Button onClick={handleAddUpdate} className="mt-2">
                     <Send className="h-4 w-4 mr-2" />

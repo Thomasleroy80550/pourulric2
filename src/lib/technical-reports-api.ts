@@ -7,7 +7,7 @@ export interface TechnicalReport {
   property_name: string;
   title: string;
   description: string | null;
-  status: 'pending_owner_action' | 'admin_will_manage' | 'resolved' | 'archived';
+  status: 'pending_owner_action' | 'owner_will_manage' | 'admin_will_manage' | 'resolved' | 'archived';
   owner_response: string | null;
   resolved_at: string | null;
   created_at: string;
@@ -31,6 +31,7 @@ export interface TechnicalReportUpdate {
   profiles?: {
     first_name: string | null;
     last_name: string | null;
+    role?: string | null;
   };
 }
 
@@ -157,7 +158,8 @@ export async function getTechnicalReportUpdates(reportId: string): Promise<Techn
       *,
       profiles (
         first_name,
-        last_name
+        last_name,
+        role
       )
     `)
     .eq('report_id', reportId)

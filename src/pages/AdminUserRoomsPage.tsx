@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { PlugZap, Droplet, Building, Edit, History, Settings, MessageSquare, Star, Sparkles, Check, X } from 'lucide-react';
+import { PlugZap, Droplet, Building, Edit, History, Settings, MessageSquare, Star, Sparkles, Check, X, QrCode, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import EditUserRoomDialog from '@/components/EditUserRoomDialog';
 import AdminRoomManagementDialog from '@/components/AdminRoomManagementDialog';
 import AdminRoomQrExportDialog from '@/components/admin/AdminRoomQrExportDialog';
+import { exportAllLabelsPdf } from '@/lib/qr-label-pdf';
 
 const AdminUserRoomsPage: React.FC = () => {
   const { data: userRooms, isLoading, error, refetch } = useQuery<AdminUserRoom[]>({
@@ -45,6 +46,25 @@ const AdminUserRoomsPage: React.FC = () => {
   const [messageDraft, setMessageDraft] = useState('');
   const [isSavingMessage, setIsSavingMessage] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthInputValue());
+  const [isExportingAllQr, setIsExportingAllQr] = useState(false);
+
+  const handleExportAllQr = async () => {
+    if (!userRooms || userRooms.length === 0) {
+      toast.error('Aucun logement à exporter.');
+      return;
+    }
+    setIsExportingAllQr(true);
+    try {
+      await exportAllLabelsPdf(
+        userRooms.map((room) => ({ id: room.id, room_name: room.room_name })),
+      );
+      toast.success(`${userRooms.length} étiquette(s) QR exportée(s).`);
+    } catch (err: any) {
+      toast.error(err.message || "Impossible d'exporter les QR codes.");
+    } finally {
+      setIsExportingAllQr(false);
+    }
+  };
 
   // Édition inline de la capacité
   const [editingCapacityId, setEditingCapacityId] = useState<string | null>(null);
@@ -179,9 +199,22 @@ const AdminUserRoomsPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Building className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Logements Utilisateurs</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Building className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight">Logements Utilisateurs</h1>
+          </div>
+          <Button
+            onClick={handleExportAllQr}
+            disabled={isExportingAllQr || !userRooms || userRooms.length === 0}
+          >
+            {isExportingAllQr ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <QrCode className="mr-2 h-4 w-4" />
+            )}
+            Télécharger tous les QR (PDF 10×15)
+          </Button>
         </div>
         <Card>
           <CardHeader>

@@ -44,7 +44,8 @@ const AdminRoomQrExportDialog = ({ roomId, roomName, ownerName }: AdminRoomQrExp
     }
   };
 
-  // Génère un PDF au format photo 10 x 15 cm (= 4 x 6 pouces), prêt à imprimer.
+  // Génère un PDF au format photo 10 x 15 cm (= 4 x 6 pouces), noir & blanc,
+  // optimisé pour l'impression thermique et bilingue FR / EN.
   const handleExportPdf = () => {
     const dataUrl = getQrDataUrl();
     if (!dataUrl) {
@@ -57,45 +58,54 @@ const AdminRoomQrExportDialog = ({ roomId, roomName, ownerName }: AdminRoomQrExp
     const pageH = 150;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pageW, pageH] });
 
-    // Cadre décoratif léger
-    pdf.setDrawColor(209, 213, 219);
-    pdf.setLineWidth(0.5);
-    pdf.roundedRect(5, 5, pageW - 10, pageH - 10, 4, 4, 'S');
+    // Cadre (noir pour thermique)
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.6);
+    pdf.roundedRect(5, 5, pageW - 10, pageH - 10, 3, 3, 'S');
 
     // Titre : nom du logement
-    pdf.setTextColor(31, 41, 55);
+    pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
     const title = pdf.splitTextToSize(roomName, pageW - 20);
-    pdf.text(title, pageW / 2, 22, { align: 'center' });
+    pdf.text(title, pageW / 2, 20, { align: 'center' });
 
-    // Sous-titre / consigne
+    // Consigne FR
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(75, 85, 99);
-    const subtitle = pdf.splitTextToSize(
-      'Un souci pendant votre séjour ?\nScannez ce QR code pour nous prévenir.',
+    pdf.setFontSize(9.5);
+    const frText = pdf.splitTextToSize(
+      'Un souci pendant votre séjour ? Scannez pour nous prévenir.',
       pageW - 24,
     );
-    pdf.text(subtitle, pageW / 2, 34, { align: 'center' });
+    pdf.text(frText, pageW / 2, 30, { align: 'center' });
 
-    // QR code centré
-    const qrSize = 62;
+    // Consigne EN
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(9);
+    const enText = pdf.splitTextToSize(
+      'An issue during your stay? Scan to let us know.',
+      pageW - 24,
+    );
+    pdf.text(enText, pageW / 2, 38, { align: 'center' });
+
+    // QR code centré (noir & blanc)
+    const qrSize = 60;
     const qrX = (pageW - qrSize) / 2;
-    const qrY = 48;
+    const qrY = 46;
     pdf.addImage(dataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
 
-    // Mention "Scannez-moi"
+    // Appel à l'action bilingue
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(11);
-    pdf.setTextColor(31, 41, 55);
-    pdf.text('Scannez avec l’appareil photo', pageW / 2, qrY + qrSize + 12, { align: 'center' });
+    pdf.text('Scannez avec l’appareil photo', pageW / 2, qrY + qrSize + 11, { align: 'center' });
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text('Scan with your phone camera', pageW / 2, qrY + qrSize + 18, { align: 'center' });
 
     // URL en pied de page
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7);
-    pdf.setTextColor(156, 163, 175);
-    pdf.text(url, pageW / 2, pageH - 12, { align: 'center' });
+    pdf.text(url, pageW / 2, pageH - 11, { align: 'center' });
 
     const safeName = roomName.replace(/\s+/g, '-').toLowerCase();
     pdf.save(`qr-10x15-${safeName}.pdf`);
@@ -112,20 +122,23 @@ const AdminRoomQrExportDialog = ({ roomId, roomName, ownerName }: AdminRoomQrExp
         <DialogHeader>
           <DialogTitle>QR code du logement</DialogTitle>
           <DialogDescription>
-            Export au format photo <strong>10×15 cm (4×6 pouces)</strong> à imprimer et déposer dans
-            « {roomName} »{ownerName ? ` — ${ownerName}` : ''}.
+            Export noir &amp; blanc au format photo <strong>10×15 cm (4×6 pouces)</strong>, optimisé
+            impression thermique et bilingue FR/EN, pour « {roomName} »
+            {ownerName ? ` — ${ownerName}` : ''}.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-4 py-2">
           <div ref={containerRef} className="rounded-xl border bg-white p-5">
+            {/* Haute résolution (size=1024) pour une impression nette, affiché en 200px */}
             <QRCodeCanvas
               value={url}
-              size={220}
-              fgColor="#4b5563"
+              size={1024}
+              fgColor="#000000"
               bgColor="#ffffff"
-              level="M"
+              level="H"
               includeMargin
+              style={{ width: 200, height: 200 }}
             />
           </div>
 
@@ -138,7 +151,7 @@ const AdminRoomQrExportDialog = ({ roomId, roomName, ownerName }: AdminRoomQrExp
 
           <Button className="w-full" onClick={handleExportPdf}>
             <FileDown className="mr-2 h-4 w-4" />
-            Exporter en 10×15 cm (PDF)
+            Exporter en 10×15 cm (PDF N&amp;B)
           </Button>
         </div>
       </DialogContent>

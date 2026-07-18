@@ -78,9 +78,18 @@ serve(async (req) => {
       const problemType = (body.problem_type as string | undefined)?.trim() || "other";
       const description = (body.description as string | undefined)?.trim() || "";
       const contact = (body.contact as string | undefined)?.trim() || "";
+      const phone = (body.phone as string | undefined)?.trim() || "";
+      const rawMedia = Array.isArray(body.media_urls) ? (body.media_urls as unknown[]) : [];
+      const mediaUrls = rawMedia
+        .filter((u): u is string => typeof u === "string" && u.startsWith("http"))
+        .slice(0, 5);
 
       if (description.length < 5) {
         return jsonResponse({ error: "Merci de décrire le problème (au moins 5 caractères)." }, 400);
+      }
+
+      if (phone.length < 5) {
+        return jsonResponse({ error: "Le numéro de téléphone est obligatoire." }, 400);
       }
 
       const problemLabel = PROBLEM_LABELS[problemType] || PROBLEM_LABELS.other;
@@ -91,6 +100,7 @@ serve(async (req) => {
         "",
         "—",
         `Signalé par : ${guestName}`,
+        `Téléphone : ${phone}`,
         contact ? `Contact : ${contact}` : null,
         "Source : QR code du logement (voyageur sur place)",
       ]
@@ -107,6 +117,7 @@ serve(async (req) => {
           status: "pending_owner_action",
           priority,
           category: "guest_qr_report",
+          media_urls: mediaUrls.length > 0 ? mediaUrls : null,
           is_archived: false,
         })
         .select("id")

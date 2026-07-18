@@ -23,8 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
+import { Building, CheckCircle2, Loader2, AlertTriangle, Paperclip, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const GUEST_PORTAL_URL =
   'https://dkjaejzwmmwwzhokpbgs.supabase.co/functions/v1/guest-logement-portal';
@@ -52,10 +53,15 @@ const t = {
     namePlaceholder: 'Prénom / Nom',
     typeLabel: 'Type de problème',
     typePlaceholder: 'Sélectionner un type',
+    phoneLabel: 'Numéro de téléphone',
+    phonePlaceholder: 'Ex. 06 12 34 56 78',
     descLabel: 'Décrivez le problème',
     descPlaceholder: 'Expliquez ce qui ne va pas, dans quelle pièce, depuis quand...',
-    contactLabel: 'Votre contact (facultatif)',
-    contactPlaceholder: 'Email ou téléphone pour vous recontacter',
+    contactLabel: 'Votre email (facultatif)',
+    contactPlaceholder: 'Email pour vous recontacter',
+    photosLabel: 'Photos (facultatif)',
+    photosAdd: 'Ajouter des photos',
+    photosHint: '5 photos maximum, 10 Mo par photo.',
     submit: 'Envoyer le signalement',
     sending: 'Envoi...',
     successTitle: 'Merci pour votre signalement !',
@@ -69,7 +75,9 @@ const t = {
     errorDesc: 'Veuillez décrire le problème (minimum 5 caractères).',
     errorLong: 'La description est trop longue.',
     errorName: 'Nom trop long.',
-    errorContact: 'Contact trop long.',
+    errorContact: 'Email trop long.',
+    errorPhone: 'Le numéro de téléphone est obligatoire.',
+    uploadError: "Échec de l'envoi d'une photo.",
   },
   en: {
     intro: 'An issue during your stay? Report it here and your host will be notified right away.',
@@ -77,10 +85,15 @@ const t = {
     namePlaceholder: 'First / Last name',
     typeLabel: 'Type of problem',
     typePlaceholder: 'Select a type',
+    phoneLabel: 'Phone number',
+    phonePlaceholder: 'e.g. +33 6 12 34 56 78',
     descLabel: 'Describe the problem',
     descPlaceholder: 'Explain what is wrong, in which room, since when...',
-    contactLabel: 'Your contact (optional)',
-    contactPlaceholder: 'Email or phone so we can reach you',
+    contactLabel: 'Your email (optional)',
+    contactPlaceholder: 'Email so we can reach you',
+    photosLabel: 'Photos (optional)',
+    photosAdd: 'Add photos',
+    photosHint: 'Up to 5 photos, 10 MB each.',
     submit: 'Send report',
     sending: 'Sending...',
     successTitle: 'Thank you for your report!',
@@ -94,7 +107,9 @@ const t = {
     errorDesc: 'Please describe the problem (minimum 5 characters).',
     errorLong: 'The description is too long.',
     errorName: 'Name too long.',
-    errorContact: 'Contact too long.',
+    errorContact: 'Email too long.',
+    errorPhone: 'Phone number is required.',
+    uploadError: 'Failed to upload a photo.',
   },
 };
 
@@ -126,11 +141,13 @@ const GuestReportPage = () => {
   const [loadingRoom, setLoadingRoom] = useState(true);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
 
   const tr = t[lang];
 
   const formSchema = z.object({
     guestName: z.string().max(80, tr.errorName).optional(),
+    phone: z.string().min(5, { message: tr.errorPhone }).max(30, { message: tr.errorPhone }),
     problemType: z.string().min(1, { message: tr.errorType }),
     description: z.string().min(5, { message: tr.errorDesc }).max(1000, { message: tr.errorLong }),
     contact: z.string().max(120, tr.errorContact).optional(),
@@ -142,11 +159,45 @@ const GuestReportPage = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       guestName: '',
+      phone: '',
       problemType: '',
       description: '',
       contact: '',
     },
   });
+
+  const handleFilesSelected = (list: FileList | null) => {
+    if (!list) return;
+    const incoming = Array.from(list);
+    setFiles((prev) => [...prev, ...incoming].slice(0, 5));
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  async function uploadPhotos(): Promise<string[]> {
+    if (files.length === 0) return [];
+    const folder = crypto.randomUUID();
+    const urls: string[] = [];
+    for (const file of files) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${roomId}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage
+        .from('guest_report_media')
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error(tr.uploadError);
+        continue;
+      }
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('guest_report_media').getPublicUrl(path);
+      urls.push(publicUrl);
+    }
+    return urls;
+  }
 
   useEffect(() => {
     let active = true;
@@ -180,13 +231,16 @@ const GuestReportPage = () => {
   const onSubmit = async (values: FormValues) => {
     if (!roomId) return;
     try {
+      const mediaUrls = await uploadPhotos();
       await callPortal({
         action: 'report',
         room_id: roomId,
         guest_name: values.guestName,
+        phone: values.phone,
         problem_type: values.problemType,
         description: values.description,
         contact: values.contact,
+        media_urls: mediaUrls,
       });
       setSubmitted(true);
     } catch (err) {
@@ -257,6 +311,7 @@ const GuestReportPage = () => {
                 className="w-full"
                 onClick={() => {
                   form.reset();
+                  setFiles([]);
                   setSubmitted(false);
                 }}
               >
@@ -284,6 +339,20 @@ const GuestReportPage = () => {
                         <FormLabel>{tr.nameLabel}</FormLabel>
                         <FormControl>
                           <Input placeholder={tr.namePlaceholder} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{tr.phoneLabel} *</FormLabel>
+                        <FormControl>
+                          <Input type="tel" placeholder={tr.phonePlaceholder} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -342,6 +411,45 @@ const GuestReportPage = () => {
                       </FormItem>
                     )}
                   />
+
+                  <div className="space-y-2">
+                    <FormLabel>{tr.photosLabel}</FormLabel>
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50">
+                      <Paperclip className="h-4 w-4" />
+                      {tr.photosAdd}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          handleFilesSelected(e.target.files);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <p className="text-xs text-muted-foreground">{tr.photosHint}</p>
+                    {files.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {files.map((file, index) => (
+                          <div key={index} className="relative">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="h-20 w-full rounded-md border object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-white"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                     {form.formState.isSubmitting ? (

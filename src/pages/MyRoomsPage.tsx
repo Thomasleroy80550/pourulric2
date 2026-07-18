@@ -5,6 +5,7 @@ import MainLayout from '@/components/MainLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RoomManagementDialog } from '@/components/RoomManagementDialog';
+import RoomQrCodeDialog from '@/components/RoomQrCodeDialog';
 import { Badge } from '@/components/ui/badge';
 import { Building, Loader2, Star, MessageSquareQuote } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
@@ -110,8 +111,9 @@ const MyRoomsPage = () => {
                       </p>
                     )}
                   </CardContent>
-                  <CardFooter className="gap-2">
+                  <CardFooter className="flex-wrap gap-2">
                     <RoomManagementDialog room={room} />
+                    <RoomQrCodeDialog roomId={room.id} roomName={room.room_name} />
                   </CardFooter>
                 </Card>
               );

@@ -23,7 +23,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, CheckCircle2, Loader2, AlertTriangle, Paperclip, X } from 'lucide-react';
+import {
+  Building,
+  CheckCircle2,
+  Loader2,
+  AlertTriangle,
+  Paperclip,
+  X,
+  Wifi,
+  Copy,
+  Check,
+  MapPin,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -62,6 +73,11 @@ const t = {
     photosLabel: 'Photos (facultatif)',
     photosAdd: 'Ajouter des photos',
     photosHint: '5 photos maximum, 10 Mo par photo.',
+    wifiTitle: 'Connexion Wi-Fi',
+    wifiNetwork: 'Réseau',
+    wifiPassword: 'Mot de passe',
+    wifiLocation: 'Box internet',
+    copied: 'Copié !',
     submit: 'Envoyer le signalement',
     sending: 'Envoi...',
     successTitle: 'Merci pour votre signalement !',
@@ -94,6 +110,11 @@ const t = {
     photosLabel: 'Photos (optional)',
     photosAdd: 'Add photos',
     photosHint: 'Up to 5 photos, 10 MB each.',
+    wifiTitle: 'Wi-Fi connection',
+    wifiNetwork: 'Network',
+    wifiPassword: 'Password',
+    wifiLocation: 'Internet box',
+    copied: 'Copied!',
     submit: 'Send report',
     sending: 'Sending...',
     successTitle: 'Thank you for your report!',
@@ -130,6 +151,34 @@ async function callPortal(payload: Record<string, unknown>) {
   return data;
 }
 
+const CopyRow = ({ label, value }: { label: string; value: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-white/70 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-xs text-sky-700/80">{label}</p>
+        <p className="truncate font-mono text-sm font-semibold text-sky-950">{value}</p>
+      </div>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sky-700 hover:bg-sky-100"
+      >
+        {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+};
+
 const GuestReportPage = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const [lang, setLang] = useState<Lang>(
@@ -138,6 +187,9 @@ const GuestReportPage = () => {
       : 'en',
   );
   const [roomName, setRoomName] = useState<string | null>(null);
+  const [wifiSsid, setWifiSsid] = useState<string | null>(null);
+  const [wifiCode, setWifiCode] = useState<string | null>(null);
+  const [wifiLocation, setWifiLocation] = useState<string | null>(null);
   const [loadingRoom, setLoadingRoom] = useState(true);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -211,6 +263,9 @@ const GuestReportPage = () => {
         const data = await callPortal({ action: 'info', room_id: roomId });
         if (active) {
           setRoomName(data.room?.room_name || 'Your stay');
+          setWifiSsid(data.room?.wifi_ssid || null);
+          setWifiCode(data.room?.wifi_code || null);
+          setWifiLocation(data.room?.wifi_box_location || null);
         }
       } catch {
         if (active) {
@@ -274,6 +329,27 @@ const GuestReportPage = () => {
             </button>
           </div>
         </div>
+
+        {!loadingRoom && !roomError && wifiCode && (
+          <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <div className="mb-3 flex items-center gap-2 text-sky-900">
+              <Wifi className="h-5 w-5" />
+              <span className="font-semibold">{tr.wifiTitle}</span>
+            </div>
+            <div className="space-y-2">
+              {wifiSsid && <CopyRow label={tr.wifiNetwork} value={wifiSsid} />}
+              <CopyRow label={tr.wifiPassword} value={wifiCode} />
+            </div>
+            {wifiLocation && (
+              <div className="mt-3 flex items-start gap-1.5 text-xs text-sky-800">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {tr.wifiLocation} : {wifiLocation}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {loadingRoom ? (
           <Card>

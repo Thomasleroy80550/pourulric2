@@ -54,7 +54,7 @@ serve(async (req) => {
     // Fetch the room (bypass RLS via service role) but only expose safe fields.
     const { data: room, error: roomError } = await supabaseAdmin
       .from("user_rooms")
-      .select("id, user_id, room_name")
+      .select("id, user_id, room_name, wifi_ssid, wifi_code, wifi_box_location")
       .eq("id", roomId)
       .maybeSingle();
 
@@ -69,7 +69,16 @@ serve(async (req) => {
 
     // Action: return only the public-safe information about the room.
     if (action === "info") {
-      return jsonResponse({ ok: true, room: { id: room.id, room_name: room.room_name } });
+      return jsonResponse({
+        ok: true,
+        room: {
+          id: room.id,
+          room_name: room.room_name,
+          wifi_ssid: room.wifi_ssid ?? null,
+          wifi_code: room.wifi_code ?? null,
+          wifi_box_location: room.wifi_box_location ?? null,
+        },
+      });
     }
 
     // Action: create an incident (technical report) for the owner.

@@ -29,6 +29,7 @@ import {
 import { toast } from 'sonner';
 import EditUserRoomDialog from '@/components/EditUserRoomDialog';
 import AdminRoomManagementDialog from '@/components/AdminRoomManagementDialog';
+import AdminRoomQrExportDialog from '@/components/admin/AdminRoomQrExportDialog';
 
 const AdminUserRoomsPage: React.FC = () => {
   const { data: userRooms, isLoading, error, refetch } = useQuery<AdminUserRoom[]>({
@@ -357,6 +358,11 @@ const AdminUserRoomsPage: React.FC = () => {
                               <Button variant="secondary" size="sm" onClick={() => openManage(room)}>
                                 <Settings className="h-4 w-4 mr-1" /> Gérer
                               </Button>
+                              <AdminRoomQrExportDialog
+                                roomId={room.id}
+                                roomName={room.room_name}
+                                ownerName={clientName}
+                              />
                               <Button variant="ghost" size="sm" onClick={() => openHistory(room)}>
                                 <History className="h-4 w-4 mr-1" /> Historique
                               </Button>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,6 +34,11 @@ import {
   Copy,
   Check,
   MapPin,
+  Send,
+  Home,
+  Wrench,
+  Ticket,
+  ClipboardList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -80,9 +85,18 @@ const t = {
     copied: 'Copié !',
     submit: 'Envoyer le signalement',
     sending: 'Envoi...',
+    animSteps: [
+      'Envoi de votre signalement...',
+      'Transmission à votre hôte...',
+      'Enregistrement en cours...',
+      'Presque terminé...',
+    ],
     successTitle: 'Merci pour votre signalement !',
     successDesc:
       'Votre demande a bien été transmise au responsable du logement. Il en sera informé immédiatement.',
+    yourRef: 'Votre référence',
+    trackBtn: 'Suivre mon signalement',
+    keepRef: 'Conservez cette référence pour suivre votre demande.',
     another: 'Signaler un autre problème',
     notFoundTitle: 'Logement introuvable',
     notFoundDesc: 'Ce QR code ne semble plus valide. Merci de contacter votre hôte.',
@@ -117,9 +131,18 @@ const t = {
     copied: 'Copied!',
     submit: 'Send report',
     sending: 'Sending...',
+    animSteps: [
+      'Sending your report...',
+      'Notifying your host...',
+      'Saving in progress...',
+      'Almost done...',
+    ],
     successTitle: 'Thank you for your report!',
     successDesc:
       'Your request has been sent to the property manager. They will be notified immediately.',
+    yourRef: 'Your reference',
+    trackBtn: 'Track my report',
+    keepRef: 'Keep this reference to follow up on your request.',
     another: 'Report another problem',
     notFoundTitle: 'Property not found',
     notFoundDesc: 'This QR code no longer seems valid. Please contact your host.',
@@ -150,6 +173,68 @@ async function callPortal(payload: Record<string, unknown>) {
   }
   return data;
 }
+
+const ANIM_DURATION = 3200; // durée fixe de l'animation d'envoi (ms)
+
+const SubmitAnimation = ({ steps }: { steps: string[] }) => {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const icons = [Send, Home, ClipboardList, Wrench];
+  const Icon = icons[stepIndex % icons.length];
+
+  useEffect(() => {
+    const perStep = ANIM_DURATION / steps.length;
+    const stepTimer = setInterval(() => {
+      setStepIndex((i) => (i < steps.length - 1 ? i + 1 : i));
+    }, perStep);
+
+    const start = Date.now();
+    const progTimer = setInterval(() => {
+      const elapsed = Date.now() - start;
+      setProgress(Math.min(100, Math.round((elapsed / ANIM_DURATION) * 100)));
+    }, 40);
+
+    return () => {
+      clearInterval(stepTimer);
+      clearInterval(progTimer);
+    };
+  }, [steps.length]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-6">
+      <div className="w-full max-w-xs rounded-2xl border bg-card p-8 text-center shadow-xl">
+        <div className="relative mx-auto mb-6 flex h-24 w-24 items-center justify-center">
+          <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+          <span className="absolute inset-2 animate-pulse rounded-full bg-primary/10" />
+          <div className="relative flex h-16 w-16 animate-bounce items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <Icon className="h-7 w-7" />
+          </div>
+        </div>
+
+        <p className="mb-4 min-h-[2.5rem] text-sm font-medium transition-all">
+          {steps[stepIndex]}
+        </p>
+
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-100 ease-linear"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <div className="mt-4 flex justify-center gap-1.5">
+          {[0, 1, 2].map((d) => (
+            <span
+              key={d}
+              className="h-2 w-2 animate-bounce rounded-full bg-primary/60"
+              style={{ animationDelay: `${d * 150}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CopyRow = ({ label, value }: { label: string; value: string }) => {
   const [copied, setCopied] = useState(false);
@@ -193,6 +278,8 @@ const GuestReportPage = () => {
   const [loadingRoom, setLoadingRoom] = useState(true);
   const [roomError, setRoomError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [reportId, setReportId] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
 
   const tr = t[lang];
@@ -285,26 +372,37 @@ const GuestReportPage = () => {
 
   const onSubmit = async (values: FormValues) => {
     if (!roomId) return;
+    setSending(true);
+    // Durée d'animation fixe minimale (style Uber) pour détendre l'attente
+    const minDelay = new Promise((resolve) => setTimeout(resolve, ANIM_DURATION));
     try {
-      const mediaUrls = await uploadPhotos();
-      await callPortal({
-        action: 'report',
-        room_id: roomId,
-        guest_name: values.guestName,
-        phone: values.phone,
-        problem_type: values.problemType,
-        description: values.description,
-        contact: values.contact,
-        media_urls: mediaUrls,
-      });
+      const request = (async () => {
+        const mediaUrls = await uploadPhotos();
+        return callPortal({
+          action: 'report',
+          room_id: roomId,
+          guest_name: values.guestName,
+          phone: values.phone,
+          problem_type: values.problemType,
+          description: values.description,
+          contact: values.contact,
+          media_urls: mediaUrls,
+        });
+      })();
+
+      const [data] = await Promise.all([request, minDelay]);
+      setReportId(data.report_id || null);
       setSubmitted(true);
     } catch (err) {
       toast.error((err as Error).message);
+    } finally {
+      setSending(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-muted/40 px-4 py-10 flex justify-center">
+      {sending && <SubmitAnimation steps={tr.animSteps} />}
       <div className="w-full max-w-lg space-y-6">
         <div className="flex items-center justify-between">
           <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
@@ -381,13 +479,36 @@ const GuestReportPage = () => {
               <CardTitle>{tr.successTitle}</CardTitle>
               <CardDescription>{tr.successDesc}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {reportId && (
+                <div className="rounded-xl border bg-muted/50 p-4 text-center">
+                  <div className="mb-1 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                    <Ticket className="h-3.5 w-3.5" />
+                    {tr.yourRef}
+                  </div>
+                  <p className="font-mono text-2xl font-bold tracking-wider">
+                    #{reportId.slice(0, 8).toUpperCase()}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{tr.keepRef}</p>
+                </div>
+              )}
+
+              {reportId && (
+                <Button className="w-full" asChild>
+                  <Link to={`/signalement/${reportId}`}>
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    {tr.trackBtn}
+                  </Link>
+                </Button>
+              )}
+
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={() => {
                   form.reset();
                   setFiles([]);
+                  setReportId(null);
                   setSubmitted(false);
                 }}
               >

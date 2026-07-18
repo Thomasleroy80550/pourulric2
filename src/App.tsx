@@ -123,6 +123,7 @@ import AdminDomainRequestsPage from "./pages/AdminDomainRequestsPage";
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
 import PlanningV2Page from "./pages/PlanningV2Page";
 import GuestReportPage from "./pages/GuestReportPage";
+import GuestReportStatusPage from "./pages/GuestReportStatusPage";
 
 const queryClient = new QueryClient();
 
@@ -200,6 +201,7 @@ function App() {
                       <Route path="/pages/:slug" element={<ContentPage />} />
                       <Route path="/sites/:slug" element={<MiniSitePublicPage />} />
                       <Route path="/logement/:roomId/signaler" element={<GuestReportPage />} />
+                      <Route path="/signalement/:reportId" element={<GuestReportStatusPage />} />
                       <Route path="/profile" element={<ProfilePage />} />
 
                       <Route path="/announcements" element={<AnnouncementsPage />} />

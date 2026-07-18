@@ -81,6 +81,31 @@ serve(async (req) => {
       });
     }
 
+    // Action: return the public status of a report so the guest can track it.
+    if (action === "status") {
+      const reportId = body.report_id as string | undefined;
+      if (!reportId) {
+        return jsonResponse({ error: "Référence manquante." }, 400);
+      }
+
+      const { data: report, error: statusError } = await supabaseAdmin
+        .from("technical_reports")
+        .select("id, title, status, created_at, property_name, owner_response, resolved_at")
+        .eq("id", reportId)
+        .maybeSingle();
+
+      if (statusError) {
+        console.error("[guest-logement-portal] status error", { error: statusError.message });
+        return jsonResponse({ error: "Impossible de récupérer le suivi." }, 500);
+      }
+
+      if (!report) {
+        return jsonResponse({ error: "Signalement introuvable." }, 404);
+      }
+
+      return jsonResponse({ ok: true, report });
+    }
+
     // Action: create an incident (technical report) for the owner.
     if (action === "report") {
       const guestName = (body.guest_name as string | undefined)?.trim() || "Voyageur";

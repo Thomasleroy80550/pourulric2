@@ -150,6 +150,9 @@ const AdminTechnicalReportsPage: React.FC = () => {
                   </Badge>
                 )}
               </div>
+              <span className="font-mono text-xs text-muted-foreground">
+                #{report.id.replace(/-/g, '').slice(0, 8).toUpperCase()}
+              </span>
             </TableCell>
             <TableCell>{getStatusBadge(report.status)}</TableCell>
             <TableCell>{format(parseISO(report.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>

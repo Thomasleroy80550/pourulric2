@@ -307,6 +307,12 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
           <Card>
             <CardHeader><CardTitle>Détails</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
+              <p>
+                <strong>Référence:</strong>{' '}
+                <span className="font-mono font-semibold">
+                  #{report.id.replace(/-/g, '').slice(0, 8).toUpperCase()}
+                </span>
+              </p>
               <p><strong>Propriétaire:</strong> {report.profiles?.first_name} {report.profiles?.last_name}</p>
               <p><strong>Créé le:</strong> {format(new Date(report.created_at), 'dd MMMM yyyy', { locale: fr })}</p>
               <p><strong>Priorité:</strong> {getPriorityBadge(report.priority)}</p>

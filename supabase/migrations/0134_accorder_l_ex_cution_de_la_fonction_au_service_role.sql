@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.find_technical_report_by_ref(text) TO service_role;

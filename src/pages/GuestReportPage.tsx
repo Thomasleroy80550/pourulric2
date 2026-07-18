@@ -101,6 +101,7 @@ const t = {
     notFoundTitle: 'Logement introuvable',
     notFoundDesc: 'Ce QR code ne semble plus valide. Merci de contacter votre hôte.',
     footer: 'Signalement transmis en toute confidentialité à votre hôte.',
+    trackExisting: 'Suivre un signalement existant',
     errorType: 'Veuillez sélectionner un type de problème.',
     errorDesc: 'Veuillez décrire le problème (minimum 5 caractères).',
     errorLong: 'La description est trop longue.',
@@ -147,6 +148,7 @@ const t = {
     notFoundTitle: 'Property not found',
     notFoundDesc: 'This QR code no longer seems valid. Please contact your host.',
     footer: 'Your report is sent confidentially to your host.',
+    trackExisting: 'Track an existing report',
     errorType: 'Please select a type of problem.',
     errorDesc: 'Please describe the problem (minimum 5 characters).',
     errorLong: 'The description is too long.',
@@ -663,6 +665,15 @@ const GuestReportPage = () => {
             </CardContent>
           </Card>
         )}
+
+        <div className="text-center">
+          <Button variant="link" size="sm" asChild>
+            <Link to="/suivi">
+              <ClipboardList className="mr-1 h-4 w-4" />
+              {tr.trackExisting}
+            </Link>
+          </Button>
+        </div>
 
         <p className="text-center text-xs text-muted-foreground">{tr.footer}</p>
       </div>

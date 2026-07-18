@@ -82,22 +82,24 @@ serve(async (req) => {
     }
 
     // Action: return the public status of a report so the guest can track it.
+    // Accepts a full UUID or the short 8-char reference shown to the guest.
     if (action === "status") {
-      const reportId = body.report_id as string | undefined;
-      if (!reportId) {
+      const ref = ((body.report_id ?? body.reference) as string | undefined)?.trim();
+      if (!ref) {
         return jsonResponse({ error: "Référence manquante." }, 400);
       }
 
-      const { data: report, error: statusError } = await supabaseAdmin
-        .from("technical_reports")
-        .select("id, title, status, created_at, property_name, owner_response, resolved_at")
-        .eq("id", reportId)
-        .maybeSingle();
+      const { data, error: statusError } = await supabaseAdmin.rpc(
+        "find_technical_report_by_ref",
+        { p_ref: ref },
+      );
 
       if (statusError) {
         console.error("[guest-logement-portal] status error", { error: statusError.message });
         return jsonResponse({ error: "Impossible de récupérer le suivi." }, 500);
       }
+
+      const report = Array.isArray(data) ? data[0] : data;
 
       if (!report) {
         return jsonResponse({ error: "Signalement introuvable." }, 404);

@@ -133,7 +133,7 @@ const GuestReportStatusPage = () => {
         : 1
     : 0;
 
-  const shortRef = reportId ? reportId.slice(0, 8).toUpperCase() : '';
+  const shortRef = (report?.id || reportId || '').replace(/-/g, '').slice(0, 8).toUpperCase();
 
   return (
     <div className="min-h-screen bg-muted/40 px-4 py-10 flex justify-center">

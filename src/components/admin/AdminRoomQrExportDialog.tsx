@@ -47,7 +47,6 @@ export const LabelPreview = ({ roomId, roomName }: { roomId: string; roomName: s
       </div>
       <p className="text-[10px] font-bold leading-tight">Scannez avec l’appareil photo</p>
       <p className="text-[9px] leading-tight">Scan with your phone camera</p>
-      <p className="mt-1 max-w-full truncate text-[7px] text-gray-500">{url}</p>
     </div>
   );
 };

@@ -19,7 +19,7 @@ async function generateQrDataUrl(url: string): Promise<string> {
   });
 }
 
-function drawLabel(pdf: jsPDF, roomName: string, url: string, qrDataUrl: string) {
+function drawLabel(pdf: jsPDF, roomName: string, qrDataUrl: string) {
   // Cadre noir (thermique)
   pdf.setDrawColor(0, 0, 0);
   pdf.setLineWidth(0.6);
@@ -64,10 +64,6 @@ function drawLabel(pdf: jsPDF, roomName: string, url: string, qrDataUrl: string)
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
   pdf.text('Scan with your phone camera', PAGE_W / 2, qrY + qrSize + 18, { align: 'center' });
-
-  // URL en pied de page
-  pdf.setFontSize(7);
-  pdf.text(url, PAGE_W / 2, PAGE_H - 11, { align: 'center' });
 }
 
 function slugify(name: string): string {
@@ -78,7 +74,7 @@ export async function exportSingleLabelPdf(roomId: string, roomName: string): Pr
   const url = buildLabelUrl(roomId);
   const qrDataUrl = await generateQrDataUrl(url);
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [PAGE_W, PAGE_H] });
-  drawLabel(pdf, roomName, url, qrDataUrl);
+  drawLabel(pdf, roomName, qrDataUrl);
   pdf.save(`qr-10x15-${slugify(roomName)}.pdf`);
 }
 
@@ -93,7 +89,7 @@ export async function exportAllLabelsPdf(
     }
     const url = buildLabelUrl(rooms[i].id);
     const qrDataUrl = await generateQrDataUrl(url);
-    drawLabel(pdf, rooms[i].room_name, url, qrDataUrl);
+    drawLabel(pdf, rooms[i].room_name, qrDataUrl);
   }
 
   pdf.save('qr-codes-logements-10x15.pdf');

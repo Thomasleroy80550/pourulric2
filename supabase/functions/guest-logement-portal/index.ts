@@ -47,41 +47,8 @@ serve(async (req) => {
     const action = body.action as string | undefined;
     const roomId = body.room_id as string | undefined;
 
-    if (!roomId) {
-      return jsonResponse({ error: "Identifiant du logement manquant." }, 400);
-    }
-
-    // Fetch the room (bypass RLS via service role) but only expose safe fields.
-    const { data: room, error: roomError } = await supabaseAdmin
-      .from("user_rooms")
-      .select("id, user_id, room_name, wifi_ssid, wifi_code, wifi_box_location")
-      .eq("id", roomId)
-      .maybeSingle();
-
-    if (roomError) {
-      console.error("[guest-logement-portal] room lookup error", { error: roomError.message });
-      return jsonResponse({ error: "Impossible de récupérer le logement." }, 500);
-    }
-
-    if (!room) {
-      return jsonResponse({ error: "Logement introuvable." }, 404);
-    }
-
-    // Action: return only the public-safe information about the room.
-    if (action === "info") {
-      return jsonResponse({
-        ok: true,
-        room: {
-          id: room.id,
-          room_name: room.room_name,
-          wifi_ssid: room.wifi_ssid ?? null,
-          wifi_code: room.wifi_code ?? null,
-          wifi_box_location: room.wifi_box_location ?? null,
-        },
-      });
-    }
-
     // Action: return the public status of a report so the guest can track it.
+    // This action does NOT require a room_id, so it is handled first.
     // Accepts a full UUID or the short 8-char reference shown to the guest.
     if (action === "status") {
       const ref = ((body.report_id ?? body.reference) as string | undefined)?.trim() ?? "";
@@ -131,6 +98,41 @@ serve(async (req) => {
       }
 
       return jsonResponse({ ok: true, report });
+    }
+
+    // The remaining actions (info / report) require a valid room_id.
+    if (!roomId) {
+      return jsonResponse({ error: "Identifiant du logement manquant." }, 400);
+    }
+
+    // Fetch the room (bypass RLS via service role) but only expose safe fields.
+    const { data: room, error: roomError } = await supabaseAdmin
+      .from("user_rooms")
+      .select("id, user_id, room_name, wifi_ssid, wifi_code, wifi_box_location")
+      .eq("id", roomId)
+      .maybeSingle();
+
+    if (roomError) {
+      console.error("[guest-logement-portal] room lookup error", { error: roomError.message });
+      return jsonResponse({ error: "Impossible de récupérer le logement." }, 500);
+    }
+
+    if (!room) {
+      return jsonResponse({ error: "Logement introuvable." }, 404);
+    }
+
+    // Action: return only the public-safe information about the room.
+    if (action === "info") {
+      return jsonResponse({
+        ok: true,
+        room: {
+          id: room.id,
+          room_name: room.room_name,
+          wifi_ssid: room.wifi_ssid ?? null,
+          wifi_code: room.wifi_code ?? null,
+          wifi_box_location: room.wifi_box_location ?? null,
+        },
+      });
     }
 
     // Action: create an incident (technical report) for the owner.

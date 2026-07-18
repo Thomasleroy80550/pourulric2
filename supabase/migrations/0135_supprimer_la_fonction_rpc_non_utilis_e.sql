@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.find_technical_report_by_ref(text);

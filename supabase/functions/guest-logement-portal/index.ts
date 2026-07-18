@@ -84,37 +84,46 @@ serve(async (req) => {
     // Action: return the public status of a report so the guest can track it.
     // Accepts a full UUID or the short 8-char reference shown to the guest.
     if (action === "status") {
-      const ref = ((body.report_id ?? body.reference) as string | undefined)?.trim();
-      if (!ref) {
-        return jsonResponse({ error: "Référence manquante." }, 400);
+      const ref = ((body.report_id ?? body.reference) as string | undefined)?.trim() ?? "";
+      const clean = ref.replace(/-/g, "").toLowerCase();
+
+      if (!/^[0-9a-f]{6,32}$/.test(clean)) {
+        return jsonResponse({ error: "Référence invalide." }, 400);
       }
 
       const columns = "id, title, status, created_at, property_name, owner_response, resolved_at";
+      const toUuid = (hex: string) =>
+        `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 
       let report: unknown = null;
 
-      const { data, error: statusError } = await supabaseAdmin.rpc(
-        "find_technical_report_by_ref",
-        { p_ref: ref },
-      );
-
-      if (statusError) {
-        console.error("[guest-logement-portal] status rpc error", { error: statusError.message });
-      } else {
-        report = Array.isArray(data) ? data[0] : data;
-      }
-
-      // Fallback : correspondance exacte si l'on dispose d'un identifiant complet.
-      if (!report) {
-        const isFullUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref);
-        if (isFullUuid) {
-          const { data: exact } = await supabaseAdmin
-            .from("technical_reports")
-            .select(columns)
-            .eq("id", ref)
-            .maybeSingle();
-          report = exact;
+      if (clean.length === 32) {
+        // Identifiant complet : correspondance exacte.
+        const { data: exact, error } = await supabaseAdmin
+          .from("technical_reports")
+          .select(columns)
+          .eq("id", toUuid(clean))
+          .maybeSingle();
+        if (error) {
+          console.error("[guest-logement-portal] status exact error", { error: error.message });
         }
+        report = exact;
+      } else {
+        // Référence courte : intervalle d'UUID couvrant tous les identifiants
+        // commençant par ce préfixe hexadécimal.
+        const low = toUuid((clean + "0".repeat(32)).slice(0, 32));
+        const high = toUuid((clean + "f".repeat(32)).slice(0, 32));
+        const { data: range, error } = await supabaseAdmin
+          .from("technical_reports")
+          .select(columns)
+          .gte("id", low)
+          .lte("id", high)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error) {
+          console.error("[guest-logement-portal] status range error", { error: error.message });
+        }
+        report = Array.isArray(range) ? range[0] : null;
       }
 
       if (!report) {

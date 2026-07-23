@@ -146,6 +146,7 @@ export interface UserProfile {
   conso_token?: string | null;
   conso_price_per_kwh?: number | null;
   conso_service_enabled?: boolean | null;
+  consumables_enabled?: boolean | null;
 }
 
 export interface RoomUtilityEvent {

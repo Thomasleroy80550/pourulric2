@@ -42,7 +42,8 @@ import {
   Package,
   LayoutTemplate,
   Globe,
-  Megaphone
+  Megaphone,
+  CheckCheck
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -113,6 +114,7 @@ const adminNavigationCategories = [
       { name: 'Ajouter Stats Manuelles', href: '/admin/manual-stats', icon: FilePlus, description: 'Ajouter manuellement les statistiques mensuelles passées.' },
       { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText, description: 'Consulter les relevés existants.' },
       { name: 'Statuts de facturation', href: '/admin/billing-status', icon: FileText, description: 'Dernier relevé par client pour contrôler la facturation.' },
+      { name: 'Facturation Consommables', href: '/admin/consumables', icon: CheckCheck, description: 'Facturer 2€ HT / logement / mois d\'occupation.' },
       { name: 'Stats 2025 manquantes', href: '/admin/missing-2025-stats', icon: FileText, description: 'Voir les mois 2025 manquants par client.' },
       { name: 'Créer Facture (Pennylane)', href: '/admin/create-pennylane-invoice', icon: FilePlus, description: 'Créer une facture client via Pennylane.' },
       { name: 'IDs Pennylane manquants', href: '/admin/pennylane-missing', icon: Link2, description: 'Voir les clients sans ID Pennylane renseigné.' },

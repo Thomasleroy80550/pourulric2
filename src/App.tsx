@@ -70,6 +70,7 @@ import ProspectSignupPage from "./pages/ProspectSignupPage";
 import ContractTerminatedBanner from "./components/ContractTerminatedBanner";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
+import AdminConsumablesPage from "./pages/AdminConsumablesPage";
 import RedeemInvitePage from './pages/RedeemInvitePage';
 import Season2026Page from "./pages/Season2026Page";
 import AdminSeasonRequestsPage from "./pages/AdminSeasonRequestsPage";
@@ -183,6 +184,7 @@ function App() {
                       <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}
                       <Route path="/admin/manual-stats" element={<AdminManualStatsPage />} /> {/* New route */}
                       <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
+                      <Route path="/admin/consumables" element={<AdminConsumablesPage />} />
                       <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                       <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
                       <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />

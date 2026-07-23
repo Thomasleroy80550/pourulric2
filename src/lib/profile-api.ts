@@ -64,6 +64,7 @@ export interface UserProfile {
   conso_token?: string;
   conso_price_per_kwh?: number;
   conso_service_enabled?: boolean;
+  consumables_enabled?: boolean;
   // NEW: flag d'accès ThermoBnB
   thermobnb_enabled?: boolean;
 }

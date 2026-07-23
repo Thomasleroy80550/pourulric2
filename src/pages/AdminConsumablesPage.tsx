@@ -46,8 +46,8 @@ import {
   type AdminUserRoom,
 } from "@/lib/admin-api";
 import {
-  fetchKrossbookingReservationsForAdminRooms,
-  type KrossbookingReservation,
+  fetchAllReservationsInRange,
+  type RangeReservation,
 } from "@/lib/krossbooking";
 import {
   CONSUMABLE_UNIT_PRICE_HT,
@@ -58,17 +58,12 @@ import {
   type ConsumableBilling,
 } from "@/lib/consumables-api";
 
-const PERIOD_MONTHS = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
-
 const CURRENT_YEAR = new Date().getFullYear();
-const PERIOD_YEARS = [CURRENT_YEAR + 1, CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+const YEARS = [CURRENT_YEAR + 1, CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 
-/** Vérifie si une réservation (non annulée) chevauche le mois donné. */
-function reservationOverlapsMonth(
-  res: KrossbookingReservation,
+/** Une réservation (non annulée) occupe-t-elle le mois [monthStart, monthEndExclusive[ ? */
+function overlapsMonth(
+  res: RangeReservation,
   monthStart: Date,
   monthEndExclusive: Date,
 ): boolean {
@@ -80,23 +75,17 @@ function reservationOverlapsMonth(
   const checkOut = new Date(`${res.check_out_date}T00:00:00`);
   if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) return false;
 
-  // Occupation = nuits [check_in, check_out) → chevauche le mois si :
+  // Nuits occupées = [check_in, check_out[
   return checkIn < monthEndExclusive && checkOut > monthStart;
 }
 
 const AdminConsumablesPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const now = new Date();
-  const [periodMonth, setPeriodMonth] = useState<string>(PERIOD_MONTHS[now.getMonth()]);
-  const [periodYear, setPeriodYear] = useState<string>(String(CURRENT_YEAR));
-  const period = `${periodMonth} ${periodYear}`;
+  const [year, setYear] = useState<string>(String(CURRENT_YEAR));
+  const yearNum = parseInt(year, 10);
+  const period = `Année ${year}`;
 
-  const monthIndex = PERIOD_MONTHS.indexOf(periodMonth);
-  const yearNum = parseInt(periodYear, 10);
-  const monthStart = new Date(yearNum, monthIndex, 1);
-  const monthEndExclusive = new Date(yearNum, monthIndex + 1, 1);
-
-  // Valeurs éditées manuellement (surcharge de l'occupation auto) par utilisateur
+  // Surcharge manuelle du nombre de mois-logements occupés par client
   const [editedCounts, setEditedCounts] = useState<Record<string, number>>({});
 
   const { data: profiles, isLoading: loadingProfiles } = useQuery<UserProfile[]>({
@@ -114,10 +103,9 @@ const AdminConsumablesPage: React.FC = () => {
     isLoading: loadingReservations,
     isFetching: fetchingReservations,
     refetch: refetchReservations,
-  } = useQuery<KrossbookingReservation[]>({
-    queryKey: ["adminAllReservations"],
-    queryFn: () => fetchKrossbookingReservationsForAdminRooms(rooms || [], false),
-    enabled: !!rooms && rooms.length > 0,
+  } = useQuery<RangeReservation[]>({
+    queryKey: ["adminYearReservations", year],
+    queryFn: () => fetchAllReservationsInRange(`${year}-01-01`, `${year}-12-31`),
   });
 
   const {
@@ -129,37 +117,44 @@ const AdminConsumablesPage: React.FC = () => {
     queryFn: () => getConsumableBillingsByPeriod(period),
   });
 
-  // Logements par utilisateur
-  const roomsByUser = useMemo(() => {
-    const map = new Map<string, AdminUserRoom[]>();
+  // Logements par utilisateur + correspondance room_id -> user_id
+  const { roomsByUser, roomOwner } = useMemo(() => {
+    const byUser = new Map<string, AdminUserRoom[]>();
+    const owner = new Map<string, string>();
     (rooms || []).forEach((room) => {
-      const list = map.get(room.user_id) || [];
+      const list = byUser.get(room.user_id) || [];
       list.push(room);
-      map.set(room.user_id, list);
+      byUser.set(room.user_id, list);
+      if (room.room_id) owner.set(String(room.room_id), room.user_id);
     });
-    return map;
+    return { roomsByUser: byUser, roomOwner: owner };
   }, [rooms]);
 
-  // Ensemble des room_id occupés durant le mois sélectionné
-  const occupiedRoomIds = useMemo(() => {
-    const set = new Set<string>();
-    (reservations || []).forEach((res) => {
-      if (reservationOverlapsMonth(res, monthStart, monthEndExclusive)) {
-        if (res.krossbooking_room_id) set.add(String(res.krossbooking_room_id));
-      }
-    });
-    return set;
-  }, [reservations, monthStart, monthEndExclusive]);
+  // Occupation annuelle : par utilisateur, ensemble des "logement|mois" occupés
+  const occupiedByUser = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    if (!reservations) return map;
 
-  // Nombre de logements occupés (auto) par utilisateur pour le mois
-  const autoOccupiedByUser = useMemo(() => {
-    const map = new Map<string, number>();
-    roomsByUser.forEach((userRooms, userId) => {
-      const count = userRooms.filter((r) => occupiedRoomIds.has(String(r.room_id))).length;
-      map.set(userId, count);
-    });
+    // Pré-calcule les bornes de chaque mois de l'année
+    const monthBounds = Array.from({ length: 12 }, (_, m) => ({
+      start: new Date(yearNum, m, 1),
+      endExclusive: new Date(yearNum, m + 1, 1),
+    }));
+
+    for (const res of reservations) {
+      for (const roomId of res.room_ids) {
+        const userId = roomOwner.get(roomId);
+        if (!userId) continue; // logement non géré par un client de la plateforme
+        for (let m = 0; m < 12; m++) {
+          if (overlapsMonth(res, monthBounds[m].start, monthBounds[m].endExclusive)) {
+            if (!map.has(userId)) map.set(userId, new Set());
+            map.get(userId)!.add(`${roomId}|${m}`);
+          }
+        }
+      }
+    }
     return map;
-  }, [roomsByUser, occupiedRoomIds]);
+  }, [reservations, roomOwner, yearNum]);
 
   const billingByUser = useMemo(() => {
     const map = new Map<string, ConsumableBilling>();
@@ -167,7 +162,7 @@ const AdminConsumablesPage: React.FC = () => {
     return map;
   }, [billings]);
 
-  // Clients concernés : tous ceux qui ont au moins un logement et un contrat actif
+  // Clients : tous ceux avec au moins un logement et un contrat actif
   const clients = useMemo(() => {
     return (profiles || [])
       .filter((p) => !p.is_contract_terminated && (roomsByUser.get(p.id)?.length || 0) > 0)
@@ -179,35 +174,14 @@ const AdminConsumablesPage: React.FC = () => {
       );
   }, [profiles, roomsByUser]);
 
-  const getOccupiedCount = (userId: string): number => {
-    if (editedCounts[userId] !== undefined) return editedCounts[userId];
-    return autoOccupiedByUser.get(userId) || 0;
-  };
-
-  const saveMutation = useMutation({
-    mutationFn: (params: { userId: string; logementCount: number }) =>
-      upsertConsumableBilling({
-        userId: params.userId,
-        period,
-        logementCount: params.logementCount,
-      }),
-    onSuccess: (_, variables) => {
-      setEditedCounts((prev) => {
-        const next = { ...prev };
-        delete next[variables.userId];
-        return next;
-      });
-      queryClient.invalidateQueries({ queryKey: ["consumableBillings", period] });
-    },
-    onError: (err: any) => toast.error("Erreur", { description: err.message }),
-  });
+  const getAutoCount = (userId: string): number => occupiedByUser.get(userId)?.size || 0;
+  const getCount = (userId: string): number =>
+    editedCounts[userId] !== undefined ? editedCounts[userId] : getAutoCount(userId);
 
   const statusMutation = useMutation({
     mutationFn: (params: { id: string; status: "pending" | "billed" }) =>
       setConsumableBillingStatus(params.id, params.status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consumableBillings", period] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["consumableBillings", period] }),
     onError: (err: any) => toast.error("Erreur", { description: err.message }),
   });
 
@@ -220,64 +194,78 @@ const AdminConsumablesPage: React.FC = () => {
     onError: (err: any) => toast.error("Erreur", { description: err.message }),
   });
 
+  const saveMutation = useMutation({
+    mutationFn: (params: { userId: string; count: number }) =>
+      upsertConsumableBilling({
+        userId: params.userId,
+        period,
+        logementCount: params.count,
+      }),
+    onSuccess: (_, variables) => {
+      setEditedCounts((prev) => {
+        const next = { ...prev };
+        delete next[variables.userId];
+        return next;
+      });
+      queryClient.invalidateQueries({ queryKey: ["consumableBillings", period] });
+    },
+    onError: (err: any) => toast.error("Erreur", { description: err.message }),
+  });
+
   const [savingAll, setSavingAll] = useState(false);
-  const handleSaveAll = async () => {
+  const handleGenerateAnnual = async () => {
     setSavingAll(true);
     try {
-      const toSave = clients.filter((p) => getOccupiedCount(p.id) > 0);
+      const toSave = clients.filter((p) => getCount(p.id) > 0);
       for (const p of toSave) {
         await upsertConsumableBilling({
           userId: p.id,
           period,
-          logementCount: getOccupiedCount(p.id),
+          logementCount: getCount(p.id),
         });
       }
       setEditedCounts({});
-      toast.success(`${toSave.length} facturation(s) enregistrée(s) pour ${period}.`);
+      toast.success(`Facture annuelle générée pour ${toSave.length} client(s) — ${period}.`);
       queryClient.invalidateQueries({ queryKey: ["consumableBillings", period] });
     } catch (err: any) {
-      toast.error("Erreur lors de l'enregistrement groupé", { description: err.message });
+      toast.error("Erreur lors de la génération", { description: err.message });
     } finally {
       setSavingAll(false);
     }
   };
 
-  // Totaux calculés (live) sur l'ensemble des clients pour la période
   const grandTotalLive = clients.reduce(
-    (sum, p) => sum + getOccupiedCount(p.id) * CONSUMABLE_UNIT_PRICE_HT,
+    (sum, p) => sum + getCount(p.id) * CONSUMABLE_UNIT_PRICE_HT,
     0,
   );
+  const totalMonthsLogements = clients.reduce((sum, p) => sum + getCount(p.id), 0);
   const totalBilled = (billings || [])
     .filter((b) => b.status === "billed")
     .reduce((sum, b) => sum + Number(b.total_ht), 0);
-  const totalOccupiedLogements = clients.reduce((sum, p) => sum + getOccupiedCount(p.id), 0);
 
   const isLoading = loadingProfiles || loadingRooms || loadingBillings;
+  const computing = loadingReservations || fetchingReservations;
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold">Facturation Consommables</h1>
+            <h1 className="text-2xl font-bold">Facturation Consommables (annuelle)</h1>
             <p className="text-muted-foreground mt-1 max-w-3xl">
-              Facturation automatique de{" "}
+              Facture automatique de fin d'année :{" "}
               <strong>{CONSUMABLE_UNIT_PRICE_HT.toFixed(2)} € HT / logement / mois d'occupation</strong>.
-              L'occupation est calculée à partir des réservations Krossbooking : un logement est facturé
-              dès qu'il a au moins une nuit réservée dans le mois.
+              L'occupation de chaque logement est calculée mois par mois sur toute l'année à partir des
+              réservations Krossbooking (un logement occupé au moins une nuit dans un mois = 1 mois facturé).
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => refetchReservations()}
-            disabled={fetchingReservations}
-          >
-            {fetchingReservations ? (
+          <Button variant="outline" onClick={() => refetchReservations()} disabled={computing}>
+            {computing ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4 mr-2" />
             )}
-            Rafraîchir l'occupation
+            Recalculer l'occupation
           </Button>
         </div>
 
@@ -289,51 +277,35 @@ const AdminConsumablesPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Période + totaux */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card className="lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-lg">Période</CardTitle>
-              <CardDescription>Mois d'occupation à facturer.</CardDescription>
+              <CardTitle className="text-lg">Année à facturer</CardTitle>
+              <CardDescription>Période de calcul de l'occupation.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Mois</Label>
-                  <Select value={periodMonth} onValueChange={setPeriodMonth}>
-                    <SelectTrigger><SelectValue placeholder="Mois" /></SelectTrigger>
-                    <SelectContent>
-                      {PERIOD_MONTHS.map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Année</Label>
-                  <Select value={periodYear} onValueChange={setPeriodYear}>
-                    <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
-                    <SelectContent>
-                      {PERIOD_YEARS.map((y) => (
-                        <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <Label className="text-xs">Année</Label>
+              <Select value={year} onValueChange={setYear}>
+                <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
+                <SelectContent>
+                  {YEARS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg">Totaux — {period}</CardTitle>
-              <CardDescription>Calcul automatique basé sur l'occupation.</CardDescription>
+              <CardDescription>Calcul automatique basé sur l'occupation annuelle.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-xs text-muted-foreground">Logements occupés</p>
-                  <p className="text-2xl font-bold">{totalOccupiedLogements}</p>
+                  <p className="text-xs text-muted-foreground">Mois-logements occupés</p>
+                  <p className="text-2xl font-bold">{totalMonthsLogements}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total HT (calculé)</p>
@@ -348,23 +320,22 @@ const AdminConsumablesPage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Tableau par client */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Total par client</CardTitle>
+              <CardTitle className="text-lg">Total par client — {period}</CardTitle>
               <CardDescription>
-                Total HT = logements occupés × {CONSUMABLE_UNIT_PRICE_HT.toFixed(2)} €
-                {(loadingReservations || fetchingReservations) && " — calcul de l'occupation en cours…"}
+                Total HT = mois-logements occupés × {CONSUMABLE_UNIT_PRICE_HT.toFixed(2)} €
+                {computing && " — calcul de l'occupation en cours…"}
               </CardDescription>
             </div>
-            <Button onClick={handleSaveAll} disabled={savingAll || clients.length === 0}>
+            <Button onClick={handleGenerateAnnual} disabled={savingAll || clients.length === 0 || computing}>
               {savingAll ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              Enregistrer tout
+              Générer la facture annuelle
             </Button>
           </CardHeader>
           <CardContent>
@@ -374,7 +345,7 @@ const AdminConsumablesPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Client</TableHead>
                     <TableHead className="text-center">Logements</TableHead>
-                    <TableHead className="text-center">Occupés (auto)</TableHead>
+                    <TableHead className="text-center">Mois occupés (auto)</TableHead>
                     <TableHead className="text-right">Total HT</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -396,9 +367,9 @@ const AdminConsumablesPage: React.FC = () => {
                   ) : (
                     clients.map((p) => {
                       const totalRooms = roomsByUser.get(p.id)?.length || 0;
-                      const occupied = getOccupiedCount(p.id);
+                      const count = getCount(p.id);
                       const existing = billingByUser.get(p.id);
-                      const total = occupied * CONSUMABLE_UNIT_PRICE_HT;
+                      const total = count * CONSUMABLE_UNIT_PRICE_HT;
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">
@@ -409,9 +380,8 @@ const AdminConsumablesPage: React.FC = () => {
                             <Input
                               type="number"
                               min={0}
-                              max={totalRooms}
                               className="w-20 mx-auto text-center"
-                              value={occupied}
+                              value={count}
                               onChange={(e) =>
                                 setEditedCounts((prev) => ({
                                   ...prev,
@@ -426,10 +396,10 @@ const AdminConsumablesPage: React.FC = () => {
                           <TableCell>
                             {existing ? (
                               <Badge variant={existing.status === "billed" ? "default" : "secondary"}>
-                                {existing.status === "billed" ? "Facturé" : "Enregistré"}
+                                {existing.status === "billed" ? "Facturé" : "Généré"}
                               </Badge>
                             ) : (
-                              <Badge variant="outline">À facturer</Badge>
+                              <Badge variant="outline">À générer</Badge>
                             )}
                           </TableCell>
                           <TableCell>
@@ -437,9 +407,7 @@ const AdminConsumablesPage: React.FC = () => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() =>
-                                  saveMutation.mutate({ userId: p.id, logementCount: occupied })
-                                }
+                                onClick={() => saveMutation.mutate({ userId: p.id, count })}
                                 disabled={saveMutation.isPending}
                                 title="Enregistrer cette ligne"
                               >
@@ -483,9 +451,9 @@ const AdminConsumablesPage: React.FC = () => {
                 {clients.length > 0 && (
                   <TableFooter>
                     <TableRow className="font-bold">
-                      <TableCell>Total période</TableCell>
+                      <TableCell>Total {period}</TableCell>
                       <TableCell />
-                      <TableCell className="text-center">{totalOccupiedLogements}</TableCell>
+                      <TableCell className="text-center">{totalMonthsLogements}</TableCell>
                       <TableCell className="text-right">{grandTotalLive.toFixed(2)} €</TableCell>
                       <TableCell colSpan={2} />
                     </TableRow>

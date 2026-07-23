@@ -410,6 +410,62 @@ export async function fetchKrossbookingReservationsForAdminRooms(
   }
 }
 
+export interface RangeReservation {
+  id: string;
+  room_ids: string[];
+  check_in_date: string; // yyyy-mm-dd
+  check_out_date: string; // yyyy-mm-dd
+  status: string;
+}
+
+/**
+ * Récupère toutes les réservations de l'établissement sur une plage de dates,
+ * en paginant. Chaque réservation expose les `id_room` concernés (via `rooms`).
+ * Utilisé côté admin pour calculer l'occupation (ex. facturation consommables).
+ */
+export async function fetchAllReservationsInRange(
+  dateFrom: string,
+  dateTo: string,
+): Promise<RangeReservation[]> {
+  const all: RangeReservation[] = [];
+  const limit = 1000;
+  let offset = 0;
+
+  // Sécurité : on borne le nombre de pages pour éviter toute boucle infinie.
+  for (let page = 0; page < 50; page++) {
+    const data = await callKrossbookingProxy("get_all_reservations", {
+      date_from: dateFrom,
+      date_to: dateTo,
+      limit,
+      offset,
+    });
+
+    const list: any[] = Array.isArray(data) ? data : [];
+    for (const res of list) {
+      const roomIds: string[] = Array.isArray(res.rooms)
+        ? res.rooms
+            .map((r: any) => (r?.id_room != null ? String(r.id_room) : ""))
+            .filter(Boolean)
+        : res.id_room != null
+        ? [String(res.id_room)]
+        : [];
+
+      all.push({
+        id: String(res.id_reservation ?? res.id ?? ""),
+        room_ids: roomIds,
+        check_in_date: res.arrival || "",
+        check_out_date: res.departure || "",
+        status: res.cod_reservation_status || "",
+      });
+    }
+
+    if (list.length < limit) break;
+    offset += limit;
+  }
+
+  return all;
+}
+
 export async function fetchKrossbookingHousekeepingTasks(
   dateFrom: string,
   dateTo: string,

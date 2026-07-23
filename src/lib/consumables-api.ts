@@ -138,23 +138,3 @@ export async function deleteConsumableBilling(id: string): Promise<void> {
     throw new Error(`Erreur lors de la suppression : ${error.message}`);
   }
 }
-
-/**
- * Active ou désactive le module Consommables pour un client. (Admin)
- * Passe par l'edge function sécurisée qui vérifie le rôle admin.
- */
-export async function setConsumablesEnabled(
-  userId: string,
-  enabled: boolean,
-): Promise<void> {
-  const { error } = await supabase.functions.invoke("update-user-proxy", {
-    body: { user_id: userId, consumables_enabled: enabled },
-  });
-
-  if (error) {
-    console.error("Error updating consumables_enabled:", error);
-    throw new Error(
-      `Erreur lors de la mise à jour de l'activation : ${error.message}`,
-    );
-  }
-}

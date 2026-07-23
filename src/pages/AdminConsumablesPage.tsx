@@ -24,47 +24,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertTriangle,
-  ChevronDown,
   CheckCheck,
   Save,
   Trash2,
-  Plus,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { getAllProfiles, getAllUserRooms, type UserProfile } from "@/lib/admin-api";
+import {
+  getAllProfiles,
+  getAllUserRooms,
+  type UserProfile,
+  type AdminUserRoom,
+} from "@/lib/admin-api";
+import {
+  fetchKrossbookingReservationsForAdminRooms,
+  type KrossbookingReservation,
+} from "@/lib/krossbooking";
 import {
   CONSUMABLE_UNIT_PRICE_HT,
   getConsumableBillingsByPeriod,
   upsertConsumableBilling,
   setConsumableBillingStatus,
   deleteConsumableBilling,
-  setConsumablesEnabled,
   type ConsumableBilling,
 } from "@/lib/consumables-api";
 
@@ -76,6 +66,24 @@ const PERIOD_MONTHS = [
 const CURRENT_YEAR = new Date().getFullYear();
 const PERIOD_YEARS = [CURRENT_YEAR + 1, CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
 
+/** Vérifie si une réservation (non annulée) chevauche le mois donné. */
+function reservationOverlapsMonth(
+  res: KrossbookingReservation,
+  monthStart: Date,
+  monthEndExclusive: Date,
+): boolean {
+  const status = (res.status || "").toUpperCase();
+  if (status.includes("CANC")) return false;
+  if (!res.check_in_date || !res.check_out_date) return false;
+
+  const checkIn = new Date(`${res.check_in_date}T00:00:00`);
+  const checkOut = new Date(`${res.check_out_date}T00:00:00`);
+  if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) return false;
+
+  // Occupation = nuits [check_in, check_out) → chevauche le mois si :
+  return checkIn < monthEndExclusive && checkOut > monthStart;
+}
+
 const AdminConsumablesPage: React.FC = () => {
   const queryClient = useQueryClient();
   const now = new Date();
@@ -83,18 +91,33 @@ const AdminConsumablesPage: React.FC = () => {
   const [periodYear, setPeriodYear] = useState<string>(String(CURRENT_YEAR));
   const period = `${periodMonth} ${periodYear}`;
 
-  // Valeurs éditées localement (logements occupés) par utilisateur
+  const monthIndex = PERIOD_MONTHS.indexOf(periodMonth);
+  const yearNum = parseInt(periodYear, 10);
+  const monthStart = new Date(yearNum, monthIndex, 1);
+  const monthEndExclusive = new Date(yearNum, monthIndex + 1, 1);
+
+  // Valeurs éditées manuellement (surcharge de l'occupation auto) par utilisateur
   const [editedCounts, setEditedCounts] = useState<Record<string, number>>({});
-  const [clientPickerOpen, setClientPickerOpen] = useState(false);
 
   const { data: profiles, isLoading: loadingProfiles } = useQuery<UserProfile[]>({
     queryKey: ["adminAllProfiles"],
     queryFn: getAllProfiles,
   });
 
-  const { data: rooms, isLoading: loadingRooms } = useQuery({
+  const { data: rooms, isLoading: loadingRooms } = useQuery<AdminUserRoom[]>({
     queryKey: ["adminAllUserRooms"],
     queryFn: getAllUserRooms,
+  });
+
+  const {
+    data: reservations,
+    isLoading: loadingReservations,
+    isFetching: fetchingReservations,
+    refetch: refetchReservations,
+  } = useQuery<KrossbookingReservation[]>({
+    queryKey: ["adminAllReservations"],
+    queryFn: () => fetchKrossbookingReservationsForAdminRooms(rooms || [], false),
+    enabled: !!rooms && rooms.length > 0,
   });
 
   const {
@@ -106,13 +129,37 @@ const AdminConsumablesPage: React.FC = () => {
     queryFn: () => getConsumableBillingsByPeriod(period),
   });
 
+  // Logements par utilisateur
   const roomsByUser = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, AdminUserRoom[]>();
     (rooms || []).forEach((room) => {
-      map.set(room.user_id, (map.get(room.user_id) || 0) + 1);
+      const list = map.get(room.user_id) || [];
+      list.push(room);
+      map.set(room.user_id, list);
     });
     return map;
   }, [rooms]);
+
+  // Ensemble des room_id occupés durant le mois sélectionné
+  const occupiedRoomIds = useMemo(() => {
+    const set = new Set<string>();
+    (reservations || []).forEach((res) => {
+      if (reservationOverlapsMonth(res, monthStart, monthEndExclusive)) {
+        if (res.krossbooking_room_id) set.add(String(res.krossbooking_room_id));
+      }
+    });
+    return set;
+  }, [reservations, monthStart, monthEndExclusive]);
+
+  // Nombre de logements occupés (auto) par utilisateur pour le mois
+  const autoOccupiedByUser = useMemo(() => {
+    const map = new Map<string, number>();
+    roomsByUser.forEach((userRooms, userId) => {
+      const count = userRooms.filter((r) => occupiedRoomIds.has(String(r.room_id))).length;
+      map.set(userId, count);
+    });
+    return map;
+  }, [roomsByUser, occupiedRoomIds]);
 
   const billingByUser = useMemo(() => {
     const map = new Map<string, ConsumableBilling>();
@@ -120,32 +167,21 @@ const AdminConsumablesPage: React.FC = () => {
     return map;
   }, [billings]);
 
-  const enabledClients = useMemo(() => {
+  // Clients concernés : tous ceux qui ont au moins un logement et un contrat actif
+  const clients = useMemo(() => {
     return (profiles || [])
-      .filter((p) => p.consumables_enabled && !p.is_contract_terminated)
+      .filter((p) => !p.is_contract_terminated && (roomsByUser.get(p.id)?.length || 0) > 0)
       .sort((a, b) =>
-        `${a.first_name} ${a.last_name}`.trim() < `${b.first_name} ${b.last_name}`.trim() ? -1 : 1,
+        `${a.first_name} ${a.last_name}`.trim().toLowerCase() <
+        `${b.first_name} ${b.last_name}`.trim().toLowerCase()
+          ? -1
+          : 1,
       );
-  }, [profiles]);
-
-  const nonEnabledClients = useMemo(() => {
-    return (profiles || [])
-      .filter((p) => !p.consumables_enabled && !p.is_contract_terminated)
-      .sort((a, b) =>
-        `${a.first_name} ${a.last_name}`.trim() < `${b.first_name} ${b.last_name}`.trim() ? -1 : 1,
-      );
-  }, [profiles]);
+  }, [profiles, roomsByUser]);
 
   const getOccupiedCount = (userId: string): number => {
     if (editedCounts[userId] !== undefined) return editedCounts[userId];
-    const existing = billingByUser.get(userId);
-    if (existing) return existing.logement_count;
-    return roomsByUser.get(userId) || 0;
-  };
-
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: ["consumableBillings", period] });
-    queryClient.invalidateQueries({ queryKey: ["adminAllProfiles"] });
+    return autoOccupiedByUser.get(userId) || 0;
   };
 
   const saveMutation = useMutation({
@@ -156,7 +192,6 @@ const AdminConsumablesPage: React.FC = () => {
         logementCount: params.logementCount,
       }),
     onSuccess: (_, variables) => {
-      toast.success("Facturation enregistrée pour la période.");
       setEditedCounts((prev) => {
         const next = { ...prev };
         delete next[variables.userId];
@@ -185,37 +220,65 @@ const AdminConsumablesPage: React.FC = () => {
     onError: (err: any) => toast.error("Erreur", { description: err.message }),
   });
 
-  const enableMutation = useMutation({
-    mutationFn: (params: { userId: string; enabled: boolean }) =>
-      setConsumablesEnabled(params.userId, params.enabled),
-    onSuccess: (_, variables) => {
-      toast.success(
-        variables.enabled ? "Module activé pour le client." : "Module désactivé pour le client.",
-      );
-      invalidateAll();
-    },
-    onError: (err: any) => toast.error("Erreur", { description: err.message }),
-  });
+  const [savingAll, setSavingAll] = useState(false);
+  const handleSaveAll = async () => {
+    setSavingAll(true);
+    try {
+      const toSave = clients.filter((p) => getOccupiedCount(p.id) > 0);
+      for (const p of toSave) {
+        await upsertConsumableBilling({
+          userId: p.id,
+          period,
+          logementCount: getOccupiedCount(p.id),
+        });
+      }
+      setEditedCounts({});
+      toast.success(`${toSave.length} facturation(s) enregistrée(s) pour ${period}.`);
+      queryClient.invalidateQueries({ queryKey: ["consumableBillings", period] });
+    } catch (err: any) {
+      toast.error("Erreur lors de l'enregistrement groupé", { description: err.message });
+    } finally {
+      setSavingAll(false);
+    }
+  };
 
-  const totalPending = (billings || [])
-    .filter((b) => b.status === "pending")
-    .reduce((sum, b) => sum + Number(b.total_ht), 0);
+  // Totaux calculés (live) sur l'ensemble des clients pour la période
+  const grandTotalLive = clients.reduce(
+    (sum, p) => sum + getOccupiedCount(p.id) * CONSUMABLE_UNIT_PRICE_HT,
+    0,
+  );
   const totalBilled = (billings || [])
     .filter((b) => b.status === "billed")
     .reduce((sum, b) => sum + Number(b.total_ht), 0);
-  const totalAll = totalPending + totalBilled;
+  const totalOccupiedLogements = clients.reduce((sum, p) => sum + getOccupiedCount(p.id), 0);
 
   const isLoading = loadingProfiles || loadingRooms || loadingBillings;
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Facturation Consommables</h1>
-          <p className="text-muted-foreground mt-1">
-            Facturation de <strong>{CONSUMABLE_UNIT_PRICE_HT.toFixed(2)} € HT / logement / mois d'occupation</strong>.
-            Sélectionnez une période, ajustez le nombre de logements occupés puis enregistrez la facturation par client.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Facturation Consommables</h1>
+            <p className="text-muted-foreground mt-1 max-w-3xl">
+              Facturation automatique de{" "}
+              <strong>{CONSUMABLE_UNIT_PRICE_HT.toFixed(2)} € HT / logement / mois d'occupation</strong>.
+              L'occupation est calculée à partir des réservations Krossbooking : un logement est facturé
+              dès qu'il a au moins une nuit réservée dans le mois.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => refetchReservations()}
+            disabled={fetchingReservations}
+          >
+            {fetchingReservations ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Rafraîchir l'occupation
+          </Button>
         </div>
 
         {error && (
@@ -226,7 +289,7 @@ const AdminConsumablesPage: React.FC = () => {
           </Alert>
         )}
 
-        {/* Sélection période + totaux */}
+        {/* Période + totaux */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card className="lg:col-span-1">
             <CardHeader>
@@ -264,84 +327,45 @@ const AdminConsumablesPage: React.FC = () => {
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg">Totaux — {period}</CardTitle>
-              <CardDescription>Montants HT sur la période sélectionnée.</CardDescription>
+              <CardDescription>Calcul automatique basé sur l'occupation.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-xs text-muted-foreground">À facturer</p>
-                  <p className="text-2xl font-bold text-amber-600">{totalPending.toFixed(2)} €</p>
+                  <p className="text-xs text-muted-foreground">Logements occupés</p>
+                  <p className="text-2xl font-bold">{totalOccupiedLogements}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Facturé</p>
+                  <p className="text-xs text-muted-foreground">Total HT (calculé)</p>
+                  <p className="text-2xl font-bold text-blue-600">{grandTotalLive.toFixed(2)} €</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Déjà facturé</p>
                   <p className="text-2xl font-bold text-green-600">{totalBilled.toFixed(2)} €</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total HT</p>
-                  <p className="text-2xl font-bold">{totalAll.toFixed(2)} €</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Activer un client */}
+        {/* Tableau par client */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Activer le module pour un client</CardTitle>
-            <CardDescription>
-              Seuls les clients avec le module activé apparaissent dans la facturation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" className="w-full sm:w-96 justify-between">
-                  <span className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Choisir un client à activer…
-                  </span>
-                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                  <CommandInput placeholder="Rechercher un client..." />
-                  <CommandList>
-                    <CommandEmpty>Aucun client trouvé.</CommandEmpty>
-                    <CommandGroup>
-                      {nonEnabledClients.map((p) => (
-                        <CommandItem
-                          key={p.id}
-                          value={`${p.first_name} ${p.last_name}`}
-                          onSelect={() => {
-                            enableMutation.mutate({ userId: p.id, enabled: true });
-                            setClientPickerOpen(false);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            <span>{p.first_name} {p.last_name}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {(roomsByUser.get(p.id) || 0)} logement(s)
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </CardContent>
-        </Card>
-
-        {/* Tableau des clients activés */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Clients avec module Consommables activé</CardTitle>
-            <CardDescription>
-              Total HT = logements occupés × {CONSUMABLE_UNIT_PRICE_HT.toFixed(2)} €
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Total par client</CardTitle>
+              <CardDescription>
+                Total HT = logements occupés × {CONSUMABLE_UNIT_PRICE_HT.toFixed(2)} €
+                {(loadingReservations || fetchingReservations) && " — calcul de l'occupation en cours…"}
+              </CardDescription>
+            </div>
+            <Button onClick={handleSaveAll} disabled={savingAll || clients.length === 0}>
+              {savingAll ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Enregistrer tout
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="border rounded-lg overflow-x-auto">
@@ -350,7 +374,7 @@ const AdminConsumablesPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Client</TableHead>
                     <TableHead className="text-center">Logements</TableHead>
-                    <TableHead className="text-center">Logements occupés</TableHead>
+                    <TableHead className="text-center">Occupés (auto)</TableHead>
                     <TableHead className="text-right">Total HT</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -358,27 +382,23 @@ const AdminConsumablesPage: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    [...Array(4)].map((_, i) => (
+                    [...Array(5)].map((_, i) => (
                       <TableRow key={i}>
                         <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
                       </TableRow>
                     ))
-                  ) : enabledClients.length === 0 ? (
+                  ) : clients.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Aucun client n'a le module Consommables activé.
+                        Aucun client avec logement actif.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    enabledClients.map((p) => {
-                      const totalRooms = roomsByUser.get(p.id) || 0;
+                    clients.map((p) => {
+                      const totalRooms = roomsByUser.get(p.id)?.length || 0;
                       const occupied = getOccupiedCount(p.id);
                       const existing = billingByUser.get(p.id);
                       const total = occupied * CONSUMABLE_UNIT_PRICE_HT;
-                      const isDirty =
-                        editedCounts[p.id] !== undefined
-                          ? (existing ? existing.logement_count !== editedCounts[p.id] : true)
-                          : !existing;
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">
@@ -389,6 +409,7 @@ const AdminConsumablesPage: React.FC = () => {
                             <Input
                               type="number"
                               min={0}
+                              max={totalRooms}
                               className="w-20 mx-auto text-center"
                               value={occupied}
                               onChange={(e) =>
@@ -405,29 +426,29 @@ const AdminConsumablesPage: React.FC = () => {
                           <TableCell>
                             {existing ? (
                               <Badge variant={existing.status === "billed" ? "default" : "secondary"}>
-                                {existing.status === "billed" ? "Facturé" : "À facturer"}
+                                {existing.status === "billed" ? "Facturé" : "Enregistré"}
                               </Badge>
                             ) : (
-                              <Badge variant="outline">Non enregistré</Badge>
+                              <Badge variant="outline">À facturer</Badge>
                             )}
                           </TableCell>
                           <TableCell>
                             <div className="flex justify-end gap-1">
                               <Button
                                 size="sm"
-                                variant={isDirty ? "default" : "outline"}
+                                variant="outline"
                                 onClick={() =>
                                   saveMutation.mutate({ userId: p.id, logementCount: occupied })
                                 }
                                 disabled={saveMutation.isPending}
+                                title="Enregistrer cette ligne"
                               >
-                                <Save className="h-4 w-4 mr-1" />
-                                Enregistrer
+                                <Save className="h-4 w-4" />
                               </Button>
                               {existing && (
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant={existing.status === "billed" ? "default" : "outline"}
                                   onClick={() =>
                                     statusMutation.mutate({
                                       id: existing.id,
@@ -435,7 +456,7 @@ const AdminConsumablesPage: React.FC = () => {
                                     })
                                   }
                                   disabled={statusMutation.isPending}
-                                  title={existing.status === "billed" ? "Marquer à facturer" : "Marquer facturé"}
+                                  title={existing.status === "billed" ? "Marquer non facturé" : "Marquer facturé"}
                                 >
                                   <CheckCheck className="h-4 w-4" />
                                 </Button>
@@ -452,15 +473,6 @@ const AdminConsumablesPage: React.FC = () => {
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => enableMutation.mutate({ userId: p.id, enabled: false })}
-                                disabled={enableMutation.isPending}
-                                title="Désactiver le module pour ce client"
-                              >
-                                Désactiver
-                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -468,11 +480,13 @@ const AdminConsumablesPage: React.FC = () => {
                     })
                   )}
                 </TableBody>
-                {enabledClients.length > 0 && (
+                {clients.length > 0 && (
                   <TableFooter>
                     <TableRow className="font-bold">
-                      <TableCell colSpan={3}>Total période</TableCell>
-                      <TableCell className="text-right">{totalAll.toFixed(2)} €</TableCell>
+                      <TableCell>Total période</TableCell>
+                      <TableCell />
+                      <TableCell className="text-center">{totalOccupiedLogements}</TableCell>
+                      <TableCell className="text-right">{grandTotalLive.toFixed(2)} €</TableCell>
                       <TableCell colSpan={2} />
                     </TableRow>
                   </TableFooter>

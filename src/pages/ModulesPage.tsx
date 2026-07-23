@@ -178,12 +178,11 @@ const ModulesPage: React.FC = () => {
       name: 'Consommables',
       description: 'Gestion et l’achat de vos consommables (papier, pastilles lave-vaisselle, sacs poubelles, etc.)',
       icon: CheckCheck,
-      status: profile?.consumables_enabled ? 'Activé' : 'Nouveau',
-      info: '2€ HT / mois / logement',
-      actionText: profile?.consumables_enabled ? 'Activé' : 'Demander',
-      buttonVariant: profile?.consumables_enabled ? 'outline' : 'default',
-      buttonDisabled: profile?.consumables_enabled || false,
-      onClick: profile?.consumables_enabled ? undefined : () => handleRequestActivation('Consommables'),
+      status: 'Activé',
+      info: '2€ HT / mois / logement occupé',
+      actionText: 'Activé',
+      buttonVariant: 'outline',
+      buttonDisabled: true,
     },
   ];
 

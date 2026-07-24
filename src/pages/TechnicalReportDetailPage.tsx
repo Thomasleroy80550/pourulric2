@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle, Star } from 'lucide-react';
+import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle, Star, FileDown, Loader2 } from 'lucide-react';
 import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, getTechnicalReportUpdates, TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
+import { downloadIncidentReportPdf } from '@/lib/pdf-utils';
 import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const [newUpdate, setNewUpdate] = useState('');
   const [newMediaFiles, setNewMediaFiles] = useState<FileList | null>(null);
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchReport = async () => {
@@ -187,6 +189,18 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
       fetchReport();
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!report) return;
+    setIsDownloadingPdf(true);
+    try {
+      await downloadIncidentReportPdf(report);
+    } catch (err: any) {
+      toast.error(`Erreur lors de la génération du PDF: ${err.message}`);
+    } finally {
+      setIsDownloadingPdf(false);
     }
   };
 
@@ -386,6 +400,10 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
             <Card>
               <CardHeader><CardTitle>Actions Admin</CardTitle></CardHeader>
               <CardContent className="space-y-2">
+                <Button className="w-full" variant="secondary" onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
+                  {isDownloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+                  Télécharger le PDF
+                </Button>
                 {report.status !== 'admin_will_manage' && report.status !== 'resolved' && report.status !== 'archived' && (
                   <Button className="w-full" onClick={handleTakeCharge}><Wrench className="h-4 w-4 mr-2" />Marquer comme pris en charge</Button>
                 )}

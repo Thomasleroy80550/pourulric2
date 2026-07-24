@@ -8,8 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle, Star, FileDown, Loader2 } from 'lucide-react';
-import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, getTechnicalReportUpdates, TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
+import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle, Star, FileDown, Loader2, Mail } from 'lucide-react';
+import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, getTechnicalReportUpdates, sendTechnicalReportEmail, TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
 import { downloadIncidentReportPdf } from '@/lib/pdf-utils';
 import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
@@ -35,6 +35,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
   const [newMediaFiles, setNewMediaFiles] = useState<FileList | null>(null);
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchReport = async () => {
@@ -201,6 +202,19 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
       toast.error(`Erreur lors de la génération du PDF: ${err.message}`);
     } finally {
       setIsDownloadingPdf(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!report) return;
+    setIsSendingEmail(true);
+    try {
+      await sendTechnicalReportEmail(report, updates);
+      toast.success("Rapport envoyé par email au propriétaire.");
+    } catch (err: any) {
+      toast.error(`Erreur lors de l'envoi de l'email: ${err.message}`);
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -403,6 +417,10 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
                 <Button className="w-full" variant="secondary" onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
                   {isDownloadingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
                   Télécharger le PDF
+                </Button>
+                <Button className="w-full" variant="secondary" onClick={handleSendEmail} disabled={isSendingEmail}>
+                  {isSendingEmail ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
+                  Envoyer par mail
                 </Button>
                 {report.status !== 'admin_will_manage' && report.status !== 'resolved' && report.status !== 'archived' && (
                   <Button className="w-full" onClick={handleTakeCharge}><Wrench className="h-4 w-4 mr-2" />Marquer comme pris en charge</Button>

@@ -103,6 +103,50 @@ export async function createTechnicalReport(report: Omit<TechnicalReport, 'id' |
   return data;
 }
 
+/**
+ * (Re)génère le PDF du rapport d'incident (avec l'historique des messages) et l'envoie
+ * par email au propriétaire concerné, en pièce jointe.
+ */
+export async function sendTechnicalReportEmail(report: TechnicalReport, updates: TechnicalReportUpdate[] = []): Promise<void> {
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('email, first_name, last_name')
+    .eq('id', report.user_id)
+    .single();
+
+  if (profileError || !profileData?.email) {
+    throw new Error("Impossible de récupérer l'adresse email du propriétaire.");
+  }
+
+  const userFirstName = profileData.first_name || 'Cher utilisateur';
+
+  const reportForPdf: TechnicalReport = {
+    ...report,
+    profiles: { first_name: profileData.first_name, last_name: profileData.last_name },
+  };
+
+  let attachments: EmailAttachment[] | undefined;
+  const pdfBase64 = await generateIncidentReportPdfBase64(reportForPdf, updates);
+  if (pdfBase64) {
+    attachments = [{ filename: buildIncidentReportFileName(reportForPdf), content: pdfBase64 }];
+  }
+
+  const subject = `Rapport d'incident : ${report.title}`;
+  const htmlContent = `
+    <p>Bonjour ${userFirstName},</p>
+    <p>Veuillez trouver ci-joint le rapport d'incident concernant votre propriété :</p>
+    <p><strong>Titre :</strong> ${report.title}</p>
+    <p><strong>Propriété :</strong> ${report.property_name}</p>
+    <p>Le document PDF joint récapitule les détails de l'incident ainsi que l'historique des échanges, signé par l'équipe Hello Keys.</p>
+    <p>Vous pouvez également consulter ce rapport en ligne :</p>
+    <p><a href="${import.meta.env.VITE_APP_BASE_URL}/reports/${report.id}">Voir le rapport technique</a></p>
+    <p>Merci de votre confiance.</p>
+    <p>L'équipe Hello Keys</p>
+  `;
+
+  await sendEmail(profileData.email, subject, htmlContent, attachments);
+}
+
 export async function getTechnicalReportsByUserId(userId: string): Promise<TechnicalReport[]> {
   const { data, error } = await supabase
     .from('technical_reports')

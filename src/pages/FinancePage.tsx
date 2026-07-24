@@ -7,6 +7,7 @@ import BalancesTab from '@/components/finance/BalancesTab';
 import ReportsTab from '@/components/finance/ReportsTab';
 import ExpensesTab from '@/components/finance/ExpensesTab';
 import RehousingNotesTab from '@/components/finance/RehousingNotesTab';
+import TransfersTab from '@/components/finance/TransfersTab';
 import { useSession } from '@/components/SessionContextProvider';
 import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
@@ -135,6 +136,7 @@ const FinancePage: React.FC = () => {
                   <SelectContent position="popper" className="w-full">
                     <SelectItem value="statements">Relevés</SelectItem>
                     <SelectItem value="invoices">Factures</SelectItem>
+                    <SelectItem value="transfers">Virements</SelectItem>
                     <SelectItem value="rehousing">Relogements</SelectItem>
                     <SelectItem value="balances">Bilans</SelectItem>
                     <SelectItem value="reports" disabled>Rapports (En développement)</SelectItem>
@@ -143,9 +145,10 @@ const FinancePage: React.FC = () => {
                 </Select>
               </div>
             ) : (
-              <TabsList className={`w-full flex flex-nowrap overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory gap-2 whitespace-nowrap md:grid ${showExpensesTab ? 'md:grid-cols-6' : 'md:grid-cols-5'} max-w-full mx-auto text-center -mx-3 px-3`}>
+              <TabsList className={`w-full flex flex-nowrap overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory gap-2 whitespace-nowrap md:grid ${showExpensesTab ? 'md:grid-cols-7' : 'md:grid-cols-6'} max-w-full mx-auto text-center -mx-3 px-3`}>
                 <TabsTrigger value="statements" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relevés</TabsTrigger>
                 <TabsTrigger value="invoices" className="flex-shrink-0 min-w-[140px] md:min-w-0">Factures</TabsTrigger>
+                <TabsTrigger value="transfers" className="flex-shrink-0 min-w-[140px] md:min-w-0">Virements</TabsTrigger>
                 <TabsTrigger value="rehousing" className="flex-shrink-0 min-w-[140px] md:min-w-0">Relogements</TabsTrigger>
                 <TabsTrigger value="balances" className="flex-shrink-0 min-w-[140px] md:min-w-0">Bilans</TabsTrigger>
                 <TabsTrigger value="reports" disabled className="flex-shrink-0 min-w-[200px] md:min-w-0">Rapports (En développement)</TabsTrigger>
@@ -158,6 +161,9 @@ const FinancePage: React.FC = () => {
           </TabsContent>
           <TabsContent value="invoices">
             <InvoicesTab />
+          </TabsContent>
+          <TabsContent value="transfers">
+            <TransfersTab />
           </TabsContent>
           <TabsContent value="rehousing">
             <RehousingNotesTab />

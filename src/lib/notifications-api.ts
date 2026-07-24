@@ -88,13 +88,21 @@ export async function createNotification(userId: string, message: string, link?:
   }
 }
 
+export interface EmailAttachment {
+  /** Nom du fichier joint (ex: "rapport.pdf"). */
+  filename: string;
+  /** Contenu du fichier encodé en base64 (sans préfixe data URI). */
+  content: string;
+}
+
 /**
  * Sends an email to a specified recipient.
  * @param to The email address of the recipient.
  * @param subject The subject of the email.
  * @param html The HTML content of the email.
+ * @param attachments Optional file attachments (base64 encoded).
  */
-export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[]): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("User not authenticated.");
 
@@ -106,7 +114,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ to, subject, html }),
+    body: JSON.stringify({ to, subject, html, attachments }),
   });
 
   if (!response.ok) {

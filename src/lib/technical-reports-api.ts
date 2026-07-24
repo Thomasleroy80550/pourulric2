@@ -1,5 +1,6 @@
 import { supabase } from '../integrations/supabase/client';
-import { Notification, sendEmail, createNotification } from './notifications-api'; // Import createNotification
+import { Notification, sendEmail, createNotification, EmailAttachment } from './notifications-api'; // Import createNotification
+import { generateIncidentReportPdfBase64, buildIncidentReportFileName } from './pdf-utils';
 
 export interface TechnicalReport {
   id: string;
@@ -56,7 +57,7 @@ export async function createTechnicalReport(report: Omit<TechnicalReport, 'id' |
   try {
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('email, first_name')
+      .select('email, first_name, last_name')
       .eq('id', data.user_id)
       .single();
 
@@ -64,18 +65,35 @@ export async function createTechnicalReport(report: Omit<TechnicalReport, 'id' |
       console.error("Erreur lors de la récupération de l'email de l'utilisateur pour le rapport technique :", profileError.message);
     } else if (profileData?.email) {
       const userFirstName = profileData.first_name || 'Cher utilisateur';
+
+      // Génère le PDF du rapport d'incident (avec la signature Hello Keys) à joindre à l'email.
+      let attachments: EmailAttachment[] | undefined;
+      try {
+        const reportForPdf: TechnicalReport = {
+          ...data,
+          profiles: { first_name: profileData.first_name, last_name: profileData.last_name },
+        };
+        const pdfBase64 = await generateIncidentReportPdfBase64(reportForPdf);
+        if (pdfBase64) {
+          attachments = [{ filename: buildIncidentReportFileName(reportForPdf), content: pdfBase64 }];
+        }
+      } catch (pdfError: any) {
+        console.error("Erreur lors de la génération du PDF du rapport d'incident :", pdfError?.message);
+      }
+
       const subject = `Action requise : Nouveau rapport technique créé : ${data.title}`;
       const htmlContent = `
         <p>Bonjour ${userFirstName},</p>
         <p>Un nouveau rapport technique a été créé pour votre propriété :</p>
         <p><strong>Titre :</strong> ${data.title}</p>
         <p><strong>Description :</strong> ${data.description || 'N/A'}</p>
+        <p>Vous trouverez en pièce jointe le rapport d'incident complet au format PDF, signé par l'équipe Hello Keys.</p>
         <p>Vous pouvez consulter les détails et suivre l'avancement de ce rapport en cliquant sur le lien ci-dessous :</p>
         <p><a href="${import.meta.env.VITE_APP_BASE_URL}/reports/${data.id}">Voir le rapport technique</a></p>
         <p>Merci de votre confiance.</p>
         <p>L'équipe Hello Keys</p>
       `;
-      await sendEmail(profileData.email, subject, htmlContent);
+      await sendEmail(profileData.email, subject, htmlContent, attachments);
       console.log(`Email de rapport technique envoyé à ${profileData.email}`);
     }
   } catch (emailError: any) {

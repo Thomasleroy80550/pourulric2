@@ -34,13 +34,22 @@ serve(async (req) => {
       });
     }
 
-    const { to, subject, html } = await req.json();
+    const { to, subject, html, attachments } = await req.json();
 
     if (!to || !subject || !html) {
       return new Response(JSON.stringify({ error: 'Missing parameters: to, subject, and html are required.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
+    }
+
+    // Normalize optional attachments: [{ filename, content (base64) }]
+    let resendAttachments: { filename: string; content: string }[] | undefined;
+    if (Array.isArray(attachments) && attachments.length > 0) {
+      resendAttachments = attachments
+        .filter((att: any) => att && typeof att.filename === 'string' && typeof att.content === 'string')
+        .map((att: any) => ({ filename: att.filename, content: att.content }));
+      console.log(`[send-email] ${resendAttachments.length} attachment(s) included.`);
     }
 
     // Read contact email setting if exists, else default
@@ -63,6 +72,7 @@ serve(async (req) => {
       bcc: [contactEmail],
       subject,
       html,
+      ...(resendAttachments && resendAttachments.length > 0 ? { attachments: resendAttachments } : {}),
     });
 
     if (sendErr) {

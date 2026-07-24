@@ -3,11 +3,109 @@ import { SavedInvoice } from '@/lib/admin-api';
 import StatementPrintLayout from '@/components/StatementPrintLayout';
 import PerformanceSummaryPrintLayout from '@/components/PerformanceSummaryPrintLayout';
 import HivernageRequestPrintLayout from '@/components/HivernageRequestPrintLayout';
+import IncidentReportPrintLayout from '@/components/IncidentReportPrintLayout';
 import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import CguvPrintLayout from '@/components/CguvPrintLayout';
 import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
+import type { TechnicalReport } from '@/lib/technical-reports-api';
+
+/**
+ * Génère le PDF d'un rapport d'incident et retourne le contenu jsPDF prêt à l'emploi.
+ */
+const buildIncidentReportPdf = (report: TechnicalReport): Promise<jsPDF> => {
+  return new Promise((resolve, reject) => {
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.width = '1024px';
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+
+    const cleanup = () => {
+      root.unmount();
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    };
+
+    const captureAndResolve = async () => {
+      try {
+        const element = container.querySelector('#incident-report-to-print') as HTMLElement | null;
+        if (!element) {
+          throw new Error("Impossible de trouver l'élément du rapport d'incident à imprimer.");
+        }
+
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          width: element.scrollWidth,
+          height: element.scrollHeight,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+          heightLeft -= pdfHeight;
+        }
+
+        resolve(pdf);
+      } catch (error) {
+        reject(error);
+      } finally {
+        cleanup();
+      }
+    };
+
+    root.render(
+      <React.StrictMode>
+        <IncidentReportPrintLayout report={report} />
+      </React.StrictMode>
+    );
+
+    setTimeout(captureAndResolve, 700);
+  });
+};
+
+export const buildIncidentReportFileName = (report: TechnicalReport): string => {
+  const reference = report.id.replace(/-/g, '').slice(0, 8).toUpperCase();
+  const property = (report.property_name || 'logement').replace(/\s+/g, '_');
+  return `Incident_${property}_${reference}.pdf`;
+};
+
+/**
+ * Génère le PDF d'un rapport d'incident et retourne son contenu encodé en base64 (sans préfixe data URI),
+ * prêt à être envoyé en pièce jointe d'email.
+ */
+export const generateIncidentReportPdfBase64 = async (report: TechnicalReport): Promise<string> => {
+  const pdf = await buildIncidentReportPdf(report);
+  const dataUri = pdf.output('datauristring');
+  return dataUri.split(',')[1] ?? '';
+};
+
+/**
+ * Génère et télécharge le PDF d'un rapport d'incident.
+ */
+export const downloadIncidentReportPdf = async (report: TechnicalReport): Promise<void> => {
+  const pdf = await buildIncidentReportPdf(report);
+  pdf.save(buildIncidentReportFileName(report));
+};
 
 export const generateStatementPdf = (statement: SavedInvoice): Promise<File> => {
   return new Promise((resolve, reject) => {

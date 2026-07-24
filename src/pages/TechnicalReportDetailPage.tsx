@@ -290,9 +290,15 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
                   </div>
                 </div>
               ))}
-              {report.status !== 'resolved' && report.status !== 'archived' && (
+              {report.status !== 'archived' && (
                 <div className="pt-4 border-t space-y-2">
-                  {isGuestReport && (
+                  {report.status === 'resolved' && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      Ce rapport est résolu, mais vous pouvez toujours ajouter une note.
+                    </p>
+                  )}
+                  {isGuestReport && report.status !== 'resolved' && (
                     <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
                       <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                         <MessageCircle className="h-3.5 w-3.5" />

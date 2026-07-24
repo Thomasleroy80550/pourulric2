@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { TechnicalReport } from '@/lib/technical-reports-api';
+import { TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
 
 const priorityLabels: Record<string, string> = {
   low: 'Basse',
@@ -10,7 +10,7 @@ const priorityLabels: Record<string, string> = {
   urgent: 'Urgente',
 };
 
-const IncidentReportPrintLayout: React.FC<{ report: TechnicalReport }> = ({ report }) => {
+const IncidentReportPrintLayout: React.FC<{ report: TechnicalReport; updates?: TechnicalReportUpdate[] }> = ({ report, updates = [] }) => {
   const ownerName = `${report.profiles?.first_name ?? ''} ${report.profiles?.last_name ?? ''}`.trim() || 'Propriétaire';
   const createdAt = new Date(report.created_at).toLocaleString('fr-FR');
   const reference = `#${report.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
@@ -111,6 +111,51 @@ const IncidentReportPrintLayout: React.FC<{ report: TechnicalReport }> = ({ repo
                 }}
               />
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Historique des messages */}
+      {updates.length > 0 && (
+        <section style={{ marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '15px', marginBottom: '8px', color: '#255f85' }}>Historique des échanges</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {updates.map((update) => {
+              const authorName =
+                `${update.profiles?.first_name ?? ''} ${update.profiles?.last_name ?? ''}`.trim() || 'Utilisateur';
+              const isAdmin = update.profiles?.role === 'admin';
+              const date = new Date(update.created_at).toLocaleString('fr-FR');
+              return (
+                <div
+                  key={update.id}
+                  style={{
+                    border: '1px solid #e5e7eb',
+                    borderLeft: `4px solid ${isAdmin ? '#255f85' : '#9ca3af'}`,
+                    borderRadius: '6px',
+                    padding: '10px 12px',
+                    background: '#f9fafb',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 600, fontSize: '13px', color: isAdmin ? '#255f85' : '#374151' }}>
+                      {authorName}
+                      {isAdmin ? ' (Hello Keys)' : ''}
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>{date}</span>
+                  </div>
+                  {update.content && (
+                    <p style={{ margin: 0, fontSize: '13px', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                      {update.content}
+                    </p>
+                  )}
+                  {update.media_urls && update.media_urls.length > 0 && (
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>
+                      {update.media_urls.length} pièce(s) jointe(s)
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

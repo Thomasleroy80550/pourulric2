@@ -196,7 +196,7 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     if (!report) return;
     setIsDownloadingPdf(true);
     try {
-      await downloadIncidentReportPdf(report);
+      await downloadIncidentReportPdf(report, updates);
     } catch (err: any) {
       toast.error(`Erreur lors de la génération du PDF: ${err.message}`);
     } finally {

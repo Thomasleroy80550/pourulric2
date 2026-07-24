@@ -9,12 +9,12 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import CguvPrintLayout from '@/components/CguvPrintLayout';
 import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
-import type { TechnicalReport } from '@/lib/technical-reports-api';
+import type { TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
 
 /**
  * Génère le PDF d'un rapport d'incident et retourne le contenu jsPDF prêt à l'emploi.
  */
-const buildIncidentReportPdf = (report: TechnicalReport): Promise<jsPDF> => {
+const buildIncidentReportPdf = (report: TechnicalReport, updates: TechnicalReportUpdate[] = []): Promise<jsPDF> => {
   return new Promise((resolve, reject) => {
     const container = document.createElement('div');
     container.style.position = 'absolute';
@@ -75,7 +75,7 @@ const buildIncidentReportPdf = (report: TechnicalReport): Promise<jsPDF> => {
 
     root.render(
       <React.StrictMode>
-        <IncidentReportPrintLayout report={report} />
+        <IncidentReportPrintLayout report={report} updates={updates} />
       </React.StrictMode>
     );
 
@@ -93,8 +93,8 @@ export const buildIncidentReportFileName = (report: TechnicalReport): string => 
  * Génère le PDF d'un rapport d'incident et retourne son contenu encodé en base64 (sans préfixe data URI),
  * prêt à être envoyé en pièce jointe d'email.
  */
-export const generateIncidentReportPdfBase64 = async (report: TechnicalReport): Promise<string> => {
-  const pdf = await buildIncidentReportPdf(report);
+export const generateIncidentReportPdfBase64 = async (report: TechnicalReport, updates: TechnicalReportUpdate[] = []): Promise<string> => {
+  const pdf = await buildIncidentReportPdf(report, updates);
   const dataUri = pdf.output('datauristring');
   return dataUri.split(',')[1] ?? '';
 };
@@ -102,8 +102,8 @@ export const generateIncidentReportPdfBase64 = async (report: TechnicalReport): 
 /**
  * Génère et télécharge le PDF d'un rapport d'incident.
  */
-export const downloadIncidentReportPdf = async (report: TechnicalReport): Promise<void> => {
-  const pdf = await buildIncidentReportPdf(report);
+export const downloadIncidentReportPdf = async (report: TechnicalReport, updates: TechnicalReportUpdate[] = []): Promise<void> => {
+  const pdf = await buildIncidentReportPdf(report, updates);
   pdf.save(buildIncidentReportFileName(report));
 };
 

@@ -22,6 +22,7 @@ import ProfilePage from "./pages/ProfilePage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
+import AdminCommissionExplanationPage from "./pages/AdminCommissionExplanationPage";
 import AdminCreatePennylaneInvoicePage from "./pages/AdminCreatePennylaneInvoicePage";
 import AdminStatementsPage from "./pages/AdminStatementsPage";
 import AdminTransferSummaryPage from "./pages/AdminTransferSummaryPage";
@@ -153,6 +154,7 @@ function App() {
                       <Route path="/admin/pages" element={<PageCreator />} />
                       <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />
                       <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />
+                      <Route path="/admin/commission-explained" element={<AdminCommissionExplanationPage />} />
                       <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} />
                       <Route path="/admin/statements" element={<AdminStatementsPage />} />
                       <Route path="/admin/transfer-summary" element={<AdminTransferSummaryPage />} />

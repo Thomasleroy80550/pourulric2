@@ -32,9 +32,6 @@ const exCommission = exRevenuGenere * example.taux;
 
 const eur = (n: number) => `${n.toFixed(2)}€`;
 
-const principle =
-  'La commission Hello Keys = Revenu Généré × Taux du client (26% par défaut si non renseigné), où le Revenu Généré est le loyer net réellement perçu, hors ménage, hors taxe de séjour et après déduction des commissions plateforme et frais de paiement.';
-
 const steps = [
   {
     title: '1. Chiffre d\u2019Affaires (CA)',
@@ -127,6 +124,95 @@ const faq = [
   },
 ];
 
+// ===== Contenu simplifié destiné au PDF client (aucune mention d'outils internes) =====
+
+const clientPrinciple =
+  'Notre commission est calculée uniquement sur votre revenu locatif net : le loyer réellement perçu, une fois retirés les frais de la plateforme (Airbnb, Booking...), les frais de ménage et la taxe de séjour. Nous ne prenons donc jamais de commission sur des sommes qui ne vous reviennent pas.';
+
+const clientSteps = [
+  {
+    title: '1. Ce que paie le voyageur',
+    formula: 'Total payé = Prix du séjour + Frais de ménage + Taxe de séjour',
+    detail:
+      'C\u2019est le montant total réglé par le voyageur lors de sa réservation. Pour Airbnb et Booking.com, la taxe de séjour est collectée et reversée directement par la plateforme : elle apparaît donc à 0€ sur votre relevé.',
+    example: `${eur(example.prixSejour)} + ${eur(example.fraisMenage)} + ${eur(example.taxeDeSejour)} = ${eur(exCA)}`,
+  },
+  {
+    title: '2. Ce que la plateforme reverse réellement',
+    formula: 'Montant versé = Total payé - Frais de la plateforme - Frais de paiement',
+    detail:
+      'Les plateformes (Airbnb, Booking...) prélèvent leur propre commission et des frais de paiement avant de reverser l\u2019argent. Le montant versé est ce qui arrive réellement.',
+    example: `${eur(exCA)} - ${eur(example.commissionPlateforme)} - ${eur(example.fraisPaiement)} = ${eur(exMontantVerse)}`,
+  },
+  {
+    title: '3. Votre revenu locatif net',
+    formula: 'Revenu net = Montant versé - Frais de ménage - Taxe de séjour',
+    detail:
+      'On retire les frais de ménage (qui rémunèrent la prestation de ménage) et la taxe de séjour (qui est reversée aux autorités). Ce qui reste correspond à votre loyer net : c\u2019est sur cette base, et uniquement celle-ci, que notre commission est calculée.',
+    example: `${eur(exMontantVerse)} - ${eur(example.fraisMenage)} - ${eur(example.taxeDeSejour)} = ${eur(exRevenuGenere)}`,
+  },
+  {
+    title: '4. La commission Hello Keys',
+    formula: 'Commission = Revenu net x Taux de votre contrat',
+    detail:
+      'Le taux appliqué est celui prévu dans votre contrat (dans cet exemple : 26%). Vos séjours personnels dans votre logement ne sont jamais commissionnés.',
+    example: `${eur(exRevenuGenere)} x ${(example.taux * 100).toFixed(0)}% = ${eur(exCommission)}`,
+  },
+];
+
+const clientRules = [
+  {
+    title: 'Taxe de séjour Airbnb & Booking.com',
+    text: 'Ces plateformes collectent la taxe de séjour auprès du voyageur et la reversent elles-mêmes aux autorités. Elle apparaît donc à 0€ sur votre relevé pour ces réservations.',
+  },
+  {
+    title: 'Vos séjours personnels',
+    text: 'Lorsque vous occupez vous-même votre logement, aucune commission n\u2019est facturée sur ce séjour.',
+  },
+  {
+    title: 'Réservations annulées',
+    text: 'Les réservations annulées n\u2019apparaissent pas sur votre relevé.',
+  },
+  {
+    title: 'Rattachement au mois',
+    text: 'Une réservation est comptée dans le mois de la date de départ du voyageur (check-out).',
+  },
+];
+
+const clientTotalsNote =
+  'Sur votre relevé : Total de notre facture = Commission Hello Keys + Frais de ménage (montant TTC, détaillé en HT et TVA 20%). Votre résultat net = Montant versé par les plateformes - Taxe de séjour - Frais de ménage - Commission.';
+
+const clientFaq = [
+  {
+    q: 'Pourquoi la commission n\u2019est-elle pas calculée sur le montant total payé par le voyageur ?',
+    a: 'Parce que ce montant contient des sommes qui ne sont pas du loyer : les frais de ménage, la taxe de séjour et les frais prélevés par les plateformes. Notre commission ne porte que sur votre revenu locatif net, c\u2019est-à-dire ce qui vous revient réellement.',
+  },
+  {
+    q: 'Pourquoi la taxe de séjour est-elle à 0€ sur mes réservations Airbnb et Booking ?',
+    a: 'Airbnb et Booking.com collectent la taxe de séjour directement auprès du voyageur et la reversent eux-mêmes aux autorités. Elle ne transite donc pas par nous, c\u2019est pourquoi elle apparaît à 0€ sur votre relevé pour ces plateformes.',
+  },
+  {
+    q: 'Quel taux de commission m\u2019est appliqué ?',
+    a: 'Le taux prévu dans votre contrat de gestion. Il est identique chaque mois. En cas de doute, contactez-nous : nous vous le confirmerons immédiatement.',
+  },
+  {
+    q: 'La commission est-elle HT ou TTC ?',
+    a: 'Le montant de commission affiché sur votre relevé est TTC. Sur la facture, il est décomposé en montant HT et TVA à 20%.',
+  },
+  {
+    q: 'Que contient le « Total de notre facture » sur mon relevé ?',
+    a: 'Il regroupe la commission Hello Keys et les frais de ménage du mois. C\u2019est ce montant TTC qui vous est facturé.',
+  },
+  {
+    q: 'Comment est calculé le « Résultat » (ce qui me revient) ?',
+    a: 'Résultat = Montant versé par les plateformes - Taxe de séjour collectée - Frais de ménage - Commission Hello Keys. C\u2019est le montant net qui vous revient.',
+  },
+  {
+    q: 'Suis-je facturé quand j\u2019occupe moi-même mon logement ?',
+    a: 'Non, vos séjours personnels ne génèrent aucune commission.',
+  },
+];
+
 // jsPDF n'affiche pas certains caractères unicode (− × → « ») avec les polices standard
 const pdfSafe = (text: string) =>
   text
@@ -186,14 +272,14 @@ const generateCommissionPdf = () => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(255, 255, 255);
-  doc.text('Calcul de la commission Hello Keys', margin, 12);
+  doc.text('Comment est calculée la commission Hello Keys ?', margin, 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text('Document explicatif - comment votre commission est calculée, étape par étape.', margin, 19);
+  doc.text('Explication simple, étape par étape, avec un exemple chiffré.', margin, 19);
   y = 34;
 
   // ===== Principe =====
-  const principleLines = doc.splitTextToSize(pdfSafe(principle), contentWidth - 8);
+  const principleLines = doc.splitTextToSize(pdfSafe(clientPrinciple), contentWidth - 8);
   const boxHeight = principleLines.length * 4 + 12;
   ensureSpace(boxHeight + 4);
   doc.setFillColor(...LIGHT_BG);
@@ -212,12 +298,12 @@ const generateCommissionPdf = () => {
   // ===== Étapes =====
   sectionTitle('Le calcul, étape par étape');
   paragraph(
-    `Exemple utilisé : séjour de ${eur(example.prixSejour)}, ménage ${eur(example.fraisMenage)}, taxe ${eur(example.taxeDeSejour)}, commission plateforme ${eur(example.commissionPlateforme)}, frais de paiement ${eur(example.fraisPaiement)}, taux client ${(example.taux * 100).toFixed(0)}%.`,
+    `Exemple utilisé tout au long du document : séjour de ${eur(example.prixSejour)}, ménage ${eur(example.fraisMenage)}, taxe de séjour ${eur(example.taxeDeSejour)}, frais de la plateforme ${eur(example.commissionPlateforme)}, frais de paiement ${eur(example.fraisPaiement)}, taux de commission ${(example.taux * 100).toFixed(0)}%.`,
     { color: GRAY },
   );
   y += 1;
 
-  steps.forEach((step) => {
+  clientSteps.forEach((step) => {
     const detailLines = doc.splitTextToSize(pdfSafe(step.detail), contentWidth - 6);
     const blockHeight = 16 + detailLines.length * 4 + 6;
     ensureSpace(blockHeight);
@@ -255,8 +341,8 @@ const generateCommissionPdf = () => {
     startY: y,
     margin: { left: margin, right: margin },
     head: [[
-      'Prix Séjour', 'Frais Ménage', 'Taxe Séjour', 'Comm. OTA', 'Frais Paiement',
-      'CA', 'Montant Versé', 'Revenu Généré', `Commission HK (${(example.taux * 100).toFixed(0)}%)`,
+      'Prix Séjour', 'Frais Ménage', 'Taxe Séjour', 'Frais Plateforme', 'Frais Paiement',
+      'Total payé', 'Montant Versé', 'Revenu net', `Commission (${(example.taux * 100).toFixed(0)}%)`,
     ]],
     body: [[
       eur(example.prixSejour), eur(example.fraisMenage), eur(example.taxeDeSejour),
@@ -269,12 +355,12 @@ const generateCommissionPdf = () => {
     theme: 'grid',
   });
   y = (doc as any).lastAutoTable.finalY + 4;
-  paragraph(totalsNote, { color: GRAY, size: 8.5 });
+  paragraph(clientTotalsNote, { color: GRAY, size: 8.5 });
   y += 3;
 
   // ===== Règles particulières =====
-  sectionTitle('Règles particulières à connaître');
-  rules.forEach((rule) => {
+  sectionTitle('Bon à savoir');
+  clientRules.forEach((rule) => {
     const lines = doc.splitTextToSize(pdfSafe(rule.text), contentWidth - 5);
     ensureSpace(5 + lines.length * 4 + 3);
     doc.setFont('helvetica', 'bold');
@@ -292,7 +378,7 @@ const generateCommissionPdf = () => {
 
   // ===== FAQ =====
   sectionTitle('Questions fréquentes');
-  faq.forEach((item) => {
+  clientFaq.forEach((item) => {
     const qLines = doc.splitTextToSize(pdfSafe(item.q), contentWidth);
     const aLines = doc.splitTextToSize(pdfSafe(item.a), contentWidth - 5);
     ensureSpace(qLines.length * 4.5 + aLines.length * 4 + 6);
@@ -353,14 +439,19 @@ const AdminCommissionExplanationPage: React.FC = () => {
               utilisé par le générateur de relevés — rien de plus, rien de moins.
             </p>
           </div>
-          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="shrink-0">
-            {isDownloading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="mr-2 h-4 w-4" />
-            )}
-            Télécharger en PDF
-          </Button>
+          <div className="shrink-0 flex flex-col items-start md:items-end gap-1">
+            <Button onClick={handleDownloadPdf} disabled={isDownloading}>
+              {isDownloading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Télécharger le PDF client
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Version simplifiée, sans mention d&apos;outils internes.
+            </p>
+          </div>
         </div>
 
         <div className="space-y-6">

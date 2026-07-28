@@ -14,7 +14,7 @@ import {
 import { Calculator, Download, Info, Loader2, Percent, ReceiptText } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import autoTable from 'jspdf-autotable';
 
 // Exemple chiffré (valeurs illustratives, mêmes formules que le générateur de relevés)
 const example = {
@@ -31,6 +31,9 @@ const exRevenuGenere = exMontantVerse - example.fraisMenage - example.taxeDeSejo
 const exCommission = exRevenuGenere * example.taux;
 
 const eur = (n: number) => `${n.toFixed(2)}€`;
+
+const principle =
+  'La commission Hello Keys = Revenu Généré × Taux du client (26% par défaut si non renseigné), où le Revenu Généré est le loyer net réellement perçu, hors ménage, hors taxe de séjour et après déduction des commissions plateforme et frais de paiement.';
 
 const steps = [
   {
@@ -62,6 +65,32 @@ const steps = [
     example: `${eur(exRevenuGenere)} × ${(example.taux * 100).toFixed(0)}% = ${eur(exCommission)}`,
   },
 ];
+
+const rules = [
+  {
+    title: 'Airbnb & Booking.com',
+    text: 'La taxe de séjour est forcée à 0€ (collectée et reversée directement par la plateforme). Un message d\u2019information s\u2019affiche lors de la génération.',
+  },
+  {
+    title: 'Séjours propriétaire',
+    text: 'Aucune commission Hello Keys (0€). Ignorés dans les imports Excel, inclus sans commission dans la génération Krossbooking.',
+  },
+  {
+    title: 'Réservations annulées (CANC)',
+    text: 'Exclues du relevé généré depuis Krossbooking.',
+  },
+  {
+    title: 'Taux manquant',
+    text: '26% appliqué par défaut, avec un avertissement visible par l\u2019admin. Pensez à vérifier la fiche client si ce message apparaît.',
+  },
+  {
+    title: 'Période',
+    text: 'Pour la génération Krossbooking, une réservation est rattachée au mois de sa date de départ (check-out).',
+  },
+];
+
+const totalsNote =
+  'Sur le relevé final : Total Facture = Commission HK + Frais de ménage (+ ménage propriétaire), décomposé en HT (÷ 1,2) et TVA 20%. Le résultat net du propriétaire = Montant Versé − Taxe − Ménage − Commission (− ménage proprio).';
 
 const faq = [
   {
@@ -98,59 +127,214 @@ const faq = [
   },
 ];
 
-const ALL_FAQ_VALUES = faq.map((_, index) => `faq-${index}`);
+// jsPDF n'affiche pas certains caractères unicode (− × → « ») avec les polices standard
+const pdfSafe = (text: string) =>
+  text
+    .replace(/\u2212/g, '-')
+    .replace(/\u00d7/g, 'x')
+    .replace(/\u2192/g, '>')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\u00ab\s?/g, '"')
+    .replace(/\s?\u00bb/g, '"');
+
+const generateCommissionPdf = () => {
+  const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const BRAND: [number, number, number] = [30, 64, 175]; // bleu
+  const GRAY: [number, number, number] = [90, 90, 90];
+  const LIGHT_BG: [number, number, number] = [243, 244, 246];
+
+  const ensureSpace = (needed: number) => {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  const sectionTitle = (title: string) => {
+    ensureSpace(14);
+    doc.setFillColor(...BRAND);
+    doc.rect(margin, y, 1.5, 6, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(0, 0, 0);
+    doc.text(pdfSafe(title), margin + 4, y + 4.7);
+    y += 11;
+  };
+
+  const paragraph = (text: string, options?: { size?: number; bold?: boolean; color?: [number, number, number]; indent?: number }) => {
+    const size = options?.size ?? 9.5;
+    const indent = options?.indent ?? 0;
+    doc.setFont('helvetica', options?.bold ? 'bold' : 'normal');
+    doc.setFontSize(size);
+    doc.setTextColor(...(options?.color ?? [0, 0, 0] as [number, number, number]));
+    const lines = doc.splitTextToSize(pdfSafe(text), contentWidth - indent);
+    const height = lines.length * size * 0.42;
+    ensureSpace(height + 2);
+    doc.text(lines, margin + indent, y);
+    y += height + 2;
+  };
+
+  // ===== En-tête =====
+  doc.setFillColor(...BRAND);
+  doc.rect(0, 0, pageWidth, 26, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Calcul de la commission Hello Keys', margin, 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Document explicatif - comment votre commission est calculée, étape par étape.', margin, 19);
+  y = 34;
+
+  // ===== Principe =====
+  const principleLines = doc.splitTextToSize(pdfSafe(principle), contentWidth - 8);
+  const boxHeight = principleLines.length * 4 + 12;
+  ensureSpace(boxHeight + 4);
+  doc.setFillColor(...LIGHT_BG);
+  doc.setDrawColor(...BRAND);
+  doc.roundedRect(margin, y, contentWidth, boxHeight, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...BRAND);
+  doc.text('Le principe en une phrase', margin + 4, y + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(0, 0, 0);
+  doc.text(principleLines, margin + 4, y + 12);
+  y += boxHeight + 8;
+
+  // ===== Étapes =====
+  sectionTitle('Le calcul, étape par étape');
+  paragraph(
+    `Exemple utilisé : séjour de ${eur(example.prixSejour)}, ménage ${eur(example.fraisMenage)}, taxe ${eur(example.taxeDeSejour)}, commission plateforme ${eur(example.commissionPlateforme)}, frais de paiement ${eur(example.fraisPaiement)}, taux client ${(example.taux * 100).toFixed(0)}%.`,
+    { color: GRAY },
+  );
+  y += 1;
+
+  steps.forEach((step) => {
+    const detailLines = doc.splitTextToSize(pdfSafe(step.detail), contentWidth - 6);
+    const blockHeight = 16 + detailLines.length * 4 + 6;
+    ensureSpace(blockHeight);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text(pdfSafe(step.title), margin, y);
+    y += 5.5;
+
+    doc.setFillColor(...LIGHT_BG);
+    doc.roundedRect(margin, y - 3.5, contentWidth, 6.5, 1, 1, 'F');
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...BRAND);
+    doc.text(pdfSafe(step.formula), margin + 3, y + 0.7);
+    y += 7;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...GRAY);
+    doc.text(detailLines, margin, y);
+    y += detailLines.length * 4 + 1;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.text(pdfSafe(`Exemple : ${step.example}`), margin, y);
+    y += 8;
+  });
+
+  // ===== Tableau récapitulatif =====
+  sectionTitle('Récapitulatif de l\u2019exemple');
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    head: [[
+      'Prix Séjour', 'Frais Ménage', 'Taxe Séjour', 'Comm. OTA', 'Frais Paiement',
+      'CA', 'Montant Versé', 'Revenu Généré', `Commission HK (${(example.taux * 100).toFixed(0)}%)`,
+    ]],
+    body: [[
+      eur(example.prixSejour), eur(example.fraisMenage), eur(example.taxeDeSejour),
+      eur(example.commissionPlateforme), eur(example.fraisPaiement),
+      eur(exCA), eur(exMontantVerse), eur(exRevenuGenere), eur(exCommission),
+    ]],
+    styles: { fontSize: 7.5, halign: 'center', cellPadding: 2 },
+    headStyles: { fillColor: BRAND, textColor: 255, fontStyle: 'bold' },
+    bodyStyles: { fontStyle: 'bold' },
+    theme: 'grid',
+  });
+  y = (doc as any).lastAutoTable.finalY + 4;
+  paragraph(totalsNote, { color: GRAY, size: 8.5 });
+  y += 3;
+
+  // ===== Règles particulières =====
+  sectionTitle('Règles particulières à connaître');
+  rules.forEach((rule) => {
+    const lines = doc.splitTextToSize(pdfSafe(rule.text), contentWidth - 5);
+    ensureSpace(5 + lines.length * 4 + 3);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text(pdfSafe(`\u2022 ${rule.title}`), margin, y);
+    y += 4.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...GRAY);
+    doc.text(lines, margin + 5, y);
+    y += lines.length * 4 + 3;
+  });
+  y += 3;
+
+  // ===== FAQ =====
+  sectionTitle('Questions fréquentes');
+  faq.forEach((item) => {
+    const qLines = doc.splitTextToSize(pdfSafe(item.q), contentWidth);
+    const aLines = doc.splitTextToSize(pdfSafe(item.a), contentWidth - 5);
+    ensureSpace(qLines.length * 4.5 + aLines.length * 4 + 6);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...BRAND);
+    doc.text(qLines, margin, y);
+    y += qLines.length * 4.5 + 1;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(60, 60, 60);
+    doc.text(aLines, margin + 5, y);
+    y += aLines.length * 4 + 5;
+  });
+
+  // ===== Pied de page sur toutes les pages =====
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Hello Keys - Calcul de la commission', margin, pageHeight - 8);
+    doc.text(`Page ${i} / ${pageCount}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+  }
+
+  doc.save('Calcul_Commission_Hello_Keys.pdf');
+};
 
 const AdminCommissionExplanationPage: React.FC = () => {
-  const [openFaqItems, setOpenFaqItems] = useState<string[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = () => {
     setIsDownloading(true);
     const toastId = toast.loading('Génération du PDF en cours...');
-
-    // Ouvre toutes les questions de la FAQ pour qu'elles apparaissent dans le PDF
-    const previousOpenItems = openFaqItems;
-    setOpenFaqItems(ALL_FAQ_VALUES);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
     try {
-      const element = document.getElementById('commission-explanation-content');
-      if (!element) throw new Error('Contenu introuvable.');
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: element.scrollWidth,
-        height: element.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
-
-      pdf.save('Calcul_Commission_Hello_Keys.pdf');
+      generateCommissionPdf();
       toast.success('PDF téléchargé avec succès !', { id: toastId });
     } catch (error) {
       console.error('Erreur lors de la génération du PDF:', error);
       toast.error('Une erreur est survenue lors de la création du PDF.', { id: toastId });
     } finally {
-      setOpenFaqItems(previousOpenItems);
       setIsDownloading(false);
     }
   };
@@ -179,151 +363,131 @@ const AdminCommissionExplanationPage: React.FC = () => {
           </Button>
         </div>
 
-        <div id="commission-explanation-content" className="space-y-6 bg-background p-2">
+        <div className="space-y-6">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Le principe en une phrase</AlertTitle>
+            <AlertDescription>
+              La commission Hello Keys = <strong>Revenu Généré × Taux du client</strong> (26% par défaut si non renseigné),
+              où le Revenu Généré est le loyer net réellement perçu, hors ménage, hors taxe de séjour et après
+              déduction des commissions plateforme et frais de paiement.
+            </AlertDescription>
+          </Alert>
 
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Le principe en une phrase</AlertTitle>
-          <AlertDescription>
-            La commission Hello Keys = <strong>Revenu Généré × Taux du client</strong> (26% par défaut si non renseigné),
-            où le Revenu Généré est le loyer net réellement perçu, hors ménage, hors taxe de séjour et après
-            déduction des commissions plateforme et frais de paiement.
-          </AlertDescription>
-        </Alert>
-
-        {/* Étapes de calcul */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Percent className="h-5 w-5" />
-              Le calcul, étape par étape
-            </CardTitle>
-            <CardDescription>
-              Chaque réservation du relevé suit exactement ces 4 étapes. Exemple chiffré : séjour de{' '}
-              {eur(example.prixSejour)}, ménage {eur(example.fraisMenage)}, taxe {eur(example.taxeDeSejour)},
-              commission plateforme {eur(example.commissionPlateforme)}, frais de paiement {eur(example.fraisPaiement)},
-              taux client {(example.taux * 100).toFixed(0)}%.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {steps.map((step) => (
-              <div key={step.title} className="border rounded-lg p-4">
-                <p className="font-semibold">{step.title}</p>
-                <p className="mt-1 font-mono text-sm bg-muted rounded px-2 py-1 inline-block">
-                  {step.formula}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">{step.detail}</p>
-                <p className="text-sm mt-2">
-                  <Badge variant="secondary" className="mr-2">Exemple</Badge>
-                  <span className="font-mono">{step.example}</span>
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Exemple récapitulatif */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ReceiptText className="h-5 w-5" />
-              Récapitulatif de l&apos;exemple
-            </CardTitle>
-            <CardDescription>
-              Les mêmes colonnes que celles du relevé envoyé au client.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border rounded-lg overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Prix Séjour</TableHead>
-                    <TableHead>Frais Ménage</TableHead>
-                    <TableHead>Taxe Séjour</TableHead>
-                    <TableHead>Commission OTA</TableHead>
-                    <TableHead>Frais Paiement</TableHead>
-                    <TableHead>CA</TableHead>
-                    <TableHead>Montant Versé</TableHead>
-                    <TableHead>Revenu Généré</TableHead>
-                    <TableHead className="text-primary font-bold">Commission HK (26%)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>{eur(example.prixSejour)}</TableCell>
-                    <TableCell>{eur(example.fraisMenage)}</TableCell>
-                    <TableCell>{eur(example.taxeDeSejour)}</TableCell>
-                    <TableCell>{eur(example.commissionPlateforme)}</TableCell>
-                    <TableCell>{eur(example.fraisPaiement)}</TableCell>
-                    <TableCell className="font-semibold">{eur(exCA)}</TableCell>
-                    <TableCell className="font-semibold">{eur(exMontantVerse)}</TableCell>
-                    <TableCell className="font-semibold">{eur(exRevenuGenere)}</TableCell>
-                    <TableCell className="font-bold text-primary">{eur(exCommission)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-            <p className="text-sm text-muted-foreground mt-3">
-              Sur le relevé final : <span className="font-mono">Total Facture = Commission HK + Frais de ménage (+ ménage propriétaire)</span>,
-              décomposé en HT (÷ 1,2) et TVA 20%. Le résultat net du propriétaire ={' '}
-              <span className="font-mono">Montant Versé − Taxe − Ménage − Commission (− ménage proprio)</span>.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Règles particulières */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Règles particulières à connaître</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="list-disc list-inside space-y-2 text-sm">
-              <li>
-                <strong>Airbnb & Booking.com :</strong> la taxe de séjour est forcée à 0€ (collectée et reversée
-                directement par la plateforme). Un message d&apos;information s&apos;affiche lors de la génération.
-              </li>
-              <li>
-                <strong>Séjours propriétaire :</strong> aucune commission Hello Keys (0€). Ignorés dans les imports
-                Excel, inclus sans commission dans la génération Krossbooking.
-              </li>
-              <li>
-                <strong>Réservations annulées (CANC) :</strong> exclues du relevé généré depuis Krossbooking.
-              </li>
-              <li>
-                <strong>Taux manquant :</strong> 26% appliqué par défaut, avec un avertissement visible par l&apos;admin.
-                Pensez à vérifier la fiche client si ce message apparaît.
-              </li>
-              <li>
-                <strong>Période :</strong> pour la génération Krossbooking, une réservation est rattachée au mois de sa
-                date de <em>départ</em> (check-out).
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* FAQ */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Questions fréquentes</CardTitle>
-            <CardDescription>Les réponses aux questions qui reviennent le plus souvent.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion
-              type="multiple"
-              value={openFaqItems}
-              onValueChange={setOpenFaqItems}
-              className="w-full"
-            >
-              {faq.map((item, index) => (
-                <AccordionItem key={index} value={`faq-${index}`}>
-                  <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
-                </AccordionItem>
+          {/* Étapes de calcul */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Percent className="h-5 w-5" />
+                Le calcul, étape par étape
+              </CardTitle>
+              <CardDescription>
+                Chaque réservation du relevé suit exactement ces 4 étapes. Exemple chiffré : séjour de{' '}
+                {eur(example.prixSejour)}, ménage {eur(example.fraisMenage)}, taxe {eur(example.taxeDeSejour)},
+                commission plateforme {eur(example.commissionPlateforme)}, frais de paiement {eur(example.fraisPaiement)},
+                taux client {(example.taux * 100).toFixed(0)}%.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {steps.map((step) => (
+                <div key={step.title} className="border rounded-lg p-4">
+                  <p className="font-semibold">{step.title}</p>
+                  <p className="mt-1 font-mono text-sm bg-muted rounded px-2 py-1 inline-block">
+                    {step.formula}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">{step.detail}</p>
+                  <p className="text-sm mt-2">
+                    <Badge variant="secondary" className="mr-2">Exemple</Badge>
+                    <span className="font-mono">{step.example}</span>
+                  </p>
+                </div>
               ))}
-            </Accordion>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* Exemple récapitulatif */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ReceiptText className="h-5 w-5" />
+                Récapitulatif de l&apos;exemple
+              </CardTitle>
+              <CardDescription>
+                Les mêmes colonnes que celles du relevé envoyé au client.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Prix Séjour</TableHead>
+                      <TableHead>Frais Ménage</TableHead>
+                      <TableHead>Taxe Séjour</TableHead>
+                      <TableHead>Commission OTA</TableHead>
+                      <TableHead>Frais Paiement</TableHead>
+                      <TableHead>CA</TableHead>
+                      <TableHead>Montant Versé</TableHead>
+                      <TableHead>Revenu Généré</TableHead>
+                      <TableHead className="text-primary font-bold">Commission HK (26%)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>{eur(example.prixSejour)}</TableCell>
+                      <TableCell>{eur(example.fraisMenage)}</TableCell>
+                      <TableCell>{eur(example.taxeDeSejour)}</TableCell>
+                      <TableCell>{eur(example.commissionPlateforme)}</TableCell>
+                      <TableCell>{eur(example.fraisPaiement)}</TableCell>
+                      <TableCell className="font-semibold">{eur(exCA)}</TableCell>
+                      <TableCell className="font-semibold">{eur(exMontantVerse)}</TableCell>
+                      <TableCell className="font-semibold">{eur(exRevenuGenere)}</TableCell>
+                      <TableCell className="font-bold text-primary">{eur(exCommission)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+              <p className="text-sm text-muted-foreground mt-3">
+                Sur le relevé final : <span className="font-mono">Total Facture = Commission HK + Frais de ménage (+ ménage propriétaire)</span>,
+                décomposé en HT (÷ 1,2) et TVA 20%. Le résultat net du propriétaire ={' '}
+                <span className="font-mono">Montant Versé − Taxe − Ménage − Commission (− ménage proprio)</span>.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Règles particulières */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Règles particulières à connaître</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="list-disc list-inside space-y-2 text-sm">
+                {rules.map((rule) => (
+                  <li key={rule.title}>
+                    <strong>{rule.title} :</strong> {rule.text}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* FAQ */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Questions fréquentes</CardTitle>
+              <CardDescription>Les réponses aux questions qui reviennent le plus souvent.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Accordion type="single" collapsible className="w-full">
+                {faq.map((item, index) => (
+                  <AccordionItem key={index} value={`faq-${index}`}>
+                    <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AdminLayout>

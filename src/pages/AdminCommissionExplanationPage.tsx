@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Accordion,
@@ -10,7 +11,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Calculator, Info, Percent, ReceiptText } from 'lucide-react';
+import { Calculator, Download, Info, Loader2, Percent, ReceiptText } from 'lucide-react';
+import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Exemple chiffré (valeurs illustratives, mêmes formules que le générateur de relevés)
 const example = {
@@ -94,20 +98,88 @@ const faq = [
   },
 ];
 
+const ALL_FAQ_VALUES = faq.map((_, index) => `faq-${index}`);
+
 const AdminCommissionExplanationPage: React.FC = () => {
+  const [openFaqItems, setOpenFaqItems] = useState<string[]>([]);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    const toastId = toast.loading('Génération du PDF en cours...');
+
+    // Ouvre toutes les questions de la FAQ pour qu'elles apparaissent dans le PDF
+    const previousOpenItems = openFaqItems;
+    setOpenFaqItems(ALL_FAQ_VALUES);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    try {
+      const element = document.getElementById('commission-explanation-content');
+      if (!element) throw new Error('Contenu introuvable.');
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save('Calcul_Commission_Hello_Keys.pdf');
+      toast.success('PDF téléchargé avec succès !', { id: toastId });
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      toast.error('Une erreur est survenue lors de la création du PDF.', { id: toastId });
+    } finally {
+      setOpenFaqItems(previousOpenItems);
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <AdminLayout>
-      <div className="max-w-5xl mx-auto space-y-6 p-4 md:p-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Calculator className="h-7 w-7 text-primary" />
-            Calcul de la commission Hello Keys
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Page de référence pour répondre aux questions récurrentes. Elle décrit exactement le calcul
-            utilisé par le générateur de relevés — rien de plus, rien de moins.
-          </p>
+      <div className="max-w-5xl mx-auto p-4 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <Calculator className="h-7 w-7 text-primary" />
+              Calcul de la commission Hello Keys
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Page de référence pour répondre aux questions récurrentes. Elle décrit exactement le calcul
+              utilisé par le générateur de relevés — rien de plus, rien de moins.
+            </p>
+          </div>
+          <Button onClick={handleDownloadPdf} disabled={isDownloading} className="shrink-0">
+            {isDownloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Télécharger en PDF
+          </Button>
         </div>
+
+        <div id="commission-explanation-content" className="space-y-6 bg-background p-2">
 
         <Alert>
           <Info className="h-4 w-4" />
@@ -237,7 +309,12 @@ const AdminCommissionExplanationPage: React.FC = () => {
             <CardDescription>Les réponses aux questions qui reviennent le plus souvent.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion
+              type="multiple"
+              value={openFaqItems}
+              onValueChange={setOpenFaqItems}
+              className="w-full"
+            >
               {faq.map((item, index) => (
                 <AccordionItem key={index} value={`faq-${index}`}>
                   <AccordionTrigger className="text-left">{item.q}</AccordionTrigger>
@@ -247,6 +324,7 @@ const AdminCommissionExplanationPage: React.FC = () => {
             </Accordion>
           </CardContent>
         </Card>
+        </div>
       </div>
     </AdminLayout>
   );

@@ -10,13 +10,18 @@
   <body class="notranslate" translate="no">
     <div id="root" class="notranslate" translate="no"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      src="https://support.hellokeys.fr/widget.js"
-      data-color="#255f85"
-      data-title="Hello Keys"
-      data-subtitle="Nous répondons en quelques minutes"
-      data-position="right"
-      defer
-    ></script>
+    <script>
+      // Charge le widget de support uniquement sur desktop (>= 768px)
+      if (window.matchMedia("(min-width: 768px)").matches) {
+        var s = document.createElement("script");
+        s.src = "https://support.hellokeys.fr/widget.js";
+        s.defer = true;
+        s.setAttribute("data-color", "#255f85");
+        s.setAttribute("data-title", "Hello Keys");
+        s.setAttribute("data-subtitle", "Nous répondons en quelques minutes");
+        s.setAttribute("data-position", "right");
+        document.body.appendChild(s);
+      }
+    </script>
   </body>
 </html>

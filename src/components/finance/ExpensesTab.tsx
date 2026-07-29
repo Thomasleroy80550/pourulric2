@@ -256,81 +256,101 @@ const ExpensesTab: React.FC = () => {
   const renderSingleExpenses = () => {
     if (loading) return <Skeleton className="h-48 w-full" />;
     if (error) return <Alert variant="destructive"><Terminal className="h-4 w-4" /><AlertTitle>Erreur</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>;
-    if (allExpenses.length === 0)
+
+    // On n'affiche ici que les vraies charges ponctuelles (les occurrences
+    // récurrentes se gèrent dans l'onglet « Charges récurrentes »).
+    const singleExpenses = allExpenses.filter((e) => !e.id.startsWith('recurring-'));
+    const hasRecurringInstances = allExpenses.length > singleExpenses.length;
+
+    if (singleExpenses.length === 0)
       return (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <div className="rounded-full bg-muted p-3">
             <ReceiptText className="h-6 w-6 text-muted-foreground" />
           </div>
-          <p className="mt-3 font-medium">Aucune charge enregistrée pour {selectedYear}</p>
+          <p className="mt-3 font-medium">Aucune charge ponctuelle pour {selectedYear}</p>
           <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-            Ajoutez vos charges pour obtenir un bénéfice net réaliste dans vos statistiques.
+            {hasRecurringInstances
+              ? 'Vos charges récurrentes se gèrent dans l\u2019onglet « Charges récurrentes ».'
+              : 'Ajoutez vos charges pour obtenir un bénéfice net réaliste dans vos statistiques.'}
           </p>
         </div>
       );
 
+    const recurringHint = hasRecurringInstances && (
+      <p className="mb-3 text-xs text-muted-foreground">
+        Les charges récurrentes n'apparaissent pas ici : gérez-les dans l'onglet « Charges récurrentes ».
+      </p>
+    );
+
     if (isMobile) {
       return (
-        <div className="space-y-3">
-          {allExpenses.map((e) => (
-            <Card key={e.id} className="rounded-xl">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold">{e.description}</p>
-                    <p className="mt-0.5 flex items-center text-sm text-muted-foreground">
-                      <Calendar className="mr-1.5 h-3 w-3" />
-                      {format(parseISO(e.expense_date), 'dd/MM/yyyy')}
-                    </p>
-                    <div className="mt-1"><CategoryTag category={e.category} /></div>
+        <div>
+          {recurringHint}
+          <div className="space-y-3">
+            {singleExpenses.map((e) => (
+              <Card key={e.id} className="rounded-xl">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{e.description}</p>
+                      <p className="mt-0.5 flex items-center text-sm text-muted-foreground">
+                        <Calendar className="mr-1.5 h-3 w-3" />
+                        {format(parseISO(e.expense_date), 'dd/MM/yyyy')}
+                      </p>
+                      <div className="mt-1"><CategoryTag category={e.category} /></div>
+                    </div>
+                    <p className="shrink-0 text-lg font-semibold text-red-600">{e.amount.toFixed(2)}€</p>
                   </div>
-                  <p className="shrink-0 text-lg font-semibold text-red-600">{e.amount.toFixed(2)}€</p>
-                </div>
-                <div className="mt-2 flex justify-end gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(e)} disabled={e.id.startsWith('recurring-')}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'single', id: e.id })} disabled={e.id.startsWith('recurring-')}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="mt-2 flex justify-end gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(e)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'single', id: e.id })}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       );
     }
 
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Catégorie</TableHead>
-            <TableHead className="text-right">Montant</TableHead>
-            <TableHead className="text-right">Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {allExpenses.map((e) => (
-            <TableRow key={e.id}>
-              <TableCell>{format(parseISO(e.expense_date), 'dd/MM/yyyy')}</TableCell>
-              <TableCell>{e.description}</TableCell>
-              <TableCell><CategoryTag category={e.category} /></TableCell>
-              <TableCell className="text-right font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => openEdit(e)} disabled={e.id.startsWith('recurring-')}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'single', id: e.id })} disabled={e.id.startsWith('recurring-')}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
+      <div>
+        {recurringHint}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Catégorie</TableHead>
+              <TableHead className="text-right">Montant</TableHead>
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {singleExpenses.map((e) => (
+              <TableRow key={e.id}>
+                <TableCell>{format(parseISO(e.expense_date), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{e.description}</TableCell>
+                <TableCell><CategoryTag category={e.category} /></TableCell>
+                <TableCell className="text-right font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(e)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'single', id: e.id })}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     );
   };
 

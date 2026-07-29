@@ -57,6 +57,17 @@ export async function addExpense(expenseData: NewExpense): Promise<Expense> {
   return data;
 }
 
+export async function updateExpense(id: string, expenseData: NewExpense): Promise<Expense> {
+  const { data, error } = await supabase
+    .from('expenses')
+    .update(expenseData)
+    .eq('id', id)
+    .select().single();
+
+  if (error) throw new Error(`Erreur lors de la modification de la dépense : ${error.message}`);
+  return data;
+}
+
 export async function deleteExpense(id: string): Promise<void> {
   const { error } = await supabase.from('expenses').delete().eq('id', id);
   if (error) throw new Error(`Erreur lors de la suppression de la dépense : ${error.message}`);

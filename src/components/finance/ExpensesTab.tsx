@@ -16,6 +16,7 @@ import {
   Terminal,
   PlusCircle,
   Trash2,
+  Pencil,
   Calendar,
   Repeat,
   Clock,
@@ -26,9 +27,21 @@ import {
   ArrowRight,
   Sparkles,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   getExpenses,
   addExpense,
+  updateExpense,
   deleteExpense,
   Expense,
   getRecurringExpenses,
@@ -96,6 +109,9 @@ const ExpensesTab: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const isMobile = useIsMobile();
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'single' | 'recurring'; id: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const yearOptions = useMemo(
     () => Array.from({ length: 3 }, (_, i) => currentYear - i),
@@ -110,6 +126,11 @@ const ExpensesTab: React.FC = () => {
   const recurringForm = useForm<z.infer<typeof recurringExpenseSchema>>({
     resolver: zodResolver(recurringExpenseSchema),
     defaultValues: { amount: undefined, description: '', category: '', frequency: 'monthly', start_date: new Date().toISOString().split('T')[0], end_date: '' },
+  });
+
+  const editForm = useForm<z.infer<typeof singleExpenseSchema>>({
+    resolver: zodResolver(singleExpenseSchema),
+    defaultValues: { amount: undefined, description: '', category: '', expense_date: '' },
   });
 
   const fetchData = async (year: number) => {
@@ -180,29 +201,45 @@ const ExpensesTab: React.FC = () => {
     }
   };
 
-  const handleDeleteSingle = async (id: string) => {
-    if (id.startsWith('recurring-')) {
-      toast.error("Vous ne pouvez pas supprimer une occurrence récurrente ici. Gérez le modèle dans l'onglet « Charges récurrentes ».");
-      return;
-    }
-    if (!window.confirm('Supprimer cette dépense ?')) return;
+  const openEdit = (expense: Expense) => {
+    setEditingExpense(expense);
+    editForm.reset({
+      amount: expense.amount,
+      description: expense.description,
+      category: expense.category || '',
+      expense_date: expense.expense_date,
+    });
+  };
+
+  const onEditSubmit = async (values: z.infer<typeof singleExpenseSchema>) => {
+    if (!editingExpense) return;
     try {
-      await deleteExpense(id);
-      toast.success('Dépense supprimée.');
+      await updateExpense(editingExpense.id, values as Parameters<typeof addExpense>[0]);
+      toast.success('Dépense modifiée !');
+      setEditingExpense(null);
       fetchData(selectedYear);
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
     }
   };
 
-  const handleDeleteRecurring = async (id: string) => {
-    if (!window.confirm('Supprimer cette dépense récurrente ?')) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteRecurringExpense(id);
-      toast.success('Dépense récurrente supprimée.');
+      if (deleteTarget.type === 'single') {
+        await deleteExpense(deleteTarget.id);
+        toast.success('Dépense supprimée.');
+      } else {
+        await deleteRecurringExpense(deleteTarget.id);
+        toast.success('Dépense récurrente supprimée.');
+      }
+      setDeleteTarget(null);
       fetchData(selectedYear);
     } catch (err: any) {
       toast.error(`Erreur: ${err.message}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -249,8 +286,11 @@ const ExpensesTab: React.FC = () => {
                   </div>
                   <p className="shrink-0 text-lg font-semibold text-red-600">{e.amount.toFixed(2)}€</p>
                 </div>
-                <div className="mt-2 flex justify-end">
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteSingle(e.id)} disabled={e.id.startsWith('recurring-')}>
+                <div className="mt-2 flex justify-end gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => openEdit(e)} disabled={e.id.startsWith('recurring-')}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'single', id: e.id })} disabled={e.id.startsWith('recurring-')}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -280,7 +320,10 @@ const ExpensesTab: React.FC = () => {
               <TableCell><CategoryTag category={e.category} /></TableCell>
               <TableCell className="text-right font-medium text-red-600">{e.amount.toFixed(2)}€</TableCell>
               <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => handleDeleteSingle(e.id)} disabled={e.id.startsWith('recurring-')}>
+                <Button variant="ghost" size="icon" onClick={() => openEdit(e)} disabled={e.id.startsWith('recurring-')}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'single', id: e.id })} disabled={e.id.startsWith('recurring-')}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </TableCell>
@@ -329,7 +372,7 @@ const ExpensesTab: React.FC = () => {
                   <p className="shrink-0 text-lg font-semibold text-red-600">{e.amount.toFixed(2)}€</p>
                 </div>
                 <div className="mt-2 flex justify-end">
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteRecurring(e.id)}>
+                  <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'recurring', id: e.id })}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -361,7 +404,7 @@ const ExpensesTab: React.FC = () => {
               <TableCell>{FREQUENCY_LABELS[e.frequency]}</TableCell>
               <TableCell>{format(parseISO(e.start_date), 'dd/MM/yy')}</TableCell>
               <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => handleDeleteRecurring(e.id)}>
+                <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'recurring', id: e.id })}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </TableCell>
@@ -581,6 +624,67 @@ const ExpensesTab: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* ── Dialog de modification ──────────────────────── */}
+      <Dialog open={!!editingExpense} onOpenChange={(open) => !open && setEditingExpense(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier la dépense</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField control={editForm.control} name="amount" render={({ field }) => (<FormItem><FormLabel>Montant (€)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0,00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={editForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Description</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={editForm.control} name="category" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catégorie</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Choisir une catégorie" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {EXPENSE_CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          <span className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
+                            {c.value}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={editForm.control} name="expense_date" render={({ field }) => (<FormItem><FormLabel>Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditingExpense(null)}>Annuler</Button>
+                <Button type="submit" disabled={editForm.formState.isSubmitting}>Enregistrer</Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Confirmation de suppression ─────────────────── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget?.type === 'recurring' ? 'Supprimer cette charge récurrente ?' : 'Supprimer cette dépense ?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.type === 'recurring'
+                ? 'Toutes ses occurrences seront retirées de vos statistiques. Cette action est irréversible.'
+                : 'Cette action est irréversible.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700">
+              {deleting ? 'Suppression…' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

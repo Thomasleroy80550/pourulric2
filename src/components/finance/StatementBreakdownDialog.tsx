@@ -23,6 +23,10 @@ import {
   Sparkles,
   Percent,
   PiggyBank,
+  ReceiptText,
+  Moon,
+  HelpCircle,
+  PieChart,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
@@ -113,6 +117,29 @@ const StepRow: React.FC<{ step: BreakdownStep; maxAmount: number }> = ({ step, m
   );
 };
 
+const FAQ_ITEMS = [
+  {
+    q: 'Pourquoi la taxe de séjour est-elle déduite ?',
+    a: 'La taxe de séjour est payée par vos voyageurs en plus de leur séjour. Elle transite par le versement mais elle est intégralement reversée à la commune : elle ne fait jamais partie de vos revenus.',
+  },
+  {
+    q: 'Pourquoi les frais de ménage sont-ils déduits ?',
+    a: 'Les frais de ménage sont facturés à vos voyageurs à chaque réservation. Ils servent à financer le ménage professionnel réalisé entre chaque séjour : c\u2019est une somme qui transite, pas un revenu.',
+  },
+  {
+    q: 'À quoi correspond la commission conciergerie ?',
+    a: 'C\u2019est notre rémunération pour la gestion complète de votre bien : création et optimisation des annonces, communication avec les voyageurs, gestion des prix, coordination du ménage et du linge, assistance 7j/7.',
+  },
+  {
+    q: 'Pourquoi les plateformes prélèvent-elles une commission ?',
+    a: 'Airbnb, Booking ou Abritel prélèvent leur propre commission et des frais de traitement de paiement avant de reverser l\u2019argent. Ces montants ne transitent jamais par la conciergerie.',
+  },
+  {
+    q: 'Le montant du virement ne correspond pas au « net » ?',
+    a: 'Selon les cas, certaines sommes (commission, ménage) sont facturées séparément plutôt que déduites du virement. Le relevé PDF détaille toujours précisément ce qui est déduit et ce qui est facturé.',
+  },
+];
+
 const StatementBreakdownDialog: React.FC<StatementBreakdownDialogProps> = ({
   isOpen,
   onOpenChange,
@@ -132,10 +159,12 @@ const StatementBreakdownDialog: React.FC<StatementBreakdownDialogProps> = ({
   const fraisMenage = (Number(totals.totalFraisMenage) || 0) + (Number(totals.ownerCleaningFee) || 0);
   const commission = Number(totals.totalCommission) || 0;
   const netProprio = montantVerse - taxeDeSejour - fraisMenage - commission;
+  const totalNuits = Number(totals.totalNuits) || sumOf('nuits');
 
   // Si le relevé ne contient pas le détail plateforme (relevés manuels),
   // la cascade démarre directement au montant reversé.
   const hasPlatformDetails = totalPaye > 0;
+  const repartitionBase = hasPlatformDetails ? totalPaye : montantVerse;
 
   const steps: BreakdownStep[] = [
     ...(hasPlatformDetails
@@ -203,108 +232,247 @@ const StatementBreakdownDialog: React.FC<StatementBreakdownDialogProps> = ({
   const maxAmount = Math.max(...steps.map((s) => Math.abs(s.amount)), 0);
   const reservationLines = lines.filter((r) => r && (r.voyageur || r.arrivee));
 
+  // --- Répartition « Où va l'argent ? » ---
+  const repartition = [
+    { label: 'Pour vous', amount: Math.max(netProprio, 0), color: '#16a34a' },
+    ...(hasPlatformDetails
+      ? [
+          { label: 'Plateformes (commission + frais)', amount: commissionPlateforme + fraisPaiement, color: '#f59e0b' },
+        ]
+      : []),
+    { label: 'Ménage', amount: fraisMenage, color: '#8b5cf6' },
+    { label: 'Commission conciergerie', amount: commission, color: '#0ea5e9' },
+    { label: 'Taxe de séjour (commune)', amount: taxeDeSejour, color: '#6b7280' },
+  ].filter((s) => s.amount > 0);
+  const repartitionTotal = repartition.reduce((acc, s) => acc + s.amount, 0);
+
+  const summaryTiles = [
+    {
+      label: 'Payé par les voyageurs',
+      value: fmt(hasPlatformDetails ? totalPaye : montantVerse),
+      icon: Users,
+    },
+    { label: 'Réservations', value: String(reservationLines.length || '—'), icon: ReceiptText },
+    { label: 'Nuits', value: String(totalNuits || '—'), icon: Moon },
+    { label: 'Net pour vous', value: fmt(netProprio), icon: PiggyBank, highlight: true },
+  ];
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Comprendre mon versement — {statement.period}</DialogTitle>
+      <DialogContent className="flex max-h-[92vh] w-[96vw] max-w-5xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b bg-gradient-to-r from-[hsl(var(--primary))]/10 to-transparent px-6 pb-4 pt-6">
+          <DialogTitle className="text-xl">Comprendre mon versement — {statement.period}</DialogTitle>
           <DialogDescription>
             Du paiement de vos voyageurs jusqu'au montant qui vous revient, étape par étape.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow space-y-1 overflow-y-auto pr-1">
-          {steps.map((step) => (
-            <StepRow key={step.label} step={step} maxAmount={maxAmount} />
-          ))}
+        <div className="flex-grow overflow-y-auto px-6 py-5">
+          {/* ── Tuiles de synthèse ─────────────────────────── */}
+          <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {summaryTiles.map((tile) => (
+              <div
+                key={tile.label}
+                className={`rounded-2xl border p-3.5 ${
+                  tile.highlight ? 'border-green-600 bg-green-50' : 'bg-card'
+                }`}
+              >
+                <div
+                  className={`w-fit rounded-lg p-1.5 ${
+                    tile.highlight ? 'bg-green-600 text-white' : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <tile.icon className="h-4 w-4" />
+                </div>
+                <p className={`mt-2 truncate text-lg font-bold ${tile.highlight ? 'text-green-700' : ''}`}>
+                  {tile.value}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">{tile.label}</p>
+              </div>
+            ))}
+          </div>
 
-          {reservationLines.length > 0 && (
-            <div className="pt-3">
-              <p className="mb-1 text-sm font-semibold">
-                Les {reservationLines.length > 1 ? `${reservationLines.length} réservations` : 'réservations'} de ce relevé
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* ── Colonne gauche : la cascade ───────────────── */}
+            <div>
+              <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <Banknote className="h-4 w-4 text-[hsl(var(--primary))]" />
+                Le parcours de l'argent
               </p>
-              <Accordion type="single" collapsible className="w-full">
-                {reservationLines.map((r, i) => (
-                  <AccordionItem key={i} value={`resa-${i}`}>
-                    <AccordionTrigger className="py-3 text-sm hover:no-underline">
-                      <span className="flex min-w-0 items-center gap-2 pr-2">
-                        <span className="truncate font-medium">{r.voyageur || 'Voyageur'}</span>
-                        {r.portail && (
-                          <Badge variant="secondary" className="shrink-0 text-[10px] font-normal">
-                            {r.portail}
-                          </Badge>
-                        )}
-                      </span>
-                      <span className="ml-auto shrink-0 pr-2 font-bold tabular-nums">
-                        {fmt(Number(r.montantVerse) || 0)}
-                      </span>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-1.5 rounded-lg bg-muted/50 p-3 text-sm">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>
-                            {safeDate(r.arrivee)} → {safeDate(r.depart)}
+              <div className="space-y-1 rounded-2xl border p-2">
+                {steps.map((step) => (
+                  <StepRow key={step.label} step={step} maxAmount={maxAmount} />
+                ))}
+              </div>
+            </div>
+
+            {/* ── Colonne droite ────────────────────────────── */}
+            <div className="space-y-6">
+              {/* Où va l'argent ? */}
+              {repartitionTotal > 0 && (
+                <div>
+                  <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                    <PieChart className="h-4 w-4 text-[hsl(var(--primary))]" />
+                    Où va l'argent ?
+                  </p>
+                  <div className="rounded-2xl border p-4">
+                    <div className="flex h-4 w-full overflow-hidden rounded-full">
+                      {repartition.map((seg) => (
+                        <div
+                          key={seg.label}
+                          className="h-full"
+                          style={{
+                            width: `${(seg.amount / repartitionTotal) * 100}%`,
+                            backgroundColor: seg.color,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {repartition.map((seg) => (
+                        <div key={seg.label} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: seg.color }}
+                            />
+                            <span className="truncate">{seg.label}</span>
                           </span>
-                          <span>{Number(r.nuits) || 0} nuit(s)</span>
+                          <span className="shrink-0 font-semibold tabular-nums">
+                            {fmt(seg.amount)}
+                            <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                              {((seg.amount / repartitionTotal) * 100).toFixed(0)}%
+                            </span>
+                          </span>
                         </div>
-                        {Number(r.ca) > 0 && (
-                          <div className="flex justify-between">
-                            <span>Payé par le voyageur</span>
-                            <span className="font-medium tabular-nums">{fmt(Number(r.ca) || 0)}</span>
-                          </div>
-                        )}
-                        {Number(r.originalCommissionPlateforme) > 0 && (
-                          <div className="flex justify-between text-red-600">
-                            <span>Commission plateforme</span>
-                            <span className="tabular-nums">− {fmt(Number(r.originalCommissionPlateforme))}</span>
-                          </div>
-                        )}
-                        {Number(r.originalFraisPaiement) > 0 && (
-                          <div className="flex justify-between text-red-600">
-                            <span>Frais de paiement</span>
-                            <span className="tabular-nums">− {fmt(Number(r.originalFraisPaiement))}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between border-t pt-1.5 font-semibold">
-                          <span>Montant reversé</span>
-                          <span className="tabular-nums">{fmt(Number(r.montantVerse) || 0)}</span>
-                        </div>
-                        {Number(r.taxeDeSejour) > 0 && (
-                          <div className="flex justify-between text-red-600">
-                            <span>Taxe de séjour</span>
-                            <span className="tabular-nums">− {fmt(Number(r.taxeDeSejour))}</span>
-                          </div>
-                        )}
-                        {Number(r.fraisMenage) > 0 && (
-                          <div className="flex justify-between text-red-600">
-                            <span>Frais de ménage</span>
-                            <span className="tabular-nums">− {fmt(Number(r.fraisMenage))}</span>
-                          </div>
-                        )}
-                        {Number(r.commissionHelloKeys) > 0 && (
-                          <div className="flex justify-between text-red-600">
-                            <span>Commission conciergerie</span>
-                            <span className="tabular-nums">− {fmt(Number(r.commissionHelloKeys))}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between border-t pt-1.5 font-bold text-green-700">
-                          <span>Net pour vous</span>
-                          <span className="tabular-nums">
-                            {fmt(
-                              (Number(r.montantVerse) || 0) -
-                                (Number(r.taxeDeSejour) || 0) -
-                                (Number(r.fraisMenage) || 0) -
-                                (Number(r.commissionHelloKeys) || 0),
+                      ))}
+                    </div>
+                    {repartition[0]?.label === 'Pour vous' && (
+                      <p className="mt-3 rounded-lg bg-green-50 p-2.5 text-xs text-green-800">
+                        💡 Sur 100 € payés par vos voyageurs,{' '}
+                        <span className="font-bold">
+                          {((Math.max(netProprio, 0) / repartitionTotal) * 100).toFixed(0)} €
+                        </span>{' '}
+                        reviennent directement dans votre poche.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Réservations */}
+              {reservationLines.length > 0 && (
+                <div>
+                  <p className="mb-1 flex items-center gap-2 text-sm font-semibold">
+                    <ReceiptText className="h-4 w-4 text-[hsl(var(--primary))]" />
+                    {reservationLines.length > 1
+                      ? `Les ${reservationLines.length} réservations de ce relevé`
+                      : 'La réservation de ce relevé'}
+                  </p>
+                  <Accordion type="single" collapsible className="w-full rounded-2xl border px-3">
+                    {reservationLines.map((r, i) => (
+                      <AccordionItem key={i} value={`resa-${i}`} className={i === reservationLines.length - 1 ? 'border-b-0' : ''}>
+                        <AccordionTrigger className="py-3 text-sm hover:no-underline">
+                          <span className="flex min-w-0 items-center gap-2 pr-2">
+                            <span className="truncate font-medium">{r.voyageur || 'Voyageur'}</span>
+                            {r.portail && (
+                              <Badge variant="secondary" className="shrink-0 text-[10px] font-normal">
+                                {r.portail}
+                              </Badge>
                             )}
                           </span>
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
+                          <span className="ml-auto shrink-0 pr-2 font-bold tabular-nums">
+                            {fmt(Number(r.montantVerse) || 0)}
+                          </span>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-1.5 rounded-lg bg-muted/50 p-3 text-sm">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>
+                                {safeDate(r.arrivee)} → {safeDate(r.depart)}
+                              </span>
+                              <span>{Number(r.nuits) || 0} nuit(s)</span>
+                            </div>
+                            {Number(r.ca) > 0 && (
+                              <div className="flex justify-between">
+                                <span>Payé par le voyageur</span>
+                                <span className="font-medium tabular-nums">{fmt(Number(r.ca) || 0)}</span>
+                              </div>
+                            )}
+                            {Number(r.originalCommissionPlateforme) > 0 && (
+                              <div className="flex justify-between text-red-600">
+                                <span>Commission plateforme</span>
+                                <span className="tabular-nums">− {fmt(Number(r.originalCommissionPlateforme))}</span>
+                              </div>
+                            )}
+                            {Number(r.originalFraisPaiement) > 0 && (
+                              <div className="flex justify-between text-red-600">
+                                <span>Frais de paiement</span>
+                                <span className="tabular-nums">− {fmt(Number(r.originalFraisPaiement))}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between border-t pt-1.5 font-semibold">
+                              <span>Montant reversé</span>
+                              <span className="tabular-nums">{fmt(Number(r.montantVerse) || 0)}</span>
+                            </div>
+                            {Number(r.taxeDeSejour) > 0 && (
+                              <div className="flex justify-between text-red-600">
+                                <span>Taxe de séjour</span>
+                                <span className="tabular-nums">− {fmt(Number(r.taxeDeSejour))}</span>
+                              </div>
+                            )}
+                            {Number(r.fraisMenage) > 0 && (
+                              <div className="flex justify-between text-red-600">
+                                <span>Frais de ménage</span>
+                                <span className="tabular-nums">− {fmt(Number(r.fraisMenage))}</span>
+                              </div>
+                            )}
+                            {Number(r.commissionHelloKeys) > 0 && (
+                              <div className="flex justify-between text-red-600">
+                                <span>Commission conciergerie</span>
+                                <span className="tabular-nums">− {fmt(Number(r.commissionHelloKeys))}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between border-t pt-1.5 font-bold text-green-700">
+                              <span>Net pour vous</span>
+                              <span className="tabular-nums">
+                                {fmt(
+                                  (Number(r.montantVerse) || 0) -
+                                    (Number(r.taxeDeSejour) || 0) -
+                                    (Number(r.fraisMenage) || 0) -
+                                    (Number(r.commissionHelloKeys) || 0),
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </div>
+              )}
+
+              {/* FAQ */}
+              <div>
+                <p className="mb-1 flex items-center gap-2 text-sm font-semibold">
+                  <HelpCircle className="h-4 w-4 text-[hsl(var(--primary))]" />
+                  Questions fréquentes
+                </p>
+                <Accordion type="single" collapsible className="w-full rounded-2xl border px-3">
+                  {FAQ_ITEMS.map((item, i) => (
+                    <AccordionItem key={item.q} value={`faq-${i}`} className={i === FAQ_ITEMS.length - 1 ? 'border-b-0' : ''}>
+                      <AccordionTrigger className="py-3 text-left text-sm hover:no-underline">
+                        {item.q}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <p className="text-sm text-muted-foreground">{item.a}</p>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

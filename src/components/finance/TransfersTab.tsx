@@ -4,9 +4,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Terminal, Banknote, CheckCircle2, Clock } from 'lucide-react';
+import { Terminal, Banknote, CheckCircle2, Clock, Lightbulb } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from '@/lib/admin-api';
+import StatementBreakdownDialog from '@/components/finance/StatementBreakdownDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TransferRow {
@@ -16,6 +18,7 @@ interface TransferRow {
   source: string;
   amount: number;
   completed: boolean;
+  statement: SavedInvoice;
 }
 
 const getAmountsBySource = (statement: SavedInvoice): { [source: string]: number } => {
@@ -42,6 +45,7 @@ const buildTransferRows = (statements: SavedInvoice[]): TransferRow[] => {
         source,
         amount,
         completed: statement.transfer_statuses?.[source] ?? false,
+        statement,
       });
     });
   });
@@ -68,6 +72,7 @@ const TransfersTab: React.FC = () => {
   const [statements, setStatements] = useState<SavedInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [breakdownStatement, setBreakdownStatement] = useState<SavedInvoice | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -141,6 +146,15 @@ const TransfersTab: React.FC = () => {
                     <span>{formatSource(row.source)}</span>
                     <span className="font-bold text-gray-900">{row.amount.toFixed(2)}€</span>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setBreakdownStatement(row.statement)}
+                  >
+                    <Lightbulb className="mr-2 h-4 w-4" />
+                    Comprendre ce versement
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -153,6 +167,7 @@ const TransfersTab: React.FC = () => {
                 <TableHead>Source</TableHead>
                 <TableHead className="text-right">Montant</TableHead>
                 <TableHead className="text-right">Statut</TableHead>
+                <TableHead className="text-right">Détail</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -161,8 +176,14 @@ const TransfersTab: React.FC = () => {
                   <TableCell className="font-medium">{row.period}</TableCell>
                   <TableCell>{formatSource(row.source)}</TableCell>
                   <TableCell className="text-right font-bold">{row.amount.toFixed(2)}€</TableCell>
-                  <TableCell className="flex justify-end">
+                  <TableCell className="text-right">
                     <StatusBadge completed={row.completed} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="outline" size="sm" onClick={() => setBreakdownStatement(row.statement)}>
+                      <Lightbulb className="mr-2 h-4 w-4" />
+                      Comprendre
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -184,6 +205,11 @@ const TransfersTab: React.FC = () => {
         </CardHeader>
         <CardContent>{renderContent()}</CardContent>
       </Card>
+      <StatementBreakdownDialog
+        isOpen={!!breakdownStatement}
+        onOpenChange={(open) => !open && setBreakdownStatement(null)}
+        statement={breakdownStatement}
+      />
     </div>
   );
 };

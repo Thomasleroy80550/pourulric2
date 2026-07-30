@@ -4,12 +4,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, Calendar, FileText, Euro } from 'lucide-react';
+import { Terminal, Eye, Calendar, FileText, Euro, Lightbulb } from 'lucide-react';
 import { getMyStatements } from '@/lib/statements-api';
 import { SavedInvoice } from '@/lib/admin-api';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import StatementDetailsDialog from '@/components/StatementDetailsDialog';
+import StatementBreakdownDialog from '@/components/finance/StatementBreakdownDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import StatementsExportButton from '@/components/finance/StatementsExportButton';
 
@@ -19,6 +20,7 @@ const StatementsTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedStatement, setSelectedStatement] = useState<SavedInvoice | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [breakdownStatement, setBreakdownStatement] = useState<SavedInvoice | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -90,7 +92,11 @@ const StatementsTab: React.FC = () => {
                     <Euro className="h-4 w-4 mr-2 text-gray-500" />
                     Montant Facturé: <span className="font-bold ml-1">{displayAmount}€</span>
                   </p>
-                  <div className="pt-2">
+                  <div className="pt-2 space-y-2">
+                    <Button size="sm" className="w-full" onClick={() => setBreakdownStatement(statement)}>
+                      <Lightbulb className="h-4 w-4 mr-2" />
+                      Comprendre mon versement
+                    </Button>
                     <Button variant="outline" size="sm" className="w-full" onClick={() => handleViewDetails(statement)}>
                       <Eye className="h-4 w-4 mr-2" />
                       Voir les détails
@@ -123,10 +129,16 @@ const StatementsTab: React.FC = () => {
                 <TableCell>{format(parseISO(statement.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
                 <TableCell className="text-right font-bold">{totalFacture.toFixed(2)}€</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => handleViewDetails(statement)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Voir
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" onClick={() => setBreakdownStatement(statement)}>
+                      <Lightbulb className="h-4 w-4 mr-2" />
+                      Comprendre
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(statement)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Voir
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             );
@@ -153,6 +165,11 @@ const StatementsTab: React.FC = () => {
         isOpen={isDetailDialogOpen}
         onOpenChange={setIsDetailDialogOpen}
         statement={selectedStatement}
+      />
+      <StatementBreakdownDialog
+        isOpen={!!breakdownStatement}
+        onOpenChange={(open) => !open && setBreakdownStatement(null)}
+        statement={breakdownStatement}
       />
     </div>
   );

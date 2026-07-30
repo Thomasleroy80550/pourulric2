@@ -232,17 +232,25 @@ const StatementBreakdownDialog: React.FC<StatementBreakdownDialogProps> = ({
   const maxAmount = Math.max(...steps.map((s) => Math.abs(s.amount)), 0);
   const reservationLines = lines.filter((r) => r && (r.voyageur || r.arrivee));
 
-  // --- Répartition « Où va l'argent ? » ---
+  // --- Répartition « en toute transparence » ---
+  // Présentation à l'avantage du propriétaire : le ménage et la taxe sont
+  // payés par les voyageurs (sommes qui transitent), les frais de plateforme
+  // existent avec ou sans conciergerie. Le seul coût réel : la commission.
   const repartition = [
-    { label: 'Pour vous', amount: Math.max(netProprio, 0), color: '#16a34a' },
+    { label: 'Pour vous', amount: Math.max(netProprio, 0), color: '#16a34a', note: undefined as string | undefined },
+    { label: 'Commission conciergerie', amount: commission, color: '#0ea5e9', note: 'votre seul coût réel' },
     ...(hasPlatformDetails
       ? [
-          { label: 'Plateformes (commission + frais)', amount: commissionPlateforme + fraisPaiement, color: '#f59e0b' },
+          {
+            label: 'Plateformes (commission + frais)',
+            amount: commissionPlateforme + fraisPaiement,
+            color: '#f59e0b',
+            note: 'identique avec ou sans conciergerie',
+          },
         ]
       : []),
-    { label: 'Ménage', amount: fraisMenage, color: '#8b5cf6' },
-    { label: 'Commission conciergerie', amount: commission, color: '#0ea5e9' },
-    { label: 'Taxe de séjour (commune)', amount: taxeDeSejour, color: '#6b7280' },
+    { label: 'Ménage', amount: fraisMenage, color: '#8b5cf6', note: 'payé par vos voyageurs, pas par vous' },
+    { label: 'Taxe de séjour', amount: taxeDeSejour, color: '#6b7280', note: 'payée par vos voyageurs, reversée à la commune' },
   ].filter((s) => s.amount > 0);
   const repartitionTotal = repartition.reduce((acc, s) => acc + s.amount, 0);
 
@@ -313,7 +321,7 @@ const StatementBreakdownDialog: React.FC<StatementBreakdownDialogProps> = ({
                 <div>
                   <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
                     <PieChart className="h-4 w-4 text-[hsl(var(--primary))]" />
-                    Où va l'argent ?
+                    Répartition, en toute transparence
                   </p>
                   <div className="rounded-2xl border p-4">
                     <div className="flex h-4 w-full overflow-hidden rounded-full">
@@ -330,32 +338,39 @@ const StatementBreakdownDialog: React.FC<StatementBreakdownDialogProps> = ({
                     </div>
                     <div className="mt-3 space-y-2">
                       {repartition.map((seg) => (
-                        <div key={seg.label} className="flex items-center justify-between gap-2 text-sm">
-                          <span className="flex min-w-0 items-center gap-2">
+                        <div key={seg.label} className="flex items-start justify-between gap-2 text-sm">
+                          <span className="flex min-w-0 items-start gap-2">
                             <span
-                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
                               style={{ backgroundColor: seg.color }}
                             />
-                            <span className="truncate">{seg.label}</span>
-                          </span>
-                          <span className="shrink-0 font-semibold tabular-nums">
-                            {fmt(seg.amount)}
-                            <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                              {((seg.amount / repartitionTotal) * 100).toFixed(0)}%
+                            <span className="min-w-0">
+                              <span className="block truncate">{seg.label}</span>
+                              {seg.note && (
+                                <span className="block text-xs italic text-muted-foreground">{seg.note}</span>
+                              )}
                             </span>
                           </span>
+                          <span className="shrink-0 font-semibold tabular-nums">{fmt(seg.amount)}</span>
                         </div>
                       ))}
                     </div>
-                    {repartition[0]?.label === 'Pour vous' && (
-                      <p className="mt-3 rounded-lg bg-green-50 p-2.5 text-xs text-green-800">
-                        💡 Sur 100 € payés par vos voyageurs,{' '}
-                        <span className="font-bold">
-                          {((Math.max(netProprio, 0) / repartitionTotal) * 100).toFixed(0)} €
-                        </span>{' '}
-                        reviennent directement dans votre poche.
+                    <div className="mt-3 space-y-2">
+                      <p className="rounded-lg bg-green-50 p-2.5 text-xs text-green-800">
+                        ✅ <span className="font-bold">Bon à savoir :</span> le ménage et la taxe de séjour sont
+                        payés par vos voyageurs <span className="font-bold">en plus</span> du séjour — ils ne
+                        viennent jamais de votre poche. Les frais de plateforme s'appliquent à toute location,
+                        avec ou sans conciergerie.
                       </p>
-                    )}
+                      {commission > 0 && (
+                        <p className="rounded-lg bg-sky-50 p-2.5 text-xs text-sky-800">
+                          💼 Votre seul coût réel sur cette période :{' '}
+                          <span className="font-bold">{fmt(commission)}</span> de commission conciergerie. En
+                          échange : annonces optimisées, gestion des voyageurs 7j/7, prix ajustés, ménage et
+                          linge coordonnés — sans que vous ayez à lever le petit doigt.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

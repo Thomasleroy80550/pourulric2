@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import MainLayout from '@/components/MainLayout';
 import PlanningGanttV2 from '@/components/planning-v2/PlanningGanttV2';
+import OwnerReservationDialog from '@/components/OwnerReservationDialog';
+import { useSession } from '@/components/SessionContextProvider';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import {
   fetchKrossbookingReservations,
@@ -19,12 +21,13 @@ import { addDays, format } from 'date-fns';
  * Branchée sur les mêmes données que la page Calendrier (Krossbooking + blocs propriétaire).
  */
 const PlanningV2Page: React.FC = () => {
+  const { profile } = useSession();
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOwnerDialogOpen, setIsOwnerDialogOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       setLoading(true);
       try {
         const configuredUserRooms = await getUserRooms();
@@ -83,9 +86,11 @@ const PlanningV2Page: React.FC = () => {
       } finally {
         setLoading(false);
       }
-    };
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <MainLayout>
@@ -106,8 +111,21 @@ const PlanningV2Page: React.FC = () => {
             Aucune chambre configurée. Ajoutez des chambres via la page « Mon Profil » pour voir le planning.
           </p>
         ) : (
-          <PlanningGanttV2 userRooms={userRooms} reservations={reservations} />
+          <PlanningGanttV2
+            userRooms={userRooms}
+            reservations={reservations}
+            onCreateOwnerReservation={() => setIsOwnerDialogOpen(true)}
+          />
         )}
+
+        <OwnerReservationDialog
+          isOpen={isOwnerDialogOpen}
+          onOpenChange={setIsOwnerDialogOpen}
+          userRooms={userRooms}
+          allReservations={reservations}
+          onReservationCreated={fetchData}
+          profile={profile}
+        />
       </div>
     </MainLayout>
   );

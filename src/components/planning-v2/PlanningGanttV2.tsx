@@ -16,7 +16,7 @@ import {
   startOfDay,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, CalendarDays, Search, Repeat, LogIn, LogOut, Building2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Search, Repeat, LogIn, LogOut, Building2, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -142,9 +142,10 @@ type Rotation = {
 interface PlanningGanttV2Props {
   userRooms: UserRoom[];
   reservations: KrossbookingReservation[];
+  onCreateOwnerReservation?: () => void;
 }
 
-const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservations }) => {
+const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservations, onCreateOwnerReservation }) => {
   const isMobile = useIsMobile();
 
   // Dimensions responsives
@@ -358,6 +359,12 @@ const PlanningGanttV2: React.FC<PlanningGanttV2Props> = ({ userRooms, reservatio
         </div>
 
         <div className="flex items-center gap-2 justify-between sm:justify-end">
+          {onCreateOwnerReservation && (
+            <Button size="sm" onClick={onCreateOwnerReservation} className="flex-shrink-0 whitespace-nowrap">
+              <Home className="mr-2 h-4 w-4" />
+              Séjour propriétaire
+            </Button>
+          )}
           <Button variant="outline" size="icon" onClick={goPrev} className="flex-shrink-0">
             <ChevronLeft className="h-4 w-4" />
           </Button>

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CalendarRange, Home, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarRange, Sparkles } from "lucide-react";
 
 import MainLayout from "@/components/MainLayout";
 import BannedUserMessage from "@/components/BannedUserMessage";
@@ -15,37 +15,42 @@ import { useSession } from "@/components/SessionContextProvider";
 import { getUserRooms, UserRoom } from "@/lib/user-room-api";
 import { fetchKrossbookingReservations, KrossbookingReservation } from "@/lib/krossbooking";
 import BookingPlanningGridV2 from "@/components/BookingPlanningGridV2";
-import OwnerReservationDialog from "@/components/OwnerReservationDialog";
 
 const PlanningV3Page: React.FC = () => {
   const { profile } = useSession();
   const [loading, setLoading] = useState(true);
   const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
   const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
-  const [isOwnerDialogOpen, setIsOwnerDialogOpen] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const rooms = await getUserRooms();
-      setUserRooms(rooms);
-
-      const resas = rooms.length > 0 ? await fetchKrossbookingReservations(rooms) : [];
-      setReservations(resas);
-    } catch (error) {
-      console.error("[planning-v3] Erreur de chargement:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (profile?.is_banned || profile?.is_payment_suspended) {
       setLoading(false);
       return;
     }
+
+    let isMounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const rooms = await getUserRooms();
+        if (!isMounted) return;
+        setUserRooms(rooms);
+
+        const resas = rooms.length > 0 ? await fetchKrossbookingReservations(rooms) : [];
+        if (!isMounted) return;
+        setReservations(resas);
+      } catch (error) {
+        console.error("[planning-v3] Erreur de chargement:", error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
     load();
-  }, [profile, load]);
+    return () => {
+      isMounted = false;
+    };
+  }, [profile]);
 
   if (profile?.is_banned) {
     return (
@@ -90,22 +95,12 @@ const PlanningV3Page: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              className="rounded-full"
-              onClick={() => setIsOwnerDialogOpen(true)}
-              disabled={loading || userRooms.length === 0}
-            >
-              <Home className="mr-2 h-4 w-4" />
-              Séjour propriétaire
-            </Button>
-            <Button asChild variant="outline" className="rounded-full">
-              <Link to="/calendar">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Revenir au calendrier
-              </Link>
-            </Button>
-          </div>
+          <Button asChild variant="outline" className="rounded-full">
+            <Link to="/calendar">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Revenir au calendrier
+            </Link>
+          </Button>
         </div>
 
         {/* Contenu */}
@@ -128,15 +123,6 @@ const PlanningV3Page: React.FC = () => {
             )}
           </CardContent>
         </Card>
-
-        <OwnerReservationDialog
-          isOpen={isOwnerDialogOpen}
-          onOpenChange={setIsOwnerDialogOpen}
-          userRooms={userRooms}
-          allReservations={reservations}
-          onReservationCreated={load}
-          profile={profile}
-        />
       </div>
     </MainLayout>
   );

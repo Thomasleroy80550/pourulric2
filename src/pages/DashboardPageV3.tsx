@@ -286,6 +286,7 @@ const DashboardPageV3: React.FC = () => {
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [nextArrival, setNextArrival] = useState<KrossbookingReservation | null>(null);
+  const [allReservations, setAllReservations] = useState<KrossbookingReservation[]>([]);
 
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [compareYear, setCompareYear] = useState<number | null>(null);
@@ -313,16 +314,59 @@ const DashboardPageV3: React.FC = () => {
     [statements, rooms, compareYear],
   );
 
+  // ── Prévisionnel : CA déjà réservé (Krossbooking) pour les mois à venir ──
+  // Mêmes règles que la page Prévisions : annulations et séjours proprio exclus,
+  // rattachement au mois de la date de départ.
+  const forecastMonthly = useMemo(() => {
+    if (selectedYear !== currentYear || allReservations.length === 0) return null;
+    const excluded = new Set(["PROPRI", "PROP0"]);
+    const parseAmount = (amount: string) => {
+      const normalized = (amount || "0").replace(",", ".").replace(/[^\d.-]/g, "");
+      const parsed = Number.parseFloat(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const monthlySecured = Array(12).fill(0);
+    let hasData = false;
+    allReservations.forEach((res) => {
+      const status = (res.status || "").toUpperCase();
+      if (status.includes("CANC") || excluded.has(status)) return;
+      const checkOut = parseISO(res.check_out_date);
+      if (!isValid(checkOut) || checkOut.getFullYear() !== currentYear) return;
+      const amount = parseAmount(res.amount);
+      if (amount <= 0) return;
+      monthlySecured[checkOut.getMonth()] += amount;
+      hasData = true;
+    });
+    return hasData ? monthlySecured : null;
+  }, [allReservations, selectedYear, currentYear]);
+
   const chartData = useMemo(() => {
     if (!metrics) return [];
-    return metrics.monthly.map((m, i) => ({
-      ...m,
-      ca2: compareMetrics?.monthly[i]?.ca ?? null,
-      benef2: compareMetrics?.monthly[i]?.benef ?? null,
-      reservations2: compareMetrics?.monthly[i]?.reservations ?? null,
-      occupation2: compareMetrics?.monthly[i]?.occupation ?? null,
-    }));
-  }, [metrics, compareMetrics]);
+    const currentMonth = new Date().getMonth();
+    return metrics.monthly.map((m, i) => {
+      // La courbe prévisionnelle couvre le mois en cours et les mois futurs
+      // (les relevés n'existant pas encore pour ces mois). Le point du mois
+      // précédent reprend le CA réel pour relier visuellement les deux courbes.
+      let prev: number | null = null;
+      if (forecastMonthly) {
+        if (i >= currentMonth) prev = forecastMonthly[i];
+        else if (i === currentMonth - 1) prev = m.ca;
+      }
+      // Pour l'année en cours, les mois futurs n'ont pas encore de relevé :
+      // on coupe les courbes réelles au lieu de les faire tomber à 0 €.
+      const isFutureMonth = selectedYear === currentYear && i > currentMonth;
+      return {
+        ...m,
+        ca: isFutureMonth ? null : m.ca,
+        benef: isFutureMonth ? null : m.benef,
+        prev,
+        ca2: compareMetrics?.monthly[i]?.ca ?? null,
+        benef2: compareMetrics?.monthly[i]?.benef ?? null,
+        reservations2: compareMetrics?.monthly[i]?.reservations ?? null,
+        occupation2: compareMetrics?.monthly[i]?.occupation ?? null,
+      };
+    });
+  }, [metrics, compareMetrics, forecastMonthly, selectedYear, currentYear]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -349,6 +393,7 @@ const DashboardPageV3: React.FC = () => {
       try {
         const reservations =
           fetchedRooms.length > 0 ? await fetchKrossbookingReservations(fetchedRooms) : [];
+        setAllReservations(reservations);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         let candidate: KrossbookingReservation | null = null;
@@ -578,6 +623,11 @@ const DashboardPageV3: React.FC = () => {
                 <p className="mt-1 text-xs text-muted-foreground">
                   Chiffre d'affaires et bénéfice net — {yearLabel}
                   {isComparing && ` vs ${compareYear}`}
+                  {forecastMonthly && (
+                    <span className="ml-1 text-amber-600">
+                      • pointillés : prévisionnel (déjà réservé)
+                    </span>
+                  )}
                 </p>
               </div>
               <Button asChild variant="outline" size="sm" className="rounded-full">
@@ -611,6 +661,18 @@ const DashboardPageV3: React.FC = () => {
                       <Tooltip content={<CustomChartTooltip formatter={(v: number) => `${v.toFixed(2)}€`} />} />
                       <Area type="monotone" dataKey="ca" name={`CA ${selectedYear}`} stroke={CA_COLOR} strokeWidth={2.5} fill="url(#v3-ca)" animationDuration={1200} />
                       <Area type="monotone" dataKey="benef" name={`Bénéfice ${selectedYear}`} stroke={BENEF_COLOR} strokeWidth={2.5} fill="url(#v3-benef)" animationDuration={1200} />
+                      {forecastMonthly && (
+                        <Line
+                          type="monotone"
+                          dataKey="prev"
+                          name="Prévisionnel (déjà réservé)"
+                          stroke="#f59e0b"
+                          strokeWidth={2.5}
+                          strokeDasharray="6 5"
+                          dot={{ r: 3, fill: "#f59e0b", strokeWidth: 0 }}
+                          animationDuration={1200}
+                        />
+                      )}
                       {isComparing && (
                         <Line type="monotone" dataKey="ca2" name={`CA ${compareYear}`} stroke={COMPARE_COLOR} strokeWidth={2} strokeDasharray="5 4" dot={false} animationDuration={1200} />
                       )}

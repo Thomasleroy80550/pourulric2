@@ -1,128 +1,130 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Zap, Home, TrendingUp, Banknote, ReceiptText, Star,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Badge, BadgeProps } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Sparkles, Rocket, Terminal, Tag } from 'lucide-react';
+import { getPublicChangelog, ChangelogEntry } from '@/lib/changelog-api';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+const getCategoryBadgeVariant = (category?: string): BadgeProps['variant'] => {
+  switch (category?.toLowerCase()) {
+    case 'nouveauté':
+      return 'default';
+    case 'amélioration':
+      return 'secondary';
+    case 'correction':
+      return 'destructive';
+    default:
+      return 'outline';
+  }
+};
+
+const getCategoryDotColor = (category?: string): string => {
+  switch (category?.toLowerCase()) {
+    case 'nouveauté':
+      return 'bg-[hsl(var(--primary))]';
+    case 'amélioration':
+      return 'bg-sky-500';
+    case 'correction':
+      return 'bg-red-500';
+    default:
+      return 'bg-muted-foreground';
+  }
+};
 
 const NewVersionPage: React.FC = () => {
+  const [entries, setEntries] = useState<ChangelogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getPublicChangelog();
+        setEntries(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   return (
     <MainLayout>
-      <div className="container mx-auto py-6">
-        <h1 className="text-4xl font-bold mb-8 text-center text-primary">Découvrez la Nouvelle Version de Hello Keys !</h1>
-        <p className="text-lg text-center text-muted-foreground mb-12 max-w-3xl mx-auto">
-          Nous sommes ravis de vous présenter une version entièrement repensée de votre plateforme de gestion locative.
-          Cette mise à jour majeure apporte des améliorations significatives en termes de performance, de fonctionnalités
-          et de facilité d'utilisation, pour vous offrir une expérience encore plus fluide et efficace.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Section: Performance et Fiabilité */}
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl font-semibold text-primary">
-                <Zap className="mr-3 h-6 w-6 text-accent" /> Performance et Fiabilité
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li><span className="font-medium text-foreground">Intégrations API avancées :</span> Connexions optimisées avec nos logiciels partenaires pour une synchronisation parfaite.</li>
-                <li><span className="font-medium text-foreground">Calendrier et Réservations ultra-réactifs :</span> Une fluidité accrue pour gérer vos plannings sans accroc.</li>
-                <li><span className="font-medium text-foreground">Statistiques réelles :</span> Vos données financières sont désormais basées sur vos relevés de réservation, garantissant une précision totale.</li>
-                <li><span className="font-medium text-foreground">Gestion des incidents :</span> Un nouveau module pour signaler et suivre les problèmes techniques de vos logements.</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Section: Gestion Détaillée de Vos Logements */}
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl font-semibold text-primary">
-                <Home className="mr-3 h-6 w-6 text-accent" /> Gestion Détaillée de Vos Logements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li><span className="font-medium text-foreground">Section "Mes Logements" :</span> Paramétrez chaque aspect de votre propriété.</li>
-                <li><span className="font-medium text-foreground">Inventaire complet :</span> Ajoutez et gérez l'inventaire de votre mobilier et équipements.</li>
-                <li><span className="font-medium text-foreground">Informations pratiques :</span> Enregistrez codes Wi-Fi, instructions d'arrivée, règles de la maison, etc.</li>
-                <li><span className="font-medium text-foreground">Fiche technique centralisée :</span> Nous disposons d'une vue complète pour une gestion optimale.</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Section: Performance et Stratégie */}
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl font-semibold text-primary">
-                <TrendingUp className="mr-3 h-6 w-6 text-accent" /> Performance et Stratégie
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li><span className="font-medium text-foreground">Onglet "Performance" repensé :</span> Visualisez des stratégies de prix et d'occupation personnalisées.</li>
-                <li><span className="font-medium text-foreground">Demande de stratégie personnalisée :</span> Sollicitez notre équipe pour une stratégie sur mesure adaptée à vos objectifs.</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Section: Finances Simplifiées */}
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl font-semibold text-primary">
-                <Banknote className="mr-3 h-6 w-6 text-accent" /> Finances Simplifiées
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li><span className="font-medium text-foreground">Onglet "Finances" :</span> Accédez facilement à tous vos relevés de réservation.</li>
-                <li><span className="font-medium text-foreground">Factures intégrées (à venir) :</span> Bientôt, la gestion de vos factures directement depuis la plateforme.</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Section: Gestion de la Taxe de Séjour */}
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl font-semibold text-primary">
-                <ReceiptText className="mr-3 h-6 w-6 text-accent" /> Gestion de la Taxe de Séjour
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li><span className="font-medium text-foreground">Affichage détaillé :</span> Visualisez la taxe de séjour mois par mois pour toutes les réservations concernées.</li>
-                <li><span className="font-medium text-foreground">Prévention des retards :</span> Un système innovant pour vous aider à ne jamais manquer une déclaration.</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          {/* Section: Gestion des Avis Centralisée */}
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl font-semibold text-primary">
-                <Star className="mr-3 h-6 w-6 text-accent" /> Gestion des Avis Centralisée
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li><span className="font-medium text-foreground">Tous vos avis au même endroit :</span> Consultez les avis de chaque plateforme de réservation.</li>
-                <li><span className="font-medium text-foreground">Module activable :</span> Activez cette fonctionnalité pour une vue unifiée de vos retours clients.</li>
-              </ul>
-            </CardContent>
-          </Card>
+      <div className="container mx-auto max-w-3xl py-6">
+        {/* ── En-tête ─────────────────────────────────────── */}
+        <div className="relative overflow-hidden rounded-3xl border-0 bg-gradient-to-br from-[hsl(var(--sidebar-foreground))] via-[hsl(var(--primary))] to-[hsl(var(--accent))] p-6 text-white shadow-md sm:p-8">
+          <div className="flex items-center gap-2 text-white/80">
+            <Rocket className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-widest">Mises à jour</span>
+          </div>
+          <h1 className="mt-2 text-2xl font-bold sm:text-3xl">Nouveautés de votre espace</h1>
+          <p className="mt-1 max-w-xl text-sm text-white/85">
+            Votre espace propriétaire évolue en continu. Retrouvez ici toutes les améliorations,
+            nouveautés et corrections publiées par l'équipe.
+          </p>
         </div>
 
-        <div className="mt-16 text-center">
-          <h2 className="text-3xl font-bold text-primary mb-4">Prêt à explorer ?</h2>
-          <p className="text-lg text-muted-foreground mb-8">
-            Plongez dès maintenant dans cette nouvelle expérience et découvrez toutes les améliorations par vous-même !
-          </p>
-          <Button size="lg" onClick={() => window.location.href = '/'}>
-            Accéder au Tableau de Bord
-          </Button>
+        {/* ── Timeline ────────────────────────────────────── */}
+        <div className="mt-8">
+          {loading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+              ))}
+            </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <Terminal className="h-4 w-4" />
+              <AlertTitle>Erreur</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : entries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="rounded-full bg-muted p-3">
+                <Sparkles className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="mt-3 font-medium">Aucune mise à jour publiée pour le moment</p>
+              <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+                Revenez bientôt, les nouveautés arrivent régulièrement !
+              </p>
+            </div>
+          ) : (
+            <ol className="relative ml-3 border-l-2 border-muted pl-6">
+              {entries.map((entry) => (
+                <li key={entry.id} className="relative pb-8 last:pb-0">
+                  <span
+                    className={`absolute -left-[31px] top-1.5 h-3 w-3 rounded-full ring-4 ring-background ${getCategoryDotColor(entry.category)}`}
+                  />
+                  <div className="rounded-2xl border bg-card p-4 shadow-sm transition hover:shadow-md sm:p-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={getCategoryBadgeVariant(entry.category)}>{entry.category}</Badge>
+                      <Badge variant="outline" className="gap-1 font-normal">
+                        <Tag className="h-3 w-3" />v{entry.version}
+                      </Badge>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {format(parseISO(entry.created_at), 'dd MMMM yyyy', { locale: fr })}
+                      </span>
+                    </div>
+                    <h2 className="mt-3 text-base font-bold sm:text-lg">{entry.title}</h2>
+                    {entry.description && (
+                      <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                        {entry.description}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </div>
     </MainLayout>

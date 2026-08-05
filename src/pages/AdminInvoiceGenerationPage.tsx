@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Upload, FileText, DollarSign, Loader2, Terminal, Pencil, ChevronDown, FlaskConical } from 'lucide-react';
+import { Upload, FileText, DollarSign, Loader2, Terminal, Pencil, ChevronDown, FlaskConical, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -199,6 +199,10 @@ const AdminInvoiceGenerationPage: React.FC = () => {
   const tva = totalFacture - factureHT;
   const totalFraisOTA = processedData.reduce((sum, row) => sum + (row.originalCommissionPlateforme || 0), 0);
   const totalFraisPaiement = processedData.reduce((sum, row) => sum + (row.originalFraisPaiement || 0), 0);
+
+  const isBookingWithZeroPaymentFee = (row: ProcessedReservation) =>
+    row.portail.toLowerCase().includes('booking') && (row.originalFraisPaiement || 0) === 0;
+  const bookingZeroFeeCount = processedData.filter(isBookingWithZeroPaymentFee).length;
 
   return (
     <AdminLayout>
@@ -442,6 +446,15 @@ const AdminInvoiceGenerationPage: React.FC = () => {
             <Card className="shadow-md">
               <CardHeader><CardTitle>4. Relevé Détaillé</CardTitle><CardDescription>Vérifiez les réservations et les commissions calculées.</CardDescription></CardHeader>
               <CardContent>
+                {bookingZeroFeeCount > 0 && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Frais de paiement manquants</AlertTitle>
+                    <AlertDescription>
+                      {bookingZeroFeeCount} réservation(s) Booking avec des frais de paiement à 0€. C'est probablement une erreur : vérifiez les lignes en rouge avant de générer le relevé.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="overflow-x-auto h-[600px]">
                   <Table className="w-full text-xs [&_th]:px-2 [&_th]:py-2 [&_th]:h-auto [&_td]:px-2 [&_td]:py-1.5">
                     <TableHeader>
@@ -465,7 +478,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                     </TableHeader>
                     <TableBody>
                       {isLoading ? Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={helloKeysCollectsRent ? 15 : 14}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) : processedData.length > 0 ? processedData.map((row, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} className={cn(isBookingWithZeroPaymentFee(row) && "bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/60")}>
                           {helloKeysCollectsRent && <TableCell><Checkbox checked={selectedReservations.has(index)} onCheckedChange={(checked) => { const newSet = new Set(selectedReservations); if (checked) newSet.add(index); else newSet.delete(index); setSelectedReservations(newSet); }} /></TableCell>}
                           <TableCell>{row.portail}</TableCell>
                           <TableCell>{row.voyageur}</TableCell>
@@ -478,7 +491,7 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                           <TableCell>{row.revenuGenere.toFixed(2)}€</TableCell>
                           <TableCell>{row.montantVerse.toFixed(2)}€</TableCell>
                           <TableCell>{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
-                          <TableCell>{row.originalFraisPaiement.toFixed(2)}€</TableCell>
+                          <TableCell className={cn(isBookingWithZeroPaymentFee(row) && "text-red-600 font-bold")}>{row.originalFraisPaiement.toFixed(2)}€</TableCell>
                           <TableCell>{row.commissionHelloKeys.toFixed(2)}€</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(row, index)}>

@@ -1,6 +1,7 @@
 import { supabase } from '../integrations/supabase/client';
 import { Notification, sendEmail, createNotification, EmailAttachment } from './notifications-api'; // Import createNotification
 import { generateIncidentReportPdfBase64, buildIncidentReportFileName } from './pdf-utils';
+import { createExternalOrderTicket } from './order-ticket-api';
 
 export interface TechnicalReport {
   id: string;
@@ -65,6 +66,36 @@ export async function createTechnicalReport(report: Omit<TechnicalReport, 'id' |
       console.error("Erreur lors de la récupération de l'email de l'utilisateur pour le rapport technique :", profileError.message);
     } else if (profileData?.email) {
       const userFirstName = profileData.first_name || 'Cher utilisateur';
+
+      // Crée automatiquement un ticket sur la plateforme support (second projet)
+      try {
+        const customerName = [profileData.first_name, profileData.last_name].filter(Boolean).join(' ') || profileData.email;
+        await createExternalOrderTicket({
+          customer_email: profileData.email,
+          customer_name: customerName,
+          subject: `Rapport technique : ${data.title}`,
+          message: [
+            `Un nouveau rapport technique a été créé.`,
+            ``,
+            `Propriété : ${data.property_name}`,
+            `Titre : ${data.title}`,
+            `Priorité : ${data.priority}`,
+            data.category ? `Catégorie : ${data.category}` : null,
+            ``,
+            `Description :`,
+            data.description || 'N/A',
+            ``,
+            `Lien : ${import.meta.env.VITE_APP_BASE_URL}/admin/technical-reports/${data.id}`,
+          ].filter((line) => line !== null).join('\n'),
+          reference: data.id,
+          source_provider: 'technical_report',
+          priority: data.priority,
+          status: 'open',
+        });
+        console.log(`Ticket support créé pour le rapport technique ${data.id}`);
+      } catch (ticketError: any) {
+        console.error("Erreur lors de la création du ticket support pour le rapport technique :", ticketError?.message);
+      }
 
       // Génère le PDF du rapport d'incident (avec la signature Hello Keys) à joindre à l'email.
       let attachments: EmailAttachment[] | undefined;

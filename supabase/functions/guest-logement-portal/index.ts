@@ -315,6 +315,68 @@ serve(async (req) => {
         console.error("[guest-logement-portal] notification error", { error: notifError.message });
       }
 
+      // Create a ticket on the external support platform (best effort).
+      try {
+        const ticketToken = Deno.env.get("PROPRIO_TICKETS_API_TOKEN");
+        if (!ticketToken) {
+          console.error("[guest-logement-portal] Missing PROPRIO_TICKETS_API_TOKEN secret, ticket not created");
+        } else {
+          const { data: ownerProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("email, first_name, last_name")
+            .eq("id", room.user_id)
+            .maybeSingle();
+
+          const ownerEmail = (ownerProfile as { email?: string } | null)?.email;
+          if (!ownerEmail) {
+            console.error("[guest-logement-portal] Owner email not found, ticket not created", { user_id: room.user_id });
+          } else {
+            const ownerName = [
+              (ownerProfile as { first_name?: string }).first_name,
+              (ownerProfile as { last_name?: string }).last_name,
+            ].filter(Boolean).join(" ") || ownerEmail;
+
+            const ticketResponse = await fetch("https://hnvaqfcfjqhjupellfhk.supabase.co/functions/v1/order-ticket-create", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${ticketToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                customer_email: ownerEmail,
+                customer_name: ownerName,
+                subject: `Rapport technique : Signalement voyageur : ${problemLabel}`,
+                message: [
+                  `Un nouveau rapport technique (signalement voyageur) a été créé.`,
+                  ``,
+                  `Propriété : ${room.room_name}`,
+                  `Type : ${problemLabel}`,
+                  `Priorité : ${priority}`,
+                  ``,
+                  fullDescription,
+                ].join("\n"),
+                reference: report.id,
+                source_provider: "technical_report",
+                priority,
+                status: "open",
+              }),
+            });
+
+            const ticketText = await ticketResponse.text();
+            if (!ticketResponse.ok) {
+              console.error("[guest-logement-portal] External ticket creation failed", {
+                status: ticketResponse.status,
+                body: ticketText,
+              });
+            } else {
+              console.log("[guest-logement-portal] Support ticket created", { report_id: report.id });
+            }
+          }
+        }
+      } catch (ticketError) {
+        console.error("[guest-logement-portal] ticket creation error", { error: (ticketError as Error).message });
+      }
+
       return jsonResponse({ ok: true, report_id: report.id });
     }
 

@@ -15,8 +15,10 @@ import { toast } from 'sonner';
 import { getAllProfiles } from '@/lib/admin-api';
 import { UserProfile } from '@/lib/profile-api';
 import { getAdminReportsByStatus, createTechnicalReport, archiveReport, TechnicalReport } from '@/lib/technical-reports-api';
+import { createExternalOrderTicket } from '@/lib/order-ticket-api';
+import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Archive, ArchiveRestore, Check, ChevronsUpDown, QrCode } from 'lucide-react';
+import { PlusCircle, Loader2, Archive, ArchiveRestore, Check, ChevronsUpDown, QrCode, FlaskConical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -46,6 +48,41 @@ const AdminTechnicalReportsPage: React.FC = () => {
   const navigate = useNavigate();
   const [openUserSelect, setOpenUserSelect] = useState(false); // New state for combobox
   const [userSearchQuery, setUserSearchQuery] = useState(''); // New state for combobox search
+  const [testingTicket, setTestingTicket] = useState(false);
+
+  const handleTestSupportTicket = async () => {
+    setTestingTicket(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const email = user?.email || 'contact@hellokeys.fr';
+      const result = await createExternalOrderTicket({
+        customer_email: email,
+        customer_name: 'Test Hello Keys',
+        subject: 'Rapport technique : TEST de liaison support',
+        message: [
+          'Ceci est un ticket de TEST envoyé depuis la page admin des incidents.',
+          '',
+          `Envoyé par : ${email}`,
+          `Date : ${new Date().toLocaleString('fr-FR')}`,
+          '',
+          'Si vous voyez ce ticket sur la plateforme support, la liaison fonctionne ✅',
+        ].join('\n'),
+        reference: `TEST-${Date.now()}`,
+        source_provider: 'technical_report',
+        priority: 'low',
+        status: 'open',
+      });
+      toast.success('Ticket de test créé sur la plateforme support !', {
+        description: `Ticket ID : ${result.ticket_id}`,
+      });
+    } catch (error: any) {
+      toast.error('Échec de la création du ticket de test', {
+        description: error.message,
+      });
+    } finally {
+      setTestingTicket(false);
+    }
+  };
 
   const form = useForm<z.infer<typeof reportSchema>>({
     resolver: zodResolver(reportSchema),
@@ -171,7 +208,13 @@ const AdminTechnicalReportsPage: React.FC = () => {
     <AdminLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Incidents</h1>
-        <Button onClick={() => setIsCreateDialogOpen(true)}><PlusCircle className="h-4 w-4 mr-2" />Créer un incident</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleTestSupportTicket} disabled={testingTicket}>
+            {testingTicket ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FlaskConical className="h-4 w-4 mr-2" />}
+            Tester le ticket support
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}><PlusCircle className="h-4 w-4 mr-2" />Créer un incident</Button>
+        </div>
       </div>
       <Tabs defaultValue="active">
         <TabsList>

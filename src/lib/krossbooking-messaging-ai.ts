@@ -54,33 +54,76 @@ function normalizeReservationId(value: unknown) {
   return normalized || null;
 }
 
-function normalizeThreadMessages(messages: unknown) {
-  if (!Array.isArray(messages)) {
+// L'API Krossbooking "messaging/get-thread" renvoie les messages sous des clés
+// numériques ("0", "1", ...) et non dans un tableau `messages`.
+function extractRawMessages(payload: any): any[] {
+  if (!payload || typeof payload !== "object") {
     return [];
   }
 
-  return messages.map((message: any, index: number) => ({
-    id_message: Number(message.id_message ?? index + 1),
-    id_thread: Number(message.id_thread ?? 0),
-    date: String(message.date || message.created_at || message.last_update || ""),
-    sender: message.sender === "host" || message.sender === "system" ? message.sender : "guest",
-    text: String(message.text || message.message || message.body || ""),
-    is_read: Boolean(message.is_read),
-  }));
+  if (Array.isArray(payload.messages)) {
+    return payload.messages;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return Object.keys(payload)
+    .filter((key) => /^\d+$/.test(key))
+    .map((key) => payload[key])
+    .filter((message) => message && typeof message === "object");
 }
 
-function normalizeDetailedThreadPayload(threadPayload: any) {
+// Convertit "2026-08-13 10:12:19+02" en "2026-08-13T10:12:19+02" pour parseISO.
+function normalizeMessageDate(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  return raw.includes("T") ? raw : raw.replace(" ", "T");
+}
+
+function normalizeThreadMessages(rawMessages: any[]) {
+  const messages = rawMessages.map((message: any, index: number) => {
+    const role = String(message.user_role || message.sender || "").toLowerCase();
+    const sender = role === "owner" || role === "host" ? "host" : role === "system" ? "system" : "guest";
+
+    return {
+      id_message: Number(message.id_message ?? index + 1),
+      id_thread: Number(message.id_thread ?? 0),
+      date: normalizeMessageDate(message.date || message.created_at || message.last_update),
+      sender,
+      text: String(message.text || message.message || message.body || ""),
+      is_read: message.is_read !== undefined
+        ? Boolean(message.is_read)
+        : message.to_read !== undefined
+          ? !message.to_read
+          : true,
+    };
+  });
+
+  // Ordre chronologique : les plus anciens en premier.
+  return messages.sort((left, right) => {
+    const leftDate = Date.parse(left.date) || 0;
+    const rightDate = Date.parse(right.date) || 0;
+    return leftDate - rightDate || left.id_message - right.id_message;
+  });
+}
+
+function normalizeDetailedThreadPayload(threadPayload: any, fallbackIdThread?: number) {
   const rawThread = threadPayload?.thread && typeof threadPayload.thread === "object"
     ? threadPayload.thread
     : threadPayload;
 
+  const messages = normalizeThreadMessages(extractRawMessages(rawThread));
+  const lastMessage = messages[messages.length - 1];
+
   return {
-    id_thread: Number(rawThread?.id_thread ?? threadPayload?.id_thread ?? 0),
+    id_thread: Number(rawThread?.id_thread ?? threadPayload?.id_thread ?? lastMessage?.id_thread ?? fallbackIdThread ?? 0),
     id_reservation: normalizeReservationId(rawThread?.id_reservation ?? threadPayload?.id_reservation),
     cod_channel: String(rawThread?.cod_channel || threadPayload?.cod_channel || "UNKNOWN"),
-    last_message_date: String(rawThread?.last_message_date || threadPayload?.last_message_date || rawThread?.last_update || threadPayload?.last_update || ""),
-    last_message_text: String(rawThread?.last_message_text || threadPayload?.last_message_text || rawThread?.last_message || threadPayload?.last_message || ""),
-    messages: normalizeThreadMessages(rawThread?.messages ?? threadPayload?.messages),
+    last_message_date: String(rawThread?.last_message_date || threadPayload?.last_message_date || rawThread?.last_update || threadPayload?.last_update || lastMessage?.date || ""),
+    last_message_text: String(rawThread?.last_message_text || threadPayload?.last_message_text || rawThread?.last_message || threadPayload?.last_message || lastMessage?.text || ""),
+    messages,
   };
 }
 
@@ -118,9 +161,7 @@ export async function getAuthorizedMessageThread(idThread: number, reservationId
     ...(reservationId ? { id_reservation: reservationId } : {}),
   });
 
-  const normalizedThread = normalizeDetailedThreadPayload(response.data.thread);
-  console.log("[SmartReplies] raw thread payload", response.data.thread);
-  console.log("[SmartReplies] normalized thread payload", normalizedThread);
+  const normalizedThread = normalizeDetailedThreadPayload(response.data.thread, idThread);
 
   return {
     reservation: response.data.reservation || null,

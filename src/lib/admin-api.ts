@@ -147,6 +147,7 @@ export interface UserProfile {
   conso_price_per_kwh?: number | null;
   conso_service_enabled?: boolean | null;
   consumables_enabled?: boolean | null;
+  lmnp_module_enabled?: boolean | null;
 }
 
 export interface RoomUtilityEvent {

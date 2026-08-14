@@ -67,6 +67,8 @@ export interface UserProfile {
   consumables_enabled?: boolean;
   // NEW: flag d'accès ThermoBnB
   thermobnb_enabled?: boolean;
+  // Flag d'accès au module Compta LMNP
+  lmnp_module_enabled?: boolean;
 }
 
 export async function getProfile(): Promise<UserProfile | null> {

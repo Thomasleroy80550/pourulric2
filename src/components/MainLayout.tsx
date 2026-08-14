@@ -97,6 +97,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
     items: [
       { name: 'Performances', href: '/performance', icon: BarChart2 },
       { name: 'Finances', href: '/finances', icon: Banknote, disabled: isPaymentSuspended },
+      { name: 'Compta LMNP', href: '/lmnp', icon: Banknote, disabled: isPaymentSuspended },
       { name: 'Taxe de Séjour', href: '/tourist-tax', icon: Banknote },
       { name: 'Mes Avis', href: '/reviews', icon: Star },
       { name: 'Analyse Concurrentielle', href: '/comp-set', icon: Copy },

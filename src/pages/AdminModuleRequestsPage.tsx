@@ -2,6 +2,8 @@ import React from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllModuleActivationRequests, updateModuleActivationRequestStatus, ModuleActivationRequest } from '@/lib/module-activation-api';
+import { LMNP_MODULE_NAME } from '@/lib/lmnp-api';
+import { updateUser } from '@/lib/admin-api';
 import {
   Table,
   TableBody,
@@ -28,10 +30,11 @@ const AdminModuleRequestsPage: React.FC = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const moduleParam = params.get('module');
-  const initialFilter: 'all' | 'powersense' | 'thermobnb' =
+  const initialFilter: 'all' | 'powersense' | 'thermobnb' | 'lmnp' =
     moduleParam === 'electricity' ? 'powersense' :
-    moduleParam === 'thermobnb' ? 'thermobnb' : 'all';
-  const [filter, setFilter] = React.useState<'all' | 'powersense' | 'thermobnb'>(initialFilter);
+    moduleParam === 'thermobnb' ? 'thermobnb' :
+    moduleParam === 'lmnp' ? 'lmnp' : 'all';
+  const [filter, setFilter] = React.useState<'all' | 'powersense' | 'thermobnb' | 'lmnp'>(initialFilter);
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [selectedRequest, setSelectedRequest] = React.useState<ModuleActivationRequest | null>(null);
 
@@ -50,8 +53,14 @@ const AdminModuleRequestsPage: React.FC = () => {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ requestId, status }: { requestId: string, status: 'approved' | 'rejected' }) => 
-      updateModuleActivationRequestStatus(requestId, status),
+    mutationFn: async ({ requestId, status }: { requestId: string, status: 'approved' | 'rejected' }) => {
+      await updateModuleActivationRequestStatus(requestId, status);
+      // Activation automatique du module Compta LMNP sur le profil du client
+      const request = requests?.find(r => r.id === requestId);
+      if (status === 'approved' && request?.module_name === LMNP_MODULE_NAME) {
+        await updateUser({ user_id: request.user_id, lmnp_module_enabled: true });
+      }
+    },
     onSuccess: () => {
       toast.success("Statut de la demande mis à jour.");
       queryClient.invalidateQueries({ queryKey: ['moduleActivationRequests'] });
@@ -81,6 +90,7 @@ const AdminModuleRequestsPage: React.FC = () => {
     if (!requests) return [];
     if (filter === 'powersense') return requests.filter(r => r.module_name === 'electricity');
     if (filter === 'thermobnb') return requests.filter(r => r.module_name === 'thermobnb');
+    if (filter === 'lmnp') return requests.filter(r => r.module_name === LMNP_MODULE_NAME);
     return requests;
   }, [requests, filter]);
 
@@ -185,11 +195,12 @@ const AdminModuleRequestsPage: React.FC = () => {
     <AdminLayout>
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Demandes d'Activation de Modules</h1>
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'powersense' | 'thermobnb')}>
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'powersense' | 'thermobnb' | 'lmnp')}>
           <TabsList>
             <TabsTrigger value="all">Tous</TabsTrigger>
             <TabsTrigger value="powersense">PowerSense</TabsTrigger>
             <TabsTrigger value="thermobnb">ThermoBnB</TabsTrigger>
+            <TabsTrigger value="lmnp">Compta LMNP</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="border rounded-lg">

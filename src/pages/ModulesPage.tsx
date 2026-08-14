@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plug, Settings, TrendingUp, MessageSquare, Shield, Banknote, Wrench, Sparkles, CheckCheck, Info, UserCheck, BookOpen } from 'lucide-react';
+import { Plug, Settings, TrendingUp, MessageSquare, Shield, Banknote, Wrench, Sparkles, CheckCheck, Info, UserCheck, BookOpen, Calculator } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AccountantAccessDialog from '@/components/AccountantAccessDialog';
@@ -25,6 +26,7 @@ interface Module {
 
 const ModulesPage: React.FC = () => {
   const { profile, refreshProfile } = useSession();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isAccountantDialogOpen, setIsAccountantDialogOpen] = useState(false);
   const [requestedModules, setRequestedModules] = useState<Set<string>>(new Set());
@@ -122,6 +124,17 @@ const ModulesPage: React.FC = () => {
       buttonVariant: profile?.digital_booklet_enabled ? 'outline' : 'default',
       buttonDisabled: profile?.digital_booklet_enabled || false,
       onClick: handleActivateBooklet,
+    },
+    {
+      name: 'Compta LMNP',
+      description: 'Sortez votre liasse fiscale LMNP (2031 + 2033-A à E) : revenus importés automatiquement, amortissements calculés, export PDF.',
+      icon: Calculator,
+      status: profile?.lmnp_module_enabled ? 'Activé' : 'Nouveau',
+      info: '99€ HT / an',
+      actionText: profile?.lmnp_module_enabled ? 'Accéder' : 'Découvrir',
+      buttonVariant: 'default',
+      buttonDisabled: false,
+      onClick: () => navigate('/lmnp'),
     },
     {
       name: 'Smart Pricing',

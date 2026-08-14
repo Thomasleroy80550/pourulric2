@@ -124,6 +124,7 @@ import AdminDomainRequestsPage from "./pages/AdminDomainRequestsPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
 import PlanningV2Page from "./pages/PlanningV2Page";
+import LmnpPage from "./pages/LmnpPage";
 import GuestReportPage from "./pages/GuestReportPage";
 import GuestReportStatusPage from "./pages/GuestReportStatusPage";
 import GuestTrackLookupPage from "./pages/GuestTrackLookupPage";
@@ -248,6 +249,7 @@ function App() {
                                           <Route path="/reviews" element={<ReviewsPage />} />
                     
                       <Route path="/finances" element={<FinancePage />} />
+                      <Route path="/lmnp" element={<LmnpPage />} />
 
                       <Route path="/tourist-tax" element={<TouristTaxPage />} />
                       <Route path="/reports" element={<TechnicalReportsPage />} />

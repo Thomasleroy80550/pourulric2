@@ -4,6 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllModuleActivationRequests, updateModuleActivationRequestStatus, ModuleActivationRequest } from '@/lib/module-activation-api';
 import { LMNP_MODULE_NAME } from '@/lib/lmnp-api';
 import { updateUser } from '@/lib/admin-api';
+import { buildSampleLmnpData } from '@/lib/lmnp-sample';
+import { exportLiassePdf } from '@/lib/lmnp-pdf';
+import { Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -194,7 +197,21 @@ const AdminModuleRequestsPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Demandes d'Activation de Modules</h1>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-2xl font-bold">Demandes d'Activation de Modules</h1>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const year = new Date().getFullYear() - 1;
+              const { computation, settings } = buildSampleLmnpData(year);
+              exportLiassePdf(computation, settings, { specimen: true });
+              toast.success('Bilan de test LMNP généré !');
+            }}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Bilan de test LMNP (PDF)
+          </Button>
+        </div>
         <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'powersense' | 'thermobnb' | 'lmnp')}>
           <TabsList>
             <TabsTrigger value="all">Tous</TabsTrigger>

@@ -226,9 +226,21 @@ serve(async (req) => {
             Ce mois-ci, votre logement a séduit les voyageurs : <strong>${reservationCount} réservation${reservationCount > 1 ? 's' : ''}</strong> et <strong>${totalNuits} nuit${totalNuits > 1 ? 's' : ''} réservée${totalNuits > 1 ? 's' : ''}</strong>. De très beaux résultats !
           </div>
           <div style="margin-top: 14px;">
-            <div style="font-size: 13px; color: #6B7280;">Montant qui vous est versé</div>
-            <div style="font-size: 28px; font-weight: 800; color: #255F85;">${formatEuro(totals.totalMontantVerse)}</div>
+            <div style="font-size: 13px; color: #6B7280;">Revenus générés ce mois-ci</div>
+            <div style="font-size: 28px; font-weight: 800; color: #255F85;">${formatEuro(totals.totalRevenuGenere)}</div>
           </div>
+          <table role="presentation" width="100%" style="margin-top: 14px; border-collapse: collapse;">
+            <tr>
+              <td style="width: 50%; text-align: center; padding: 8px; border-right: 1px solid #CDE8FF;">
+                <div style="font-size: 12px; color: #6B7280;">Chiffre d'affaires</div>
+                <div style="font-size: 17px; font-weight: 700; color: #111827;">${formatEuro(totalCA)}</div>
+              </td>
+              <td style="width: 50%; text-align: center; padding: 8px;">
+                <div style="font-size: 12px; color: #6B7280;">Montant qui vous est versé</div>
+                <div style="font-size: 17px; font-weight: 700; color: #111827;">${formatEuro(totals.totalMontantVerse)}</div>
+              </td>
+            </tr>
+          </table>
         </div>
 
         <h2 style="font-size: 16px; color: #255F85; margin-bottom: 12px;">📊 Vos résultats du mois — ${escapeText(period)}</h2>

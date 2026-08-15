@@ -161,26 +161,42 @@ const JoinSharedSpacePage: React.FC = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: inviteeEmail,
-        password,
-        options: {
-          data: { first_name: firstName, last_name: lastName },
-          emailRedirectTo: window.location.origin + `/rejoindre-espace?token=${encodeURIComponent(token)}`,
+      // Création du compte côté serveur : email déjà confirmé, profil actif, invitation acceptée
+      const { data, error } = await supabase.functions.invoke('join-shared-space', {
+        body: {
+          token,
+          password,
+          firstName,
+          lastName,
+          cguvVersion: CURRENT_CGUV_VERSION,
         },
       });
 
-      if (error) {
-        if ((error as any)?.status === 422) {
+      if (error || data?.error) {
+        const message = data?.error || error?.message || '';
+        if (message === 'already_exists') {
           toast.error("Un compte existe déjà avec cet email. Veuillez vous connecter pour accepter l'invitation.");
           navigate('/login');
           return;
         }
-        toast.error(`Inscription impossible: ${error.message}`);
+        toast.error(`Inscription impossible: ${message}`);
         return;
       }
 
-      toast.success('Inscription réussie ! Vérifiez votre email pour confirmer votre compte, puis revenez sur ce lien pour finaliser.');
+      // Connexion immédiate (aucune confirmation d'email requise)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: inviteeEmail,
+        password,
+      });
+
+      if (signInError) {
+        toast.success("Compte créé ! Connectez-vous pour accéder à l'espace partagé.");
+        navigate('/login');
+        return;
+      }
+
+      toast.success("Bienvenue ! Votre accès à l'espace partagé est actif. Retrouvez-le sur votre profil.");
+      navigate('/profile');
     } finally {
       setLoading(false);
     }

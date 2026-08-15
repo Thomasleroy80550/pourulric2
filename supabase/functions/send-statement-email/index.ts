@@ -1,10 +1,125 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-// import { encode } from "https://deno.land/std@0.190.0/encoding/base64.ts"; // Supprimé car le PDF n'est plus attaché
+import { encode as encodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+const MAX_ATTACHMENT_BYTES = 12 * 1024 * 1024; // 12MB max pour la pièce jointe
+
+function escapeText(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Thème email Hello Keys (identique au thème newsletter)
+function buildEmailHtml(subject: string, bodyHtml: string): string {
+  const brandPrimary = "#255F85";
+  const brandPrimaryText = "#FFFFFF";
+  const brandLightBg = "#E1F2FF";
+  const brandAccentBorder = "#CDE8FF";
+  const textColor = "#111827";
+  const mutedText = "#6B7280";
+  const pageBg = "#F3F4F6";
+  const containerBg = "#FFFFFF";
+  const fontStack =
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+  const logoUrl = "https://beta.proprietaire.hellokeys.fr/logo.png";
+
+  return `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeText(subject)}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <style>
+    @media only screen and (max-width: 620px) {
+      .container { width: 100% !important; }
+      .content { padding: 16px !important; }
+      .header-inner { padding: 16px !important; }
+      .logo { width: 110px !important; height: auto !important; }
+    }
+    a { color: ${brandPrimary}; text-decoration: underline; }
+    img { max-width: 100%; border: 0; line-height: 100%; }
+    a[data-btn] {
+      display: inline-block;
+      background: ${brandPrimary};
+      color: ${brandPrimaryText} !important;
+      text-decoration: none !important;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background:${pageBg};">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background:${pageBg};">
+    <tr>
+      <td align="center" style="padding: 24px 12px;">
+        <table role="presentation" class="container" border="0" cellpadding="0" cellspacing="0" width="600" style="width:600px; max-width:600px; background:${containerBg}; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.06); font-family:${fontStack};">
+          <!-- Header -->
+          <tr>
+            <td style="background:${brandLightBg}; color:${brandPrimary};">
+              <div class="header-inner" style="padding: 20px 24px;">
+                <table role="presentation" width="100%">
+                  <tr>
+                    <td style="vertical-align: middle;">
+                      <img class="logo" src="${logoUrl}" alt="Hello Keys" width="128" style="display:block; border:0; outline:none; text-decoration:none;">
+                    </td>
+                    <td align="right" style="vertical-align: middle;">
+                      <div style="font-size:14px; opacity:0.9; font-weight:600; text-align:right;">${escapeText(subject)}</div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Bande accent -->
+          <tr>
+            <td style="background:${brandLightBg}; height: 6px; line-height: 6px; font-size: 0;">&nbsp;</td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="content" style="padding: 24px; color:${textColor}; font-size:15px; line-height:1.6;">
+              ${bodyHtml}
+            </td>
+          </tr>
+
+          <!-- Callout -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table role="presentation" width="100%" style="border:1px solid ${brandAccentBorder}; border-radius:8px; background:#FAFCFF;">
+                <tr>
+                  <td style="padding:16px; color:${mutedText}; font-size:13px;">
+                    Cet email vous est envoyé par Hello Keys. Si vous ne souhaitez plus recevoir ces communications,
+                    vous pouvez mettre à jour vos préférences dans votre espace client.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 24px; color:${mutedText}; font-size:12px; background:${brandLightBg};">
+              © ${new Date().getFullYear()} Hello Keys · Tous droits réservés
+              <br />
+              <span style="color:${mutedText};">Ce message peut contenir des informations confidentielles.</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 serve(async (req) => {
@@ -66,7 +181,7 @@ serve(async (req) => {
     // 3. Préparer le contenu de l'e-mail
     const defaultTemplate = {
       subject: 'Votre relevé Hello Keys pour {{period}} est disponible',
-      body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en cliquant sur le lien ci-dessous et sur votre espace client.\n\nCliquez ici pour télécharger votre relevé : {{pdfLink}}\n\nConnectez-vous pour consulter tous vos relevés : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
+      body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en pièce jointe de cet email, ainsi que sur votre espace client.\n\nVous pouvez également le télécharger ici : {{pdfLink}}\n\nConnectez-vous pour consulter tous vos relevés : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
     };
 
     // Chercher un event template "statement_email" si présent et activé
@@ -101,8 +216,8 @@ serve(async (req) => {
 
     const recapHtml = `
       <div style="margin: 24px 0;">
-        <h2 style="font-size: 16px; color: #111827; margin-bottom: 12px;">📊 Votre récap du mois — ${period}</h2>
-        <table style="width: 100%; max-width: 480px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="font-size: 16px; color: #255F85; margin-bottom: 12px;">📊 Votre récap du mois — ${escapeText(period)}</h2>
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid #CDE8FF; border-radius: 8px;">
           ${recapRow('Réservations', String(reservationCount))}
           ${recapRow('Nuits réservées', String(Number(totals.totalNuits) || 0))}
           ${recapRow('Voyageurs accueillis', String(Number(totals.totalVoyageurs) || 0))}
@@ -127,16 +242,51 @@ serve(async (req) => {
       ? `[TEST] ${replaceVars(effectiveTemplate.subject)}`
       : replaceVars(effectiveTemplate.subject);
     const body = replaceVars(effectiveTemplate.body);
-    let htmlBody = body.replace(/\n/g, '<br>');
+    let contentHtml = body.replace(/\n/g, '<br>');
 
     // Insérer le récap : via la variable {{recap}} si présente dans le template, sinon l'ajouter après le corps
-    if (htmlBody.includes('{{recap}}')) {
-      htmlBody = htmlBody.replace(/{{recap}}/g, recapHtml);
+    if (contentHtml.includes('{{recap}}')) {
+      contentHtml = contentHtml.replace(/{{recap}}/g, recapHtml);
     } else {
-      htmlBody = `${htmlBody}${recapHtml}`;
+      contentHtml = `${contentHtml}${recapHtml}`;
     }
 
-    // 4. Envoyer l'e-mail SANS pièce jointe
+    // Bouton de téléchargement du PDF
+    contentHtml += `
+      <div style="text-align: center; margin: 8px 0 16px 0;">
+        <a data-btn href="${pdfDownloadUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; background:#255F85; color:#FFFFFF !important; text-decoration:none !important; padding:10px 16px; border-radius:8px; font-weight:600;">📄 Télécharger mon relevé PDF</a>
+      </div>`;
+
+    // Appliquer le thème Hello Keys
+    const htmlBody = buildEmailHtml(replaceVars(effectiveTemplate.subject), contentHtml);
+
+    // 4. Télécharger le PDF pour le joindre à l'email
+    console.log("[send-statement-email] Téléchargement du PDF pour pièce jointe", { pdfPath });
+    let attachments: { filename: string; content: string }[] = [];
+    try {
+      const { data: pdfBlob, error: downloadError } = await supabaseAdmin.storage
+        .from('statements')
+        .download(pdfPath);
+
+      if (downloadError || !pdfBlob) {
+        console.warn("[send-statement-email] Impossible de télécharger le PDF, envoi sans pièce jointe", { error: downloadError?.message });
+      } else {
+        const arrayBuffer = await pdfBlob.arrayBuffer();
+        if (arrayBuffer.byteLength > MAX_ATTACHMENT_BYTES) {
+          console.warn("[send-statement-email] PDF trop volumineux pour être joint", { size: arrayBuffer.byteLength });
+        } else {
+          const safePeriod = period.replace(/[^a-zA-Z0-9àâäéèêëîïôöùûüç\s-]/g, '').replace(/\s+/g, '-');
+          attachments = [{
+            filename: `Releve-HelloKeys-${safePeriod}.pdf`,
+            content: encodeBase64(new Uint8Array(arrayBuffer)),
+          }];
+        }
+      }
+    } catch (e) {
+      console.warn("[send-statement-email] Erreur lors de la préparation de la pièce jointe", { error: (e as any)?.message });
+    }
+
+    // 5. Envoyer l'e-mail avec la pièce jointe
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) throw new Error("RESEND_API_KEY n'est pas configuré.");
 
@@ -151,6 +301,7 @@ serve(async (req) => {
             to: [testEmail || user.email],
             subject: subject,
             html: htmlBody,
+            ...(attachments.length > 0 ? { attachments } : {}),
         }),
     });
 
@@ -159,7 +310,7 @@ serve(async (req) => {
         throw new Error(`Échec de l'envoi de l'e-mail: ${JSON.stringify(errorBody)}`);
     }
 
-    // 5. Créer une notification pour l'utilisateur (si activée via event template ou par défaut)
+    // 6. Créer une notification pour l'utilisateur (si activée via event template ou par défaut)
     // En mode test, on ne notifie pas le client
     const shouldNotify = testEmail ? false : (statementEvent ? (statementEvent.sendNotification ?? true) : true);
     if (shouldNotify) {
@@ -170,12 +321,12 @@ serve(async (req) => {
       })
     }
 
-    return new Response(JSON.stringify({ message: "E-mail envoyé avec succès avec le lien PDF", subject, body }), {
+    return new Response(JSON.stringify({ message: "E-mail envoyé avec succès avec le PDF en pièce jointe", subject, attached: attachments.length > 0 }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
-    console.error(error)
+    console.error("[send-statement-email] Erreur", error)
     return new Response(JSON.stringify({ error: (error as any).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

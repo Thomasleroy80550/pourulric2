@@ -180,8 +180,8 @@ serve(async (req) => {
 
     // 3. Préparer le contenu de l'e-mail
     const defaultTemplate = {
-      subject: 'Votre relevé Hello Keys pour {{period}} est disponible',
-      body: `Bonjour {{userName}},\n\nVotre nouveau relevé pour la période de {{period}} est disponible en pièce jointe de cet email, ainsi que sur votre espace client.\n\nVous pouvez également le télécharger ici : {{pdfLink}}\n\nConnectez-vous pour consulter tous vos relevés : {{appUrl}}/finances\n\nCordialement,\nL'équipe Hello Keys`,
+      subject: '🎉 Bravo {{userName}} ! Vos résultats de {{period}} sont arrivés',
+      body: `Bonjour {{userName}},\n\nBonne nouvelle : votre relevé pour la période de {{period}} est arrivé, et vos résultats méritent d'être salués ! 👏\n\nVous trouverez le détail complet en pièce jointe de cet email, ainsi que sur votre espace client : {{appUrl}}/finances`,
     };
 
     // Chercher un event template "statement_email" si présent et activé
@@ -214,13 +214,27 @@ serve(async (req) => {
         <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827; ${bold ? 'font-weight: bold;' : ''}">${value}</td>
       </tr>`;
 
+    const totalNuits = Number(totals.totalNuits) || 0;
+
     const recapHtml = `
       <div style="margin: 24px 0;">
-        <h2 style="font-size: 16px; color: #255F85; margin-bottom: 12px;">📊 Votre récap du mois — ${escapeText(period)}</h2>
+        <!-- Bandeau félicitations -->
+        <div style="background: linear-gradient(135deg, #E1F2FF 0%, #F0F9FF 100%); border: 1px solid #CDE8FF; border-radius: 12px; padding: 20px 24px; text-align: center; margin-bottom: 20px;">
+          <div style="font-size: 22px;">🎉</div>
+          <div style="font-size: 18px; font-weight: 700; color: #255F85; margin-top: 4px;">Félicitations ${escapeText(userName)} !</div>
+          <div style="font-size: 14px; color: #374151; margin-top: 8px;">
+            Ce mois-ci, votre logement a séduit les voyageurs : <strong>${reservationCount} réservation${reservationCount > 1 ? 's' : ''}</strong> et <strong>${totalNuits} nuit${totalNuits > 1 ? 's' : ''} réservée${totalNuits > 1 ? 's' : ''}</strong>. De très beaux résultats !
+          </div>
+          <div style="margin-top: 14px;">
+            <div style="font-size: 13px; color: #6B7280;">Montant qui vous est versé</div>
+            <div style="font-size: 28px; font-weight: 800; color: #255F85;">${formatEuro(totals.totalMontantVerse)}</div>
+          </div>
+        </div>
+
+        <h2 style="font-size: 16px; color: #255F85; margin-bottom: 12px;">📊 Vos résultats du mois — ${escapeText(period)}</h2>
         <table style="width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid #CDE8FF; border-radius: 8px;">
           ${recapRow('Réservations', String(reservationCount))}
-          ${recapRow('Nuits réservées', String(Number(totals.totalNuits) || 0))}
-          ${recapRow('Voyageurs accueillis', String(Number(totals.totalVoyageurs) || 0))}
+          ${recapRow('Nuits réservées', String(totalNuits))}
           ${recapRow("Chiffre d'affaires", formatEuro(totalCA))}
           ${recapRow('Revenus générés', formatEuro(totals.totalRevenuGenere))}
           ${recapRow('Frais de ménage', formatEuro(totals.totalFraisMenage))}
@@ -228,6 +242,9 @@ serve(async (req) => {
           ${recapRow('Commission Hello Keys', formatEuro(totals.totalCommission))}
           ${recapRow('Montant versé', formatEuro(totals.totalMontantVerse), true)}
         </table>
+        <p style="font-size: 14px; color: #374151; margin-top: 16px;">
+          Merci de votre confiance : c'est un plaisir de gérer votre logement au quotidien. Toute l'équipe Hello Keys travaille pour que le mois prochain soit encore meilleur ! 🚀
+        </p>
       </div>`;
 
     // Remplacement basique des variables

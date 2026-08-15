@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, FileText, TrendingDown, RefreshCw, CheckCircle2, Clock } from "lucide-react";
+import { Calculator, FileText, TrendingDown, RefreshCw, CheckCircle2, Clock, Download, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { createModuleActivationRequest } from "@/lib/module-activation-api";
-import { LMNP_MODULE_NAME } from "@/lib/lmnp-api";
+import { LMNP_MODULE_NAME, LMNP_ACTIVATION_OPEN } from "@/lib/lmnp-api";
+import { buildSampleLmnpData } from "@/lib/lmnp-sample";
+import { exportLiassePdf } from "@/lib/lmnp-pdf";
+import { useSession } from "@/components/SessionContextProvider";
 
 const FEATURES = [
   {
@@ -32,10 +35,13 @@ const FEATURES = [
 ];
 
 const LmnpPaywall: React.FC = () => {
+  const { profile } = useSession();
   const [pending, setPending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const isAdmin = profile?.role === "admin";
 
   useEffect(() => {
+    if (!LMNP_ACTIVATION_OPEN) return;
     const checkPending = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -63,6 +69,17 @@ const LmnpPaywall: React.FC = () => {
     }
   };
 
+  const handleDownloadSample = () => {
+    try {
+      const year = new Date().getFullYear() - 1;
+      const { computation, settings } = buildSampleLmnpData(year);
+      exportLiassePdf(computation, settings, { specimen: true });
+      toast.success("Bilan de test généré ! Vous pouvez l'envoyer à votre expert-comptable.");
+    } catch (err: any) {
+      toast.error(`Erreur lors de la génération du bilan de test : ${err.message}`);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Card className="overflow-hidden border-0 bg-gradient-to-br from-[hsl(var(--sidebar-foreground))] via-[hsl(var(--primary))] to-[hsl(var(--accent))] text-white shadow-lg">
@@ -78,7 +95,12 @@ const LmnpPaywall: React.FC = () => {
             <span className="text-white/80">HT / an</span>
           </div>
           <div className="mt-6">
-            {pending ? (
+            {!LMNP_ACTIVATION_OPEN ? (
+              <Button size="lg" variant="secondary" disabled className="rounded-full bg-white/15 text-white">
+                <Clock className="mr-2 h-4 w-4" />
+                Bientôt disponible
+              </Button>
+            ) : pending ? (
               <Button size="lg" variant="secondary" disabled className="rounded-full bg-white/15 text-white">
                 <Clock className="mr-2 h-4 w-4" />
                 Demande envoyée — en attente de validation
@@ -97,10 +119,39 @@ const LmnpPaywall: React.FC = () => {
             )}
           </div>
           <p className="mt-3 text-xs text-white/70">
-            Facturation annuelle via votre compte Hello Keys après validation de la demande.
+            {LMNP_ACTIVATION_OPEN
+              ? "Facturation annuelle via votre compte Hello Keys après validation de la demande."
+              : "Le module est en cours de validation par un expert-comptable. Ouverture des activations très prochainement."}
           </p>
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card className="border-dashed border-2 shadow-none">
+          <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5">
+            <div className="flex gap-4">
+              <div className="rounded-lg bg-muted p-2.5 h-fit">
+                <FlaskConical className="h-5 w-5 text-[hsl(var(--primary))]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold">Bilan de test</p>
+                  <Badge variant="outline">Réservé admin</Badge>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Liasse complète (2031 + 2033-A à E) générée à partir d'un jeu de données fictif :
+                  12 relevés mensuels, charges variées, 4 immobilisations, déficits antérieurs.
+                  À envoyer à votre expert-comptable pour validation avant l'ouverture aux clients.
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleDownloadSample} className="shrink-0">
+              <Download className="mr-2 h-4 w-4" />
+              Télécharger le bilan de test
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {FEATURES.map((f) => (

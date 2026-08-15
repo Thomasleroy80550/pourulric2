@@ -2,6 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const LMNP_MODULE_NAME = "Compta LMNP";
 
+// Interrupteur : tant que false, les clients ne peuvent pas demander l'activation
+// (phase de validation du bilan de test par l'expert-comptable).
+export const LMNP_ACTIVATION_OPEN = false;
+
 export interface LmnpSettings {
   user_id: string;
   declarant_name?: string | null;

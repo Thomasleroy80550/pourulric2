@@ -66,6 +66,7 @@ import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
 import { Badge } from '@/components/ui/badge';
 import SharedSpaceBanner from './SharedSpaceBanner';
+import SpaceSwitcher from './SpaceSwitcher';
 
 const housekeepingSidebarSections = [
   {
@@ -443,6 +444,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                         </div>
 
             <div className="w-1/3 md:w-auto flex items-center justify-end space-x-1 sm:space-x-4">
+              <SpaceSwitcher />
               {isImpersonating && (
                 <div className="flex items-center gap-2">
                   <Badge variant="destructive" className="uppercase">Impersonation active</Badge>

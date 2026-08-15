@@ -15,8 +15,13 @@ const GREY_DARK: [number, number, number] = [80, 80, 80];
 const GREY_SECTION: [number, number, number] = [215, 215, 215];
 const GREY_COL: [number, number, number] = [238, 238, 238];
 
+// jsPDF (polices standard) ne sait pas afficher les espaces insécables
+// étroites (U+202F) produites par toLocaleString("fr-FR") : elles
+// apparaissent comme des « / ». On les remplace par des espaces normales.
+const clean = (s: string) => s.replace(/[\u202F\u00A0\u2009]/g, " ");
+
 // Les liasses fiscales sont exprimées en euros, sans centimes
-const fmtInt = (n: number) => Math.round(n).toLocaleString("fr-FR");
+const fmtInt = (n: number) => clean(Math.round(n).toLocaleString("fr-FR"));
 
 export interface ExportLiasseOptions {
   specimen?: boolean;
@@ -112,13 +117,13 @@ function drawIdentification(doc: jsPDF, year: number, settings: LmnpSettings | n
     body: [
       [
         { content: "Déclarant", styles: labelStyle },
-        { content: settings?.declarant_name || "—" },
+        { content: clean(settings?.declarant_name || "—") },
         { content: "SIRET", styles: labelStyle },
-        { content: settings?.siret || "—" },
+        { content: clean(settings?.siret || "—") },
       ],
       [
         { content: "Adresse du bien", styles: labelStyle },
-        { content: settings?.property_address || "—" },
+        { content: clean(settings?.property_address || "—") },
         { content: "Exercice", styles: labelStyle },
         { content: `01/01/${year} — 31/12/${year}` },
       ],
@@ -198,9 +203,11 @@ function drawFormPage(doc: jsPDF, form: LiasseForm, year: number, settings: Lmnp
   form.sections.forEach((section) => {
     const rows = section.lines.map((line) => [
       line.code,
-      line.note && line.amount === 0
-        ? `${line.label} : ${line.note}`
-        : line.label + (line.note ? `\n${line.note}` : ""),
+      clean(
+        line.note && line.amount === 0
+          ? `${line.label} : ${line.note}`
+          : line.label + (line.note ? `\n${line.note}` : ""),
+      ),
       line.amount !== 0 || !line.note ? fmtInt(line.amount) : "",
     ]);
     // Si la section ne tient plus sur la page, on passe à la suivante
@@ -360,7 +367,7 @@ export function exportLiassePdf(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     computation.warnings.forEach((w) => {
-      const lines: string[] = doc.splitTextToSize(`• ${w}`, contentW(doc));
+      const lines: string[] = doc.splitTextToSize(clean(`• ${w}`), contentW(doc));
       doc.text(lines, M, y);
       y += lines.length * 3.6 + 2;
     });

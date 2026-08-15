@@ -65,6 +65,7 @@ import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
 import { Badge } from '@/components/ui/badge';
+import SharedSpaceBanner from './SharedSpaceBanner';
 
 const housekeepingSidebarSections = [
   {
@@ -543,6 +544,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               isMobile && "pb-[calc(5rem+env(safe-area-inset-bottom))]"
             )}
           >
+            <SharedSpaceBanner />
             {profile?.is_payment_suspended && (
               <Alert variant="destructive" className="mb-6 sticky top-0 z-10">
                 <Ban className="h-4 w-4" />

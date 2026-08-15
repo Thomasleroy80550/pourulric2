@@ -84,6 +84,37 @@ serve(async (req) => {
     const userName = invoice.profiles?.first_name || 'Client';
     const period = invoice.period;
 
+    // Construction du récap mensuel à partir des totaux du relevé
+    const totals = invoice.totals || {};
+    const invoiceData: any[] = Array.isArray(invoice.invoice_data) ? invoice.invoice_data : [];
+    const totalCA = invoiceData.reduce((sum, r) => sum + (Number(r?.ca) || 0), 0);
+    const reservationCount = invoiceData.length;
+
+    const formatEuro = (value: unknown) =>
+      new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(value) || 0);
+
+    const recapRow = (label: string, value: string, bold = false) => `
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; color: #374151; ${bold ? 'font-weight: bold;' : ''}">${label}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #111827; ${bold ? 'font-weight: bold;' : ''}">${value}</td>
+      </tr>`;
+
+    const recapHtml = `
+      <div style="margin: 24px 0;">
+        <h2 style="font-size: 16px; color: #111827; margin-bottom: 12px;">📊 Votre récap du mois — ${period}</h2>
+        <table style="width: 100%; max-width: 480px; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; border: 1px solid #e5e7eb; border-radius: 8px;">
+          ${recapRow('Réservations', String(reservationCount))}
+          ${recapRow('Nuits réservées', String(Number(totals.totalNuits) || 0))}
+          ${recapRow('Voyageurs accueillis', String(Number(totals.totalVoyageurs) || 0))}
+          ${recapRow("Chiffre d'affaires", formatEuro(totalCA))}
+          ${recapRow('Revenus générés', formatEuro(totals.totalRevenuGenere))}
+          ${recapRow('Frais de ménage', formatEuro(totals.totalFraisMenage))}
+          ${recapRow('Taxe de séjour', formatEuro(totals.totalTaxeDeSejour))}
+          ${recapRow('Commission Hello Keys', formatEuro(totals.totalCommission))}
+          ${recapRow('Montant versé', formatEuro(totals.totalMontantVerse), true)}
+        </table>
+      </div>`;
+
     // Remplacement basique des variables
     const replaceVars = (tpl: string) =>
       tpl
@@ -94,7 +125,14 @@ serve(async (req) => {
 
     const subject = replaceVars(effectiveTemplate.subject);
     const body = replaceVars(effectiveTemplate.body);
-    const htmlBody = body.replace(/\n/g, '<br>');
+    let htmlBody = body.replace(/\n/g, '<br>');
+
+    // Insérer le récap : via la variable {{recap}} si présente dans le template, sinon l'ajouter après le corps
+    if (htmlBody.includes('{{recap}}')) {
+      htmlBody = htmlBody.replace(/{{recap}}/g, recapHtml);
+    } else {
+      htmlBody = `${htmlBody}${recapHtml}`;
+    }
 
     // 4. Envoyer l'e-mail SANS pièce jointe
     const resendApiKey = Deno.env.get('RESEND_API_KEY');

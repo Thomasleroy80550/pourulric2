@@ -18,6 +18,8 @@ import { generateStatementPdf } from '@/lib/pdf-utils';
 import { uploadStatementPdf } from '@/lib/storage-api';
 import StatusBadge from '@/components/StatusBadge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   Pagination,
@@ -39,6 +41,8 @@ const AdminStatementsPage: React.FC = () => {
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
   const [sendingTestId, setSendingTestId] = useState<string | null>(null);
+  const [testDialogStatement, setTestDialogStatement] = useState<SavedInvoice | null>(null);
+  const [testEmailValue, setTestEmailValue] = useState('');
   const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
@@ -208,13 +212,15 @@ const AdminStatementsPage: React.FC = () => {
     }
   };
 
-  const handleSendTestEmail = async (statement: SavedInvoice) => {
-    const testEmail = window.prompt("Adresse email pour recevoir l'email de test :");
-    if (!testEmail) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail.trim())) {
+  const handleSendTestEmail = async () => {
+    const statement = testDialogStatement;
+    if (!statement) return;
+    const testEmail = testEmailValue.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) {
       toast.error("Adresse email invalide.");
       return;
     }
+    setTestDialogStatement(null);
     setSendingTestId(statement.id);
     const toastId = toast.loading("Préparation de l'email de test...");
     try {
@@ -225,9 +231,9 @@ const AdminStatementsPage: React.FC = () => {
       const { path } = await uploadStatementPdf(statement.user_id, statement.id, pdfFile);
 
       toast.info("Envoi de l'email de test...", { id: toastId });
-      await sendStatementByEmail(statement.id, path, testEmail.trim());
+      await sendStatementByEmail(statement.id, path, testEmail);
 
-      toast.success(`Email de test envoyé à ${testEmail.trim()} !`, { id: toastId });
+      toast.success(`Email de test envoyé à ${testEmail} !`, { id: toastId });
     } catch (err: any) {
       console.error("Erreur lors de l'envoi de l'email de test:", err);
       toast.error(`Erreur lors de l'envoi du test: ${err.message}`, { id: toastId });
@@ -556,7 +562,7 @@ const AdminStatementsPage: React.FC = () => {
                             <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
                               {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                             </Button>
-                            <Button variant="outline" size="icon" onClick={() => handleSendTestEmail(statement)} disabled={sendingTestId === statement.id} title="Envoyer un email de test (récap) à une adresse de votre choix">
+                            <Button variant="outline" size="icon" onClick={() => { setTestEmailValue(''); setTestDialogStatement(statement); }} disabled={sendingTestId === statement.id} title="Envoyer un email de test (récap) à une adresse de votre choix">
                               {sendingTestId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
                             </Button>
                             <Button
@@ -656,6 +662,36 @@ const AdminStatementsPage: React.FC = () => {
         statement={selectedStatement}
         onCommentSaved={loadStatements}
       />
+      <Dialog open={!!testDialogStatement} onOpenChange={(open) => { if (!open) setTestDialogStatement(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5" /> Envoyer un email de test
+            </DialogTitle>
+            <DialogDescription>
+              L'email de relevé avec le récap mensuel {testDialogStatement ? `(période « ${testDialogStatement.period} »)` : ''} sera envoyé à l'adresse de votre choix, sans notifier le client.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="test-email">Votre adresse email</Label>
+            <Input
+              id="test-email"
+              type="email"
+              placeholder="vous@exemple.fr"
+              value={testEmailValue}
+              onChange={(e) => setTestEmailValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSendTestEmail(); }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestDialogStatement(null)}>Annuler</Button>
+            <Button onClick={handleSendTestEmail} disabled={!testEmailValue.trim()}>
+              <Send className="h-4 w-4 mr-2" /> Envoyer le test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

@@ -645,9 +645,9 @@ export async function updateInvoice(invoiceId: string, userId: string, period: s
  * @param invoiceId The ID of the invoice to send.
  * @param pdfPath The path of the generated PDF in Supabase Storage.
  */
-export async function sendStatementByEmail(invoiceId: string, pdfPath: string): Promise<void> {
+export async function sendStatementByEmail(invoiceId: string, pdfPath: string, testEmail?: string): Promise<void> {
   const { error } = await supabase.functions.invoke('send-statement-email', {
-    body: { invoiceId, pdfPath },
+    body: { invoiceId, pdfPath, ...(testEmail ? { testEmail } : {}) },
   });
 
   if (error) {

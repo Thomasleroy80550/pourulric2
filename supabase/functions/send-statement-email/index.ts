@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { invoiceId, pdfPath } = await req.json()
+    const { invoiceId, pdfPath, testEmail } = await req.json()
     if (!invoiceId || !pdfPath) {
       throw new Error("invoiceId et pdfPath sont requis");
     }
@@ -123,7 +123,9 @@ serve(async (req) => {
         .replace(/{{appUrl}}/g, appUrl)
         .replace(/{{pdfLink}}/g, pdfDownloadUrl);
 
-    const subject = replaceVars(effectiveTemplate.subject);
+    const subject = testEmail
+      ? `[TEST] ${replaceVars(effectiveTemplate.subject)}`
+      : replaceVars(effectiveTemplate.subject);
     const body = replaceVars(effectiveTemplate.body);
     let htmlBody = body.replace(/\n/g, '<br>');
 
@@ -146,7 +148,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
             from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
-            to: [user.email],
+            to: [testEmail || user.email],
             subject: subject,
             html: htmlBody,
         }),
@@ -158,7 +160,8 @@ serve(async (req) => {
     }
 
     // 5. Créer une notification pour l'utilisateur (si activée via event template ou par défaut)
-    const shouldNotify = statementEvent ? (statementEvent.sendNotification ?? true) : true;
+    // En mode test, on ne notifie pas le client
+    const shouldNotify = testEmail ? false : (statementEvent ? (statementEvent.sendNotification ?? true) : true);
     if (shouldNotify) {
       await supabaseAdmin.from('notifications').insert({
         user_id: invoice.user_id,

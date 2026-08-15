@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Terminal, Eye, MessageSquare, Trash2, Send, Loader2, RefreshCw, Search, Pencil, CheckCircle2, XCircle, AlertTriangle, FlaskConical } from 'lucide-react';
 import { getSavedInvoices, deleteInvoice, SavedInvoice, sendStatementByEmail, resendStatementToPennylane, getAllProfiles, sendPaymentReminder, setInvoicePaidStatus, updateInvoicePeriod } from '@/lib/admin-api';
 
 import { format, parseISO } from 'date-fns';
@@ -38,6 +38,7 @@ const AdminStatementsPage: React.FC = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [sendingStatementId, setSendingStatementId] = useState<string | null>(null);
+  const [sendingTestId, setSendingTestId] = useState<string | null>(null);
   const [retriggeringPennylaneId, setRetriggeringPennylaneId] = useState<string | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
   const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
@@ -204,6 +205,34 @@ const AdminStatementsPage: React.FC = () => {
       toast.error(`Erreur lors de l'envoi: ${err.message}`, { id: toastId });
     } finally {
       setSendingStatementId(null);
+    }
+  };
+
+  const handleSendTestEmail = async (statement: SavedInvoice) => {
+    const testEmail = window.prompt("Adresse email pour recevoir l'email de test :");
+    if (!testEmail) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail.trim())) {
+      toast.error("Adresse email invalide.");
+      return;
+    }
+    setSendingTestId(statement.id);
+    const toastId = toast.loading("Préparation de l'email de test...");
+    try {
+      toast.info("Génération du PDF...", { id: toastId });
+      const pdfFile = await generateStatementPdf(statement);
+
+      toast.info("Téléversement du PDF...", { id: toastId });
+      const { path } = await uploadStatementPdf(statement.user_id, statement.id, pdfFile);
+
+      toast.info("Envoi de l'email de test...", { id: toastId });
+      await sendStatementByEmail(statement.id, path, testEmail.trim());
+
+      toast.success(`Email de test envoyé à ${testEmail.trim()} !`, { id: toastId });
+    } catch (err: any) {
+      console.error("Erreur lors de l'envoi de l'email de test:", err);
+      toast.error(`Erreur lors de l'envoi du test: ${err.message}`, { id: toastId });
+    } finally {
+      setSendingTestId(null);
     }
   };
 
@@ -526,6 +555,9 @@ const AdminStatementsPage: React.FC = () => {
 
                             <Button variant="outline" size="icon" onClick={() => handleSendStatement(statement)} disabled={sendingStatementId === statement.id} title="Envoyer par e-mail">
                               {sendingStatementId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => handleSendTestEmail(statement)} disabled={sendingTestId === statement.id} title="Envoyer un email de test (récap) à une adresse de votre choix">
+                              {sendingTestId === statement.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
                             </Button>
                             <Button
                               variant="outline"

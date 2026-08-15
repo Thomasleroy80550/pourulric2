@@ -216,11 +216,12 @@ serve(async (req) => {
 
     const totalNuits = Number(totals.totalNuits) || 0;
     const totalMontantVerse = Number(totals.totalMontantVerse) || 0;
+    const totalTaxeDeSejour = Number(totals.totalTaxeDeSejour) || 0;
     // La facture Hello Keys : commission + frais de ménage (+ forfait ménage propriétaire)
     const totalFacture = Number(totals.totalFacture) ||
       ((Number(totals.totalCommission) || 0) + (Number(totals.totalFraisMenage) || 0) + (Number(totals.ownerCleaningFee) || 0));
-    // Le résultat net du propriétaire : ce qu'il touche réellement
-    const resultatNet = totalMontantVerse - totalFacture;
+    // Le résultat net du propriétaire : montant versé − facture Hello Keys − taxe de séjour à reverser
+    const resultatNet = totalMontantVerse - totalFacture - totalTaxeDeSejour;
 
     const recapHtml = `
       <div style="margin: 24px 0;">
@@ -237,13 +238,17 @@ serve(async (req) => {
           </div>
           <table role="presentation" width="100%" style="margin-top: 14px; border-collapse: collapse;">
             <tr>
-              <td style="width: 50%; text-align: center; padding: 8px; border-right: 1px solid #CDE8FF;">
+              <td style="width: 34%; text-align: center; padding: 8px; border-right: 1px solid #CDE8FF;">
                 <div style="font-size: 12px; color: #6B7280;">Montant qui vous est versé</div>
-                <div style="font-size: 17px; font-weight: 700; color: #111827;">${formatEuro(totalMontantVerse)}</div>
+                <div style="font-size: 16px; font-weight: 700; color: #111827;">${formatEuro(totalMontantVerse)}</div>
               </td>
-              <td style="width: 50%; text-align: center; padding: 8px;">
+              <td style="width: 33%; text-align: center; padding: 8px; border-right: 1px solid #CDE8FF;">
                 <div style="font-size: 12px; color: #6B7280;">Facture Hello Keys</div>
-                <div style="font-size: 17px; font-weight: 700; color: #111827;">− ${formatEuro(totalFacture)}</div>
+                <div style="font-size: 16px; font-weight: 700; color: #111827;">− ${formatEuro(totalFacture)}</div>
+              </td>
+              <td style="width: 33%; text-align: center; padding: 8px;">
+                <div style="font-size: 12px; color: #6B7280;">Taxe de séjour à reverser</div>
+                <div style="font-size: 16px; font-weight: 700; color: #111827;">− ${formatEuro(totalTaxeDeSejour)}</div>
               </td>
             </tr>
           </table>
@@ -260,6 +265,7 @@ serve(async (req) => {
           ${recapRow('Commission Hello Keys', formatEuro(totals.totalCommission))}
           ${recapRow('Montant versé', formatEuro(totalMontantVerse))}
           ${recapRow('Facture Hello Keys', `− ${formatEuro(totalFacture)}`)}
+          ${recapRow('Taxe de séjour à reverser', `− ${formatEuro(totalTaxeDeSejour)}`)}
           ${recapRow('Votre résultat net', formatEuro(resultatNet), true)}
         </table>
         <p style="font-size: 14px; color: #374151; margin-top: 16px;">

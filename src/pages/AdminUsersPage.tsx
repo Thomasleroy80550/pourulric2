@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle, Mail, RotateCcw } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle, Mail, RotateCcw, UserX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -115,6 +115,9 @@ const AdminUsersPage: React.FC = () => {
   const [onboardingFilter, setOnboardingFilter] = useState<string>('all');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [userToHardDelete, setUserToHardDelete] = useState<UserProfile | null>(null);
+  const [hardDeleteConfirmText, setHardDeleteConfirmText] = useState('');
+  const [isHardDeleting, setIsHardDeleting] = useState(false);
   const [compactMode, setCompactMode] = useState(true);
   const navigate = useNavigate();
 
@@ -579,6 +582,35 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  // Suppression TOTALE et irréversible d'un utilisateur (compte + toutes ses données)
+  const performHardDeleteUser = async () => {
+    if (!userToHardDelete) return;
+    const target = userToHardDelete;
+    setIsHardDeleting(true);
+    const toastId = toast.loading("Suppression totale de l'utilisateur en cours...");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Session admin non trouvée.");
+
+      const { data, error } = await supabase.functions.invoke('delete-user-admin', {
+        body: { target_user_id: target.id },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setUsers(curr => curr.filter(u => u.id !== target.id));
+      toast.success(`L'utilisateur ${target.first_name || ''} ${target.last_name || ''} a été supprimé définitivement.`, { id: toastId });
+      setUserToHardDelete(null);
+      setHardDeleteConfirmText('');
+    } catch (error: any) {
+      toast.error(`Erreur lors de la suppression : ${error.message}`, { id: toastId });
+    } finally {
+      setIsHardDeleting(false);
+    }
+  };
+
   const handleRestoreClient = async (user: UserProfile) => {
     const prevUsers = users;
     setUsers(curr => curr.map(u => (
@@ -845,6 +877,16 @@ const AdminUsersPage: React.FC = () => {
                     title="Sortie définitive du client"
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
+                {user.role !== 'admin' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => { setHardDeleteConfirmText(''); setUserToHardDelete(user); }}
+                    title="Supprimer TOTALEMENT l'utilisateur (irréversible)"
+                  >
+                    <UserX className="h-4 w-4 text-red-700" />
                   </Button>
                 )}
 
@@ -1322,6 +1364,48 @@ const AdminUsersPage: React.FC = () => {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={performDeleteOnboardingClient}>
               Confirmer la sortie
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!userToHardDelete} onOpenChange={(open) => { if (!open) { setUserToHardDelete(null); setHardDeleteConfirmText(''); } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+              <UserX className="h-5 w-5" /> Supprimer TOTALEMENT cet utilisateur ?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Vous êtes sur le point de supprimer définitivement{' '}
+                  <strong>{userToHardDelete?.first_name ?? ''} {userToHardDelete?.last_name ?? ''}</strong>
+                  {userToHardDelete?.email ? ` (${userToHardDelete.email})` : ''}.
+                </p>
+                <p className="text-red-600 font-medium">
+                  ⚠️ Cette action est IRRÉVERSIBLE : le compte, les relevés, les logements, les notifications et toutes les données associées seront définitivement supprimés.
+                </p>
+                <div className="space-y-1">
+                  <p className="text-sm">Tapez <strong>SUPPRIMER</strong> pour confirmer :</p>
+                  <Input
+                    value={hardDeleteConfirmText}
+                    onChange={(e) => setHardDeleteConfirmText(e.target.value)}
+                    placeholder="SUPPRIMER"
+                    disabled={isHardDeleting}
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isHardDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); performHardDeleteUser(); }}
+              disabled={hardDeleteConfirmText !== 'SUPPRIMER' || isHardDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isHardDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Supprimer définitivement
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

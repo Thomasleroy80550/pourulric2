@@ -215,6 +215,12 @@ serve(async (req) => {
       </tr>`;
 
     const totalNuits = Number(totals.totalNuits) || 0;
+    const totalMontantVerse = Number(totals.totalMontantVerse) || 0;
+    // La facture Hello Keys : commission + frais de ménage (+ forfait ménage propriétaire)
+    const totalFacture = Number(totals.totalFacture) ||
+      ((Number(totals.totalCommission) || 0) + (Number(totals.totalFraisMenage) || 0) + (Number(totals.ownerCleaningFee) || 0));
+    // Le résultat net du propriétaire : ce qu'il touche réellement
+    const resultatNet = totalMontantVerse - totalFacture;
 
     const recapHtml = `
       <div style="margin: 24px 0;">
@@ -226,18 +232,18 @@ serve(async (req) => {
             Ce mois-ci, votre logement a séduit les voyageurs : <strong>${reservationCount} réservation${reservationCount > 1 ? 's' : ''}</strong> et <strong>${totalNuits} nuit${totalNuits > 1 ? 's' : ''} réservée${totalNuits > 1 ? 's' : ''}</strong>. De très beaux résultats !
           </div>
           <div style="margin-top: 14px;">
-            <div style="font-size: 13px; color: #6B7280;">Revenus générés ce mois-ci</div>
-            <div style="font-size: 28px; font-weight: 800; color: #255F85;">${formatEuro(totals.totalRevenuGenere)}</div>
+            <div style="font-size: 13px; color: #6B7280;">Votre résultat net ce mois-ci</div>
+            <div style="font-size: 28px; font-weight: 800; color: #255F85;">${formatEuro(resultatNet)}</div>
           </div>
           <table role="presentation" width="100%" style="margin-top: 14px; border-collapse: collapse;">
             <tr>
               <td style="width: 50%; text-align: center; padding: 8px; border-right: 1px solid #CDE8FF;">
-                <div style="font-size: 12px; color: #6B7280;">Chiffre d'affaires</div>
-                <div style="font-size: 17px; font-weight: 700; color: #111827;">${formatEuro(totalCA)}</div>
+                <div style="font-size: 12px; color: #6B7280;">Montant qui vous est versé</div>
+                <div style="font-size: 17px; font-weight: 700; color: #111827;">${formatEuro(totalMontantVerse)}</div>
               </td>
               <td style="width: 50%; text-align: center; padding: 8px;">
-                <div style="font-size: 12px; color: #6B7280;">Montant qui vous est versé</div>
-                <div style="font-size: 17px; font-weight: 700; color: #111827;">${formatEuro(totals.totalMontantVerse)}</div>
+                <div style="font-size: 12px; color: #6B7280;">Facture Hello Keys</div>
+                <div style="font-size: 17px; font-weight: 700; color: #111827;">− ${formatEuro(totalFacture)}</div>
               </td>
             </tr>
           </table>
@@ -252,7 +258,9 @@ serve(async (req) => {
           ${recapRow('Frais de ménage', formatEuro(totals.totalFraisMenage))}
           ${recapRow('Taxe de séjour', formatEuro(totals.totalTaxeDeSejour))}
           ${recapRow('Commission Hello Keys', formatEuro(totals.totalCommission))}
-          ${recapRow('Montant versé', formatEuro(totals.totalMontantVerse), true)}
+          ${recapRow('Montant versé', formatEuro(totalMontantVerse))}
+          ${recapRow('Facture Hello Keys', `− ${formatEuro(totalFacture)}`)}
+          ${recapRow('Votre résultat net', formatEuro(resultatNet), true)}
         </table>
         <p style="font-size: 14px; color: #374151; margin-top: 16px;">
           Merci de votre confiance : c'est un plaisir de gérer votre logement au quotidien. Toute l'équipe Hello Keys travaille pour que le mois prochain soit encore meilleur ! 🚀

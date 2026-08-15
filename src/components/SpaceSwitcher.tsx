@@ -111,8 +111,9 @@ const SpaceSwitcher: React.FC = () => {
       const { error } = await supabase.auth.setSession(session);
       if (error) throw error;
       localStorage.removeItem(RETURN_SESSION_KEY);
-      toast.success("Retour à votre compte.");
-      window.location.href = '/';
+      sessionStorage.removeItem('hk_space_chosen');
+      toast.success("Retour à la sélection de compte.");
+      window.location.href = '/espaces';
     } catch (err: any) {
       toast.error(`Impossible de revenir à votre compte : ${err.message}. Reconnectez-vous.`);
       localStorage.removeItem(RETURN_SESSION_KEY);
@@ -138,7 +139,7 @@ const SpaceSwitcher: React.FC = () => {
         {hasReturnSession ? (
           <DropdownMenuItem onClick={returnToMyAccount} className="cursor-pointer">
             <Undo2 className="h-4 w-4 mr-2" />
-            Revenir à mon compte
+            Revenir à la sélection de compte
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem disabled>

@@ -16,6 +16,11 @@ import { getLmnpSettings, getLmnpFixedAssets } from "@/lib/lmnp-api";
 import { getMyStatements } from "@/lib/statements-api";
 import { getExpenses, getRecurringExpenses, generateRecurringInstances } from "@/lib/expenses-api";
 import { computeLmnpYear } from "@/lib/lmnp-engine";
+import { buildSampleLmnpData } from "@/lib/lmnp-sample";
+import { exportLiassePdf } from "@/lib/lmnp-pdf";
+import { Button } from "@/components/ui/button";
+import { FlaskConical } from "lucide-react";
+import { toast } from "sonner";
 
 const LmnpPage: React.FC = () => {
   const { profile } = useSession();
@@ -97,21 +102,38 @@ const LmnpPage: React.FC = () => {
             <h1 className="text-3xl font-bold">Compta LMNP</h1>
             <Badge variant="secondary">Régime réel simplifié</Badge>
           </div>
-          {enabled && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Exercice</span>
-              <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(parseInt(v, 10))}>
-                <SelectTrigger className="h-9 w-[130px] rounded-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((y) => (
-                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {profile?.role === "admin" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const year = new Date().getFullYear() - 1;
+                  const { computation, settings: sampleSettings } = buildSampleLmnpData(year);
+                  exportLiassePdf(computation, sampleSettings, { specimen: true });
+                  toast.success("Bilan de test généré ! Envoyez-le à votre expert-comptable.");
+                }}
+              >
+                <FlaskConical className="mr-2 h-4 w-4" />
+                Bilan de test (PDF)
+              </Button>
+            )}
+            {enabled && (
+              <>
+                <span className="text-sm font-medium text-muted-foreground">Exercice</span>
+                <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(parseInt(v, 10))}>
+                  <SelectTrigger className="h-9 w-[130px] rounded-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+          </div>
         </div>
 
         {!profile ? (

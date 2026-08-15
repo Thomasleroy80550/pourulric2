@@ -25,6 +25,7 @@ import { useTheme } from 'next-themes';
 import PasswordChangeForm from '@/components/PasswordChangeForm';
 import DocumentsTab from '@/components/DocumentsTab';
 import DelegatedAccessPanel from '@/components/DelegatedAccessPanel';
+import SharedSpacePanel from '@/components/SharedSpacePanel';
 import AttestationFormDialog from '@/components/AttestationFormDialog';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -661,7 +662,8 @@ const ProfilePage: React.FC = () => {
             <DocumentsTab className="w-full" />
           </TabsContent>
 
-          <TabsContent value="delegated-access" className="flex-1">
+          <TabsContent value="delegated-access" className="flex-1 space-y-6">
+            <SharedSpacePanel className="w-full" />
             <DelegatedAccessPanel className="w-full" />
           </TabsContent>
         </Tabs>

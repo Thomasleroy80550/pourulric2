@@ -73,6 +73,7 @@ import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
 import AdminConsumablesPage from "./pages/AdminConsumablesPage";
 import RedeemInvitePage from './pages/RedeemInvitePage';
+import JoinSharedSpacePage from './pages/JoinSharedSpacePage';
 import Season2026Page from "./pages/Season2026Page";
 import AdminSeasonRequestsPage from "./pages/AdminSeasonRequestsPage";
 import AdminHivernageEmailPage from './pages/AdminHivernageEmailPage';
@@ -217,6 +218,7 @@ function App() {
                       <Route path="/promotion" element={<PromotionPage />} />
                       <Route path="/new-version" element={<NewVersionPage />} />
                       <Route path="/redeem-invite" element={<RedeemInvitePage />} />
+                      <Route path="/rejoindre-espace" element={<JoinSharedSpacePage />} />
                       <Route path="/season-2026" element={<Season2026Page />} />
                       <Route path="/season-2026/prices" element={<MySeasonPricesPage />} />
                       <Route path="/hivernage-2026" element={<Hivernage2026Page />} />

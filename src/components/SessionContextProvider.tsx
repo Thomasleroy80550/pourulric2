@@ -69,12 +69,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           // Regular user logic
           if (!isOnboardingComplete) {
             // Autoriser l'invitation même si l'onboarding n'est pas terminé
-            if (location.pathname !== '/onboarding-status' && !location.pathname.startsWith('/redeem-invite')) {
+            if (location.pathname !== '/onboarding-status' && !location.pathname.startsWith('/redeem-invite') && !location.pathname.startsWith('/rejoindre-espace')) {
               navigate('/onboarding-status');
             }
           } else {
-            // Si onboarding terminé, ne pas rediriger s'il est sur /redeem-invite
-            if ((location.pathname === '/onboarding-status' || location.pathname === '/login') && !location.pathname.startsWith('/redeem-invite')) {
+            // Si onboarding terminé, ne pas rediriger s'il est sur /redeem-invite ou /rejoindre-espace
+            if ((location.pathname === '/onboarding-status' || location.pathname === '/login') && !location.pathname.startsWith('/redeem-invite') && !location.pathname.startsWith('/rejoindre-espace')) {
               navigate('/');
             }
           }
@@ -96,7 +96,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setShowCguvModal(false);
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
-      const publicPaths = ['/login', '/prospect-signup', '/redeem-invite', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi'];
+      const publicPaths = ['/login', '/prospect-signup', '/redeem-invite', '/rejoindre-espace', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi'];
       const isPublicPath = publicPaths.some((p) => location.pathname.startsWith(p));
 
       if (!isPublicPath) {

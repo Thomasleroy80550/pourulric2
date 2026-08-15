@@ -292,6 +292,7 @@ const SidebarContent: React.FC<{ onLinkClick?: () => void; isPaymentSuspended: b
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
+  const location = useLocation();
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [isAICopilotDialogOpen, setIsAICopilotDialogOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
@@ -307,6 +308,26 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');
     setIsImpersonating(!!impersonationSession);
   }, [profile]);
+
+  // Comptes invités : à l'arrivée sur le tableau de bord, proposer le choix d'espace
+  useEffect(() => {
+    const checkSpaceChoice = async () => {
+      if (location.pathname !== '/') return;
+      if (sessionStorage.getItem('hk_space_chosen')) return;
+      if (localStorage.getItem('shared_space_return_session')) return; // déjà basculé dans un espace
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count } = await supabase
+        .from('account_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('member_id', user.id)
+        .eq('status', 'accepted');
+      if ((count ?? 0) > 0) {
+        navigate('/espaces');
+      }
+    };
+    checkSpaceChoice();
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const fetchMigrationNotice = async () => {

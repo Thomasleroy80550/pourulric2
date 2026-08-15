@@ -356,7 +356,7 @@ function buildForms(i: FormInputs): LiasseForm[] {
       {
         title: "Passif",
         lines: [
-          { code: "120", label: "Capital / compte de l'exploitant (équilibre)", amount: round2(netAssets - (i.taxResult < 0 ? 0 : i.finalTaxResult)) },
+          { code: "120", label: "Capital / compte de l'exploitant (équilibre)", amount: round2(netAssets - i.taxResult) },
           { code: "310", label: "Résultat de l'exercice", amount: i.taxResult },
           { code: "180", label: "Total passif", amount: netAssets },
         ],

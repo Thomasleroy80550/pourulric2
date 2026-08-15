@@ -126,7 +126,9 @@ const ModulesPage: React.FC = () => {
       onClick: handleActivateBooklet,
     },
     {
-      name: 'Compta LMNP',
+      // Libellé volontairement différent du nom de la demande d'activation ('Compta LMNP')
+      // pour que ce bouton de navigation ne soit jamais désactivé par une demande en attente.
+      name: 'Compta LMNP — Liasse fiscale',
       description: 'Sortez votre liasse fiscale LMNP (2031 + 2033-A à E) : revenus importés automatiquement, amortissements calculés, export PDF.',
       icon: Calculator,
       status: profile?.lmnp_module_enabled ? 'Activé' : 'Nouveau',

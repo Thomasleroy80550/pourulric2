@@ -24,7 +24,7 @@ const LmnpPage: React.FC = () => {
   // Par défaut, l'exercice à déclarer est l'année précédente
   const [selectedYear, setSelectedYear] = useState(currentYear - 1);
 
-  const enabled = !!(profile as any)?.lmnp_module_enabled;
+  const enabled = !!profile?.lmnp_module_enabled;
 
   const { data: settings, isLoading: loadingSettings } = useQuery({
     queryKey: ["lmnpSettings"],

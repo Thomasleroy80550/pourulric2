@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
+import AccountSuspendedScreen from './AccountSuspendedScreen';
 import { getProfile, updateProfile, UserProfile, updateUserLastSeen } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
@@ -222,6 +223,16 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Blocage total de l'application pour les comptes suspendus pour impayé (hors admins)
+  if (session && profile?.is_payment_suspended && profile.role !== 'admin') {
+    return (
+      <SessionContext.Provider value={{ session, loading, profile }}>
+        <AccountSuspendedScreen />
+        <Toaster />
+      </SessionContext.Provider>
     );
   }
 

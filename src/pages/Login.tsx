@@ -79,16 +79,16 @@ const BRAND = "#175e82";
 
 const features = [{
     icon: CalendarCheck2,
-    title: "Planning centralisé",
-    description: "Toutes vos réservations synchronisées en temps réel."
+    title: "Suivez vos réservations",
+    description: "Le planning de votre bien, mis à jour en temps réel."
 }, {
     icon: BarChart3,
-    title: "Revenus optimisés",
-    description: "Tarification dynamique et reporting financier détaillé."
+    title: "Vos revenus en un coup d'œil",
+    description: "Relevés, versements et performances de votre location."
 }, {
     icon: ShieldCheck,
-    title: "Sécurité & conformité",
-    description: "Vos données protégées, documents et KYC sécurisés."
+    title: "Vos documents sécurisés",
+    description: "Contrats, factures et relevés accessibles à tout moment."
 }];
 
 const StatusBar = (
@@ -226,12 +226,12 @@ const Login = () => {
                 <div className="relative z-10 max-w-md">
                     <span
                         className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur">
-                        <Sparkles className="h-3.5 w-3.5" />Plateforme de gestion locative
+                        <Sparkles className="h-3.5 w-3.5" />Votre espace propriétaire
                                   </span>
                     <h2
-                        className="mt-6 text-4xl xl:text-[2.75rem] font-bold leading-[1.15] tracking-tight">Pilotez vos locations comme une agence pro.</h2>
-                    <p className="mt-4 text-white/70 text-base leading-relaxed">Réservations, revenus, documents et conciergerie — tout votre
-                                    portefeuille au même endroit.
+                        className="mt-6 text-4xl xl:text-[2.75rem] font-bold leading-[1.15] tracking-tight">Votre bien entre de bonnes mains, en toute transparence.</h2>
+                    <p className="mt-4 text-white/70 text-base leading-relaxed">Suivez vos réservations, vos revenus et vos documents —
+                                    tout ce qui concerne votre bien, au même endroit.
                                   </p>
                     <ul className="mt-10 space-y-5">
                         {features.map(f => (<li key={f.title} className="flex items-start gap-4">

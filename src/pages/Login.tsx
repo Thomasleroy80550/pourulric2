@@ -25,6 +25,8 @@ import {
     BarChart3,
     CalendarCheck2,
     Wand2,
+    CheckCircle2,
+    TrendingUp,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -223,6 +225,37 @@ const Login = () => {
                         alt="Hello Keys"
                         className="h-10 w-auto brightness-0 invert" />
                 </div>
+                {/* Notifications flottantes façon dashboard vivant */}
+                <div className="hidden xl:block absolute right-8 top-12 z-10 w-64 space-y-3 pointer-events-none select-none">
+                    <div className="animate-float">
+                        <div
+                            className="rounded-2xl bg-white/95 p-4 shadow-2xl shadow-black/20 backdrop-blur rotate-2">
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                </span>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-gray-900">Nouvelle réservation confirmée</p>
+                                    <p className="text-[11px] text-gray-500">7 nuits · arrivée le 12 juillet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="animate-float ml-8" style={{ animationDelay: "1s" }}>
+                        <div
+                            className="rounded-2xl bg-white/95 p-4 shadow-2xl shadow-black/20 backdrop-blur -rotate-2">
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
+                                    <TrendingUp className="h-5 w-5" style={{ color: BRAND }} />
+                                </span>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-gray-900">Versement effectué</p>
+                                    <p className="text-[11px] text-gray-500">+ 1 250 € sur votre compte</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div className="relative z-10 max-w-md">
                     <span
                         className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur">
@@ -278,12 +311,15 @@ const Login = () => {
                 <div className="flex-1 flex items-center justify-center px-4 sm:px-12 py-8">
                     <div className="w-full max-w-[440px]">
                         <div className="text-center">
-                            <span
-                                className="inline-flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg shadow-[#175e82]/20"
-                                style={{
-                                    background: `linear-gradient(135deg, ${BRAND} 0%, #1e77a5 100%)`
-                                }}>
-                                <Lock className="h-6 w-6 text-white" />
+                            <span className="relative inline-flex">
+                                <span className="absolute inset-0 rounded-2xl bg-[#175e82]/30 blur-xl animate-pulse" />
+                                <span
+                                    className="relative inline-flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg shadow-[#175e82]/20"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${BRAND} 0%, #1e77a5 100%)`
+                                    }}>
+                                    <Lock className="h-6 w-6 text-white" />
+                                </span>
                             </span>
                             <h1 className="mt-5 text-2xl sm:text-[1.75rem] font-bold tracking-tight text-gray-900">Bon retour parmi nous
                                             </h1>

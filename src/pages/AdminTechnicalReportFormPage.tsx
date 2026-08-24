@@ -13,12 +13,13 @@ import { toast } from 'sonner';
 import { getAllProfiles, UserProfile } from '@/lib/admin-api';
 import { createTechnicalReport, getTechnicalReportById, updateTechnicalReport } from '@/lib/technical-reports-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, ChevronsUpDown, ArrowLeft, Pencil, PlusCircle } from 'lucide-react';
+import { Loader2, Check, ChevronsUpDown, ArrowLeft, Pencil, PlusCircle, SpellCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { uploadFiles } from '@/lib/storage-api';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import RepairQuoteBuilder from '@/components/RepairQuoteBuilder';
 
 const reportSchema = z.object({
@@ -41,6 +42,29 @@ const AdminTechnicalReportFormPage: React.FC = () => {
   const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>([]);
   const [openUserSelect, setOpenUserSelect] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [correcting, setCorrecting] = useState(false);
+
+  const handleCorrectSpelling = async () => {
+    const text = form.getValues('description') || '';
+    if (!text.trim()) {
+      toast.info("La description est vide, rien à corriger.");
+      return;
+    }
+    setCorrecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('correct-spelling', {
+        body: { text },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.corrected) throw new Error("Aucune correction reçue.");
+      form.setValue('description', data.corrected, { shouldDirty: true });
+      toast.success("Orthographe corrigée !");
+    } catch (error: any) {
+      toast.error(`Erreur lors de la correction : ${error.message}`);
+    } finally {
+      setCorrecting(false);
+    }
+  };
 
   const form = useForm<z.infer<typeof reportSchema>>({
     resolver: zodResolver(reportSchema),
@@ -244,7 +268,21 @@ const AdminTechnicalReportFormPage: React.FC = () => {
                 )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Description</FormLabel>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCorrectSpelling}
+                        disabled={correcting}
+                      >
+                        {correcting
+                          ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          : <SpellCheck className="h-4 w-4 mr-2" />}
+                        Corriger l'orthographe
+                      </Button>
+                    </div>
                     <FormControl><Textarea {...field} rows={10} placeholder="Décrire le problème en détail..." /></FormControl>
                     <FormMessage />
                   </FormItem>

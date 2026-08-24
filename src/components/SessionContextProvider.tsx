@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -25,6 +25,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [loading, setLoading] = useState(true);
   const [showCguvModal, setShowCguvModal] = useState(false);
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
+  const hasInitializedRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -51,7 +52,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, []);
 
   const revalidateSessionAndProfile = useCallback(async (currentSession: Session | null) => {
-    setLoading(true);
+    // N'affiche l'écran de chargement global que lors du tout premier chargement.
+    // Les re-validations (retour sur l'onglet, refresh de token) se font en arrière-plan
+    // pour ne pas démonter l'application et perdre l'état des formulaires en cours.
+    if (!hasInitializedRef.current) {
+      setLoading(true);
+    }
     if (currentSession) {
       setSession(currentSession);
       const userProfile = await fetchUserProfile(currentSession);
@@ -104,6 +110,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         navigate('/login');
       }
     }
+    hasInitializedRef.current = true;
     setLoading(false);
   }, [fetchUserProfile, location.pathname, navigate]);
 

@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2, Calculator, FileDown } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { downloadRepairQuotePdf } from '@/lib/quote-pdf';
 
 export interface QuoteLine {
   id: string;
@@ -66,80 +65,7 @@ const RepairQuoteBuilder: React.FC<RepairQuoteBuilderProps> = ({ onInsert }) => 
   };
 
   const handleDownload = () => {
-    const validLines = lines.filter(l => l.description.trim() !== '');
-    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const today = new Date().toLocaleDateString('fr-FR');
-
-    // En-tête
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 58, 95);
-    doc.text('DEVIS DE RÉPARATION', 14, 22);
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100);
-    doc.text('Hello Keys — Conciergerie', 14, 30);
-    doc.text(`Date : ${today}`, pageWidth - 14, 30, { align: 'right' });
-
-    doc.setDrawColor(30, 58, 95);
-    doc.setLineWidth(0.5);
-    doc.line(14, 34, pageWidth - 14, 34);
-
-    // Tableau des lignes
-    autoTable(doc, {
-      startY: 40,
-      head: [['Désignation', 'Qté', 'Prix unit. HT', 'Total HT']],
-      body: validLines.map(l => [
-        l.description,
-        String(l.quantity),
-        formatEUR(l.unitPrice),
-        formatEUR(l.quantity * l.unitPrice),
-      ]),
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [30, 58, 95], textColor: 255, fontStyle: 'bold' },
-      columnStyles: {
-        1: { halign: 'center', cellWidth: 18 },
-        2: { halign: 'right', cellWidth: 35 },
-        3: { halign: 'right', cellWidth: 35 },
-      },
-      theme: 'striped',
-    });
-
-    // Totaux
-    const finalY = (doc as any).lastAutoTable?.finalY ?? 60;
-    let y = finalY + 10;
-    const labelX = pageWidth - 74;
-    const valueX = pageWidth - 14;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60);
-    doc.text('Sous-total HT :', labelX, y);
-    doc.text(formatEUR(subtotal), valueX, y, { align: 'right' });
-    y += 6;
-    doc.text(`TVA (${vatRate}%) :`, labelX, y);
-    doc.text(formatEUR(vatAmount), valueX, y, { align: 'right' });
-    y += 8;
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 58, 95);
-    doc.text('TOTAL TTC :', labelX, y);
-    doc.text(formatEUR(total), valueX, y, { align: 'right' });
-
-    // Pied de page
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(150);
-    doc.text(
-      'Devis estimatif établi par Hello Keys. Valable 30 jours, sous réserve de constatation sur place.',
-      14,
-      doc.internal.pageSize.getHeight() - 12,
-    );
-
-    doc.save(`devis-reparation-${new Date().toISOString().slice(0, 10)}.pdf`);
+    downloadRepairQuotePdf(lines, vatRate);
   };
 
   return (

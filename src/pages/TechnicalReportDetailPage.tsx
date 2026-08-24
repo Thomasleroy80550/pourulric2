@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, Wrench, User, CheckCircle, Send, ArrowLeft, Clock, Tag, Shield, Paperclip, Archive, ArchiveRestore, MessageCircle, Star, FileDown, Loader2, Mail } from 'lucide-react';
 import { getTechnicalReportById, updateTechnicalReport, addTechnicalReportUpdate, archiveReport, requestOwnerAction, getTechnicalReportUpdates, sendTechnicalReportEmail, TechnicalReport, TechnicalReportUpdate } from '@/lib/technical-reports-api';
 import { downloadIncidentReportPdf } from '@/lib/pdf-utils';
+import { parseQuoteFromText, downloadRepairQuotePdf } from '@/lib/quote-pdf';
 import { uploadFiles } from '@/lib/storage-api';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -205,6 +206,22 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
     }
   };
 
+  const parsedQuote = parseQuoteFromText(report?.description);
+
+  const handleDownloadQuotePdf = () => {
+    if (!report || !parsedQuote) return;
+    try {
+      const reference = report.id.replace(/-/g, '').slice(0, 8).toUpperCase();
+      downloadRepairQuotePdf(parsedQuote.lines, parsedQuote.vatRate, {
+        propertyName: report.property_name,
+        reference,
+        fileName: `devis-reparation-${reference}.pdf`,
+      });
+    } catch (err: any) {
+      toast.error(`Erreur lors de la génération du devis PDF: ${err.message}`);
+    }
+  };
+
   const handleSendEmail = async () => {
     if (!report) return;
     setIsSendingEmail(true);
@@ -275,6 +292,14 @@ const TechnicalReportDetailPage: React.FC<TechnicalReportDetailPageProps> = ({ i
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap">{report.description}</p>
+              {parsedQuote && (
+                <div className="mt-4 pt-4 border-t">
+                  <Button variant="outline" onClick={handleDownloadQuotePdf}>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Télécharger le devis (PDF)
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 

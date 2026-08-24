@@ -266,7 +266,7 @@ const Login = () => {
             </aside>
             {}
             <main
-                className="flex-1 flex flex-col min-h-[100svh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+                className="flex-1 flex flex-col min-h-[100svh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] bg-gradient-to-b from-slate-50 via-white to-slate-50">
                 <header className="flex items-center justify-between px-6 sm:px-12 pt-6">
                     <img src="/logo.png" alt="Hello Keys" className="h-9 w-auto lg:invisible" />
                     <button
@@ -275,26 +275,27 @@ const Login = () => {
                         className="text-xs font-medium text-gray-500 hover:text-gray-800 transition">Besoin d'aide pour migrer ?
                                   </button>
                 </header>
-                <div className="flex-1 flex items-center justify-center px-6 sm:px-12 py-8">
-                    <div className="w-full max-w-[400px]">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Connectez-vous
-                                        </h1>
-                        <p className="mt-2 text-sm text-gray-500">Accédez à votre espace de gestion.{" "}
-                            <Link
-                                to="/prospect-signup"
-                                state={{
-                                    transition: "push"
-                                }}
-                                className="font-semibold hover:underline"
+                <div className="flex-1 flex items-center justify-center px-4 sm:px-12 py-8">
+                    <div className="w-full max-w-[440px]">
+                        <div className="text-center">
+                            <span
+                                className="inline-flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg shadow-[#175e82]/20"
                                 style={{
-                                    color: BRAND
-                                }}>Créer un compte
-                                              </Link>
-                        </p>
+                                    background: `linear-gradient(135deg, ${BRAND} 0%, #1e77a5 100%)`
+                                }}>
+                                <Lock className="h-6 w-6 text-white" />
+                            </span>
+                            <h1 className="mt-5 text-2xl sm:text-[1.75rem] font-bold tracking-tight text-gray-900">Bon retour parmi nous
+                                            </h1>
+                            <p className="mt-1.5 text-sm text-gray-500">Connectez-vous à votre espace propriétaire
+                                            </p>
+                        </div>
+                        <div
+                            className="mt-8 rounded-3xl border border-gray-100 bg-white p-6 sm:p-8 shadow-[0_10px_40px_-12px_rgba(23,94,130,0.15)]">
                         <Form {...form}>
                             <form
                                 onSubmit={form.handleSubmit(handleEmailSubmit)}
-                                className="mt-8 space-y-5">
+                                className="space-y-5">
                                 <FormField
                                     control={form.control}
                                     name="email"
@@ -318,7 +319,7 @@ const Login = () => {
                                                     placeholder="vous@exemple.com"
                                                     {...field}
                                                     disabled={loading}
-                                                    className="h-11 rounded-lg border-gray-200 bg-white pl-10 pr-3 text-[15px] shadow-sm focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
+                                                    className="h-12 rounded-xl border-gray-200 bg-gray-50/80 pl-10 pr-3 text-[15px] transition-colors focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
                                                     translate="no" />
                                             </div>
                                         </FormControl>
@@ -357,7 +358,7 @@ const Login = () => {
                                                     placeholder="••••••••"
                                                     {...field}
                                                     disabled={loading}
-                                                    className="h-11 rounded-lg border-gray-200 bg-white pl-10 pr-10 text-[15px] shadow-sm focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
+                                                    className="h-12 rounded-xl border-gray-200 bg-gray-50/80 pl-10 pr-10 text-[15px] transition-colors focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
                                                     translate="no" />
                                                 <button
                                                     type="button"
@@ -381,9 +382,9 @@ const Login = () => {
                                 </div>
                                 <Button
                                     type="submit"
-                                    className="w-full h-11 rounded-lg text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                                    className="w-full h-12 rounded-xl text-sm font-semibold text-white shadow-lg shadow-[#175e82]/25 transition hover:opacity-90 hover:shadow-[#175e82]/35"
                                     style={{
-                                        backgroundColor: BRAND
+                                        background: `linear-gradient(135deg, ${BRAND} 0%, #1e77a5 100%)`
                                     }}
                                     disabled={loading}>
                                     {loading ? (<>
@@ -392,22 +393,35 @@ const Login = () => {
                                 </Button>
                                 <div className="flex items-center gap-3 py-1">
                                     <div className="h-px flex-1 bg-gray-200" />
-                                    <span className="text-xs text-gray-400 uppercase tracking-wide">ou
+                                    <span className="text-[11px] text-gray-400 uppercase tracking-widest">ou
                                                           </span>
                                     <div className="h-px flex-1 bg-gray-200" />
                                 </div>
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-full h-11 rounded-lg text-sm font-medium border-gray-200 text-gray-700 hover:bg-gray-50"
+                                    className="w-full h-12 rounded-xl text-sm font-medium border-[#175e82]/20 bg-[#175e82]/[0.04] text-[#175e82] hover:bg-[#175e82]/[0.08] hover:text-[#175e82]"
                                     onClick={handleMagicLink}
                                     disabled={loading}>
                                     <Wand2 className="h-4 w-4" />Recevoir un lien magique
                                                     </Button>
                             </form>
                         </Form>
+                        </div>
+                        <p className="mt-6 text-center text-sm text-gray-500">Pas encore de compte ?{" "}
+                            <Link
+                                to="/prospect-signup"
+                                state={{
+                                    transition: "push"
+                                }}
+                                className="font-semibold hover:underline"
+                                style={{
+                                    color: BRAND
+                                }}>Créer un compte
+                                              </Link>
+                        </p>
                         <p
-                            className="mt-8 flex items-center justify-center gap-1.5 text-xs text-gray-400">
+                            className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-400">
                             <ShieldCheck className="h-3.5 w-3.5" />Connexion sécurisée — données chiffrées
                                         </p>
                     </div>

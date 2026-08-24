@@ -29,6 +29,7 @@ import AdminTransferSummaryPage from "./pages/AdminTransferSummaryPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import FinancePage from "./pages/FinancePage";
 import AdminTechnicalReportsPage from "./pages/AdminTechnicalReportsPage";
+import AdminTechnicalReportFormPage from "./pages/AdminTechnicalReportFormPage";
 import TechnicalReportsPage from "./pages/TechnicalReportsPage";
 import TechnicalReportDetailPage from "./pages/TechnicalReportDetailPage";
 import ReservationReportDetailPage from "./pages/ReservationReportDetailPage";
@@ -167,6 +168,8 @@ function App() {
                       <Route path="/admin/module-requests" element={<AdminModuleRequestsPage />} />
                       <Route path="/admin/season-requests" element={<AdminSeasonRequestsPage />} />
                       <Route path="/admin/technical-reports" element={<AdminTechnicalReportsPage />} />
+                      <Route path="/admin/technical-reports/new" element={<AdminTechnicalReportFormPage />} />
+                      <Route path="/admin/technical-reports/:id/edit" element={<AdminTechnicalReportFormPage />} />
                       <Route path="/admin/technical-reports/:id" element={<TechnicalReportDetailPage isAdmin />} />
                       <Route path="/admin/reservation-reports/:id" element={<ReservationReportDetailPage />} />
                       <Route path="/admin/user-rooms" element={<AdminUserRoomsPage />} />

@@ -43,7 +43,8 @@ import {
   LayoutTemplate,
   Globe,
   Megaphone,
-  CheckCheck
+  CheckCheck,
+  Mail
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -100,6 +101,7 @@ const adminNavigationCategories = [
     categoryName: 'Contenu',
     items: [
       { name: 'Pages', href: '/admin/pages', icon: FileText, description: 'Créer et modifier les pages de contenu.' },
+      { name: 'Newsletter', href: '/admin/newsletter', icon: Mail, description: 'Envoyer une newsletter à tous les clients.' },
       { name: 'Annonces', href: '/admin/announcements', icon: Megaphone, description: 'Publier des annonces pour tous les utilisateurs.' },
       { name: 'FAQ', href: '/admin/faq', icon: HelpCircle, description: 'Gérer la foire aux questions.' },
       { name: 'Changelog', href: '/admin/changelog', icon: GitMerge, description: 'Publier les nouveautés de l\'application.' },

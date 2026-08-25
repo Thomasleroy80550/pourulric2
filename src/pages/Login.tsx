@@ -27,6 +27,7 @@ import {
     Wand2,
     CheckCircle2,
     TrendingUp,
+    Palmtree,
 } from "lucide-react";
 
 import { Link } from "react-router-dom";
@@ -310,6 +311,22 @@ const Login = () => {
                 </header>
                 <div className="flex-1 flex items-center justify-center px-4 sm:px-12 py-8">
                     <div className="w-full max-w-[440px]">
+                        {/* Annonce vacances Hello Keys (disparaît automatiquement après le 5 février 2027) */}
+                        {new Date() < new Date("2027-02-06T00:00:00") && (
+                            <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
+                                    <Palmtree className="h-5 w-5 text-amber-600" />
+                                </span>
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-900">Vacances Hello Keys</p>
+                                    <p className="mt-0.5 text-xs leading-relaxed text-amber-800">
+                                        Du <strong>dimanche 3 janvier</strong> au <strong>vendredi 5 février 2027</strong>,
+                                        Hello Keys sera en vacances. Votre espace reste accessible, mais nos délais de
+                                        réponse pourront être allongés durant cette période. Merci de votre compréhension !
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <div className="text-center">
                             <span className="relative inline-flex">
                                 <span className="absolute inset-0 rounded-2xl bg-[#175e82]/30 blur-xl animate-pulse" />

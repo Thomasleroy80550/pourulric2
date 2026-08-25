@@ -6,7 +6,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Mail, Send, Loader2, Eye, History, RefreshCcw, Copy, Save, XCircle, CheckCircle2, Server } from "lucide-react";
+import { Mail, Send, Loader2, Eye, History, RefreshCcw, Copy, Save, XCircle, CheckCircle2, Server, Sparkles, Wand2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -48,6 +50,11 @@ const AdminNewsletterPage: React.FC = () => {
   );
   const [submitting, setSubmitting] = useState(false);
   const [testMode, setTestMode] = useState(false);
+
+  // Rédaction IA
+  const [aiBrief, setAiBrief] = useState("");
+  const [aiTone, setAiTone] = useState("chaleureux");
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Campagnes en cours d'envoi (file serveur)
   const [activeCampaigns, setActiveCampaigns] = useState<ActiveCampaign[]>([]);
@@ -126,6 +133,35 @@ const AdminNewsletterPage: React.FC = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleGenerateWithAi = async (improveExisting: boolean) => {
+    if (!aiBrief.trim() || aiBrief.trim().length < 5) {
+      toast.error("Décrivez le sujet de la newsletter (quelques mots minimum).");
+      return;
+    }
+    if (improveExisting && !html.trim()) {
+      toast.error("Aucun contenu existant à améliorer.");
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-newsletter", {
+        body: {
+          brief: aiBrief,
+          tone: aiTone,
+          existingHtml: improveExisting ? html : undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.subject) setSubject(data.subject);
+      if (data?.html) setHtml(data.html);
+      toast.success("Newsletter rédigée par l'IA. Relisez et ajustez avant l'envoi !");
+    } catch (e: any) {
+      toast.error(`Erreur IA: ${e?.message || e}`);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!subject.trim() || !html.trim()) {
@@ -285,6 +321,50 @@ const AdminNewsletterPage: React.FC = () => {
                   Envoie uniquement à thomasleroy80550@gmail.com pour vérification.
                 </p>
               </div>
+            </div>
+
+            {/* Rédaction IA */}
+            <div className="rounded-md border border-violet-200 bg-violet-50/50 dark:border-violet-900 dark:bg-violet-950/20 px-3 py-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-600" />
+                <span className="text-sm font-medium">Rédaction assistée par IA</span>
+              </div>
+              <Textarea
+                placeholder="Décrivez le contenu souhaité, ex: Annoncer les nouveautés de l'été 2025 : mini-sites personnalisés, suivi conso en temps réel, et rappeler l'offre parrainage..."
+                value={aiBrief}
+                onChange={(e) => setAiBrief(e.target.value)}
+                className="min-h-[80px] bg-background"
+                disabled={aiLoading}
+              />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <Select value={aiTone} onValueChange={setAiTone} disabled={aiLoading}>
+                  <SelectTrigger className="w-full sm:w-[220px] bg-background">
+                    <SelectValue placeholder="Ton" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="chaleureux">Ton chaleureux</SelectItem>
+                    <SelectItem value="professionnel">Ton professionnel</SelectItem>
+                    <SelectItem value="commercial">Ton commercial</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2 sm:ml-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleGenerateWithAi(true)}
+                    disabled={aiLoading || !html.trim()}
+                  >
+                    {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                    Améliorer le contenu actuel
+                  </Button>
+                  <Button onClick={() => handleGenerateWithAi(false)} disabled={aiLoading}>
+                    {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    Rédiger avec l'IA
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                L'IA remplit automatiquement le sujet et le contenu ci-dessous. Relisez toujours avant d'envoyer.
+              </p>
             </div>
 
             <div>

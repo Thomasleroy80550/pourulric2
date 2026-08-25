@@ -4,6 +4,7 @@ export type NewsletterCampaign = {
   id: string;
   subject: string;
   html: string;
+  raw_html: string | null;
   content_hash: string;
   status: string;
   created_by: string | null;
@@ -50,5 +51,63 @@ export async function getDeliveryCount(content_hash: string): Promise<number> {
 
 export async function duplicateCampaign(campaign: NewsletterCampaign, newSubject?: string): Promise<NewsletterCampaign> {
   const subject = newSubject && newSubject.trim().length > 0 ? newSubject : `${campaign.subject} (copie)`;
-  return await createCampaign(subject, campaign.html, "draft");
+  return await createCampaign(subject, campaign.raw_html ?? campaign.html, "draft");
+}
+
+// --- File d'attente serveur ---
+
+export type QueueProgress = {
+  pending: number;
+  sent: number;
+  failed: number;
+  cancelled: number;
+  total: number;
+};
+
+export async function enqueueNewsletter(
+  subject: string,
+  html: string,
+  testMode: boolean,
+  campaignId?: string,
+  rawHtml?: string
+): Promise<{ campaignId: string; queued: number; estimatedMinutes?: number }> {
+  const { data, error } = await supabase.functions.invoke("enqueue-newsletter", {
+    body: { subject, html, testMode, campaignId, rawHtml },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function cancelQueuedCampaign(campaignId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke("enqueue-newsletter", {
+    body: { action: "cancel", campaignId },
+  });
+  if (error) throw error;
+}
+
+export async function getQueueProgress(campaignId: string): Promise<QueueProgress> {
+  const { data, error } = await supabase
+    .from("newsletter_queue")
+    .select("status")
+    .eq("campaign_id", campaignId);
+  if (error) throw error;
+  const rows = data || [];
+  const count = (s: string) => rows.filter((r) => r.status === s).length;
+  return {
+    pending: count("pending"),
+    sent: count("sent"),
+    failed: count("failed"),
+    cancelled: count("cancelled"),
+    total: rows.length,
+  };
+}
+
+export async function listSendingCampaigns(): Promise<NewsletterCampaign[]> {
+  const { data, error } = await supabase
+    .from("newsletter_campaigns")
+    .select("*")
+    .eq("status", "sending")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []) as NewsletterCampaign[];
 }

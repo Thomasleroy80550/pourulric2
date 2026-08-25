@@ -6,57 +6,36 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Mail, Send, Loader2, Eye, History, RefreshCcw, Copy, Play, Save } from "lucide-react";
+import { Mail, Send, Loader2, Eye, History, RefreshCcw, Copy, Save, XCircle, CheckCircle2, Server } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-// AJOUT: panneau d'info
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import EmailHtmlEditor from "@/components/EmailHtmlEditor";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import DOMPurify from "dompurify";
 import EmailThemePreview from "@/components/EmailThemePreview";
 import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
-import { listCampaigns, createCampaign, duplicateCampaign, getDeliveryCount, type NewsletterCampaign } from "@/lib/newsletter-api";
+import {
+  listCampaigns,
+  createCampaign,
+  duplicateCampaign,
+  getDeliveryCount,
+  enqueueNewsletter,
+  cancelQueuedCampaign,
+  getQueueProgress,
+  listSendingCampaigns,
+  type NewsletterCampaign,
+  type QueueProgress,
+} from "@/lib/newsletter-api";
 
-const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
-const DEFAULT_BATCH_SIZE = 50; // ≈ 30–40 secondes par lot (limite de fonction sûre)
-
-const PLAN_STORAGE_KEY = "newsletterSendPlan";
 const DRAFT_STORAGE_KEY = "newsletterDraftV1";
+const POLL_INTERVAL_MS = 15_000;
 
-type NewsletterPlan = {
-  subject: string;
-  html: string;
-  testMode: boolean;
-  batchSize: number;
-  intervalMs?: number;
-  sending: boolean;
-  offset?: number;
-  campaignId?: string;
-  campaignCreated?: boolean;
-};
-
-const savePlan = (plan: NewsletterPlan) => {
-  try {
-    localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(plan));
-  } catch {}
-};
-
-const loadPlan = (): NewsletterPlan | null => {
-  try {
-    const raw = localStorage.getItem(PLAN_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const clearPlan = () => {
-  try {
-    localStorage.removeItem(PLAN_STORAGE_KEY);
-  } catch {}
+type ActiveCampaign = {
+  campaign: NewsletterCampaign;
+  progress: QueueProgress;
 };
 
 const AdminNewsletterPage: React.FC = () => {
@@ -67,26 +46,20 @@ const AdminNewsletterPage: React.FC = () => {
     () => buildNewsletterHtml({ subject: subject || "Newsletter", bodyHtml: sanitizedHtml }),
     [subject, sanitizedHtml]
   );
-  const [sending, setSending] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [testMode, setTestMode] = useState(false);
 
-  // Nouveau: étalement
-  const [spreadMode, setSpreadMode] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const [totalRemaining, setTotalRemaining] = useState<number | null>(null);
-  const [batchSize, setBatchSize] = useState<number>(DEFAULT_BATCH_SIZE);
-  const timerRef = useRef<number | null>(null);
-  // AJOUT: état pour la prévisualisation du plan
-  const [planPreview, setPlanPreview] = useState<{ remaining: number; lots: number; intervalMs: number } | null>(null);
+  // Campagnes en cours d'envoi (file serveur)
+  const [activeCampaigns, setActiveCampaigns] = useState<ActiveCampaign[]>([]);
+  const pollRef = useRef<number | null>(null);
 
   // Historique des campagnes
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>({});
 
-  // Sauvegarde auto du brouillon (sujet/html/options) et restauration
+  // Restauration du brouillon
   useEffect(() => {
-    // Restaurer le brouillon au chargement
     try {
       const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
       if (raw) {
@@ -94,253 +67,116 @@ const AdminNewsletterPage: React.FC = () => {
         if (typeof d.subject === "string") setSubject(d.subject);
         if (typeof d.html === "string") setHtml(d.html);
         if (typeof d.testMode === "boolean") setTestMode(d.testMode);
-        if (typeof d.spreadMode === "boolean") setSpreadMode(d.spreadMode);
-        if (typeof d.batchSize === "number" && d.batchSize >= 10 && d.batchSize <= 500) {
-          setBatchSize(d.batchSize);
-        }
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sauvegarde auto du brouillon
   useEffect(() => {
-    // Débouncer la sauvegarde locale pour éviter d'écrire trop souvent
     const t = window.setTimeout(() => {
-      const draft = { subject, html, testMode, spreadMode, batchSize, updatedAt: Date.now() };
       try {
-        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ subject, html, testMode, updatedAt: Date.now() }));
       } catch {}
     }, 300);
     return () => window.clearTimeout(t);
-  }, [subject, html, testMode, spreadMode, batchSize]);
-
-  // Avertir avant de quitter si envoi en cours ou contenu saisi
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (sending || subject.trim().length > 0 || html.trim().length > 0) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [sending, subject, html]);
+  }, [subject, html, testMode]);
 
   const loadCampaigns = async () => {
     setLoadingCampaigns(true);
-    const list = await listCampaigns(50);
-    setCampaigns(list);
-    // Récupère les compteurs d'envois pour les 20 premières campagnes (limiter la charge)
-    const top = list.slice(0, 20);
-    const entries = await Promise.all(top.map(async (c) => {
-      const ct = await getDeliveryCount(c.content_hash);
-      return [c.content_hash, ct] as const;
-    }));
-    const nextCounts: Record<string, number> = {};
-    for (const [hash, ct] of entries) nextCounts[hash] = ct;
-    setCounts(nextCounts);
-    setLoadingCampaigns(false);
-  };
-
-  useEffect(() => {
-    loadCampaigns().catch(() => {
+    try {
+      const list = await listCampaigns(50);
+      setCampaigns(list);
+      const top = list.slice(0, 20);
+      const entries = await Promise.all(top.map(async (c) => {
+        const ct = await getDeliveryCount(c.content_hash);
+        return [c.content_hash, ct] as const;
+      }));
+      const nextCounts: Record<string, number> = {};
+      for (const [hash, ct] of entries) nextCounts[hash] = ct;
+      setCounts(nextCounts);
+    } finally {
       setLoadingCampaigns(false);
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
-
-  // AJOUT: reprise automatique d'un plan si présent dans le stockage local
-  useEffect(() => {
-    const plan = loadPlan();
-    if (!plan || !plan.sending) return;
-
-    // Réhydrate l'UI
-    setSubject(plan.subject);
-    setHtml(plan.html);
-    setTestMode(plan.testMode);
-    setSpreadMode(true);
-    setBatchSize(plan.batchSize);
-
-    // Démarre/reprend le plan
-    startSpreadPlan(plan);
-  }, []);
-
-  // AJOUT: fonction centralisée pour démarrer/reprendre un plan étalé
-  const startSpreadPlan = async (plan: NewsletterPlan) => {
-    if (!plan.subject.trim() || !plan.html.trim()) {
-      toast.error("Veuillez renseigner un sujet et un contenu HTML.");
-      return;
     }
+  };
 
-    // Enregistre la campagne une seule fois (évite duplication lors d'une reprise)
-    if (!plan.campaignCreated) {
-      try {
-        const created = await createCampaign(plan.subject, plan.html, "scheduled");
-        // Marquer comme créé et persister le plan
-        const nextPlan = { ...plan, campaignCreated: true, campaignId: created.id, sending: true };
-        savePlan(nextPlan);
-        // recharge l'historique
+  // Suivi des campagnes en cours (le serveur envoie tout seul, on ne fait que lire la progression)
+  const refreshActiveCampaigns = async () => {
+    try {
+      const sending = await listSendingCampaigns();
+      const withProgress = await Promise.all(sending.map(async (campaign) => ({
+        campaign,
+        progress: await getQueueProgress(campaign.id),
+      })));
+      setActiveCampaigns(withProgress);
+      if (withProgress.length === 0 && pollRef.current) {
+        // Plus rien en cours : recharger l'historique une dernière fois
         loadCampaigns().catch(() => {});
-        plan = nextPlan;
-      } catch (e: any) {
-        // On n'arrête pas l'envoi si l'enregistrement échoue, mais on notifie
-        toast.error(`Impossible d'enregistrer la campagne: ${e?.message || e}`);
       }
+    } catch {
+      // silencieux: simple polling
     }
+  };
 
-    setSending(true);
-
-    // 1) Preview pour connaître le volume restant
-    const previewRes = await supabase.functions.invoke("send-newsletter", {
-      body: { subject: plan.subject, html: buildNewsletterHtml({ subject: plan.subject || "Newsletter", bodyHtml: DOMPurify.sanitize(plan.html) }), testMode: plan.testMode, previewOnly: true },
-    });
-
-    if (previewRes.error) {
-      setSending(false);
-      clearPlan();
-      toast.error(`Erreur (preview): ${previewRes.error.message}`);
-      return;
-    }
-
-    const remaining = Number(previewRes.data?.totalRemaining ?? 0);
-    setTotalRemaining(remaining);
-
-    if (remaining <= 0) {
-      setSending(false);
-      clearPlan();
-      toast.success("Aucun destinataire restant pour cette campagne (déjà envoyé ou aucun email).");
-      return;
-    }
-
-    // 2) Calcul des lots et intervalle (ou reprise si interval stocké)
-    const lots = Math.ceil(remaining / plan.batchSize);
-    const intervalMs = Math.max(Math.floor(SIX_HOURS_MS / lots), 10_000);
-    const effectiveInterval = plan.intervalMs ?? intervalMs;
-
-    // Sauvegarde du plan
-    savePlan({ ...plan, intervalMs: effectiveInterval, sending: true, offset: 0 });
-    setOffset(0);
-
-    // 3) Fonction d'envoi d'un lot (reprend à chaque passage)
-    const sendBatch = async () => {
-      const themed = buildNewsletterHtml({ subject: plan.subject || "Newsletter", bodyHtml: DOMPurify.sanitize(plan.html) });
-
-      const { data, error } = await supabase.functions.invoke("send-newsletter", {
-        body: {
-          subject: plan.subject,
-          html: themed,
-          testMode: plan.testMode,
-          previewOnly: false,
-          maxEmails: plan.batchSize,
-        },
-      });
-
-      if (error) {
-        toast.error(`Erreur lors de l'envoi d'un lot: ${error.message}`);
-        setSending(false);
-        clearPlan();
-        return;
-      }
-
-      const sent = Number(data?.sent ?? 0);
-      const failed = Number(data?.failed ?? 0);
-      const remainingLeft = Number(data?.totalRemaining ?? 0);
-
-      // Mise à jour progression locale et plan persistant
-      setOffset((prev) => {
-        const next = prev + sent;
-        savePlan({ ...plan, intervalMs: effectiveInterval, sending: true, offset: next });
-        return next;
-      });
-
-      toast.success(`Lot envoyé: ${sent} succès, ${failed} échecs. Restant: ${remainingLeft}`);
-
-      setTotalRemaining(remainingLeft);
-
-      if (remainingLeft <= 0) {
-        setSending(false);
-        clearPlan();
-        toast.success("Newsletter terminée. Tous les lots ont été envoyés.");
-        return;
-      }
-
-      timerRef.current = window.setTimeout(() => {
-        sendBatch();
-      }, effectiveInterval);
+  useEffect(() => {
+    loadCampaigns().catch(() => setLoadingCampaigns(false));
+    refreshActiveCampaigns();
+    pollRef.current = window.setInterval(refreshActiveCampaigns, POLL_INTERVAL_MS);
+    return () => {
+      if (pollRef.current) window.clearInterval(pollRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Premier lot immédiat
-    await sendBatch();
-  };
-
-  // AJOUT: annuler proprement le plan
-  const cancelPlan = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setSending(false);
-    clearPlan();
-    setTotalRemaining(null);
-    setOffset(0);
-    toast.info("Plan d'envoi annulé. Vous pourrez le reprendre plus tard.");
-  };
-
-  // AJOUT: Prévisualiser le plan (aucun envoi, utilise previewOnly)
-  const handlePreviewPlan = async () => {
+  const handleSend = async () => {
     if (!subject.trim() || !html.trim()) {
       toast.error("Veuillez renseigner un sujet et un contenu HTML.");
       return;
     }
-
-    const previewRes = await supabase.functions.invoke("send-newsletter", {
-      body: { subject, html: themedHtml, testMode, previewOnly: true },
-    });
-
-    if (previewRes.error) {
-      toast.error(`Erreur (preview): ${previewRes.error.message}`);
-      return;
+    setSubmitting(true);
+    try {
+      const res = await enqueueNewsletter(subject, themedHtml, testMode, undefined, html);
+      if (res.queued === 0) {
+        toast.info("Aucun destinataire restant pour cette campagne (déjà envoyée ou aucun email).");
+      } else if (testMode) {
+        toast.success("Email de test mis en file. Il sera envoyé dans la minute.");
+      } else {
+        toast.success(
+          `Campagne mise en file: ${res.queued} destinataires. Envoi automatique par le serveur (~${res.estimatedMinutes ?? "?"} min). Vous pouvez fermer cette page.`
+        );
+      }
+      await refreshActiveCampaigns();
+      await loadCampaigns();
+    } catch (e: any) {
+      toast.error(`Erreur lors de la mise en file: ${e?.message || e}`);
+    } finally {
+      setSubmitting(false);
     }
-
-    const remaining = Number(previewRes.data?.totalRemaining ?? 0);
-    setTotalRemaining(remaining);
-
-    if (remaining <= 0) {
-      setPlanPreview({ remaining: 0, lots: 0, intervalMs: 0 });
-      toast.info("Aucun destinataire restant pour cette campagne.");
-      return;
-    }
-
-    const lots = Math.max(1, Math.ceil(remaining / batchSize));
-    const intervalMs = Math.max(Math.floor(SIX_HOURS_MS / lots), 10_000);
-    setPlanPreview({ remaining, lots, intervalMs });
-
-    toast.info(`Plan: ${remaining} destinataires, ${lots} lots, intervalle ≈ ${Math.round(intervalMs / 60000)} min.`);
   };
 
-  // Enregistrer comme brouillon sans envoyer
+  const handleCancel = async (campaignId: string) => {
+    try {
+      await cancelQueuedCampaign(campaignId);
+      toast.info("Campagne annulée. Les emails restants ne seront pas envoyés.");
+      await refreshActiveCampaigns();
+      await loadCampaigns();
+    } catch (e: any) {
+      toast.error(`Erreur lors de l'annulation: ${e?.message || e}`);
+    }
+  };
+
   const handleSaveDraft = async () => {
     if (!subject.trim() || !html.trim()) {
       toast.error("Veuillez renseigner un sujet et un contenu HTML.");
       return;
     }
-    const draft = await createCampaign(subject, html, "draft");
+    await createCampaign(subject, html, "draft");
     toast.success("Campagne enregistrée.");
     await loadCampaigns();
-    return draft;
   };
 
-  // Actions d'historique
   const handleLoadCampaign = (c: NewsletterCampaign) => {
     setSubject(c.subject);
-    setHtml(c.html);
+    setHtml(c.raw_html ?? c.html);
     toast.success("Campagne chargée dans l'éditeur.");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -349,68 +185,31 @@ const AdminNewsletterPage: React.FC = () => {
     const dup = await duplicateCampaign(c);
     toast.success("Campagne dupliquée.");
     await loadCampaigns();
-    // Option: charger la copie directement
     handleLoadCampaign(dup);
   };
 
   const handleContinueSending = async (c: NewsletterCampaign) => {
-    // Utilise le même contenu; le hash identique empêchera l'envoi aux emails déjà servis
-    const plan: NewsletterPlan = {
-      subject: c.subject,
-      html: c.html,
-      testMode: false,
-      batchSize,
-      sending: true,
-      campaignId: c.id,
-      campaignCreated: true,
-    };
-    await startSpreadPlan(plan);
-    toast.info("Reprise de l'envoi programmée pour cette campagne.");
-  };
-
-  const handleSendImmediate = async () => {
-    setSending(true);
-    const { data, error } = await supabase.functions.invoke("send-newsletter", {
-      body: { subject, html: themedHtml, testMode },
-    });
-    setSending(false);
-
-    if (error) {
-      toast.error(`Erreur lors de l'envoi: ${error.message}`);
-      return;
-    }
-
-    const sent = data?.sent ?? 0;
-    const failed = data?.failed ?? 0;
-    toast.success(`Newsletter envoyée: ${sent} emails envoyés, ${failed} en échec.`);
-  };
-
-  const handleSendSpread = async () => {
-    if (!subject.trim() || !html.trim()) {
-      toast.error("Veuillez renseigner un sujet et un contenu HTML.");
-      return;
-    }
-
-    // Démarre un nouveau plan (la logique est dans startSpreadPlan)
-    const plan: NewsletterPlan = {
-      subject,
-      html,
-      testMode,
-      batchSize,
-      sending: true,
-    };
-    await startSpreadPlan(plan);
-  };
-
-  const handleSend = async () => {
-    if (!subject.trim() || !html.trim()) {
-      toast.error("Veuillez renseigner un sujet et un contenu HTML.");
-      return;
-    }
-    if (spreadMode) {
-      await handleSendSpread();
-    } else {
-      await handleSendImmediate();
+    setSubmitting(true);
+    try {
+      // Reconstruire le HTML thémé comme lors de l'envoi original :
+      // le hash identique garantit qu'aucun email déjà servi ne sera renvoyé
+      const source = c.raw_html ?? c.html;
+      const themed = buildNewsletterHtml({
+        subject: c.subject || "Newsletter",
+        bodyHtml: DOMPurify.sanitize(source),
+      });
+      const res = await enqueueNewsletter(c.subject, themed, false, c.id, source);
+      if (res.queued === 0) {
+        toast.info("Tous les destinataires ont déjà reçu cette campagne.");
+      } else {
+        toast.success(`Reprise: ${res.queued} destinataires restants mis en file.`);
+      }
+      await refreshActiveCampaigns();
+      await loadCampaigns();
+    } catch (e: any) {
+      toast.error(`Erreur: ${e?.message || e}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -422,6 +221,44 @@ const AdminNewsletterPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Newsletter</h1>
         </div>
 
+        {/* Campagnes en cours d'envoi */}
+        {activeCampaigns.length > 0 && (
+          <Card className="mb-6 border-primary/40">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Server className="h-5 w-5 text-primary" />
+                <CardTitle>Envoi en cours (côté serveur)</CardTitle>
+              </div>
+              <CardDescription>
+                L'envoi est géré automatiquement par le serveur (≈100 emails/minute). Vous pouvez fermer cette page sans interrompre l'envoi.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {activeCampaigns.map(({ campaign, progress }) => {
+                const done = progress.sent + progress.failed + progress.cancelled;
+                const pct = progress.total > 0 ? Math.round((done / progress.total) * 100) : 0;
+                return (
+                  <div key={campaign.id} className="rounded-md border p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium truncate">{campaign.subject}</div>
+                      <Button size="sm" variant="destructive" onClick={() => handleCancel(campaign.id)}>
+                        <XCircle className="h-4 w-4 mr-1" /> Annuler
+                      </Button>
+                    </div>
+                    <Progress value={pct} />
+                    <div className="text-xs text-muted-foreground">
+                      {progress.sent} envoyés • {progress.pending} en attente
+                      {progress.failed > 0 && <> • <span className="text-destructive">{progress.failed} échecs</span></>}
+                      {progress.cancelled > 0 && <> • {progress.cancelled} annulés</>}
+                      {" "}• {pct}%
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Envoyer une newsletter</CardTitle>
@@ -430,15 +267,15 @@ const AdminNewsletterPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-              <Switch id="newsletter-spread-mode" checked={spreadMode} onCheckedChange={setSpreadMode} />
-              <div className="space-y-0.5">
-                <Label htmlFor="newsletter-spread-mode">Étalement sur 6 heures</Label>
-                <p className="text-xs text-muted-foreground">
-                  Envoie par lots espacés sur ~6h pour éviter les limites de Resend.
-                </p>
-              </div>
-            </div>
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertTitle>Envoi fiable et automatique</AlertTitle>
+              <AlertDescription className="text-sm">
+                Les emails sont mis en file d'attente et envoyés par le serveur à un rythme respectant les limites de Resend
+                (lots de 25 via l'API batch, ≈100 emails/minute). Chaque échec est réessayé 3 fois et un même contenu n'est
+                jamais envoyé deux fois à la même adresse. Vous pouvez fermer votre navigateur, l'envoi continue.
+              </AlertDescription>
+            </Alert>
 
             <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
               <Switch id="newsletter-test-mode" checked={testMode} onCheckedChange={setTestMode} />
@@ -449,50 +286,6 @@ const AdminNewsletterPage: React.FC = () => {
                 </p>
               </div>
             </div>
-
-            {spreadMode && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                <div>
-                  <Label htmlFor="batch-size" className="block text-sm font-medium mb-1">Taille d'un lot</Label>
-                  <Input
-                    id="batch-size"
-                    type="number"
-                    min={10}
-                    max={500}
-                    value={batchSize}
-                    onChange={(e) => setBatchSize(Math.max(10, Math.min(500, Number(e.target.value || DEFAULT_BATCH_SIZE))))}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Nombre d'emails par lot (50 recommandé).
-                  </p>
-                </div>
-                <div className="flex items-end justify-between">
-                  <div className="text-xs text-muted-foreground">
-                    {totalRemaining !== null ? (
-                      <span>Destinataires restants (preview): {totalRemaining}</span>
-                    ) : (
-                      <span>Prévisualisez pour estimer le volume à envoyer.</span>
-                    )}
-                  </div>
-                  <Button variant="secondary" onClick={handlePreviewPlan} className="ml-3">
-                    Prévisualiser le plan
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* AJOUT: Panneau d'information du plan (pas d'envoi) */}
-            {spreadMode && planPreview && (
-              <Alert className="mt-3">
-                <AlertTitle>Test du plan d'étalement</AlertTitle>
-                <AlertDescription className="text-sm">
-                  • Destinataires restants: {planPreview.remaining}<br />
-                  • Nombre de lots: {planPreview.lots}<br />
-                  • Intervalle estimé: ~{Math.round(planPreview.intervalMs / 60000)} minutes entre lots<br />
-                  La protection anti-double envoi est active: un même contenu (hash) n'est jamais envoyé 2 fois au même email.
-                </AlertDescription>
-              </Alert>
-            )}
 
             <div>
               <label className="block text-sm font-medium mb-1">Sujet</label>
@@ -549,25 +342,20 @@ const AdminNewsletterPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-end gap-2">
-              <Button variant="secondary" onClick={handleSaveDraft} disabled={sending}>
+              <Button variant="secondary" onClick={handleSaveDraft} disabled={submitting}>
                 <Save className="mr-2 h-4 w-4" />
                 Enregistrer comme brouillon
               </Button>
-              {sending && spreadMode && (
-                <Button variant="secondary" onClick={cancelPlan}>
-                  Annuler le plan
-                </Button>
-              )}
-              <Button onClick={handleSend} disabled={sending}>
-                {sending ? (
+              <Button onClick={handleSend} disabled={submitting}>
+                {submitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {spreadMode ? "Envoi étalé en cours..." : "Envoi en cours..."}
+                    Mise en file...
                   </>
                 ) : (
                   <>
                     <Send className="mr-2 h-4 w-4" />
-                    {spreadMode ? "Planifier l'envoi sur 6h" : (testMode ? "Envoyer l'email de test" : "Envoyer à tous les clients")}
+                    {testMode ? "Envoyer l'email de test" : "Envoyer à tous les clients"}
                   </>
                 )}
               </Button>
@@ -615,9 +403,11 @@ const AdminNewsletterPage: React.FC = () => {
                       <Button size="sm" variant="outline" onClick={() => handleDuplicateCampaign(c)}>
                         <Copy className="h-4 w-4 mr-1" /> Dupliquer
                       </Button>
-                      <Button size="sm" onClick={() => handleContinueSending(c)}>
-                        <Play className="h-4 w-4 mr-1" /> Continuer l'envoi
-                      </Button>
+                      {c.status !== "sending" && (
+                        <Button size="sm" onClick={() => handleContinueSending(c)} disabled={submitting}>
+                          <Send className="h-4 w-4 mr-1" /> Continuer l'envoi
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -321,8 +321,9 @@ const Login = () => {
                                     <p className="text-sm font-semibold text-amber-900">Vacances Hello Keys</p>
                                     <p className="mt-0.5 text-xs leading-relaxed text-amber-800">
                                         Du <strong>dimanche 3 janvier</strong> au <strong>vendredi 5 février 2027</strong>,
-                                        Hello Keys sera en vacances. Votre espace reste accessible, mais nos délais de
-                                        réponse pourront être allongés durant cette période. Merci de votre compréhension !
+                                        Hello Keys sera en vacances. <strong>Vos calendriers seront fermés à la location
+                                        durant cette période.</strong> Votre espace reste accessible, mais nos délais de
+                                        réponse pourront être allongés. Merci de votre compréhension !
                                     </p>
                                 </div>
                             </div>

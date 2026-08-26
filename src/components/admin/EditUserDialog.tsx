@@ -574,9 +574,10 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       )} />
                       <EstimationFromReference
                         currentUserId={user.id}
-                        onApply={(amount, sourceLabel) => {
+                        onApply={(amount, details) => {
                           form.setValue('estimated_revenue', amount, { shouldDirty: true });
-                          toast.success(`Revenu estimé mis à jour : ${amount.toLocaleString('fr-FR')} € (${sourceLabel})`);
+                          form.setValue('estimation_details', details, { shouldDirty: true });
+                          toast.success(`Estimation complète appliquée : ${amount.toLocaleString('fr-FR')} € + détails remplis. Pensez à enregistrer.`);
                         }}
                       />
                       <FormField control={form.control} name="estimation_details" render={({ field }) => (

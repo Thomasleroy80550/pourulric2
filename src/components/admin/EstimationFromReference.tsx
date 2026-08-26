@@ -28,8 +28,16 @@ interface YearSummary {
 
 interface EstimationFromReferenceProps {
   currentUserId: string;
-  onApply: (amount: number, sourceLabel: string) => void;
+  onApply: (amount: number, details: string) => void;
 }
+
+const buildDetails = (s: YearSummary): string =>
+  `Estimation basée sur les revenus réels d'un logement comparable sur l'année ${s.year} ` +
+  `(${s.monthCount} mois d'activité, ${s.nuits} nuits louées) :\n` +
+  `• Chiffre d'affaires brut (séjours + ménage + taxe) : ${formatEUR(s.brut)}\n` +
+  `• Prix des séjours (loyers) : ${formatEUR(s.prixSejour)}\n` +
+  `• Montant versé par les plateformes : ${formatEUR(s.montantVerse)}\n` +
+  `• Revenu généré (base de calcul de la commission) : ${formatEUR(s.revenuGenere)}`;
 
 const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ currentUserId, onApply }) => {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -149,53 +157,23 @@ const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ curre
               <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <div>
                   <p className="font-medium">CA brut total</p>
-                  <p className="text-xs text-muted-foreground">Prix séjour + ménage + taxe = {formatEUR(s.brut)}</p>
+                  <p className="text-xs text-muted-foreground">Prix séjour + ménage + taxe</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{formatEUR(s.brut)}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onApply(Math.round(s.brut), `CA brut réel ${s.year} d'un logement comparable (${selectedClientName})`)}
-                  >
-                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
-                  </Button>
-                </div>
+                <span className="font-bold">{formatEUR(s.brut)}</span>
               </div>
               <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <div>
                   <p className="font-medium">Prix séjour (loyers)</p>
                   <p className="text-xs text-muted-foreground">Hors ménage et taxe de séjour</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{formatEUR(s.prixSejour)}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onApply(Math.round(s.prixSejour), `loyers réels ${s.year} d'un logement comparable (${selectedClientName})`)}
-                  >
-                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
-                  </Button>
-                </div>
+                <span className="font-bold">{formatEUR(s.prixSejour)}</span>
               </div>
               <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <div>
                   <p className="font-medium">Montant versé par les plateformes</p>
                   <p className="text-xs text-muted-foreground">Après commissions OTA et frais de paiement</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{formatEUR(s.montantVerse)}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onApply(Math.round(s.montantVerse), `montant versé réel ${s.year} d'un logement comparable (${selectedClientName})`)}
-                  >
-                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
-                  </Button>
-                </div>
+                <span className="font-bold">{formatEUR(s.montantVerse)}</span>
               </div>
               <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <div>
@@ -204,26 +182,26 @@ const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ curre
                     Base de commission — commission HK réelle : {formatEUR(s.commission)}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{formatEUR(s.revenuGenere)}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onApply(Math.round(s.revenuGenere), `revenu généré réel ${s.year} d'un logement comparable (${selectedClientName})`)}
-                  >
-                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
-                  </Button>
-                </div>
+                <span className="font-bold">{formatEUR(s.revenuGenere)}</span>
               </div>
+            </div>
+            <div className="p-3 bg-muted/40 border-t">
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => onApply(Math.round(s.brut), buildDetails(s))}
+              >
+                <Check className="mr-2 h-4 w-4" /> Utiliser l'année complète {s.year}
+              </Button>
             </div>
           </div>
         ))}
 
         {yearSummaries.length > 0 && (
           <p className="text-xs text-muted-foreground">
-            Cliquez sur « Utiliser » pour reporter le montant choisi dans « Revenu Annuel Estimé ».
-            Le nom du client de référence n'est jamais visible par le prospect.
+            « Utiliser l'année complète » reporte le CA brut dans « Revenu Annuel Estimé » et remplit
+            automatiquement les « Détails de l'estimation » avec l'ensemble des chiffres (brut, loyers, versé,
+            revenu généré). Le nom du client de référence ({selectedClientName || '...'}) n'est jamais visible par le prospect.
           </p>
         )}
       </CardContent>

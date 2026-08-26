@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy, Lock, ShieldCheck, Bell } from 'lucide-react';
+import { Terminal, User, Banknote, Briefcase, Download, AlertTriangle, Loader2, Phone, CheckCircle, Settings, KeyRound, Gift, Copy, Lock, ShieldCheck, Bell, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { getProfile, updateProfile, UserProfile } from '@/lib/profile-api';
 import { toast } from 'sonner';
 import { useSession } from '@/components/SessionContextProvider';
@@ -490,6 +491,13 @@ const ProfilePage: React.FC = () => {
                   <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCguvModalOpen(true)}>
                     Voir nos CGUV
                   </Button>
+                  {(profile?.estimated_revenue || profile?.estimation_details) && (
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                      <Link to="/estimation">
+                        <FileText className="mr-2 h-4 w-4" /> Voir mon estimation
+                      </Link>
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     className="w-full sm:w-auto"

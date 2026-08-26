@@ -161,12 +161,8 @@ export async function downloadEstimationPdf(profile: UserProfile): Promise<void>
   const cardW = (W - M * 2 - 8) / 3;
   const cards: [string, string][] = [
     ['Moyenne mensuelle brute', formatEUR(est.grossMonthly)],
-    est.commissionRate !== null
-      ? [`Frais de gestion (${est.commissionRate}%)`, `- ${formatEUR(est.commissionAmount!)}`]
-      : ['Frais de gestion', 'Sur devis'],
-    est.net !== null
-      ? ['Revenu net annuel estimé', formatEUR(est.net)]
-      : ['Revenu net annuel estimé', formatEUR(est.gross)],
+    [`Frais de gestion (${est.commissionRate}% TTC)`, `- ${formatEUR(est.commissionAmount)}`],
+    ['Revenu net annuel estimé', formatEUR(est.net)],
   ];
   cards.forEach(([label, value], i) => {
     const x = M + i * (cardW + 4);
@@ -190,12 +186,10 @@ export async function downloadEstimationPdf(profile: UserProfile): Promise<void>
   const detailBody: string[][] = [
     ['Revenus locatifs bruts annuels estimés', formatEUR(est.gross)],
     ['Moyenne mensuelle brute', formatEUR(est.grossMonthly)],
+    [`Frais de gestion Hello Keys (${est.commissionRate}% TTC)`, `- ${formatEUR(est.commissionAmount)}`],
+    ['Revenu net propriétaire annuel estimé', formatEUR(est.net)],
+    ['Revenu net propriétaire mensuel moyen', formatEUR(est.netMonthly)],
   ];
-  if (est.commissionRate !== null && est.commissionAmount !== null && est.net !== null) {
-    detailBody.push([`Frais de gestion Hello Keys (${est.commissionRate}% des revenus)`, `- ${formatEUR(est.commissionAmount)}`]);
-    detailBody.push(['Revenu net propriétaire annuel estimé', formatEUR(est.net)]);
-    detailBody.push(['Revenu net propriétaire mensuel moyen', formatEUR(est.netMonthly!)]);
-  }
 
   autoTable(doc, {
     startY: y,
@@ -208,14 +202,27 @@ export async function downloadEstimationPdf(profile: UserProfile): Promise<void>
     theme: 'grid',
     margin: { left: M, right: M },
     didParseCell: (data) => {
-      if (data.section === 'body' && data.row.index === detailBody.length - 2 && est.net !== null) {
+      if (data.section === 'body' && data.row.index === detailBody.length - 2) {
         data.cell.styles.fillColor = [219, 234, 254];
         data.cell.styles.textColor = NAVY;
         data.cell.styles.fontStyle = 'bold';
       }
     },
   });
-  y = (doc as any).lastAutoTable.finalY + 10;
+  y = (doc as any).lastAutoTable.finalY + 5;
+
+  // Note sur la méthode de calcul de la commission
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(...GREY);
+  const commissionNote = doc.splitTextToSize(
+    `Le taux de ${est.commissionRate}% est un taux TTC (TVA 20% incluse). Conformément à votre contrat, la commission ` +
+      'Hello Keys est calculée sur votre revenu locatif net : le loyer réellement perçu, après déduction des frais de ' +
+      'plateforme (Airbnb, Booking...), des frais de ménage et de la taxe de séjour. Vos séjours personnels ne sont jamais commissionnés.',
+    W - M * 2,
+  );
+  doc.text(commissionNote, M, y);
+  y += commissionNote.length * 3.6 + 8;
 
   // --- Détails et remarques ---
   if (profile.estimation_details) {

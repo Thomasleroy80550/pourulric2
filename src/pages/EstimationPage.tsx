@@ -146,11 +146,9 @@ const EstimationPage: React.FC = () => {
                 <Percent className="h-4 w-4 text-blue-600" /> Frais de gestion
               </div>
               <p className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mt-2">
-                {est.commissionRate !== null ? `${est.commissionRate} %` : 'Sur devis'}
+                {est.commissionRate} % <span className="text-sm font-semibold text-muted-foreground">TTC</span>
               </p>
-              {est.commissionAmount !== null && (
-                <p className="text-xs text-muted-foreground mt-1">soit {formatEUR(est.commissionAmount)} / an</p>
-              )}
+              <p className="text-xs text-muted-foreground mt-1">soit {formatEUR(est.commissionAmount)} / an</p>
             </CardContent>
           </Card>
           <Card className="shadow-md border-0 bg-blue-600 text-white">
@@ -158,10 +156,8 @@ const EstimationPage: React.FC = () => {
               <div className="flex items-center gap-2 text-blue-100 text-xs font-medium uppercase tracking-wide">
                 <PiggyBank className="h-4 w-4" /> Net propriétaire estimé
               </div>
-              <p className="text-2xl font-extrabold mt-2">{formatEUR(est.net ?? est.gross)}</p>
-              {est.netMonthly !== null && (
-                <p className="text-xs text-blue-100 mt-1">soit {formatEUR(est.netMonthly)} / mois en moyenne</p>
-              )}
+              <p className="text-2xl font-extrabold mt-2">{formatEUR(est.net)}</p>
+              <p className="text-xs text-blue-100 mt-1">soit {formatEUR(est.netMonthly)} / mois en moyenne</p>
             </CardContent>
           </Card>
         </div>
@@ -229,20 +225,19 @@ const EstimationPage: React.FC = () => {
                   <span className="text-muted-foreground">Moyenne mensuelle brute</span>
                   <span className="font-bold">{formatEUR(est.grossMonthly)}</span>
                 </div>
-                {est.commissionRate !== null && est.commissionAmount !== null && (
-                  <div className="flex justify-between items-center py-3 text-sm">
-                    <span className="text-muted-foreground">Frais de gestion ({est.commissionRate}%)</span>
-                    <span className="font-bold text-red-500">- {formatEUR(est.commissionAmount)}</span>
-                  </div>
-                )}
-                {est.net !== null && (
-                  <div className="flex justify-between items-center py-3">
-                    <span className="font-semibold text-sm">Net propriétaire annuel</span>
-                    <span className="font-extrabold text-blue-600 text-lg">{formatEUR(est.net)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center py-3 text-sm">
+                  <span className="text-muted-foreground">Frais de gestion ({est.commissionRate}% TTC)</span>
+                  <span className="font-bold text-red-500">- {formatEUR(est.commissionAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="font-semibold text-sm">Net propriétaire annuel</span>
+                  <span className="font-extrabold text-blue-600 text-lg">{formatEUR(est.net)}</span>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground pt-3">Montants avant charges, taxes et impôts.</p>
+              <p className="text-xs text-muted-foreground pt-3">
+                Taux TTC (TVA 20 % incluse). Conformément à votre contrat, la commission est calculée sur votre revenu
+                locatif net (hors frais de plateforme, ménage et taxe de séjour). Montants avant charges et impôts.
+              </p>
             </CardContent>
           </Card>
 

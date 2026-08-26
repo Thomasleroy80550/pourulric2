@@ -22,12 +22,16 @@ export interface EstimationData {
   grossMonthly: number;
   low: number;
   high: number;
-  commissionRate: number | null;
-  commissionAmount: number | null;
-  net: number | null;
-  netMonthly: number | null;
+  /** Taux de commission TTC en pourcentage (ex : 26). Défaut : 26% comme dans la méthode de calcul officielle. */
+  commissionRate: number;
+  commissionAmount: number;
+  net: number;
+  netMonthly: number;
   monthlyBreakdown: { month: string; short: string; weight: number; amount: number }[];
 }
+
+// Taux par défaut (26% TTC), identique au générateur de relevés
+export const DEFAULT_COMMISSION_RATE = 0.26;
 
 export const formatEUR = (value: number) =>
   value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
@@ -38,9 +42,11 @@ export function getEstimationReference(profile: UserProfile): string {
 
 export function computeEstimation(profile: UserProfile): EstimationData {
   const gross = profile.estimated_revenue ?? 0;
-  const commissionRate = profile.commission_rate ?? null;
-  const commissionAmount = commissionRate !== null ? gross * (commissionRate / 100) : null;
-  const net = commissionAmount !== null ? gross - commissionAmount : null;
+  // commission_rate est stocké en décimal (0.26 = 26% TTC), comme dans la fiche client admin
+  const rateDecimal = profile.commission_rate || DEFAULT_COMMISSION_RATE;
+  const commissionRate = Math.round(rateDecimal * 100 * 10) / 10;
+  const commissionAmount = gross * rateDecimal;
+  const net = gross - commissionAmount;
 
   return {
     reference: getEstimationReference(profile),
@@ -51,7 +57,7 @@ export function computeEstimation(profile: UserProfile): EstimationData {
     commissionRate,
     commissionAmount,
     net,
-    netMonthly: net !== null ? net / 12 : null,
+    netMonthly: net / 12,
     monthlyBreakdown: SEASONAL_WEIGHTS.map(({ month, short, weight }) => ({
       month,
       short,

@@ -33,8 +33,12 @@ export interface EstimationData {
 // Taux par défaut (26% TTC), identique au générateur de relevés
 export const DEFAULT_COMMISSION_RATE = 0.26;
 
+// jsPDF (polices standard) ne sait pas afficher les espaces insécables du format fr-FR :
+// on les remplace par des espaces classiques (sans impact visible sur la page web).
 export const formatEUR = (value: number) =>
-  value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  value
+    .toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
+    .replace(/[\u202F\u00A0]/g, ' ');
 
 export function getEstimationReference(profile: UserProfile): string {
   return `EST-${new Date().getFullYear()}-${profile.id.slice(0, 6).toUpperCase()}`;

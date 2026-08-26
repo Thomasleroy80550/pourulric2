@@ -100,16 +100,22 @@ const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ curre
         });
       } else {
         const t = inv.totals || {};
+        const menage = t.totalFraisMenage || 0;
+        const taxe = t.totalTaxeDeSejour || 0;
         prixSejour = t.totalPrixSejour || 0;
-        brut = prixSejour + (t.totalFraisMenage || 0) + (t.totalTaxeDeSejour || 0);
+        // Relevés manuels : le CA total est souvent renseigné sans le détail
+        // (prix séjour / ménage / taxe à 0). On privilégie donc totalCA.
+        brut = t.totalCA || prixSejour + menage + taxe;
+        if (prixSejour === 0 && brut > 0) prixSejour = brut - menage - taxe;
         montantVerse = t.totalMontantVerse || 0;
         revenuGenere = t.totalRevenuGenere || 0;
-        commission = t.totalCommission || 0;
+        // À défaut de commission détaillée, le total facturé HK en tient lieu.
+        commission = t.totalCommission || t.totalFacture || 0;
         nuits = t.totalNuits || 0;
+        if (revenuGenere === 0 && montantVerse > 0) revenuGenere = montantVerse - menage - taxe;
       }
 
-      // Relevés manuels : souvent seul le montant versé est renseigné.
-      // Le voyageur a payé au moins ce qui a été reversé : on l'utilise comme plancher.
+      // Le voyageur a payé au moins ce qui a été reversé : plancher de sécurité.
       if (brut < montantVerse) brut = montantVerse;
       if (revenuGenere === 0 && montantVerse > 0) revenuGenere = montantVerse;
 

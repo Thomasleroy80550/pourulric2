@@ -81,21 +81,48 @@ const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ curre
       const year = parseInt(parts[1], 10);
       if (monthIndex === undefined || isNaN(year)) return;
 
-      const t = inv.totals || {};
-      const prixSejour = t.totalPrixSejour || 0;
-      const menage = t.totalFraisMenage || 0;
-      const taxe = t.totalTaxeDeSejour || 0;
+      // On privilégie les lignes de réservation (invoice_data) : elles contiennent
+      // les vrais chiffres, y compris quand les totaux du relevé sont incomplets.
+      const lines: any[] = Array.isArray(inv.invoice_data) ? inv.invoice_data : [];
+      let brut = 0, prixSejour = 0, montantVerse = 0, revenuGenere = 0, commission = 0, nuits = 0;
+
+      if (lines.length > 0) {
+        lines.forEach(l => {
+          const ps = l.prixSejour || 0;
+          const menage = l.fraisMenage || 0;
+          const taxe = l.taxeDeSejour || 0;
+          brut += l.ca ?? l.originalTotalPaye ?? (ps + menage + taxe);
+          prixSejour += ps;
+          montantVerse += l.montantVerse || 0;
+          revenuGenere += l.revenuGenere || 0;
+          commission += l.commissionHelloKeys || 0;
+          nuits += l.nuits || 0;
+        });
+      } else {
+        const t = inv.totals || {};
+        prixSejour = t.totalPrixSejour || 0;
+        brut = prixSejour + (t.totalFraisMenage || 0) + (t.totalTaxeDeSejour || 0);
+        montantVerse = t.totalMontantVerse || 0;
+        revenuGenere = t.totalRevenuGenere || 0;
+        commission = t.totalCommission || 0;
+        nuits = t.totalNuits || 0;
+      }
+
+      // Relevés manuels : souvent seul le montant versé est renseigné.
+      // Le voyageur a payé au moins ce qui a été reversé : on l'utilise comme plancher.
+      if (brut < montantVerse) brut = montantVerse;
+      if (revenuGenere === 0 && montantVerse > 0) revenuGenere = montantVerse;
 
       if (!byYear.has(year)) {
         byYear.set(year, { brut: 0, prixSejour: 0, montantVerse: 0, revenuGenere: 0, commission: 0, nuits: 0, months: new Set() });
       }
       const entry = byYear.get(year)!;
-      entry.brut += prixSejour + menage + taxe;
+      entry.brut += brut;
       entry.prixSejour += prixSejour;
-      entry.montantVerse += t.totalMontantVerse || 0;
-      entry.revenuGenere += t.totalRevenuGenere || 0;
-      entry.commission += t.totalCommission || 0;
-      entry.nuits += t.totalNuits || 0;
+      entry.montantVerse += montantVerse;
+      entry.revenuGenere += revenuGenere;
+      entry.commission += commission;
+      entry.nuits += nuits;
       entry.months.add(monthIndex);
     });
     return Array.from(byYear.entries())

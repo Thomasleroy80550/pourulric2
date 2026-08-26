@@ -130,12 +130,25 @@ const extractAvailableYears = (statements: SavedInvoice[]): number[] => {
   return Array.from(years).sort((a, b) => b - a);
 };
 
+const getStatementMonthIndex = (s: SavedInvoice): number | undefined => {
+  let parsed = parse(s.period, "MMMM yyyy", new Date(), { locale: fr });
+  if (!isValid(parsed)) parsed = parse(s.period, "MMM yyyy", new Date(), { locale: fr });
+  if (isValid(parsed)) return parsed.getMonth();
+  return MONTH_FALLBACK[s.period.toLowerCase().split(" ")[0].replace(".", "")];
+};
+
 const buildYearMetrics = (
   statements: SavedInvoice[],
   year: number,
   rooms: UserRoom[],
+  throughMonth: number = 11,
 ): YearMetrics => {
-  const statementsForYear = statements.filter((s) => s.period.includes(String(year)));
+  const statementsForYear = statements.filter((s) => {
+    if (!s.period.includes(String(year))) return false;
+    if (throughMonth >= 11) return true;
+    const monthIndex = getStatementMonthIndex(s);
+    return monthIndex !== undefined && monthIndex <= throughMonth;
+  });
 
   const months = eachMonthOfInterval({
     start: startOfMonth(new Date(year, 0, 1)),
@@ -180,14 +193,7 @@ const buildYearMetrics = (
     totalGuests += s.totals.totalVoyageurs || 0;
     totalReservations += reservations;
 
-    let monthIndex: number | undefined;
-    let parsed = parse(s.period, "MMMM yyyy", new Date(), { locale: fr });
-    if (!isValid(parsed)) parsed = parse(s.period, "MMM yyyy", new Date(), { locale: fr });
-    if (isValid(parsed)) {
-      monthIndex = parsed.getMonth();
-    } else {
-      monthIndex = MONTH_FALLBACK[s.period.toLowerCase().split(" ")[0].replace(".", "")];
-    }
+    const monthIndex = getStatementMonthIndex(s);
 
     if (monthIndex !== undefined) {
       monthly[monthIndex].ca += ca;
@@ -212,7 +218,11 @@ const buildYearMetrics = (
     monthly[i].occupation = available > 0 ? (monthlyNights[i] / available) * 100 : 0;
   });
 
-  const totalAvailable = rooms.length * getDaysInYear(new Date(year, 0, 1));
+  const totalAvailable =
+    throughMonth >= 11
+      ? rooms.length * getDaysInYear(new Date(year, 0, 1))
+      : rooms.length *
+        months.slice(0, throughMonth + 1).reduce((acc, m) => acc + getDaysInMonth(m), 0);
   const occupancyRate = totalAvailable > 0 ? (totalNights / totalAvailable) * 100 : 0;
 
   let bestMonth: YearMetrics["bestMonth"] = null;
@@ -313,6 +323,26 @@ const DashboardPageV3: React.FC = () => {
     () => (compareYear !== null ? buildYearMetrics(statements, compareYear, rooms) : null),
     [statements, rooms, compareYear],
   );
+
+  // Dernier mois avec des données pour l'année sélectionnée (si année en cours).
+  // Permet de comparer à période équivalente et non contre 12 mois complets.
+  const lastDataMonth = useMemo(() => {
+    if (selectedYear !== currentYear || !metrics) return 11;
+    let last = -1;
+    metrics.monthly.forEach((m, i) => {
+      if (m.ca !== 0 || m.benef !== 0 || m.reservations > 0) last = i;
+    });
+    return last >= 0 ? last : new Date().getMonth();
+  }, [metrics, selectedYear, currentYear]);
+
+  const isPartialYear = selectedYear === currentYear && lastDataMonth < 11;
+
+  // Métriques de comparaison limitées à la même période (pour les badges KPI).
+  const compareMetricsYTD = useMemo(() => {
+    if (compareYear === null) return null;
+    if (!isPartialYear) return compareMetrics;
+    return buildYearMetrics(statements, compareYear, rooms, lastDataMonth);
+  }, [statements, rooms, compareYear, compareMetrics, isPartialYear, lastDataMonth]);
 
   // ── Prévisionnel : CA déjà réservé (Krossbooking) pour les mois à venir ──
   // Mêmes règles que la page Prévisions : annulations et séjours proprio exclus,
@@ -452,37 +482,37 @@ const DashboardPageV3: React.FC = () => {
         {
           label: "Chiffre d'affaires",
           value: formatEuro(metrics.totalCA),
-          delta: computeDelta(metrics.totalCA, compareMetrics?.totalCA),
+          delta: computeDelta(metrics.totalCA, compareMetricsYTD?.totalCA),
           icon: Landmark,
         },
         {
           label: "Résultat net",
           value: formatEuro(metrics.totalNet),
-          delta: computeDelta(metrics.totalNet, compareMetrics?.totalNet),
+          delta: computeDelta(metrics.totalNet, compareMetricsYTD?.totalNet),
           icon: Wallet,
         },
         {
           label: "Réservations",
           value: String(metrics.totalReservations),
-          delta: computeDelta(metrics.totalReservations, compareMetrics?.totalReservations),
+          delta: computeDelta(metrics.totalReservations, compareMetricsYTD?.totalReservations),
           icon: CalendarDays,
         },
         {
           label: "Nuits",
           value: String(metrics.totalNights),
-          delta: computeDelta(metrics.totalNights, compareMetrics?.totalNights),
+          delta: computeDelta(metrics.totalNights, compareMetricsYTD?.totalNights),
           icon: BedDouble,
         },
         {
           label: "Occupation",
           value: `${metrics.occupancyRate.toFixed(1)} %`,
-          delta: computeDelta(metrics.occupancyRate, compareMetrics?.occupancyRate),
+          delta: computeDelta(metrics.occupancyRate, compareMetricsYTD?.occupancyRate),
           icon: PercentCircle,
         },
         {
           label: "Voyageurs",
           value: String(metrics.totalGuests),
-          delta: computeDelta(metrics.totalGuests, compareMetrics?.totalGuests),
+          delta: computeDelta(metrics.totalGuests, compareMetricsYTD?.totalGuests),
           icon: Users,
         },
       ]
@@ -573,6 +603,8 @@ const DashboardPageV3: React.FC = () => {
           {isComparing && (
             <Badge className="rounded-full bg-[hsl(var(--sidebar-background))] text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-background))]">
               Comparaison {selectedYear} vs {compareYear}
+              {isPartialYear &&
+                ` (à période équivalente : janv – ${format(new Date(selectedYear, lastDataMonth, 1), "MMM", { locale: fr })})`}
             </Badge>
           )}
         </div>

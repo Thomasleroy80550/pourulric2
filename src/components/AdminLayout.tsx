@@ -77,6 +77,7 @@ const adminNavigationCategories = [
     categoryName: 'Gestion',
     items: [
       { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
+      { name: 'Accès délégués', href: '/admin/delegated-access', icon: ShieldCheck, description: 'Visualiser les accès délégués accordés par les propriétaires.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
       { name: 'Config iCal', href: '/admin/ical-config', icon: CalendarDays, description: 'Configurer et importer les flux iCal des logements.' },
       { name: 'Blanchisserie', href: '/admin/laundry', icon: Package, description: 'Calculer les commandes de linge à partir des réservations.' },

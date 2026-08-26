@@ -75,8 +75,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         } else {
           // Regular user logic
           if (!isOnboardingComplete) {
-            // Autoriser l'invitation même si l'onboarding n'est pas terminé
-            if (location.pathname !== '/onboarding-status' && !location.pathname.startsWith('/redeem-invite') && !location.pathname.startsWith('/rejoindre-espace')) {
+            // Autoriser l'invitation et la page d'estimation même si l'onboarding n'est pas terminé
+            if (location.pathname !== '/onboarding-status' && location.pathname !== '/estimation' && !location.pathname.startsWith('/redeem-invite') && !location.pathname.startsWith('/rejoindre-espace')) {
               navigate('/onboarding-status');
             }
           } else {

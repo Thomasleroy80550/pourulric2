@@ -5,12 +5,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CheckCircle, Circle, Loader2, Rocket, KeyRound, LogOut } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Rocket, KeyRound, LogOut, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CGUVModal from '@/components/CGUVModal';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import OnboardingVisualProgress from '@/components/OnboardingVisualProgress'; // Import the new component
 import { supabase } from '@/integrations/supabase/client';
+import { downloadEstimationPdf } from '@/lib/estimation-pdf';
 
 const statusSteps: { status: OnboardingStatus; title: string; description: string; action?: string }[] = [
   { status: 'estimation_sent', title: 'Estimation envoyée', description: 'Nous vous avons envoyé une estimation de revenus. Veuillez la consulter et la valider.' },
@@ -29,6 +30,20 @@ const OnboardingStatusPage: React.FC = () => {
   const [isCguvModalOpen, setIsCguvModalOpen] = useState(false);
   const [isSubmittingChoice, setIsSubmittingChoice] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDownloadingEstimation, setIsDownloadingEstimation] = useState(false);
+
+  const handleDownloadEstimation = async () => {
+    if (!profile) return;
+    setIsDownloadingEstimation(true);
+    try {
+      await downloadEstimationPdf(profile);
+      toast.success('Votre estimation PDF a été téléchargée !');
+    } catch (error: any) {
+      toast.error(`Erreur lors de la génération du PDF : ${error.message}`);
+    } finally {
+      setIsDownloadingEstimation(false);
+    }
+  };
 
   const fetchProfileData = useCallback(async () => {
     setLoading(true);
@@ -281,6 +296,22 @@ const OnboardingStatusPage: React.FC = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-0.5">
                     {profile.estimation_details || "Aucun détail fourni."}
                   </p>
+                </div>
+                <div className="space-y-2 pt-1">
+                  <Link to="/estimation" className="block">
+                    <Button className="w-full text-sm">
+                      <FileText className="mr-2 h-4 w-4" /> Voir mon estimation détaillée
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    className="w-full text-sm"
+                    onClick={handleDownloadEstimation}
+                    disabled={isDownloadingEstimation}
+                  >
+                    {isDownloadingEstimation ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Download className="mr-2 h-4 w-4" />}
+                    Télécharger le PDF (banque)
+                  </Button>
                 </div>
               </CardContent>
             </Card>

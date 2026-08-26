@@ -48,6 +48,7 @@ import AdminUserRoomsPage from "./pages/AdminUserRoomsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminModuleRequestsPage from "./pages/AdminModuleRequestsPage";
 import OnboardingStatusPage from "./pages/OnboardingStatusPage";
+import EstimationPage from "./pages/EstimationPage";
 import FaqPage from "./pages/FaqPage";
 import AdminFaqPage from "./pages/AdminFaqPage";
 import AdminChangelogPage from "./pages/AdminChangelogPage";
@@ -154,6 +155,7 @@ function App() {
                       <Route path="/login" element={<Login />} />
                       <Route path="/login-v2" element={<LoginV2 />} />
                       <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
+                      <Route path="/estimation" element={<EstimationPage />} />
                       <Route path="/admin" element={<AdminDashboardPage />} />
                       <Route path="/admin/pages" element={<PageCreator />} />
                       <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />

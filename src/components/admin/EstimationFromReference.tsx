@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Check, Loader2 } from 'lucide-react';
+import { Building2, Check, Loader2, MoonStar } from 'lucide-react';
 
 const MONTHS_FR: Record<string, number> = {
   janvier: 0, février: 1, fevrier: 1, mars: 2, avril: 3, mai: 4, juin: 5,
@@ -17,8 +17,13 @@ const formatEUR = (value: number) =>
 
 interface YearSummary {
   year: number;
-  total: number;
   monthCount: number;
+  brut: number; // CA total (prix séjour + ménage + taxe)
+  prixSejour: number;
+  montantVerse: number;
+  revenuGenere: number;
+  commission: number;
+  nuits: number;
 }
 
 interface EstimationFromReferenceProps {
@@ -60,21 +65,33 @@ const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ curre
 
   const yearSummaries: YearSummary[] = useMemo(() => {
     if (!invoices) return [];
-    const byYear = new Map<number, { total: number; months: Set<number> }>();
+    const byYear = new Map<number, Omit<YearSummary, 'year' | 'monthCount'> & { months: Set<number> }>();
     invoices.forEach(inv => {
       const parts = (inv.period || '').trim().split(' ');
       if (parts.length < 2) return;
       const monthIndex = MONTHS_FR[parts[0].toLowerCase()];
       const year = parseInt(parts[1], 10);
       if (monthIndex === undefined || isNaN(year)) return;
-      const revenue = inv.totals?.totalRevenuGenere || 0;
-      if (!byYear.has(year)) byYear.set(year, { total: 0, months: new Set() });
+
+      const t = inv.totals || {};
+      const prixSejour = t.totalPrixSejour || 0;
+      const menage = t.totalFraisMenage || 0;
+      const taxe = t.totalTaxeDeSejour || 0;
+
+      if (!byYear.has(year)) {
+        byYear.set(year, { brut: 0, prixSejour: 0, montantVerse: 0, revenuGenere: 0, commission: 0, nuits: 0, months: new Set() });
+      }
       const entry = byYear.get(year)!;
-      entry.total += revenue;
+      entry.brut += prixSejour + menage + taxe;
+      entry.prixSejour += prixSejour;
+      entry.montantVerse += t.totalMontantVerse || 0;
+      entry.revenuGenere += t.totalRevenuGenere || 0;
+      entry.commission += t.totalCommission || 0;
+      entry.nuits += t.totalNuits || 0;
       entry.months.add(monthIndex);
     });
     return Array.from(byYear.entries())
-      .map(([year, { total, months }]) => ({ year, total, monthCount: months.size }))
+      .map(([year, { months, ...rest }]) => ({ year, monthCount: months.size, ...rest }))
       .sort((a, b) => b.year - a.year);
   }, [invoices]);
 
@@ -85,7 +102,7 @@ const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ curre
           <Building2 className="h-4 w-4" /> Estimer depuis un logement existant
         </CardTitle>
         <CardDescription>
-          Basez l'estimation sur les revenus réels (Revenu Généré des relevés) d'un client comparable.
+          Basez l'estimation sur les chiffres réels des relevés d'un client comparable (brut, versé, revenu généré...).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -119,34 +136,95 @@ const EstimationFromReference: React.FC<EstimationFromReferenceProps> = ({ curre
           </p>
         )}
 
-        {yearSummaries.length > 0 && (
-          <div className="space-y-2">
-            {yearSummaries.map(({ year, total, monthCount }) => (
-              <div
-                key={year}
-                className="flex items-center justify-between gap-3 rounded-md border p-2.5 text-sm"
-              >
+        {yearSummaries.map((s) => (
+          <div key={s.year} className="rounded-md border overflow-hidden">
+            <div className="flex items-center justify-between bg-muted/60 px-3 py-2">
+              <p className="font-semibold text-sm">{s.year}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                {s.monthCount} relevé{s.monthCount > 1 ? 's' : ''}
+                <span className="flex items-center gap-1"><MoonStar className="h-3 w-3" /> {s.nuits} nuits</span>
+              </p>
+            </div>
+            <div className="divide-y text-sm">
+              <div className="flex items-center justify-between gap-2 px-3 py-2">
                 <div>
-                  <p className="font-semibold">{year}</p>
+                  <p className="font-medium">CA brut total</p>
+                  <p className="text-xs text-muted-foreground">Prix séjour + ménage + taxe = {formatEUR(s.brut)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{formatEUR(s.brut)}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onApply(Math.round(s.brut), `CA brut réel ${s.year} d'un logement comparable (${selectedClientName})`)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 px-3 py-2">
+                <div>
+                  <p className="font-medium">Prix séjour (loyers)</p>
+                  <p className="text-xs text-muted-foreground">Hors ménage et taxe de séjour</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{formatEUR(s.prixSejour)}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onApply(Math.round(s.prixSejour), `loyers réels ${s.year} d'un logement comparable (${selectedClientName})`)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 px-3 py-2">
+                <div>
+                  <p className="font-medium">Montant versé par les plateformes</p>
+                  <p className="text-xs text-muted-foreground">Après commissions OTA et frais de paiement</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{formatEUR(s.montantVerse)}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onApply(Math.round(s.montantVerse), `montant versé réel ${s.year} d'un logement comparable (${selectedClientName})`)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 px-3 py-2">
+                <div>
+                  <p className="font-medium">Revenu généré</p>
                   <p className="text-xs text-muted-foreground">
-                    {monthCount} relevé{monthCount > 1 ? 's' : ''} — Revenu généré : <strong>{formatEUR(total)}</strong>
+                    Base de commission — commission HK réelle : {formatEUR(s.commission)}
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => onApply(Math.round(total), `logement comparable, revenus réels ${year} (${selectedClientName})`)}
-                >
-                  <Check className="mr-1.5 h-3.5 w-3.5" /> Utiliser
-                </Button>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">{formatEUR(s.revenuGenere)}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onApply(Math.round(s.revenuGenere), `revenu généré réel ${s.year} d'un logement comparable (${selectedClientName})`)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" /> Utiliser
+                  </Button>
+                </div>
               </div>
-            ))}
-            <p className="text-xs text-muted-foreground">
-              Cliquez sur « Utiliser » pour reporter le montant dans le champ « Revenu Annuel Estimé ».
-              Le nom du client de référence n'est jamais visible par le prospect.
-            </p>
+            </div>
           </div>
+        ))}
+
+        {yearSummaries.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Cliquez sur « Utiliser » pour reporter le montant choisi dans « Revenu Annuel Estimé ».
+            Le nom du client de référence n'est jamais visible par le prospect.
+          </p>
         )}
       </CardContent>
     </Card>

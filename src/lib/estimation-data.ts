@@ -1,16 +1,17 @@
 import { UserProfile } from '@/lib/profile-api';
 
-// Saisonnalité indicative de la location saisonnière sur le littoral (Baie de Somme)
+// Saisonnalité indicative de la location saisonnière sur le littoral (Baie de Somme).
+// Janvier = 0 : fermeture annuelle de l'activité.
 export const SEASONAL_WEIGHTS: { month: string; short: string; weight: number }[] = [
-  { month: 'Janvier', short: 'Jan', weight: 0.03 },
+  { month: 'Janvier', short: 'Jan', weight: 0 },
   { month: 'Février', short: 'Fév', weight: 0.05 },
   { month: 'Mars', short: 'Mar', weight: 0.05 },
   { month: 'Avril', short: 'Avr', weight: 0.08 },
-  { month: 'Mai', short: 'Mai', weight: 0.08 },
+  { month: 'Mai', short: 'Mai', weight: 0.09 },
   { month: 'Juin', short: 'Juin', weight: 0.10 },
-  { month: 'Juillet', short: 'Juil', weight: 0.16 },
+  { month: 'Juillet', short: 'Juil', weight: 0.17 },
   { month: 'Août', short: 'Août', weight: 0.17 },
-  { month: 'Septembre', short: 'Sep', weight: 0.09 },
+  { month: 'Septembre', short: 'Sep', weight: 0.10 },
   { month: 'Octobre', short: 'Oct', weight: 0.07 },
   { month: 'Novembre', short: 'Nov', weight: 0.05 },
   { month: 'Décembre', short: 'Déc', weight: 0.07 },

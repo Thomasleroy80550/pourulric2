@@ -26,6 +26,7 @@ import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
 import { Label } from '@/components/ui/label';
 import ChangePasswordDialog from '@/components/admin/ChangePasswordDialog';
 import DownloadUserStatementsButton from '@/components/admin/DownloadUserStatementsButton';
+import EstimationFromReference from '@/components/admin/EstimationFromReference';
 
 const optionalPositiveNumberField = z.preprocess(
   (value) => value === '' || value === null || value === undefined ? null : value,
@@ -571,6 +572,13 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                           <FormMessage />
                         </FormItem>
                       )} />
+                      <EstimationFromReference
+                        currentUserId={user.id}
+                        onApply={(amount, sourceLabel) => {
+                          form.setValue('estimated_revenue', amount, { shouldDirty: true });
+                          toast.success(`Revenu estimé mis à jour : ${amount.toLocaleString('fr-FR')} € (${sourceLabel})`);
+                        }}
+                      />
                       <FormField control={form.control} name="estimation_details" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Détails de l'estimation</FormLabel>

@@ -170,6 +170,7 @@ const EstimationPage: React.FC = () => {
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Répartition indicative de vos revenus bruts sur l'année, selon la saisonnalité du marché local.
+              L'activité est fermée en janvier (fermeture annuelle).
             </p>
           </CardHeader>
           <CardContent>

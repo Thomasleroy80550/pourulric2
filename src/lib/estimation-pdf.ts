@@ -244,7 +244,8 @@ export async function downloadEstimationPdf(profile: UserProfile): Promise<void>
   doc.setFontSize(9);
   doc.setTextColor(...GREY);
   doc.text(
-    'Répartition indicative des revenus bruts sur l\'année, selon la saisonnalité observée sur le marché local.',
+    'Répartition indicative des revenus bruts sur l\'année, selon la saisonnalité observée sur le marché local. ' +
+      'L\'activité est fermée en janvier (fermeture annuelle).',
     M, y,
   );
   y += 8;
@@ -289,7 +290,11 @@ export async function downloadEstimationPdf(profile: UserProfile): Promise<void>
   autoTable(doc, {
     startY: y,
     head: [['Mois', 'Part de l\'année', 'Revenu brut estimé']],
-    body: est.monthlyBreakdown.map(m => [m.month, `${Math.round(m.weight * 100)} %`, formatEUR(m.amount)]),
+    body: est.monthlyBreakdown.map(m => [
+      m.weight === 0 ? `${m.month} (fermeture annuelle)` : m.month,
+      `${Math.round(m.weight * 100)} %`,
+      formatEUR(m.amount),
+    ]),
     foot: [['Total annuel', '100 %', formatEUR(est.gross)]],
     styles: { fontSize: 8.5, cellPadding: 2.2, textColor: [30, 41, 59] },
     headStyles: { fillColor: NAVY, textColor: 255, fontStyle: 'bold', fontSize: 8.5 },

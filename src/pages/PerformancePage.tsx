@@ -97,6 +97,8 @@ const PerformanceDashboard = () => {
   const [avgStayDuration, setAvgStayDuration] = useState(0);
   const [avgGuestsPerReservation, setAvgGuestsPerReservation] = useState(0);
   const [roomsCount, setRoomsCount] = useState(0);
+  // Dernier mois avec données si l'année en cours est partielle (null sinon)
+  const [partialThroughMonth, setPartialThroughMonth] = useState<number | null>(null);
 
   // Charts
   const [monthlyFinancialData, setMonthlyFinancialData] = useState<any[]>([]);
@@ -233,8 +235,22 @@ const PerformanceDashboard = () => {
       setTotalRevenues(totalCA);
       setTotalNetProfit(totalNetRevenueFromStatements - totalOtherExpenses);
 
-      const totalDaysInYear = getDaysInYear(new Date(year, 0, 1));
-      const totalAvailableNightsInYear = userRooms.length * totalDaysInYear;
+      // Pour l'année en cours, on calcule l'occupation et le RevPAR sur la
+      // période réellement écoulée (jusqu'au dernier mois avec des données),
+      // et non sur 365 jours — sinon les taux sont artificiellement bas.
+      let lastDataMonth = -1;
+      newMonthlyFinancialData.forEach((m, i) => {
+        if (m.ca !== 0 || monthlyNights[i] > 0 || newMonthlyReservationsData[i].reservations > 0) {
+          lastDataMonth = i;
+        }
+      });
+      const isCurrentYearPartial = year === currentYear && lastDataMonth >= 0 && lastDataMonth < 11;
+      setPartialThroughMonth(isCurrentYearPartial ? lastDataMonth : null);
+
+      const totalDaysConsidered = isCurrentYearPartial
+        ? monthsOfYear.slice(0, lastDataMonth + 1).reduce((acc, m) => acc + getDaysInMonth(m), 0)
+        : getDaysInYear(new Date(year, 0, 1));
+      const totalAvailableNightsInYear = userRooms.length * totalDaysConsidered;
 
       setOccupancyRateYear(totalAvailableNightsInYear > 0 ? (totalNightsSold / totalAvailableNightsInYear) * 100 : 0);
       setRevPar(totalAvailableNightsInYear > 0 ? totalCA / totalAvailableNightsInYear : 0);
@@ -267,16 +283,21 @@ const PerformanceDashboard = () => {
 
   const yearLabel = selectedYear === currentYear ? `${currentYear} (en cours)` : String(selectedYear);
 
+  const partialPeriodLabel =
+    partialThroughMonth !== null
+      ? `janv – ${format(new Date(selectedYear, partialThroughMonth, 1), 'MMM', { locale: fr })}`
+      : null;
+
   const kpis: KpiTile[] = useMemo(
     () => [
       { label: "Chiffre d'affaires", value: formatEuro(totalRevenues), hint: 'Total brut voyageurs', icon: Landmark },
       { label: 'Bénéfice net', value: formatEuro(totalNetProfit), hint: 'Après frais & dépenses', icon: Wallet },
-      { label: "Taux d'occupation", value: `${occupancyRateYear.toFixed(1)} %`, hint: "Moyenne sur l'année", icon: PercentCircle },
-      { label: 'RevPAR', value: `${revPar.toFixed(0)} €`, hint: 'Revenu / logement dispo', icon: Gauge },
+      { label: "Taux d'occupation", value: `${occupancyRateYear.toFixed(1)} %`, hint: partialPeriodLabel ? `Moyenne ${partialPeriodLabel}` : "Moyenne sur l'année", icon: PercentCircle },
+      { label: 'RevPAR', value: `${revPar.toFixed(0)} €`, hint: partialPeriodLabel ? `Revenu / logement (${partialPeriodLabel})` : 'Revenu / logement dispo', icon: Gauge },
       { label: 'Prix moyen / nuit', value: `${adr.toFixed(0)} €`, hint: 'ADR — tarif par nuitée', icon: Euro },
       { label: 'Revenu net / nuit', value: `${netRevenuePerNight.toFixed(0)} €`, hint: 'Avant autres dépenses', icon: BedDouble },
     ],
-    [totalRevenues, totalNetProfit, occupancyRateYear, revPar, adr, netRevenuePerNight],
+    [totalRevenues, totalNetProfit, occupancyRateYear, revPar, adr, netRevenuePerNight, partialPeriodLabel],
   );
 
   return (

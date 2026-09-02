@@ -51,6 +51,7 @@ const AdminKrossStatsPage: React.FC = () => {
   const [includeOwner, setIncludeOwner] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reservations, setReservations] = useState<DetailedRangeReservation[] | null>(null);
+  const [appliedRange, setAppliedRange] = useState<{ from: string; to: string } | null>(null);
 
   const applyPreset = (from: Date, to: Date) => {
     setDateFrom(from);
@@ -68,11 +69,11 @@ const AdminKrossStatsPage: React.FC = () => {
     }
     setLoading(true);
     try {
-      const data = await fetchAllReservationsDetailedInRange(
-        format(dateFrom, 'yyyy-MM-dd'),
-        format(dateTo, 'yyyy-MM-dd'),
-      );
+      const from = format(dateFrom, 'yyyy-MM-dd');
+      const to = format(dateTo, 'yyyy-MM-dd');
+      const data = await fetchAllReservationsDetailedInRange(from, to);
       setReservations(data);
+      setAppliedRange({ from, to });
       toast.success(`${data.length} réservation(s) récupérée(s) depuis Krossbooking.`);
     } catch (err: any) {
       console.error('Erreur récupération stats Kross:', err);
@@ -82,14 +83,22 @@ const AdminKrossStatsPage: React.FC = () => {
     }
   };
 
+  // Réservations dont l'arrivée est réellement dans la plage sélectionnée
+  // (l'API Krossbooking peut renvoyer des réservations hors plage).
+  const inRange = useMemo(() => {
+    if (!reservations || !appliedRange) return [];
+    return reservations.filter(
+      (r) => r.check_in_date >= appliedRange.from && r.check_in_date <= appliedRange.to,
+    );
+  }, [reservations, appliedRange]);
+
   const filtered = useMemo(() => {
-    if (!reservations) return [];
-    return reservations.filter((r) => {
+    return inRange.filter((r) => {
       if (r.status === CANCELLED_STATUS) return false;
       if (!includeOwner && OWNER_STATUSES.has(r.status)) return false;
       return true;
     });
-  }, [reservations, includeOwner]);
+  }, [inRange, includeOwner]);
 
   const stats = useMemo(() => {
     let ca = 0;
@@ -104,13 +113,14 @@ const AdminKrossStatsPage: React.FC = () => {
   }, [filtered]);
 
   const cancelledCount = useMemo(
-    () => (reservations ?? []).filter((r) => r.status === CANCELLED_STATUS).length,
-    [reservations],
+    () => inRange.filter((r) => r.status === CANCELLED_STATUS).length,
+    [inRange],
   );
   const ownerCount = useMemo(
-    () => (reservations ?? []).filter((r) => OWNER_STATUSES.has(r.status)).length,
-    [reservations],
+    () => inRange.filter((r) => OWNER_STATUSES.has(r.status)).length,
+    [inRange],
   );
+  const outOfRangeCount = (reservations?.length ?? 0) - inRange.length;
 
   const now = new Date();
 
@@ -232,6 +242,7 @@ const AdminKrossStatsPage: React.FC = () => {
                   <p className="text-xs text-muted-foreground">
                     {cancelledCount} annulée(s) exclue(s)
                     {!includeOwner && ownerCount > 0 ? ` · ${ownerCount} proprio exclue(s)` : ''}
+                    {outOfRangeCount > 0 ? ` · ${outOfRangeCount} hors plage exclue(s)` : ''}
                   </p>
                 </CardContent>
               </Card>

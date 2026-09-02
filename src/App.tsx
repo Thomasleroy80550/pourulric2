@@ -59,6 +59,7 @@ import AdminDocumentsPage from "./pages/AdminDocumentsPage";
 import CompSetPage from "./pages/CompSetPage";
 import AdminStripeTransactionsPage from "./pages/AdminStripeTransactionsPage";
 import AdminHelloKeysStatsPage from "./pages/AdminHelloKeysStatsPage"; // New import
+import AdminKrossStatsPage from "./pages/AdminKrossStatsPage";
 import AdminStripeMatchPage from "./pages/AdminStripeMatchPage"; // New import
 import AdminStripeTransfersPage from "./pages/AdminStripeTransfersPage"; // New import
 import AdminRehousingNotePage from "./pages/AdminRehousingNotePage"; // New import
@@ -191,6 +192,7 @@ function App() {
                       <Route path="/admin/stripe-transactions" element={<AdminStripeTransactionsPage />} />
                       <Route path="/admin/stripe-match" element={<AdminStripeMatchPage />} /> {/* New route */}
                       <Route path="/admin/hello-keys-stats" element={<AdminHelloKeysStatsPage />} /> {/* New route */}
+                      <Route path="/admin/kross-stats" element={<AdminKrossStatsPage />} />
                       <Route path="/admin/stripe-transfers" element={<AdminStripeTransfersPage />} /> {/* New route */}
                       <Route path="/admin/stripe-duplicates" element={<AdminStripeDuplicatesPage />} /> {/* New route */}
                       <Route path="/admin/rehousing-note" element={<AdminRehousingNotePage />} /> {/* New route */}

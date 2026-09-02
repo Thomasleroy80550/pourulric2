@@ -466,6 +466,60 @@ export async function fetchAllReservationsInRange(
   return all;
 }
 
+export interface DetailedRangeReservation {
+  id: string;
+  guest_name: string;
+  check_in_date: string; // yyyy-mm-dd
+  check_out_date: string; // yyyy-mm-dd
+  status: string;
+  amount: number;
+  cod_channel: string;
+  guests: number;
+}
+
+/**
+ * Récupère toutes les réservations de l'établissement sur une plage de dates,
+ * avec les montants et l'occupation. Utilisé par l'outil de stats admin.
+ */
+export async function fetchAllReservationsDetailedInRange(
+  dateFrom: string,
+  dateTo: string,
+): Promise<DetailedRangeReservation[]> {
+  const all: DetailedRangeReservation[] = [];
+  const limit = 1000;
+  let offset = 0;
+
+  for (let page = 0; page < 50; page++) {
+    const data = await callKrossbookingProxy("get_all_reservations", {
+      date_from: dateFrom,
+      date_to: dateTo,
+      limit,
+      offset,
+    });
+
+    const list: any[] = Array.isArray(data) ? data : [];
+    for (const res of list) {
+      const occ = extractOccupancy(res);
+      all.push({
+        id: String(res.id_reservation ?? res.id ?? ""),
+        guest_name: res.label || "N/A",
+        check_in_date: res.arrival || "",
+        check_out_date: res.departure || "",
+        status: res.cod_reservation_status || "",
+        amount: res.charge_total_amount != null ? Number(res.charge_total_amount) || 0 : 0,
+        cod_channel: res.cod_channel || "UNKNOWN",
+        guests: occ.guests,
+      });
+    }
+
+    if (list.length < limit) break;
+    offset += limit;
+  }
+
+  // Déduplique par id de réservation
+  return Array.from(new Map(all.map((r) => [r.id, r])).values());
+}
+
 export async function fetchKrossbookingHousekeepingTasks(
   dateFrom: string,
   dateTo: string,

@@ -103,7 +103,51 @@ function isProviderIpDeniedError(message: string) {
   return /not allowed/i.test(message) || /IP.*allowed/i.test(message);
 }
 
-async function getAuthToken(): Promise<string> {
+// --- Token caching (memory + DB) to avoid generating a new Kross token on every invocation ---
+// Kross tokens are valid 7 days and auto-renew on each use, so one shared token is enough.
+let inMemoryAuthToken: string | null = null;
+
+function getServiceRoleClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  );
+}
+
+async function readCachedToken(): Promise<string | null> {
+  try {
+    const admin = getServiceRoleClient();
+    const { data, error } = await admin
+      .from("krossbooking_token_cache")
+      .select("auth_token")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error) {
+      console.warn(`[krossbooking-proxy] token cache read failed: ${error.message}`);
+      return null;
+    }
+    return data?.auth_token ?? null;
+  } catch (err) {
+    console.warn(`[krossbooking-proxy] token cache read exception: ${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
+}
+
+async function persistToken(token: string): Promise<void> {
+  try {
+    const admin = getServiceRoleClient();
+    const { error } = await admin
+      .from("krossbooking_token_cache")
+      .upsert({ id: 1, auth_token: token, updated_at: new Date().toISOString() });
+    if (error) {
+      console.warn(`[krossbooking-proxy] token cache write failed: ${error.message}`);
+    }
+  } catch (err) {
+    console.warn(`[krossbooking-proxy] token cache write exception: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+async function requestNewAuthToken(): Promise<string> {
   const KROSSBOOKING_API_KEY = Deno.env.get("KROSSBOOKING_API_KEY");
   const KROSSBOOKING_HOTEL_ID = Deno.env.get("KROSSBOOKING_HOTEL_ID");
   const KROSSBOOKING_USERNAME = Deno.env.get("KROSSBOOKING_USERNAME");
@@ -113,7 +157,7 @@ async function getAuthToken(): Promise<string> {
     throw new Error("Missing Krossbooking API credentials in environment variables.");
   }
 
-  console.log("[krossbooking-proxy] Requesting Krossbooking auth token via proxy client");
+  console.log("[krossbooking-proxy] Requesting NEW Krossbooking auth token via proxy client");
 
   const client = Deno.createHttpClient({
     proxy: { url: KROSSBOOKING_UPSTREAM_PROXY_URL },
@@ -143,19 +187,28 @@ async function getAuthToken(): Promise<string> {
       throw new Error("Krossbooking token not found in response.");
     }
 
+    inMemoryAuthToken = data.auth_token;
+    await persistToken(data.auth_token);
     return data.auth_token;
   } finally {
     client.close();
   }
 }
 
-async function postToKrossbooking(authToken: string | null, path: string, payload: Record<string, unknown>) {
-  if (!authToken) {
-    throw new Error(`Missing Krossbooking auth token for path: ${path}`);
+async function getAuthToken(): Promise<string> {
+  if (inMemoryAuthToken) return inMemoryAuthToken;
+
+  const cached = await readCachedToken();
+  if (cached) {
+    console.log("[krossbooking-proxy] Reusing cached Krossbooking auth token");
+    inMemoryAuthToken = cached;
+    return cached;
   }
 
-  console.log(`[krossbooking-proxy] calling Krossbooking API path=${path} via proxy client`);
+  return await requestNewAuthToken();
+}
 
+async function performKrossRequest(authToken: string, path: string, payload: Record<string, unknown>) {
   const client = Deno.createHttpClient({
     proxy: { url: KROSSBOOKING_UPSTREAM_PROXY_URL },
   });
@@ -172,15 +225,39 @@ async function postToKrossbooking(authToken: string | null, path: string, payloa
     });
 
     const responseText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`Krossbooking API error: ${response.status} - ${compactResponsePreview(responseText)}`);
-    }
-
-    return parseJsonResponse(responseText, `Krossbooking API path=${path}`);
+    return { status: response.status, ok: response.ok, statusText: response.statusText, responseText };
   } finally {
     client.close();
   }
+}
+
+function isTokenRejected(status: number, responseText: string) {
+  if (status === 401) return true;
+  return status === 403 && /token/i.test(responseText) && /(invalid|expired|not valid)/i.test(responseText);
+}
+
+async function postToKrossbooking(authToken: string | null, path: string, payload: Record<string, unknown>) {
+  if (!authToken) {
+    throw new Error(`Missing Krossbooking auth token for path: ${path}`);
+  }
+
+  console.log(`[krossbooking-proxy] calling Krossbooking API path=${path} via proxy client`);
+
+  // Prefer the freshest known token (may have been refreshed during this invocation).
+  let result = await performKrossRequest(inMemoryAuthToken ?? authToken, path, payload);
+
+  // Cached token expired/revoked: fetch a fresh one and retry once.
+  if (!result.ok && isTokenRejected(result.status, result.responseText)) {
+    console.warn(`[krossbooking-proxy] token rejected (status=${result.status}), refreshing token and retrying path=${path}`);
+    const freshToken = await requestNewAuthToken();
+    result = await performKrossRequest(freshToken, path, payload);
+  }
+
+  if (!result.ok) {
+    throw new Error(`Krossbooking API error: ${result.status} - ${compactResponsePreview(result.responseText)}`);
+  }
+
+  return parseJsonResponse(result.responseText, `Krossbooking API path=${path}`);
 }
 
 async function getUserContext(authHeader: string): Promise<UserContext> {

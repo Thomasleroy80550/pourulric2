@@ -67,7 +67,7 @@ const HousingRegistrationModal: React.FC<HousingRegistrationModalProps> = ({
         <div
           className={`relative px-6 pt-8 pb-6 text-white ${
             canDismiss
-              ? 'bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700'
+              ? 'bg-gradient-to-br from-sky-600 via-sky-700 to-blue-900'
               : 'bg-gradient-to-br from-rose-600 via-red-600 to-orange-600'
           }`}
         >
@@ -121,7 +121,7 @@ const HousingRegistrationModal: React.FC<HousingRegistrationModalProps> = ({
                 className={`h-14 text-center font-mono text-lg tracking-[0.35em] pr-10 rounded-xl border-2 transition-colors ${
                   isValid
                     ? 'border-green-500 focus-visible:ring-green-500/30'
-                    : 'focus-visible:ring-violet-500/30 focus-visible:border-violet-500'
+                    : 'focus-visible:ring-sky-500/30 focus-visible:border-sky-600'
                 }`}
               />
               {isValid && (
@@ -134,7 +134,7 @@ const HousingRegistrationModal: React.FC<HousingRegistrationModalProps> = ({
               <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${
-                    isValid ? 'bg-green-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'
+                    isValid ? 'bg-green-500' : 'bg-gradient-to-r from-sky-500 to-blue-600'
                   }`}
                   style={{ width: `${progress}%` }}
                 />
@@ -152,7 +152,7 @@ const HousingRegistrationModal: React.FC<HousingRegistrationModalProps> = ({
           </div>
 
           <div className="flex items-start gap-2.5 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
-            <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0 text-violet-500" />
+            <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0 text-sky-600" />
             <p>
               Ce numéro de 13 caractères figure sur le récépissé de déclaration de votre meublé de
               tourisme délivré par votre mairie.
@@ -165,7 +165,7 @@ const HousingRegistrationModal: React.FC<HousingRegistrationModalProps> = ({
               disabled={!isValid || saving}
               className={`w-full h-11 rounded-xl text-sm font-semibold shadow-lg transition-all ${
                 canDismiss
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-violet-500/25'
+                  ? 'bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 shadow-blue-500/25'
                   : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 shadow-red-500/25'
               }`}
             >

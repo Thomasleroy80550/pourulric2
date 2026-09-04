@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
+import HousingRegistrationModal from './HousingRegistrationModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
 import AccountSuspendedScreen from './AccountSuspendedScreen';
 import { getProfile, updateProfile, UserProfile, updateUserLastSeen } from '@/lib/profile-api';
@@ -24,6 +25,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCguvModal, setShowCguvModal] = useState(false);
+  const [showHousingModal, setShowHousingModal] = useState(false);
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
   const hasInitializedRef = useRef(false);
   const navigate = useNavigate();
@@ -95,12 +97,16 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         } else {
           setShowCguvModal(false);
         }
+
+        // --- Numéro d'enregistrement du logement (obligatoire, hors admins) ---
+        setShowHousingModal(!isAdmin && !userProfile.housing_registration_number);
       }
     } else {
       // No session, redirect to login if not already there
       setSession(null);
       setProfile(null);
       setShowCguvModal(false);
+      setShowHousingModal(false);
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
       const publicPaths = ['/login', '/prospect-signup', '/redeem-invite', '/rejoindre-espace', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi'];
@@ -193,6 +199,15 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
   };
 
+  const handleSaveHousingNumber = async (registrationNumber: string) => {
+    const updatedProfile = await updateProfile({
+      housing_registration_number: registrationNumber,
+    });
+    setProfile(updatedProfile);
+    setShowHousingModal(false);
+    toast.success("Merci ! Votre numéro d'enregistrement a bien été enregistré.");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-950">
@@ -258,6 +273,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
             }
           }}
           onAccept={handleAcceptCguv}
+        />
+      )}
+      {showHousingModal && !showCguvModal && (
+        <HousingRegistrationModal
+          isOpen={showHousingModal}
+          onSave={handleSaveHousingNumber}
         />
       )}
       {showOnboardingConfetti && (

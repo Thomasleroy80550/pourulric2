@@ -44,7 +44,8 @@ import {
   Globe,
   Megaphone,
   CheckCheck,
-  Mail
+  Mail,
+  ClipboardList
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,7 @@ const adminNavigationCategories = [
     categoryName: 'Gestion',
     items: [
       { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
+      { name: 'N° Enregistrement', href: '/admin/housing-registrations', icon: ClipboardList, description: "Numéros d'enregistrement des logements communiqués par les clients." },
       { name: 'Accès délégués', href: '/admin/delegated-access', icon: ShieldCheck, description: 'Visualiser les accès délégués accordés par les propriétaires.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
       { name: 'Config iCal', href: '/admin/ical-config', icon: CalendarDays, description: 'Configurer et importer les flux iCal des logements.' },

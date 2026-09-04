@@ -69,6 +69,8 @@ export interface UserProfile {
   thermobnb_enabled?: boolean;
   // Flag d'accès au module Compta LMNP
   lmnp_module_enabled?: boolean;
+  // Numéro d'enregistrement du logement (13 caractères)
+  housing_registration_number?: string;
 }
 
 export async function getProfile(): Promise<UserProfile | null> {

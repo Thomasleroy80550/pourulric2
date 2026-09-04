@@ -27,6 +27,7 @@ import AdminCreatePennylaneInvoicePage from "./pages/AdminCreatePennylaneInvoice
 import AdminStatementsPage from "./pages/AdminStatementsPage";
 import AdminTransferSummaryPage from "./pages/AdminTransferSummaryPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminHousingRegistrationsPage from "./pages/AdminHousingRegistrationsPage";
 import AdminDelegatedAccessPage from "./pages/AdminDelegatedAccessPage";
 import FinancePage from "./pages/FinancePage";
 import AdminTechnicalReportsPage from "./pages/AdminTechnicalReportsPage";
@@ -167,6 +168,7 @@ function App() {
                       <Route path="/admin/statements" element={<AdminStatementsPage />} />
                       <Route path="/admin/transfer-summary" element={<AdminTransferSummaryPage />} />
                       <Route path="/admin/users" element={<AdminUsersPage />} />
+                      <Route path="/admin/housing-registrations" element={<AdminHousingRegistrationsPage />} />
                       <Route path="/admin/delegated-access" element={<AdminDelegatedAccessPage />} />
                       <Route path="/admin/settings" element={<AdminSettingsPage />} />
                       <Route path="/admin/strategies" element={<AdminStrategiesPage />} />

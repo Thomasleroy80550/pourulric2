@@ -71,6 +71,8 @@ export interface UserProfile {
   lmnp_module_enabled?: boolean;
   // Numéro d'enregistrement du logement (13 caractères)
   housing_registration_number?: string;
+  // Date de première demande du numéro (départ du délai de 30 jours)
+  housing_registration_requested_at?: string;
 }
 
 export async function getProfile(): Promise<UserProfile | null> {

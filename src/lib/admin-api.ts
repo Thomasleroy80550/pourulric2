@@ -149,6 +149,7 @@ export interface UserProfile {
   consumables_enabled?: boolean | null;
   lmnp_module_enabled?: boolean | null;
   housing_registration_number?: string | null;
+  housing_registration_requested_at?: string | null;
 }
 
 export interface RoomUtilityEvent {

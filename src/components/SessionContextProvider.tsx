@@ -26,7 +26,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [loading, setLoading] = useState(true);
   const [showCguvModal, setShowCguvModal] = useState(false);
   const [showHousingModal, setShowHousingModal] = useState(false);
+  const [housingDaysLeft, setHousingDaysLeft] = useState<number | null>(null);
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
+  const housingDismissedRef = useRef(false);
   const hasInitializedRef = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -98,8 +100,24 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           setShowCguvModal(false);
         }
 
-        // --- Numéro d'enregistrement du logement (obligatoire, hors admins) ---
-        setShowHousingModal(!isAdmin && !userProfile.housing_registration_number);
+        // --- Numéro d'enregistrement du logement (délai de 30 jours, hors admins) ---
+        if (!isAdmin && !userProfile.housing_registration_number) {
+          let requestedAt = userProfile.housing_registration_requested_at;
+          if (!requestedAt) {
+            // Démarrage du délai de 30 jours à la première demande
+            requestedAt = new Date().toISOString();
+            updateProfile({ housing_registration_requested_at: requestedAt }).catch((e) =>
+              console.error("Erreur lors du démarrage du délai du numéro d'enregistrement:", e)
+            );
+          }
+          const elapsedDays = Math.floor((Date.now() - new Date(requestedAt).getTime()) / (24 * 60 * 60 * 1000));
+          const remaining = Math.max(0, 30 - elapsedDays);
+          setHousingDaysLeft(remaining);
+          // Bloquant si délai expiré, sinon affiché tant que non fermé dans la session
+          setShowHousingModal(remaining <= 0 || !housingDismissedRef.current);
+        } else {
+          setShowHousingModal(false);
+        }
       }
     } else {
       // No session, redirect to login if not already there
@@ -107,6 +125,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setProfile(null);
       setShowCguvModal(false);
       setShowHousingModal(false);
+      setHousingDaysLeft(null);
+      housingDismissedRef.current = false;
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
       const publicPaths = ['/login', '/prospect-signup', '/redeem-invite', '/rejoindre-espace', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi'];
@@ -208,6 +228,11 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     toast.success("Merci ! Votre numéro d'enregistrement a bien été enregistré.");
   };
 
+  const handleDismissHousingModal = () => {
+    housingDismissedRef.current = true;
+    setShowHousingModal(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-950">
@@ -279,6 +304,9 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         <HousingRegistrationModal
           isOpen={showHousingModal}
           onSave={handleSaveHousingNumber}
+          daysLeft={housingDaysLeft}
+          canDismiss={(housingDaysLeft ?? 0) > 0}
+          onDismiss={handleDismissHousingModal}
         />
       )}
       {showOnboardingConfetti && (

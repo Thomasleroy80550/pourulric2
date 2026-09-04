@@ -142,6 +142,7 @@ const AdminHousingRegistrationsPage: React.FC = () => {
                     <TableHead>Adresse du logement</TableHead>
                     <TableHead>Numéro d'enregistrement</TableHead>
                     <TableHead>Statut</TableHead>
+                    <TableHead>Échéance (30 j)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -195,12 +196,31 @@ const AdminHousingRegistrationsPage: React.FC = () => {
                             <Badge variant="destructive">Manquant</Badge>
                           )}
                         </TableCell>
+                        <TableCell>
+                          {user.housing_registration_number ? (
+                            '—'
+                          ) : user.housing_registration_requested_at ? (
+                            (() => {
+                              const elapsed = Math.floor(
+                                (Date.now() - new Date(user.housing_registration_requested_at!).getTime()) / (24 * 60 * 60 * 1000)
+                              );
+                              const remaining = 30 - elapsed;
+                              return remaining > 0 ? (
+                                <span className="text-sm text-muted-foreground">{remaining} j restant{remaining > 1 ? 's' : ''}</span>
+                              ) : (
+                                <Badge variant="destructive">Expiré</Badge>
+                              );
+                            })()
+                          ) : (
+                            <span className="text-sm text-muted-foreground italic">Non démarré</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                   {filteredUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground italic">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground italic">
                         Aucun client trouvé.
                       </TableCell>
                     </TableRow>

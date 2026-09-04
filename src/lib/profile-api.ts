@@ -73,6 +73,12 @@ export interface UserProfile {
   housing_registration_number?: string;
   // Date de première demande du numéro (départ du délai de 30 jours)
   housing_registration_requested_at?: string;
+  // Adresse postale du domicile
+  home_address?: string;
+  home_zip_code?: string;
+  home_city?: string;
+  // Date de confirmation de l'adresse du logement
+  property_address_confirmed_at?: string;
 }
 
 export async function getProfile(): Promise<UserProfile | null> {

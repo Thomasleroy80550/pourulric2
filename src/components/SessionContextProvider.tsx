@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
-import HousingRegistrationModal from './HousingRegistrationModal';
+import HousingRegistrationModal, { HousingOnboardingPayload } from './HousingRegistrationModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
 import AccountSuspendedScreen from './AccountSuspendedScreen';
 import { getProfile, updateProfile, UserProfile, updateUserLastSeen } from '@/lib/profile-api';
@@ -100,8 +100,12 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           setShowCguvModal(false);
         }
 
-        // --- Numéro d'enregistrement du logement (délai de 30 jours, hors admins) ---
-        if (!isAdmin && !userProfile.housing_registration_number) {
+        // --- Onboarding conformité : domicile, logement, n° d'enregistrement (délai 30 jours, hors admins) ---
+        const onboardingIncomplete =
+          !userProfile.housing_registration_number ||
+          !userProfile.home_address ||
+          !userProfile.property_address_confirmed_at;
+        if (!isAdmin && onboardingIncomplete) {
           let requestedAt = userProfile.housing_registration_requested_at;
           if (!requestedAt) {
             // Démarrage du délai de 30 jours à la première demande
@@ -219,13 +223,11 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
   };
 
-  const handleSaveHousingNumber = async (registrationNumber: string) => {
-    const updatedProfile = await updateProfile({
-      housing_registration_number: registrationNumber,
-    });
+  const handleSaveHousingOnboarding = async (payload: HousingOnboardingPayload) => {
+    const updatedProfile = await updateProfile(payload);
     setProfile(updatedProfile);
     setShowHousingModal(false);
-    toast.success("Merci ! Votre numéro d'enregistrement a bien été enregistré.");
+    toast.success('Merci ! Vos informations ont bien été enregistrées. Vous êtes en conformité. 🎉');
   };
 
   const handleDismissHousingModal = () => {
@@ -303,7 +305,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       {showHousingModal && !showCguvModal && (
         <HousingRegistrationModal
           isOpen={showHousingModal}
-          onSave={handleSaveHousingNumber}
+          profile={profile}
+          onSave={handleSaveHousingOnboarding}
           daysLeft={housingDaysLeft}
           canDismiss={(housingDaysLeft ?? 0) > 0}
           onDismiss={handleDismissHousingModal}

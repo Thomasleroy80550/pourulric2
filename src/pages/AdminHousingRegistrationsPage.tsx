@@ -139,6 +139,7 @@ const AdminHousingRegistrationsPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Nom</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Adresse du domicile</TableHead>
                     <TableHead>Adresse du logement</TableHead>
                     <TableHead>Numéro d'enregistrement</TableHead>
                     <TableHead>Statut</TableHead>
@@ -156,9 +157,23 @@ const AdminHousingRegistrationsPage: React.FC = () => {
                         </TableCell>
                         <TableCell>{user.email || 'N/A'}</TableCell>
                         <TableCell className="max-w-[240px] truncate">
-                          {[user.property_address, user.property_zip_code, user.property_city]
+                          {[user.home_address, user.home_zip_code, user.home_city]
                             .filter(Boolean)
                             .join(', ') || '—'}
+                        </TableCell>
+                        <TableCell className="max-w-[240px] truncate">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate">
+                              {[user.property_address, user.property_zip_code, user.property_city]
+                                .filter(Boolean)
+                                .join(', ') || '—'}
+                            </span>
+                            {user.property_address_confirmed_at && (
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200 shrink-0" variant="secondary">
+                                Confirmée
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex min-w-[240px] items-center gap-2">
@@ -220,7 +235,7 @@ const AdminHousingRegistrationsPage: React.FC = () => {
                   })}
                   {filteredUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground italic">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground italic">
                         Aucun client trouvé.
                       </TableCell>
                     </TableRow>

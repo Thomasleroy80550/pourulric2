@@ -150,6 +150,10 @@ export interface UserProfile {
   lmnp_module_enabled?: boolean | null;
   housing_registration_number?: string | null;
   housing_registration_requested_at?: string | null;
+  home_address?: string | null;
+  home_zip_code?: string | null;
+  home_city?: string | null;
+  property_address_confirmed_at?: string | null;
 }
 
 export interface RoomUtilityEvent {

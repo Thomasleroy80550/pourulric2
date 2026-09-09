@@ -52,19 +52,20 @@ const AdminStatementsPage: React.FC = () => {
   const [savingPeriodId, setSavingPeriodId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedAgency, setSelectedAgency] = useState<string>('Toutes');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const location = useLocation();
 
-  // Charge tous les profils pour faire le mapping id -> nom (inclut admins)
-  const [profilesMap, setProfilesMap] = useState<Record<string, { first_name: string | null; last_name: string | null }>>({});
+  // Charge tous les profils pour faire le mapping id -> nom + agence (inclut admins)
+  const [profilesMap, setProfilesMap] = useState<Record<string, { first_name: string | null; last_name: string | null; agency: string | null }>>({});
   useEffect(() => {
     const loadProfiles = async () => {
       try {
         const profiles = await getAllProfiles();
-        const map: Record<string, { first_name: string | null; last_name: string | null }> = {};
+        const map: Record<string, { first_name: string | null; last_name: string | null; agency: string | null }> = {};
         profiles.forEach((p: any) => {
-          map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null };
+          map[p.id] = { first_name: p.first_name ?? null, last_name: p.last_name ?? null, agency: p.agency ?? null };
         });
         setProfilesMap(map);
       } catch (e) {
@@ -360,9 +361,25 @@ const AdminStatementsPage: React.FC = () => {
     return label.charAt(0).toUpperCase() + label.slice(1);
   };
 
+  // Liste des agences disponibles (basée sur les profils)
+  const availableAgencies = [...new Set(
+    Object.values(profilesMap)
+      .map(p => (p.agency ?? '').trim())
+      .filter(a => a !== '')
+  )].sort();
+
+  const statementAgency = (statement: SavedInvoice) =>
+    (profilesMap[statement.user_id]?.agency ?? '').trim();
+
   const filteredStatements = statements.filter(statement => {
     if (selectedMonth !== 'all' && periodToMonthKey(statement.period) !== selectedMonth) {
       return false;
+    }
+    if (selectedAgency !== 'Toutes') {
+      const agency = statementAgency(statement);
+      if (selectedAgency === 'Sans agence' ? agency !== '' : agency !== selectedAgency) {
+        return false;
+      }
     }
     const term = searchTerm.toLowerCase();
     const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}`.toLowerCase() : 'client supprimé';
@@ -442,6 +459,7 @@ const AdminStatementsPage: React.FC = () => {
           <MonthlyStatementTotals
             statements={filteredStatements}
             monthLabel={monthLabel(selectedMonth)}
+            getAgency={statementAgency}
           />
         )}
         <Card className="shadow-md">
@@ -489,6 +507,26 @@ const AdminStatementsPage: React.FC = () => {
                       {monthLabel(month)}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedAgency}
+                onValueChange={(value) => {
+                  setSelectedAgency(value);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[220px]">
+                  <SelectValue placeholder="Filtrer par agence" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Toutes">Toutes les agences</SelectItem>
+                  {availableAgencies.map((agency) => (
+                    <SelectItem key={agency} value={agency}>
+                      {agency}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="Sans agence">Sans agence</SelectItem>
                 </SelectContent>
               </Select>
             </div>

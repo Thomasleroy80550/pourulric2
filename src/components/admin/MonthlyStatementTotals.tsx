@@ -32,9 +32,10 @@ export const getStatementFigures = (statement: SavedInvoice): StatementFigures =
 interface MonthlyStatementTotalsProps {
   statements: SavedInvoice[];
   monthLabel: string;
+  getAgency?: (statement: SavedInvoice) => string;
 }
 
-const MonthlyStatementTotals: React.FC<MonthlyStatementTotalsProps> = ({ statements, monthLabel }) => {
+const MonthlyStatementTotals: React.FC<MonthlyStatementTotalsProps> = ({ statements, monthLabel, getAgency }) => {
   const rows = statements.map(getStatementFigures);
 
   const grand = rows.reduce(
@@ -68,6 +69,7 @@ const MonthlyStatementTotals: React.FC<MonthlyStatementTotalsProps> = ({ stateme
               <TableHeader>
                 <TableRow>
                   <TableHead>Client</TableHead>
+                  {getAgency && <TableHead>Agence</TableHead>}
                   <TableHead>Période</TableHead>
                   <TableHead>Émis le</TableHead>
                   <TableHead className="text-right">Montant versé</TableHead>
@@ -86,6 +88,7 @@ const MonthlyStatementTotals: React.FC<MonthlyStatementTotalsProps> = ({ stateme
                   return (
                     <TableRow key={r.statement.id}>
                       <TableCell className="font-medium">{clientName}</TableCell>
+                      {getAgency && <TableCell>{getAgency(r.statement) || 'Sans agence'}</TableCell>}
                       <TableCell>{r.statement.period}</TableCell>
                       <TableCell>
                         {format(parseISO(r.statement.created_at), 'dd/MM/yyyy', { locale: fr })}
@@ -102,7 +105,7 @@ const MonthlyStatementTotals: React.FC<MonthlyStatementTotalsProps> = ({ stateme
               </TableBody>
               <TableFooter>
                 <TableRow className="font-bold">
-                    <TableCell colSpan={3}>Total de la période</TableCell>
+                    <TableCell colSpan={getAgency ? 4 : 3}>Total de la période</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(grand.montantVerse)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(grand.taxeDeSejour)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(grand.fraisMenage)}</TableCell>

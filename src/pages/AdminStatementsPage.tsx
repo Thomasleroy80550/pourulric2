@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import MonthlyStatementTotals from '@/components/admin/MonthlyStatementTotals';
 import {
   Pagination,
   PaginationContent,
@@ -49,6 +51,7 @@ const AdminStatementsPage: React.FC = () => {
   const [editingPeriodValue, setEditingPeriodValue] = useState('');
   const [savingPeriodId, setSavingPeriodId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const location = useLocation();
@@ -330,7 +333,20 @@ const AdminStatementsPage: React.FC = () => {
     })
   );
 
+  // Liste des mois d'émission disponibles (basés sur created_at), du plus récent au plus ancien
+  const availableMonths = [...new Set(statements.map(s => format(parseISO(s.created_at), 'yyyy-MM')))]
+    .sort()
+    .reverse();
+
+  const monthLabel = (monthKey: string) => {
+    const label = format(parseISO(`${monthKey}-01`), 'MMMM yyyy', { locale: fr });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
   const filteredStatements = statements.filter(statement => {
+    if (selectedMonth !== 'all' && format(parseISO(statement.created_at), 'yyyy-MM') !== selectedMonth) {
+      return false;
+    }
     const term = searchTerm.toLowerCase();
     const clientName = statement.profiles ? `${statement.profiles.first_name} ${statement.profiles.last_name}`.toLowerCase() : 'client supprimé';
     const period = statement.period.toLowerCase();
@@ -405,6 +421,12 @@ const AdminStatementsPage: React.FC = () => {
             </Alert>
           )}
         </div>
+        {selectedMonth !== 'all' && !loading && !error && (
+          <MonthlyStatementTotals
+            statements={filteredStatements}
+            monthLabel={monthLabel(selectedMonth)}
+          />
+        )}
         <Card className="shadow-md">
           <CardHeader>
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -420,17 +442,38 @@ const AdminStatementsPage: React.FC = () => {
                   : 'Aucun doublon détecté'}
               </Badge>
             </div>
-            <div className="relative mt-2">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher par client, période ou statut..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1); // Reset to first page on search
+            <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center">
+              <div className="relative w-full md:w-1/3">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par client, période ou statut..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // Reset to first page on search
+                  }}
+                  className="pl-8 w-full"
+                />
+              </div>
+              <Select
+                value={selectedMonth}
+                onValueChange={(value) => {
+                  setSelectedMonth(value);
+                  setCurrentPage(1);
                 }}
-                className="pl-8 w-full md:w-1/3"
-              />
+              >
+                <SelectTrigger className="w-full md:w-[240px]">
+                  <SelectValue placeholder="Filtrer par mois d'émission" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les mois</SelectItem>
+                  {availableMonths.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {monthLabel(month)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent>

@@ -53,10 +53,10 @@ const MonthlyStatementTotals: React.FC<MonthlyStatementTotalsProps> = ({ stateme
     <Card className="shadow-md border-[hsl(var(--primary))]/30">
       <CardHeader>
         <CardTitle className="text-lg">
-          Totaux des relevés émis en {monthLabel} ({rows.length} relevé(s))
+          Totaux des relevés de la période {monthLabel} ({rows.length} relevé(s))
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Détail ligne par ligne de tous les relevés émis ce mois, avec le total général en bas du tableau.
+          Détail ligne par ligne de tous les relevés de cette période, avec le total général en bas du tableau.
         </p>
       </CardHeader>
       <CardContent>
@@ -102,7 +102,7 @@ const MonthlyStatementTotals: React.FC<MonthlyStatementTotalsProps> = ({ stateme
               </TableBody>
               <TableFooter>
                 <TableRow className="font-bold">
-                  <TableCell colSpan={3}>Total du mois</TableCell>
+                    <TableCell colSpan={3}>Total de la période</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(grand.montantVerse)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(grand.taxeDeSejour)}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(grand.fraisMenage)}</TableCell>

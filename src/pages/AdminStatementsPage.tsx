@@ -333,8 +333,25 @@ const AdminStatementsPage: React.FC = () => {
     })
   );
 
-  // Liste des mois d'émission disponibles (basés sur created_at), du plus récent au plus ancien
-  const availableMonths = [...new Set(statements.map(s => format(parseISO(s.created_at), 'yyyy-MM')))]
+  // Filtre basé sur la période du relevé (ex: "Janvier 2025"), pas sur la date d'émission
+  const MONTHS_FR: Record<string, number> = {
+    janvier: 0, février: 1, fevrier: 1, mars: 2, avril: 3, mai: 4, juin: 5,
+    juillet: 6, août: 7, aout: 7, septembre: 8, octobre: 9, novembre: 10, décembre: 11, decembre: 11,
+  };
+
+  const periodToMonthKey = (period: string): string | null => {
+    const parts = (period || '').trim().toLowerCase().split(/\s+/);
+    if (parts.length < 2) return null;
+    const monthIndex = MONTHS_FR[parts[0]];
+    const year = parseInt(parts[parts.length - 1], 10);
+    if (monthIndex === undefined || isNaN(year)) return null;
+    return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+  };
+
+  // Liste des périodes disponibles, de la plus récente à la plus ancienne
+  const availableMonths = [...new Set(
+    statements.map(s => periodToMonthKey(s.period)).filter((k): k is string => k !== null)
+  )]
     .sort()
     .reverse();
 
@@ -344,7 +361,7 @@ const AdminStatementsPage: React.FC = () => {
   };
 
   const filteredStatements = statements.filter(statement => {
-    if (selectedMonth !== 'all' && format(parseISO(statement.created_at), 'yyyy-MM') !== selectedMonth) {
+    if (selectedMonth !== 'all' && periodToMonthKey(statement.period) !== selectedMonth) {
       return false;
     }
     const term = searchTerm.toLowerCase();
@@ -463,10 +480,10 @@ const AdminStatementsPage: React.FC = () => {
                 }}
               >
                 <SelectTrigger className="w-full md:w-[240px]">
-                  <SelectValue placeholder="Filtrer par mois d'émission" />
+                  <SelectValue placeholder="Filtrer par période du relevé" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les mois</SelectItem>
+                  <SelectItem value="all">Toutes les périodes</SelectItem>
                   {availableMonths.map((month) => (
                     <SelectItem key={month} value={month}>
                       {monthLabel(month)}

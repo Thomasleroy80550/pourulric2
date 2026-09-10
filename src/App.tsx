@@ -132,6 +132,7 @@ import AdminMiniSitesPage from "./pages/AdminMiniSitesPage";
 import AdminDomainRequestsPage from "./pages/AdminDomainRequestsPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
+import PwaUpdatePrompt from "@/components/PwaUpdatePrompt";
 import PlanningV2Page from "./pages/PlanningV2Page";
 import LmnpPage from "./pages/LmnpPage";
 import GuestReportPage from "./pages/GuestReportPage";
@@ -149,6 +150,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <PwaUpdatePrompt />
             <BrowserRouter>
               <InvoiceGenerationProvider>
                 <SessionContextProvider>

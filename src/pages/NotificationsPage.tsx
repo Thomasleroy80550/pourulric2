@@ -16,6 +16,7 @@ import SupportPolicyDialog from "@/components/SupportPolicyDialog";
 import Bilan2025NoticeDialog from "@/components/Bilan2025NoticeDialog";
 import { useSession } from "@/components/SessionContextProvider";
 import DirectDebitRequestDialog from "@/components/DirectDebitRequestDialog";
+import PushNotificationsCard from "@/components/PushNotificationsCard";
 
 const isInBilanNoticeWindow = () => {
   const now = new Date();
@@ -127,6 +128,9 @@ const NotificationsPage: React.FC = () => {
             </Button>
           )}
         </div>
+
+        {/* Notifications push */}
+        <PushNotificationsCard />
 
         {/* Informations importantes */}
         <Card className="shadow-sm">

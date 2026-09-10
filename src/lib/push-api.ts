@@ -71,10 +71,19 @@ export async function subscribeToPush(): Promise<void> {
     throw new Error("Impossible de récupérer la configuration push.");
   }
 
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(data.publicKey),
-  });
+  let subscription: PushSubscription;
+  try {
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(data.publicKey),
+    });
+  } catch (err) {
+    console.error("Push subscribe failed:", err);
+    throw new Error(
+      "Le service push n'est pas disponible dans cet environnement. " +
+        "Ouvrez le site déployé dans Chrome, Edge ou Firefox (ou l'app installée sur l'écran d'accueil sur iPhone) et réessayez."
+    );
+  }
 
   const json = subscription.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {

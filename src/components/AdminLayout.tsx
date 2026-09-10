@@ -45,7 +45,8 @@ import {
   Megaphone,
   CheckCheck,
   Mail,
-  ClipboardList
+  ClipboardList,
+  Trophy
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -120,6 +121,7 @@ const adminNavigationCategories = [
       { name: 'Calcul Commission', href: '/admin/commission-explained', icon: HelpCircle, description: 'Comprendre le calcul de la commission Hello Keys.' },
       { name: 'Ajouter Stats Manuelles', href: '/admin/manual-stats', icon: FilePlus, description: 'Ajouter manuellement les statistiques mensuelles passées.' },
       { name: 'Relevés Sauvegardés', href: '/admin/statements', icon: FileText, description: 'Consulter les relevés existants.' },
+      { name: 'Leaderboard Logements', href: '/admin/leaderboard', icon: Trophy, description: 'Classement des logements par période à partir des relevés.' },
       { name: 'Statuts de facturation', href: '/admin/billing-status', icon: FileText, description: 'Dernier relevé par client pour contrôler la facturation.' },
       { name: 'Facturation Consommables', href: '/admin/consumables', icon: CheckCheck, description: 'Facture annuelle : 2€ HT / logement / mois d\'occupation.' },
       { name: 'Stats 2025 manquantes', href: '/admin/missing-2025-stats', icon: FileText, description: 'Voir les mois 2025 manquants par client.' },

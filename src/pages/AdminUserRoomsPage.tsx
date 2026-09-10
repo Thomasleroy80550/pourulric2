@@ -277,8 +277,12 @@ const AdminUserRoomsPage: React.FC = () => {
                       const isFeatured = Boolean(featuredRoom);
                       return (
                         <TableRow key={room.id}>
-                          <TableCell className="font-medium">{room.room_name}</TableCell>
-                          <TableCell>{clientName}</TableCell>
+                          <TableCell className="font-medium">
+                            <span className="block max-w-[180px] truncate" title={room.room_name}>
+                              {room.room_name}
+                            </span>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{clientName}</TableCell>
                           <TableCell className="text-muted-foreground">{room.room_id}</TableCell>
                           <TableCell>{room.property_type || '—'}</TableCell>
                           <TableCell>{room.keybox_code || '—'}</TableCell>
@@ -332,9 +336,21 @@ const AdminUserRoomsPage: React.FC = () => {
                               </button>
                             )}
                           </TableCell>
-                          <TableCell>{room.arrival_instructions || '—'}</TableCell>
-                          <TableCell>{room.parking_info || '—'}</TableCell>
-                          <TableCell>{room.house_rules || '—'}</TableCell>
+                          <TableCell>
+                            <span className="block max-w-[200px] truncate" title={room.arrival_instructions || undefined}>
+                              {room.arrival_instructions || '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="block max-w-[200px] truncate" title={room.parking_info || undefined}>
+                              {room.parking_info || '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="block max-w-[200px] truncate" title={room.house_rules || undefined}>
+                              {room.house_rules || '—'}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {room.is_electricity_cut && (

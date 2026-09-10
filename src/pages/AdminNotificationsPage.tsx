@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import SendPushNotificationCard from '@/components/admin/SendPushNotificationCard';
+import AdminPwaInstallStatusCard from '@/components/admin/AdminPwaInstallStatusCard';
 
 type EventTemplate = {
   key: string;
@@ -167,6 +168,9 @@ function AdminNotificationsPage() {
 
         {/* Envoi manuel de notifications (in-app + push) */}
         <SendPushNotificationCard />
+
+        {/* Statut d'installation PWA */}
+        <AdminPwaInstallStatusCard />
 
         {/* Variables d'aperçu */}
         <Card>

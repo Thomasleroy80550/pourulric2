@@ -133,6 +133,7 @@ import AdminDomainRequestsPage from "./pages/AdminDomainRequestsPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
 import PwaUpdatePrompt from "@/components/PwaUpdatePrompt";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import PlanningV2Page from "./pages/PlanningV2Page";
 import LmnpPage from "./pages/LmnpPage";
 import GuestReportPage from "./pages/GuestReportPage";
@@ -157,6 +158,8 @@ function App() {
                   <GlobalAppErrorBoundary>
                     {/* Bandeau global Contrat résilié */}
                     <ContractTerminatedBanner />
+                    {/* Popup d'installation PWA (mobile uniquement) */}
+                    <PwaInstallPrompt />
                     {/* The SessionContextProvider handles its own loading state and redirects */}
                     <Routes>
                       <Route path="/login" element={<Login />} />

@@ -11,8 +11,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Hello Keys";
   const options = {
     body: data.body || "",
-    icon: "/icons/pwa-icon-512.png",
-    badge: "/icons/pwa-icon-512.png",
+    icon: "/icons/pwa-icon.png",
+    badge: "/icons/pwa-icon.png",
     data: { url: data.url || "/" },
   };
 

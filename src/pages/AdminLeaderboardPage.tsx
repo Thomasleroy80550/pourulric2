@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { useQuery } from '@tanstack/react-query';
-import { getSavedInvoices, getAllUserRooms, SavedInvoice, AdminUserRoom } from '@/lib/admin-api';
+import { getSavedInvoices, getAllUserRooms, getAllProfiles, SavedInvoice, AdminUserRoom } from '@/lib/admin-api';
 import {
   deleteMonthlyFeaturedRoom,
   formatMonthLabel,
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Trophy, Star, Medal, Terminal, Moon, ReceiptText, Banknote, PiggyBank } from 'lucide-react';
+import { Trophy, Star, Medal, Terminal, Moon, ReceiptText, Banknote, PiggyBank, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fmt = (n: number) =>
@@ -56,6 +56,7 @@ const METRICS: { key: MetricKey; label: string; isMoney: boolean }[] = [
 interface LeaderboardRow {
   userId: string;
   clientName: string;
+  agency: string;
   rooms: AdminUserRoom[];
   statementCount: number;
   montantVerse: number;
@@ -98,6 +99,7 @@ const rankStyles = [
 const AdminLeaderboardPage: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [metric, setMetric] = useState<MetricKey>('montantVerse');
+  const [selectedAgency, setSelectedAgency] = useState<string>('Toutes');
   const [roomPickerRow, setRoomPickerRow] = useState<LeaderboardRow | null>(null);
 
   const { data: statements, isLoading: loadingStatements, error: statementsError } = useQuery({
@@ -109,6 +111,25 @@ const AdminLeaderboardPage: React.FC = () => {
     queryKey: ['adminUserRooms'],
     queryFn: getAllUserRooms,
   });
+
+  const { data: profiles } = useQuery({
+    queryKey: ['adminAllProfiles'],
+    queryFn: getAllProfiles,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const agencyByUser = useMemo(() => {
+    const map = new Map<string, string>();
+    (profiles || []).forEach((p) => {
+      map.set(p.id, (p.agency ?? '').trim());
+    });
+    return map;
+  }, [profiles]);
+
+  const availableAgencies = useMemo(
+    () => [...new Set([...agencyByUser.values()].filter((a) => a !== ''))].sort(),
+    [agencyByUser]
+  );
 
   // Périodes disponibles (basées sur la période des relevés)
   const availableMonths = useMemo(() => {
@@ -140,7 +161,7 @@ const AdminLeaderboardPage: React.FC = () => {
     return map;
   }, [userRooms]);
 
-  const rows: LeaderboardRow[] = useMemo(() => {
+  const allRows: LeaderboardRow[] = useMemo(() => {
     if (!statements || !effectiveMonth) return [];
     const byUser = new Map<string, LeaderboardRow>();
 
@@ -163,6 +184,7 @@ const AdminLeaderboardPage: React.FC = () => {
             clientName: s.profiles
               ? `${s.profiles.first_name} ${s.profiles.last_name}`
               : 'Client supprimé',
+            agency: agencyByUser.get(s.user_id) || '',
             rooms: roomsByUser.get(s.user_id) || [],
             statementCount: 1,
             ...agg,
@@ -171,7 +193,33 @@ const AdminLeaderboardPage: React.FC = () => {
       });
 
     return [...byUser.values()].sort((a, b) => b[metric] - a[metric]);
-  }, [statements, effectiveMonth, metric, roomsByUser]);
+  }, [statements, effectiveMonth, metric, roomsByUser, agencyByUser]);
+
+  const rows: LeaderboardRow[] = useMemo(() => {
+    if (selectedAgency === 'Toutes') return allRows;
+    if (selectedAgency === 'Sans agence') return allRows.filter((r) => r.agency === '');
+    return allRows.filter((r) => r.agency === selectedAgency);
+  }, [allRows, selectedAgency]);
+
+  // Comparatif agence / agence sur la période
+  const agencyComparison = useMemo(() => {
+    const byAgency = new Map<string, { clients: number; montantVerse: number; ca: number; commission: number; netProprio: number; nuits: number; reservations: number }>();
+    allRows.forEach((r) => {
+      const key = r.agency || 'Sans agence';
+      const entry = byAgency.get(key) || { clients: 0, montantVerse: 0, ca: 0, commission: 0, netProprio: 0, nuits: 0, reservations: 0 };
+      entry.clients += 1;
+      entry.montantVerse += r.montantVerse;
+      entry.ca += r.ca;
+      entry.commission += r.commission;
+      entry.netProprio += r.netProprio;
+      entry.nuits += r.nuits;
+      entry.reservations += r.reservations;
+      byAgency.set(key, entry);
+    });
+    return [...byAgency.entries()]
+      .map(([agency, stats]) => ({ agency, ...stats }))
+      .sort((a, b) => b[metric] - a[metric]);
+  }, [allRows, metric]);
 
   const metricInfo = METRICS.find((m) => m.key === metric)!;
   const formatMetric = (value: number) =>
@@ -276,6 +324,20 @@ const AdminLeaderboardPage: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={selectedAgency} onValueChange={setSelectedAgency}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Agence" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Toutes">Toutes les agences</SelectItem>
+                {availableAgencies.map((agency) => (
+                  <SelectItem key={agency} value={agency}>
+                    {agency}
+                  </SelectItem>
+                ))}
+                <SelectItem value="Sans agence">Sans agence</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -320,6 +382,48 @@ const AdminLeaderboardPage: React.FC = () => {
                 </Card>
               ))}
             </div>
+
+            {/* Comparatif agence / agence */}
+            {agencyComparison.length > 1 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Building2 className="h-5 w-5 text-primary" /> Agence / Agence — {monthLabelCap}
+                  </CardTitle>
+                  <CardDescription>
+                    Comparatif des agences sur la période (tous clients confondus, indépendamment du filtre agence).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {agencyComparison.map((a, i) => (
+                      <div
+                        key={a.agency}
+                        className={`rounded-xl border p-4 ${i === 0 ? 'border-2 border-amber-400 bg-amber-50/50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold">{a.agency}</p>
+                          {i === 0 && (
+                            <Badge className="bg-amber-500 text-white hover:bg-amber-500">
+                              <Trophy className="mr-1 h-3 w-3" /> 1ère
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mt-1 text-2xl font-bold tabular-nums">{formatMetric(a[metric])}</p>
+                        <p className="text-xs text-muted-foreground">{metricInfo.label}</p>
+                        <div className="mt-3 space-y-1 text-sm">
+                          <div className="flex justify-between"><span className="text-muted-foreground">Clients avec relevé</span><span className="tabular-nums font-medium">{a.clients}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Montant versé</span><span className="tabular-nums font-medium">{fmt(a.montantVerse)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Commission</span><span className="tabular-nums font-medium">{fmt(a.commission)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Net propriétaires</span><span className="tabular-nums font-medium">{fmt(a.netProprio)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Nuits / Résa</span><span className="tabular-nums font-medium">{Math.round(a.nuits)} / {a.reservations}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Podium */}
             <div className="grid gap-3 md:grid-cols-3">
@@ -375,6 +479,7 @@ const AdminLeaderboardPage: React.FC = () => {
                       <TableRow>
                         <TableHead className="w-14">Rang</TableHead>
                         <TableHead>Client</TableHead>
+                        <TableHead>Agence</TableHead>
                         <TableHead>Logement(s)</TableHead>
                         <TableHead className="text-right">Montant versé</TableHead>
                         <TableHead className="text-right">CA voyageurs</TableHead>
@@ -407,6 +512,7 @@ const AdminLeaderboardPage: React.FC = () => {
                               )}
                             </div>
                           </TableCell>
+                          <TableCell className="whitespace-nowrap">{row.agency || 'Sans agence'}</TableCell>
                           <TableCell>
                             <span
                               className="block max-w-[220px] truncate"

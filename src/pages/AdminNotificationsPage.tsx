@@ -11,6 +11,7 @@ import { getSetting, updateSetting } from '@/lib/admin-api';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import SendPushNotificationCard from '@/components/admin/SendPushNotificationCard';
 
 type EventTemplate = {
   key: string;
@@ -163,6 +164,9 @@ function AdminNotificationsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Envoi manuel de notifications (in-app + push) */}
+        <SendPushNotificationCard />
 
         {/* Variables d'aperçu */}
         <Card>

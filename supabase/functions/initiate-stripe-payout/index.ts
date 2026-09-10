@@ -183,7 +183,7 @@ serve(async (req) => {
 
     const { data: invoices, error: invoicesError } = await supabaseAdmin
       .from('invoices')
-      .select('id, transfer_statuses')
+      .select('id, transfer_statuses, user_id, period')
       .in('id', invoice_ids);
 
     if (invoicesError) {
@@ -212,6 +212,29 @@ serve(async (req) => {
           failed_count: failedUpdates.length,
           invoice_ids,
         });
+      }
+
+      // Notifie les propriétaires concernés (notification in-app + push automatique)
+      const amountFormatted = (amount / 100).toFixed(2);
+      const currencyLabel = String(currency).toUpperCase();
+      const userIds = [...new Set(invoices.map((invoice: any) => invoice.user_id).filter(Boolean))];
+
+      if (userIds.length > 0) {
+        const { error: notifError } = await supabaseAdmin.from('notifications').insert(
+          userIds.map((uid) => ({
+            user_id: uid,
+            message: `💸 Un virement de ${amountFormatted} ${currencyLabel} a été initié vers votre compte.`,
+            link: '/finances',
+          })),
+        );
+        if (notifError) {
+          console.error('[initiate-stripe-payout] failed to create payout notifications', {
+            message: notifError.message,
+            user_ids: userIds,
+          });
+        } else {
+          console.log('[initiate-stripe-payout] payout notifications created', { user_ids: userIds });
+        }
       }
     }
 

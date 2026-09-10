@@ -29,6 +29,7 @@ import AdminLeaderboardPage from "./pages/AdminLeaderboardPage";
 import AdminTransferSummaryPage from "./pages/AdminTransferSummaryPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminHousingRegistrationsPage from "./pages/AdminHousingRegistrationsPage";
+import HousingRegistrationPage from "./pages/HousingRegistrationPage";
 import AdminDelegatedAccessPage from "./pages/AdminDelegatedAccessPage";
 import FinancePage from "./pages/FinancePage";
 import AdminTechnicalReportsPage from "./pages/AdminTechnicalReportsPage";
@@ -269,6 +270,7 @@ function App() {
                       <Route path="/lmnp" element={<LmnpPage />} />
 
                       <Route path="/tourist-tax" element={<TouristTaxPage />} />
+                      <Route path="/numero-enregistrement" element={<HousingRegistrationPage />} />
                       <Route path="/reports" element={<TechnicalReportsPage />} />
                       <Route path="/reports/:id" element={<TechnicalReportDetailPage />} />
                       <Route path="/help" element={<HelpPage />} />

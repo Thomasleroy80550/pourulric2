@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import CGUVModal from './CGUVModal';
-import HousingRegistrationModal, { HousingOnboardingPayload } from './HousingRegistrationModal';
+import HousingRegistrationModal from './HousingRegistrationModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
 import AccountSuspendedScreen from './AccountSuspendedScreen';
 import { getProfile, updateProfile, UserProfile, updateUserLastSeen } from '@/lib/profile-api';
@@ -26,7 +26,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   const [loading, setLoading] = useState(true);
   const [showCguvModal, setShowCguvModal] = useState(false);
   const [showHousingModal, setShowHousingModal] = useState(false);
-  const [housingDaysLeft, setHousingDaysLeft] = useState<number | null>(null);
   const [showOnboardingConfetti, setShowOnboardingConfetti] = useState(false);
   const housingDismissedRef = useRef(false);
   const hasInitializedRef = useRef(false);
@@ -100,28 +99,10 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           setShowCguvModal(false);
         }
 
-        // --- Onboarding conformité : domicile, logement, n° d'enregistrement (délai 30 jours, hors admins) ---
-        const onboardingIncomplete =
-          !userProfile.housing_registration_number ||
-          !userProfile.home_address ||
-          !userProfile.property_address_confirmed_at;
-        if (!isAdmin && onboardingIncomplete) {
-          let requestedAt = userProfile.housing_registration_requested_at;
-          if (!requestedAt) {
-            // Démarrage du délai de 30 jours à la première demande
-            requestedAt = new Date().toISOString();
-            updateProfile({ housing_registration_requested_at: requestedAt }).catch((e) =>
-              console.error("Erreur lors du démarrage du délai du numéro d'enregistrement:", e)
-            );
-          }
-          const elapsedDays = Math.floor((Date.now() - new Date(requestedAt).getTime()) / (24 * 60 * 60 * 1000));
-          const remaining = Math.max(0, 30 - elapsedDays);
-          setHousingDaysLeft(remaining);
-          // Bloquant si délai expiré, sinon affiché tant que non fermé dans la session
-          setShowHousingModal(remaining <= 0 || !housingDismissedRef.current);
-        } else {
-          setShowHousingModal(false);
-        }
+        // --- Note informative : numéro d'enregistrement national (hors admins) ---
+        setShowHousingModal(
+          !isAdmin && !userProfile.housing_registration_number && !housingDismissedRef.current
+        );
       }
     } else {
       // No session, redirect to login if not already there
@@ -129,7 +110,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       setProfile(null);
       setShowCguvModal(false);
       setShowHousingModal(false);
-      setHousingDaysLeft(null);
       housingDismissedRef.current = false;
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
@@ -223,13 +203,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
   };
 
-  const handleSaveHousingOnboarding = async (payload: HousingOnboardingPayload) => {
-    const updatedProfile = await updateProfile(payload);
-    setProfile(updatedProfile);
-    setShowHousingModal(false);
-    toast.success('Merci ! Vos informations ont bien été enregistrées. Vous êtes en conformité. 🎉');
-  };
-
   const handleDismissHousingModal = () => {
     housingDismissedRef.current = true;
     setShowHousingModal(false);
@@ -305,10 +278,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       {showHousingModal && !showCguvModal && (
         <HousingRegistrationModal
           isOpen={showHousingModal}
-          profile={profile}
-          onSave={handleSaveHousingOnboarding}
-          daysLeft={housingDaysLeft}
-          canDismiss={(housingDaysLeft ?? 0) > 0}
           onDismiss={handleDismissHousingModal}
         />
       )}

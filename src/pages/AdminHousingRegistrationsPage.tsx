@@ -143,7 +143,7 @@ const AdminHousingRegistrationsPage: React.FC = () => {
                     <TableHead>Adresse du logement</TableHead>
                     <TableHead>Numéro d'enregistrement</TableHead>
                     <TableHead>Statut</TableHead>
-                    <TableHead>Échéance (30 j)</TableHead>
+                    <TableHead>Échéance (3 juil. 2027)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -214,20 +214,17 @@ const AdminHousingRegistrationsPage: React.FC = () => {
                         <TableCell>
                           {user.housing_registration_number ? (
                             '—'
-                          ) : user.housing_registration_requested_at ? (
+                          ) : (
                             (() => {
-                              const elapsed = Math.floor(
-                                (Date.now() - new Date(user.housing_registration_requested_at!).getTime()) / (24 * 60 * 60 * 1000)
-                              );
-                              const remaining = 30 - elapsed;
+                              // Fin de la démarche : 3 nov. 2026 + 8 mois
+                              const deadline = new Date('2027-07-03T23:59:59');
+                              const remaining = Math.ceil((deadline.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
                               return remaining > 0 ? (
-                                <span className="text-sm text-muted-foreground">{remaining} j restant{remaining > 1 ? 's' : ''}</span>
+                                <span className="text-sm text-muted-foreground">{remaining} j restants</span>
                               ) : (
                                 <Badge variant="destructive">Expiré</Badge>
                               );
                             })()
-                          ) : (
-                            <span className="text-sm text-muted-foreground italic">Non démarré</span>
                           )}
                         </TableCell>
                       </TableRow>

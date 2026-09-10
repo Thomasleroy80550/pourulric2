@@ -39,6 +39,7 @@ import {
     Mail, // icône e-mail
     Zap, // icône éclair pour conso électricité
     Megaphone, // icône annonces
+    FileCheck2, // icône numéro d'enregistrement
   } from "lucide-react";
 
 import { Button } from '@/components/ui/button';
@@ -111,6 +112,7 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
   {
     title: 'Ressources',
     items: [
+      { name: "N° d'enregistrement", href: '/numero-enregistrement', icon: FileCheck2 },
       { name: 'Annonces', href: '/announcements', icon: Megaphone },
       { name: 'Aides', href: '/help', icon: HelpCircle },
       { name: 'Marketplace', href: '/marketplace', icon: Store },

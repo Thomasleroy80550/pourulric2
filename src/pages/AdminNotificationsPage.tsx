@@ -13,6 +13,7 @@ import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import SendPushNotificationCard from '@/components/admin/SendPushNotificationCard';
 import AdminPwaInstallStatusCard from '@/components/admin/AdminPwaInstallStatusCard';
+import PwaInstallQrCard from '@/components/admin/PwaInstallQrCard';
 
 type EventTemplate = {
   key: string;
@@ -168,6 +169,9 @@ function AdminNotificationsPage() {
 
         {/* Envoi manuel de notifications (in-app + push) */}
         <SendPushNotificationCard />
+
+        {/* QR code d'installation */}
+        <PwaInstallQrCard />
 
         {/* Statut d'installation PWA */}
         <AdminPwaInstallStatusCard />

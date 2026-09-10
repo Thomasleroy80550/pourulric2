@@ -381,7 +381,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         {Sidebar}
 
         {/* Main content */}
-        <main className="flex-1 flex flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <main className="flex-1 min-w-0 max-w-full overflow-x-auto flex flex-col gap-4 p-4 md:gap-8 md:p-8">
           {children}
         </main>
       </div>

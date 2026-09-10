@@ -146,7 +146,7 @@ function App() {
 
     <div className="notranslate" translate="no" data-hk-app-shell="true">
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="light" themes={["light", "noel", "halloween"]}>
           <TooltipProvider>
             <Toaster />
             <Sonner />

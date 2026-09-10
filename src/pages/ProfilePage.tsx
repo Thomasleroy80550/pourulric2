@@ -605,17 +605,6 @@ const ProfilePage: React.FC = () => {
                 <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Settings /> Paramètres</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md">
-                  <div>
-                    <Label htmlFor="darkMode">Mode Sombre</Label>
-                    <p className="text-sm text-gray-500">Activez le thème sombre pour l'application.</p>
-                  </div>
-                  <Switch
-                    id="darkMode"
-                    checked={theme === 'dark'}
-                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                  />
-                </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-md bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
                   <div>
                     <Label htmlFor="noelMode" className="text-green-800 dark:text-green-300">🎄 Mode Noël</Label>

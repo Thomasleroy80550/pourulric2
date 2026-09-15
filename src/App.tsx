@@ -141,6 +141,17 @@ import GuestReportStatusPage from "./pages/GuestReportStatusPage";
 import GuestTrackLookupPage from "./pages/GuestTrackLookupPage";
 import InstallAppPage from "./pages/InstallAppPage";
 
+// V4 — maquette mobile épurée (données fictives)
+import HomeV4 from "./pages/v4/HomeV4";
+import CalendarV4 from "./pages/v4/CalendarV4";
+import BookingsV4 from "./pages/v4/BookingsV4";
+import BookingDetailV4 from "./pages/v4/BookingDetailV4";
+import FinancesV4 from "./pages/v4/FinancesV4";
+import FinanceMonthV4 from "./pages/v4/FinanceMonthV4";
+import MoreV4 from "./pages/v4/MoreV4";
+import ReviewsV4 from "./pages/v4/ReviewsV4";
+import ContactV4 from "./pages/v4/ContactV4";
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -263,6 +274,17 @@ function App() {
                       <Route path="/home-classic" element={<DashboardPage />} />
                       <Route path="/home-v2" element={<DashboardPageV2 />} />
                       <Route path="/home-v3" element={<DashboardPageV3 />} />
+
+                      {/* V4 — maquette mobile épurée (données fictives) */}
+                      <Route path="/v4" element={<HomeV4 />} />
+                      <Route path="/v4/calendrier" element={<CalendarV4 />} />
+                      <Route path="/v4/reservations" element={<BookingsV4 />} />
+                      <Route path="/v4/reservations/:id" element={<BookingDetailV4 />} />
+                      <Route path="/v4/finances" element={<FinancesV4 />} />
+                      <Route path="/v4/finances/mois" element={<FinanceMonthV4 />} />
+                      <Route path="/v4/plus" element={<MoreV4 />} />
+                      <Route path="/v4/avis" element={<ReviewsV4 />} />
+                      <Route path="/v4/contact" element={<ContactV4 />} />
 
                       <Route path="/calendar" element={<CalendarPage />} />
                       <Route path="/planning-v3" element={<PlanningV3Page />} />

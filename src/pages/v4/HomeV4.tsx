@@ -190,10 +190,7 @@ const HomeV4: React.FC = () => {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-extrabold tracking-wide text-hk-600 uppercase">
-              Hello Keys
-            </p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900">
               Bonjour {profile?.first_name ?? ""} 👋
             </h1>
             <p className="mt-0.5 text-sm text-slate-500">

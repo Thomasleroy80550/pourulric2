@@ -11,6 +11,7 @@ import {
   ChevronRight,
   FlaskConical,
   RefreshCw,
+  Sparkle,
 } from "lucide-react";
 import { PWA_UPDATE_TEST_EVENT } from "@/components/PwaUpdatePrompt";
 import V4Layout from "./V4Layout";
@@ -32,6 +33,22 @@ const MoreV4: React.FC = () => {
   const handleMockToggle = (checked: boolean) => {
     setV4MockEnabled(checked);
     setMockOn(checked);
+  };
+
+  // Rejoue le splash screen (les styles sont déjà présents dans index.html)
+  const handleTestSplash = () => {
+    if (document.getElementById("splash-screen")) return;
+    const el = document.createElement("div");
+    el.id = "splash-screen";
+    el.innerHTML =
+      '<div class="splash-logo-wrap"><img src="/icons/pwa-icon.png" alt="Hello Keys" class="splash-logo" /></div>' +
+      '<p class="splash-title">Hello Keys</p>' +
+      '<div class="splash-dots"><span></span><span></span><span></span></div>';
+    document.body.appendChild(el);
+    setTimeout(() => {
+      el.style.opacity = "0";
+      setTimeout(() => el.remove(), 450);
+    }, 2000);
   };
 
   const firstName = profile?.first_name ?? "";
@@ -181,6 +198,23 @@ const MoreV4: React.FC = () => {
                 </p>
                 <p className="text-xs text-slate-400">
                   Affiche le panneau sans lancer de vraie mise à jour
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-300" />
+            </button>
+            <button
+              onClick={handleTestSplash}
+              className="flex w-full items-center gap-3 border-t border-slate-100 px-4 py-3 text-left"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <Sparkle size={18} />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-900">
+                  Tester le splash screen
+                </p>
+                <p className="text-xs text-slate-400">
+                  Rejoue l'animation de démarrage (2 secondes)
                 </p>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-300" />

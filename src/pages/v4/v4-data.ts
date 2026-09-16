@@ -1,7 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { parse, isValid, parseISO, differenceInCalendarDays } from "date-fns";
+import {
+  parse,
+  isValid,
+  parseISO,
+  differenceInCalendarDays,
+  format,
+  subDays,
+  addDays,
+} from "date-fns";
 import { fr } from "date-fns/locale";
 import { getUserRooms } from "@/lib/user-room-api";
+import { fetchClientHousekeepingTasks } from "@/lib/housekeeping-api";
 import {
   fetchKrossbookingReservations,
   KrossbookingReservation,
@@ -33,6 +42,22 @@ export function useV4Reservations() {
     rooms: rooms.data ?? [],
     isLoading: rooms.isLoading || (rooms.data?.length ? query.isLoading : false),
   };
+}
+
+/** Ménages des 7 derniers jours et 7 prochains jours. */
+export function useV4Housekeeping() {
+  return useQuery({
+    queryKey: ["v4-housekeeping"],
+    queryFn: () => {
+      const now = new Date();
+      return fetchClientHousekeepingTasks({
+        dateFrom: format(subDays(now, 7), "yyyy-MM-dd"),
+        dateTo: format(addDays(now, 7), "yyyy-MM-dd"),
+        taskType: "cleaning",
+      });
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
 export function useV4Statements() {

@@ -44,15 +44,15 @@ export function useV4Reservations() {
   };
 }
 
-/** Ménages des 7 derniers jours et 7 prochains jours. */
-export function useV4Housekeeping() {
+/** Ménages sur une fenêtre glissante (par défaut ±7 jours). */
+export function useV4Housekeeping(pastDays = 7, futureDays = 7) {
   return useQuery({
-    queryKey: ["v4-housekeeping"],
+    queryKey: ["v4-housekeeping", pastDays, futureDays],
     queryFn: () => {
       const now = new Date();
       return fetchClientHousekeepingTasks({
-        dateFrom: format(subDays(now, 7), "yyyy-MM-dd"),
-        dateTo: format(addDays(now, 7), "yyyy-MM-dd"),
+        dateFrom: format(subDays(now, pastDays), "yyyy-MM-dd"),
+        dateTo: format(addDays(now, futureDays), "yyyy-MM-dd"),
         taskType: "cleaning",
       });
     },

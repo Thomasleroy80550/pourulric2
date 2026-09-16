@@ -11,6 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import V4Layout from "./V4Layout";
+import PushSettingV4 from "./PushSettingV4";
 import { useSession } from "@/components/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useV4Rooms, useV4Reviews } from "./v4-data";
@@ -130,6 +131,9 @@ const MoreV4: React.FC = () => {
             })}
           </div>
         ))}
+
+        {/* Notifications push */}
+        <PushSettingV4 />
 
         {/* Déconnexion */}
         <button

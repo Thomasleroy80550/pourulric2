@@ -150,7 +150,7 @@ const HomeV4: React.FC = () => {
           ? `Le ménage de votre logement vient d'être terminé${roomSuffix}`
           : `Ménage effectué${roomSuffix}`,
       when: relative(lastDoneCleaning.dateScheduled),
-      to: "/housekeeping",
+      to: "/v4/menages",
     });
   }
   if (nextCleaning) {
@@ -161,7 +161,7 @@ const HomeV4: React.FC = () => {
       icon: <Sparkles className="h-5 w-5 text-hk-500" />,
       label: `Ménage prévu${roomSuffix}`,
       when: relative(nextCleaning.dateScheduled),
-      to: "/housekeeping",
+      to: "/v4/menages",
     });
   }
 

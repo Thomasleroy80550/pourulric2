@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, CalendarPlus, MoonStar, PercentCircle } from "lucide-react";
 import { parseISO, isValid, isSameDay } from "date-fns";
 import V4Layout from "./V4Layout";
+import PropertySelector from "./PropertySelector";
 import OwnerReservationDialog from "@/components/OwnerReservationDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
@@ -128,35 +129,11 @@ const CalendarV4: React.FC = () => {
         <h1 className="text-2xl font-bold text-slate-900">Calendrier</h1>
 
         {/* Sélecteur de logement */}
-        {hasMultipleRooms && (
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <button
-              onClick={() => setSelectedRoomId(null)}
-              className={cn(
-                "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
-                selectedRoomId === null
-                  ? "bg-hk-600 text-white shadow-sm"
-                  : "bg-white text-slate-600 shadow-sm"
-              )}
-            >
-              Tous
-            </button>
-            {rooms.map((room) => (
-              <button
-                key={room.room_id}
-                onClick={() => setSelectedRoomId(room.room_id)}
-                className={cn(
-                  "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
-                  selectedRoomId === room.room_id
-                    ? "bg-hk-600 text-white shadow-sm"
-                    : "bg-white text-slate-600 shadow-sm"
-                )}
-              >
-                {room.room_name}
-              </button>
-            ))}
-          </div>
-        )}
+        <PropertySelector
+          rooms={rooms}
+          selectedRoomId={selectedRoomId}
+          onSelect={setSelectedRoomId}
+        />
 
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           {/* Navigation mois */}

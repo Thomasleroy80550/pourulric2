@@ -1,10 +1,25 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Bell, ChevronDown, ChevronRight, Star, CalendarCheck, LogIn } from "lucide-react";
-import { formatDistanceToNow, parseISO, isValid } from "date-fns";
+import {
+  Bell,
+  ChevronRight,
+  Star,
+  CalendarCheck,
+  LogIn,
+  LogOut,
+  BedDouble,
+  Sun,
+} from "lucide-react";
+import {
+  formatDistanceToNow,
+  parseISO,
+  isValid,
+  isSameDay,
+  format,
+} from "date-fns";
 import { fr } from "date-fns/locale";
 import V4Layout from "./V4Layout";
-import { GuestAvatar, PropertyTile } from "./V4Thumb";
+import { GuestAvatar } from "./V4Thumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
 import {
@@ -49,11 +64,71 @@ const HomeV4: React.FC = () => {
   const upcoming = upcomingReservations(reservations);
   const next = upcoming[0];
 
-  const room = rooms[0];
   const monthShort = now.toLocaleDateString("fr-FR", {
     month: "short",
     year: "numeric",
   });
+
+  // Statut du jour
+  const showRoomName = rooms.length > 1;
+  const arrivalToday = guests.find((r) => {
+    const d = parseISO(r.check_in_date);
+    return isValid(d) && isSameDay(d, now);
+  });
+  const departureToday = guests.find((r) => {
+    const d = parseISO(r.check_out_date);
+    return isValid(d) && isSameDay(d, now);
+  });
+  const currentStay = guests.find((r) => {
+    const s = parseISO(r.check_in_date);
+    const e = parseISO(r.check_out_date);
+    return isValid(s) && isValid(e) && s <= now && now < e;
+  });
+
+  let status: {
+    icon: React.ReactNode;
+    iconBg: string;
+    title: string;
+    detail: string;
+    to?: string;
+  };
+  if (arrivalToday) {
+    status = {
+      icon: <LogIn className="h-5 w-5 text-emerald-600" />,
+      iconBg: "bg-emerald-50",
+      title: "Arrivée aujourd'hui",
+      detail: `${arrivalToday.guest_name}${showRoomName && arrivalToday.property_name ? ` · ${arrivalToday.property_name}` : ""}`,
+      to: `/v4/reservations/${arrivalToday.id}`,
+    };
+  } else if (departureToday) {
+    status = {
+      icon: <LogOut className="h-5 w-5 text-amber-600" />,
+      iconBg: "bg-amber-50",
+      title: "Départ aujourd'hui",
+      detail: `${departureToday.guest_name}${showRoomName && departureToday.property_name ? ` · ${departureToday.property_name}` : ""}`,
+      to: `/v4/reservations/${departureToday.id}`,
+    };
+  } else if (currentStay) {
+    const out = parseISO(currentStay.check_out_date);
+    status = {
+      icon: <BedDouble className="h-5 w-5 text-hk-600" />,
+      iconBg: "bg-hk-50",
+      title: "Voyageur sur place",
+      detail: `${currentStay.guest_name} · départ le ${isValid(out) ? format(out, "d MMM", { locale: fr }) : ""}`,
+      to: `/v4/reservations/${currentStay.id}`,
+    };
+  } else {
+    const nextIn = next ? parseISO(next.check_in_date) : null;
+    status = {
+      icon: <Sun className="h-5 w-5 text-amber-500" />,
+      iconBg: "bg-amber-50",
+      title: "Logement libre aujourd'hui",
+      detail:
+        nextIn && isValid(nextIn)
+          ? `Prochaine arrivée le ${format(nextIn, "d MMMM", { locale: fr })}`
+          : "Aucune arrivée prévue",
+    };
+  }
 
   // Actualités dérivées des vraies données
   const lastPast = pastReservations(reservations)[0];
@@ -116,25 +191,12 @@ const HomeV4: React.FC = () => {
           </Link>
         </div>
 
-        {/* Logement */}
-        <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-          <PropertyTile className="h-12 w-16" iconClassName="h-6 w-6" />
-          <div className="flex-1">
-            {isLoading ? (
-              <Skeleton className="h-5 w-32" />
-            ) : (
-              <>
-                <p className="font-semibold text-slate-900">
-                  {room?.room_name ?? "Mon logement"}
-                </p>
-                <p className="text-sm text-slate-500">
-                  {profile?.property_address ?? ""}
-                </p>
-              </>
-            )}
-          </div>
-          {rooms.length > 1 && <ChevronDown className="h-5 w-5 text-slate-400" />}
-        </div>
+        {/* Statut du jour */}
+        {isLoading ? (
+          <Skeleton className="h-[68px] w-full rounded-2xl" />
+        ) : (
+          <StatusCard status={status} />
+        )}
 
         {/* KPIs du mois */}
         <div className="rounded-2xl bg-white p-4 shadow-sm">
@@ -228,6 +290,42 @@ const HomeV4: React.FC = () => {
         )}
       </div>
     </V4Layout>
+  );
+};
+
+const StatusCard: React.FC<{
+  status: {
+    icon: React.ReactNode;
+    iconBg: string;
+    title: string;
+    detail: string;
+    to?: string;
+  };
+}> = ({ status }) => {
+  const content = (
+    <>
+      <span
+        className={`flex h-11 w-11 items-center justify-center rounded-xl ${status.iconBg}`}
+      >
+        {status.icon}
+      </span>
+      <div className="flex-1">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+          Aujourd'hui
+        </p>
+        <p className="text-sm font-semibold text-slate-900">{status.title}</p>
+        <p className="text-xs text-slate-500">{status.detail}</p>
+      </div>
+      {status.to && <ChevronRight className="h-4 w-4 text-slate-300" />}
+    </>
+  );
+  const className = "flex w-full items-center gap-3 rounded-2xl bg-white p-3 shadow-sm";
+  return status.to ? (
+    <Link to={status.to} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <div className={className}>{content}</div>
   );
 };
 

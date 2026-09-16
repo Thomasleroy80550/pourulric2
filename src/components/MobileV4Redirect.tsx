@@ -34,7 +34,7 @@ function getV4Target(pathname: string): string | null {
 /**
  * Sur mobile, la V4 est la version par défaut : les principales routes
  * propriétaire de l'app classique redirigent vers leur équivalent V4.
- * Les admins et le desktop ne sont pas concernés.
+ * Le desktop n'est pas concerné, et les routes /admin restent accessibles.
  */
 const MobileV4Redirect: React.FC = () => {
   const { pathname } = useLocation();
@@ -54,7 +54,7 @@ const MobileV4Redirect: React.FC = () => {
 
   useEffect(() => {
     if (!isMobile) return;
-    if (!profile || profile.role === "admin") return;
+    if (!profile) return;
     const target = getV4Target(pathname);
     if (target) navigate(target, { replace: true });
   }, [isMobile, pathname, profile, navigate]);

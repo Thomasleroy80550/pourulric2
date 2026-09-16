@@ -160,6 +160,7 @@ import RoomsV4 from "./pages/v4/RoomsV4";
 import SettingsV4 from "./pages/v4/SettingsV4";
 import MenageV4 from "./pages/v4/MenageV4";
 import IdeasV4 from "./pages/v4/IdeasV4";
+import ChatV4 from "./pages/v4/ChatV4";
 import LoginV4 from "./pages/v4/LoginV4";
 
 const queryClient = new QueryClient();
@@ -306,6 +307,7 @@ function App() {
                       <Route path="/v4/parametres" element={<SettingsV4 />} />
                       <Route path="/v4/menages" element={<MenageV4 />} />
                       <Route path="/v4/idees" element={<IdeasV4 />} />
+                      <Route path="/v4/chat" element={<ChatV4 />} />
 
                       <Route path="/calendar" element={<CalendarPage />} />
                       <Route path="/planning-v3" element={<PlanningV3Page />} />

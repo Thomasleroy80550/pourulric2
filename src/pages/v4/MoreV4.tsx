@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Sparkle,
   Lightbulb,
+  Headset,
 } from "lucide-react";
 import { PWA_UPDATE_TEST_EVENT } from "@/components/PwaUpdatePrompt";
 import V4Layout from "./V4Layout";
@@ -89,9 +90,15 @@ const MoreV4: React.FC = () => {
         to: "/v4/avis",
       },
       {
+        icon: Headset,
+        label: "Chat avec l'équipe",
+        sub: "Écrivez-nous, on vous répond vite !",
+        to: "/v4/chat",
+      },
+      {
         icon: MessageCircle,
         label: "Contacter mon équipe",
-        sub: "Une question ? Nous sommes là !",
+        sub: "Messages, téléphone, aide",
         to: "/v4/contact",
       },
       {

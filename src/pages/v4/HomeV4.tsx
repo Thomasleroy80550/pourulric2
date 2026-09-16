@@ -8,6 +8,7 @@ import {
   LogIn,
   LogOut,
   BedDouble,
+  Thermometer,
 } from "lucide-react";
 import {
   formatDistanceToNow,
@@ -117,6 +118,12 @@ const HomeV4: React.FC = () => {
       to: `/v4/reservations/${currentStay.id}`,
     };
   }
+  // Évite le doublon avec la carte "Prochaine réservation"
+  if (arrivalToday && next && arrivalToday.id === next.id) {
+    status = null;
+  }
+
+  const thermoEnabled = !!profile?.thermobnb_enabled;
 
   // Actualités dérivées des vraies données
   const lastPast = pastReservations(reservations)[0];
@@ -236,6 +243,40 @@ const HomeV4: React.FC = () => {
             </div>
           )
         )}
+
+        {/* Module Température (ThermoBnB) */}
+        <Link
+          to={thermoEnabled ? "/integrations/netatmo/dashboard" : "/thermobnb"}
+          className={`flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ${
+            thermoEnabled ? "" : "opacity-60 grayscale"
+          }`}
+        >
+          <span
+            className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+              thermoEnabled ? "bg-hk-50" : "bg-slate-100"
+            }`}
+          >
+            <Thermometer
+              className={`h-5 w-5 ${thermoEnabled ? "text-hk-600" : "text-slate-400"}`}
+            />
+          </span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-slate-900">Température</p>
+              {!thermoEnabled && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                  Non activé
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500">
+              {thermoEnabled
+                ? "Piloter le chauffage de votre logement (ThermoBnB)"
+                : "Découvrir le pilotage du chauffage ThermoBnB"}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-slate-300" />
+        </Link>
 
         {/* Dernières actualités */}
         {news.length > 0 && (

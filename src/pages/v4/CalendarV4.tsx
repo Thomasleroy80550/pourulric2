@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { parseISO, isValid, isSameDay } from "date-fns";
 import V4Layout from "./V4Layout";
+import OwnerReservationDialog from "@/components/OwnerReservationDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/components/SessionContextProvider";
+import { clearReservationsCache } from "@/lib/krossbooking";
 import {
   PROPERTY_IMG,
   useV4Reservations,
@@ -20,11 +24,19 @@ type DayStatus = "reserved" | "blocked";
 const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const CalendarV4: React.FC = () => {
-  const { reservations, isLoading } = useV4Reservations();
+  const { reservations, rooms, isLoading } = useV4Reservations();
+  const { profile } = useSession();
+  const queryClient = useQueryClient();
+  const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
+
+  const handleReservationCreated = () => {
+    clearReservationsCache();
+    queryClient.invalidateQueries({ queryKey: ["v4-reservations"] });
+  };
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -177,14 +189,23 @@ const CalendarV4: React.FC = () => {
           </div>
         </div>
 
-        <Link
-          to="/calendar"
+        <button
+          onClick={() => setIsBlockDialogOpen(true)}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 font-semibold text-white shadow-md"
         >
           <CalendarPlus className="h-5 w-5" />
           Bloquer des dates pour moi
-        </Link>
+        </button>
       </div>
+
+      <OwnerReservationDialog
+        isOpen={isBlockDialogOpen}
+        onOpenChange={setIsBlockDialogOpen}
+        userRooms={rooms}
+        allReservations={reservations}
+        onReservationCreated={handleReservationCreated}
+        profile={profile}
+      />
     </V4Layout>
   );
 };

@@ -38,17 +38,27 @@ const MoreV4: React.FC = () => {
   // Rejoue le splash screen (les styles sont déjà présents dans index.html)
   const handleTestSplash = () => {
     if (document.getElementById("splash-screen")) return;
+    const taglines: string[] = (window as any).__splashTaglines ?? [
+      "Votre logement entre de bonnes mains",
+      "La gestion locative, sans effort",
+      "Vos revenus locatifs, optimisés",
+      "Louez plus, sans y penser",
+      "Votre conciergerie de confiance",
+      "Des voyageurs heureux, un logement choyé",
+    ];
+    const tagline = taglines[Math.floor(Math.random() * taglines.length)];
     const el = document.createElement("div");
     el.id = "splash-screen";
     el.innerHTML =
       '<div class="splash-logo-wrap"><img src="/icons/pwa-icon.png" alt="Hello Keys" class="splash-logo" /></div>' +
-      '<p class="splash-title">Hello Keys</p>' +
+      '<p class="splash-tagline"></p>' +
       '<div class="splash-dots"><span></span><span></span><span></span></div>';
+    (el.querySelector(".splash-tagline") as HTMLElement).textContent = tagline;
     document.body.appendChild(el);
     setTimeout(() => {
       el.style.opacity = "0";
       setTimeout(() => el.remove(), 450);
-    }, 2000);
+    }, 2200);
   };
 
   const firstName = profile?.first_name ?? "";

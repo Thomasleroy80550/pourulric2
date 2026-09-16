@@ -14,7 +14,7 @@ export function ticketStatusBadge(status: string): { label: string; className: s
     return { label: "Résolu", className: "bg-emerald-50 text-emerald-600" };
   if (s === "pending")
     return { label: "En attente", className: "bg-amber-50 text-amber-600" };
-  return { label: "En cours", className: "bg-blue-50 text-blue-600" };
+  return { label: "En cours", className: "bg-hk-50 text-hk-600" };
 }
 
 const MessagesV4: React.FC = () => {
@@ -71,7 +71,7 @@ const MessagesV4: React.FC = () => {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     {t.unread_count > 0 && (
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-hk-600" />
                     )}
                     <p
                       className={cn(
@@ -109,7 +109,7 @@ const MessagesV4: React.FC = () => {
 
         <a
           href="tel:+33322319270"
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 font-semibold text-white shadow-md"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-hk-600 py-3.5 font-semibold text-white shadow-md"
         >
           <Phone className="h-5 w-5" />
           Besoin d'aide ? Appelez-nous

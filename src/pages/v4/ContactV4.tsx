@@ -31,7 +31,7 @@ const ContactV4: React.FC = () => {
             to="/v4/messages"
             className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-hk-50 text-hk-600">
               <Mail className="h-5 w-5" />
             </span>
             <div className="flex-1">
@@ -49,7 +49,7 @@ const ContactV4: React.FC = () => {
             href="tel:+33322319270"
             className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-hk-50 text-hk-600">
               <Phone className="h-5 w-5" />
             </span>
             <div className="flex-1">
@@ -67,7 +67,7 @@ const ContactV4: React.FC = () => {
             to="/v4/aide"
             className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-hk-50 text-hk-600">
               <HelpCircle className="h-5 w-5" />
             </span>
             <div className="flex-1">

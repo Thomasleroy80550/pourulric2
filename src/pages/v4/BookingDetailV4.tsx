@@ -31,7 +31,7 @@ const BookingDetailV4: React.FC = () => {
       <div className="pb-8">
         {/* Bandeau + header */}
         <div className="relative">
-          <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700">
+          <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-hk-500 to-hk-700">
             {booking && (
               <GuestAvatar
                 name={booking.guest_name}
@@ -49,7 +49,7 @@ const BookingDetailV4: React.FC = () => {
             </button>
           </div>
           {isUpcoming && (
-            <span className="absolute bottom-3 right-3 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+            <span className="absolute bottom-3 right-3 rounded-full bg-hk-600 px-3 py-1 text-xs font-semibold text-white">
               À venir
             </span>
           )}
@@ -110,7 +110,7 @@ const BookingDetailV4: React.FC = () => {
               </div>
 
               {amountOf(booking) > 0 && (
-                <div className="flex items-center justify-between rounded-2xl bg-blue-50 p-4">
+                <div className="flex items-center justify-between rounded-2xl bg-hk-50 p-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
                       Montant du séjour
@@ -126,7 +126,7 @@ const BookingDetailV4: React.FC = () => {
               )}
 
               <div className="flex gap-3 rounded-2xl bg-slate-100 p-4">
-                <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-hk-500" />
                 <p className="text-sm text-slate-600">
                   La gestion de cette réservation est assurée par Hello Keys.
                   Vous n'avez aucune action à effectuer.

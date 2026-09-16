@@ -71,7 +71,7 @@ const HomeV4: React.FC = () => {
   if (next) {
     news.push({
       key: "next",
-      icon: <LogIn className="h-5 w-5 text-blue-500" />,
+      icon: <LogIn className="h-5 w-5 text-hk-500" />,
       label: `Prochaine arrivée · ${next.guest_name}`,
       when: relative(next.check_in_date),
       to: `/v4/reservations/${next.id}`,
@@ -93,7 +93,7 @@ const HomeV4: React.FC = () => {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-extrabold tracking-wide text-blue-600 uppercase">
+            <p className="text-sm font-extrabold tracking-wide text-hk-600 uppercase">
               Hello Keys
             </p>
             <h1 className="mt-1 text-2xl font-bold text-slate-900">
@@ -168,19 +168,19 @@ const HomeV4: React.FC = () => {
         {next ? (
           <Link
             to={`/v4/reservations/${next.id}`}
-            className="block overflow-hidden rounded-2xl bg-blue-600 p-4 text-white shadow-md"
+            className="block overflow-hidden rounded-2xl bg-hk-600 p-4 text-white shadow-md"
           >
             <div className="flex items-center gap-3">
               <div className="flex-1">
-                <p className="text-xs font-medium text-blue-100">
+                <p className="text-xs font-medium text-hk-100">
                   Prochaine réservation
                 </p>
                 <p className="mt-1 text-xl font-bold">
                   {formatRangeShort(next.check_in_date, next.check_out_date)}
                 </p>
-                <p className="mt-1 text-sm text-blue-100">{next.guest_name}</p>
+                <p className="mt-1 text-sm text-hk-100">{next.guest_name}</p>
                 {!!next.n_guests && (
-                  <p className="text-sm text-blue-100">
+                  <p className="text-sm text-hk-100">
                     {next.n_guests} voyageur{next.n_guests > 1 ? "s" : ""}
                   </p>
                 )}

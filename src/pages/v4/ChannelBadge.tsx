@@ -19,7 +19,7 @@ const ChannelBadge: React.FC<{ channel: V4Channel }> = ({ channel }) => {
   }
   if (channel === "direct") {
     return (
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-500">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-hk-50 text-hk-500">
         <User className="h-3.5 w-3.5" />
       </span>
     );

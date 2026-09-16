@@ -73,7 +73,7 @@ const SettingsV4: React.FC = () => {
             <input
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
+              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-hk-200"
             />
           </div>
           <div>
@@ -81,7 +81,7 @@ const SettingsV4: React.FC = () => {
             <input
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
+              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-hk-200"
             />
           </div>
           <div>
@@ -92,7 +92,7 @@ const SettingsV4: React.FC = () => {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               type="tel"
-              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-blue-200"
+              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-hk-200"
             />
           </div>
           <div>
@@ -105,7 +105,7 @@ const SettingsV4: React.FC = () => {
           <button
             onClick={handleSave}
             disabled={!hasChanges || saving}
-            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white disabled:opacity-40"
+            className="w-full rounded-xl bg-hk-600 py-3 text-sm font-semibold text-white disabled:opacity-40"
           >
             {saving ? "Enregistrement..." : "Enregistrer"}
           </button>

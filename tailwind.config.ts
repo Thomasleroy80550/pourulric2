@@ -20,6 +20,17 @@ export default {
     },
     extend: {
       colors: {
+        // Palette de marque Hello Keys (déclinée depuis --primary: hsl(200 70% 30%))
+        hk: {
+          DEFAULT: "hsl(200 70% 30%)",
+          50: "hsl(200 60% 97%)",
+          100: "hsl(200 55% 92%)",
+          200: "hsl(200 55% 82%)",
+          300: "hsl(200 55% 68%)",
+          500: "hsl(200 65% 40%)",
+          600: "hsl(200 70% 30%)",
+          700: "hsl(200 75% 23%)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

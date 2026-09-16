@@ -116,12 +116,12 @@ const MessageDetailV4: React.FC = () => {
                 className={cn(
                   "max-w-[85%] rounded-2xl p-3 shadow-sm",
                   isMine
-                    ? "ml-auto rounded-tr-md bg-blue-600 text-white"
+                    ? "ml-auto rounded-tr-md bg-hk-600 text-white"
                     : "rounded-tl-md bg-white text-slate-700"
                 )}
               >
                 {!isMine && m.author_name && (
-                  <p className="mb-0.5 text-xs font-semibold text-blue-600">
+                  <p className="mb-0.5 text-xs font-semibold text-hk-600">
                     {m.author_name}
                   </p>
                 )}
@@ -129,7 +129,7 @@ const MessageDetailV4: React.FC = () => {
                 <p
                   className={cn(
                     "mt-1 text-[10px]",
-                    isMine ? "text-blue-100" : "text-slate-400"
+                    isMine ? "text-hk-100" : "text-slate-400"
                   )}
                 >
                   {formatDate(m.created_at)}
@@ -152,7 +152,7 @@ const MessageDetailV4: React.FC = () => {
             <button
               onClick={handleSend}
               disabled={sending || !reply.trim()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white disabled:opacity-40"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-hk-600 text-white disabled:opacity-40"
             >
               <Send className="h-4 w-4" />
             </button>

@@ -91,7 +91,7 @@ const MoreV4: React.FC = () => {
 
         {/* Profil */}
         <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-hk-100 text-sm font-bold text-hk-700">
             {initials}
           </span>
           <div>

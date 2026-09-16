@@ -43,7 +43,7 @@ const BookingsV4: React.FC = () => {
               onClick={() => setTab(t.key)}
               className={cn(
                 "flex-1 rounded-full py-2 text-sm font-semibold transition-colors",
-                tab === t.key ? "bg-blue-600 text-white" : "text-slate-500"
+                tab === t.key ? "bg-hk-600 text-white" : "text-slate-500"
               )}
             >
               {t.label}

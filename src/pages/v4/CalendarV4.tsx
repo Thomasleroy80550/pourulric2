@@ -123,7 +123,7 @@ const CalendarV4: React.FC = () => {
                         status === "reserved" &&
                           "bg-rose-100 font-medium text-rose-700",
                         status === "blocked" &&
-                          "bg-blue-100 font-medium text-blue-700",
+                          "bg-hk-100 font-medium text-hk-700",
                         !status && !isToday && "text-slate-600"
                       )}
                     >
@@ -141,7 +141,7 @@ const CalendarV4: React.FC = () => {
               <span className="h-2.5 w-2.5 rounded-full bg-rose-300" /> Réservé
             </span>
             <span className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-300" /> Votre blocage
+              <span className="h-2.5 w-2.5 rounded-full bg-hk-300" /> Votre blocage
             </span>
             <span className="flex items-center gap-1.5 text-xs text-slate-500">
               <span className="h-2.5 w-2.5 rounded-full bg-slate-200" /> Disponible
@@ -187,7 +187,7 @@ const CalendarV4: React.FC = () => {
 
         <button
           onClick={() => setIsBlockDialogOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 font-semibold text-white shadow-md"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-hk-600 py-3.5 font-semibold text-white shadow-md"
         >
           <CalendarPlus className="h-5 w-5" />
           Bloquer des dates pour moi

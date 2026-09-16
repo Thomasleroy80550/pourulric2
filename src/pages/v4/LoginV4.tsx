@@ -50,14 +50,14 @@ const LoginV4: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#eef3fa]">
+    <div className="min-h-screen bg-[#ecf3f7]">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4">
         {/* Branding */}
         <div className="flex flex-col items-center pt-16">
-          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-md">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-hk-500 to-hk-700 shadow-md">
             <KeyRound className="h-8 w-8 text-white" />
           </span>
-          <p className="mt-4 text-lg font-extrabold uppercase tracking-wide text-blue-600">
+          <p className="mt-4 text-lg font-extrabold uppercase tracking-wide text-hk-600">
             Hello Keys
           </p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">
@@ -82,7 +82,7 @@ const LoginV4: React.FC = () => {
               placeholder="vous@exemple.fr"
               autoComplete="email"
               required
-              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-blue-200"
+              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-hk-200"
             />
           </div>
 
@@ -98,7 +98,7 @@ const LoginV4: React.FC = () => {
                 placeholder="••••••••"
                 autoComplete="current-password"
                 required
-                className="w-full rounded-xl bg-slate-50 p-3 pr-11 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-blue-200"
+                className="w-full rounded-xl bg-slate-50 p-3 pr-11 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-hk-200"
               />
               <button
                 type="button"
@@ -122,7 +122,7 @@ const LoginV4: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-semibold text-white shadow-md disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-hk-600 py-3.5 font-semibold text-white shadow-md disabled:opacity-60"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? "Connexion..." : "Se connecter"}
@@ -131,7 +131,7 @@ const LoginV4: React.FC = () => {
           <button
             type="button"
             onClick={handleForgotPassword}
-            className="w-full py-1 text-center text-sm font-medium text-blue-600"
+            className="w-full py-1 text-center text-sm font-medium text-hk-600"
           >
             Mot de passe oublié ?
           </button>
@@ -150,7 +150,7 @@ const LoginV4: React.FC = () => {
           </p>
           <Link
             to="/prospect-signup"
-            className="mt-2 inline-block rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-blue-600 shadow-sm"
+            className="mt-2 inline-block rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-hk-600 shadow-sm"
           >
             Découvrir la conciergerie
           </Link>

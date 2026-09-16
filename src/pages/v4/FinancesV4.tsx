@@ -81,7 +81,7 @@ const FinancesV4: React.FC = () => {
               onClick={() => setTab(t.key)}
               className={cn(
                 "flex-1 rounded-full py-2 text-sm font-semibold transition-colors",
-                tab === t.key ? "bg-blue-600 text-white" : "text-slate-500"
+                tab === t.key ? "bg-hk-600 text-white" : "text-slate-500"
               )}
             >
               {t.label}
@@ -160,7 +160,7 @@ const FinancesV4: React.FC = () => {
                           key={i}
                           className={cn(
                             "w-2 rounded-sm",
-                            i === bars.length - 1 ? "bg-blue-600" : "bg-blue-200"
+                            i === bars.length - 1 ? "bg-hk-600" : "bg-hk-200"
                           )}
                           style={{ height: `${8 + (v / maxBar) * 40}px` }}
                         />
@@ -183,11 +183,11 @@ const FinancesV4: React.FC = () => {
                         - {formatEuro(commission)}
                       </span>
                     </div>
-                    <div className="flex justify-between rounded-xl bg-blue-50 px-3 py-2">
+                    <div className="flex justify-between rounded-xl bg-hk-50 px-3 py-2">
                       <span className="font-semibold text-slate-900">
                         Revenus pour vous
                       </span>
-                      <span className="font-bold text-blue-700">
+                      <span className="font-bold text-hk-700">
                         {formatEuro(net)}
                       </span>
                     </div>
@@ -195,7 +195,7 @@ const FinancesV4: React.FC = () => {
 
                   <Link
                     to={`/v4/finances/mois/${encodeURIComponent(current.period)}`}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 py-2.5 text-sm font-semibold text-blue-600"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-hk-200 py-2.5 text-sm font-semibold text-hk-600"
                   >
                     Voir le détail
                     <ArrowRight className="h-4 w-4" />

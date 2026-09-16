@@ -3,7 +3,7 @@ import { Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const AVATAR_COLORS = [
-  "bg-blue-100 text-blue-700",
+  "bg-hk-100 text-hk-700",
   "bg-emerald-100 text-emerald-700",
   "bg-amber-100 text-amber-700",
   "bg-rose-100 text-rose-700",
@@ -50,7 +50,7 @@ export const PropertyTile: React.FC<{
 }> = ({ className, iconClassName }) => (
   <span
     className={cn(
-      "flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700",
+      "flex items-center justify-center rounded-xl bg-gradient-to-br from-hk-500 to-hk-700",
       className
     )}
   >

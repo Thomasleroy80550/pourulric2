@@ -115,11 +115,11 @@ const FinanceMonthV4: React.FC = () => {
                     - {formatEuro(commission)}
                   </span>
                 </div>
-                <div className="flex justify-between rounded-xl bg-blue-50 px-3 py-2">
+                <div className="flex justify-between rounded-xl bg-hk-50 px-3 py-2">
                   <span className="font-semibold text-slate-900">
                     Revenus pour vous
                   </span>
-                  <span className="font-bold text-blue-700">
+                  <span className="font-bold text-hk-700">
                     {formatEuro(net)}
                   </span>
                 </div>

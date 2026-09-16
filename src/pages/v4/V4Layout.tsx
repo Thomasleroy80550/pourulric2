@@ -21,8 +21,8 @@ const V4Layout: React.FC<{ children: React.ReactNode; hideNav?: boolean }> = ({
     to === "/v4" ? pathname === "/v4" : pathname.startsWith(to);
 
   return (
-    <div className="min-h-screen bg-[#eef3fa]">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[#eef3fa]">
+    <div className="min-h-screen bg-[#ecf3f7]">
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[#ecf3f7]">
         <main className={cn("flex-1", !hideNav && "pb-24")}>{children}</main>
 
         {!hideNav && (
@@ -40,7 +40,7 @@ const V4Layout: React.FC<{ children: React.ReactNode; hideNav?: boolean }> = ({
                     <span
                       className={cn(
                         "rounded-xl px-3 py-1",
-                        active ? "bg-blue-50 text-blue-600" : "text-slate-400"
+                        active ? "bg-hk-50 text-hk-600" : "text-slate-400"
                       )}
                     >
                       <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
@@ -48,7 +48,7 @@ const V4Layout: React.FC<{ children: React.ReactNode; hideNav?: boolean }> = ({
                     <span
                       className={cn(
                         "text-[10px] font-medium",
-                        active ? "text-blue-600" : "text-slate-400"
+                        active ? "text-hk-600" : "text-slate-400"
                       )}
                     >
                       {tab.label}

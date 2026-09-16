@@ -53,7 +53,7 @@ const NotificationsV4: React.FC = () => {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAll}
-              className="flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600"
+              className="flex items-center gap-1.5 rounded-full bg-hk-50 px-3 py-1.5 text-xs font-semibold text-hk-600"
             >
               <CheckCheck className="h-3.5 w-3.5" />
               Tout lire
@@ -85,13 +85,13 @@ const NotificationsV4: React.FC = () => {
               onClick={() => handleClick(n)}
               className={cn(
                 "flex w-full items-start gap-3 rounded-2xl p-3 text-left shadow-sm",
-                n.is_read ? "bg-white" : "bg-blue-50"
+                n.is_read ? "bg-white" : "bg-hk-50"
               )}
             >
               <span
                 className={cn(
                   "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                  n.is_read ? "bg-slate-200" : "bg-blue-600"
+                  n.is_read ? "bg-slate-200" : "bg-hk-600"
                 )}
               />
               <div className="flex-1">

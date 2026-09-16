@@ -36,7 +36,7 @@ const HelpV4: React.FC = () => {
             to="/v4/messages"
             className="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-3 shadow-sm"
           >
-            <MessageCircle className="h-5 w-5 text-blue-600" />
+            <MessageCircle className="h-5 w-5 text-hk-600" />
             <span className="text-center text-xs font-semibold text-slate-700">
               Messages
             </span>
@@ -45,7 +45,7 @@ const HelpV4: React.FC = () => {
             href="tel:+33322319270"
             className="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-3 shadow-sm"
           >
-            <Phone className="h-5 w-5 text-blue-600" />
+            <Phone className="h-5 w-5 text-hk-600" />
             <span className="text-center text-xs font-semibold text-slate-700">
               Appeler
             </span>
@@ -56,7 +56,7 @@ const HelpV4: React.FC = () => {
             rel="noreferrer"
             className="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-3 shadow-sm"
           >
-            <CalendarCheck className="h-5 w-5 text-blue-600" />
+            <CalendarCheck className="h-5 w-5 text-hk-600" />
             <span className="text-center text-xs font-semibold text-slate-700">
               Rendez-vous
             </span>

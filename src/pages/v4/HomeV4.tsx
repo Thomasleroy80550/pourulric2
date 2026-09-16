@@ -8,7 +8,6 @@ import {
   LogIn,
   LogOut,
   BedDouble,
-  Sun,
 } from "lucide-react";
 import {
   formatDistanceToNow,
@@ -91,7 +90,7 @@ const HomeV4: React.FC = () => {
     title: string;
     detail: string;
     to?: string;
-  };
+  } | null = null;
   if (arrivalToday) {
     status = {
       icon: <LogIn className="h-5 w-5 text-emerald-600" />,
@@ -116,17 +115,6 @@ const HomeV4: React.FC = () => {
       title: "Voyageur sur place",
       detail: `${currentStay.guest_name} · départ le ${isValid(out) ? format(out, "d MMM", { locale: fr }) : ""}`,
       to: `/v4/reservations/${currentStay.id}`,
-    };
-  } else {
-    const nextIn = next ? parseISO(next.check_in_date) : null;
-    status = {
-      icon: <Sun className="h-5 w-5 text-amber-500" />,
-      iconBg: "bg-amber-50",
-      title: "Logement libre aujourd'hui",
-      detail:
-        nextIn && isValid(nextIn)
-          ? `Prochaine arrivée le ${format(nextIn, "d MMMM", { locale: fr })}`
-          : "Aucune arrivée prévue",
     };
   }
 
@@ -191,12 +179,8 @@ const HomeV4: React.FC = () => {
           </Link>
         </div>
 
-        {/* Statut du jour */}
-        {isLoading ? (
-          <Skeleton className="h-[68px] w-full rounded-2xl" />
-        ) : (
-          <StatusCard status={status} />
-        )}
+        {/* Statut du jour (uniquement si activité aujourd'hui) */}
+        {!isLoading && status && <StatusCard status={status} />}
 
         {/* KPIs du mois */}
         <div className="rounded-2xl bg-white p-4 shadow-sm">

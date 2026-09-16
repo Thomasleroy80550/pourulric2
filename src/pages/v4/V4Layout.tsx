@@ -21,16 +21,14 @@ const V4Layout: React.FC<{ children: React.ReactNode; hideNav?: boolean }> = ({
     to === "/v4" ? pathname === "/v4" : pathname.startsWith(to);
 
   return (
-    <div className="min-h-screen bg-[#ecf3f7]">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-[#ecf3f7]">
-        <main
-          className={cn("flex-1", !hideNav && "pb-[calc(env(safe-area-inset-bottom)+104px)]")}
-        >
+    <div className="h-screen [height:100dvh] overflow-hidden bg-[#ecf3f7]">
+      <div className="mx-auto flex h-full w-full max-w-md flex-col bg-[#ecf3f7]">
+        <main className={cn("flex-1 overflow-y-auto overscroll-contain", !hideNav && "pb-8")}>
           {children}
         </main>
 
         {!hideNav && (
-          <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 border-t border-slate-200 bg-white/95 backdrop-blur">
+          <nav className="shrink-0 border-t border-slate-200 bg-white/95 backdrop-blur">
             <div className="grid grid-cols-5 px-1 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2">
               {tabs.map((tab) => {
                 const active = isActive(tab.to);

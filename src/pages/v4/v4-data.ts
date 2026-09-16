@@ -9,6 +9,9 @@ import {
 import { getMyStatements } from "@/lib/statements-api";
 import { SavedInvoice } from "@/lib/admin-api";
 import { getReviews } from "@/lib/reviews-api";
+import { getNotifications } from "@/lib/notifications-api";
+import { getTickets } from "@/lib/tickets-api";
+import { getPublishedFaqs } from "@/lib/faq-api";
 
 export const PROPERTY_IMG = "/assets/v4-property.png";
 
@@ -40,6 +43,18 @@ export function useV4Statements() {
 
 export function useV4Reviews() {
   return useQuery({ queryKey: ["v4-reviews"], queryFn: getReviews });
+}
+
+export function useV4Notifications() {
+  return useQuery({ queryKey: ["v4-notifications"], queryFn: getNotifications });
+}
+
+export function useV4Tickets() {
+  return useQuery({ queryKey: ["v4-tickets"], queryFn: getTickets });
+}
+
+export function useV4Faqs() {
+  return useQuery({ queryKey: ["v4-faqs"], queryFn: getPublishedFaqs });
 }
 
 // ---------- Réservations : helpers ----------

@@ -41,13 +41,13 @@ const MoreV4: React.FC = () => {
         sub: rooms
           ? `${rooms.length} logement${rooms.length > 1 ? "s" : ""}`
           : "",
-        to: "/my-rooms",
+        to: "/v4/logements",
       },
       {
         icon: FileText,
-        label: "Mes documents",
-        sub: "Contrats, relevés, attestations",
-        to: "/finances",
+        label: "Mes relevés",
+        sub: "Historique de vos versements",
+        to: "/v4/finances",
       },
       {
         icon: Star,
@@ -68,14 +68,14 @@ const MoreV4: React.FC = () => {
       {
         icon: Settings,
         label: "Paramètres",
-        sub: "Profil, notifications, etc.",
-        to: "/profile",
+        sub: "Profil, coordonnées",
+        to: "/v4/parametres",
       },
       {
         icon: HelpCircle,
         label: "Aide & support",
-        sub: "Centre d'aide",
-        to: "/help",
+        sub: "FAQ, contact, rendez-vous",
+        to: "/v4/aide",
       },
       {
         icon: ArrowLeftRight,

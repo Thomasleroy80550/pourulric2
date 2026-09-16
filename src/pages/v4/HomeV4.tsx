@@ -10,6 +10,7 @@ import {
   PROPERTY_IMG,
   useV4Reservations,
   useV4Reviews,
+  useV4Notifications,
   upcomingReservations,
   pastReservations,
   guestReservations,
@@ -23,6 +24,8 @@ const HomeV4: React.FC = () => {
   const { profile } = useSession();
   const { reservations, rooms, isLoading } = useV4Reservations();
   const { data: reviews } = useV4Reviews();
+  const { data: notifications } = useV4Notifications();
+  const unreadCount = (notifications ?? []).filter((n) => !n.is_read).length;
 
   const now = new Date();
   const year = now.getFullYear();
@@ -101,10 +104,15 @@ const HomeV4: React.FC = () => {
             </p>
           </div>
           <Link
-            to="/notifications"
-            className="rounded-full bg-white p-2.5 text-slate-600 shadow-sm"
+            to="/v4/notifications"
+            className="relative rounded-full bg-white p-2.5 text-slate-600 shadow-sm"
           >
             <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Link>
         </div>
 

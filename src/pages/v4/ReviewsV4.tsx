@@ -1,6 +1,6 @@
 import React from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { ChevronLeft, Star, ArrowRight, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft, Star, Clock } from "lucide-react";
 import V4Layout from "./V4Layout";
 import ChannelBadge from "./ChannelBadge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,18 +62,11 @@ const ReviewsV4: React.FC = () => {
                   {(reviews ?? []).length} avis
                 </p>
               </div>
-              <Link
-                to="/reviews"
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 py-2.5 text-sm font-semibold text-blue-600"
-              >
-                Voir tous mes avis
-                <ArrowRight className="h-4 w-4" />
-              </Link>
             </div>
 
             {/* Liste des avis */}
             <div className="space-y-2">
-              {(reviews ?? []).slice(0, 20).map((r) => (
+              {(reviews ?? []).slice(0, 50).map((r) => (
                 <div key={r.id} className="rounded-2xl bg-white p-4 shadow-sm">
                   <div className="flex items-center gap-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-500">

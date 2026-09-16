@@ -28,7 +28,7 @@ const ContactV4: React.FC = () => {
 
         <div className="space-y-2">
           <Link
-            to="/tickets"
+            to="/v4/messages"
             className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -36,10 +36,10 @@ const ContactV4: React.FC = () => {
             </span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-slate-900">
-                Envoyer un message
+                Mes messages
               </p>
               <p className="text-xs text-slate-400">
-                Ouvrez un ticket, réponse sous 24h
+                Vos échanges avec l'équipe, réponse sous 24h
               </p>
             </div>
             <ChevronRight className="h-4 w-4 text-slate-300" />
@@ -64,7 +64,7 @@ const ContactV4: React.FC = () => {
           </a>
 
           <Link
-            to="/help"
+            to="/v4/aide"
             className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">

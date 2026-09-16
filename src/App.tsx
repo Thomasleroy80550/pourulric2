@@ -151,6 +151,12 @@ import FinanceMonthV4 from "./pages/v4/FinanceMonthV4";
 import MoreV4 from "./pages/v4/MoreV4";
 import ReviewsV4 from "./pages/v4/ReviewsV4";
 import ContactV4 from "./pages/v4/ContactV4";
+import NotificationsV4 from "./pages/v4/NotificationsV4";
+import MessagesV4 from "./pages/v4/MessagesV4";
+import MessageDetailV4 from "./pages/v4/MessageDetailV4";
+import HelpV4 from "./pages/v4/HelpV4";
+import RoomsV4 from "./pages/v4/RoomsV4";
+import SettingsV4 from "./pages/v4/SettingsV4";
 
 const queryClient = new QueryClient();
 
@@ -285,6 +291,12 @@ function App() {
                       <Route path="/v4/plus" element={<MoreV4 />} />
                       <Route path="/v4/avis" element={<ReviewsV4 />} />
                       <Route path="/v4/contact" element={<ContactV4 />} />
+                      <Route path="/v4/notifications" element={<NotificationsV4 />} />
+                      <Route path="/v4/messages" element={<MessagesV4 />} />
+                      <Route path="/v4/messages/:id" element={<MessageDetailV4 />} />
+                      <Route path="/v4/aide" element={<HelpV4 />} />
+                      <Route path="/v4/logements" element={<RoomsV4 />} />
+                      <Route path="/v4/parametres" element={<SettingsV4 />} />
 
                       <Route path="/calendar" element={<CalendarPage />} />
                       <Route path="/planning-v3" element={<PlanningV3Page />} />

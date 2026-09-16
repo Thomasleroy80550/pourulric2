@@ -281,7 +281,7 @@ function App() {
                       <Route path="/v4/reservations" element={<BookingsV4 />} />
                       <Route path="/v4/reservations/:id" element={<BookingDetailV4 />} />
                       <Route path="/v4/finances" element={<FinancesV4 />} />
-                      <Route path="/v4/finances/mois" element={<FinanceMonthV4 />} />
+                      <Route path="/v4/finances/mois/:period" element={<FinanceMonthV4 />} />
                       <Route path="/v4/plus" element={<MoreV4 />} />
                       <Route path="/v4/avis" element={<ReviewsV4 />} />
                       <Route path="/v4/contact" element={<ContactV4 />} />

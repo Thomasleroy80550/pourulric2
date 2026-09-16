@@ -1,34 +1,34 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import V4Layout from "./V4Layout";
 import ChannelBadge from "./ChannelBadge";
-import { PROPERTY_IMG, bookings, formatEuro } from "./mockData";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  PROPERTY_IMG,
+  useV4Reservations,
+  upcomingReservations,
+  pastReservations,
+  channelOf,
+  amountOf,
+  formatEuro,
+  formatRangeShort,
+} from "./v4-data";
 import { cn } from "@/lib/utils";
-
-function formatRange(start: string, end: string): string {
-  const s = new Date(start);
-  const e = new Date(end);
-  const months = [
-    "janv.", "févr.", "mars", "avr.", "mai", "juin",
-    "juil.", "août", "sept.", "oct.", "nov.", "déc.",
-  ];
-  return `${s.getDate()} → ${e.getDate()} ${months[e.getMonth()]} ${e.getFullYear()}`;
-}
 
 const BookingsV4: React.FC = () => {
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
-  const list = bookings.filter((b) => (tab === "past" ? b.past : !b.past));
+  const { reservations, isLoading } = useV4Reservations();
+
+  const list =
+    tab === "upcoming"
+      ? upcomingReservations(reservations)
+      : pastReservations(reservations).slice(0, 30);
 
   return (
     <V4Layout>
       <div className="space-y-4 px-4 pt-5">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Réservations</h1>
-          <button className="rounded-full bg-white p-2 text-slate-500 shadow-sm">
-            <ExternalLink className="h-4 w-4" />
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold text-slate-900">Réservations</h1>
 
         {/* Onglets */}
         <div className="flex rounded-full bg-white p-1 shadow-sm">
@@ -53,35 +53,56 @@ const BookingsV4: React.FC = () => {
 
         {/* Liste */}
         <div className="space-y-2">
-          {list.map((b) => (
-            <Link
-              key={b.id}
-              to={`/v4/reservations/${b.id}`}
-              className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
-            >
-              <img
-                src={PROPERTY_IMG}
-                alt=""
-                className="h-16 w-16 rounded-xl object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-slate-900">
-                  {b.guestName}
-                </p>
-                <p className="text-sm text-slate-500">
-                  {formatRange(b.startDate, b.endDate)}
-                </p>
-                <p className="text-xs text-slate-400">{b.guests} voyageurs</p>
-                <p className="mt-0.5 text-sm font-bold text-slate-900">
-                  {formatEuro(b.amount)}
-                </p>
-              </div>
-              <div className="flex flex-col items-end justify-between self-stretch py-0.5">
-                <ChevronRight className="h-4 w-4 text-slate-300" />
-                <ChannelBadge channel={b.channel} />
-              </div>
-            </Link>
-          ))}
+          {isLoading && (
+            <>
+              <Skeleton className="h-20 w-full rounded-2xl" />
+              <Skeleton className="h-20 w-full rounded-2xl" />
+              <Skeleton className="h-20 w-full rounded-2xl" />
+            </>
+          )}
+          {!isLoading && list.length === 0 && (
+            <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+              Aucune réservation {tab === "upcoming" ? "à venir" : "passée"}.
+            </p>
+          )}
+          {list.map((b) => {
+            const amount = amountOf(b);
+            return (
+              <Link
+                key={b.id}
+                to={`/v4/reservations/${b.id}`}
+                className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
+              >
+                <img
+                  src={PROPERTY_IMG}
+                  alt=""
+                  className="h-16 w-16 rounded-xl object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-900">
+                    {b.guest_name}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {formatRangeShort(b.check_in_date, b.check_out_date)}
+                  </p>
+                  {!!b.n_guests && (
+                    <p className="text-xs text-slate-400">
+                      {b.n_guests} voyageur{b.n_guests > 1 ? "s" : ""}
+                    </p>
+                  )}
+                  {amount > 0 && (
+                    <p className="mt-0.5 text-sm font-bold text-slate-900">
+                      {formatEuro(amount)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col items-end justify-between self-stretch py-0.5">
+                  <ChevronRight className="h-4 w-4 text-slate-300" />
+                  <ChannelBadge channel={channelOf(b)} />
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </V4Layout>

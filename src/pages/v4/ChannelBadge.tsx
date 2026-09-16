@@ -1,8 +1,8 @@
 import React from "react";
-import { User } from "lucide-react";
-import type { BookingChannel } from "./mockData";
+import { User, Globe } from "lucide-react";
+import type { V4Channel } from "./v4-data";
 
-const ChannelBadge: React.FC<{ channel: BookingChannel }> = ({ channel }) => {
+const ChannelBadge: React.FC<{ channel: V4Channel }> = ({ channel }) => {
   if (channel === "airbnb") {
     return (
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-xs font-bold text-rose-500">
@@ -17,9 +17,16 @@ const ChannelBadge: React.FC<{ channel: BookingChannel }> = ({ channel }) => {
       </span>
     );
   }
+  if (channel === "direct") {
+    return (
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-500">
+        <User className="h-3.5 w-3.5" />
+      </span>
+    );
+  }
   return (
-    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-500">
-      <User className="h-3.5 w-3.5" />
+    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+      <Globe className="h-3.5 w-3.5" />
     </span>
   );
 };

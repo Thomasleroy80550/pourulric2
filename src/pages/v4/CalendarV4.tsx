@@ -1,30 +1,63 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
+import { parseISO, isValid, isSameDay } from "date-fns";
 import V4Layout from "./V4Layout";
-import { PROPERTY_IMG } from "./mockData";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  PROPERTY_IMG,
+  useV4Reservations,
+  upcomingReservations,
+  isCancelled,
+  isOwnerBlock,
+  formatRangeShort,
+  monthLabel,
+} from "./v4-data";
 import { cn } from "@/lib/utils";
 
-type DayStatus = "reserved" | "blocked" | "available";
+type DayStatus = "reserved" | "blocked";
 
-// Septembre 2026 : le 1er tombe un mardi
-const dayStatuses: Record<number, DayStatus> = {
-  10: "blocked", 11: "blocked", 12: "blocked", 13: "blocked",
-  14: "blocked", 15: "blocked",
-  16: "reserved", 17: "reserved", 18: "reserved", 19: "reserved",
-  20: "reserved", 21: "reserved",
-  23: "reserved", 24: "reserved", 25: "reserved", 26: "reserved",
-  29: "blocked", 30: "blocked",
-};
-
-const TODAY = 9;
 const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
 const CalendarV4: React.FC = () => {
-  // Grille : septembre 2026 commence un mardi (offset 1), 30 jours
+  const { reservations, isLoading } = useV4Reservations();
+  const [viewDate, setViewDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7; // lundi = 0
+
+  const dayStatuses = useMemo(() => {
+    const map: Record<number, DayStatus> = {};
+    reservations
+      .filter((r) => !isCancelled(r))
+      .forEach((r) => {
+        const start = parseISO(r.check_in_date);
+        const end = parseISO(r.check_out_date);
+        if (!isValid(start) || !isValid(end)) return;
+        const status: DayStatus = isOwnerBlock(r) ? "blocked" : "reserved";
+        const d = new Date(start);
+        while (d < end) {
+          if (d.getFullYear() === year && d.getMonth() === month) {
+            // "reserved" prime sur "blocked"
+            if (map[d.getDate()] !== "reserved") map[d.getDate()] = status;
+          }
+          d.setDate(d.getDate() + 1);
+        }
+      });
+    return map;
+  }, [reservations, year, month]);
+
+  const today = new Date();
+  const upcoming = upcomingReservations(reservations).slice(0, 3);
+
   const cells: (number | null)[] = [
-    ...Array.from({ length: 1 }, () => null),
-    ...Array.from({ length: 30 }, (_, i) => i + 1),
+    ...Array.from({ length: offset }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
 
   return (
@@ -35,11 +68,17 @@ const CalendarV4: React.FC = () => {
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           {/* Navigation mois */}
           <div className="flex items-center justify-between">
-            <button className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50">
+            <button
+              onClick={() => setViewDate(new Date(year, month - 1, 1))}
+              className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50"
+            >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <p className="font-semibold text-slate-900">Septembre 2026</p>
-            <button className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50">
+            <p className="font-semibold text-slate-900">{monthLabel(viewDate)}</p>
+            <button
+              onClick={() => setViewDate(new Date(year, month + 1, 1))}
+              className="rounded-full p-1.5 text-slate-500 hover:bg-slate-50"
+            >
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
@@ -54,29 +93,35 @@ const CalendarV4: React.FC = () => {
           </div>
 
           {/* Grille */}
-          <div className="mt-2 grid grid-cols-7 gap-y-1.5 text-center">
-            {cells.map((day, i) => {
-              if (day === null) return <span key={`e-${i}`} />;
-              const status = dayStatuses[day];
-              const isToday = day === TODAY;
-              return (
-                <div key={day} className="flex justify-center">
-                  <span
-                    className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-lg text-sm",
-                      isToday &&
-                        "border-2 border-emerald-400 font-bold text-emerald-600",
-                      status === "reserved" && "bg-rose-100 text-rose-700 font-medium",
-                      status === "blocked" && "bg-blue-100 text-blue-700 font-medium",
-                      !status && !isToday && "text-slate-600"
-                    )}
-                  >
-                    {day}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          {isLoading ? (
+            <Skeleton className="mt-2 h-48 w-full" />
+          ) : (
+            <div className="mt-2 grid grid-cols-7 gap-y-1.5 text-center">
+              {cells.map((day, i) => {
+                if (day === null) return <span key={`e-${i}`} />;
+                const status = dayStatuses[day];
+                const isToday = isSameDay(new Date(year, month, day), today);
+                return (
+                  <div key={day} className="flex justify-center">
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-lg text-sm",
+                        isToday &&
+                          "border-2 border-emerald-400 font-bold text-emerald-600",
+                        status === "reserved" &&
+                          "bg-rose-100 font-medium text-rose-700",
+                        status === "blocked" &&
+                          "bg-blue-100 font-medium text-blue-700",
+                        !status && !isToday && "text-slate-600"
+                      )}
+                    >
+                      {day}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Légende */}
           <div className="mt-4 flex items-center gap-4 border-t border-slate-100 pt-3">
@@ -98,10 +143,13 @@ const CalendarV4: React.FC = () => {
             Prochaines réservations
           </h2>
           <div className="mt-2 space-y-2">
-            {[
-              { id: "r1", dates: "16 → 21 sept.", guest: "Martine DESANGLOIS", guests: 2 },
-              { id: "r2", dates: "3 → 8 oct.", guest: "Sophie Martin", guests: 3 },
-            ].map((r) => (
+            {isLoading && <Skeleton className="h-16 w-full rounded-2xl" />}
+            {!isLoading && upcoming.length === 0 && (
+              <p className="rounded-2xl bg-white p-4 text-center text-sm text-slate-500 shadow-sm">
+                Aucune réservation à venir.
+              </p>
+            )}
+            {upcoming.map((r) => (
               <Link
                 key={r.id}
                 to={`/v4/reservations/${r.id}`}
@@ -113,9 +161,15 @@ const CalendarV4: React.FC = () => {
                   className="h-12 w-14 rounded-xl object-cover"
                 />
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900">{r.dates}</p>
-                  <p className="text-sm text-slate-600">{r.guest}</p>
-                  <p className="text-xs text-slate-400">{r.guests} voyageurs</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatRangeShort(r.check_in_date, r.check_out_date)}
+                  </p>
+                  <p className="text-sm text-slate-600">{r.guest_name}</p>
+                  {!!r.n_guests && (
+                    <p className="text-xs text-slate-400">
+                      {r.n_guests} voyageur{r.n_guests > 1 ? "s" : ""}
+                    </p>
+                  )}
                 </div>
                 <ChevronRight className="h-4 w-4 text-slate-300" />
               </Link>
@@ -123,10 +177,13 @@ const CalendarV4: React.FC = () => {
           </div>
         </div>
 
-        <button className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 font-semibold text-white shadow-md">
+        <Link
+          to="/calendar"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 font-semibold text-white shadow-md"
+        >
           <CalendarPlus className="h-5 w-5" />
           Bloquer des dates pour moi
-        </button>
+        </Link>
       </div>
     </V4Layout>
   );

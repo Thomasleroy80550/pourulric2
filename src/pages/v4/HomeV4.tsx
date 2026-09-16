@@ -1,25 +1,88 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Bell, ChevronDown, ChevronRight, Sparkles, CalendarPlus, Star } from "lucide-react";
+import { Bell, ChevronDown, ChevronRight, Star, CalendarCheck, LogIn } from "lucide-react";
+import { formatDistanceToNow, parseISO, isValid } from "date-fns";
+import { fr } from "date-fns/locale";
 import V4Layout from "./V4Layout";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/components/SessionContextProvider";
 import {
   PROPERTY_IMG,
-  owner,
-  property,
-  monthFinance,
-  bookings,
-  activities,
+  useV4Reservations,
+  useV4Reviews,
+  upcomingReservations,
+  pastReservations,
+  guestReservations,
+  nightsInMonth,
+  amountOf,
   formatEuro,
-} from "./mockData";
-
-const activityIcons: Record<string, React.ReactNode> = {
-  cleaning: <Sparkles className="h-5 w-5 text-emerald-500" />,
-  booking: <CalendarPlus className="h-5 w-5 text-blue-500" />,
-  review: <Star className="h-5 w-5 text-amber-400" />,
-};
+  formatRangeShort,
+} from "./v4-data";
 
 const HomeV4: React.FC = () => {
-  const next = bookings[0];
+  const { profile } = useSession();
+  const { reservations, rooms, isLoading } = useV4Reservations();
+  const { data: reviews } = useV4Reviews();
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const guests = guestReservations(reservations);
+  const monthGuests = guests.filter((r) => nightsInMonth(r, year, month) > 0);
+  const monthRevenue = guests
+    .filter((r) => {
+      const d = parseISO(r.check_in_date);
+      return isValid(d) && d.getFullYear() === year && d.getMonth() === month;
+    })
+    .reduce((acc, r) => acc + amountOf(r), 0);
+  const monthNights = monthGuests.reduce(
+    (acc, r) => acc + nightsInMonth(r, year, month),
+    0,
+  );
+  const occupancy = Math.min(100, Math.round((monthNights / daysInMonth) * 100));
+
+  const upcoming = upcomingReservations(reservations);
+  const next = upcoming[0];
+
+  const room = rooms[0];
+  const monthShort = now.toLocaleDateString("fr-FR", {
+    month: "short",
+    year: "numeric",
+  });
+
+  // Actualités dérivées des vraies données
+  const lastPast = pastReservations(reservations)[0];
+  const lastReview = reviews?.[0];
+  const news: { key: string; icon: React.ReactNode; label: string; when: string; to: string }[] = [];
+  if (lastPast) {
+    news.push({
+      key: "past",
+      icon: <CalendarCheck className="h-5 w-5 text-emerald-500" />,
+      label: `Séjour terminé · ${lastPast.guest_name}`,
+      when: relative(lastPast.check_out_date),
+      to: `/v4/reservations/${lastPast.id}`,
+    });
+  }
+  if (next) {
+    news.push({
+      key: "next",
+      icon: <LogIn className="h-5 w-5 text-blue-500" />,
+      label: `Prochaine arrivée · ${next.guest_name}`,
+      when: relative(next.check_in_date),
+      to: `/v4/reservations/${next.id}`,
+    });
+  }
+  if (lastReview) {
+    news.push({
+      key: "review",
+      icon: <Star className="h-5 w-5 text-amber-400" />,
+      label: `Nouvel avis ${lastReview.rating}★`,
+      when: relative(lastReview.rawDate),
+      to: "/v4/avis",
+    });
+  }
 
   return (
     <V4Layout>
@@ -31,108 +94,143 @@ const HomeV4: React.FC = () => {
               Hello Keys
             </p>
             <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Bonjour {owner.firstName} 👋
+              Bonjour {profile?.first_name ?? ""} 👋
             </h1>
             <p className="mt-0.5 text-sm text-slate-500">
               Votre logement est entre de bonnes mains.
             </p>
           </div>
-          <button className="rounded-full bg-white p-2.5 text-slate-600 shadow-sm">
+          <Link
+            to="/notifications"
+            className="rounded-full bg-white p-2.5 text-slate-600 shadow-sm"
+          >
             <Bell className="h-5 w-5" />
-          </button>
+          </Link>
         </div>
 
-        {/* Sélecteur de logement */}
+        {/* Logement */}
         <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
           <img
             src={PROPERTY_IMG}
-            alt={property.name}
+            alt=""
             className="h-12 w-16 rounded-xl object-cover"
           />
           <div className="flex-1">
-            <p className="font-semibold text-slate-900">{property.name}</p>
-            <p className="text-sm text-slate-500">{property.city}</p>
+            {isLoading ? (
+              <Skeleton className="h-5 w-32" />
+            ) : (
+              <>
+                <p className="font-semibold text-slate-900">
+                  {room?.room_name ?? "Mon logement"}
+                </p>
+                <p className="text-sm text-slate-500">
+                  {profile?.property_address ?? ""}
+                </p>
+              </>
+            )}
           </div>
-          <ChevronDown className="h-5 w-5 text-slate-400" />
+          {rooms.length > 1 && <ChevronDown className="h-5 w-5 text-slate-400" />}
         </div>
 
         {/* KPIs du mois */}
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="font-semibold text-slate-900">Ce mois-ci</p>
-            <p className="text-sm text-slate-400">Sept. 2026</p>
+            <p className="text-sm text-slate-400 capitalize">{monthShort}</p>
           </div>
-          <div className="mt-3 grid grid-cols-3 divide-x divide-slate-100">
-            <div className="pr-2">
-              <p className="text-lg font-bold text-slate-900">
-                {formatEuro(monthFinance.revenue)}
-              </p>
-              <p className="text-xs text-slate-500">Revenus estimés</p>
+          {isLoading ? (
+            <Skeleton className="mt-3 h-12 w-full" />
+          ) : (
+            <div className="mt-3 grid grid-cols-3 divide-x divide-slate-100">
+              <div className="pr-2">
+                <p className="text-lg font-bold text-slate-900">
+                  {formatEuro(monthRevenue)}
+                </p>
+                <p className="text-xs text-slate-500">Revenus estimés</p>
+              </div>
+              <div className="px-3">
+                <p className="text-lg font-bold text-slate-900">{occupancy} %</p>
+                <p className="text-xs text-slate-500">Occupation</p>
+              </div>
+              <div className="pl-3">
+                <p className="text-lg font-bold text-slate-900">{monthNights}</p>
+                <p className="text-xs text-slate-500">Nuits réservées</p>
+              </div>
             </div>
-            <div className="px-3">
-              <p className="text-lg font-bold text-slate-900">
-                {monthFinance.occupancy} %
-              </p>
-              <p className="text-xs text-slate-500">Occupation</p>
-            </div>
-            <div className="pl-3">
-              <p className="text-lg font-bold text-slate-900">
-                {monthFinance.nightsBooked}
-              </p>
-              <p className="text-xs text-slate-500">Nuits réservées</p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Prochaine réservation */}
-        <Link
-          to={`/v4/reservations/${next.id}`}
-          className="block overflow-hidden rounded-2xl bg-blue-600 p-4 text-white shadow-md"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-blue-100">
-                Prochaine réservation
-              </p>
-              <p className="mt-1 text-xl font-bold">16 → 21 sept. 2026</p>
-              <p className="mt-1 text-sm text-blue-100">{next.guestName}</p>
-              <p className="text-sm text-blue-100">{next.guests} voyageurs</p>
+        {next ? (
+          <Link
+            to={`/v4/reservations/${next.id}`}
+            className="block overflow-hidden rounded-2xl bg-blue-600 p-4 text-white shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-blue-100">
+                  Prochaine réservation
+                </p>
+                <p className="mt-1 text-xl font-bold">
+                  {formatRangeShort(next.check_in_date, next.check_out_date)}
+                </p>
+                <p className="mt-1 text-sm text-blue-100">{next.guest_name}</p>
+                {!!next.n_guests && (
+                  <p className="text-sm text-blue-100">
+                    {next.n_guests} voyageur{next.n_guests > 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
+              <img
+                src={PROPERTY_IMG}
+                alt=""
+                className="h-20 w-24 rounded-xl object-cover"
+              />
             </div>
-            <img
-              src={PROPERTY_IMG}
-              alt=""
-              className="h-20 w-24 rounded-xl object-cover"
-            />
-          </div>
-        </Link>
+          </Link>
+        ) : (
+          !isLoading && (
+            <div className="rounded-2xl bg-white p-4 text-center text-sm text-slate-500 shadow-sm">
+              Aucune réservation à venir pour le moment.
+            </div>
+          )
+        )}
 
         {/* Dernières actualités */}
-        <div>
-          <div className="flex items-center justify-between px-1">
-            <h2 className="font-semibold text-slate-900">Dernières actualités</h2>
-            <button className="text-sm font-medium text-blue-600">Voir tout</button>
+        {news.length > 0 && (
+          <div>
+            <h2 className="px-1 font-semibold text-slate-900">
+              Dernières actualités
+            </h2>
+            <div className="mt-2 space-y-2">
+              {news.map((a) => (
+                <Link
+                  key={a.key}
+                  to={a.to}
+                  className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50">
+                    {a.icon}
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-900">{a.label}</p>
+                    <p className="text-xs text-slate-500">{a.when}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-300" />
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="mt-2 space-y-2">
-            {activities.map((a) => (
-              <div
-                key={a.label}
-                className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50">
-                  {activityIcons[a.icon]}
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-900">{a.label}</p>
-                  <p className="text-xs text-slate-500">{a.when}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-300" />
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </V4Layout>
   );
 };
+
+function relative(iso: string): string {
+  const d = parseISO(iso);
+  if (!isValid(d)) return "";
+  return formatDistanceToNow(d, { addSuffix: true, locale: fr });
+}
 
 export default HomeV4;

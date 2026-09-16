@@ -1,25 +1,7 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Mail, PhoneCall, Phone, Heart, ChevronRight } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ChevronLeft, Mail, Phone, Heart, ChevronRight, HelpCircle } from "lucide-react";
 import V4Layout from "./V4Layout";
-
-const options = [
-  {
-    icon: Mail,
-    label: "Envoyer un message",
-    sub: "Réponse sous 24h",
-  },
-  {
-    icon: PhoneCall,
-    label: "Être rappelé",
-    sub: "Laissez votre numéro, nous vous rappelons",
-  },
-  {
-    icon: Phone,
-    label: "Nous appeler",
-    sub: "09 XX XX XX XX · Lun. – Ven. 9h – 18h",
-  },
-];
 
 const ContactV4: React.FC = () => {
   const navigate = useNavigate();
@@ -45,26 +27,57 @@ const ContactV4: React.FC = () => {
         </p>
 
         <div className="space-y-2">
-          {options.map((o) => {
-            const Icon = o.icon;
-            return (
-              <button
-                key={o.label}
-                className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {o.label}
-                  </p>
-                  <p className="text-xs text-slate-400">{o.sub}</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-300" />
-              </button>
-            );
-          })}
+          <Link
+            to="/tickets"
+            className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Mail className="h-5 w-5" />
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-900">
+                Envoyer un message
+              </p>
+              <p className="text-xs text-slate-400">
+                Ouvrez un ticket, réponse sous 24h
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-slate-300" />
+          </Link>
+
+          <a
+            href="tel:+33322319270"
+            className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <Phone className="h-5 w-5" />
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-900">
+                Nous appeler
+              </p>
+              <p className="text-xs text-slate-400">
+                03 22 31 92 70 · Lun. – Ven. 9h – 18h
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-slate-300" />
+          </a>
+
+          <Link
+            to="/help"
+            className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <HelpCircle className="h-5 w-5" />
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-slate-900">
+                Centre d'aide
+              </p>
+              <p className="text-xs text-slate-400">FAQ et guides</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-slate-300" />
+          </Link>
         </div>
 
         <div className="flex items-center gap-3 rounded-2xl bg-rose-50 p-4">

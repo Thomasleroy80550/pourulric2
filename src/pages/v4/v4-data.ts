@@ -21,39 +21,20 @@ import { getReviews } from "@/lib/reviews-api";
 import { getNotifications } from "@/lib/notifications-api";
 import { getTickets } from "@/lib/tickets-api";
 import { getPublishedFaqs } from "@/lib/faq-api";
-import {
-  isV4MockEnabled,
-  mockRooms,
-  mockReservations,
-  mockStatements,
-  mockReviews,
-  mockNotifications,
-  mockTickets,
-  mockHousekeeping,
-  mockFaqs,
-} from "./v4-mock";
 
 export type V4Channel = "airbnb" | "booking" | "direct" | "other";
 
 // ---------- Hooks ----------
 
-const mock = () => isV4MockEnabled();
-
 export function useV4Rooms() {
-  return useQuery({
-    queryKey: ["v4-rooms", mock()],
-    queryFn: () => (mock() ? Promise.resolve(mockRooms) : getUserRooms()),
-  });
+  return useQuery({ queryKey: ["v4-rooms"], queryFn: getUserRooms });
 }
 
 export function useV4Reservations() {
   const rooms = useV4Rooms();
   const query = useQuery({
-    queryKey: ["v4-reservations", mock(), (rooms.data ?? []).map((r) => r.room_id)],
-    queryFn: () =>
-      mock()
-        ? Promise.resolve(mockReservations)
-        : fetchKrossbookingReservations(rooms.data ?? []),
+    queryKey: ["v4-reservations", (rooms.data ?? []).map((r) => r.room_id)],
+    queryFn: () => fetchKrossbookingReservations(rooms.data ?? []),
     enabled: !!rooms.data && rooms.data.length > 0,
   });
   return {
@@ -66,9 +47,8 @@ export function useV4Reservations() {
 /** Ménages sur une fenêtre glissante (par défaut ±7 jours). */
 export function useV4Housekeeping(pastDays = 7, futureDays = 7) {
   return useQuery({
-    queryKey: ["v4-housekeeping", mock(), pastDays, futureDays],
+    queryKey: ["v4-housekeeping", pastDays, futureDays],
     queryFn: () => {
-      if (mock()) return Promise.resolve(mockHousekeeping);
       const now = new Date();
       return fetchClientHousekeepingTasks({
         dateFrom: format(subDays(now, pastDays), "yyyy-MM-dd"),
@@ -81,39 +61,23 @@ export function useV4Housekeeping(pastDays = 7, futureDays = 7) {
 }
 
 export function useV4Statements() {
-  return useQuery({
-    queryKey: ["v4-statements", mock()],
-    queryFn: () => (mock() ? Promise.resolve(mockStatements) : getMyStatements()),
-  });
+  return useQuery({ queryKey: ["v4-statements"], queryFn: getMyStatements });
 }
 
 export function useV4Reviews() {
-  return useQuery({
-    queryKey: ["v4-reviews", mock()],
-    queryFn: () => (mock() ? Promise.resolve(mockReviews) : getReviews()),
-  });
+  return useQuery({ queryKey: ["v4-reviews"], queryFn: getReviews });
 }
 
 export function useV4Notifications() {
-  return useQuery({
-    queryKey: ["v4-notifications", mock()],
-    queryFn: () =>
-      mock() ? Promise.resolve(mockNotifications) : getNotifications(),
-  });
+  return useQuery({ queryKey: ["v4-notifications"], queryFn: getNotifications });
 }
 
 export function useV4Tickets() {
-  return useQuery({
-    queryKey: ["v4-tickets", mock()],
-    queryFn: () => (mock() ? Promise.resolve(mockTickets) : getTickets()),
-  });
+  return useQuery({ queryKey: ["v4-tickets"], queryFn: getTickets });
 }
 
 export function useV4Faqs() {
-  return useQuery({
-    queryKey: ["v4-faqs", mock()],
-    queryFn: () => (mock() ? Promise.resolve(mockFaqs) : getPublishedFaqs()),
-  });
+  return useQuery({ queryKey: ["v4-faqs"], queryFn: getPublishedFaqs });
 }
 
 // ---------- Réservations : helpers ----------

@@ -132,6 +132,7 @@ import AdminMiniSitesPage from "./pages/AdminMiniSitesPage";
 import AdminDomainRequestsPage from "./pages/AdminDomainRequestsPage";
 
 import GlobalAppErrorBoundary from "@/components/GlobalAppErrorBoundary";
+import MobileV4Redirect from "@/components/MobileV4Redirect";
 import PwaUpdatePrompt from "@/components/PwaUpdatePrompt";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import PlanningV2Page from "./pages/PlanningV2Page";
@@ -174,6 +175,8 @@ function App() {
               <InvoiceGenerationProvider>
                 <SessionContextProvider>
                   <GlobalAppErrorBoundary>
+                    {/* Sur mobile, la V4 est la version par défaut */}
+                    <MobileV4Redirect />
                     {/* Bandeau global Contrat résilié */}
                     <ContractTerminatedBanner />
                     {/* Popup d'installation PWA (mobile uniquement) */}

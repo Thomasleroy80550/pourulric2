@@ -9,7 +9,6 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
-  ArrowLeftRight,
 } from "lucide-react";
 import V4Layout from "./V4Layout";
 import { useSession } from "@/components/SessionContextProvider";
@@ -76,12 +75,6 @@ const MoreV4: React.FC = () => {
         label: "Aide & support",
         sub: "FAQ, contact, rendez-vous",
         to: "/v4/aide",
-      },
-      {
-        icon: ArrowLeftRight,
-        label: "Revenir à l'app classique",
-        sub: "Version complète",
-        to: "/",
       },
     ],
   ];

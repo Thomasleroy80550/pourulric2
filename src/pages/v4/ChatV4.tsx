@@ -4,7 +4,6 @@ import { ArrowLeft, Headset, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/components/SessionContextProvider";
 import { createExternalOrderTicket } from "@/lib/order-ticket-api";
-import { replyToTicket } from "@/lib/tickets-api";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -21,13 +20,12 @@ const ChatV4: React.FC = () => {
     {
       id: 0,
       role: "team",
-      text: "Bonjour 👋 Une question, un souci, une demande ? Écrivez-nous ici : votre message est transmis directement à notre équipe support.",
+      text: "Bonjour 👋 Une question, un souci, une demande ? Décrivez-la en un message complet : elle est transmise directement à notre équipe support.",
     },
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
-  const [subject, setSubject] = useState<string>("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +34,7 @@ const ChatV4: React.FC = () => {
 
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || sending) return;
+    if (!text || sending || ticketId) return;
 
     const email = profile?.email || session?.user?.email || "";
     const name =
@@ -48,40 +46,25 @@ const ChatV4: React.FC = () => {
     setMessages((m) => [...m, { id: Date.now(), role: "user", text }]);
 
     try {
-      if (!ticketId) {
-        // Premier message : création du ticket sur l'API support
-        const newSubject =
-          text.length > 60 ? `${text.slice(0, 57)}…` : text;
-        const result = await createExternalOrderTicket({
-          customer_email: email,
-          customer_name: name,
-          subject: `[App mobile] ${newSubject}`,
-          message: text,
-          source_provider: "app-mobile",
-          status: "open",
-        });
-        setTicketId(result.ticket_id);
-        setSubject(`[App mobile] ${newSubject}`);
-        setMessages((m) => [
-          ...m,
-          {
-            id: Date.now() + 1,
-            role: "team",
-            text: "✅ Votre demande a bien été transmise à notre équipe ! Nous vous répondons au plus vite. Vous pouvez suivre la conversation dans « Mes messages », ou continuer à écrire ici pour compléter votre demande.",
-          },
-        ]);
-      } else {
-        // Messages suivants : réponse sur le même ticket
-        await replyToTicket(ticketId, subject, text);
-        setMessages((m) => [
-          ...m,
-          {
-            id: Date.now() + 1,
-            role: "team",
-            text: "Message ajouté à votre demande 👍",
-          },
-        ]);
-      }
+      // Une conversation = un seul ticket sur l'API support
+      const newSubject = text.length > 60 ? `${text.slice(0, 57)}…` : text;
+      const result = await createExternalOrderTicket({
+        customer_email: email,
+        customer_name: name,
+        subject: `[App mobile] ${newSubject}`,
+        message: text,
+        source_provider: "app-mobile",
+        status: "open",
+      });
+      setTicketId(result.ticket_id);
+      setMessages((m) => [
+        ...m,
+        {
+          id: Date.now() + 1,
+          role: "team",
+          text: "✅ Votre demande a bien été transmise à notre équipe ! Nous vous répondons au plus vite — vous pourrez poursuivre la conversation dans « Mes messages » dès notre réponse.",
+        },
+      ]);
     } catch (e: any) {
       toast.error(e.message || "Impossible d'envoyer votre message.");
       setMessages((m) => m.slice(0, -1));
@@ -89,6 +72,17 @@ const ChatV4: React.FC = () => {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleNewRequest = () => {
+    setTicketId(null);
+    setMessages([
+      {
+        id: Date.now(),
+        role: "team",
+        text: "Nouvelle demande : je vous écoute 👂 Décrivez votre question ou votre besoin en un message.",
+      },
+    ]);
   };
 
   return (
@@ -146,42 +140,51 @@ const ChatV4: React.FC = () => {
               </div>
             </div>
           )}
-          {ticketId && (
-            <p className="pt-1 text-center text-[11px] text-slate-400">
-              Suivez la réponse de l'équipe dans{" "}
-              <Link to="/v4/messages" className="font-semibold text-hk-600">
-                Mes messages
-              </Link>
-            </p>
-          )}
           <div ref={bottomRef} />
         </main>
 
-        {/* Saisie */}
+        {/* Saisie ou confirmation */}
         <footer className="shrink-0 border-t border-slate-200 bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2.5">
-          <div className="flex items-end gap-2">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Écrivez votre message…"
-              rows={1}
-              className="max-h-28 flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-hk-400"
-            />
-            <button
-              onClick={handleSend}
-              disabled={sending || !input.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-hk-600 text-white shadow-md transition-transform active:scale-95 disabled:opacity-40"
-              aria-label="Envoyer"
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          </div>
+          {ticketId ? (
+            <div className="flex gap-2">
+              <Link
+                to="/v4/messages"
+                className="flex-1 rounded-2xl bg-hk-600 py-3 text-center text-sm font-semibold text-white shadow-md"
+              >
+                Voir mes messages
+              </Link>
+              <button
+                onClick={handleNewRequest}
+                className="flex-1 rounded-2xl bg-slate-100 py-3 text-sm font-semibold text-slate-600"
+              >
+                Nouvelle demande
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-end gap-2">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Décrivez votre demande en un message…"
+                rows={1}
+                className="max-h-28 flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-hk-400"
+              />
+              <button
+                onClick={handleSend}
+                disabled={sending || !input.trim()}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-hk-600 text-white shadow-md transition-transform active:scale-95 disabled:opacity-40"
+                aria-label="Envoyer"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </div>
+          )}
         </footer>
       </div>
     </div>

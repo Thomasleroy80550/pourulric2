@@ -29,6 +29,31 @@ const PwaUpdatePrompt: React.FC = () => {
     },
   });
 
+  const handleUpdate = async () => {
+    // Vide tous les caches (Cache Storage) pour éviter de servir l'ancienne version
+    try {
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+    } catch (e) {
+      console.warn("Impossible de vider le cache avant la mise à jour :", e);
+    }
+
+    // Filet de sécurité : si l'activation du nouveau service worker ne
+    // recharge pas la page d'elle-même, on force le rechargement.
+    const fallbackReload = setTimeout(() => {
+      window.location.reload();
+    }, 3000);
+
+    try {
+      await updateServiceWorker(true);
+    } finally {
+      clearTimeout(fallbackReload);
+      window.location.reload();
+    }
+  };
+
   return (
     <AlertDialog open={needRefresh}>
       <AlertDialogContent>
@@ -46,7 +71,7 @@ const PwaUpdatePrompt: React.FC = () => {
           <AlertDialogCancel onClick={() => setNeedRefresh(false)}>
             Plus tard
           </AlertDialogCancel>
-          <AlertDialogAction onClick={() => updateServiceWorker(true)}>
+          <AlertDialogAction onClick={handleUpdate}>
             Mettre à jour
           </AlertDialogAction>
         </AlertDialogFooter>

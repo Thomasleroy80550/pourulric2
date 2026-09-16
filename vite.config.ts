@@ -60,6 +60,10 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         importScripts: ['push-sw.js'],
         navigateFallbackDenylist: [/^\/functions\//],
+        // Supprime les anciens caches et prend le contrôle immédiatement
+        // après la mise à jour, pour ne plus servir l'ancienne version.
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
       },
     }),
   ],

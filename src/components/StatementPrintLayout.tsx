@@ -6,10 +6,28 @@ interface StatementPrintLayoutProps {
   statement: SavedInvoice;
 }
 
+const toNumber = (value: any): number => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const normalizeInvoiceData = (raw: any): any[] => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }) => {
   const clientName = statement.profiles ? `${statement.profiles.first_name}` : 'Client';
-  const totals = statement.totals;
-  const invoiceData = statement.invoice_data;
+  const totals = statement.totals || {};
+  const invoiceData = normalizeInvoiceData(statement.invoice_data);
 
   // Defensive checks for all needed values
   const totalMontantVerse = totals.totalMontantVerse || 0;
@@ -27,14 +45,14 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
   const transferDetails = totals.transferDetails;
 
   // Calculate totals for the "Détail des réservations" table
-  const sumPrixSejour = invoiceData.reduce((sum, row) => sum + row.prixSejour, 0);
-  const sumFraisMenage = invoiceData.reduce((sum, row) => sum + row.fraisMenage, 0);
-  const sumTaxeDeSejour = invoiceData.reduce((sum, row) => sum + row.taxeDeSejour, 0);
-  const sumMontantVerse = invoiceData.reduce((sum, row) => sum + row.montantVerse, 0);
-  const sumRevenuGenere = invoiceData.reduce((sum, row) => sum + row.revenuGenere, 0);
-  const sumCommissionHelloKeys = invoiceData.reduce((sum, row) => sum + row.commissionHelloKeys, 0);
-  const sumOriginalFraisPaiement = invoiceData.reduce((sum, row) => sum + row.originalFraisPaiement, 0);
-  const sumOtaCommission = invoiceData.reduce((sum, row) => sum + row.originalCommissionPlateforme, 0); // Corrected to use originalCommissionPlateforme
+  const sumPrixSejour = invoiceData.reduce((sum, row) => sum + toNumber(row.prixSejour), 0);
+  const sumFraisMenage = invoiceData.reduce((sum, row) => sum + toNumber(row.fraisMenage), 0);
+  const sumTaxeDeSejour = invoiceData.reduce((sum, row) => sum + toNumber(row.taxeDeSejour), 0);
+  const sumMontantVerse = invoiceData.reduce((sum, row) => sum + toNumber(row.montantVerse), 0);
+  const sumRevenuGenere = invoiceData.reduce((sum, row) => sum + toNumber(row.revenuGenere), 0);
+  const sumCommissionHelloKeys = invoiceData.reduce((sum, row) => sum + toNumber(row.commissionHelloKeys), 0);
+  const sumOriginalFraisPaiement = invoiceData.reduce((sum, row) => sum + toNumber(row.originalFraisPaiement), 0);
+  const sumOtaCommission = invoiceData.reduce((sum, row) => sum + toNumber(row.originalCommissionPlateforme), 0); // Corrected to use originalCommissionPlateforme
 
   return (
     <div id="statement-to-print" className="bg-white text-black p-8 font-sans">
@@ -139,14 +157,14 @@ const StatementPrintLayout: React.FC<StatementPrintLayoutProps> = ({ statement }
                   <TableCell className="font-medium py-2 px-1">{row.portail}</TableCell>
                   <TableCell className="py-2 px-1">{row.voyageur}</TableCell>
                   <TableCell className="py-2 px-1">{row.arrivee}</TableCell>
-                  <TableCell className="text-right py-2 px-1">{row.prixSejour.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right py-2 px-1">{row.fraisMenage.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right py-2 px-1">{row.taxeDeSejour.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right py-2 px-1">{row.originalFraisPaiement.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right py-2 px-1">{row.originalCommissionPlateforme.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right font-semibold py-2 px-1">{row.montantVerse.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right font-semibold py-2 px-1">{row.revenuGenere.toFixed(2)}€</TableCell>
-                  <TableCell className="text-right text-red-600 py-2 px-1">(-{row.commissionHelloKeys.toFixed(2)}€)</TableCell>
+                  <TableCell className="text-right py-2 px-1">{toNumber(row.prixSejour).toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{toNumber(row.fraisMenage).toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{toNumber(row.taxeDeSejour).toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{toNumber(row.originalFraisPaiement).toFixed(2)}€</TableCell>
+                  <TableCell className="text-right py-2 px-1">{toNumber(row.originalCommissionPlateforme).toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold py-2 px-1">{toNumber(row.montantVerse).toFixed(2)}€</TableCell>
+                  <TableCell className="text-right font-semibold py-2 px-1">{toNumber(row.revenuGenere).toFixed(2)}€</TableCell>
+                  <TableCell className="text-right text-red-600 py-2 px-1">(-{toNumber(row.commissionHelloKeys).toFixed(2)}€)</TableCell>
                 </TableRow>
               ))}
             </TableBody>

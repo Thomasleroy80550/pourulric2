@@ -54,6 +54,11 @@ const MobileV4Redirect: React.FC = () => {
 
   useEffect(() => {
     if (!isMobile) return;
+    // La page de connexion est publique : redirigée même sans profil chargé
+    if (pathname === "/login") {
+      navigate("/v4/login", { replace: true });
+      return;
+    }
     if (!profile) return;
     const target = getV4Target(pathname);
     if (target) navigate(target, { replace: true });

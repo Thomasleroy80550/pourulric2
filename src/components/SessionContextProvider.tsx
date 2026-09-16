@@ -72,7 +72,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         // --- Redirection Logic ---
         if (isAdmin) {
           // Admins are redirected to their dashboard from login/onboarding pages
-          if (location.pathname === '/login' || location.pathname === '/onboarding-status') {
+          if (location.pathname === '/login' || location.pathname === '/v4/login' || location.pathname === '/onboarding-status') {
             navigate('/admin');
           }
         } else {
@@ -84,7 +84,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
             }
           } else {
             // Si onboarding terminé, ne pas rediriger s'il est sur /redeem-invite ou /rejoindre-espace
-            if ((location.pathname === '/onboarding-status' || location.pathname === '/login') && !location.pathname.startsWith('/redeem-invite') && !location.pathname.startsWith('/rejoindre-espace')) {
+            if ((location.pathname === '/onboarding-status' || location.pathname === '/login' || location.pathname === '/v4/login') && !location.pathname.startsWith('/redeem-invite') && !location.pathname.startsWith('/rejoindre-espace')) {
               navigate('/');
             }
           }
@@ -113,7 +113,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       housingDismissedRef.current = false;
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
-      const publicPaths = ['/login', '/prospect-signup', '/redeem-invite', '/rejoindre-espace', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi', '/installer'];
+      const publicPaths = ['/login', '/v4/login', '/prospect-signup', '/redeem-invite', '/rejoindre-espace', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi', '/installer'];
       const isPublicPath = publicPaths.some((p) => location.pathname.startsWith(p));
 
       if (!isPublicPath) {

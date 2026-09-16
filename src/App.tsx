@@ -158,6 +158,7 @@ import MessageDetailV4 from "./pages/v4/MessageDetailV4";
 import HelpV4 from "./pages/v4/HelpV4";
 import RoomsV4 from "./pages/v4/RoomsV4";
 import SettingsV4 from "./pages/v4/SettingsV4";
+import LoginV4 from "./pages/v4/LoginV4";
 
 const queryClient = new QueryClient();
 
@@ -185,6 +186,7 @@ function App() {
                     <Routes>
                       <Route path="/login" element={<Login />} />
                       <Route path="/login-v2" element={<LoginV2 />} />
+                      <Route path="/v4/login" element={<LoginV4 />} />
                       <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
                       <Route path="/estimation" element={<EstimationPage />} />
                       <Route path="/admin" element={<AdminDashboardPage />} />

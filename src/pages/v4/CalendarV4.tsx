@@ -14,6 +14,8 @@ import {
   upcomingReservations,
   isCancelled,
   isOwnerBlock,
+  nightsInMonth,
+  guestReservations,
   formatRangeShort,
   monthLabel,
 } from "./v4-data";
@@ -36,10 +38,20 @@ const CalendarV4: React.FC = () => {
   const { profile } = useSession();
   const queryClient = useQueryClient();
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
+
+  const hasMultipleRooms = rooms.length > 1;
+  const filteredReservations = useMemo(
+    () =>
+      selectedRoomId
+        ? reservations.filter((r) => r.krossbooking_room_id === selectedRoomId)
+        : reservations,
+    [reservations, selectedRoomId],
+  );
 
   const handleReservationCreated = () => {
     clearReservationsCache();
@@ -56,7 +68,7 @@ const CalendarV4: React.FC = () => {
 
   const days = useMemo(() => {
     const map: Record<number, DayInfo> = {};
-    reservations
+    filteredReservations
       .filter((r) => !isCancelled(r))
       .forEach((r) => {
         const start = parseISO(r.check_in_date);
@@ -83,18 +95,20 @@ const CalendarV4: React.FC = () => {
         }
       });
     return map;
-  }, [reservations, year, month]);
+  }, [filteredReservations, year, month]);
 
-  // Stats du mois affiché
-  const reservedNights = Object.values(days).filter(
-    (d) => d.status === "reserved"
-  ).length;
+  // Stats du mois affiché (toutes réservations voyageurs du/des logement(s) sélectionné(s))
+  const reservedNights = guestReservations(filteredReservations).reduce(
+    (acc, r) => acc + nightsInMonth(r, year, month),
+    0
+  );
+  const roomCount = selectedRoomId ? 1 : Math.max(1, rooms.length);
   const occupancy = Math.min(
     100,
-    Math.round((reservedNights / daysInMonth) * 100)
+    Math.round((reservedNights / (daysInMonth * roomCount)) * 100)
   );
 
-  const upcoming = upcomingReservations(reservations).slice(0, 3);
+  const upcoming = upcomingReservations(filteredReservations).slice(0, 3);
 
   const cells: (number | null)[] = [
     ...Array.from({ length: offset }, () => null),
@@ -112,6 +126,37 @@ const CalendarV4: React.FC = () => {
     <V4Layout>
       <div className="space-y-5 px-4 pt-5">
         <h1 className="text-2xl font-bold text-slate-900">Calendrier</h1>
+
+        {/* Sélecteur de logement */}
+        {hasMultipleRooms && (
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button
+              onClick={() => setSelectedRoomId(null)}
+              className={cn(
+                "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
+                selectedRoomId === null
+                  ? "bg-hk-600 text-white shadow-sm"
+                  : "bg-white text-slate-600 shadow-sm"
+              )}
+            >
+              Tous
+            </button>
+            {rooms.map((room) => (
+              <button
+                key={room.room_id}
+                onClick={() => setSelectedRoomId(room.room_id)}
+                className={cn(
+                  "shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
+                  selectedRoomId === room.room_id
+                    ? "bg-hk-600 text-white shadow-sm"
+                    : "bg-white text-slate-600 shadow-sm"
+                )}
+              >
+                {room.room_name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           {/* Navigation mois */}
@@ -254,7 +299,9 @@ const CalendarV4: React.FC = () => {
             </span>
           </div>
           <p className="mt-2 text-center text-[11px] text-slate-400">
-            Touchez un séjour pour voir la réservation
+            {hasMultipleRooms && !selectedRoomId
+              ? "Vue combinée de tous vos logements — filtrez par logement ci-dessus"
+              : "Touchez un séjour pour voir la réservation"}
           </p>
         </div>
 
@@ -282,11 +329,16 @@ const CalendarV4: React.FC = () => {
                     {formatRangeShort(r.check_in_date, r.check_out_date)}
                   </p>
                   <p className="text-sm text-slate-600">{r.guest_name}</p>
-                  {!!r.n_guests && (
-                    <p className="text-xs text-slate-400">
-                      {r.n_guests} voyageur{r.n_guests > 1 ? "s" : ""}
-                    </p>
-                  )}
+                  {(() => {
+                    const parts: string[] = [];
+                    if (hasMultipleRooms && !selectedRoomId && r.property_name)
+                      parts.push(r.property_name);
+                    if (r.n_guests)
+                      parts.push(`${r.n_guests} voyageur${r.n_guests > 1 ? "s" : ""}`);
+                    return parts.length ? (
+                      <p className="text-xs text-slate-400">{parts.join(" · ")}</p>
+                    ) : null;
+                  })()}
                 </div>
                 <ChevronRight className="h-4 w-4 text-slate-300" />
               </Link>

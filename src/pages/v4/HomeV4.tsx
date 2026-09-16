@@ -131,15 +131,6 @@ const HomeV4: React.FC = () => {
       to: `/v4/reservations/${lastPast.id}`,
     });
   }
-  if (next) {
-    news.push({
-      key: "next",
-      icon: <LogIn className="h-5 w-5 text-hk-500" />,
-      label: `Prochaine arrivée · ${next.guest_name}`,
-      when: relative(next.check_in_date),
-      to: `/v4/reservations/${next.id}`,
-    });
-  }
   if (lastReview) {
     news.push({
       key: "review",

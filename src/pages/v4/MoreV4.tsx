@@ -11,6 +11,7 @@ import {
   ChevronRight,
   RefreshCw,
   Sparkle,
+  Lightbulb,
 } from "lucide-react";
 import { PWA_UPDATE_TEST_EVENT } from "@/components/PwaUpdatePrompt";
 import V4Layout from "./V4Layout";
@@ -92,6 +93,12 @@ const MoreV4: React.FC = () => {
         label: "Contacter mon équipe",
         sub: "Une question ? Nous sommes là !",
         to: "/v4/contact",
+      },
+      {
+        icon: Lightbulb,
+        label: "Boîte à idées",
+        sub: "Proposez, votez : on développe !",
+        to: "/v4/idees",
       },
     ],
     [

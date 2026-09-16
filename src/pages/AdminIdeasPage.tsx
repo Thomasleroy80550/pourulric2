@@ -2,6 +2,7 @@ import React from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllIdeas, updateIdeaStatus, deleteIdea, AdminIdea } from '@/lib/admin-api';
+import { getIdeaVotes } from '@/lib/ideas-api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -30,6 +31,17 @@ const AdminIdeasPage: React.FC = () => {
     queryKey: ['allIdeas'],
     queryFn: getAllIdeas,
   });
+  const { data: votes } = useQuery({
+    queryKey: ['idea-votes'],
+    queryFn: getIdeaVotes,
+  });
+  const voteCounts = new Map<string, number>();
+  (votes ?? []).forEach((v) => {
+    voteCounts.set(v.idea_id, (voteCounts.get(v.idea_id) ?? 0) + 1);
+  });
+  const sortedIdeas = [...(ideas ?? [])].sort(
+    (a, b) => (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0)
+  );
 
   const statusUpdateMutation = useMutation({
     mutationFn: ({ ideaId, status }: { ideaId: string, status: string }) => updateIdeaStatus(ideaId, status),
@@ -84,6 +96,7 @@ const AdminIdeasPage: React.FC = () => {
               <TableRow>
                 <TableHead>Titre</TableHead>
                 <TableHead>Utilisateur</TableHead>
+                <TableHead>Votes</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -95,15 +108,17 @@ const AdminIdeasPage: React.FC = () => {
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-9 w-40" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
                   </TableRow>
                 ))
-              ) : ideas?.map((idea) => (
+              ) : sortedIdeas.map((idea) => (
                 <TableRow key={idea.id}>
                   <TableCell className="font-medium">{idea.title}</TableCell>
                   <TableCell>{idea.profiles ? `${idea.profiles.first_name} ${idea.profiles.last_name}` : 'Utilisateur inconnu'}</TableCell>
+                  <TableCell className="font-semibold">{voteCounts.get(idea.id) ?? 0}</TableCell>
                   <TableCell>{format(new Date(idea.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
                   <TableCell>
                     <Select

@@ -2,9 +2,10 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, KeyRound, Wifi, Home } from "lucide-react";
 import V4Layout from "./V4Layout";
+import { PropertyTile } from "./V4Thumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
-import { PROPERTY_IMG, useV4Rooms } from "./v4-data";
+import { useV4Rooms } from "./v4-data";
 
 const RoomsV4: React.FC = () => {
   const navigate = useNavigate();
@@ -41,10 +42,9 @@ const RoomsV4: React.FC = () => {
 
         {(rooms ?? []).map((room) => (
           <div key={room.id} className="overflow-hidden rounded-2xl bg-white shadow-sm">
-            <img
-              src={PROPERTY_IMG}
-              alt=""
-              className="h-36 w-full object-cover"
+            <PropertyTile
+              className="h-28 w-full rounded-none"
+              iconClassName="h-10 w-10"
             />
             <div className="space-y-3 p-4">
               <div>

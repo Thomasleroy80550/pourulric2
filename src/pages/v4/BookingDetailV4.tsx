@@ -4,9 +4,9 @@ import { ChevronLeft, CalendarDays, Users, Info } from "lucide-react";
 import { parseISO, isValid } from "date-fns";
 import V4Layout from "./V4Layout";
 import ChannelBadge from "./ChannelBadge";
+import { GuestAvatar } from "./V4Thumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  PROPERTY_IMG,
   useV4Reservations,
   channelOf,
   amountOf,
@@ -29,9 +29,17 @@ const BookingDetailV4: React.FC = () => {
   return (
     <V4Layout hideNav>
       <div className="pb-8">
-        {/* Photo + header */}
+        {/* Bandeau + header */}
         <div className="relative">
-          <img src={PROPERTY_IMG} alt="" className="h-52 w-full object-cover" />
+          <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700">
+            {booking && (
+              <GuestAvatar
+                name={booking.guest_name}
+                light
+                className="h-20 w-20 rounded-full text-3xl"
+              />
+            )}
+          </div>
           <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
             <button
               onClick={() => navigate(-1)}

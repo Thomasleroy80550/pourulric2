@@ -4,8 +4,8 @@ import { ChevronRight } from "lucide-react";
 import V4Layout from "./V4Layout";
 import ChannelBadge from "./ChannelBadge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GuestAvatar } from "./V4Thumb";
 import {
-  PROPERTY_IMG,
   useV4Reservations,
   upcomingReservations,
   pastReservations,
@@ -73,10 +73,9 @@ const BookingsV4: React.FC = () => {
                 to={`/v4/reservations/${b.id}`}
                 className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
               >
-                <img
-                  src={PROPERTY_IMG}
-                  alt=""
-                  className="h-16 w-16 rounded-xl object-cover"
+                <GuestAvatar
+                  name={b.guest_name}
+                  className="h-16 w-16 text-lg"
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-900">

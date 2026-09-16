@@ -4,10 +4,10 @@ import { Bell, ChevronDown, ChevronRight, Star, CalendarCheck, LogIn } from "luc
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
 import V4Layout from "./V4Layout";
+import { GuestAvatar, PropertyTile } from "./V4Thumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
 import {
-  PROPERTY_IMG,
   useV4Reservations,
   useV4Reviews,
   useV4Notifications,
@@ -118,11 +118,7 @@ const HomeV4: React.FC = () => {
 
         {/* Logement */}
         <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm">
-          <img
-            src={PROPERTY_IMG}
-            alt=""
-            className="h-12 w-16 rounded-xl object-cover"
-          />
+          <PropertyTile className="h-12 w-16" iconClassName="h-6 w-6" />
           <div className="flex-1">
             {isLoading ? (
               <Skeleton className="h-5 w-32" />
@@ -189,10 +185,10 @@ const HomeV4: React.FC = () => {
                   </p>
                 )}
               </div>
-              <img
-                src={PROPERTY_IMG}
-                alt=""
-                className="h-20 w-24 rounded-xl object-cover"
+              <GuestAvatar
+                name={next.guest_name}
+                light
+                className="h-20 w-24 text-2xl"
               />
             </div>
           </Link>

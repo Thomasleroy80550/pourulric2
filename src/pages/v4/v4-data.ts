@@ -13,8 +13,6 @@ import { getNotifications } from "@/lib/notifications-api";
 import { getTickets } from "@/lib/tickets-api";
 import { getPublishedFaqs } from "@/lib/faq-api";
 
-export const PROPERTY_IMG = "/assets/v4-property.png";
-
 export type V4Channel = "airbnb" | "booking" | "direct" | "other";
 
 // ---------- Hooks ----------

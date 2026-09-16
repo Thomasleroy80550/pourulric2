@@ -8,8 +8,8 @@ import OwnerReservationDialog from "@/components/OwnerReservationDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
 import { clearReservationsCache } from "@/lib/krossbooking";
+import { GuestAvatar } from "./V4Thumb";
 import {
-  PROPERTY_IMG,
   useV4Reservations,
   upcomingReservations,
   isCancelled,
@@ -167,11 +167,7 @@ const CalendarV4: React.FC = () => {
                 to={`/v4/reservations/${r.id}`}
                 className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
               >
-                <img
-                  src={PROPERTY_IMG}
-                  alt=""
-                  className="h-12 w-14 rounded-xl object-cover"
-                />
+                <GuestAvatar name={r.guest_name} className="h-12 w-14 text-base" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900">
                     {formatRangeShort(r.check_in_date, r.check_out_date)}

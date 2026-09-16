@@ -10,7 +10,9 @@ import {
   LogOut,
   ChevronRight,
   FlaskConical,
+  RefreshCw,
 } from "lucide-react";
+import { PWA_UPDATE_TEST_EVENT } from "@/components/PwaUpdatePrompt";
 import V4Layout from "./V4Layout";
 import PushSettingV4 from "./PushSettingV4";
 import { Switch } from "@/components/ui/switch";
@@ -164,6 +166,25 @@ const MoreV4: React.FC = () => {
                 aria-label="Activer le mode mock"
               />
             </div>
+            <button
+              onClick={() =>
+                window.dispatchEvent(new Event(PWA_UPDATE_TEST_EVENT))
+              }
+              className="flex w-full items-center gap-3 border-t border-slate-100 px-4 py-3 text-left"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <RefreshCw size={18} />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-900">
+                  Tester le popup de mise à jour
+                </p>
+                <p className="text-xs text-slate-400">
+                  Affiche le panneau sans lancer de vraie mise à jour
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-300" />
+            </button>
           </div>
         )}
 

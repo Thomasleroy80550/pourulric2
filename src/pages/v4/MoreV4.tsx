@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -9,18 +9,28 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
+  FlaskConical,
 } from "lucide-react";
 import V4Layout from "./V4Layout";
 import PushSettingV4 from "./PushSettingV4";
+import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/components/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useV4Rooms, useV4Reviews } from "./v4-data";
+import { isV4MockEnabled, setV4MockEnabled } from "./v4-mock";
 
 const MoreV4: React.FC = () => {
   const navigate = useNavigate();
   const { profile } = useSession();
   const { data: rooms } = useV4Rooms();
   const { data: reviews } = useV4Reviews();
+  const isAdmin = profile?.role === "admin";
+  const [mockOn, setMockOn] = useState(isV4MockEnabled());
+
+  const handleMockToggle = (checked: boolean) => {
+    setV4MockEnabled(checked);
+    setMockOn(checked);
+  };
 
   const firstName = profile?.first_name ?? "";
   const lastName = profile?.last_name ?? "";
@@ -134,6 +144,28 @@ const MoreV4: React.FC = () => {
 
         {/* Notifications push */}
         <PushSettingV4 />
+
+        {/* Mode Mock (admin uniquement) */}
+        {isAdmin && (
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-amber-200">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <FlaskConical size={18} />
+              </span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-slate-900">Mock</p>
+                <p className="text-xs text-slate-400">
+                  Affiche des données fictives sur la V4 (pour les captures d'écran)
+                </p>
+              </div>
+              <Switch
+                checked={mockOn}
+                onCheckedChange={handleMockToggle}
+                aria-label="Activer le mode mock"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Déconnexion */}
         <button

@@ -9,12 +9,9 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
-  RefreshCw,
-  Sparkle,
   Lightbulb,
   Headset,
 } from "lucide-react";
-import { PWA_UPDATE_TEST_EVENT } from "@/components/PwaUpdatePrompt";
 import V4Layout from "./V4Layout";
 import PushSettingV4 from "./PushSettingV4";
 import RateAppV4 from "./RateAppV4";
@@ -27,33 +24,6 @@ const MoreV4: React.FC = () => {
   const { profile } = useSession();
   const { data: rooms } = useV4Rooms();
   const { data: reviews } = useV4Reviews();
-  const isAdmin = profile?.role === "admin";
-
-  // Rejoue le splash screen (les styles sont déjà présents dans index.html)
-  const handleTestSplash = () => {
-    if (document.getElementById("splash-screen")) return;
-    const taglines: string[] = (window as any).__splashTaglines ?? [
-      "Votre logement entre de bonnes mains",
-      "La gestion locative, sans effort",
-      "Vos revenus locatifs, optimisés",
-      "Louez plus, sans y penser",
-      "Votre conciergerie de confiance",
-      "Des voyageurs heureux, un logement choyé",
-    ];
-    const tagline = taglines[Math.floor(Math.random() * taglines.length)];
-    const el = document.createElement("div");
-    el.id = "splash-screen";
-    el.innerHTML =
-      '<div class="splash-logo-wrap"><img src="/icons/pwa-icon.png" alt="Hello Keys" class="splash-logo" /></div>' +
-      '<p class="splash-tagline"></p>' +
-      '<div class="splash-dots"><span></span><span></span><span></span></div>';
-    (el.querySelector(".splash-tagline") as HTMLElement).textContent = tagline;
-    document.body.appendChild(el);
-    setTimeout(() => {
-      el.style.opacity = "0";
-      setTimeout(() => el.remove(), 450);
-    }, 2200);
-  };
 
   const firstName = profile?.first_name ?? "";
   const lastName = profile?.last_name ?? "";
@@ -182,48 +152,6 @@ const MoreV4: React.FC = () => {
 
         {/* Noter l'application */}
         <RateAppV4 />
-
-        {/* Outils de test (admin uniquement) */}
-        {isAdmin && (
-          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-amber-200">
-            <button
-              onClick={() =>
-                window.dispatchEvent(new Event(PWA_UPDATE_TEST_EVENT))
-              }
-              className="flex w-full items-center gap-3 px-4 py-3 text-left"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <RefreshCw size={18} />
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">
-                  Tester le popup de mise à jour
-                </p>
-                <p className="text-xs text-slate-400">
-                  Affiche le panneau sans lancer de vraie mise à jour
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-300" />
-            </button>
-            <button
-              onClick={handleTestSplash}
-              className="flex w-full items-center gap-3 border-t border-slate-100 px-4 py-3 text-left"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <Sparkle size={18} />
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">
-                  Tester le splash screen
-                </p>
-                <p className="text-xs text-slate-400">
-                  Rejoue l'animation de démarrage (2 secondes)
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-300" />
-            </button>
-          </div>
-        )}
 
         {/* Déconnexion */}
         <button

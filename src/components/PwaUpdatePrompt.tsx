@@ -4,13 +4,9 @@ import React, { useEffect, useState } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { Check, PartyPopper, RefreshCw } from "lucide-react";
 
-/** Événement custom permettant de tester visuellement le popup (admin). */
-export const PWA_UPDATE_TEST_EVENT = "pwa-update-prompt-test";
-
 type Phase = "idle" | "updating" | "done";
 
 const PwaUpdatePrompt: React.FC = () => {
-  const [testMode, setTestMode] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
 
@@ -28,21 +24,10 @@ const PwaUpdatePrompt: React.FC = () => {
     },
   });
 
-  useEffect(() => {
-    const openTest = () => {
-      setPhase("idle");
-      setProgress(0);
-      setTestMode(true);
-    };
-    window.addEventListener(PWA_UPDATE_TEST_EVENT, openTest);
-    return () => window.removeEventListener(PWA_UPDATE_TEST_EVENT, openTest);
-  }, []);
-
-  const open = needRefresh || testMode;
+  const open = needRefresh;
 
   const handleDismiss = () => {
     if (phase !== "idle") return;
-    setTestMode(false);
     setNeedRefresh(false);
   };
 
@@ -50,20 +35,6 @@ const PwaUpdatePrompt: React.FC = () => {
     setPhase("updating");
     // Lance la barre de progression (effet "préparation de la commande")
     requestAnimationFrame(() => setProgress(90));
-
-    if (testMode && !needRefresh) {
-      // Mode test : on simule l'installation puis la confirmation.
-      setTimeout(() => {
-        setProgress(100);
-        setPhase("done");
-      }, 2200);
-      setTimeout(() => {
-        setTestMode(false);
-        setPhase("idle");
-        setProgress(0);
-      }, 3800);
-      return;
-    }
 
     // Vide tous les caches (Cache Storage) pour éviter de servir l'ancienne version
     try {

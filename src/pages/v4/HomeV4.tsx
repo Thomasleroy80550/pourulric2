@@ -19,6 +19,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import V4Layout from "./V4Layout";
+import { RateAppPromptV4 } from "./RateAppV4";
 import { GuestAvatar } from "./V4Thumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
@@ -304,6 +305,9 @@ const HomeV4: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Popup de notation (une seule fois par utilisateur) */}
+      <RateAppPromptV4 />
     </V4Layout>
   );
 };

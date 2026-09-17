@@ -3,6 +3,8 @@ import AdminLayout from '@/components/AdminLayout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllIdeas, updateIdeaStatus, deleteIdea, AdminIdea } from '@/lib/admin-api';
 import { getIdeaVotes } from '@/lib/ideas-api';
+import { adminGetAppRatings } from '@/lib/app-rating-api';
+import { Star } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -42,6 +44,15 @@ const AdminIdeasPage: React.FC = () => {
   const sortedIdeas = [...(ideas ?? [])].sort(
     (a, b) => (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0)
   );
+
+  const { data: appRatings } = useQuery({
+    queryKey: ['app-ratings'],
+    queryFn: adminGetAppRatings,
+  });
+  const avgRating =
+    appRatings && appRatings.length > 0
+      ? Math.round((appRatings.reduce((a, r) => a + r.rating, 0) / appRatings.length) * 10) / 10
+      : null;
 
   const statusUpdateMutation = useMutation({
     mutationFn: ({ ideaId, status }: { ideaId: string, status: string }) => updateIdeaStatus(ideaId, status),
@@ -87,7 +98,44 @@ const AdminIdeasPage: React.FC = () => {
     <AdminLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Gestion des Idées</h1>
-        
+
+        {/* Avis sur l'application mobile */}
+        <div className="mb-6 rounded-lg bg-white dark:bg-gray-800 shadow-md p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+              Avis sur l'application
+            </h2>
+            {avgRating !== null && (
+              <p className="text-sm font-semibold">
+                {avgRating.toLocaleString('fr-FR')}/5 · {appRatings!.length} avis
+              </p>
+            )}
+          </div>
+          {!appRatings || appRatings.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">Aucun avis pour le moment.</p>
+          ) : (
+            <div className="mt-3 space-y-2 max-h-64 overflow-y-auto">
+              {appRatings.map((r) => (
+                <div key={r.user_id} className="rounded-md border border-slate-100 dark:border-gray-700 px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">
+                      {r.profiles ? `${r.profiles.first_name ?? ''} ${r.profiles.last_name ?? ''}`.trim() || 'Client' : 'Client'}
+                    </p>
+                    <span className="flex items-center gap-1 text-sm font-semibold text-amber-500">
+                      {r.rating} <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    </span>
+                  </div>
+                  {r.comment && <p className="mt-1 text-sm text-muted-foreground">{r.comment}</p>}
+                  <p className="mt-1 text-xs text-slate-400">
+                    {format(new Date(r.updated_at), 'dd/MM/yyyy', { locale: fr })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {isError && <p className="text-red-500">Erreur lors du chargement des idées: { (error as Error).message }</p>}
         
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">

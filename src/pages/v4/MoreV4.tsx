@@ -17,6 +17,7 @@ import {
 import { PWA_UPDATE_TEST_EVENT } from "@/components/PwaUpdatePrompt";
 import V4Layout from "./V4Layout";
 import PushSettingV4 from "./PushSettingV4";
+import RateAppV4 from "./RateAppV4";
 import { useSession } from "@/components/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useV4Rooms, useV4Reviews } from "./v4-data";
@@ -178,6 +179,9 @@ const MoreV4: React.FC = () => {
 
         {/* Notifications push */}
         <PushSettingV4 />
+
+        {/* Noter l'application */}
+        <RateAppV4 />
 
         {/* Outils de test (admin uniquement) */}
         {isAdmin && (

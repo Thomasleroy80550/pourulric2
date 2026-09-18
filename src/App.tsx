@@ -26,6 +26,7 @@ import AdminCommissionExplanationPage from "./pages/AdminCommissionExplanationPa
 import AdminCreatePennylaneInvoicePage from "./pages/AdminCreatePennylaneInvoicePage";
 import AdminStatementsPage from "./pages/AdminStatementsPage";
 import AdminLeaderboardPage from "./pages/AdminLeaderboardPage";
+import AdminAgencyComparisonPage from "./pages/AdminAgencyComparisonPage";
 import AdminTransferSummaryPage from "./pages/AdminTransferSummaryPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminHousingRegistrationsPage from "./pages/AdminHousingRegistrationsPage";
@@ -200,6 +201,7 @@ function App() {
                       <Route path="/admin/create-pennylane-invoice" element={<AdminCreatePennylaneInvoicePage />} />
                       <Route path="/admin/statements" element={<AdminStatementsPage />} />
                       <Route path="/admin/leaderboard" element={<AdminLeaderboardPage />} />
+                      <Route path="/admin/agency-comparison" element={<AdminAgencyComparisonPage />} />
                       <Route path="/admin/transfer-summary" element={<AdminTransferSummaryPage />} />
                       <Route path="/admin/users" element={<AdminUsersPage />} />
                       <Route path="/admin/housing-registrations" element={<AdminHousingRegistrationsPage />} />

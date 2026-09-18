@@ -44,20 +44,23 @@ const aggregateStatement = (statement: SavedInvoice) => {
   const ca = sumOf('ca') || sumOf('originalTotalPaye') || montantVerse;
   const nuits = Number(totals.totalNuits) || sumOf('nuits');
   const reservations = lines.filter((r) => r && (r.voyageur || r.arrivee)).length;
+  const totalFacture = Number(totals.totalFacture) || 0;
 
   return {
     montantVerse,
     ca,
     commission,
+    totalFacture,
     nuits,
     reservations,
     netProprio: montantVerse - taxeDeSejour - fraisMenage - commission,
   };
 };
 
-type MetricKey = 'montantVerse' | 'ca' | 'commission' | 'netProprio' | 'nuits' | 'reservations';
+type MetricKey = 'montantVerse' | 'ca' | 'commission' | 'totalFacture' | 'netProprio' | 'nuits' | 'reservations';
 
 const METRICS: { key: MetricKey; label: string; isMoney: boolean }[] = [
+  { key: 'totalFacture', label: 'Montant facturé (par nous)', isMoney: true },
   { key: 'montantVerse', label: 'Montant versé', isMoney: true },
   { key: 'ca', label: 'CA (payé par les voyageurs)', isMoney: true },
   { key: 'commission', label: 'Commission conciergerie', isMoney: true },
@@ -130,7 +133,7 @@ const AdminAgencyComparisonPage: React.FC = () => {
       const agg = aggregateStatement(statement);
       const entry = byAgency.get(agency) || {
         agency, clients: 0, statements: 0, montantVerse: 0, ca: 0,
-        commission: 0, netProprio: 0, nuits: 0, reservations: 0,
+        commission: 0, totalFacture: 0, netProprio: 0, nuits: 0, reservations: 0,
         users: new Set<string>(),
       };
       entry.users.add(statement.user_id);
@@ -138,6 +141,7 @@ const AdminAgencyComparisonPage: React.FC = () => {
       entry.montantVerse += agg.montantVerse;
       entry.ca += agg.ca;
       entry.commission += agg.commission;
+      entry.totalFacture += agg.totalFacture;
       entry.netProprio += agg.netProprio;
       entry.nuits += agg.nuits;
       entry.reservations += agg.reservations;
@@ -184,13 +188,14 @@ const AdminAgencyComparisonPage: React.FC = () => {
       montantVerse: acc.montantVerse + r.montantVerse,
       ca: acc.ca + r.ca,
       commission: acc.commission + r.commission,
+      totalFacture: acc.totalFacture + r.totalFacture,
       netProprio: acc.netProprio + r.netProprio,
       nuits: acc.nuits + r.nuits,
       reservations: acc.reservations + r.reservations,
       clients: acc.clients + r.clients,
       statements: acc.statements + r.statements,
     }),
-    { montantVerse: 0, ca: 0, commission: 0, netProprio: 0, nuits: 0, reservations: 0, clients: 0, statements: 0 }
+    { montantVerse: 0, ca: 0, commission: 0, totalFacture: 0, netProprio: 0, nuits: 0, reservations: 0, clients: 0, statements: 0 }
   );
 
   const handleExportPdf = () => {
@@ -326,6 +331,7 @@ const AdminAgencyComparisonPage: React.FC = () => {
                       <div className="flex justify-between"><span className="text-muted-foreground">Montant versé</span><span className="tabular-nums font-medium">{fmt(a.montantVerse)}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">CA voyageurs</span><span className="tabular-nums font-medium">{fmt(a.ca)}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Commission</span><span className="tabular-nums font-medium">{fmt(a.commission)}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Montant facturé</span><span className="tabular-nums font-medium">{fmt(a.totalFacture)}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Net propriétaires</span><span className="tabular-nums font-medium">{fmt(a.netProprio)}</span></div>
                       <div className="flex justify-between"><span className="text-muted-foreground">Nuits / Résa</span><span className="tabular-nums font-medium">{Math.round(a.nuits)} / {a.reservations}</span></div>
                     </div>
@@ -353,6 +359,7 @@ const AdminAgencyComparisonPage: React.FC = () => {
                         <TableHead className="text-right">Montant versé</TableHead>
                         <TableHead className="text-right">CA voyageurs</TableHead>
                         <TableHead className="text-right">Commission</TableHead>
+                        <TableHead className="text-right">Montant facturé</TableHead>
                         <TableHead className="text-right">Net proprio</TableHead>
                         <TableHead className="text-right">Nuits</TableHead>
                         <TableHead className="text-right">Résa</TableHead>
@@ -367,6 +374,7 @@ const AdminAgencyComparisonPage: React.FC = () => {
                           <TableCell className="text-right tabular-nums">{fmt(r.montantVerse)}</TableCell>
                           <TableCell className="text-right tabular-nums">{fmt(r.ca)}</TableCell>
                           <TableCell className="text-right tabular-nums">{fmt(r.commission)}</TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">{fmt(r.totalFacture)}</TableCell>
                           <TableCell className="text-right font-semibold tabular-nums">{fmt(r.netProprio)}</TableCell>
                           <TableCell className="text-right tabular-nums">{Math.round(r.nuits)}</TableCell>
                           <TableCell className="text-right tabular-nums">{r.reservations}</TableCell>
@@ -381,6 +389,7 @@ const AdminAgencyComparisonPage: React.FC = () => {
                         <TableCell className="text-right tabular-nums">{fmt(totals.montantVerse)}</TableCell>
                         <TableCell className="text-right tabular-nums">{fmt(totals.ca)}</TableCell>
                         <TableCell className="text-right tabular-nums">{fmt(totals.commission)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmt(totals.totalFacture)}</TableCell>
                         <TableCell className="text-right tabular-nums">{fmt(totals.netProprio)}</TableCell>
                         <TableCell className="text-right tabular-nums">{Math.round(totals.nuits)}</TableCell>
                         <TableCell className="text-right tabular-nums">{totals.reservations}</TableCell>

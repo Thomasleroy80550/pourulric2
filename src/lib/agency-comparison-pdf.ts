@@ -8,6 +8,7 @@ export interface AgencyComparisonRow {
   montantVerse: number;
   ca: number;
   commission: number;
+  totalFacture: number;
   netProprio: number;
   nuits: number;
   reservations: number;
@@ -61,7 +62,7 @@ export const generateAgencyComparisonPdf = (params: {
     startY: 36,
     head: [[
       'Agence', 'Clients', 'Relevés', 'Montant versé', 'CA voyageurs',
-      'Commission', 'Net propriétaires', 'Nuits', 'Réservations',
+      'Commission', 'Montant facturé', 'Net propriétaires', 'Nuits', 'Réservations',
     ]],
     body: rows.map((r) => [
       r.agency,
@@ -70,6 +71,7 @@ export const generateAgencyComparisonPdf = (params: {
       fmtEur(r.montantVerse),
       fmtEur(r.ca),
       fmtEur(r.commission),
+      fmtEur(r.totalFacture),
       fmtEur(r.netProprio),
       String(Math.round(r.nuits)),
       String(r.reservations),
@@ -81,6 +83,7 @@ export const generateAgencyComparisonPdf = (params: {
       fmtEur(rows.reduce((a, r) => a + r.montantVerse, 0)),
       fmtEur(rows.reduce((a, r) => a + r.ca, 0)),
       fmtEur(rows.reduce((a, r) => a + r.commission, 0)),
+      fmtEur(rows.reduce((a, r) => a + r.totalFacture, 0)),
       fmtEur(rows.reduce((a, r) => a + r.netProprio, 0)),
       String(Math.round(rows.reduce((a, r) => a + r.nuits, 0))),
       String(rows.reduce((a, r) => a + r.reservations, 0)),
@@ -91,7 +94,7 @@ export const generateAgencyComparisonPdf = (params: {
     columnStyles: {
       1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' },
       4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' },
-      7: { halign: 'right' }, 8: { halign: 'right' },
+      7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' },
     },
   });
 

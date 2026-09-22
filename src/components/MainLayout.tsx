@@ -68,6 +68,10 @@ import SnowfallOverlay from './SnowfallOverlay';
 import { Badge } from '@/components/ui/badge';
 import SharedSpaceBanner from './SharedSpaceBanner';
 import SpaceSwitcher from './SpaceSwitcher';
+import DesktopTopNav from './DesktopTopNav';
+import { PanelLeft } from 'lucide-react';
+
+const SIMPLE_NAV_KEY = 'hk_desktop_simple_nav';
 
 const housekeepingSidebarSections = [
   {
@@ -306,6 +310,17 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [migrationNotice, setMigrationNotice] = useState<{ isVisible: boolean; message: string } | null>(null);
   const hasImportant = true; // Support email + période Bilan = infos importantes
 
+  // Menu simplifié sur PC (inspiré de la V4 mobile) — activé par défaut, bascule mémorisée
+  const [simpleNav, setSimpleNav] = useState(() => localStorage.getItem(SIMPLE_NAV_KEY) !== 'off');
+  const toggleSimpleNav = () => {
+    setSimpleNav((prev) => {
+      localStorage.setItem(SIMPLE_NAV_KEY, prev ? 'off' : 'on');
+      return !prev;
+    });
+  };
+  const useSimpleDesktopNav =
+    !isMobile && simpleNav && profile?.role !== 'housekeeper' && profile?.role !== 'accountant';
+
   useEffect(() => {
     const impersonationSession = localStorage.getItem('admin_impersonation_session');
     setIsImpersonating(!!impersonationSession);
@@ -436,7 +451,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
-      {!isMobile && (
+      {!isMobile && !useSimpleDesktopNav && (
               <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
                 <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} announcementUnread={announcementUnread} hasImportant={hasImportant} navigate={navigate} />
               </aside>
@@ -445,7 +460,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <header className="bg-background border-b h-16 flex items-center px-3 sm:px-6 justify-between">
-            <div className="w-1/3 md:w-auto">
+            <div className="w-1/3 md:w-auto md:flex-1 md:min-w-0">
               {isMobile && (
                 <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                   <SheetTrigger asChild>
@@ -457,6 +472,22 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                                       <SidebarContent onLinkClick={handleLinkClick} isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} announcementUnread={announcementUnread} hasImportant={hasImportant} navigate={navigate} />
                                     </SheetContent>
                 </Sheet>
+              )}
+              {useSimpleDesktopNav && (
+                <div className="flex items-center gap-4 min-w-0">
+                  <img
+                    src="/logo.png"
+                    alt="Hello Keys Logo"
+                    className="h-8 w-auto shrink-0 cursor-pointer"
+                    onClick={() => navigate('/')}
+                  />
+                  <DesktopTopNav
+                    isPaymentSuspended={profile?.is_payment_suspended || false}
+                    isAdmin={profile?.role === 'admin'}
+                    unreadCount={unreadCount}
+                    announcementUnread={announcementUnread}
+                  />
+                </div>
               )}
             </div>
 
@@ -475,6 +506,16 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     Retour admin
                   </Button>
                 </div>
+              )}
+              {!isMobile && profile?.role !== 'housekeeper' && profile?.role !== 'accountant' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleSimpleNav}
+                  title={simpleNav ? 'Revenir au menu classique (sidebar)' : 'Essayer le menu simplifié'}
+                >
+                  <PanelLeft className="h-5 w-5" />
+                </Button>
               )}
               <Button variant="ghost" size="icon" onClick={() => setIsAICopilotDialogOpen(true)}>
                 <Sparkles className="h-5 w-5 text-blue-500" />

@@ -17,9 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { KeyRound, Search, Trash2, Loader2, MapPin } from "lucide-react";
+import { KeyRound, Search, Trash2, Loader2, MapPin, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import KeyBoardAutoAssignDialog from "@/components/admin/KeyBoardAutoAssignDialog";
 import {
   KEY_BOARD_AGENCIES,
   KEY_BOARD_SLOT_COUNT,
@@ -41,6 +42,7 @@ const AdminKeyBoardPage: React.FC = () => {
   const [agency, setAgency] = useState<KeyBoardAgency>("baie_de_somme");
   const [search, setSearch] = useState("");
   const [editingSlot, setEditingSlot] = useState<number | null>(null);
+  const [autoOpen, setAutoOpen] = useState(false);
 
   const { data: slots = [], isLoading } = useQuery({
     queryKey: ["key-board-slots", agency],
@@ -103,10 +105,17 @@ const AdminKeyBoardPage: React.FC = () => {
               {KEY_BOARD_SLOT_COUNT}.
             </p>
           </div>
-          <Badge variant="secondary" className="w-fit">
-            {occupiedCount} / {KEY_BOARD_SLOT_COUNT} emplacements occupés
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="w-fit">
+              {occupiedCount} / {KEY_BOARD_SLOT_COUNT} emplacements occupés
+            </Badge>
+            <Button size="sm" onClick={() => setAutoOpen(true)}>
+              <Wand2 className="mr-2 h-4 w-4" /> Attribution automatique
+            </Button>
+          </div>
         </div>
+
+        <KeyBoardAutoAssignDialog open={autoOpen} onClose={() => setAutoOpen(false)} />
 
         <Tabs value={agency} onValueChange={(v) => { setAgency(v as KeyBoardAgency); setSearch(""); }}>
           <TabsList>

@@ -48,7 +48,8 @@ import {
   ClipboardList,
   Trophy,
   BellRing,
-  Building2
+  Building2,
+  KeyRound
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,7 @@ const adminNavigationCategories = [
       { name: 'N° Enregistrement', href: '/admin/housing-registrations', icon: ClipboardList, description: "Numéros d'enregistrement des logements communiqués par les clients." },
       { name: 'Accès délégués', href: '/admin/delegated-access', icon: ShieldCheck, description: 'Visualiser les accès délégués accordés par les propriétaires.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },
+      { name: 'Tableau à clés', href: '/admin/key-board', icon: KeyRound, description: 'Retrouver et classer les clés des logements par agence.' },
       { name: 'Config iCal', href: '/admin/ical-config', icon: CalendarDays, description: 'Configurer et importer les flux iCal des logements.' },
       { name: 'Blanchisserie', href: '/admin/laundry', icon: Package, description: 'Calculer les commandes de linge à partir des réservations.' },
 

@@ -2,8 +2,9 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { KEY_BOARD_SLOT_COUNT, type KeyBoardSlot } from "./key-board-api";
 
-const PAGE_W = 210;
-const PAGE_H = 297;
+// A4 paysage
+const PAGE_W = 297;
+const PAGE_H = 210;
 const MARGIN = 10;
 
 function normalize(s: string) {
@@ -25,7 +26,7 @@ function drawHeader(doc: jsPDF, title: string, subtitle: string) {
 
 function drawGrid(doc: jsPDF, slots: KeyBoardSlot[]) {
   const byNumber = new Map(slots.map((s) => [s.slot_number, s]));
-  const cols = 6;
+  const cols = 10;
   const rows = Math.ceil(KEY_BOARD_SLOT_COUNT / cols);
   const gap = 2;
   const top = 30;
@@ -72,7 +73,7 @@ function drawGrid(doc: jsPDF, slots: KeyBoardSlot[]) {
 }
 
 export function generateKeyBoardPdf(agencyLabel: string, slots: KeyBoardSlot[]) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
   const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const subtitle = `Agence ${agencyLabel} · ${slots.length} / ${KEY_BOARD_SLOT_COUNT} emplacements occupés · édité le ${dateStr}`;
 
@@ -91,10 +92,10 @@ export function generateKeyBoardPdf(agencyLabel: string, slots: KeyBoardSlot[]) 
     styles: { fontSize: 8.5, cellPadding: 1.6 },
     headStyles: { fillColor: [30, 60, 130], textColor: 255, fontStyle: "bold" },
     columnStyles: {
-      0: { cellWidth: 60, fontStyle: "bold" },
-      1: { cellWidth: 12, halign: "center", fontStyle: "bold" },
-      3: { cellWidth: 12, halign: "center" },
-      4: { cellWidth: 14, halign: "center" },
+      0: { cellWidth: 90, fontStyle: "bold" },
+      1: { cellWidth: 16, halign: "center", fontStyle: "bold" },
+      3: { cellWidth: 16, halign: "center" },
+      4: { cellWidth: 18, halign: "center" },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
     margin: { left: MARGIN, right: MARGIN },
@@ -120,10 +121,10 @@ export function generateKeyBoardPdf(agencyLabel: string, slots: KeyBoardSlot[]) 
     styles: { fontSize: 8, cellPadding: 1.4 },
     headStyles: { fillColor: [30, 60, 130], textColor: 255, fontStyle: "bold" },
     columnStyles: {
-      0: { cellWidth: 10, halign: "center", fontStyle: "bold" },
-      1: { cellWidth: 48 },
-      3: { cellWidth: 11, halign: "center" },
-      4: { cellWidth: 14, halign: "center" },
+      0: { cellWidth: 12, halign: "center", fontStyle: "bold" },
+      1: { cellWidth: 70 },
+      3: { cellWidth: 14, halign: "center" },
+      4: { cellWidth: 18, halign: "center" },
     },
     didParseCell: (data) => {
       if (data.section === "body" && data.row.raw && (data.row.raw as string[])[1] === "— libre —") {

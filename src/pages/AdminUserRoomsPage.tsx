@@ -31,6 +31,7 @@ import EditUserRoomDialog from '@/components/EditUserRoomDialog';
 import AdminRoomManagementDialog from '@/components/AdminRoomManagementDialog';
 import AdminRoomQrExportDialog from '@/components/admin/AdminRoomQrExportDialog';
 import { exportAllLabelsPdf } from '@/lib/qr-label-pdf';
+import { setRoomHasKeybox } from '@/lib/key-board-api';
 
 const AdminUserRoomsPage: React.FC = () => {
   const { data: userRooms, isLoading, error, refetch } = useQuery<AdminUserRoom[]>({
@@ -130,6 +131,20 @@ const AdminUserRoomsPage: React.FC = () => {
   const handleEdit = (room: AdminUserRoom) => {
     setEditingRoom(room);
     setDialogOpen(true);
+  };
+
+  const handleKeyboxToggle = async (room: AdminUserRoom, checked: boolean) => {
+    try {
+      await setRoomHasKeybox(room.id, checked);
+      toast.success(
+        checked
+          ? `${room.room_name} : boîte à clés (exclu du tableau à clés).`
+          : `${room.room_name} : clé au tableau de l'agence.`,
+      );
+      await refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Impossible de mettre à jour la boîte à clés.');
+    }
   };
 
   const handleRoomSaved = () => {
@@ -259,6 +274,7 @@ const AdminUserRoomsPage: React.FC = () => {
                       <TableHead>Propriétaire</TableHead>
                       <TableHead>ID Chambre</TableHead>
                       <TableHead>Type de Propriété</TableHead>
+                      <TableHead>Boîte à clés</TableHead>
                       <TableHead>Code Boîte à Clés</TableHead>
                       <TableHead>Code Wi-Fi</TableHead>
                       <TableHead>Capacité</TableHead>
@@ -285,6 +301,19 @@ const AdminUserRoomsPage: React.FC = () => {
                           <TableCell className="whitespace-nowrap">{clientName}</TableCell>
                           <TableCell className="text-muted-foreground">{room.room_id}</TableCell>
                           <TableCell>{room.property_type || '—'}</TableCell>
+                          <TableCell>
+                            <label className="flex cursor-pointer items-center gap-2 whitespace-nowrap text-sm">
+                              <Checkbox
+                                checked={Boolean(room.has_keybox)}
+                                onCheckedChange={(checked) => handleKeyboxToggle(room, checked === true)}
+                              />
+                              {room.has_keybox ? (
+                                <Badge variant="secondary" className="text-amber-800 border-amber-300">Boîte à clés</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">Au tableau</span>
+                              )}
+                            </label>
+                          </TableCell>
                           <TableCell>{room.keybox_code || '—'}</TableCell>
                           <TableCell>{room.wifi_code || '—'}</TableCell>
                           <TableCell>

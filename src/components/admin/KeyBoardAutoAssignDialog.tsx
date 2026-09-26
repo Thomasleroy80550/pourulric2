@@ -9,18 +9,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Wand2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Wand2, AlertTriangle, CheckCircle2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   KEY_BOARD_AGENCIES,
   KEY_BOARD_SLOT_COUNT,
   fetchKeyBoardRoomCandidates,
   getAllKeyBoardSlots,
   bulkUpsertKeyBoardSlots,
+  setRoomHasKeybox,
   type KeyBoardAgency,
   type KeyBoardRoomCandidate,
   type KeyBoardSlotInput,
@@ -40,6 +42,7 @@ const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").t
 const KeyBoardAutoAssignDialog: React.FC<Props> = ({ open, onClose }) => {
   const queryClient = useQueryClient();
   const [choices, setChoices] = useState<Record<string, Choice>>({});
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const { data: candidates = [], isLoading: loadingRooms } = useQuery({
     queryKey: ["key-board-candidates"],
@@ -58,15 +61,35 @@ const KeyBoardAutoAssignDialog: React.FC<Props> = ({ open, onClose }) => {
     () => candidates.filter((c) => !alreadyPlaced.has(norm(c.room_name))),
     [candidates, alreadyPlaced],
   );
-  const sureOnes = useMemo(() => remaining.filter((c) => c.sure), [remaining]);
-  const unsureOnes = useMemo(() => remaining.filter((c) => !c.sure), [remaining]);
+  const keyboxOnes = useMemo(() => remaining.filter((c) => c.has_keybox), [remaining]);
+  const sureOnes = useMemo(() => remaining.filter((c) => !c.has_keybox && c.sure), [remaining]);
+  const unsureOnes = useMemo(() => remaining.filter((c) => !c.has_keybox && !c.sure), [remaining]);
 
   useEffect(() => {
     if (!open) return;
-    const init: Record<string, Choice> = {};
-    unsureOnes.forEach((c) => (init[c.room_id] = c.suggested));
-    setChoices(init);
+    setChoices((prev) => {
+      const next = { ...prev };
+      unsureOnes.forEach((c) => {
+        if (!(c.room_id in next)) next[c.room_id] = c.suggested;
+      });
+      return next;
+    });
   }, [open, unsureOnes]);
+
+  const toggleKeybox = async (c: KeyBoardRoomCandidate, value: boolean) => {
+    setTogglingId(c.id);
+    try {
+      await setRoomHasKeybox(c.id, value);
+      queryClient.setQueryData<KeyBoardRoomCandidate[]>(["key-board-candidates"], (old) =>
+        (old || []).map((x) => (x.id === c.id ? { ...x, has_keybox: value } : x)),
+      );
+      queryClient.invalidateQueries({ queryKey: ["adminUserRooms"] });
+    } catch (e: any) {
+      toast.error(`Erreur : ${e.message}`);
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   // Plan d'attribution : par agence, on remplit les crochets libres dans l'ordre
   const plan = useMemo(() => {
@@ -119,16 +142,51 @@ const KeyBoardAutoAssignDialog: React.FC<Props> = ({ open, onClose }) => {
 
   const loading = loadingRooms || loadingSlots;
 
+  const KeyboxToggle: React.FC<{ c: KeyBoardRoomCandidate }> = ({ c }) => (
+    <label
+      className={cn(
+        "flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs select-none",
+        c.has_keybox ? "border-amber-300 bg-amber-50 text-amber-800" : "text-muted-foreground hover:bg-muted",
+      )}
+      title="Ce logement a une boîte à clés : sa clé n'est pas au tableau de l'agence"
+    >
+      <Checkbox
+        checked={c.has_keybox}
+        disabled={togglingId === c.id}
+        onCheckedChange={(v) => toggleKeybox(c, v === true)}
+      />
+      <Lock className="h-3 w-3" />
+      Boîte à clés
+    </label>
+  );
+
+  const RoomRow: React.FC<{ c: KeyBoardRoomCandidate; right?: React.ReactNode }> = ({ c, right }) => (
+    <div className="flex items-center gap-3 p-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium truncate">{c.room_name}</p>
+        <p className="text-xs text-muted-foreground truncate">
+          {c.owner_name}
+          {c.owner_name && " · "}
+          {c.sure ? labelOf(c.suggested) : c.reason}
+          {c.keybox_code && ` · code ${c.keybox_code}`}
+        </p>
+      </div>
+      {right}
+      <KeyboxToggle c={c} />
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="h-5 w-5" /> Attribution automatique
           </DialogTitle>
           <DialogDescription>
             Les logements sont placés sur le tableau de leur agence (d'après le profil du propriétaire), dans les
-            crochets libres, par ordre alphabétique. Les logements déjà placés sont ignorés.
+            crochets libres, par ordre alphabétique. Cochez <strong>Boîte à clés</strong> pour les logements dont la clé
+            n'est pas à l'agence : ils ne seront pas mis au tableau.
           </DialogDescription>
         </DialogHeader>
 
@@ -139,18 +197,23 @@ const KeyBoardAutoAssignDialog: React.FC<Props> = ({ open, onClose }) => {
         ) : (
           <ScrollArea className="flex-1 min-h-0 pr-3">
             <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {KEY_BOARD_AGENCIES.map((a) => (
                   <div key={a.value} className="rounded-lg border p-3">
                     <p className="font-semibold">{a.label}</p>
                     <p className="text-2xl font-bold">{plan[a.value].assigned.length}</p>
                     <p className="text-xs text-muted-foreground">
-                      logement{plan[a.value].assigned.length > 1 ? "s" : ""} à placer ·{" "}
-                      {sureOnes.filter((c) => c.suggested === a.value).length} sûr
-                      {sureOnes.filter((c) => c.suggested === a.value).length > 1 ? "s" : ""}
+                      logement{plan[a.value].assigned.length > 1 ? "s" : ""} à placer
                     </p>
                   </div>
                 ))}
+                <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                  <p className="font-semibold flex items-center gap-1">
+                    <Lock className="h-4 w-4" /> Boîte à clés
+                  </p>
+                  <p className="text-2xl font-bold">{keyboxOnes.length}</p>
+                  <p className="text-xs text-muted-foreground">exclus du tableau</p>
+                </div>
               </div>
 
               {totalOverflow > 0 && (
@@ -183,32 +246,28 @@ const KeyBoardAutoAssignDialog: React.FC<Props> = ({ open, onClose }) => {
                   </p>
                   <div className="divide-y rounded-lg border">
                     {unsureOnes.map((c) => (
-                      <div key={c.room_id} className="flex items-center gap-3 p-2.5">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{c.room_name}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {c.owner_name}
-                            {c.owner_name && " · "}
-                            {c.reason}
-                          </p>
-                        </div>
-                        <Select
-                          value={choices[c.room_id] ?? c.suggested}
-                          onValueChange={(v) => setChoices((prev) => ({ ...prev, [c.room_id]: v as Choice }))}
-                        >
-                          <SelectTrigger className="w-[170px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {KEY_BOARD_AGENCIES.map((a) => (
-                              <SelectItem key={a.value} value={a.value}>
-                                {a.label}
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="skip">Ignorer</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <RoomRow
+                        key={c.id}
+                        c={c}
+                        right={
+                          <Select
+                            value={choices[c.room_id] ?? c.suggested}
+                            onValueChange={(v) => setChoices((prev) => ({ ...prev, [c.room_id]: v as Choice }))}
+                          >
+                            <SelectTrigger className="w-[160px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {KEY_BOARD_AGENCIES.map((a) => (
+                                <SelectItem key={a.value} value={a.value}>
+                                  {a.label}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="skip">Ignorer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        }
+                      />
                     ))}
                   </div>
                 </div>
@@ -218,14 +277,28 @@ const KeyBoardAutoAssignDialog: React.FC<Props> = ({ open, onClose }) => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <h3 className="font-semibold">Attribution sûre ({sureOnes.length})</h3>
+                    <h3 className="font-semibold">À placer au tableau ({sureOnes.length})</h3>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="divide-y rounded-lg border">
                     {sureOnes.map((c) => (
-                      <Badge key={c.room_id} variant="secondary" className="font-normal">
-                        {c.room_name}
-                        <span className="ml-1 text-muted-foreground">· {labelOf(c.suggested)}</span>
-                      </Badge>
+                      <RoomRow key={c.id} c={c} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {keyboxOnes.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-amber-600" />
+                    <h3 className="font-semibold">Boîte à clés — non placés ({keyboxOnes.length})</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Décochez pour remettre un logement au tableau.
+                  </p>
+                  <div className="divide-y rounded-lg border opacity-80">
+                    {keyboxOnes.map((c) => (
+                      <RoomRow key={c.id} c={c} />
                     ))}
                   </div>
                 </div>

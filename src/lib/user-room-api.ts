@@ -8,6 +8,7 @@ export interface UserRoom {
   room_id_2?: string; // New field for secondary room ID (e.g., for price/restriction systems)
   ical_url?: string | null;
   keybox_code?: string;
+  has_keybox?: boolean;
   wifi_code?: string;
 
   property_type?: string;

@@ -85,9 +85,17 @@ export async function bulkUpsertKeyBoardSlots(inputs: KeyBoardSlotInput[]): Prom
   if (error) throw error;
 }
 
+export async function setRoomHasKeybox(userRoomId: string, hasKeybox: boolean): Promise<void> {
+  const { error } = await supabase.from("user_rooms").update({ has_keybox: hasKeybox }).eq("id", userRoomId);
+  if (error) throw error;
+}
+
 export interface KeyBoardRoomCandidate {
+  id: string;
   room_id: string;
   room_name: string;
+  has_keybox: boolean;
+  keybox_code: string | null;
   address: string | null;
   owner_name: string;
   suggested: KeyBoardAgency;
@@ -104,7 +112,7 @@ export async function fetchKeyBoardRoomCandidates(): Promise<KeyBoardRoomCandida
   const { data, error } = await supabase
     .from("user_rooms")
     .select(
-      `room_id, room_name, profiles ( first_name, last_name, agency, krossbooking_property_id, role, is_contract_terminated, property_address, property_zip_code, property_city )`,
+      `id, room_id, room_name, has_keybox, keybox_code, profiles ( first_name, last_name, agency, krossbooking_property_id, role, is_contract_terminated, property_address, property_zip_code, property_city )`,
     )
     .order("room_name", { ascending: true });
   if (error) throw error;
@@ -148,8 +156,11 @@ export async function fetchKeyBoardRoomCandidates(): Promise<KeyBoardRoomCandida
       .join(", ");
 
     candidates.push({
+      id: row.id,
       room_id: row.room_id,
       room_name: row.room_name,
+      has_keybox: !!row.has_keybox,
+      keybox_code: row.keybox_code || null,
       address: address || null,
       owner_name: `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim(),
       suggested,

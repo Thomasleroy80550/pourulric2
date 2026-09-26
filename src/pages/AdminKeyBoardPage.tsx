@@ -17,10 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { KeyRound, Search, Trash2, Loader2, MapPin, Wand2 } from "lucide-react";
+import { KeyRound, Search, Trash2, Loader2, MapPin, Wand2, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import KeyBoardAutoAssignDialog from "@/components/admin/KeyBoardAutoAssignDialog";
+import { generateKeyBoardPdf } from "@/lib/key-board-pdf";
 import {
   KEY_BOARD_AGENCIES,
   KEY_BOARD_SLOT_COUNT,
@@ -109,6 +110,17 @@ const AdminKeyBoardPage: React.FC = () => {
             <Badge variant="secondary" className="w-fit">
               {occupiedCount} / {KEY_BOARD_SLOT_COUNT} emplacements occupés
             </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isLoading}
+              onClick={() => {
+                generateKeyBoardPdf(agencyLabel, slots);
+                toast.success("PDF généré.");
+              }}
+            >
+              <FileDown className="mr-2 h-4 w-4" /> PDF
+            </Button>
             <Button size="sm" onClick={() => setAutoOpen(true)}>
               <Wand2 className="mr-2 h-4 w-4" /> Attribution automatique
             </Button>

@@ -55,10 +55,10 @@ export default function ReviewsEmbedPage() {
         {error ? <p role="alert" className="text-xs text-slate-500">Avis indisponibles</p> : !summary ? (
           <p role="status" className="animate-pulse text-xs text-slate-500">Chargement…</p>
         ) : (
-          <p aria-live="polite" className="min-w-0 text-slate-700">
-            <span className="text-3xl font-extrabold tracking-tight text-slate-900">{summary.total.toLocaleString('fr-FR')}</span>
-            <span className="ml-2 text-sm font-medium">avis clients</span>
-          </p>
+          <div aria-live="polite" className="min-w-0">
+            <p className="text-3xl font-extrabold tracking-tight text-slate-900">{summary.globalAverage !== null ? summary.globalAverage.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-sm font-semibold text-slate-400">/10</span></p>
+            <p className="text-xs font-medium text-slate-600">{summary.total.toLocaleString('fr-FR')} avis clients</p>
+          </div>
         )}
       </section>
     </main>

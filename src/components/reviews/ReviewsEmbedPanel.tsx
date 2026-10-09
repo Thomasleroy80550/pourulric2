@@ -28,7 +28,7 @@ export default function ReviewsEmbedPanel() {
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
         <div>
           <CardTitle className="flex items-center gap-2 text-base"><Code2 className="h-5 w-5" /> Badge d’avis pour le hero</CardTitle>
-          <CardDescription className="mt-1">Un badge minimal affichant le nombre total d’avis clients.</CardDescription>
+          <CardDescription className="mt-1">Un badge minimal : note globale sur 10 et total d’avis clients.</CardDescription>
         </div>
         <Button variant="outline" onClick={() => setOpen(!open)} aria-expanded={open}>
           {open ? 'Masquer le code' : 'Obtenir le code embed'}
@@ -36,7 +36,7 @@ export default function ReviewsEmbedPanel() {
       </CardHeader>
       {open && (
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">Placez ce badge près de votre bouton « Contactez-nous » dans le hero. Format compact de 360 × 104 px, adapté au mobile. Le total inclut tous les avis, avec actualisation toutes les 30 secondes depuis les données enregistrées. Copiez le code depuis votre application publiée.</p>
+          <p className="text-sm text-muted-foreground">Placez ce badge près de votre bouton « Contactez-nous » dans le hero. Format compact de 360 × 104 px, adapté au mobile. La note globale inclut toutes les notes valides et le total inclut tous les avis, avec actualisation toutes les 30 secondes depuis les données enregistrées. Copiez le code depuis votre application publiée.</p>
           <Textarea aria-label="Code HTML à intégrer" readOnly value={code} onFocus={(event) => event.target.select()} className="min-h-24 font-mono text-xs" />
           <div className="flex flex-wrap gap-2">
             <Button onClick={copy}><Copy className="mr-2 h-4 w-4" /> Copier le code</Button>

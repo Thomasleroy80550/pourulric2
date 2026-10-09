@@ -4,6 +4,7 @@ export interface PublicReviewsSummary {
   total: number;
   favorableTotal: number;
   average: number;
+  globalAverage: number | null;
   reviews: { id: number; rating: number; comment: string; source: string }[];
 }
 

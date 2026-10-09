@@ -36,7 +36,7 @@ export default function ReviewsEmbedPanel() {
       </CardHeader>
       {open && (
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">Collez ce code dans un bloc HTML du hero, par exemple sous votre bouton principal. Le badge mesure au maximum 440 px de large et s’adapte au mobile, sur un fond transparent. La moyenne utilise tous les avis ; seuls les extraits notés au moins 4/5 défilent. Utilisez l’adresse de votre application publiée, et non celle de l’aperçu de développement.</p>
+          <p className="text-sm text-muted-foreground">Collez ce code dans un bloc HTML du hero, par exemple sous votre bouton principal. Le badge mesure au maximum 440 px de large et s’adapte au mobile, sur un fond transparent. La note sur 10 est la moyenne des avis favorables (au moins 8/10), et non la moyenne globale. Le total inclut tous les avis. Le badge relit les avis enregistrés toutes les 30 secondes ; il ne lance pas de nouvelle collecte sur les plateformes. Utilisez l’adresse de votre application publiée, et non celle de l’aperçu de développement.</p>
           <Textarea aria-label="Code HTML à intégrer" readOnly value={code} onFocus={(event) => event.target.select()} className="min-h-24 font-mono text-xs" />
           <div className="flex flex-wrap gap-2">
             <Button onClick={copy}><Copy className="mr-2 h-4 w-4" /> Copier le code</Button>

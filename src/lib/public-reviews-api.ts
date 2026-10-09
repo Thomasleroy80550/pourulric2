@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface PublicReviewsSummary {
   total: number;
+  favorableTotal: number;
   average: number;
   reviews: { id: number; rating: number; comment: string; source: string }[];
 }

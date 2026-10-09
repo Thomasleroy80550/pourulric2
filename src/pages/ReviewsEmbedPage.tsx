@@ -30,12 +30,36 @@ export default function ReviewsEmbedPage() {
 
   useEffect(() => {
     let active = true;
-    getPublicReviews().then((data) => {
-      if (active) setSummary(data);
-    }).catch(() => {
-      if (active) setError(true);
-    });
-    return () => { active = false; };
+    let fetching = false;
+    const refresh = async () => {
+      if (fetching) return;
+      fetching = true;
+      try {
+        const data = await getPublicReviews();
+        if (active) {
+          setSummary(data);
+          setIndex((current) => data.reviews.length ? current % data.reviews.length : 0);
+          setError(false);
+        }
+      } catch {
+        if (active) setError(true);
+      } finally {
+        fetching = false;
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh();
+    }, 30000);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   const count = summary?.reviews.length ?? 0;
@@ -66,18 +90,19 @@ export default function ReviewsEmbedPage() {
             <p role="status" className="animate-pulse text-xs text-slate-500">Chargement des avis…</p>
           ) : (
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="whitespace-nowrap text-xl font-bold tracking-tight">{summary.total > 0 ? summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-xs font-medium text-slate-400"> / 5</span></span>
-                {summary.total > 0 && <div className="flex gap-0.5" aria-label={`${summary.average} sur 5`}>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span aria-live="polite" className="whitespace-nowrap text-xl font-bold tracking-tight">{summary.favorableTotal > 0 ? summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-xs font-medium text-slate-400"> / 10</span></span>
+                {summary.favorableTotal > 0 && <div className="flex gap-0.5" aria-label={`${summary.average} sur 10`}>
                   {Array.from({ length: 5 }, (_, i) => (
                     <span key={i} className="relative h-3.5 w-3.5">
                       <Star aria-hidden="true" className="absolute h-3.5 w-3.5 fill-slate-200 text-slate-200" />
-                      <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${Math.max(0, Math.min(1, summary.average - i)) * 100}%` }}><Star aria-hidden="true" className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /></span>
+                      <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${Math.max(0, Math.min(1, summary.average / 2 - i)) * 100}%` }}><Star aria-hidden="true" className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /></span>
                     </span>
                   ))}
                 </div>}
+                <span title="Actualisation toutes les 30 secondes depuis les avis enregistrés" className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" /> EN LIVE</span>
               </div>
-              <p className="mt-0.5 text-[11px] text-slate-500"><strong className="font-semibold text-slate-700">{summary.total.toLocaleString('fr-FR')} avis clients</strong> · Hello Keys</p>
+              <p className="mt-0.5 text-[11px] text-slate-500"><strong className="font-semibold text-slate-700">{summary.total.toLocaleString('fr-FR')} avis clients au total</strong> · Hello Keys</p>
             </div>
           )}
         </div>
@@ -91,7 +116,7 @@ export default function ReviewsEmbedPage() {
             )}
           </div>
         )}
-        {summary && <p className="border-t border-slate-100 px-4 py-1 text-[9px] text-slate-400">Moyenne de tous les avis{review ? ' · Extraits favorables' : ''}</p>}
+        {summary && <p className="border-t border-slate-100 px-4 py-1 text-[9px] text-slate-400">Moyenne des {summary.favorableTotal.toLocaleString('fr-FR')} avis favorables (≥ 8/10)</p>}
       </section>
     </main>
   );

@@ -1,0 +1,13 @@
+import { supabase } from '@/integrations/supabase/client';
+
+export interface PublicReviewsSummary {
+  total: number;
+  average: number;
+  reviews: { id: number; rating: number; comment: string; source: string }[];
+}
+
+export async function getPublicReviews(): Promise<PublicReviewsSummary> {
+  const { data, error } = await supabase.rpc('get_public_service_reviews');
+  if (error) throw error;
+  return data as PublicReviewsSummary;
+}

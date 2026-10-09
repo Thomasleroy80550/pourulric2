@@ -9,6 +9,7 @@ import CalendarPageMobile from "./pages/CalendarPageMobile";
 import BookingsPage from "./pages/BookingsPage";
 import PerformancePage from "./pages/PerformancePage";
 import ReviewsPage from "./pages/ReviewsPage";
+import ReviewsEmbedPage from "./pages/ReviewsEmbedPage";
 import HelpPage from "./pages/HelpPage";
 import ModulesPage from "./pages/ModulesPage";
 import RoadmapPage from "./pages/RoadmapPage";
@@ -168,6 +169,17 @@ import LoginV4 from "./pages/v4/LoginV4";
 const queryClient = new QueryClient();
 
 function App() {
+  // L’embed reste indépendant de la session et des fenêtres modales de l’application.
+  if (window.location.pathname.replace(/\/$/, '') === '/embed/avis') {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/embed/avis" element={<ReviewsEmbedPage />} />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
   return (
 
     <div className="notranslate" translate="no" data-hk-app-shell="true">

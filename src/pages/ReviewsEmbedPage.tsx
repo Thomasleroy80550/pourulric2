@@ -1,23 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, MessageSquareQuote, Pause, Play, Star } from 'lucide-react';
+import { BadgeCheck, Pause, Play, Star } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { Button } from '@/components/ui/button';
 import { getPublicReviews, PublicReviewsSummary } from '@/lib/public-reviews-api';
-
-const sources: Record<string, string> = {
-  AIRBNB: 'Airbnb', BOOKING: 'Booking.com', HOMEAWAY: 'Abritel', VRBO: 'Vrbo',
-  EXPEDIA: 'Expedia', DIRECT: 'Direct', BE: 'Site web', GOOGLE: 'Google',
-};
-
-function Stars({ rating }: { rating: number }) {
-  return (
-    <div className="flex gap-1 text-amber-500" aria-label={`${rating} sur 5`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star key={i} aria-hidden="true" className={`h-5 w-5 ${i < Math.round(rating) ? 'fill-amber-400' : 'text-slate-200'}`} />
-      ))}
-    </div>
-  );
-}
 
 export default function ReviewsEmbedPage() {
   const [summary, setSummary] = useState<PublicReviewsSummary | null>(null);
@@ -27,6 +12,13 @@ export default function ReviewsEmbedPage() {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const elements = [document.body, document.documentElement];
+    const backgrounds = elements.map((element) => element.style.background);
+    elements.forEach((element) => { element.style.background = 'transparent'; });
+    return () => elements.forEach((element, i) => { element.style.background = backgrounds[i]; });
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -54,49 +46,52 @@ export default function ReviewsEmbedPage() {
   }, [count, paused, hovered, focused, reducedMotion]);
 
   const review = summary?.reviews[index];
-  const move = (step: number) => setIndex((current) => (current + step + count) % count);
+  const comment = review ? DOMPurify.sanitize(review.comment, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) : '';
 
   return (
-    <main className="w-full bg-white p-3 text-slate-900 sm:p-5">
-      <section className="mx-auto max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" aria-label="Avis clients Hello Keys">
-        <div className="bg-gradient-to-br from-teal-50 via-white to-amber-50 px-5 py-6 sm:px-8">
-          <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-teal-700"><MessageSquareQuote className="h-4 w-4" /> Hello Keys · Avis clients</p>
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Ils nous ont fait confiance</h1>
-          {error ? (
-            <p role="alert" className="mt-4 text-sm text-slate-500">Les avis sont momentanément indisponibles.</p>
-          ) : !summary ? (
-            <p role="status" className="mt-4 animate-pulse text-sm text-slate-500">Chargement des avis…</p>
+    <main className="w-full bg-transparent p-2 font-sans text-slate-900">
+      <section
+        className="mx-auto w-full max-w-[440px] overflow-hidden rounded-2xl border border-white/80 bg-white/95 shadow-[0_4px_16px_rgba(15,23,42,0.10)]"
+        aria-label="Avis clients Hello Keys"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocusCapture={() => setFocused(true)}
+        onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
+      >
+        <div className="flex h-[76px] items-center gap-3 px-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <BadgeCheck className="h-6 w-6" aria-hidden="true" />
+          </div>
+          {error ? <p role="alert" className="text-xs text-slate-500">Avis momentanément indisponibles</p> : !summary ? (
+            <p role="status" className="animate-pulse text-xs text-slate-500">Chargement des avis…</p>
           ) : (
-            <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div className="flex items-baseline gap-1"><span className="text-4xl font-bold">{summary.total > 0 ? summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}</span><span className="text-sm text-slate-500">/ 5</span></div>
-              {summary.total > 0 && <Stars rating={summary.average} />}
-              <p className="text-sm text-slate-600"><strong className="text-slate-900">{summary.total.toLocaleString('fr-FR')}</strong> avis clients<br /><span className="text-xs">Moyenne sur l’ensemble des avis</span></p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap text-xl font-bold tracking-tight">{summary.total > 0 ? summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-xs font-medium text-slate-400"> / 5</span></span>
+                {summary.total > 0 && <div className="flex gap-0.5" aria-label={`${summary.average} sur 5`}>
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <span key={i} className="relative h-3.5 w-3.5">
+                      <Star aria-hidden="true" className="absolute h-3.5 w-3.5 fill-slate-200 text-slate-200" />
+                      <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${Math.max(0, Math.min(1, summary.average - i)) * 100}%` }}><Star aria-hidden="true" className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /></span>
+                    </span>
+                  ))}
+                </div>}
+              </div>
+              <p className="mt-0.5 text-[11px] text-slate-500"><strong className="font-semibold text-slate-700">{summary.total.toLocaleString('fr-FR')} avis clients</strong> · Hello Keys</p>
             </div>
           )}
         </div>
-        {summary && (
-          <div className="px-5 py-5 sm:px-8" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
-            {review ? (
-              <>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <Stars rating={review.rating} />
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{sources[review.source.toUpperCase()] ?? 'Avis voyageur'}</span>
-                </div>
-                <div className="h-40 overflow-y-auto rounded-xl bg-slate-50 p-4" tabIndex={0} aria-label="Commentaire client">
-                  <blockquote className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">« {DOMPurify.sanitize(review.comment, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })} »</blockquote>
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-xs text-slate-500">Sélection d’avis favorables · {index + 1}/{count}</p>
-                  {count > 1 && <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-600 hover:bg-slate-100 hover:text-slate-900" onClick={() => move(-1)} aria-label="Avis précédent"><ChevronLeft className="h-4 w-4" /></Button>
-                    {!reducedMotion && <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-600 hover:bg-slate-100 hover:text-slate-900" onClick={() => setPaused(!paused)} aria-label={paused ? 'Reprendre le défilement' : 'Mettre le défilement en pause'}>{paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}</Button>}
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-600 hover:bg-slate-100 hover:text-slate-900" onClick={() => move(1)} aria-label="Avis suivant"><ChevronRight className="h-4 w-4" /></Button>
-                  </div>}
-                </div>
-              </>
-            ) : <p className="py-6 text-sm text-slate-500">{summary.total === 0 ? 'Aucun avis client pour le moment.' : 'Aucun commentaire favorable à afficher pour le moment.'}</p>}
+        {review && (
+          <div className="flex h-[46px] items-center gap-2 border-t border-slate-100 bg-slate-50/80 px-4">
+            <p key={review.id} title={comment} className="min-w-0 flex-1 truncate text-[11px] italic text-slate-600 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-500">« {comment} »</p>
+            {count > 1 && !reducedMotion && (
+              <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0 rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-700" onClick={() => setPaused(!paused)} aria-label={paused ? 'Reprendre le défilement des avis' : 'Mettre le défilement des avis en pause'}>
+                {paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+              </Button>
+            )}
           </div>
         )}
+        {summary && <p className="border-t border-slate-100 px-4 py-1 text-[9px] text-slate-400">Moyenne de tous les avis{review ? ' · Extraits favorables' : ''}</p>}
       </section>
     </main>
   );

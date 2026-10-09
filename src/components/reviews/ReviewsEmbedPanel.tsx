@@ -10,7 +10,7 @@ export default function ReviewsEmbedPanel() {
   const { profile } = useSession();
   const [open, setOpen] = useState(false);
   const url = `${window.location.origin}/embed/avis`;
-  const code = `<iframe src="${url}" title="Avis clients Hello Keys" width="100%" height="560" style="border:0;border-radius:24px;" loading="lazy"></iframe>`;
+  const code = `<iframe src="${url}" title="Avis clients Hello Keys" width="440" height="164" style="border:0;width:100%;max-width:440px;height:164px;background:transparent;" loading="eager"></iframe>`;
 
   if (profile?.role !== 'admin') return null;
 
@@ -27,8 +27,8 @@ export default function ReviewsEmbedPanel() {
     <Card className="mb-6">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
         <div>
-          <CardTitle className="flex items-center gap-2 text-base"><Code2 className="h-5 w-5" /> Avis sur votre site vitrine</CardTitle>
-          <CardDescription className="mt-1">Tous les avis du service : total, moyenne et sélection favorable, sans dates.</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Code2 className="h-5 w-5" /> Badge d’avis pour le hero</CardTitle>
+          <CardDescription className="mt-1">Un badge compact : étoiles, moyenne, total et extraits favorables, sans dates.</CardDescription>
         </div>
         <Button variant="outline" onClick={() => setOpen(!open)} aria-expanded={open}>
           {open ? 'Masquer le code' : 'Obtenir le code embed'}
@@ -36,13 +36,16 @@ export default function ReviewsEmbedPanel() {
       </CardHeader>
       {open && (
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">Collez ce code dans un bloc HTML de votre site. La moyenne utilise tous les avis ; seuls les commentaires notés au moins 4/5 défilent. Utilisez l’adresse de votre application publiée, et non celle de l’aperçu de développement.</p>
+          <p className="text-sm text-muted-foreground">Collez ce code dans un bloc HTML du hero, par exemple sous votre bouton principal. Le badge mesure au maximum 440 px de large et s’adapte au mobile, sur un fond transparent. La moyenne utilise tous les avis ; seuls les extraits notés au moins 4/5 défilent. Utilisez l’adresse de votre application publiée, et non celle de l’aperçu de développement.</p>
           <Textarea aria-label="Code HTML à intégrer" readOnly value={code} onFocus={(event) => event.target.select()} className="min-h-24 font-mono text-xs" />
           <div className="flex flex-wrap gap-2">
             <Button onClick={copy}><Copy className="mr-2 h-4 w-4" /> Copier le code</Button>
-            <Button asChild variant="outline"><a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Voir le widget</a></Button>
+            <Button asChild variant="outline"><a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" /> Voir le badge</a></Button>
           </div>
-          <iframe src={url} title="Aperçu du widget d’avis clients" className="h-[560px] w-full rounded-3xl border" loading="lazy" />
+          <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-teal-900 p-4 sm:p-6">
+            <p className="mb-3 text-xs text-white/60">Aperçu sur un fond de hero</p>
+            <iframe src={url} title="Aperçu du badge d’avis clients" className="h-[164px] w-full max-w-[440px] border-0 bg-transparent" loading="lazy" />
+          </div>
         </CardContent>
       )}
     </Card>

@@ -56,8 +56,9 @@ export default function ReviewsEmbedPage() {
           <p role="status" className="animate-pulse text-xs text-slate-500">Chargement…</p>
         ) : (
           <div aria-live="polite" className="min-w-0">
-            <p className="text-3xl font-extrabold tracking-tight text-slate-900">{summary.globalAverage !== null ? summary.globalAverage.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-sm font-semibold text-slate-400">/10</span></p>
-            <p className="text-xs font-medium text-slate-600">{summary.total.toLocaleString('fr-FR')} avis clients</p>
+            <p className="text-3xl font-extrabold tracking-tight text-slate-900">{summary.badgeAverage !== null ? summary.badgeAverage.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-sm font-semibold text-slate-400">/10</span></p>
+            <p className="text-[10px] font-medium text-slate-500">Note des avis ≥ 3★</p>
+            <p className="text-xs font-medium text-slate-600">{summary.total.toLocaleString('fr-FR')} avis au total</p>
           </div>
         )}
       </section>

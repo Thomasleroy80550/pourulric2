@@ -5,6 +5,7 @@ export interface PublicReviewsSummary {
   favorableTotal: number;
   average: number;
   globalAverage: number | null;
+  badgeAverage: number | null;
   reviews: { id: number; rating: number; comment: string; source: string }[];
 }
 

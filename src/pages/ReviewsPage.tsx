@@ -18,7 +18,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { getReviews, Review } from '@/lib/reviews-api';
 import ReviewsTrendChart from '@/components/reviews/ReviewsTrendChart';
-import ReviewsEmbedPanel from '@/components/reviews/ReviewsEmbedPanel';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Pagination,
@@ -239,8 +238,6 @@ const ReviewsPage: React.FC = () => {
             </p>
           </div>
         </div>
-
-        <ReviewsEmbedPanel />
 
         {/* Quick stats strip */}
         {!error && (

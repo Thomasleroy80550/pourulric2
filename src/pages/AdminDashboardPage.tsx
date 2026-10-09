@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAllModuleActivationRequests, ModuleActivationRequest } from '@/lib/module-activation-api';
 import { toast } from "sonner";
 import NewsFeed from '@/components/admin/NewsFeed';
+import ReviewsEmbedPanel from '@/components/reviews/ReviewsEmbedPanel';
 import { supabase } from "@/integrations/supabase/client";
 
 const AdminDashboardPage: React.FC = () => {
@@ -292,6 +293,8 @@ const AdminDashboardPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Bonjour, {profile?.first_name || 'Admin'} !</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">Bienvenue sur votre tableau de bord centralisé.</p>
         </div>
+
+        <ReviewsEmbedPanel />
 
         {tempAlertsCount > 0 && (
           <Alert className="border-amber-300 bg-amber-50">

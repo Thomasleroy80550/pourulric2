@@ -4,11 +4,15 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { useSession } from '@/components/SessionContextProvider';
 
 export default function ReviewsEmbedPanel() {
+  const { profile } = useSession();
   const [open, setOpen] = useState(false);
   const url = `${window.location.origin}/embed/avis`;
   const code = `<iframe src="${url}" title="Avis clients Hello Keys" width="100%" height="560" style="border:0;border-radius:24px;" loading="lazy"></iframe>`;
+
+  if (profile?.role !== 'admin') return null;
 
   const copy = async () => {
     try {

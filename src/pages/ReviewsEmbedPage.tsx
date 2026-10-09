@@ -52,16 +52,13 @@ export default function ReviewsEmbedPage() {
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50">
           <Star className="h-6 w-6 fill-amber-400 text-amber-400" aria-hidden="true" />
         </div>
-        {error ? <p role="alert" className="text-xs text-slate-500">Note indisponible</p> : !summary ? (
+        {error ? <p role="alert" className="text-xs text-slate-500">Avis indisponibles</p> : !summary ? (
           <p role="status" className="animate-pulse text-xs text-slate-500">Chargement…</p>
         ) : (
-          <div className="min-w-0">
-            <div className="flex items-baseline gap-2">
-              <span aria-live="polite" className="whitespace-nowrap text-3xl font-extrabold tracking-tight">{summary.favorableTotal > 0 ? summary.average.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-sm font-semibold text-slate-400">/10</span></span>
-              <span className="text-[11px] font-medium text-slate-600">Moyenne des<br />avis favorables</span>
-            </div>
-            <p className="mt-0.5 text-[11px] text-slate-500">{summary.favorableTotal.toLocaleString('fr-FR')} avis ≥ 8/10</p>
-          </div>
+          <p aria-live="polite" className="min-w-0 text-slate-700">
+            <span className="text-3xl font-extrabold tracking-tight text-slate-900">{summary.total.toLocaleString('fr-FR')}</span>
+            <span className="ml-2 text-sm font-medium">avis clients</span>
+          </p>
         )}
       </section>
     </main>

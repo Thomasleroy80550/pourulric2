@@ -55,9 +55,9 @@ export default function ReviewsEmbedPage() {
         {error ? <p role="alert" className="text-xs text-slate-500">Avis indisponibles</p> : !summary ? (
           <p role="status" className="animate-pulse text-xs text-slate-500">Chargement…</p>
         ) : (
-          <div aria-live="polite" className="min-w-0">
-            <p className="text-3xl font-extrabold tracking-tight text-slate-900">{summary.badgeAverage !== null ? summary.badgeAverage.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-sm font-semibold text-slate-400">/10</span></p>
-            <p className="text-xs font-medium text-slate-600">{summary.total.toLocaleString('fr-FR')} avis au total</p>
+          <div aria-live="polite" className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
+            <p className="whitespace-nowrap text-3xl font-extrabold tracking-tight text-slate-900">{summary.badgeAverage !== null ? summary.badgeAverage.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : '—'}<span className="text-sm font-semibold text-slate-400">/10</span></p>
+            <p className="whitespace-nowrap text-xs font-medium text-slate-600">{summary.total.toLocaleString('fr-FR')} avis au total</p>
           </div>
         )}
       </section>

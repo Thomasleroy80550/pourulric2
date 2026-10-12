@@ -373,7 +373,7 @@ const Login = () => {
                                                     placeholder="vous@exemple.com"
                                                     {...field}
                                                     disabled={loading}
-                                                    className="h-12 rounded-xl border-gray-200 bg-gray-50/80 pl-10 pr-3 text-[15px] transition-colors focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
+                                                    className="h-12 rounded-xl border-gray-200 bg-gray-50/80 pl-10 pr-3 text-[16px] transition-colors focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
                                                     translate="no" />
                                             </div>
                                         </FormControl>
@@ -412,7 +412,7 @@ const Login = () => {
                                                     placeholder="••••••••"
                                                     {...field}
                                                     disabled={loading}
-                                                    className="h-12 rounded-xl border-gray-200 bg-gray-50/80 pl-10 pr-10 text-[15px] transition-colors focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
+                                                    className="h-12 rounded-xl border-gray-200 bg-gray-50/80 pl-10 pr-10 text-[16px] transition-colors focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#175e82]/30 focus-visible:border-[#175e82]"
                                                     translate="no" />
                                                 <button
                                                     type="button"

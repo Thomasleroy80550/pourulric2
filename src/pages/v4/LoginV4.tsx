@@ -82,7 +82,7 @@ const LoginV4: React.FC = () => {
               placeholder="vous@exemple.fr"
               autoComplete="email"
               required
-              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-hk-200"
+              className="mt-1 w-full rounded-xl bg-slate-50 p-3 text-[16px] text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-hk-200"
             />
           </div>
 
@@ -98,7 +98,7 @@ const LoginV4: React.FC = () => {
                 placeholder="••••••••"
                 autoComplete="current-password"
                 required
-                className="w-full rounded-xl bg-slate-50 p-3 pr-11 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-hk-200"
+                className="w-full rounded-xl bg-slate-50 p-3 pr-11 text-[16px] text-slate-900 outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-hk-200"
               />
               <button
                 type="button"

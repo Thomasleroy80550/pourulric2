@@ -478,6 +478,9 @@ const Login = () => {
                             className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-400">
                             <ShieldCheck className="h-3.5 w-3.5" />Connexion sécurisée — données chiffrées
                                         </p>
+                        <a href="/preview/digicode" className="mt-4 block text-center text-sm font-medium text-[#175e82] underline underline-offset-4">
+                            Voir l’aperçu du digicode PWA
+                        </a>
                     </div>
                 </div>
                 <footer className="px-6 sm:px-12 pb-6">

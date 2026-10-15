@@ -165,16 +165,19 @@ import MenageV4 from "./pages/v4/MenageV4";
 import IdeasV4 from "./pages/v4/IdeasV4";
 import ChatV4 from "./pages/v4/ChatV4";
 import LoginV4 from "./pages/v4/LoginV4";
+import PinPreview from "./pages/PinPreview";
 
 const queryClient = new QueryClient();
 
 function App() {
-  // L’embed reste indépendant de la session et des fenêtres modales de l’application.
-  if (window.location.pathname.replace(/\/$/, '') === '/embed/avis') {
+  // Ces écrans publics restent indépendants de la session et de ses fenêtres modales.
+  const publicStandalonePath = window.location.pathname.replace(/\/$/, '');
+  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode') {
     return (
       <BrowserRouter>
         <Routes>
           <Route path="/embed/avis" element={<ReviewsEmbedPage />} />
+          <Route path="/preview/digicode" element={<PinPreview />} />
         </Routes>
       </BrowserRouter>
     );

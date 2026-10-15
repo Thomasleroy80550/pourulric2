@@ -142,6 +142,9 @@ const LoginV4: React.FC = () => {
           <ShieldCheck className="h-3.5 w-3.5" />
           Connexion sécurisée · Vos données sont protégées
         </div>
+        <a href="/preview/digicode" className="mt-4 text-center text-sm font-medium text-hk-600 underline underline-offset-4">
+          Voir l’aperçu du digicode PWA
+        </a>
 
         {/* Prospect */}
         <div className="mt-auto pb-10 pt-8 text-center">

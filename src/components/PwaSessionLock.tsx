@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Fingerprint, LockKeyhole, ShieldCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import PinKeypad from "@/components/PinKeypad";
 import { supabase } from "@/integrations/supabase/client";
 import { enableDeviceBiometrics, getLockDeviceId, isInstalledPwa, lockRequest, unlockWithBiometrics } from "@/lib/pwa-lock-api";
 
@@ -13,6 +13,7 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
   const [checkedUser, setCheckedUser] = useState<string>();
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
+  const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [biometric, setBiometric] = useState(false);
@@ -41,6 +42,7 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
     setCheckedUser(undefined);
     setPin("");
     setConfirmPin("");
+    setConfirming(false);
     setMessage("");
     setBiometric(false);
     if (!installed || !userId) return;
@@ -174,22 +176,31 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
               setPhase("open");
             }}>Pas maintenant</Button>
           </>}
-          {(phase === "setup" || phase === "unlock") && <form className="space-y-4" onSubmit={e => { e.preventDefault(); phase === "setup" ? savePin() : validatePin(); }}>
+          {(phase === "setup" || phase === "unlock") && <form className="space-y-4" onSubmit={e => {
+            e.preventDefault();
+            if (busy || pin.length !== 4) return;
+            if (phase === "unlock") validatePin();
+            else if (!confirming) { setConfirming(true); setMessage(""); }
+            else if (confirmPin.length === 4) savePin();
+          }}>
             {phase === "unlock" && biometric && <>
               <Button type="button" className="h-12 w-full gap-2 bg-[#255f85]" disabled={busy} onClick={validateBiometric}><Fingerprint className="h-5 w-5" />Face ID / empreinte</Button>
               <p className="text-center text-xs text-slate-500">Le téléphone peut aussi proposer son code de déverrouillage. Ou utilisez votre code personnel Hello Keys ci-dessous.</p>
             </>}
-            <div>
-              <label htmlFor="pwa-pin" className="text-sm font-medium text-slate-700">{phase === "setup" ? "Choisissez un code à 4 chiffres" : "Code personnel à 4 chiffres"}</label>
-              <Input id="pwa-pin" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="off" value={pin} disabled={busy} onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} className="mt-2 h-14 text-center text-[24px] tracking-[0.6em]" required />
-            </div>
-            {phase === "setup" && <div>
-              <label htmlFor="pwa-pin-confirm" className="text-sm font-medium text-slate-700">Confirmez le code</label>
-              <Input id="pwa-pin-confirm" type="password" inputMode="numeric" pattern="[0-9]{4}" maxLength={4} autoComplete="off" value={confirmPin} disabled={busy} onChange={e => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))} className="mt-2 h-14 text-center text-[24px] tracking-[0.6em]" required />
-              <p className="mt-2 text-xs text-slate-500">Évitez 0000, 1234 et votre date de naissance. Ce code est distinct du code du téléphone.</p>
-            </div>}
-            <Button type="submit" disabled={busy || pin.length !== 4 || (phase === "setup" && confirmPin.length !== 4)} className="h-12 w-full bg-[#255f85]">{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : phase === "setup" ? "Enregistrer mon code" : "Déverrouiller"}</Button>
-            {phase === "setup" && <Button type="button" variant="ghost" className="w-full" disabled={busy} onClick={() => { setPin(""); setConfirmPin(""); setPhase("offer"); }}>Retour</Button>}
+            <PinKeypad
+              value={phase === "setup" && confirming ? confirmPin : pin}
+              onChange={phase === "setup" && confirming ? setConfirmPin : setPin}
+              disabled={busy}
+              label={phase === "setup" ? confirming ? "Confirmez votre code à 4 chiffres" : "Choisissez votre code à 4 chiffres" : "Saisissez votre code personnel"}
+            />
+            {phase === "setup" && <p className="text-center text-xs text-slate-500">{confirming ? "Saisissez à nouveau le même code." : "Évitez 0000, 1234 et votre date de naissance. Ce code est distinct de celui du téléphone."}</p>}
+            <Button type="submit" disabled={busy || pin.length !== 4 || (phase === "setup" && confirming && confirmPin.length !== 4)} className="h-14 w-full rounded-2xl bg-[#255f85] text-base">{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : phase === "setup" ? confirming ? "Enregistrer mon code" : "Continuer" : "Déverrouiller"}</Button>
+            {phase === "setup" && <Button type="button" variant="ghost" className="w-full" disabled={busy} onClick={() => {
+              setMessage("");
+              setConfirmPin("");
+              if (confirming) setConfirming(false);
+              else { setPin(""); setPhase("offer"); }
+            }}>{confirming ? "Modifier mon code" : "Retour"}</Button>}
           </form>}
           {phase === "biometric" && <>
             <p className="text-center text-sm text-slate-600">Votre code personnel est enregistré. Ajoutez Face ID, Touch ID ou votre empreinte. Votre téléphone peut aussi proposer son code de déverrouillage : Hello Keys ne le voit jamais.</p>

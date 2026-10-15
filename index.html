@@ -92,7 +92,11 @@
           window.matchMedia("(display-mode: standalone)").matches ||
           window.navigator.standalone === true;
         var el = document.getElementById("splash-screen");
-        if (!standalone) {
+        var rememberedLock = false;
+        try {
+          rememberedLock = !!localStorage.getItem("hk-pwa-lock-user");
+        } catch (_) {}
+        if (!standalone || rememberedLock) {
           el.parentNode.removeChild(el);
           return;
         }

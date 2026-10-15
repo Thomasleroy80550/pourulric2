@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Fingerprint, ShieldCheck, Loader2 } from "lucide-react";
+import { Fingerprint, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PinKeypad from "@/components/PinKeypad";
+import MobileAuthScreen from "@/components/MobileAuthScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { enableDeviceBiometrics, getLockDeviceId, isInstalledPwa, lockRequest, unlockWithBiometrics } from "@/lib/pwa-lock-api";
 
 type Phase = "checking" | "offer" | "setup" | "biometric" | "unlock" | "open" | "error";
 
-export default function PwaSessionLock({ userId, children }: { userId: string | undefined; children: ReactNode }) {
+export default function PwaSessionLock({ userId, children, sessionLoading = false }: { userId: string | undefined; children: ReactNode; sessionLoading?: boolean }) {
   const [installed] = useState(isInstalledPwa);
+  // Ce souvenir sert uniquement à afficher l'écran : le serveur décide toujours du déverrouillage.
+  const [cachedUser, setCachedUser] = useState<string | null>(() => {
+    try { return localStorage.getItem("hk-pwa-lock-user"); } catch { return null; }
+  });
   const [phase, setPhase] = useState<Phase>("checking");
   const [checkedUser, setCheckedUser] = useState<string>();
   const [pin, setPin] = useState("");
@@ -24,6 +29,12 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
   const previousUser = useRef<string>();
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+
+  const rememberLock = (owner: string | null) => {
+    if (owner) localStorage.setItem("hk-pwa-lock-user", owner);
+    else localStorage.removeItem("hk-pwa-lock-user");
+    setCachedUser(owner);
+  };
 
   useEffect(() => {
     if (window.PublicKeyCredential && window.isSecureContext) {
@@ -45,13 +56,20 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
     setConfirming(false);
     setMessage("");
     setBiometric(false);
-    if (!installed || !userId) return;
+    if (!installed) return;
+    if (!userId) {
+      if (!sessionLoading) {
+        try { rememberLock(null); } catch { setCachedUser(null); }
+      }
+      return;
+    }
     setPhase("checking");
     try {
       deviceId.current = getLockDeviceId(userId);
       lockRequest(deviceId.current, "status").then((status) => {
         if (!active) return;
         configured.current = status.configured;
+        rememberLock(status.configured ? userId : null);
         setCheckedUser(userId);
         setBiometric(status.biometric);
         setPhase(status.configured ? "unlock" : sessionStorage.getItem(`hk-pwa-lock-skipped:${userId}`) ? "open" : "offer");
@@ -63,7 +81,7 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
       setPhase("error");
     }
     return () => { active = false; };
-  }, [installed, userId]);
+  }, [installed, userId, sessionLoading]);
 
   useEffect(() => {
     const lockOnBackground = () => {
@@ -82,8 +100,9 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
     };
   }, []);
 
-  if (!installed || !userId) return <>{children}</>;
-  if (phase === "open" && checkedUser === userId) return <>{children}</>;
+  if (!installed || (!userId && !sessionLoading)) return <>{children}</>;
+  if (userId && phase === "open" && checkedUser === userId) return <>{children}</>;
+  const showStartupKeypad = phase === "checking" && !!cachedUser && (!userId || cachedUser === userId);
 
   const openApp = () => {
     setPin("");
@@ -114,6 +133,7 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
     if (!/^\d{4}$/.test(pin) || pin !== confirmPin) throw new Error("Les deux codes à 4 chiffres doivent être identiques.");
     await lockRequest(deviceId.current, "setup", { pin });
     configured.current = true;
+    rememberLock(userId ?? null);
     setConfirmPin("");
     if (canUseBiometric) setPhase("biometric");
     else openApp();
@@ -146,25 +166,22 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
   });
 
   const retry = () => run(async () => {
+    if (!userId) return;
     deviceId.current = getLockDeviceId(userId);
     const status = await lockRequest(deviceId.current, "status");
     configured.current = status.configured;
+    rememberLock(status.configured ? userId : null);
     setCheckedUser(userId);
     setBiometric(status.biometric);
     setPhase(status.configured ? "unlock" : "offer");
   });
 
   return (
-    <div className="fixed inset-0 z-[10000] overflow-y-auto bg-[radial-gradient(ellipse_at_top,_#e7f0ed_0%,_#f5f7f3_45%,_#fafaf7_100%)] px-6 py-8" role="main" aria-label="Protection de votre espace">
-      <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center">
-        <div className="mb-7 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">
-            {phase === "offer" ? "Votre espace, protégé." : phase === "setup" ? "Votre code personnel." : phase === "biometric" ? "Un geste suffit." : phase === "unlock" ? "Bon retour." : "Vérification en cours."}
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">Votre espace, en toute confiance.</p>
-        </div>
-        <div className="space-y-5 px-2">
-          {phase === "checking" && <div className="flex justify-center py-8"><Loader2 className="h-7 w-7 animate-spin text-[#255f85]" aria-label="Chargement" /></div>}
+    <MobileAuthScreen overlay title={phase === "offer" ? "Votre espace, protégé." : phase === "setup" ? "Votre code personnel." : phase === "biometric" ? "Un geste suffit." : phase === "unlock" || showStartupKeypad ? "Bon retour." : "Vérification en cours."}>
+          {phase === "checking" && (showStartupKeypad ? <>
+            <PinKeypad value="" onChange={() => {}} disabled label="Saisissez votre code personnel" />
+            <Button disabled className="h-14 w-full gap-2 rounded-full bg-[#e5ebe7] text-sm text-[#71868a] opacity-100"><Loader2 className="h-4 w-4 animate-spin" />Préparation du déverrouillage…</Button>
+          </> : <div className="flex justify-center py-8"><Loader2 className="h-7 w-7 animate-spin text-[#255f85]" aria-label="Chargement" /></div>)}
           {phase === "offer" && <>
             <p className="text-center text-sm leading-relaxed text-slate-600">À chaque réouverture et après un passage en arrière-plan, déverrouillez votre session avec un code à 4 chiffres ou Face ID / empreinte selon votre téléphone.</p>
             <Button className="w-full bg-[#255f85]" onClick={() => setPhase("setup")}>Activer la protection</Button>
@@ -207,9 +224,7 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
           {phase === "error" && <Button className="w-full bg-[#255f85]" disabled={busy} onClick={retry}>Réessayer</Button>}
           {message && <p role="alert" className="rounded-xl bg-red-50 p-3 text-center text-sm text-red-700">{message}</p>}
           {(phase === "unlock" || phase === "error") && <Button variant="ghost" className="h-auto w-full whitespace-normal text-sm text-slate-500" disabled={busy} onClick={reconnect}>Code oublié ? Se reconnecter avec mon compte</Button>}
-        </div>
-        <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-500"><ShieldCheck className="h-4 w-4 shrink-0" />Vérification sécurisée · Une connexion internet est nécessaire</p>
-      </div>
-    </div>
+          {(phase === "unlock" || phase === "error") && <p className="text-center text-[10px] text-slate-500">Une connexion internet est nécessaire pour vérifier votre code.</p>}
+    </MobileAuthScreen>
   );
 }

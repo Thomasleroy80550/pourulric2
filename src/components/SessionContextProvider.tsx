@@ -209,8 +209,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     setShowHousingModal(false);
   };
 
-  if (loading) {
-    return (
+  const loadingScreen = loading ? (
       <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-950">
         <div className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shadow-sm">
           <Skeleton className="h-8 w-32" />
@@ -246,26 +245,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           </div>
         </div>
       </div>
-    );
-  }
-
-  // Blocage total de l'application pour les comptes suspendus pour impayé (hors admins)
-  if (session && profile?.is_payment_suspended && profile.role !== 'admin') {
-    return (
-      <SessionContext.Provider value={{ session, loading, profile }}>
-        <PwaSessionLock userId={session.user.id}>
-          <AccountSuspendedScreen />
-          <Toaster />
-        </PwaSessionLock>
-      </SessionContext.Provider>
-    );
-  }
+  ) : null;
 
   return (
     <SessionContext.Provider value={{ session, loading, profile }}>
-      <PwaSessionLock userId={session?.user.id}>
+      <PwaSessionLock userId={session?.user.id} sessionLoading={loading && !session}>
+      {loading ? loadingScreen : session && profile?.is_payment_suspended && profile.role !== 'admin' ? <AccountSuspendedScreen /> : <>
       {children}
-      <Toaster />
       {showCguvModal && (
         <CGUVModal
           isOpen={showCguvModal}
@@ -291,6 +277,8 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           onClose={() => setShowOnboardingConfetti(false)}
         />
       )}
+      </>}
+      <Toaster />
       </PwaSessionLock>
     </SessionContext.Provider>
   );

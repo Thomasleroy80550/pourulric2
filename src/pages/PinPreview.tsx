@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowRight, CheckCircle2, Fingerprint, RotateCcw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PinKeypad from "@/components/PinKeypad";
+import MobileAuthScreen from "@/components/MobileAuthScreen";
 
 export default function PinPreview() {
   const [pin, setPin] = useState("");
@@ -9,17 +10,15 @@ export default function PinPreview() {
   const [message, setMessage] = useState("");
 
   return (
-    <main className="min-h-dvh bg-[radial-gradient(ellipse_at_top,_#e7f0ed_0%,_#f5f7f3_45%,_#fafaf7_100%)] px-6 py-6">
-      <div className="mx-auto max-w-sm">
-        <div className="mb-7 flex items-center justify-between">
-          <a href="/v4/login" className="text-xs font-medium tracking-wide text-[#71868a] transition-colors hover:text-[#255f85]">← Retour</a>
-          <span className="rounded-full border border-[#255f85]/10 bg-white/60 px-3 py-1.5 text-[10px] font-medium tracking-wide text-[#547379]">Aperçu · code 1234</span>
-        </div>
-        <div className="mb-7 pt-4 text-center">
-          <h1 className="text-2xl font-bold text-slate-900">{unlocked ? "Vous voilà chez vous." : "Bon retour."}</h1>
-          <p className="mt-2 text-sm text-slate-500">Votre espace, en toute confiance.</p>
-        </div>
-        <div className="px-2">
+    <MobileAuthScreen title={unlocked ? "Vous voilà chez vous." : "Bon retour."}
+      leading={<div className="mb-7 flex items-center justify-between">
+        <a href="/v4/login" className="text-xs font-medium text-[#71868a] transition-colors hover:text-[#255f85]">← Retour</a>
+        <span className="rounded-full border border-[#255f85]/10 bg-white/60 px-3 py-1.5 text-[10px] font-medium text-[#547379]">Aperçu · code 1234</span>
+      </div>}
+      footer={<div className="space-y-2 pb-3">
+        <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium text-[#819693]"><ShieldCheck className="h-3 w-3" />Démonstration uniquement</p>
+        <p className="text-[10px] text-[#8b9c99]">Aucun code enregistré · Aucun accès à votre compte</p>
+      </div>}>
           {unlocked ? <div className="space-y-6 py-10 text-center">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#e2eee7]"><CheckCircle2 className="h-10 w-10 text-[#397961]" strokeWidth={1.5} /></div>
             <p className="text-sm leading-relaxed text-[#71868a]">Code de démonstration validé.<br />Votre compte réel n’a pas été ouvert.</p>
@@ -35,12 +34,6 @@ export default function PinPreview() {
             <Button type="button" variant="ghost" className="mx-auto flex h-11 gap-2.5 rounded-full px-5 text-xs font-medium text-[#547980] hover:bg-white/70" onClick={() => setMessage("Aperçu uniquement : Face ID n’est pas lancé ici. Dans la PWA, ce bouton ouvre la validation sécurisée de votre téléphone.")}><Fingerprint className="h-5 w-5" strokeWidth={1.5} />Utiliser Face ID / empreinte</Button>
           </form>}
           {message && <p role="status" className="mt-4 rounded-2xl border border-[#dfe6e4] bg-white/60 p-4 text-center text-xs leading-relaxed text-[#547379]">{message}</p>}
-        </div>
-        <div className="mt-7 space-y-2 pb-3 text-center">
-          <p className="flex items-center justify-center gap-1.5 text-[10px] font-medium tracking-wide text-[#819693]"><ShieldCheck className="h-3 w-3" />Démonstration uniquement</p>
-          <p className="text-[10px] text-[#8b9c99]">Aucun code enregistré · Aucun accès à votre compte</p>
-        </div>
-      </div>
-    </main>
+    </MobileAuthScreen>
   );
 }

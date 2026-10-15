@@ -8,6 +8,7 @@ import CGUVModal from './CGUVModal';
 import HousingRegistrationModal from './HousingRegistrationModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
 import AccountSuspendedScreen from './AccountSuspendedScreen';
+import PwaSessionLock from './PwaSessionLock';
 import { getProfile, updateProfile, UserProfile, updateUserLastSeen } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
@@ -252,14 +253,17 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   if (session && profile?.is_payment_suspended && profile.role !== 'admin') {
     return (
       <SessionContext.Provider value={{ session, loading, profile }}>
-        <AccountSuspendedScreen />
-        <Toaster />
+        <PwaSessionLock userId={session.user.id}>
+          <AccountSuspendedScreen />
+          <Toaster />
+        </PwaSessionLock>
       </SessionContext.Provider>
     );
   }
 
   return (
     <SessionContext.Provider value={{ session, loading, profile }}>
+      <PwaSessionLock userId={session?.user.id}>
       {children}
       <Toaster />
       {showCguvModal && (
@@ -287,6 +291,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           onClose={() => setShowOnboardingConfetti(false)}
         />
       )}
+      </PwaSessionLock>
     </SessionContext.Provider>
   );
 };

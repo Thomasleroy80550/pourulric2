@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Fingerprint, RotateCcw, ShieldCheck } from "lucide-react";
+import { ArrowRight, CheckCircle2, RotateCcw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PinKeypad from "@/components/PinKeypad";
 import MobileAuthScreen from "@/components/MobileAuthScreen";
@@ -30,8 +30,7 @@ export default function PinPreview() {
             else { setMessage("Code de démonstration incorrect. Essayez 1234."); setPin(""); }
           }}>
             <PinKeypad value={pin} onChange={value => { setPin(value); setMessage(""); }} label="Entrez votre code personnel" />
-            <Button type="submit" disabled={pin.length !== 4} className="h-14 w-full justify-between rounded-full bg-gradient-to-r from-[#255f85] to-[#1a4c65] px-6 text-sm font-medium tracking-wide text-white shadow-[0_8px_22px_-8px_rgba(37,95,133,0.4)] transition-all hover:shadow-[0_10px_26px_-6px_rgba(37,95,133,0.4)] disabled:bg-none disabled:bg-[#e5ebe7] disabled:text-[#99a9a7] disabled:opacity-100 disabled:shadow-none"><span>Déverrouiller la démo</span><ArrowRight className="h-4 w-4" strokeWidth={1.5} /></Button>
-            <Button type="button" variant="ghost" className="mx-auto flex h-11 gap-2.5 rounded-full px-5 text-xs font-medium text-[#547980] hover:bg-white/70" onClick={() => setMessage("Aperçu uniquement : Face ID n’est pas lancé ici. Dans la PWA, ce bouton ouvre la validation sécurisée de votre téléphone.")}><Fingerprint className="h-5 w-5" strokeWidth={1.5} />Utiliser Face ID / empreinte</Button>
+            <Button type="submit" disabled={pin.length !== 4} className="h-14 w-full justify-between rounded-full bg-gradient-to-r from-[#255f85] to-[#1a4c65] px-6 text-sm font-normal text-white shadow-[0_8px_22px_-8px_rgba(37,95,133,0.4)] transition-all hover:shadow-[0_10px_26px_-6px_rgba(37,95,133,0.4)] disabled:bg-none disabled:bg-[#e5ebe7] disabled:text-[#99a9a7] disabled:opacity-100 disabled:shadow-none"><span>Déverrouiller la démo</span><ArrowRight className="h-4 w-4" strokeWidth={1.5} /></Button>
           </form>}
           {message && <p role="status" className="mt-4 rounded-2xl border border-[#dfe6e4] bg-white/60 p-4 text-center text-xs leading-relaxed text-[#547379]">{message}</p>}
     </MobileAuthScreen>

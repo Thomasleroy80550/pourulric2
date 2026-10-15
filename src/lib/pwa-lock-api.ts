@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 
 export function isInstalledPwa() {
   return window.matchMedia("(display-mode: standalone)").matches ||
@@ -30,16 +29,4 @@ export async function lockRequest(deviceId: string, action: string, extra: Recor
   }
   if (data?.error) throw new Error(data.error);
   return data;
-}
-
-export async function enableDeviceBiometrics(deviceId: string, pin: string) {
-  const { options } = await lockRequest(deviceId, "register-options", { pin });
-  const response = await startRegistration({ optionsJSON: options });
-  await lockRequest(deviceId, "register-verify", { response });
-}
-
-export async function unlockWithBiometrics(deviceId: string) {
-  const { options } = await lockRequest(deviceId, "auth-options");
-  const response = await startAuthentication({ optionsJSON: options });
-  await lockRequest(deviceId, "auth-verify", { response });
 }

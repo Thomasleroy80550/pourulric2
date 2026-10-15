@@ -53,16 +53,16 @@ const LoginV4: React.FC = () => {
   };
 
   return (
-    <MobileAuthScreen title="Bon retour.">
+    <MobileAuthScreen title="Connexion">
       <form onSubmit={handleSignIn} className="space-y-5">
-        <p className="text-center text-sm text-slate-600">Connectez-vous à votre espace propriétaire.</p>
+        <p className="text-center text-sm text-slate-600">Connectez-vous une première fois. Sur mobile, vous choisirez ensuite votre code à 4 chiffres.</p>
         <div>
-          <label htmlFor="login-v4-email" className="text-sm font-medium text-slate-600">Email</label>
+          <label htmlFor="login-v4-email" className="text-sm font-normal text-slate-600">Email</label>
           <Input id="login-v4-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@exemple.fr" autoComplete="email" required disabled={loading}
             className="mt-2 h-14 rounded-2xl border-[#dfe6e4] bg-white/70 px-4 text-[16px] text-slate-900 shadow-sm focus-visible:ring-[#255f85]/30" />
         </div>
         <div>
-          <label htmlFor="login-v4-password" className="text-sm font-medium text-slate-600">Mot de passe</label>
+          <label htmlFor="login-v4-password" className="text-sm font-normal text-slate-600">Mot de passe</label>
           <div className="relative mt-2">
             <Input id="login-v4-password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" required disabled={loading}
               className="h-14 rounded-2xl border-[#dfe6e4] bg-white/70 pl-4 pr-12 text-[16px] text-slate-900 shadow-sm focus-visible:ring-[#255f85]/30" />
@@ -71,15 +71,14 @@ const LoginV4: React.FC = () => {
             </Button>
           </div>
         </div>
-        <Button type="submit" disabled={loading} className="h-14 w-full gap-2 rounded-full bg-gradient-to-r from-[#255f85] to-[#1a4c65] text-sm font-medium shadow-[0_8px_22px_-8px_rgba(37,95,133,0.4)] disabled:opacity-60">
+        <Button type="submit" disabled={loading} className="h-14 w-full gap-2 rounded-full bg-gradient-to-r from-[#255f85] to-[#1a4c65] text-sm font-normal shadow-[0_8px_22px_-8px_rgba(37,95,133,0.4)] disabled:opacity-60">
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}{loading ? "Connexion..." : "Se connecter"}
         </Button>
-        <Button type="button" variant="ghost" disabled={loading} onClick={handleForgotPassword} className="w-full rounded-full text-sm font-medium text-[#547980] hover:bg-white/70">Mot de passe oublié ?</Button>
+        <Button type="button" variant="ghost" disabled={loading} onClick={handleForgotPassword} className="w-full rounded-full text-sm font-normal text-[#547980] hover:bg-white/70">Mot de passe oublié ?</Button>
       </form>
-      <a href="/preview/digicode" className="block text-center text-xs font-medium text-[#547980] underline underline-offset-4">Voir l’aperçu du digicode PWA</a>
       <div className="pt-3 text-center">
         <p className="text-xs text-slate-500">Pas encore client Hello Keys ?</p>
-        <Link to="/prospect-signup" className="mt-2 inline-block text-sm font-semibold text-[#255f85]">Découvrir la conciergerie</Link>
+        <Link to="/prospect-signup" className="mt-2 inline-block text-sm font-normal text-[#255f85]">Découvrir la conciergerie</Link>
       </div>
     </MobileAuthScreen>
   );

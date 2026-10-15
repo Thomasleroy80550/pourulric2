@@ -195,7 +195,7 @@ export default function PwaSessionLock({ userId, children, sessionLoading = fals
   });
 
   return (
-    <MobileAuthScreen overlay title={phase === "setup" ? confirming ? "Confirmez votre code" : "Choisissez votre code" : phase === "unlock" || showStartupKeypad ? "Bon retour" : "Vérification en cours"}>
+    <MobileAuthScreen compact overlay title={phase === "setup" ? confirming ? "Confirmez votre code" : "Choisissez votre code" : phase === "unlock" || showStartupKeypad ? "Bon retour" : "Vérification en cours"}>
       {phase === "checking" && (showStartupKeypad ? <>
         <PinKeypad value="" onChange={setPin} disabled label="Saisissez votre code à 4 chiffres" />
         <Button disabled className="h-14 w-full gap-2 rounded-full bg-[#e5ebe7] text-sm font-normal text-[#71868a] opacity-100"><Loader2 className="h-4 w-4 animate-spin" />Préparation du digicode…</Button>

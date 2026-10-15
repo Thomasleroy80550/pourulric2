@@ -10,8 +10,8 @@ export default function PinPreview() {
   const [message, setMessage] = useState("");
 
   return (
-    <MobileAuthScreen title={unlocked ? "Vous voilà chez vous." : "Bon retour."}
-      leading={<div className="mb-7 flex items-center justify-between">
+    <MobileAuthScreen compact title={unlocked ? "Vous voilà chez vous." : "Bon retour."}
+      leading={<div className="mb-4 flex items-center justify-between">
         <a href="/v4/login" className="text-xs font-medium text-[#71868a] transition-colors hover:text-[#255f85]">← Retour</a>
         <span className="rounded-full border border-[#255f85]/10 bg-white/60 px-3 py-1.5 text-[10px] font-medium text-[#547379]">Aperçu · code 1234</span>
       </div>}

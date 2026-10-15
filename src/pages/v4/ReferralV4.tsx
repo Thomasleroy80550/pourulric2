@@ -14,10 +14,9 @@ export default function ReferralV4() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Parrainage</h1>
-            <p className="mt-1 text-sm text-slate-500">Recommandez Hello Keys et retrouvez vos récompenses dans votre Wallet.</p>
           </div>
         </header>
-        <HelloKeysWallet />
+        <HelloKeysWallet compact />
       </div>
     </V4Layout>
   );

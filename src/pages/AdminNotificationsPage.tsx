@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import SendPushNotificationCard from '@/components/admin/SendPushNotificationCard';
 import AdminPwaInstallStatusCard from '@/components/admin/AdminPwaInstallStatusCard';
 import PwaInstallQrCard from '@/components/admin/PwaInstallQrCard';
+import BroadcastPushNotificationCard from '@/components/admin/BroadcastPushNotificationCard';
+import { PUSH_UPDATE_TEMPLATE } from '@/lib/push-update-template';
 
 type EventTemplate = {
   key: string;
@@ -25,6 +27,7 @@ type EventTemplate = {
 };
 
 const DEFAULT_TEMPLATES: EventTemplate[] = [
+  PUSH_UPDATE_TEMPLATE,
   {
     key: 'statement_email',
     name: 'Relevé envoyé (email)',
@@ -166,6 +169,8 @@ function AdminNotificationsPage() {
             </Button>
           </div>
         </div>
+
+        <BroadcastPushNotificationCard template={eventTemplates.find(t => t.key === PUSH_UPDATE_TEMPLATE.key)} />
 
         {/* Envoi manuel de notifications (in-app + push) */}
         <SendPushNotificationCard />

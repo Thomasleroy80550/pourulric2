@@ -152,13 +152,13 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
-      console.log('Auth state changed:', event, currentSession);
+      console.log('Auth state changed:', event, { hasSession: !!currentSession });
       revalidateSessionAndProfile(currentSession);
     });
 
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       if (!isMounted) return;
-      console.log("Initial getSession result:", initialSession);
+      console.log("Initial getSession result:", { hasSession: !!initialSession });
       revalidateSessionAndProfile(initialSession);
     });
 

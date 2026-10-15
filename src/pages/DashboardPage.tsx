@@ -679,6 +679,12 @@ const DashboardPage = () => {
           </div>
           <DashboardVersionSwitch />
         </div>
+        <Card className="mb-4 border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><h2 className="font-semibold">Parrainez vos proches, gagnez jusqu’à 160 € !</h2><p className="text-sm text-muted-foreground">Vos récompenses en euros pour vos ménages propriétaires et vos prochaines factures.</p></div>
+            <Button asChild><Link to="/wallet">Mon Wallet Hello Keys</Link></Button>
+          </CardContent>
+        </Card>
         <div className="mb-3">
 
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Version actuelle</p>

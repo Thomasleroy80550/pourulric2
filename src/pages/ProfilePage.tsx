@@ -29,6 +29,7 @@ import DelegatedAccessPanel from '@/components/DelegatedAccessPanel';
 import SharedSpacePanel from '@/components/SharedSpacePanel';
 import AttestationFormDialog from '@/components/AttestationFormDialog';
 import { supabase } from '@/integrations/supabase/client';
+import HelloKeysWallet from '@/components/HelloKeysWallet';
 
 // Bouton discret pour accéder au dashboard Netatmo
 function HiddenNetatmoDashboardButton() {
@@ -529,40 +530,7 @@ const ProfilePage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="referral" className="flex-1">
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl flex items-center gap-2"><Gift /> Programme de Parrainage</CardTitle>
-                <CardDescription>Partagez votre code de parrainage et gagnez des crédits pour chaque nouvel utilisateur qui nous rejoint grâce à vous !</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <Label htmlFor="referralCode">Votre code de parrainage unique</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input id="referralCode" value={profile?.referral_code || 'Génération...'} readOnly className="font-mono text-base sm:text-lg" />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        if (profile?.referral_code) {
-                          navigator.clipboard.writeText(profile.referral_code);
-                          toast.success("Code copié dans le presse-papiers !");
-                        }
-                      }}
-                      disabled={!profile?.referral_code}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <Label>Vos crédits de parrainage</Label>
-                  <div className="text-3xl sm:text-4xl font-bold text-primary mt-1">
-                    {profile?.referral_credits || 0}
-                  </div>
-                  <p className="text-sm text-muted-foreground">Utilisez vos crédits pour obtenir des réductions sur nos services.</p>
-                </div>
-              </CardContent>
-            </Card>
+            <HelloKeysWallet />
           </TabsContent>
 
           <TabsContent value="kyc" className="flex-1">

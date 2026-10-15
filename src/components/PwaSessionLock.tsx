@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import PinKeypad from "@/components/PinKeypad";
 import MobileAuthScreen from "@/components/MobileAuthScreen";
 import { supabase } from "@/integrations/supabase/client";
-import { getLockDeviceId, isInstalledPwa, lockRequest } from "@/lib/pwa-lock-api";
+import { forgetDeviceLock, getLockDeviceId, getLockDeviceKey, isInstalledPwa, lockRequest, readSavedDevice } from "@/lib/pwa-lock-api";
 
 type Phase = "checking" | "setup" | "unlock" | "open" | "error";
 const MOBILE_QUERY = "(max-width: 767px)";
@@ -24,8 +24,10 @@ export default function PwaSessionLock({ userId, children, sessionLoading = fals
   const [busy, setBusy] = useState(false);
   const deviceId = useRef("");
   const configured = useRef(false);
+  const verifiedSignInUser = useRef<string>();
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  const savedOwner = userId ? null : cachedUser;
 
   const rememberLock = (owner: string | null) => {
     if (owner) localStorage.setItem("hk-pwa-lock-user", owner);
@@ -54,20 +56,24 @@ export default function PwaSessionLock({ userId, children, sessionLoading = fals
     setConfirmPin("");
     setConfirming(false);
     setMessage("");
-    if (!mobile) return;
-    if (!userId) {
-      if (!sessionLoading) {
-        try { rememberLock(null); } catch { setCachedUser(null); }
-      }
+    if (!mobile || (!userId && sessionLoading)) return;
+    if (userId && verifiedSignInUser.current === userId) {
+      verifiedSignInUser.current = undefined;
+      configured.current = true;
+      setCheckedUser(userId);
+      setPhase(document.visibilityState === "hidden" ? "unlock" : "open");
       return;
     }
+    const savedDevice = readSavedDevice(savedOwner);
+    if (!userId && !savedDevice) return;
     setPhase("checking");
     try {
-      deviceId.current = getLockDeviceId(userId);
-      lockRequest(deviceId.current, "status").then(status => {
+      const owner = userId ?? savedOwner!;
+      deviceId.current = userId ? getLockDeviceId(userId) : savedDevice!.deviceId;
+      lockRequest(deviceId.current, userId ? "status" : "device-status", userId ? {} : { deviceKey: savedDevice!.deviceKey }).then(status => {
         if (!active) return;
         configured.current = status.configured;
-        rememberLock(status.configured ? userId : null);
+        rememberLock(status.configured ? owner : null);
         setCheckedUser(userId);
         setPhase(status.configured ? "unlock" : "setup");
       }).catch(error => {
@@ -78,7 +84,18 @@ export default function PwaSessionLock({ userId, children, sessionLoading = fals
       setPhase("error");
     }
     return () => { active = false; };
-  }, [mobile, userId, sessionLoading]);
+  }, [mobile, userId, sessionLoading, savedOwner]);
+
+  useEffect(() => {
+    const forget = () => {
+      configured.current = false;
+      setCachedUser(null);
+      setCheckedUser(undefined);
+      setPhase(userId ? "setup" : "checking");
+    };
+    window.addEventListener("hk-device-lock-forgotten", forget);
+    return () => window.removeEventListener("hk-device-lock-forgotten", forget);
+  }, [userId]);
 
   useEffect(() => {
     const lockOnBackground = (event: Event) => {
@@ -97,7 +114,7 @@ export default function PwaSessionLock({ userId, children, sessionLoading = fals
     };
   }, []);
 
-  if (!mobile || (!userId && !sessionLoading)) return <>{children}</>;
+  if (!mobile || (!userId && !sessionLoading && !readSavedDevice(cachedUser))) return <>{children}</>;
   if (userId && phase === "open" && checkedUser === userId) return <>{children}</>;
   const showStartupKeypad = phase === "checking" && !!cachedUser && (!userId || cachedUser === userId);
 
@@ -127,30 +144,52 @@ export default function PwaSessionLock({ userId, children, sessionLoading = fals
       setConfirmPin("");
       throw new Error("Les deux codes doivent être identiques. Confirmez à nouveau votre code.");
     }
-    await lockRequest(deviceId.current, "setup", { pin });
+    if (!userId) return;
+    await lockRequest(deviceId.current, "setup", { pin, deviceKey: getLockDeviceKey(userId) });
     configured.current = true;
-    rememberLock(userId ?? null);
+    rememberLock(userId);
     openApp();
   });
 
   const validatePin = () => run(async () => {
-    await lockRequest(deviceId.current, "pin", { pin });
-    openApp();
+    if (userId) {
+      await lockRequest(deviceId.current, "pin", { pin, deviceKey: getLockDeviceKey(userId) });
+      rememberLock(userId);
+      openApp();
+      return;
+    }
+    const saved = readSavedDevice(cachedUser);
+    if (!saved) throw new Error("Reconnectez-vous à votre compte pour autoriser ce téléphone.");
+    const result = await lockRequest(saved.deviceId, "device-signin", { pin, deviceKey: saved.deviceKey });
+    if (!result.session) throw new Error("La connexion n’a pas pu être créée.");
+    verifiedSignInUser.current = result.session.userId;
+    try {
+      const { error } = await supabase.auth.setSession({ access_token: result.session.access_token, refresh_token: result.session.refresh_token });
+      if (error) throw error;
+      setPin("");
+    } catch (error) {
+      verifiedSignInUser.current = undefined;
+      throw error;
+    }
   });
 
   const reconnect = () => run(async () => {
+    const owner = userId ?? cachedUser;
+    if (owner) await forgetDeviceLock(owner);
     const { error } = await supabase.auth.signOut({ scope: "local" });
     if (error) throw error;
-    // La connexion complète au compte reste nécessaire pour réinitialiser un code oublié.
-    localStorage.removeItem(`hk-pwa-device:${userId}`);
+    setCachedUser(null);
   });
 
   const retry = () => run(async () => {
-    if (!userId) return;
-    deviceId.current = getLockDeviceId(userId);
-    const status = await lockRequest(deviceId.current, "status");
+    const owner = userId ?? cachedUser;
+    if (!owner) return;
+    const saved = readSavedDevice(owner);
+    if (!userId && !saved) return;
+    deviceId.current = userId ? getLockDeviceId(userId) : saved!.deviceId;
+    const status = await lockRequest(deviceId.current, userId ? "status" : "device-status", userId ? {} : { deviceKey: saved!.deviceKey });
     configured.current = status.configured;
-    rememberLock(status.configured ? userId : null);
+    rememberLock(status.configured ? owner : null);
     setCheckedUser(userId);
     setPhase(status.configured ? "unlock" : "setup");
   });

@@ -20,6 +20,8 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import PageCreator from "./components/PageCreator";
 import ContentPage from "./pages/ContentPage";
 import ProfilePage from "./pages/ProfilePage";
+import WalletPage from "./pages/WalletPage";
+import AdminWalletPage from "./pages/AdminWalletPage";
 import NewOwnerSitePage from "./pages/NewOwnerSitePage";
 import PromotionPage from "./pages/PromotionPage";
 import AdminInvoiceGenerationPage from "./pages/AdminInvoiceGenerationPage";
@@ -209,7 +211,9 @@ function App() {
                       <Route path="/v4/login" element={<LoginV4 />} />
                       <Route path="/onboarding-status" element={<OnboardingStatusPage />} />
                       <Route path="/estimation" element={<EstimationPage />} />
+                      <Route path="/wallet" element={<WalletPage />} />
                       <Route path="/admin" element={<AdminDashboardPage />} />
+                      <Route path="/admin/wallet" element={<AdminWalletPage />} />
                       <Route path="/admin/pages" element={<PageCreator />} />
                       <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />
                       <Route path="/admin/invoice-generation" element={<AdminInvoiceGenerationPage />} />

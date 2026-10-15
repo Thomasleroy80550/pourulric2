@@ -598,9 +598,9 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                       )} />
                       <FormField control={form.control} name="referral_credits" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Crédits de parrainage</FormLabel>
-                          <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
-                          <FormDescription>Nombre de crédits de parrainage disponibles pour l'utilisateur.</FormDescription>
+                          <FormLabel>Anciens crédits de parrainage (archivés)</FormLabel>
+                          <FormControl><Input type="number" {...field} value={field.value ?? ''} readOnly /></FormControl>
+                          <FormDescription>Convertis une seule fois à raison de 1 crédit = 1 €. Le solde actuel et les validations se gèrent dans Wallet & parrainage.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )} />

@@ -294,6 +294,7 @@ const AdminDashboardPage: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 mt-1">Bienvenue sur votre tableau de bord centralisé.</p>
         </div>
 
+        <Button asChild variant="outline"><Link to="/admin/wallet">Gérer les Wallets et les parrainages</Link></Button>
         <ReviewsEmbedPanel />
 
         {tempAlertsCount > 0 && (

@@ -6,6 +6,7 @@ import V4Layout from "./V4Layout";
 import { useSession } from "@/components/SessionContextProvider";
 import { updateProfile } from "@/lib/profile-api";
 import { supabase } from "@/integrations/supabase/client";
+import DevicePinSettings from "@/components/DevicePinSettings";
 
 const SettingsV4: React.FC = () => {
   const navigate = useNavigate();
@@ -130,10 +131,12 @@ const SettingsV4: React.FC = () => {
           <ChevronRight className="h-4 w-4 text-slate-300" />
         </Link>
 
+        <DevicePinSettings />
+
         {/* Déconnexion */}
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 font-semibold text-red-500"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 font-semibold text-red-500"} الج?}
         >
           <LogOut className="h-4 w-4" />
           Se déconnecter

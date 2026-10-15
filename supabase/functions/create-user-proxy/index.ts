@@ -81,27 +81,15 @@ serve(async (req) => {
       } else if (referrerProfile) {
         const referrerId = referrerProfile.id;
         const newUserId = createData.user.id;
-        const creditsToAward = 10;
 
-        // 1. Create a record in the referrals table
-        await adminSupabaseClient.from('referrals').insert({
+        // Les primes Wallet sont créditées après validation des étapes par Hello Keys.
+        const { error: referralError } = await adminSupabaseClient.from('referrals').insert({
           referrer_id: referrerId,
           referred_id: newUserId,
         });
-
-        // 2. Update the referrer's credit balance
-        const newCreditBalance = (referrerProfile.referral_credits || 0) + creditsToAward;
-        await adminSupabaseClient
-          .from('profiles')
-          .update({ referral_credits: newCreditBalance })
-          .eq('id', referrerId);
-
-        // 3. Log the credit transaction
-        await adminSupabaseClient.from('credit_transactions').insert({
-          user_id: referrerId,
-          amount: creditsToAward,
-          description: `Parrainage de ${first_name} ${last_name}`,
-        });
+        if (referralError) {
+          console.error('[create-user-proxy] Referral registration failed', { message: referralError.message });
+        }
       }
     }
 

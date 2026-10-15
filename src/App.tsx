@@ -155,6 +155,7 @@ import BookingDetailV4 from "./pages/v4/BookingDetailV4";
 import FinancesV4 from "./pages/v4/FinancesV4";
 import FinanceMonthV4 from "./pages/v4/FinanceMonthV4";
 import MoreV4 from "./pages/v4/MoreV4";
+import ReferralV4 from "./pages/v4/ReferralV4";
 import ReviewsV4 from "./pages/v4/ReviewsV4";
 import ContactV4 from "./pages/v4/ContactV4";
 import NotificationsV4 from "./pages/v4/NotificationsV4";
@@ -320,6 +321,7 @@ function App() {
                       <Route path="/v4/finances" element={<FinancesV4 />} />
                       <Route path="/v4/finances/mois/:period" element={<FinanceMonthV4 />} />
                       <Route path="/v4/plus" element={<MoreV4 />} />
+                      <Route path="/v4/plus/parrainage" element={<ReferralV4 />} />
                       <Route path="/v4/avis" element={<ReviewsV4 />} />
                       <Route path="/v4/contact" element={<ContactV4 />} />
                       <Route path="/v4/notifications" element={<NotificationsV4 />} />

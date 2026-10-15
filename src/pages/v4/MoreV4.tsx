@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Lightbulb,
   Headset,
+  Gift,
 } from "lucide-react";
 import V4Layout from "./V4Layout";
 import PushSettingV4 from "./PushSettingV4";
@@ -51,6 +52,12 @@ const MoreV4: React.FC = () => {
         label: "Mes relevés",
         sub: "Historique de vos versements",
         to: "/v4/finances",
+      },
+      {
+        icon: Gift,
+        label: "Parrainage",
+        sub: "Gagnez jusqu’à 160 € dans votre Wallet",
+        to: "/v4/plus/parrainage",
       },
       {
         icon: Star,

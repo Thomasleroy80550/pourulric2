@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Fingerprint, LockKeyhole, ShieldCheck, Loader2 } from "lucide-react";
+import { Fingerprint, ShieldCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PinKeypad from "@/components/PinKeypad";
 import { supabase } from "@/integrations/supabase/client";
@@ -158,15 +158,10 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
     <div className="fixed inset-0 z-[10000] overflow-y-auto bg-[radial-gradient(ellipse_at_top,_#e7f0ed_0%,_#f5f7f3_45%,_#fafaf7_100%)] px-6 py-8" role="main" aria-label="Protection de votre espace">
       <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center">
         <div className="mb-7 text-center">
-          <div className="relative mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-[24px] border border-white/80 bg-gradient-to-br from-[#2d7081] to-[#173f56] text-white shadow-[0_12px_30px_-10px_rgba(23,63,86,0.4)]">
-            {phase === "biometric" ? <Fingerprint className="h-8 w-8" strokeWidth={1.4} /> : <LockKeyhole className="h-7 w-7" strokeWidth={1.4} />}
-            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-[3px] border-[#edf3ee] bg-[#dbeae3] text-[#397961]"><ShieldCheck className="h-3 w-3" /></span>
-          </div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#64858b]">Hello Keys</p>
-          <h1 className="mt-3 text-[30px] font-medium leading-tight tracking-[-0.04em] text-[#173f47]">
+          <h1 className="text-2xl font-bold text-slate-900">
             {phase === "offer" ? "Votre espace, protégé." : phase === "setup" ? "Votre code personnel." : phase === "biometric" ? "Un geste suffit." : phase === "unlock" ? "Bon retour." : "Vérification en cours."}
           </h1>
-          <p className="mt-2 text-[13px] text-[#7d9092]">Votre espace, en toute confiance.</p>
+          <p className="mt-2 text-sm text-slate-500">Votre espace, en toute confiance.</p>
         </div>
         <div className="space-y-5 px-2">
           {phase === "checking" && <div className="flex justify-center py-8"><Loader2 className="h-7 w-7 animate-spin text-[#255f85]" aria-label="Chargement" /></div>}

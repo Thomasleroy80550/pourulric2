@@ -36,7 +36,7 @@ export default function PinKeypad({ value, onChange, disabled = false, label }: 
         if (event.key === "Backspace") { event.preventDefault(); onChange(value.slice(0, -1)); }
         if (event.key === "Delete") { event.preventDefault(); onChange(""); }
       }}>
-      <p className="text-center text-[13px] font-medium tracking-wide text-[#6b7d81]">{label}</p>
+      <p className="text-center text-sm font-medium text-slate-600">{label}</p>
       <div className="mb-8 mt-5 flex justify-center gap-3" role="status" aria-label={`${value.length} chiffres saisis sur 4`}>
         {[0, 1, 2, 3].map(index => (
           <span key={index} aria-hidden="true" className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-200 motion-reduce:transition-none ${index < value.length ? "border-[#255f85]/20 bg-[#255f85]/[0.06] shadow-[0_2px_8px_rgba(37,95,133,0.05)]" : "border-[#dfe6e4] bg-white/40"}`}>
@@ -48,14 +48,14 @@ export default function PinKeypad({ value, onChange, disabled = false, label }: 
         {digits.map(({ digit, letters }) => (
           <Button key={digit} type="button" variant="ghost" disabled={disabled || value.length === 4}
             onClick={() => addDigit(digit)} aria-label={`Chiffre ${digit}`} className={digitClassName}>
-            <span className="text-[36px] font-light leading-[1.15] tracking-tight tabular-nums">{digit}</span>
-            <span aria-hidden="true" className="mt-1 h-3 text-[8px] font-medium tracking-[0.22em] text-[#91a3a5] group-active:text-white/70">{letters}</span>
+            <span className="text-3xl font-semibold leading-tight">{digit}</span>
+            <span aria-hidden="true" className="mt-1 h-3 text-[9px] font-medium text-[#91a3a5] group-active:text-white/70">{letters}</span>
           </Button>
         ))}
         <Button type="button" variant="ghost" disabled={disabled || !value.length} onClick={() => onChange("")}
           className="aspect-square h-auto w-full rounded-full p-0 text-[#8a9b9e] transition-all hover:bg-white/70 hover:text-[#255f85] active:scale-90" aria-label="Effacer tout le code"><RotateCcw className="h-5 w-5" strokeWidth={1.5} /></Button>
         <Button type="button" variant="ghost" disabled={disabled || value.length === 4} onClick={() => addDigit("0")}
-          className={digitClassName} aria-label="Chiffre 0"><span className="text-[36px] font-light leading-[1.15] tracking-tight tabular-nums">0</span><span aria-hidden="true" className="mt-1 h-3 text-[9px] text-[#91a3a5] group-active:text-white/70">+</span></Button>
+          className={digitClassName} aria-label="Chiffre 0"><span className="text-3xl font-semibold leading-tight">0</span><span aria-hidden="true" className="mt-1 h-3 text-[9px] text-[#91a3a5] group-active:text-white/70">+</span></Button>
         <Button type="button" variant="ghost" disabled={disabled || !value.length} onClick={() => onChange(value.slice(0, -1))}
           className="aspect-square h-auto w-full rounded-full p-0 text-[#8a9b9e] transition-all hover:bg-white/70 hover:text-[#255f85] active:scale-90" aria-label="Effacer le dernier chiffre"><Delete className="h-6 w-6" strokeWidth={1.5} /></Button>
       </div>

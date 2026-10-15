@@ -136,7 +136,7 @@ const SettingsV4: React.FC = () => {
         {/* Déconnexion */}
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 font-semibold text-red-500"} الج?}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-50 py-3.5 font-semibold text-red-500"
         >
           <LogOut className="h-4 w-4" />
           Se déconnecter

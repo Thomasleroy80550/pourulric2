@@ -30,6 +30,7 @@ export default function DevicePinSettings() {
     <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
       <h2 className="font-semibold text-slate-900">Connexion par code</h2>
       <p className="text-sm text-slate-500">Votre code fonctionne sur ce téléphone, même après déconnexion. Pour retirer cette autorisation et revenir à la connexion par email, oubliez cet appareil.</p>
+      <p className="text-xs text-slate-400">Après 30 jours sans utilisation du code, une connexion au compte est nécessaire pour renouveler l’autorisation. La double authentification, si activée, reste obligatoire.</p>
       <AlertDialog>
         <AlertDialogTrigger asChild><Button variant="outline" className="w-full rounded-xl" disabled={busy}>Oublier cet appareil</Button></AlertDialogTrigger>
         <AlertDialogContent>

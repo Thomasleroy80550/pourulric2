@@ -62,6 +62,7 @@ Deno.serve(async req => {
     const suppliedKeyHash = validKeyFormat ? await hashDeviceKey(body.deviceKey) : null;
     const ownsKey = !!device?.device_key_hash && !!suppliedKeyHash && equalHash(suppliedKeyHash, device.device_key_hash);
     if (device && device.origin !== origin) return reply({ error: "Cet appareil est associé à une autre adresse de l’application." }, 401);
+    if (body.action === "forget" && !device) return reply({ forgotten: true });
     if (publicAction && !(body.action === "forget" && callerId === device?.user_id) && !ownsKey) {
       return reply({ error: "Ce téléphone n’est pas encore autorisé. Reconnectez-vous une fois avec votre compte puis entrez votre code." }, 401);
     }
@@ -130,11 +131,12 @@ Deno.serve(async req => {
       if (!signedIn.session || signedIn.user?.id !== device.user_id) throw new Error("Session identity mismatch");
       sessionTokens = { access_token: signedIn.session.access_token, refresh_token: signedIn.session.refresh_token, userId: signedIn.user.id };
     }
-    const { error: saveError } = await db.from("pwa_device_locks").update({
+    const { data: saved, error: saveError } = await db.from("pwa_device_locks").update({
       attempts: 0, total_attempts: 0, locked_until: null, device_valid_until: deviceExpiry(),
       ...(body.action === "pin" && suppliedKeyHash ? { device_key_hash: suppliedKeyHash } : {}),
-    }).eq("id", device.id).eq("user_id", device.user_id);
+    }).eq("id", device.id).eq("user_id", device.user_id).select("id");
     if (saveError) throw saveError;
+    if (!saved?.length) return reply({ error: "L’autorisation de cet appareil a été supprimée." }, 401);
     console.info("[pwa-unlock] Connexion par code validée", { userId: device.user_id, newSession: !!sessionTokens });
     return reply({ verified: true, ...(sessionTokens ? { session: sessionTokens } : {}) });
   } catch (error) {

@@ -155,18 +155,20 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
   });
 
   return (
-    <div className="fixed inset-0 z-[10000] overflow-y-auto bg-[#ecf3f7] px-5 py-10" role="main" aria-label="Protection de votre espace">
+    <div className="fixed inset-0 z-[10000] overflow-y-auto bg-[radial-gradient(ellipse_at_top,_#e7f0ed_0%,_#f5f7f3_45%,_#fafaf7_100%)] px-6 py-8" role="main" aria-label="Protection de votre espace">
       <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#255f85] text-white shadow-lg">
-            {phase === "biometric" ? <Fingerprint className="h-10 w-10" /> : <LockKeyhole className="h-9 w-9" />}
+        <div className="mb-7 text-center">
+          <div className="relative mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-[24px] border border-white/80 bg-gradient-to-br from-[#2d7081] to-[#173f56] text-white shadow-[0_12px_30px_-10px_rgba(23,63,86,0.4)]">
+            {phase === "biometric" ? <Fingerprint className="h-8 w-8" strokeWidth={1.4} /> : <LockKeyhole className="h-7 w-7" strokeWidth={1.4} />}
+            <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-[3px] border-[#edf3ee] bg-[#dbeae3] text-[#397961]"><ShieldCheck className="h-3 w-3" /></span>
           </div>
-          <p className="text-sm font-bold uppercase tracking-widest text-[#255f85]">Hello Keys</p>
-          <h1 className="mt-3 text-2xl font-bold text-slate-900">
-            {phase === "offer" ? "Protégez votre application" : phase === "setup" ? "Votre code personnel" : phase === "biometric" ? "Activez la biométrie" : phase === "unlock" ? "Déverrouillez votre espace" : "Vérification de la protection"}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#64858b]">Hello Keys</p>
+          <h1 className="mt-3 text-[30px] font-medium leading-tight tracking-[-0.04em] text-[#173f47]">
+            {phase === "offer" ? "Votre espace, protégé." : phase === "setup" ? "Votre code personnel." : phase === "biometric" ? "Un geste suffit." : phase === "unlock" ? "Bon retour." : "Vérification en cours."}
           </h1>
+          <p className="mt-2 text-[13px] text-[#7d9092]">Votre espace, en toute confiance.</p>
         </div>
-        <div className="space-y-5 rounded-3xl bg-white p-6 shadow-sm">
+        <div className="space-y-5 px-2">
           {phase === "checking" && <div className="flex justify-center py-8"><Loader2 className="h-7 w-7 animate-spin text-[#255f85]" aria-label="Chargement" /></div>}
           {phase === "offer" && <>
             <p className="text-center text-sm leading-relaxed text-slate-600">À chaque réouverture et après un passage en arrière-plan, déverrouillez votre session avec un code à 4 chiffres ou Face ID / empreinte selon votre téléphone.</p>
@@ -183,10 +185,6 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
             else if (!confirming) { setConfirming(true); setMessage(""); }
             else if (confirmPin.length === 4) savePin();
           }}>
-            {phase === "unlock" && biometric && <>
-              <Button type="button" className="h-12 w-full gap-2 bg-[#255f85]" disabled={busy} onClick={validateBiometric}><Fingerprint className="h-5 w-5" />Face ID / empreinte</Button>
-              <p className="text-center text-xs text-slate-500">Le téléphone peut aussi proposer son code de déverrouillage. Ou utilisez votre code personnel Hello Keys ci-dessous.</p>
-            </>}
             <PinKeypad
               value={phase === "setup" && confirming ? confirmPin : pin}
               onChange={phase === "setup" && confirming ? setConfirmPin : setPin}
@@ -194,7 +192,11 @@ export default function PwaSessionLock({ userId, children }: { userId: string | 
               label={phase === "setup" ? confirming ? "Confirmez votre code à 4 chiffres" : "Choisissez votre code à 4 chiffres" : "Saisissez votre code personnel"}
             />
             {phase === "setup" && <p className="text-center text-xs text-slate-500">{confirming ? "Saisissez à nouveau le même code." : "Évitez 0000, 1234 et votre date de naissance. Ce code est distinct de celui du téléphone."}</p>}
-            <Button type="submit" disabled={busy || pin.length !== 4 || (phase === "setup" && confirming && confirmPin.length !== 4)} className="h-14 w-full rounded-2xl bg-[#255f85] text-base">{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : phase === "setup" ? confirming ? "Enregistrer mon code" : "Continuer" : "Déverrouiller"}</Button>
+            <Button type="submit" disabled={busy || pin.length !== 4 || (phase === "setup" && confirming && confirmPin.length !== 4)} className="h-14 w-full rounded-full bg-gradient-to-r from-[#255f85] to-[#1a4c65] text-sm font-medium tracking-wide shadow-[0_8px_22px_-8px_rgba(37,95,133,0.4)] disabled:bg-none disabled:bg-[#e5ebe7] disabled:text-[#99a9a7] disabled:opacity-100 disabled:shadow-none">{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : phase === "setup" ? confirming ? "Enregistrer mon code" : "Continuer" : "Déverrouiller"}</Button>
+            {phase === "unlock" && biometric && <div className="text-center">
+              <Button type="button" variant="ghost" className="mx-auto flex h-11 gap-2.5 rounded-full px-5 text-xs font-medium text-[#547980] hover:bg-white/70" disabled={busy} onClick={validateBiometric}><Fingerprint className="h-5 w-5" strokeWidth={1.5} />Utiliser Face ID / empreinte</Button>
+              <p className="mt-1 text-[10px] leading-relaxed text-[#8b9c99]">Le téléphone peut aussi proposer son code de déverrouillage.</p>
+            </div>}
             {phase === "setup" && <Button type="button" variant="ghost" className="w-full" disabled={busy} onClick={() => {
               setMessage("");
               setConfirmPin("");

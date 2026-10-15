@@ -15,6 +15,13 @@ export default function MobileAuthScreen({ title, children, overlay = false, lea
       <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-sm flex-col justify-center">
         {leading}
         <header className="mb-7 text-center">
+          <img
+            src="https://www.hellokeys.fr/assets/hello-keys-logo.png"
+            alt="Hello Keys"
+            width={176}
+            height={56}
+            className="mx-auto mb-6 h-14 w-44 object-contain"
+          />
           <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
           <p className="mt-2 text-sm text-slate-500">Votre espace, en toute confiance.</p>
         </header>

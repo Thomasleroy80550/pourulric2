@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -16,6 +15,7 @@ import { Copy, Gift, Wallet, Sparkles, Receipt, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import ReferralTimeline from '@/components/ReferralTimeline';
 import WalletMobileSummary from '@/components/WalletMobileSummary';
+import RecommendOwnerDialog from '@/components/RecommendOwnerDialog';
 
 export default function HelloKeysWallet({ compact = false }: { compact?: boolean }) {
   const { session, profile } = useSession();
@@ -28,10 +28,6 @@ export default function HelloKeysWallet({ compact = false }: { compact?: boolean
   const [details, setDetails] = useState('');
   const [requestId, setRequestId] = useState('');
   const [referralOpen, setReferralOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [property, setProperty] = useState('');
-  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const balance = data?.entries.reduce((sum, entry) => sum + Number(entry.amount_cents), 0) ?? 0;
   const reserved = data?.requests.filter(r => r.status === 'pending').reduce((sum, r) => sum + Number(r.amount_cents), 0) ?? 0;
@@ -49,15 +45,6 @@ export default function HelloKeysWallet({ compact = false }: { compact?: boolean
       toast.success('Demande envoyée. Le montant est réservé dans votre Wallet.'); setKind(null); await refresh();
     } catch (err) { toast.error(err instanceof Error ? err.message : (err as { message: string }).message); }
     finally { setBusy(false); }
-  };
-  const submitReferral = async (event: React.FormEvent) => {
-    event.preventDefault(); if (!consent || !userId) return; setBusy(true);
-    try {
-      if (email.trim().toLowerCase() === session?.user.email?.toLowerCase()) throw new Error('Vous ne pouvez pas vous parrainer vous-même.');
-      const { error } = await supabase.from('hello_wallet_referrals').insert({ user_id: userId, contact_name: name.trim(), contact_email: email.trim().toLowerCase(), property_details: property.trim(), contact_consent: true });
-      if (error) throw new Error(error.code === '23505' ? 'Ce propriétaire a déjà été recommandé.' : error.message);
-      toast.success('Parrainage transmis à Hello Keys.'); setReferralOpen(false); setName(''); setEmail(''); setProperty(''); setConsent(false); await refresh();
-    } catch (err) { toast.error((err as Error).message); } finally { setBusy(false); }
   };
   if (!userId) return null;
   if (isLoading) return <div className="flex items-center gap-2 p-6"><Loader2 className="h-5 w-5 animate-spin" />Chargement de votre Wallet…</div>;
@@ -88,6 +75,6 @@ export default function HelloKeysWallet({ compact = false }: { compact?: boolean
       </DialogContent>
     </Dialog>}
     <Dialog open={kind !== null} onOpenChange={open => { if (!open && !busy) setKind(null); }}><DialogContent><DialogHeader><DialogTitle>{kind === 'cleaning' ? 'Utiliser mon solde pour un ménage' : 'Déduire mon solde de ma prochaine facture'}</DialogTitle><DialogDescription>Hello Keys vérifiera l’éligibilité et vous confirmera la prestation ou l’imputation. Aucun virement bancaire n’est possible.</DialogDescription></DialogHeader><form onSubmit={submitRequest} className="space-y-4"><div><Label htmlFor="wallet-amount">Montant à réserver (€) · disponible {euros(balance)}</Label><Input id="wallet-amount" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} required /></div><div><Label htmlFor="wallet-details">{kind === 'cleaning' ? 'Logement, date souhaitée et précisions' : 'Facture ou période concernée'}</Label><Textarea id="wallet-details" value={details} onChange={e => setDetails(e.target.value)} minLength={5} maxLength={2000} required /></div><Button type="submit" disabled={busy}>{busy ? 'Envoi…' : 'Envoyer ma demande'}</Button></form></DialogContent></Dialog>
-    <Dialog open={referralOpen} onOpenChange={open => { if (!busy) setReferralOpen(open); }}><DialogContent><DialogHeader><DialogTitle>Recommander un propriétaire</DialogTitle><DialogDescription>Transmettez un contact avec son accord. Aucun crédit n’est accordé avant la validation du rendez-vous qualifié.</DialogDescription></DialogHeader><form onSubmit={submitReferral} className="space-y-4"><div><Label htmlFor="referral-name">Nom du propriétaire</Label><Input id="referral-name" value={name} onChange={e => setName(e.target.value)} minLength={2} maxLength={150} required /></div><div><Label htmlFor="referral-email">Email</Label><Input id="referral-email" type="email" value={email} onChange={e => setEmail(e.target.value)} maxLength={254} required /></div><div><Label htmlFor="referral-property">Logement et informations utiles</Label><Textarea id="referral-property" value={property} onChange={e => setProperty(e.target.value)} maxLength={2000} /></div><div className="flex items-start gap-2"><Checkbox id="referral-consent" checked={consent} onCheckedChange={v => setConsent(v === true)} /><Label htmlFor="referral-consent" className="text-sm leading-relaxed">Ce propriétaire m’a autorisé à transmettre ses coordonnées à Hello Keys pour être contacté.</Label></div><Button type="submit" disabled={busy || !consent}>{busy ? 'Envoi…' : 'Transmettre ma recommandation'}</Button></form></DialogContent></Dialog>
+    <RecommendOwnerDialog open={referralOpen} onOpenChange={setReferralOpen} onSubmitted={refresh} />
   </div>;
 }

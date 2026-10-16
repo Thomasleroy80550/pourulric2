@@ -28,10 +28,11 @@ import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { saveKrossbookingReservation, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking'; // Import KrossbookingRoomType
+import { saveKrossbookingReservation, SaveReservationPayload, KrossbookingReservation, fetchKrossbookingRoomTypes, KrossbookingRoomType } from '@/lib/krossbooking';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
-import { Profile } from '@/lib/profile-api';
+import { UserProfile } from '@/lib/profile-api';
 
 interface OwnerReservationDialogProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ interface OwnerReservationDialogProps {
   allReservations: KrossbookingReservation[];
   onReservationCreated: () => void;
   initialBooking?: KrossbookingReservation | null;
-  profile: Profile | null;
+  profile: UserProfile | null;
 }
 
 const blockTypes = [
@@ -96,8 +97,11 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   const [loadingKrossbookingRoomTypes, setLoadingKrossbookingRoomTypes] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmCancellation, setConfirmCancellation] = useState(false);
 
   React.useEffect(() => {
+    setError(null);
+    setConfirmCancellation(false);
     const loadRoomTypes = async () => {
       setLoadingKrossbookingRoomTypes(true);
       try {
@@ -187,6 +191,21 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
 
     const formattedArrival = format(values.dateRange.from, 'yyyy-MM-dd');
     const formattedDeparture = format(values.dateRange.to!, 'yyyy-MM-dd');
+    if (formattedDeparture <= formattedArrival) {
+      toast.error('Le blocage doit comprendre au moins une nuit.');
+      return;
+    }
+    const overlaps = allReservations.some(res =>
+      res.krossbooking_room_id === values.roomId &&
+      !res.status.toUpperCase().includes('CANC') &&
+      res.id !== initialBooking?.id &&
+      formattedArrival < res.check_out_date.slice(0, 10) &&
+      formattedDeparture > res.check_in_date.slice(0, 10)
+    );
+    if (overlaps) {
+      toast.error('Ces dates chevauchent une réservation ou un autre blocage.');
+      return;
+    }
 
     const cod_reservation_status = values.foreseeCleaning ? 'PROPRI' : 'PROP0';
     const cleaningSuffix = values.foreseeCleaning ? ' avec ménage' : ' sans ménage';
@@ -237,11 +256,49 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     }
   };
 
+  const cancelBlock = async () => {
+    if (!initialBooking || isLoading) return;
+    const roomType = initialBooking.id_room_type || krossbookingRoomTypes.find(type =>
+      type.rooms.some(room => String(room.id_room) === initialBooking.krossbooking_room_id)
+    )?.id_room_type.toString();
+    if (!roomType) {
+      toast.error("Impossible de trouver le type de chambre pour l'annulation.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      await saveKrossbookingReservation({
+        id_reservation: initialBooking.id,
+        label: initialBooking.guest_name,
+        arrival: initialBooking.check_in_date,
+        departure: initialBooking.check_out_date,
+        email: initialBooking.email || '',
+        phone: initialBooking.phone || '',
+        cod_reservation_status: 'CANC',
+        id_room: initialBooking.krossbooking_room_id,
+        id_room_type: roomType,
+        property_id: initialBooking.property_id,
+      });
+      toast.success('Blocage annulé : les dates sont libérées.');
+      setConfirmCancellation(false);
+      onReservationCreated();
+      onOpenChange(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Impossible d'annuler le blocage.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <>
+    <Dialog open={isOpen} onOpenChange={open => { if (!isLoading) onOpenChange(open); }}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{initialBooking ? 'Modifier la Réservation' : 'Créer une Réservation Propriétaire'}</DialogTitle>
+          <DialogTitle>{initialBooking ? 'Modifier le blocage' : 'Créer une Réservation Propriétaire'}</DialogTitle>
           <DialogDescription>
             {initialBooking ? 'Modifiez les détails de cette réservation.' : 'Bloquez des dates pour un séjour propriétaire, une fermeture ou un entretien.'}
           </DialogDescription>
@@ -343,8 +400,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                         initialFocus
                         mode="range"
                         defaultMonth={field.value.from}
-                        selected={field.value}
-                        onSelect={field.onChange}
+                        selected={{ from: field.value.from, to: field.value.to }}
+                        onSelect={range => field.onChange(range ?? { from: undefined, to: undefined })}
                         numberOfMonths={1}
                         locale={fr}
                         disabled={getDisabledDates}
@@ -405,18 +462,41 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
               )}
             />
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Annuler
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" disabled={isLoading} onClick={() => onOpenChange(false)}>
+                Fermer
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting || loadingKrossbookingRoomTypes || isLoading}>
-                {form.formState.isSubmitting ? (initialBooking ? 'Mise à jour...' : 'Création...') : (initialBooking ? 'Mettre à jour la Réservation' : 'Créer la Réservation')}
+                {isLoading ? 'Enregistrement...' : (initialBooking ? 'Enregistrer les modifications' : 'Créer la Réservation')}
               </Button>
             </DialogFooter>
+            {initialBooking && (
+              <Button type="button" variant="destructive" className="w-full" disabled={isLoading || loadingKrossbookingRoomTypes} onClick={() => setConfirmCancellation(true)}>
+                Annuler ce blocage
+              </Button>
+            )}
           </form>
         </Form>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={confirmCancellation} onOpenChange={open => { if (!isLoading) setConfirmCancellation(open); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Annuler ce blocage ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Les dates de ce blocage seront libérées et pourront à nouveau être réservées par des voyageurs.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isLoading}>Conserver le blocage</AlertDialogCancel>
+          <AlertDialogAction disabled={isLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={event => { event.preventDefault(); void cancelBlock(); }}>
+            {isLoading ? 'Annulation...' : "Confirmer l'annulation"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
 

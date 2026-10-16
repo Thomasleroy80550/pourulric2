@@ -636,6 +636,31 @@ serve(async (req) => {
         if (!label || !arrival || !departure || !cod_reservation_status || !id_room || !id_room_type || property_id === undefined) {
           throw new Error("Missing required parameters for save_reservation.");
         }
+        if (!userContext) {
+          throw new Response(JSON.stringify({ error: "Authentification requise." }), {
+            status: 401, headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+        if (userContext.role !== "admin") {
+          const allowedRoom = userContext.rooms.some(room => Number(room.room_id) === Number(id_room));
+          if (!allowedRoom || userContext.propertyId !== Number(property_id) ||
+              !["PROP0", "PROPRI", "CANC"].includes(cod_reservation_status) ||
+              (cod_reservation_status === "CANC" && !id_reservation)) {
+            throw new Response(JSON.stringify({ error: "Vous ne pouvez gérer que les blocages de vos logements." }), {
+              status: 403, headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+          if (id_reservation) {
+            const authorizedReservations = await getAuthorizedReservations(await getOrCreateAuthToken(), userContext);
+            const existing = authorizedReservations.get(Number(id_reservation));
+            const status = String(existing?.cod_reservation_status ?? "").toUpperCase();
+            if (!existing || !["PROP0", "PROPRI"].includes(status)) {
+              throw new Response(JSON.stringify({ error: "Blocage propriétaire introuvable ou non autorisé." }), {
+                status: 403, headers: { "Content-Type": "application/json", ...corsHeaders },
+              });
+            }
+          }
+        }
         krossbookingPath = "/reservations/save";
         payload = {
           label,

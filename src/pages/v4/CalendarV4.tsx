@@ -8,7 +8,7 @@ import PropertySelector from "./PropertySelector";
 import OwnerReservationDialog from "@/components/OwnerReservationDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
-import { clearReservationsCache } from "@/lib/krossbooking";
+import { clearReservationsCache, KrossbookingReservation } from "@/lib/krossbooking";
 import { GuestAvatar } from "./V4Thumb";
 import {
   useV4Reservations,
@@ -39,6 +39,7 @@ const CalendarV4: React.FC = () => {
   const { profile } = useSession();
   const queryClient = useQueryClient();
   const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
+  const [editingBlock, setEditingBlock] = useState<KrossbookingReservation | null>(null);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [viewDate, setViewDate] = useState(() => {
     const d = new Date();
@@ -57,6 +58,12 @@ const CalendarV4: React.FC = () => {
   const handleReservationCreated = () => {
     clearReservationsCache();
     queryClient.invalidateQueries({ queryKey: ["v4-reservations"] });
+    queryClient.invalidateQueries({ queryKey: ["v4-housekeeping"] });
+  };
+
+  const openBlock = (block: KrossbookingReservation) => {
+    setEditingBlock(block);
+    setIsBlockDialogOpen(true);
   };
 
   const today = new Date();
@@ -110,6 +117,9 @@ const CalendarV4: React.FC = () => {
   );
 
   const upcoming = upcomingReservations(filteredReservations).slice(0, 3);
+  const monthBlocks = filteredReservations
+    .filter(r => isOwnerBlock(r) && !isCancelled(r) && nightsInMonth(r, year, month) > 0)
+    .sort((a, b) => a.check_in_date.localeCompare(b.check_in_date));
 
   const cells: (number | null)[] = [
     ...Array.from({ length: offset }, () => null),
@@ -120,6 +130,9 @@ const CalendarV4: React.FC = () => {
     const info = days[day];
     if (info?.status === "reserved") {
       navigate(`/v4/reservations/${info.reservationId}`);
+    } else if (info?.status === "blocked") {
+      const block = filteredReservations.find(r => r.id === info.reservationId);
+      if (block) openBlock(block);
     }
   };
 
@@ -278,9 +291,27 @@ const CalendarV4: React.FC = () => {
           <p className="mt-2 text-center text-[11px] text-slate-400">
             {hasMultipleRooms && !selectedRoomId
               ? "Vue combinée de tous vos logements — filtrez par logement ci-dessus"
-              : "Touchez un séjour pour voir la réservation"}
+              : "Touchez un séjour ou un blocage pour le gérer"}
           </p>
         </div>
+
+        <section className="space-y-2">
+          <h2 className="px-1 font-semibold text-slate-900">Mes blocages du mois</h2>
+          <p className="px-1 text-xs text-slate-500">Touchez un blocage pour modifier ses dates ou l'annuler.</p>
+          {isLoading ? <Skeleton className="h-16 w-full rounded-2xl" /> : monthBlocks.length === 0 ? (
+            <p className="rounded-2xl bg-white p-4 text-center text-sm text-slate-500 shadow-sm">Aucun blocage ce mois-ci.</p>
+          ) : monthBlocks.map(block => (
+            <button key={block.id} onClick={() => openBlock(block)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm">
+              <CalendarPlus className="h-5 w-5 shrink-0 text-hk-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-900">{formatRangeShort(block.check_in_date, block.check_out_date)}</p>
+                <p className="text-sm text-slate-600">{block.guest_name}</p>
+                {hasMultipleRooms && <p className="text-xs text-slate-500">{block.property_name}</p>}
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+            </button>
+          ))}
+        </section>
 
         {/* Prochaines réservations */}
         <div>
@@ -324,7 +355,7 @@ const CalendarV4: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setIsBlockDialogOpen(true)}
+          onClick={() => { setEditingBlock(null); setIsBlockDialogOpen(true); }}
           className="flex w-full items-center justify-center gap-2 rounded-2xl bg-hk-600 py-3.5 font-semibold text-white shadow-md"
         >
           <CalendarPlus className="h-5 w-5" />
@@ -338,6 +369,7 @@ const CalendarV4: React.FC = () => {
         userRooms={rooms}
         allReservations={reservations}
         onReservationCreated={handleReservationCreated}
+        initialBooking={editingBlock}
         profile={profile}
       />
     </V4Layout>

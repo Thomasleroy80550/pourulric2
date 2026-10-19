@@ -10,7 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 import CGUV_HTML_CONTENT from '@/assets/cguv.html?raw';
@@ -56,27 +55,30 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept, v
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-4xl max-h-[90dvh] flex flex-col">
+      <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-4xl h-[90dvh] max-h-[800px] overflow-hidden flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>Conditions Générales d'Utilisation (CGUV)</DialogTitle>
           <DialogDescription>
             {viewOnly ? "Voici nos conditions générales d'utilisation et de vente." : "Veuillez lire et accepter nos conditions pour continuer à utiliser l'application. Vous pouvez aussi quitter cette fenêtre : vous serez déconnecté sans accepter les conditions."}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea
-          className="min-h-0 flex-1 p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[400px]"
-          viewportRef={viewportRef}
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed"
+          ref={viewportRef}
           onScroll={handleScroll}
+          role="region"
+          aria-label="Texte des conditions générales"
+          tabIndex={0}
         >
           <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: CGUV_HTML_CONTENT }} />
-        </ScrollArea>
+        </div>
         {!viewOnly && !scrolledToBottom && (
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2 animate-pulse">
+          <p className="shrink-0 text-center text-sm text-gray-500 dark:text-gray-400 mt-2 animate-pulse">
             Veuillez faire défiler pour lire toutes les conditions <span className="inline-block animate-bounce">↓</span>
           </p>
         )}
         {!viewOnly && (
-          <div className="flex items-center space-x-2 mt-4">
+          <div className="shrink-0 flex items-center space-x-2 mt-4">
             <Checkbox
               id="cguv-accept"
               checked={hasAccepted}

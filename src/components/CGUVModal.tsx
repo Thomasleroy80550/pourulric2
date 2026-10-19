@@ -56,15 +56,15 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept, v
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-4xl max-h-[90dvh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Conditions Générales d'Utilisation (CGUV)</DialogTitle>
           <DialogDescription>
-            {viewOnly ? "Voici nos conditions générales d'utilisation et de vente." : "Veuillez lire et accepter nos conditions pour continuer à utiliser l'application."}
+            {viewOnly ? "Voici nos conditions générales d'utilisation et de vente." : "Veuillez lire et accepter nos conditions pour continuer à utiliser l'application. Vous pouvez aussi quitter cette fenêtre : vous serez déconnecté sans accepter les conditions."}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea
-          className="flex-grow p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[400px]"
+          className="min-h-0 flex-1 p-4 border rounded-md bg-gray-50 dark:bg-gray-800 text-sm leading-relaxed h-[400px]"
           viewportRef={viewportRef}
           onScroll={handleScroll}
         >
@@ -91,15 +91,20 @@ const CGUVModal: React.FC<CGUVModalProps> = ({ isOpen, onOpenChange, onAccept, v
             </Label>
           </div>
         )}
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4 shrink-0 gap-2">
           {viewOnly ? (
             <Button onClick={() => onOpenChange(false)} variant="outline">
               Fermer
             </Button>
           ) : (
-            <Button onClick={onAccept} disabled={!hasAccepted || !scrolledToBottom}>
-              Valider et Continuer
-            </Button>
+            <>
+              <Button onClick={() => onOpenChange(false)} variant="outline">
+                Quitter et se déconnecter
+              </Button>
+              <Button onClick={onAccept} disabled={!hasAccepted || !scrolledToBottom}>
+                Valider et Continuer
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

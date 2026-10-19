@@ -204,6 +204,27 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
     }
   };
 
+  const handleCguvOpenChange = async (open: boolean) => {
+    if (open) {
+      setShowCguvModal(true);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) throw error;
+      setSession(null);
+      setProfile(null);
+      setShowCguvModal(false);
+      setShowHousingModal(false);
+      setShowOnboardingConfetti(false);
+      navigate('/login');
+    } catch (error) {
+      console.error('Error leaving CGUV:', error);
+      toast.error("Impossible de vous déconnecter. Veuillez réessayer.");
+    }
+  };
+
   const handleDismissHousingModal = () => {
     housingDismissedRef.current = true;
     setShowHousingModal(false);
@@ -255,13 +276,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       {showCguvModal && (
         <CGUVModal
           isOpen={showCguvModal}
-          onOpenChange={(open) => {
-            if (!open && (!profile?.cguv_accepted_at || profile?.cguv_version !== CURRENT_CGUV_VERSION)) {
-              // Do nothing, keep modal open
-            } else {
-              setShowCguvModal(open);
-            }
-          }}
+          onOpenChange={handleCguvOpenChange}
           onAccept={handleAcceptCguv}
         />
       )}

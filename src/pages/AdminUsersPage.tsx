@@ -39,6 +39,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import OnboardingMiniProgress from '@/components/OnboardingMiniProgress';
 import { sendEmail, createNotification } from '@/lib/notifications-api';
+import UserAuthHistoryDialog from '@/components/admin/UserAuthHistoryDialog';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -99,6 +100,7 @@ const AdminUsersPage: React.FC = () => {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [historyUser, setHistoryUser] = useState<UserProfile | null>(null);
   const [pendingApproval, setPendingApproval] = useState<AccountantRequest | null>(null);
   const [isSwitchingUser, setIsSwitchingUser] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -845,6 +847,9 @@ const AdminUsersPage: React.FC = () => {
                 {user.cguv_accepted_at ? format(new Date(user.cguv_accepted_at), 'dd/MM/yy HH:mm', { locale: fr }) : 'Non accepté'}
               </TableCell>
               <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => setHistoryUser(user)}>
+                  Historique
+                </Button>
                 <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/statements?userId=${user.id}`)} title="Voir les relevés">
                   <FileText className="h-4 w-4" />
                 </Button>
@@ -1437,6 +1442,9 @@ const AdminUsersPage: React.FC = () => {
         onOpenChange={setIsStripeDetailsOpen}
         stripeAccountId={selectedStripeAccountId}
       />
+      {historyUser && (
+        <UserAuthHistoryDialog key={historyUser.id} user={historyUser} onClose={() => setHistoryUser(null)} />
+      )}
     </AdminLayout>
   );
 };

@@ -176,13 +176,12 @@ const queryClient = new QueryClient();
 function App() {
   // Ces écrans publics restent indépendants de la session et de ses fenêtres modales.
   const publicStandalonePath = window.location.pathname.replace(/\/$/, '');
-  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode' || publicStandalonePath === '/actualites/tarification-meteo') {
+  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode') {
     return (
       <BrowserRouter>
         <Routes>
           <Route path="/embed/avis" element={<ReviewsEmbedPage />} />
           <Route path="/preview/digicode" element={<PinPreview />} />
-          <Route path="/actualites/tarification-meteo" element={<WeatherPricingNewsPage />} />
         </Routes>
       </BrowserRouter>
     );

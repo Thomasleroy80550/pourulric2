@@ -1,4 +1,6 @@
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, CloudRain, CloudSun, Info, MapPin, ShieldCheck, Sun, Thermometer, TrendingUp, Wind } from "lucide-react";
+import { Link } from "react-router-dom";
+import MainLayout from "@/components/MainLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,18 +21,14 @@ const safeguards = [
 
 export default function WeatherPricingNewsPage() {
   return (
-    <div className="min-h-screen bg-[#fafaf7] text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-5 sm:px-8">
-          <a href="/" className="text-xl font-bold tracking-tight">hello <span className="text-teal-700">keys.</span></a>
-          <Button asChild variant="ghost" size="sm"><a href="/"><ArrowLeft className="mr-2 h-4 w-4" />Votre espace</a></Button>
-        </div>
-      </header>
-
-      <main>
-        <article>
+    <MainLayout>
+      <div className="mx-auto w-full max-w-6xl py-2">
+        <Button asChild variant="ghost" size="sm" className="mb-4">
+          <Link to="/"><ArrowLeft className="mr-2 h-4 w-4" />Retour à l’accueil</Link>
+        </Button>
+        <article className="overflow-hidden rounded-3xl border bg-[#fafaf7] text-slate-900 shadow-sm">
           <section className="relative overflow-hidden border-b border-teal-100 bg-gradient-to-br from-teal-50 via-white to-amber-50">
-            <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:px-8 sm:py-20 lg:grid-cols-[1.4fr_0.8fr] lg:items-center">
+            <div className="mx-auto grid max-w-6xl gap-10 px-5 py-10 sm:px-8 sm:py-12 xl:grid-cols-[1.4fr_0.8fr] xl:items-center">
               <div>
                 <Badge className="mb-6 border-teal-200 bg-teal-100 text-teal-900 hover:bg-teal-100">Nouveauté · Tarification dynamique</Badge>
                 <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl">La météo, un nouvel éclairage sur vos tarifs</h1>
@@ -115,8 +113,7 @@ export default function WeatherPricingNewsPage() {
             </section>
           </div>
         </article>
-      </main>
-      <footer className="border-t border-slate-200 px-5 py-6 text-center text-sm text-slate-500">Hello Keys · Une aide à la décision tarifaire pour votre logement</footer>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

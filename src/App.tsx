@@ -170,7 +170,6 @@ import IdeasV4 from "./pages/v4/IdeasV4";
 import ChatV4 from "./pages/v4/ChatV4";
 import LoginV4 from "./pages/v4/LoginV4";
 import PinPreview from "./pages/PinPreview";
-import HalloweenPrank from "./components/HalloweenPrank";
 import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
@@ -199,7 +198,6 @@ function App() {
             <Toaster />
             <Sonner />
             <PwaUpdatePrompt />
-            <HalloweenPrank />
             <BrowserRouter>
               <InvoiceGenerationProvider>
                 <SessionContextProvider>

@@ -523,6 +523,14 @@ const DashboardPageV3: React.FC = () => {
       {showReveal && <DashboardV3Reveal onFinish={handleFinishReveal} />}
       <div className="w-full max-w-full overflow-x-hidden break-words">
         <AnnouncementsBanner />
+        <Link to="/actualites/tarification-meteo" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-5 text-teal-950 transition-colors hover:bg-teal-100">
+          <div>
+            <Badge className="mb-2 bg-teal-800 text-white hover:bg-teal-800">Nouveauté</Badge>
+            <p className="font-semibold">La météo, un nouvel éclairage sur vos tarifs</p>
+            <p className="mt-1 text-sm text-teal-800">Découvrez le croisement météo et tarification dynamique, avec ses garde-fous.</p>
+          </div>
+          <span className="flex items-center gap-2 text-sm font-semibold">Lire l’actualité <ArrowRight className="h-4 w-4" /></span>
+        </Link>
         {/* ── En-tête ─────────────────────────────────────── */}
         <div className="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">

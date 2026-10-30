@@ -98,6 +98,7 @@ import AdminCRMPage from "./pages/AdminCRMPage";
 import MessagesPage from "./pages/MessagesPage";
 import SmartRepliesPage from "./pages/SmartRepliesPage";
 import SmartPricingPage from "./pages/SmartPricingPage";
+import WeatherPricingNewsPage from "./pages/WeatherPricingNewsPage";
 import AdminV2Dashboard from "./pages/admin-v2/Dashboard";
 import AdminV2Users from "./pages/admin-v2/Users";
 import ElectricityConsumptionPage from "./pages/ElectricityConsumptionPage";
@@ -175,12 +176,13 @@ const queryClient = new QueryClient();
 function App() {
   // Ces écrans publics restent indépendants de la session et de ses fenêtres modales.
   const publicStandalonePath = window.location.pathname.replace(/\/$/, '');
-  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode') {
+  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode' || publicStandalonePath === '/actualites/tarification-meteo') {
     return (
       <BrowserRouter>
         <Routes>
           <Route path="/embed/avis" element={<ReviewsEmbedPage />} />
           <Route path="/preview/digicode" element={<PinPreview />} />
+          <Route path="/actualites/tarification-meteo" element={<WeatherPricingNewsPage />} />
         </Routes>
       </BrowserRouter>
     );
@@ -285,6 +287,7 @@ function App() {
 
                       <Route path="/announcements" element={<AnnouncementsPage />} />
                       <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
+                      <Route path="/actualites/tarification-meteo" element={<WeatherPricingNewsPage />} />
                       <Route path="/new-owner-site" element={<NewOwnerSitePage />} />
                       <Route path="/promotion" element={<PromotionPage />} />
                       <Route path="/new-version" element={<NewVersionPage />} />

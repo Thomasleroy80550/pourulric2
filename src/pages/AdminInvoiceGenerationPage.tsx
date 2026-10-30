@@ -21,6 +21,7 @@ import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, Command
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import ClientStatementNotes from '@/components/ClientStatementNotes';
 
 const PERIOD_MONTHS = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -282,6 +283,9 @@ const AdminInvoiceGenerationPage: React.FC = () => {
                         )
                       )}
                     </div>
+                    {selectedClientId && (
+                      <ClientStatementNotes key={selectedClientId} clientId={selectedClientId} />
+                    )}
                     <div>
                       <Label>Période de facturation</Label>
                       {(() => {

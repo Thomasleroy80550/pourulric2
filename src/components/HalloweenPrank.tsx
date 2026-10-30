@@ -16,51 +16,30 @@ export default function HalloweenPrank({ featured = false }: { featured?: boolea
   const [revealed, setRevealed] = useState(false);
   const [muted, setMuted] = useState(false);
   const [audioError, setAudioError] = useState(false);
-  const audio = useRef<AudioContext | null>(null);
+  const audio = useRef<HTMLAudioElement | null>(null);
 
   const stopSound = () => {
-    const context = audio.current;
-    audio.current = null;
-    if (context && context.state !== "closed") void context.close().catch(() => {});
+    if (audio.current) {
+      audio.current.pause();
+      audio.current.currentTime = 0;
+    }
   };
 
-  useEffect(() => () => stopSound(), []);
+  useEffect(() => {
+    const sound = audio.current;
+    return () => { sound?.pause(); };
+  }, []);
 
   const reveal = async () => {
     setRevealed(true);
     setAudioError(false);
-    if (muted) return;
+    if (muted || !audio.current) return;
     stopSound();
     try {
-      const context = new AudioContext();
-      audio.current = context;
-      await context.resume();
-      if (audio.current !== context) return;
-      // Des syllabes « ha » graves, modulées, composent un rire sans fichier externe.
-      const master = context.createGain();
-      master.gain.value = 0.18;
-      master.connect(context.destination);
-      for (let i = 0; i < 15; i++) {
-        const start = context.currentTime + 0.05 + i * 0.24;
-        const voice = context.createOscillator();
-        const envelope = context.createGain();
-        const filter = context.createBiquadFilter();
-        voice.type = "sawtooth";
-        voice.frequency.setValueAtTime(185 - i * 4, start);
-        voice.frequency.exponentialRampToValueAtTime(85, start + 0.19);
-        filter.type = "bandpass";
-        filter.frequency.value = 650;
-        filter.Q.value = 0.7;
-        envelope.gain.setValueAtTime(0, start);
-        envelope.gain.linearRampToValueAtTime(0.8, start + 0.025);
-        envelope.gain.exponentialRampToValueAtTime(0.001, start + 0.2);
-        voice.connect(filter);
-        filter.connect(envelope);
-        envelope.connect(master);
-        voice.start(start);
-        voice.stop(start + 0.22);
-      }
-    } catch {
+      audio.current.volume = 0.7;
+      await audio.current.play();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       setAudioError(true);
       stopSound();
     }
@@ -74,6 +53,7 @@ export default function HalloweenPrank({ featured = false }: { featured?: boolea
 
   return (
     <>
+      <audio ref={audio} preload="auto" src="https://upload.wikimedia.org/wikipedia/commons/2/23/Evil_laugh_2.oga" />
       <Button
         onClick={() => changeOpen(true)}
         className={featured
@@ -108,7 +88,10 @@ export default function HalloweenPrank({ featured = false }: { featured?: boolea
                 {muted ? <VolumeX className="mr-2 h-4 w-4" /> : <Volume2 className="mr-2 h-4 w-4" />}{muted ? "Son coupé" : "Son activé"}
               </Button>
             </div>
-            <p className="relative z-30 mt-5 text-xs text-purple-300/70" role="status">{audioError ? "Le son n’est pas disponible dans ce navigateur." : "Une petite frayeur, rien de méchant. 🖤"}</p>
+            <p className="relative z-30 mt-5 text-xs text-purple-300/70" role="status">{audioError ? "Impossible de charger le rire. Vérifie ta connexion et réessaie." : "Une petite frayeur, rien de méchant. 🖤"}</p>
+            <p className="relative z-30 mt-2 text-[10px] text-purple-300/60">
+              Rire : <a className="underline" href="https://commons.wikimedia.org/wiki/File:Evil_laugh_2.oga" target="_blank" rel="noopener noreferrer">Ondra Krist (Witeg)</a> · <a className="underline" href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 3.0</a>
+            </p>
           </div>
         </DialogContent>
       </Dialog>

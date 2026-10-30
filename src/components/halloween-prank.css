@@ -1,0 +1,16 @@
+@keyframes halloween-gift-float {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-12px) rotate(4deg); }
+}
+.halloween-gift { animation: halloween-gift-float 3s ease-in-out infinite; }
+@keyframes halloween-bat-flight {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.1); }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--bat-x), var(--bat-y)) scale(1.7) rotate(25deg); }
+}
+.halloween-bat { animation: halloween-bat-flight 3.2s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .halloween-gift { animation: none; }
+  .halloween-bat { animation: none; opacity: .5; transform: translate(var(--bat-x), var(--bat-y)); }
+}

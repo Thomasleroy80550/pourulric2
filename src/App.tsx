@@ -170,18 +170,21 @@ import IdeasV4 from "./pages/v4/IdeasV4";
 import ChatV4 from "./pages/v4/ChatV4";
 import LoginV4 from "./pages/v4/LoginV4";
 import PinPreview from "./pages/PinPreview";
+import HalloweenPrank from "./components/HalloweenPrank";
+import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
 function App() {
   // Ces écrans publics restent indépendants de la session et de ses fenêtres modales.
   const publicStandalonePath = window.location.pathname.replace(/\/$/, '');
-  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode') {
+  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode' || publicStandalonePath === '/halloween') {
     return (
       <BrowserRouter>
         <Routes>
           <Route path="/embed/avis" element={<ReviewsEmbedPage />} />
           <Route path="/preview/digicode" element={<PinPreview />} />
+          <Route path="/halloween" element={<Index />} />
         </Routes>
       </BrowserRouter>
     );
@@ -196,6 +199,7 @@ function App() {
             <Toaster />
             <Sonner />
             <PwaUpdatePrompt />
+            <HalloweenPrank />
             <BrowserRouter>
               <InvoiceGenerationProvider>
                 <SessionContextProvider>

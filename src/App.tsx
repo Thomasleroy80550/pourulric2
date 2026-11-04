@@ -171,6 +171,7 @@ import ChatV4 from "./pages/v4/ChatV4";
 import LoginV4 from "./pages/v4/LoginV4";
 import PinPreview from "./pages/PinPreview";
 import Index from "./pages/Index";
+import MigrationBanner from "./components/MigrationBanner";
 
 const queryClient = new QueryClient();
 
@@ -180,6 +181,7 @@ function App() {
   if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode' || publicStandalonePath === '/halloween') {
     return (
       <BrowserRouter>
+        <MigrationBanner />
         <Routes>
           <Route path="/embed/avis" element={<ReviewsEmbedPage />} />
           <Route path="/preview/digicode" element={<PinPreview />} />
@@ -192,6 +194,7 @@ function App() {
   return (
 
     <div className="notranslate" translate="no" data-hk-app-shell="true">
+      <MigrationBanner />
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" themes={["light", "noel", "halloween"]}>
           <TooltipProvider>

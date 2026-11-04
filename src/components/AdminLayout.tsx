@@ -158,7 +158,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, loading } = useSession();
-  const pageUsage = useAdminPageUsage(profile?.id, !loading && profile?.role === 'admin' && !ADMIN_BLOCKED, adminPagePaths);
+  useAdminPageUsage(profile?.id, !loading && profile?.role === 'admin' && !ADMIN_BLOCKED, adminPagePaths);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [simplifiedMenu, setSimplifiedMenu] = React.useState(() => {
     try {
@@ -256,7 +256,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           simplified={simplifiedMenu}
           onModeChange={changeMenuMode}
           isActive={isActive}
-          usage={pageUsage}
         />
 
         <div className="mt-4 pt-4 border-t">
@@ -293,7 +292,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                     simplified={simplifiedMenu}
                     onModeChange={changeMenuMode}
                     isActive={isActive}
-                    usage={pageUsage}
                     onNavigate={() => setMobileOpen(false)}
                   />
                 </div>

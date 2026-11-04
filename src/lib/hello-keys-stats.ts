@@ -10,6 +10,7 @@ export interface StatsInvoice {
   source_type: string;
   is_paid: boolean | null;
   totals: Record<string, unknown>;
+  agency: string | null;
 }
 export interface StatsMonth extends Record<Metric, number> {
   period: string;
@@ -38,10 +39,13 @@ export async function fetchHelloKeysInvoices(): Promise<StatsInvoice[]> {
   // La pagination évite la limite de 1 000 lignes de l'API Supabase.
   for (let offset = 0; ; offset += 500) {
     const { data, error } = await supabase.from('invoices')
-      .select('id, user_id, period, totals, source_type, is_paid')
+      .select('id, user_id, period, totals, source_type, is_paid, profiles!user_id(agency)')
       .order('id').range(offset, offset + 499);
     if (error) throw new Error(error.message);
-    invoices.push(...(data as StatsInvoice[]));
+    invoices.push(...data.map(({ profiles, ...invoice }) => {
+      const profile = Array.isArray(profiles) ? profiles[0] : profiles;
+      return { ...invoice, agency: profile?.agency?.trim() || null } as StatsInvoice;
+    }));
     if (data.length < 500) break;
   }
   return invoices;

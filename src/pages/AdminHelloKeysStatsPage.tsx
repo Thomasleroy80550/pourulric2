@@ -24,6 +24,7 @@ export default function AdminHelloKeysStatsPage() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [year, setYear] = useState('all');
   const [source, setSource] = useState<StatsSource>('all');
+  const [agency, setAgency] = useState('all');
   const [heatMetric, setHeatMetric] = useState<Metric>('revenue');
   const [descending, setDescending] = useState(true);
   const fetchStats = useCallback(async (initial = false) => {
@@ -44,7 +45,11 @@ export default function AdminHelloKeysStatsPage() {
   }, []);
   useEffect(() => { void fetchStats(true); }, [fetchStats]);
 
-  const { months: allMonths, excluded } = useMemo(() => aggregateMonths(invoices, source), [invoices, source]);
+  const agencies = useMemo(() => [...new Set(["Côte d'opal", 'Baie de somme', ...invoices.flatMap(row => row.agency ? [row.agency] : [])])], [invoices]);
+  const agencyInvoices = useMemo(() => invoices.filter(row => agency === 'all' || (agency === 'unassigned' ? !row.agency : row.agency === agency)), [invoices, agency]);
+  const unassignedCount = invoices.filter(row => !row.agency).length;
+  const agencyLabel = agency === 'all' ? 'Les deux agences' : agency === 'unassigned' ? 'Sans agence renseignée' : agency;
+  const { months: allMonths, excluded } = useMemo(() => aggregateMonths(agencyInvoices, source), [agencyInvoices, source]);
   const years = useMemo(() => [...new Set(aggregateMonths(invoices, 'all').months.map(row => row.year))].sort().reverse(), [invoices]);
   const months = useMemo(() => allMonths.filter(row => year === 'all' || row.year === year), [allMonths, year]);
   const summary = useMemo(() => summarizeMonths(months), [months]);
@@ -63,7 +68,7 @@ export default function AdminHelloKeysStatsPage() {
   const beforeLatest = months.at(-2);
   const latestChange = latest && beforeLatest && latest.coverage.revenue > 0 && beforeLatest.coverage.revenue > 0 && (Number(latest.year) * 12 + latest.month) - (Number(beforeLatest.year) * 12 + beforeLatest.month) === 1
     ? change(latest.revenue, beforeLatest.revenue) : null;
-  const generatedMonths = aggregateMonths(invoices, 'generated').months.filter(row => year === 'all' || row.year === year);
+  const generatedMonths = aggregateMonths(agencyInvoices, 'generated').months.filter(row => year === 'all' || row.year === year);
   const generatedSummary = summarizeMonths(generatedMonths);
   const commissionRate = source !== 'manual' && generatedSummary.revenue > 0 ? generatedSummary.commission / generatedSummary.revenue * 100 : null;
   const revenuePerNight = summary.nights > 0 && summary.coverage.nights === summary.invoices && summary.coverage.revenue === summary.invoices ? summary.revenue / summary.nights : null;
@@ -73,13 +78,14 @@ export default function AdminHelloKeysStatsPage() {
   const displayMetric = (metric: Metric, value: number, coverage: number) => coverage === 0 ? '—' : ['nights', 'guests'].includes(metric) ? number(value) : money(value);
 
   const exportCsv = () => {
-    const header = ['Période', ...METRICS.map(metric => labels[metric]), 'Relevés', 'Propriétaires distincts', 'Relevés générés', 'Saisies manuelles', 'Déclarés payés', 'Non déclarés payés', 'Paiement non suivi', ...METRICS.map(metric => `Relevés renseignés : ${labels[metric]}`)];
-    const rows = months.map(row => [row.period, ...METRICS.map(metric => row.coverage[metric] ? row[metric].toFixed(2).replace('.', ',') : ''), row.invoices, row.owners.length, row.generated, row.manual, row.paid, row.unpaid, row.paymentUnknown, ...METRICS.map(metric => row.coverage[metric])]);
+    const header = ['Agence', 'Période', ...METRICS.map(metric => labels[metric]), 'Relevés', 'Propriétaires distincts', 'Relevés générés', 'Saisies manuelles', 'Déclarés payés', 'Non déclarés payés', 'Paiement non suivi', ...METRICS.map(metric => `Relevés renseignés : ${labels[metric]}`)];
+    const safeAgencyLabel = /^[=+@-]/.test(agencyLabel) ? `'${agencyLabel}` : agencyLabel;
+    const rows = months.map(row => [safeAgencyLabel, row.period, ...METRICS.map(metric => row.coverage[metric] ? row[metric].toFixed(2).replace('.', ',') : ''), row.invoices, row.owners.length, row.generated, row.manual, row.paid, row.unpaid, row.paymentUnknown, ...METRICS.map(metric => row.coverage[metric])]);
     const csv = '\uFEFF' + [header, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(';')).join('\r\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `hello-keys-statistiques-${year}-${source}.csv`;
+    link.download = `hello-keys-statistiques-${year}-${source}-${agency.replace(/[^a-z0-9-]/gi, '-')}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success('Le détail mensuel a été exporté.');
@@ -94,9 +100,27 @@ export default function AdminHelloKeysStatsPage() {
       </div>
     </section>
 
+    <Card className="rounded-2xl border-indigo-200 dark:border-indigo-900">
+      <CardContent className="flex flex-col justify-between gap-4 p-5 md:flex-row md:items-center">
+        <div>
+          <label htmlFor="stats-agency" className="text-base font-semibold">Vue par agence</label>
+          <p className="mt-1 text-sm text-muted-foreground">Combinez les deux agences ou consultez les résultats d’une seule.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Selon l’agence actuellement renseignée sur le profil du propriétaire.{unassignedCount > 0 && ` ${unassignedCount} relevés sans agence sont inclus dans la vue globale, mais exclus des vues individuelles.`}</p>
+        </div>
+        <Select value={agency} onValueChange={setAgency}>
+          <SelectTrigger id="stats-agency" className="w-full md:w-[260px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Les deux agences</SelectItem>
+            {agencies.map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+            {unassignedCount > 0 && <SelectItem value="unassigned">Sans agence renseignée</SelectItem>}
+          </SelectContent>
+        </Select>
+      </CardContent>
+    </Card>
+
     <div className="flex flex-col justify-between gap-4 rounded-2xl border bg-card p-4 md:flex-row md:items-center">
       <div className="flex flex-wrap items-center gap-4"><div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-indigo-500" /><label htmlFor="stats-year" className="text-sm font-medium">Période</label><Select value={year} onValueChange={setYear}><SelectTrigger id="stats-year" className="w-[170px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tout l’historique</SelectItem>{years.map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div><div className="flex items-center gap-2"><label htmlFor="stats-source" className="text-sm font-medium">Source</label><Select value={source} onValueChange={value => setSource(value as StatsSource)}><SelectTrigger id="stats-source" className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tous les relevés</SelectItem><SelectItem value="generated">Relevés générés</SelectItem><SelectItem value="manual">Saisies manuelles</SelectItem></SelectContent></Select></div></div>
-      <Badge variant="outline" className="w-fit">{months.length} mois renseignés{year !== 'all' ? ' / 12' : ''} · {number(summary.owners)} propriétaires</Badge>
+      <Badge variant="outline" className="w-fit">{agencyLabel} · {months.length} mois renseignés{year !== 'all' ? ' / 12' : ''} · {number(summary.owners)} propriétaires</Badge>
     </div>
 
     {loading ? <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin text-indigo-500" /><p>Chargement de l’ensemble des relevés…</p></div> : error ? <Card><CardContent className="space-y-3 p-6 text-center"><p className="text-destructive">Impossible de charger les statistiques : {error}</p><Button onClick={() => void fetchStats()}>Réessayer</Button></CardContent></Card> : !months.length ? <Card><CardContent className="flex min-h-64 flex-col items-center justify-center gap-3 text-center"><BarChart3 className="h-10 w-10 text-muted-foreground" /><h2 className="font-semibold">Aucun relevé pour cette sélection</h2><p className="text-sm text-muted-foreground">Choisissez une autre année ou une autre source.{excluded > 0 && ` ${excluded} périodes non reconnues ont été exclues.`}</p><Button variant="outline" onClick={() => { setYear('all'); setSource('all'); }}>Afficher tout l’historique</Button></CardContent></Card> : <>

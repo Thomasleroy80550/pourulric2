@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import type { AdminPageUsage } from '@/hooks/useAdminPageUsage';
 
 type NavigationItem = {
   name: string;
@@ -20,12 +21,21 @@ interface AdminNavigationProps {
   simplified: boolean;
   onModeChange: (simplified: boolean) => void;
   isActive: (href: string) => boolean;
+  usage: AdminPageUsage[];
   onNavigate?: () => void;
 }
 
 const quickLinks = ['/admin', '/admin/users', '/admin/user-rooms', '/admin/statements'];
 
-export default function AdminNavigation({ categories, simplified, onModeChange, isActive, onNavigate }: AdminNavigationProps) {
+export default function AdminNavigation({ categories, simplified, onModeChange, isActive, usage, onNavigate }: AdminNavigationProps) {
+  const items = categories.flatMap((category) => category.items);
+  const counts = new Map(usage.map((entry) => [entry.page_path, entry.visit_count]));
+  const rankedItems = items.filter((item) => (counts.get(item.href) ?? 0) > 0)
+    .sort((a, b) => (counts.get(b.href) ?? 0) - (counts.get(a.href) ?? 0) || a.name.localeCompare(b.name, 'fr'));
+  const fallbackItems = quickLinks.map((href) => items.find((item) => item.href === href))
+    .filter((item): item is NavigationItem => Boolean(item))
+    .filter((item) => !rankedItems.some((ranked) => ranked.href === item.href));
+  const priorityItems = [...rankedItems, ...fallbackItems].slice(0, 4);
   const renderLink = (item: NavigationItem) => {
     const Icon = item.icon;
     return (
@@ -61,11 +71,11 @@ export default function AdminNavigation({ categories, simplified, onModeChange, 
         {simplified ? (
           <>
             <div className="space-y-1">
-              <div className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Accès rapides</div>
-              {quickLinks.map((href) => {
-                const item = categories.flatMap((category) => category.items).find((entry) => entry.href === href);
-                return item ? renderLink(item) : null;
-              })}
+              <div className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {rankedItems.length > 0 ? 'Les plus consultées' : 'Accès rapides'}
+              </div>
+              {priorityItems.map(renderLink)}
+              {rankedItems.length > 0 && <p className="px-3 pt-1 text-xs text-muted-foreground">Selon les visites de tous les admins</p>}
             </div>
             <div>
               <div className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Toutes les rubriques</div>

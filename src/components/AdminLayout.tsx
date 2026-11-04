@@ -61,6 +61,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import AdminNavigation from './AdminNavigation';
 import NotificationBell from './NotificationBell';
+import { useAdminPageUsage } from '@/hooks/useAdminPageUsage';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 const ADMIN_BLOCKED = false;
@@ -151,10 +152,13 @@ const adminNavigationCategories = [
   },
 ];
 
+const adminPagePaths = adminNavigationCategories.flatMap((category) => category.items.map((item) => item.href));
+
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, loading } = useSession();
+  const pageUsage = useAdminPageUsage(profile?.id, !loading && profile?.role === 'admin' && !ADMIN_BLOCKED, adminPagePaths);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [simplifiedMenu, setSimplifiedMenu] = React.useState(() => {
     try {
@@ -252,6 +256,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           simplified={simplifiedMenu}
           onModeChange={changeMenuMode}
           isActive={isActive}
+          usage={pageUsage}
         />
 
         <div className="mt-4 pt-4 border-t">
@@ -288,6 +293,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                     simplified={simplifiedMenu}
                     onModeChange={changeMenuMode}
                     isActive={isActive}
+                    usage={pageUsage}
                     onNavigate={() => setMobileOpen(false)}
                   />
                 </div>

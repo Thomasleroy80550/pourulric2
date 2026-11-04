@@ -9,6 +9,7 @@ import { getAllHivernageRequests, HivernageRequest } from '@/lib/hivernage-api';
 import { generateHivernageRequestPdf, openHivernageRequestPdfInNewWindow } from '@/lib/pdf-utils';
 import { Snowflake, Printer, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { winterClosureSummary } from '@/lib/winter-season';
 
 const AdminHivernageRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<HivernageRequest[]>([]);
@@ -107,8 +108,13 @@ const AdminHivernageRequestsPage: React.FC = () => {
                         <TableCell>{new Date(r.created_at).toLocaleString('fr-FR')}</TableCell>
                         <TableCell>{owner}</TableCell>
                         <TableCell>{room}</TableCell>
-                        <TableCell className="max-w-[280px] truncate">{summary}</TableCell>
-                        <TableCell className="max-w-[280px] truncate">{r.comments ?? '—'}</TableCell>
+                        <TableCell className="min-w-[260px] max-w-[360px] whitespace-normal">
+                          {i.season && <p className="mb-2 font-semibold">Hiver {i.season}</p>}
+                          <p className="mb-2">{winterClosureSummary(i)}</p>
+                          <p>{summary}</p>
+                          {i.holiday_notice_acknowledged && <p className="mt-2 text-xs text-muted-foreground">Vacances du 3 janvier au 5 février 2027 : information prise en compte.</p>}
+                        </TableCell>
+                        <TableCell className="min-w-[180px] max-w-[280px] whitespace-pre-wrap break-words">{r.comments ?? '—'}</TableCell>
                         <TableCell className="space-x-2">
                           <Button variant="outline" size="sm" onClick={() => openHivernageRequestPdfInNewWindow(r)}>
                             <Printer className="h-4 w-4 mr-1" /> Imprimer

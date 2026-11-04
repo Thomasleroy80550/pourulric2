@@ -535,10 +535,10 @@ const DashboardPage = () => {
 
       // Ajouter Hivernage et Saison 2026 comme actions requises
       allTodoTasks.push({
-        id: 'hivernage-2026',
-        title: "Envoyer mes consignes d'hivernage",
-        description: "Fermeture du 4 au 11 janvier. Chauffage, eau, réfrigérateur, linge, volets...",
-        link: '/hivernage-2026',
+        id: 'hivernage-2027',
+        title: "Préparer mon logement pour l’hiver 2026–2027",
+        description: "Vos dates de fermeture et vos consignes. Vacances Hello Keys du 3 janvier au 5 février 2027.",
+        link: '/hivernage-2027',
         category: 'hivernage',
       });
       allTodoTasks.push({

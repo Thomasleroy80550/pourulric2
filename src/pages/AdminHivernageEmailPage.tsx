@@ -11,19 +11,15 @@ import { getAllProfiles } from '@/lib/admin-api';
 import { sendEmail } from '@/lib/notifications-api';
 import { Loader2, Mail } from 'lucide-react';
 
-const DEFAULT_SUBJECT = 'Consignes d’hivernage – fermeture du 4 au 11 janvier';
+const DEFAULT_SUBJECT = 'Préparez votre logement pour l’hiver 2026–2027';
 const DEFAULT_BODY_HTML = `
   <p>Bonjour,</p>
-  <p>Nous approchons de la période d’hivernage, durant laquelle la conciergerie sera fermée du <strong>dimanche 4 janvier</strong> au <strong>mercredi 11</strong> inclus.</p>
-  <p>Avant notre fermeture, nous souhaitons savoir si vous avez des <strong>instructions particulières</strong> concernant votre logement (chauffage, eau, réfrigérateur, entretien, etc.).</p>
-  <p>Merci de nous préciser, <strong>par retour de mail</strong>, ce que vous souhaitez que nous fassions avant notre départ&nbsp;:</p>
-  <ul>
-    <li>par exemple&nbsp;: couper l’eau ou le chauffe‑eau, laisser le chauffage en hors‑gel, enlever le linge ou en mettre, fermer les volets, etc.</li>
-    <li>ou au contraire, si vous préférez ne rien modifier.</li>
-  </ul>
-  <p>Cela nous permettra de planifier les passages et de garantir que tout soit en ordre avant notre pause hivernale.</p>
-  <p>Merci de nous transmettre vos consignes <strong>avant la fermeture</strong> afin que nous puissions nous organiser au mieux.</p>
-  <p>Bien à vous,<br/>L’équipe Hello Keys<br/>La Conciergerie Hello Keys</p>
+  <p>L’hiver approche ! Nous souhaitons connaître vos préférences pour votre logement pendant toute la période hivernale.</p>
+  <p>Dans votre espace propriétaire, ouvrez <strong>« Préparer mon logement pour l’hiver 2026–2027 »</strong> et indiquez si vous souhaitez fermer votre logement, les dates souhaitées et vos consignes particulières.</p>
+  <p><strong>Du dimanche 3 janvier au vendredi 5 février 2027, Hello Keys sera en vacances.</strong> Vos calendriers seront fermés à la location durant cette période. Votre espace reste accessible, mais nos délais de réponse pourront être allongés. Merci de votre compréhension !</p>
+  <p>Le formulaire vous permet aussi de choisir les actions à réaliser avant notre départ : eau, chauffe-eau, chauffage en hors-gel, réfrigérateur et volets, ou ne rien modifier. Votre logement n’aura pas de linge pendant cette période.</p>
+  <p>Merci de nous transmettre vos consignes via le formulaire avant notre fermeture afin que nous puissions organiser les passages.</p>
+  <p>Bien à vous,<br/>L’équipe Hello Keys</p>
 `;
 
 const AdminHivernageEmailPage: React.FC = () => {

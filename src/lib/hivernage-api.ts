@@ -1,6 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type HivernageInstructions = {
+  season?: string;
+  close_for_winter?: boolean;
+  closure_start?: string;
+  closure_end?: string;
+  holiday_notice_acknowledged?: boolean;
   cut_water?: boolean;
   cut_water_heater?: boolean;
   heating_frost_mode?: boolean;

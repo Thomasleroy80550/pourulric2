@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { HivernageRequest } from '@/lib/hivernage-api';
+import { WINTER_ACTIONS, winterClosureSummary } from '@/lib/winter-season';
 
 const HivernageRequestPrintLayout: React.FC<{ request: HivernageRequest }> = ({ request }) => {
   const ownerName = `${request.profiles?.first_name ?? ''} ${request.profiles?.last_name ?? ''}`.trim() || 'Propriétaire';
@@ -25,8 +26,17 @@ const HivernageRequestPrintLayout: React.FC<{ request: HivernageRequest }> = ({ 
         <p><strong>{roomName}</strong></p>
       </section>
 
+      {instr.season && (
+        <section style={{ marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '18px', marginBottom: '6px' }}>Organisation de l’hiver {instr.season}</h2>
+          <p>{winterClosureSummary(instr)}</p>
+          <p>Vacances Hello Keys : du 3 janvier au 5 février 2027. Calendriers fermés à la location.</p>
+          {instr.holiday_notice_acknowledged && <p>Le propriétaire a pris connaissance de la période de vacances et des délais de réponse allongés.</p>}
+        </section>
+      )}
+
       <section style={{ marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '18px', marginBottom: '6px' }}>Consignes</h2>
+        <h2 style={{ fontSize: '18px', marginBottom: '6px' }}>Consignes{instr.season ? ' avant les vacances Hello Keys' : ''}</h2>
         <ul style={{ listStyle: 'disc', paddingLeft: '20px' }}>
           {instr.cut_water && <li>Couper l’eau</li>}
           {instr.cut_water_heater && <li>Couper le chauffe-eau</li>}
@@ -36,7 +46,7 @@ const HivernageRequestPrintLayout: React.FC<{ request: HivernageRequest }> = ({ 
           {instr.put_linen && <li>Mettre le linge</li>}
           {instr.close_shutters && <li>Fermer les volets</li>}
           {instr.no_change && <li>Ne rien modifier</li>}
-          {!Object.values(instr).some(Boolean) && <li>Aucune consigne spécifique</li>}
+          {!WINTER_ACTIONS.some(action => instr[action.key]) && !instr.remove_linen && !instr.put_linen && !instr.no_change && <li>Aucune consigne spécifique</li>}
         </ul>
       </section>
 

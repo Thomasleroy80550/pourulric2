@@ -65,7 +65,7 @@ import { MIGRATION_NOTICE_KEY } from '@/lib/constants'; // Import the new consta
 import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
-import ThermoSyncPromoDialog from './ThermoSyncPromoDialog';
+import WinterWelcomeDialog from './WinterWelcomeDialog';
 import { Badge } from '@/components/ui/badge';
 import SharedSpaceBanner from './SharedSpaceBanner';
 import SpaceSwitcher from './SpaceSwitcher';
@@ -700,7 +700,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       />
       <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
       <SnowfallOverlay />
-      <ThermoSyncPromoDialog />
+      <WinterWelcomeDialog />
     </div>
   );
 };

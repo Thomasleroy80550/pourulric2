@@ -1,0 +1,20 @@
+@keyframes winter-entry-snow {
+  from { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 0; }
+  15% { opacity: 0.65; }
+  to { transform: translate3d(35px, 420px, 0) rotate(150deg); opacity: 0; }
+}
+@keyframes winter-entry-reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes winter-entry-emblem {
+  from { transform: scale(0.75) rotate(-35deg); }
+  to { transform: scale(1) rotate(0deg); }
+}
+.winter-entry-flake { animation: winter-entry-snow 6s linear infinite; }
+.winter-entry-content { animation: winter-entry-reveal 700ms ease-out both; }
+.winter-entry-emblem { animation: winter-entry-emblem 900ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .winter-entry-flake { display: none; animation: none; }
+  .winter-entry-content, .winter-entry-emblem { animation: none; }
+}

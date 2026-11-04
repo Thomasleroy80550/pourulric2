@@ -298,6 +298,7 @@ function App() {
                       <Route path="/season-2026" element={<Season2026Page />} />
                       <Route path="/season-2026/prices" element={<MySeasonPricesPage />} />
                       <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
+                      <Route path="/hivernage-2027" element={<Hivernage2026Page />} />
                       <Route path="/powersense" element={<PowerSenseLandingFull />} />
                       <Route path="/marvel-2026" element={<Marvel2026Landing />} />
                       <Route path="/thermo-sync" element={<ThermoSyncPage />} />

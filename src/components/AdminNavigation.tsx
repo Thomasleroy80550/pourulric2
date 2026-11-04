@@ -35,7 +35,11 @@ export default function AdminNavigation({ categories, simplified, onModeChange, 
   const fallbackItems = quickLinks.map((href) => items.find((item) => item.href === href))
     .filter((item): item is NavigationItem => Boolean(item))
     .filter((item) => !rankedItems.some((ranked) => ranked.href === item.href));
-  const priorityItems = [...rankedItems, ...fallbackItems].slice(0, 4);
+  const pinnedItem = items.find((item) => item.href === '/admin/invoice-generation');
+  const priorityItems = [
+    ...(pinnedItem ? [pinnedItem] : []),
+    ...[...rankedItems, ...fallbackItems].filter((item) => item.href !== pinnedItem?.href).slice(0, 4),
+  ];
   const renderLink = (item: NavigationItem) => {
     const Icon = item.icon;
     return (

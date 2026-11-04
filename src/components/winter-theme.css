@@ -1,0 +1,49 @@
+.winter-theme {
+  background-image: radial-gradient(ellipse at 0% 0%, rgb(224 242 254 / 0.7), transparent 45%), radial-gradient(ellipse at 100% 100%, rgb(207 250 254 / 0.4), transparent 45%);
+}
+.winter-theme > div > div > header {
+  border-bottom-color: rgb(186 230 253 / 0.6);
+  box-shadow: 0 1px 14px rgb(56 189 248 / 0.08), inset 0 -1px 0 rgb(255 255 255 / 0.8);
+  background-image: linear-gradient(110deg, rgb(240 249 255 / 0.55), transparent 65%);
+}
+.winter-theme main .bg-card {
+  border-color: rgb(186 230 253 / 0.6);
+  background-image: linear-gradient(135deg, rgb(224 242 254 / 0.35), transparent 35%, transparent 85%, rgb(240 249 255 / 0.35));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 4px 18px rgb(14 165 233 / 0.045);
+}
+.winter-ice-edge {
+  box-shadow: inset 0 0 20px 4px rgb(186 230 253 / 0.22);
+  background: radial-gradient(ellipse 145px 145px at top left, rgb(224 242 254 / 0.65), transparent 80%), radial-gradient(ellipse 145px 145px at top right, rgb(224 242 254 / 0.65), transparent 80%), radial-gradient(ellipse 130px 130px at bottom left, rgb(224 242 254 / 0.5), transparent 80%), radial-gradient(ellipse 130px 130px at bottom right, rgb(224 242 254 / 0.5), transparent 80%);
+}
+.winter-ice-crystal {
+  color: rgb(125 211 252 / 0.55);
+  filter: drop-shadow(0 1px 1px rgb(255 255 255 / 0.8));
+}
+.dark .winter-theme {
+  background-image: radial-gradient(ellipse at 0% 0%, rgb(12 74 110 / 0.25), transparent 45%), radial-gradient(ellipse at 100% 100%, rgb(8 51 68 / 0.2), transparent 45%);
+}
+.dark .winter-theme > div > div > header {
+  border-bottom-color: rgb(56 189 248 / 0.2);
+  box-shadow: 0 1px 14px rgb(56 189 248 / 0.06), inset 0 -1px 0 rgb(125 211 252 / 0.08);
+  background-image: linear-gradient(110deg, rgb(12 74 110 / 0.2), transparent 65%);
+}
+.dark .winter-theme main .bg-card {
+  border-color: rgb(56 189 248 / 0.2);
+  background-image: linear-gradient(135deg, rgb(12 74 110 / 0.15), transparent 35%, transparent 85%, rgb(8 51 68 / 0.15));
+  box-shadow: inset 0 1px 0 rgb(125 211 252 / 0.1), 0 4px 18px rgb(14 165 233 / 0.04);
+}
+.dark .winter-ice-edge {
+  box-shadow: inset 0 0 20px 4px rgb(56 189 248 / 0.07);
+  background: radial-gradient(ellipse 145px 145px at top left, rgb(56 189 248 / 0.1), transparent 80%), radial-gradient(ellipse 145px 145px at top right, rgb(56 189 248 / 0.1), transparent 80%);
+}
+.dark .winter-ice-crystal {
+  color: rgb(186 230 253 / 0.25);
+  filter: none;
+}
+@media (max-width: 640px) {
+  .winter-ice-edge { background: none; box-shadow: inset 0 0 12px 2px rgb(186 230 253 / 0.15); }
+  .winter-ice-crystal { opacity: 0.6; }
+}
+@media (forced-colors: active) {
+  .winter-frost-frame { display: none; }
+}

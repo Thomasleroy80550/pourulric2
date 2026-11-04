@@ -4,6 +4,10 @@ export const WINTER_SEASON = '2026–2027';
 export const WINTER_FORM_PATH = '/hivernage-2027';
 export const WINTER_NOTICE = 'Du dimanche 3 janvier au vendredi 5 février 2027, Hello Keys sera en vacances. Vos calendriers seront fermés à la location durant cette période. Votre espace reste accessible, mais nos délais de réponse pourront être allongés. Merci de votre compréhension !';
 
+export function isWinterSeasonActive() {
+  return Date.now() < new Date('2027-02-06T00:00:00+01:00').getTime();
+}
+
 export const WINTER_ACTIONS = [
   { key: 'cut_water', label: "Couper l’eau", description: 'Fermer l’arrivée d’eau du logement.' },
   { key: 'cut_water_heater', label: 'Couper le chauffe-eau', description: 'Arrêter la production d’eau chaude.' },

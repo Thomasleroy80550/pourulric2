@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/components/SessionContextProvider';
 import ThermoSyncPromoDialog from '@/components/ThermoSyncPromoDialog';
-import { WINTER_FORM_PATH } from '@/lib/winter-season';
+import { supabase } from '@/integrations/supabase/client';
+import { WINTER_FORM_PATH, WINTER_SEASON, isWinterSeasonActive } from '@/lib/winter-season';
 import './winter-welcome.css';
 
 type WinterWelcomeDialogProps = { previewOpen?: boolean; onPreviewClose?: () => void };
@@ -20,14 +21,22 @@ const WinterWelcomeDialog = ({ previewOpen, onPreviewClose }: WinterWelcomeDialo
   const isDashboard = dashboardPaths.includes(pathname);
   const eligible = !!profile && !profile.is_banned && !['housekeeper', 'accountant'].includes(profile.role || '');
   const userId = session?.user.id;
-  const seasonActive = Date.now() < new Date('2027-02-06T00:00:00+01:00').getTime();
+  const seasonActive = isWinterSeasonActive();
   const visible = manualPreview ? !!previewOpen : open;
 
   useEffect(() => {
     setOpen(false);
     if (manualPreview || !isDashboard || !eligible || !userId || !seasonActive) return;
-    const timer = window.setTimeout(() => setOpen(true), 100);
-    return () => window.clearTimeout(timer);
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const { error } = await supabase.from('winter_intro_views').insert({ user_id: userId, season: WINTER_SEASON });
+      if (error) {
+        if (error.code !== '23505') console.error('[winter-intro] Impossible de vérifier le premier affichage', error);
+        return;
+      }
+      if (!cancelled) setOpen(true);
+    }, 100);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [manualPreview, isDashboard, eligible, userId, navigationKey, seasonActive]);
 
   useEffect(() => {

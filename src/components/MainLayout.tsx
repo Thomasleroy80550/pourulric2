@@ -66,6 +66,8 @@ import { useTheme } from 'next-themes';
 import { useVersion } from '@/hooks/use-version';
 import SnowfallOverlay from './SnowfallOverlay';
 import WinterWelcomeDialog from './WinterWelcomeDialog';
+import WinterFrostOverlay from './WinterFrostOverlay';
+import { isWinterSeasonActive } from '@/lib/winter-season';
 import { Badge } from '@/components/ui/badge';
 import SharedSpaceBanner from './SharedSpaceBanner';
 import SpaceSwitcher from './SpaceSwitcher';
@@ -450,8 +452,10 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   };
 
+  const winterActive = isWinterSeasonActive();
+
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
+    <div className={cn('flex min-h-screen overflow-x-hidden bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50', winterActive && 'winter-theme')}>
       {!isMobile && !useSimpleDesktopNav && (
               <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border shadow-lg">
                 <SidebarContent isPaymentSuspended={profile?.is_payment_suspended || false} unreadCount={unreadCount} announcementUnread={announcementUnread} hasImportant={hasImportant} navigate={navigate} />
@@ -699,7 +703,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         navigate={navigate}
       />
       <WhatsNewSheet isOpen={isWhatsNewOpen} onOpenChange={setIsWhatsNewOpen} />
-      <SnowfallOverlay />
+      {winterActive && <SnowfallOverlay />}
+      {winterActive && <WinterFrostOverlay />}
       <WinterWelcomeDialog />
     </div>
   );

@@ -9,7 +9,6 @@ import HousingRegistrationModal from './HousingRegistrationModal';
 import OnboardingConfettiDialog from './OnboardingConfettiDialog';
 import AccountSuspendedScreen from './AccountSuspendedScreen';
 import PwaSessionLock from './PwaSessionLock';
-import PwaBonusGift from './PwaBonusGift';
 import { getProfile, updateProfile, UserProfile, updateUserLastSeen } from '@/lib/profile-api';
 import { CURRENT_CGUV_VERSION } from '@/lib/constants';
 import { toast } from 'sonner';
@@ -292,9 +291,6 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
           isOpen={showOnboardingConfetti}
           onClose={() => setShowOnboardingConfetti(false)}
         />
-      )}
-      {session && profile?.id === session.user.id && !showCguvModal && !showHousingModal && !showOnboardingConfetti && (
-        <PwaBonusGift key={session.user.id} userId={session.user.id} />
       )}
       </>}
       <Toaster />

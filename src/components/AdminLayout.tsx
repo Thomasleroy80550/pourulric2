@@ -59,7 +59,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useSession } from './SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import AdminNavigation from './AdminNavigation';
 import NotificationBell from './NotificationBell';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
@@ -151,32 +151,26 @@ const adminNavigationCategories = [
   },
 ];
 
-type Item = { name: string; href: string; icon: React.ElementType };
-
-const SidebarLink: React.FC<{ item: Item; active: boolean; onClick?: () => void }> = ({ item, active, onClick }) => {
-  const Icon = item.icon;
-  return (
-    <Link
-      to={item.href}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 transition-colors",
-        active
-          ? "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-200"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-      )}
-    >
-      <Icon className="h-4 w-4" />
-      <span className="truncate">{item.name}</span>
-    </Link>
-  );
-};
-
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, loading } = useSession();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [simplifiedMenu, setSimplifiedMenu] = React.useState(() => {
+    try {
+      return localStorage.getItem('admin-menu-mode') !== 'complete';
+    } catch {
+      return true;
+    }
+  });
+  const changeMenuMode = (simplified: boolean) => {
+    setSimplifiedMenu(simplified);
+    try {
+      localStorage.setItem('admin-menu-mode', simplified ? 'simplified' : 'complete');
+    } catch {
+      // Le menu reste utilisable lorsque le stockage du navigateur est indisponible.
+    }
+  };
   const [tempAlertsCount, setTempAlertsCount] = React.useState<number>(0);
 
   React.useEffect(() => {
@@ -231,12 +225,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     );
   }
 
-  const isActive = (href: string) =>
-    location.pathname === href || location.pathname.startsWith(href + "/");
+  const isActive = (href: string) => {
+    const [pathname, search] = href.split('?');
+    if (pathname === '/admin') return location.pathname === pathname;
+    return (location.pathname === pathname || location.pathname.startsWith(pathname + '/'))
+      && (!search || location.search === `?${search}`);
+  };
 
   const Sidebar = (
-    <aside className="hidden md:flex md:w-64 lg:w-72 shrink-0 border-r bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/40">
-      <div className="flex h-full w-full flex-col p-4">
+    <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] md:flex md:w-64 lg:w-72 shrink-0 border-r bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/40">
+      <div className="flex h-full min-h-0 w-full flex-col p-4">
         <div className="flex items-center gap-2 mb-6">
           <Shield className="h-6 w-6 text-orange-600" />
           <div className="font-semibold">Admin Hello Keys</div>
@@ -249,21 +247,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </Link>
         </Button>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto pr-1">
-
-          {adminNavigationCategories.map((cat) => (
-            <div key={cat.categoryName} className="space-y-1">
-              <div className="px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                {cat.categoryName}
-              </div>
-              <div className="space-y-1">
-                {cat.items.map((item) => (
-                  <SidebarLink key={item.name} item={item as Item} active={isActive(item.href)} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </nav>
+        <AdminNavigation
+          categories={adminNavigationCategories}
+          simplified={simplifiedMenu}
+          onModeChange={changeMenuMode}
+          isActive={isActive}
+        />
 
         <div className="mt-4 pt-4 border-t">
           <Link to="/" className="flex items-center gap-3 rounded-md px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-muted/60">
@@ -293,25 +282,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                   <Shield className="h-6 w-6 text-orange-600" />
                   <div className="font-semibold">Admin Hello Keys</div>
                 </div>
-                <nav className="flex-1 px-2 overflow-y-auto">
-                  {adminNavigationCategories.map((cat) => (
-                    <div key={cat.categoryName} className="mb-3">
-                      <div className="px-2 py-1 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
-                        {cat.categoryName}
-                      </div>
-                      <div className="space-y-1">
-                        {cat.items.map((item) => (
-                          <SidebarLink
-                            key={item.name}
-                            item={item as Item}
-                            active={isActive(item.href)}
-                            onClick={() => setMobileOpen(false)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </nav>
+                <div className="flex min-h-0 flex-1 flex-col px-2">
+                  <AdminNavigation
+                    categories={adminNavigationCategories}
+                    simplified={simplifiedMenu}
+                    onModeChange={changeMenuMode}
+                    isActive={isActive}
+                    onNavigate={() => setMobileOpen(false)}
+                  />
+                </div>
                 <div className="p-2 border-t">
                   <Link
                     to="/"

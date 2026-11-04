@@ -16,6 +16,8 @@ import { createHivernageRequest, getMyHivernageRequests, HivernageInstructions, 
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { WINTER_ACTIONS, WINTER_NOTICE, WINTER_SEASON, winterClosureSummary } from '@/lib/winter-season';
 import WinterSubmittedRooms from '@/components/WinterSubmittedRooms';
+import WinterMobileForm from '@/components/WinterMobileForm';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type FormValues = { user_room_id: string; instructions: HivernageInstructions; comments: string };
 const steps = ['Votre logement', 'Votre hiver', 'Nos vacances', 'Récapitulatif'];
@@ -27,6 +29,7 @@ const defaults: FormValues = {
 };
 
 const Hivernage2026Page = () => {
+  const isMobile = useIsMobile();
   const form = useForm<FormValues>({ defaultValues: defaults, shouldUnregister: false });
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
@@ -99,6 +102,18 @@ const Hivernage2026Page = () => {
       toast.error(error instanceof Error ? error.message : 'Impossible d’envoyer vos consignes. Veuillez réessayer.');
     } finally { submitting.current = false; }
   };
+
+  if (isMobile) return <WinterMobileForm
+    form={form}
+    rooms={rooms}
+    loading={loadingRooms}
+    error={roomError}
+    submittedRoomIds={submittedRoomIds}
+    sent={sent}
+    onRetry={loadRooms}
+    onSubmit={onSubmit}
+    onReset={() => { form.reset(defaults); setSent(null); setStep(0); }}
+  />;
 
   return (
     <MainLayout>

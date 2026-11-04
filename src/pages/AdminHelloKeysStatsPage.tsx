@@ -55,8 +55,9 @@ export default function AdminHelloKeysStatsPage() {
   const summary = useMemo(() => summarizeMonths(months), [months]);
   const previous = allMonths.filter(row => row.year === String(Number(year) - 1));
   const matched = months.filter(row => previous.some(item => item.month === row.month));
+  const comparisonExcluded = year === '2025' || year === '2026';
   const compare = (metric: Metric) => {
-    if (year === 'all') return null;
+    if (year === 'all' || comparisonExcluded) return null;
     const comparable = matched.filter(row => row.coverage[metric] > 0 && previous.some(item => item.month === row.month && item.coverage[metric] > 0));
     if (!comparable.length) return null;
     const current = comparable.reduce((sum, row) => sum + row[metric], 0);
@@ -66,7 +67,7 @@ export default function AdminHelloKeysStatsPage() {
   const best = [...months].filter(row => row.coverage.revenue > 0).sort((a, b) => b.revenue - a.revenue)[0];
   const latest = months.at(-1);
   const beforeLatest = months.at(-2);
-  const latestChange = latest && beforeLatest && latest.coverage.revenue > 0 && beforeLatest.coverage.revenue > 0 && (Number(latest.year) * 12 + latest.month) - (Number(beforeLatest.year) * 12 + beforeLatest.month) === 1
+  const latestChange = latest && beforeLatest && latest.year !== '2025' && beforeLatest.year !== '2025' && latest.coverage.revenue > 0 && beforeLatest.coverage.revenue > 0 && (Number(latest.year) * 12 + latest.month) - (Number(beforeLatest.year) * 12 + beforeLatest.month) === 1
     ? change(latest.revenue, beforeLatest.revenue) : null;
   const generatedMonths = aggregateMonths(agencyInvoices, 'generated').months.filter(row => year === 'all' || row.year === year);
   const generatedSummary = summarizeMonths(generatedMonths);
@@ -124,12 +125,12 @@ export default function AdminHelloKeysStatsPage() {
     </div>
 
     {loading ? <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin text-indigo-500" /><p>Chargement de l’ensemble des relevés…</p></div> : error ? <Card><CardContent className="space-y-3 p-6 text-center"><p className="text-destructive">Impossible de charger les statistiques : {error}</p><Button onClick={() => void fetchStats()}>Réessayer</Button></CardContent></Card> : !months.length ? <Card><CardContent className="flex min-h-64 flex-col items-center justify-center gap-3 text-center"><BarChart3 className="h-10 w-10 text-muted-foreground" /><h2 className="font-semibold">Aucun relevé pour cette sélection</h2><p className="text-sm text-muted-foreground">Choisissez une autre année ou une autre source.{excluded > 0 && ` ${excluded} périodes non reconnues ont été exclues.`}</p><Button variant="outline" onClick={() => { setYear('all'); setSource('all'); }}>Afficher tout l’historique</Button></CardContent></Card> : <>
-      <div className="flex gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs leading-relaxed text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-100"><Info className="mt-0.5 h-4 w-4 shrink-0" /><div>Les revenus incluent le CA des saisies manuelles. Commissions, ménage et taxe ne sont détaillés que sur les relevés générés. Les mois absents ne sont pas assimilés à zéro.{year !== 'all' && ` Comparaisons N−1 calculées sur ${matched.length} mois présents dans les deux années.`}{excluded > 0 && ` ${excluded} relevés exclus : période non reconnue.`}</div></div>
+      <div className="flex gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs leading-relaxed text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-100"><Info className="mt-0.5 h-4 w-4 shrink-0" /><div>Les revenus incluent le CA des saisies manuelles. Commissions, ménage et taxe ne sont détaillés que sur les relevés générés. Les mois absents ne sont pas assimilés à zéro. Les montants bruts historiques de 2025 ne sont pas comparables aux revenus des relevés générés : toutes les comparaisons impliquant 2025 sont désactivées.{year !== 'all' && !comparisonExcluded && ` Comparaisons N−1 calculées sur ${matched.length} mois présents dans les deux années.`}{excluded > 0 && ` ${excluded} relevés exclus : période non reconnue.`}</div></div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {METRICS.map((metric, index) => {
           const Icon = [Euro, Wallet, Sparkles, FileText, Wallet, Euro, Moon, Users][index];
-          return <Card key={metric} className="rounded-2xl shadow-sm"><CardContent className="p-5"><div className="mb-3 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">{labels[metric]}</span><span className={`rounded-lg p-2 ${index % 2 ? 'bg-teal-500/10 text-teal-600' : 'bg-indigo-500/10 text-indigo-500'}`}><Icon className="h-4 w-4" /></span></div><div className="text-2xl font-bold tracking-tight tabular-nums">{displayMetric(metric, summary[metric], summary.coverage[metric])}</div><div className="mt-2"><Variation value={compare(metric)} /></div><p className="mt-2 text-[11px] text-muted-foreground">{summary.coverage[metric]} / {summary.invoices} relevés renseignés{summary.coverage[metric] < summary.invoices ? ' · données partielles' : ''}</p></CardContent></Card>;
+          return <Card key={metric} className="rounded-2xl shadow-sm"><CardContent className="p-5"><div className="mb-3 flex items-center justify-between gap-2"><span className="text-sm font-medium text-muted-foreground">{labels[metric]}</span><span className={`rounded-lg p-2 ${index % 2 ? 'bg-teal-500/10 text-teal-600' : 'bg-indigo-500/10 text-indigo-500'}`}><Icon className="h-4 w-4" /></span></div><div className="text-2xl font-bold tracking-tight tabular-nums">{displayMetric(metric, summary[metric], summary.coverage[metric])}</div>{!comparisonExcluded && <div className="mt-2"><Variation value={compare(metric)} /></div>}<p className="mt-2 text-[11px] text-muted-foreground">{summary.coverage[metric]} / {summary.invoices} relevés renseignés{summary.coverage[metric] < summary.invoices ? ' · données partielles' : ''}</p></CardContent></Card>;
         })}
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

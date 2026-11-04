@@ -12,7 +12,9 @@ import {
   Lightbulb,
   Headset,
   Gift,
+  Snowflake,
 } from "lucide-react";
+import { WINTER_FORM_PATH } from "@/lib/winter-season";
 import V4Layout from "./V4Layout";
 import PushSettingV4 from "./PushSettingV4";
 import RateAppV4 from "./RateAppV4";
@@ -124,6 +126,12 @@ const MoreV4: React.FC = () => {
             <p className="text-sm text-slate-500">Propriétaire</p>
           </div>
         </div>
+
+        <Link to={WINTER_FORM_PATH} className="flex items-center gap-3 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 p-4 text-sky-950">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><Snowflake className="h-6 w-6" /></span>
+          <div className="flex-1"><p className="text-sm font-semibold">Hivernage 2027</p><p className="text-xs text-sky-700">Formulaire et logements déjà renseignés</p></div>
+          <ChevronRight className="h-4 w-4 shrink-0" />
+        </Link>
 
         {/* Sections */}
         {sections.map((items, i) => (

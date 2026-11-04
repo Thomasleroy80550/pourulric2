@@ -8,7 +8,10 @@ import ThermoSyncPromoDialog from '@/components/ThermoSyncPromoDialog';
 import { WINTER_FORM_PATH, WINTER_NOTICE, WINTER_SEASON } from '@/lib/winter-season';
 import './winter-welcome.css';
 
-const WinterWelcomeDialog = () => {
+type WinterWelcomeDialogProps = { previewOpen?: boolean; onPreviewClose?: () => void };
+
+const WinterWelcomeDialog = ({ previewOpen, onPreviewClose }: WinterWelcomeDialogProps) => {
+  const manualPreview = previewOpen !== undefined;
   const { session, profile } = useSession();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -21,7 +24,7 @@ const WinterWelcomeDialog = () => {
   useEffect(() => {
     setOpen(false);
     setShowPromo(false);
-    if (!isClient || !userId) return;
+    if (manualPreview || !isClient || !userId) return;
     if (Date.now() >= new Date('2027-02-06T00:00:00+01:00').getTime()) {
       setShowPromo(true);
       return;
@@ -32,17 +35,18 @@ const WinterWelcomeDialog = () => {
     if (pathname === WINTER_FORM_PATH || pathname === '/hivernage-2026') return;
     const timer = window.setTimeout(() => setOpen(true), 650);
     return () => window.clearTimeout(timer);
-  }, [isClient, userId, storageKey, pathname]);
+  }, [isClient, userId, storageKey, pathname, manualPreview]);
 
   const dismiss = () => {
+    if (manualPreview) { onPreviewClose?.(); return; }
     try { localStorage.setItem(storageKey, '1'); } catch { /* Le navigateur peut refuser le stockage local. */ }
     setOpen(false);
   };
 
-  if (!isClient) return null;
-  if (showPromo) return <ThermoSyncPromoDialog />;
+  if (!manualPreview && !isClient) return null;
+  if (!manualPreview && showPromo) return <ThermoSyncPromoDialog />;
 
-  return <Dialog open={open} onOpenChange={value => { if (!value) dismiss(); }}>
+  return <Dialog open={manualPreview ? previewOpen : open} onOpenChange={value => { if (!value) dismiss(); }}>
     <DialogContent className="max-h-[90dvh] overflow-y-auto overflow-x-hidden rounded-3xl border-sky-200 p-0 sm:max-w-xl">
       <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-sky-950 to-cyan-900 px-6 pb-8 pt-10 text-white sm:px-9">
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">{Array.from({ length: 16 }, (_, index) => <Snowflake key={index} className="winter-entry-flake absolute -top-8 text-sky-100/40" style={{ left: `${(index * 37) % 100}%`, width: `${12 + index % 4 * 5}px`, animationDelay: `${index % 6 * -0.9}s`, animationDuration: `${5 + index % 4}s` }} />)}</div>

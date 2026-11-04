@@ -10,6 +10,7 @@ import { generateHivernageRequestPdf, openHivernageRequestPdfInNewWindow } from 
 import { Snowflake, Printer, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { winterClosureSummary } from '@/lib/winter-season';
+import WinterSeasonBanner from '@/components/WinterSeasonBanner';
 
 const AdminHivernageRequestsPage: React.FC = () => {
   const [requests, setRequests] = useState<HivernageRequest[]>([]);
@@ -52,6 +53,7 @@ const AdminHivernageRequestsPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Demandes d'hivernage</h1>
         </div>
 
+        <WinterSeasonBanner />
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">

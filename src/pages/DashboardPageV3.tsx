@@ -50,9 +50,8 @@ import {
 
 import MainLayout from "@/components/MainLayout";
 import BannedUserMessage from "@/components/BannedUserMessage";
-import DashboardV3Reveal from "@/components/DashboardV3Reveal";
+import WinterWelcomeDialog from "@/components/WinterWelcomeDialog";
 import AnnouncementsBanner from "@/components/AnnouncementsBanner";
-import WinterSeasonBanner from "@/components/WinterSeasonBanner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -91,9 +90,6 @@ const MONTH_FALLBACK: Record<string, number> = {
   juin: 5, juillet: 6, août: 7, aout: 7, septembre: 8, octobre: 9,
   novembre: 10, décembre: 11, decembre: 11,
 };
-
-// Palette alignée sur l'identité Hello Keys (tokens de marque)
-const REVEAL_STORAGE_KEY = "dashboard_v3_reveal_seen";
 
 const COMPARE_COLOR = "hsl(var(--muted-foreground))";
 const CA_COLOR = "hsl(var(--primary))";
@@ -454,18 +450,7 @@ const DashboardPageV3: React.FC = () => {
     }
   }, [fetchData, profile]);
 
-  // Affiche l'animation de révélation une seule fois par utilisateur.
-  useEffect(() => {
-    if (profile?.is_banned) return;
-    if (!localStorage.getItem(REVEAL_STORAGE_KEY)) {
-      setShowReveal(true);
-    }
-  }, [profile]);
-
-  const handleFinishReveal = () => {
-    setShowReveal(false);
-    localStorage.setItem(REVEAL_STORAGE_KEY, "1");
-  };
+  const handleFinishReveal = () => setShowReveal(false);
 
   if (profile?.is_banned) {
     return (
@@ -521,9 +506,8 @@ const DashboardPageV3: React.FC = () => {
 
   return (
     <MainLayout>
-      {showReveal && <DashboardV3Reveal onFinish={handleFinishReveal} />}
+      <WinterWelcomeDialog previewOpen={showReveal} onPreviewClose={handleFinishReveal} />
       <div className="w-full max-w-full overflow-x-hidden break-words">
-        <WinterSeasonBanner />
         <AnnouncementsBanner />
         <Link to="/actualites/tarification-meteo" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-5 text-teal-950 transition-colors hover:bg-teal-100">
           <div>

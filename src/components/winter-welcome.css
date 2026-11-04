@@ -1,20 +1,53 @@
-@keyframes winter-entry-snow {
-  from { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 0; }
-  15% { opacity: 0.65; }
-  to { transform: translate3d(35px, 420px, 0) rotate(150deg); opacity: 0; }
+@keyframes winter-frost-open-left {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
 }
-@keyframes winter-entry-reveal {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes winter-frost-open-right {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
 }
-@keyframes winter-entry-emblem {
-  from { transform: scale(0.75) rotate(-35deg); }
-  to { transform: scale(1) rotate(0deg); }
+@keyframes winter-scene-rise {
+  from { opacity: 0; transform: translateY(20px); filter: blur(8px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
-.winter-entry-flake { animation: winter-entry-snow 6s linear infinite; }
-.winter-entry-content { animation: winter-entry-reveal 700ms ease-out both; }
-.winter-entry-emblem { animation: winter-entry-emblem 900ms ease-out both; }
+@keyframes winter-crystal-turn {
+  from { opacity: 0; transform: scale(0.55) rotate(-60deg); filter: blur(12px); }
+  to { opacity: 1; transform: scale(1) rotate(0); filter: blur(0); }
+}
+@keyframes winter-crystal-ring {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1.1); }
+}
+@keyframes winter-drift {
+  from { transform: translate3d(0, -35px, 0); opacity: 0; }
+  35% { opacity: 0.6; }
+  to { transform: translate3d(35px, 65px, 0); opacity: 0; }
+}
+@keyframes winter-aurora {
+  from { transform: rotate(-15deg) scale(0.8); }
+  to { transform: rotate(15deg) scale(1.1); }
+}
+@keyframes winter-scene-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes winter-scene-out {
+  from { opacity: 1; filter: blur(0); }
+  to { opacity: 0; filter: blur(8px); }
+}
+.winter-frost-left { animation: winter-frost-open-left 2s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both; }
+.winter-frost-right { animation: winter-frost-open-right 2s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both; }
+.winter-scene-label { animation: winter-scene-rise 0.8s ease-out 0.3s both; }
+.winter-crystal { animation: winter-crystal-turn 1.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.winter-crystal-ring { animation: winter-crystal-ring 1.8s ease-out 0.2s both; }
+.winter-scene-title { animation: winter-scene-rise 1s ease-out 0.65s both; }
+.winter-scene-details { animation: winter-scene-rise 0.8s ease-out 1.1s both; }
+.winter-scene-actions { animation: winter-scene-rise 0.8s ease-out 1.4s both; }
+.winter-drift { animation: winter-drift 8s ease-in-out infinite; }
+.winter-aurora { animation: winter-aurora 12s ease-in-out alternate infinite; }
+.winter-scene-progress { animation: winter-scene-progress 6.2s linear both; }
+.winter-scene[data-state="closed"] { animation: winter-scene-out 450ms ease-out both; }
 @media (prefers-reduced-motion: reduce) {
-  .winter-entry-flake { display: none; animation: none; }
-  .winter-entry-content, .winter-entry-emblem { animation: none; }
+  .winter-scene *, .winter-scene[data-state="closed"] { animation: none !important; }
+  .winter-frost, .winter-drift { display: none; }
 }

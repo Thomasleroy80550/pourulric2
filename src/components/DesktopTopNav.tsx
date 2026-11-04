@@ -25,9 +25,11 @@ import {
   Plug,
   Gift,
   Shield,
+  Snowflake,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { WINTER_FORM_PATH } from "@/lib/winter-season";
 
 type NavItem = {
   name: string;
@@ -214,6 +216,18 @@ const DesktopTopNav: React.FC<DesktopTopNavProps> = ({
           )}
         </PopoverContent>
       </Popover>
+      <button
+        type="button"
+        onClick={() => { setMoreOpen(false); navigate(WINTER_FORM_PATH); }}
+        aria-current={isActive(WINTER_FORM_PATH) ? 'page' : undefined}
+        className={cn(
+          "ml-2 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-sky-300/60 bg-gradient-to-r from-sky-100 to-cyan-50 px-3 py-2 text-sm font-semibold text-sky-900 shadow-sm shadow-sky-200/50 transition-all hover:border-sky-400 hover:shadow-md dark:border-sky-700 dark:from-sky-950 dark:to-cyan-950 dark:text-sky-100 dark:shadow-none",
+          isActive(WINTER_FORM_PATH) && "ring-2 ring-sky-500/40"
+        )}
+      >
+        <Snowflake className="h-5 w-5 text-sky-600 dark:text-sky-300 motion-safe:animate-[spin_18s_linear_infinite]" />
+        Hivernage 2027
+      </button>
     </nav>
   );
 };

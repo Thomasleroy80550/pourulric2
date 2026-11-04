@@ -1,4 +1,5 @@
-import { AlertTriangle, CalendarDays, CheckCircle2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, CalendarDays, CheckCircle2, Timer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,25 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+const maintenanceStart = new Date("2026-11-16T08:00:00+01:00").getTime();
+
 export default function MigrationBanner() {
+  const [remaining, setRemaining] = useState(() => Math.max(0, maintenanceStart - Date.now()));
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setRemaining(Math.max(0, maintenanceStart - Date.now()));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const totalSeconds = Math.floor(remaining / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const countdown = `${days}j ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
   return (
     <Dialog>
       <aside
@@ -23,6 +42,14 @@ export default function MigrationBanner() {
           >
             Migration du <strong>16 au 18 novembre</strong> : support client et plateforme propriétaire indisponibles.
           </p>
+          <span
+            role="timer"
+            aria-label={remaining > 0 ? `Temps restant avant la maintenance : ${days} jours, ${hours} heures, ${minutes} minutes, ${seconds} secondes` : "L’heure de début de la maintenance est atteinte"}
+            className="inline-flex shrink-0 items-center gap-1 rounded border border-white/20 bg-white/10 px-1.5 text-[10px] font-semibold tabular-nums sm:gap-1.5 sm:px-2 sm:text-xs"
+          >
+            <Timer className="hidden h-3 w-3 sm:block" aria-hidden="true" />
+            {remaining > 0 ? countdown : "Début atteint"}
+          </span>
           <DialogTrigger asChild>
             <button
               type="button"
@@ -41,6 +68,27 @@ export default function MigrationBanner() {
             Une nouvelle étape pour Hello Keys : la migration de vos données du 16 au 18 novembre.
           </DialogDescription>
         </DialogHeader>
+
+        <section className="space-y-3 rounded-xl bg-gradient-to-br from-red-800 to-red-600 p-4 text-white sm:p-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <Timer className="h-4 w-4" aria-hidden="true" />
+            {remaining > 0 ? "La maintenance commence dans" : "L’heure de début de la maintenance est atteinte"}
+          </h2>
+          <div role="timer" aria-label={`Temps restant : ${countdown}`} className="grid grid-cols-4 gap-2">
+            {[
+              { label: "Jours", value: days },
+              { label: "Heures", value: hours },
+              { label: "Minutes", value: minutes },
+              { label: "Secondes", value: seconds },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-lg border border-white/20 bg-white/10 py-3 text-center">
+                <span className="block text-2xl font-bold tabular-nums sm:text-3xl">{String(value).padStart(2, "0")}</span>
+                <span className="text-[10px] text-red-100 sm:text-xs">{label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-red-100">Début prévu le 16 novembre 2026 à 08 h 00 (heure de Paris).</p>
+        </section>
 
         <section className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">
           <h2 className="flex items-center gap-2 font-bold">

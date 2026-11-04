@@ -5,7 +5,7 @@ export default function WinterFrostOverlay() {
     <div aria-hidden="true" className="winter-frost-frame pointer-events-none fixed inset-0 z-30 select-none">
       <div className="winter-ice-edge absolute inset-0" />
       {['left-0 top-0', 'right-0 top-0 -scale-x-100', 'bottom-0 left-0 -scale-y-100', 'bottom-0 right-0 -scale-x-100 -scale-y-100'].map(corner => (
-        <svg key={corner} viewBox="0 0 220 220" fill="none" className={`winter-ice-crystal absolute h-24 w-24 sm:h-44 sm:w-44 ${corner}`}>
+        <svg key={corner} viewBox="0 0 220 220" fill="none" className={`winter-ice-crystal absolute h-12 w-12 sm:h-20 sm:w-20 ${corner}`}>
           <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
             <path strokeWidth="1.6" d="M0 0L153 153M0 16L81 180M16 0L180 81" />
             <path d="M28 28L29 66M28 28L66 29M53 53L53 101M53 53L101 53M80 80L81 126M80 80L126 81M110 110L112 145M110 110L145 112M132 132L133 156M132 132L156 133" />

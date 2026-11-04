@@ -12,9 +12,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { createHivernageRequest, HivernageInstructions } from '@/lib/hivernage-api';
+import { createHivernageRequest, getMyHivernageRequests, HivernageInstructions, HivernageRequest } from '@/lib/hivernage-api';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { WINTER_ACTIONS, WINTER_NOTICE, WINTER_SEASON, winterClosureSummary } from '@/lib/winter-season';
+import WinterSubmittedRooms from '@/components/WinterSubmittedRooms';
 
 type FormValues = { user_room_id: string; instructions: HivernageInstructions; comments: string };
 const steps = ['Votre logement', 'Votre hiver', 'Nos vacances', 'Récapitulatif'];
@@ -30,6 +31,10 @@ const Hivernage2026Page = () => {
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [roomError, setRoomError] = useState(false);
+  const [requests, setRequests] = useState<HivernageRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [requestsError, setRequestsError] = useState(false);
+  const submittedRoomIds = new Set(requests.filter(request => request.instructions?.season === WINTER_SEASON && request.user_room_id).map(request => request.user_room_id));
   const [step, setStep] = useState(0);
   const [sent, setSent] = useState<FormValues | null>(null);
   const submitting = useRef(false);
@@ -51,7 +56,16 @@ const Hivernage2026Page = () => {
       toast.error('Impossible de charger vos logements. Veuillez réessayer.');
     } finally { setLoadingRooms(false); }
   };
-  useEffect(() => { void loadRooms(); }, []);
+  const loadRequests = async () => {
+    setLoadingRequests(true);
+    setRequestsError(false);
+    try {
+      setRequests(await getMyHivernageRequests());
+    } catch {
+      setRequestsError(true);
+    } finally { setLoadingRequests(false); }
+  };
+  useEffect(() => { void loadRooms(); void loadRequests(); }, []);
   useEffect(() => { heading.current?.focus(); }, [step]);
 
   const next = async () => {
@@ -77,7 +91,8 @@ const Hivernage2026Page = () => {
     if (!data.instructions.holiday_notice_acknowledged) { setStep(2); return; }
     submitting.current = true;
     try {
-      await createHivernageRequest(data);
+      const request = await createHivernageRequest(data);
+      setRequests(previous => [request, ...previous]);
       setSent(data);
       toast.success('Vos consignes ont été transmises à Hello Keys.');
     } catch (error) {
@@ -97,6 +112,8 @@ const Hivernage2026Page = () => {
             <div className="mt-6 flex items-center gap-3 text-sm text-sky-100"><CalendarDays className="h-5 w-5 shrink-0" /> Vacances Hello Keys · 3 janvier → 5 février 2027</div>
           </div>
         </header>
+
+        <WinterSubmittedRooms requests={requests} rooms={rooms} loading={loadingRequests} error={requestsError} onRetry={loadRequests} />
 
         {sent ? (
           <Card className="mx-auto max-w-2xl rounded-2xl"><CardContent className="space-y-5 p-6 text-center md:p-10">
@@ -129,9 +146,10 @@ const Hivernage2026Page = () => {
                         <FormField control={form.control} name="user_room_id" rules={{ required: 'Sélectionnez le logement concerné.' }} render={({ field }) => <FormItem>
                           <FormLabel>Votre logement</FormLabel><FormControl><select {...field} disabled={loadingRooms || roomError} className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm">
                             <option value="">{loadingRooms ? 'Chargement des logements…' : 'Sélectionner un logement'}</option>
-                            {rooms.map(r => <option key={r.id} value={r.id}>{r.room_name}</option>)}
+                            {rooms.map(r => <option key={r.id} value={r.id}>{r.room_name}{submittedRoomIds.has(r.id) ? ' — ✓ Consignes déjà envoyées' : ''}</option>)}
                           </select></FormControl><FormMessage />
                         </FormItem>} />
+                        {values.user_room_id && submittedRoomIds.has(values.user_room_id) && <p className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />Les consignes de ce logement ont déjà été envoyées pour cet hiver. Un nouvel envoi créera une nouvelle demande.</p>}
                         {roomError && <Button type="button" variant="outline" onClick={loadRooms}>Réessayer le chargement</Button>}
                         {!loadingRooms && !roomError && !rooms.length && <p className="text-sm text-muted-foreground">Aucun logement disponible. Contactez Hello Keys avant de renseigner vos consignes.</p>}
                       </>}

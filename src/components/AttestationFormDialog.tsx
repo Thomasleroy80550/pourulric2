@@ -24,6 +24,9 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
   const [propertyCity, setPropertyCity] = useState('');
   const [propertyZip, setPropertyZip] = useState('');
   const [occasionalStay, setOccasionalStay] = useState(false);
+  const [exclusiveRental, setExclusiveRental] = useState(false);
+  const [contractExcludesPersonalUse, setContractExcludesPersonalUse] = useState(false);
+  const [contractReference, setContractReference] = useState('');
   const [generating, setGenerating] = useState(false);
   const [attestationYear, setAttestationYear] = useState<string>(String(new Date().getFullYear()));
 
@@ -36,15 +39,23 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
       setPropertyAddress(profile.property_address || '');
       setPropertyCity(profile.property_city || '');
       setPropertyZip(profile.property_zip_code || '');
-      // Reset l'année à l'année courante à chaque ouverture
       setAttestationYear(String(new Date().getFullYear()));
+      setOccasionalStay(false);
+      setExclusiveRental(false);
+      setContractExcludesPersonalUse(false);
+      setContractReference('');
     }
   }, [profile, open]);
 
-  const ownerFullName = useMemo(() => `${firstName} ${lastName}`.trim(), [firstName, lastName]);
+  const canGenerate = useMemo(() => {
+    const year = Number(attestationYear);
+    return !!profile && [firstName, lastName, ownerAddress, propertyAddress, propertyCity, propertyZip, contractReference].every((value) => value.trim())
+      && Number.isInteger(year) && year >= 2000 && year <= 2100
+      && exclusiveRental && contractExcludesPersonalUse && !occasionalStay;
+  }, [profile, firstName, lastName, ownerAddress, propertyAddress, propertyCity, propertyZip, contractReference, attestationYear, exclusiveRental, contractExcludesPersonalUse, occasionalStay]);
 
   const handleGenerate = async () => {
-    if (!profile) return;
+    if (!profile || !canGenerate) return;
     setGenerating(true);
 
     const el = printRef.current;
@@ -53,6 +64,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
       return;
     }
 
+    try {
     const canvas = await html2canvas(el as HTMLElement, {
       scale: 2,
       useCORS: true,
@@ -91,18 +103,22 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     const fileName = `attestation-hellokeys-${(lastName || profile.last_name || 'client').toLowerCase()}.pdf`;
     pdf.save(fileName);
 
-    setGenerating(false);
     onOpenChange(false);
-    toast.success('Attestation téléchargée avec succès !');
+    toast.success('Attestation téléchargée : signez-la et joignez vos justificatifs.');
+    } catch {
+      toast.error("Impossible de générer l'attestation. Veuillez réessayer.");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Générer l'attestation</DialogTitle>
+          <DialogTitle>Attestation d'affectation exclusivement locative</DialogTitle>
           <DialogDescription>
-            Renseignez ou confirmez les informations ci-dessous avant de télécharger votre attestation.
+            Justificatif déclaratif pour votre dossier de taxe d'habitation. Confirmez uniquement des faits exacts et appuyés par votre contrat signé.
           </DialogDescription>
         </DialogHeader>
 
@@ -112,13 +128,15 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
             ref={printRef}
             profile={{ ...profile!, first_name: firstName, last_name: lastName }}
             ownerAddress={ownerAddress}
-            occasionalStay={occasionalStay}
+            exclusiveRental={exclusiveRental && !occasionalStay}
+            contractExcludesPersonalUse={contractExcludesPersonalUse}
+            contractReference={contractReference}
             propertyAddressOverride={{
               address: propertyAddress,
               city: propertyCity,
               zip: propertyZip,
             }}
-            attestationYear={parseInt(attestationYear, 10) || new Date().getFullYear()}
+            attestationYear={Number(attestationYear)}
           />
         </div>
 
@@ -162,13 +180,31 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
             />
           </div>
 
-          <div className="flex items-center space-x-2 md:col-span-2">
-            <Checkbox id="occasionalStay" checked={occasionalStay} onCheckedChange={(c) => setOccasionalStay(!!c)} />
-            <Label htmlFor="occasionalStay">Je séjourne de temps en temps dans mon logement</Label>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="contractReference">Référence du contrat signé / article excluant l'usage personnel</Label>
+            <Input id="contractReference" value={contractReference} onChange={(e) => setContractReference(e.target.value)} placeholder="Contrat du …, article … ou avenant du …" />
           </div>
-
-          <div className="md:col-span-2 text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/40 border rounded-md p-3">
-            Disclaimer : Hello Keys n'est pas responsable de vos déclarations fiscales.
+          <div className="flex items-start gap-2 md:col-span-2">
+            <Checkbox id="occasionalStay" checked={occasionalStay} onCheckedChange={(c) => setOccasionalStay(c === true)} />
+            <Label htmlFor="occasionalStay">Je séjourne dans le logement ou je m'en réserve l'usage personnel pendant l'année indiquée.</Label>
+          </div>
+          {occasionalStay && (
+            <p role="alert" className="md:col-span-2 text-sm text-destructive">
+              Une occupation ou une possibilité d'usage personnel est incompatible avec cette attestation. Le téléchargement est bloqué ; contactez votre service des impôts pour examiner votre situation.
+            </p>
+          )}
+          <div className="flex items-start gap-2 md:col-span-2">
+            <Checkbox id="exclusiveRental" checked={exclusiveRental} onCheckedChange={(c) => setExclusiveRental(c === true)} />
+            <Label htmlFor="exclusiveRental">Je déclare que le logement est exclusivement destiné à la location, sans occupation personnelle ni droit de jouissance réservé, y compris au 1er janvier de l'année indiquée.</Label>
+          </div>
+          <div className="flex items-start gap-2 md:col-span-2">
+            <Checkbox id="contractExcludesPersonalUse" checked={contractExcludesPersonalUse} onCheckedChange={(c) => setContractExcludesPersonalUse(c === true)} />
+            <Label htmlFor="contractExcludesPersonalUse">Mon contrat de gestion signé ou un avenant exclut expressément l'accès au logement pour mon usage personnel et la possibilité de le réserver pour moi-même.</Label>
+          </div>
+          <div className="md:col-span-2 text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/40 border rounded-md p-3 space-y-2">
+            <p>Complétez tous les champs et confirmez les deux déclarations pour télécharger le document, puis signez-le.</p>
+            <p>Joignez le contrat signé et sa clause d'exclusion d'usage personnel, ainsi que les justificatifs de location (annonces, calendrier, réservations ou relevés de gestion). Déposez votre demande ou réclamation auprès de votre service des impôts et effectuez la déclaration d'occupation demandée, notamment via « Gérer mes biens immobiliers ».</p>
+            <p>Ce document ne modifie pas votre contrat et ne garantit aucune exonération. Une simple absence de séjour ne suffit pas si vous conservez la possibilité d'utiliser le logement. Seule l'administration fiscale apprécie votre situation.</p>
           </div>
         </div>
 
@@ -176,7 +212,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
-          <Button onClick={handleGenerate} disabled={generating || !profile}>
+          <Button onClick={handleGenerate} disabled={generating || !canGenerate}>
             {generating ? 'Génération…' : 'Télécharger l\'attestation'}
           </Button>
         </DialogFooter>

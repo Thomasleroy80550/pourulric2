@@ -25,6 +25,7 @@ import AdminBilan2025PreviewDialog, { type AdminBilan2025PreviewData } from '@/c
 import { generateBilan2025PdfFile } from '@/lib/bilan-2025-api';
 import { uploadBilanPdf } from '@/lib/storage-api';
 import { triggerBlobDownload } from '@/lib/download-utils';
+import ClientPaymentScoreCard from '@/components/admin/ClientPaymentScoreCard';
 
 type SimpleProfile = {
   id: string;
@@ -545,6 +546,8 @@ const AdminClientPerformancePage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {selectedUserId && <ClientPaymentScoreCard key={selectedUserId} userId={selectedUserId} />}
 
         {(loadingInvoices || loadingRooms) && (
           <div className="flex items-center gap-2 text-muted-foreground mb-4">

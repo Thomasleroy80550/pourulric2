@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { getAllProfiles, getAccountantRequests, updateAccountantRequestStatus, AccountantRequest, updateUser, createStripeAccount } from '@/lib/admin-api';
 import { UserProfile, OnboardingStatus } from '@/lib/profile-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle, Mail, RotateCcw, UserX } from 'lucide-react';
+import { PlusCircle, Loader2, Edit, LogIn, Upload, Search, CreditCard, FileText, Trash2, ArrowRight, CheckCircle, Mail, RotateCcw, UserX, MoreHorizontal, History, Phone, Clock, FileCheck } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -742,8 +743,9 @@ const AdminUsersPage: React.FC = () => {
 
   const activeClients = filteredUsers.filter(user => !user.is_contract_terminated);
   const formerClients = filteredUsers.filter(user => user.is_contract_terminated);
-  const crotoyClients = activeClients.filter(user => user.krossbooking_property_id === 1);
-  const berckClients = activeClients.filter(user => user.krossbooking_property_id === 2);
+  // Filtre sur l'agence du profil (l'ID propriété Krossbooking vaut 1 par défaut, donc non fiable).
+  const crotoyClients = activeClients.filter(user => user.agency === 'Baie de somme');
+  const berckClients = activeClients.filter(user => user.agency === "Côte d'opal");
   const allClients = activeClients;
   const smartPricingClients = activeClients.filter(user => !user.can_manage_prices);
   const noAgencyClients = activeClients.filter(user => !user.agency || user.agency.trim() === '');
@@ -752,197 +754,155 @@ const AdminUsersPage: React.FC = () => {
     : onboardingClients.filter(u => (u.onboarding_status ?? 'estimation_sent') === onboardingFilter);
 
   const renderUserTable = (clientList: UserProfile[], options?: { showExitAction?: boolean }) => (
-
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Nom</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Téléphone</TableHead>
-          <TableHead>Rôle</TableHead>
-          <TableHead>Agence</TableHead>
-          <TableHead>Paiement</TableHead>
-          <TableHead>Statut Intégration</TableHead>
-          <TableHead>Statut KYC</TableHead>
-          <TableHead>Smart Pricing</TableHead>
-          <TableHead>Compte Stripe</TableHead>
-          <TableHead>Dernière Connexion</TableHead>
-          <TableHead>Acceptation CGUV</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {clientList.map((user) => {
-          const isOnline = user.last_seen_at && (new Date().getTime() - new Date(user.last_seen_at).getTime()) < 2 * 60 * 1000;
-          const smartPricingActive = !user.can_manage_prices;
-          return (
-            <TableRow key={user.id} className={user.is_banned ? 'bg-red-100 dark:bg-red-900/30' : user.is_contract_terminated ? 'bg-muted/40' : ''}>
-              <TableCell>
-                <div className="flex items-center gap-2">
+    <div className="space-y-3">
+      {clientList.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted-foreground">Aucun client dans cette liste.</p>
+      )}
+      {clientList.map((user) => {
+        const isOnline = user.last_seen_at && (new Date().getTime() - new Date(user.last_seen_at).getTime()) < 2 * 60 * 1000;
+        const smartPricingActive = !user.can_manage_prices;
+        const phoneDraft = phoneNumberDrafts[user.id] ?? user.phone_number ?? '';
+        const phoneDirty = phoneDraft.trim() !== (user.phone_number ?? '').trim();
+        const rowTone = user.is_banned
+          ? 'border-red-300 bg-red-50 dark:bg-red-900/20'
+          : user.is_contract_terminated
+            ? 'bg-muted/40'
+            : 'bg-card';
+        return (
+          <div key={user.id} className={`rounded-lg border p-3 sm:p-4 ${rowTone}`}>
+            {/* Ligne 1 : identité, statuts, actions */}
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   {isOnline && <span className="h-2 w-2 rounded-full bg-green-500" title="En ligne"></span>}
-                  <span>{user.first_name} {user.last_name}</span>
+                  <span className="font-semibold">{user.first_name} {user.last_name}</span>
+                  <PaymentGradeBadge stored={paymentScores[user.id]} />
+                  {user.role !== 'user' && <Badge variant="outline">{user.role}</Badge>}
                   {user.is_contract_terminated && <Badge variant="outline">Ancien client</Badge>}
+                  {user.is_banned && <Badge variant="destructive">Banni</Badge>}
                 </div>
-              </TableCell>
+                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1 truncate"><Mail className="h-3.5 w-3.5 shrink-0" />{user.email || 'N/A'}</span>
+                  <span className="flex items-center gap-1" title="Dernière connexion">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    {user.last_sign_in_at ? formatDistanceToNow(new Date(user.last_sign_in_at), { addSuffix: true, locale: fr }) : 'Jamais connecté'}
+                  </span>
+                  <span className="flex items-center gap-1" title="Acceptation CGUV">
+                    <FileCheck className="h-3.5 w-3.5 shrink-0" />
+                    {user.cguv_accepted_at ? `CGUV ${format(new Date(user.cguv_accepted_at), 'dd/MM/yy', { locale: fr })}` : 'CGUV non acceptées'}
+                  </span>
+                </div>
+              </div>
 
-              <TableCell>{user.email || 'N/A'}</TableCell>
-              <TableCell>
-                <div className="flex min-w-[220px] items-center gap-2">
-                  <Input
-                    type="tel"
-                    value={phoneNumberDrafts[user.id] ?? user.phone_number ?? ''}
-                    placeholder="Téléphone"
-                    className="h-8"
-                    disabled={savingPhoneFor === user.id}
-                    onChange={(e) => handlePhoneDraftChange(user.id, e.target.value)}
-                    onBlur={() => handleSavePhoneNumber(user)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSavePhoneNumber(user);
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={savingPhoneFor === user.id || (phoneNumberDrafts[user.id] ?? user.phone_number ?? '').trim() === (user.phone_number ?? '').trim()}
-                    onClick={() => handleSavePhoneNumber(user)}
-                  >
-                    {savingPhoneFor === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'OK'}
-                  </Button>
-                </div>
-              </TableCell>
-              <TableCell>{user.role}</TableCell>
-              <TableCell>
-                <div className="min-w-[180px]">
-                  <Select
-                    value={user.agency ?? ''}
-                    onValueChange={(val) => handleUpdateAgency(user, val)}
-                    disabled={updatingAgencyFor === user.id}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sans agence" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Aucune</SelectItem>
-                      {AGENCIES.map((a) => (
-                        <SelectItem key={a} value={a}>{a}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TableCell>
-              <TableCell>
-                <PaymentGradeBadge stored={paymentScores[user.id]} />
-              </TableCell>
-              <TableCell>
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
                   {onboardingStatusText[user.onboarding_status || 'estimation_sent']}
                 </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant={getKycStatusVariant(user.kyc_status)}>
-                  {getKycStatusText(user.kyc_status)}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={smartPricingActive}
-                    onCheckedChange={(val) => handleSmartPricingToggle(user, val === true)}
-                    disabled={updatingPricingFor === user.id}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {smartPricingActive ? 'Actif' : 'Désactivé'}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                {user.stripe_account_id ? (
-                  <Button variant="outline" size="sm" onClick={() => handleShowStripeDetails(user.stripe_account_id!)}>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Voir
+                <Badge variant={getKycStatusVariant(user.kyc_status)}>KYC : {getKycStatusText(user.kyc_status)}</Badge>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" title="Actions">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleCreateStripeAccount(user)}
-                    disabled={creatingStripeAccountFor === user.id}
-                  >
-                    {creatingStripeAccountFor === user.id ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                    )}
-                    Créer compte
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem onClick={() => handleEditClick(user)}><Edit className="mr-2 h-4 w-4" />Modifier le client</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/admin/statements?userId=${user.id}`)}><FileText className="mr-2 h-4 w-4" />Voir les relevés</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setHistoryUser(user)}><History className="mr-2 h-4 w-4" />Historique de connexion</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSwitchUser(user.id)} disabled={isSwitchingUser === user.id}>
+                    {isSwitchingUser === user.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                    Se connecter en tant que ce client
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {user.is_contract_terminated ? (
+                    <DropdownMenuItem onClick={() => handleRestoreClient(user)}>
+                      <RotateCcw className="mr-2 h-4 w-4 text-emerald-600" />Remettre en client actif
+                    </DropdownMenuItem>
+                  ) : options?.showExitAction !== false && (
+                    <DropdownMenuItem onClick={() => confirmDeleteOnboardingClient(user)} className="text-red-600 focus:text-red-600">
+                      <Trash2 className="mr-2 h-4 w-4" />Sortie définitive du client
+                    </DropdownMenuItem>
+                  )}
+                  {user.role !== 'admin' && (
+                    <DropdownMenuItem onClick={() => { setHardDeleteConfirmText(''); setUserToHardDelete(user); }} className="text-red-700 focus:text-red-700">
+                      <UserX className="mr-2 h-4 w-4" />Supprimer totalement (irréversible)
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Ligne 2 : réglages rapides */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 border-t pt-3">
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="tel"
+                  value={phoneDraft}
+                  placeholder="Téléphone"
+                  className="h-8 w-40"
+                  disabled={savingPhoneFor === user.id}
+                  onChange={(e) => handlePhoneDraftChange(user.id, e.target.value)}
+                  onBlur={() => handleSavePhoneNumber(user)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSavePhoneNumber(user);
+                    }
+                  }}
+                />
+                {phoneDirty && (
+                  <Button type="button" size="sm" variant="outline" className="h-8" disabled={savingPhoneFor === user.id} onClick={() => handleSavePhoneNumber(user)}>
+                    {savingPhoneFor === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'OK'}
                   </Button>
                 )}
-              </TableCell>
-              <TableCell>
-                {user.last_sign_in_at ? formatDistanceToNow(new Date(user.last_sign_in_at), { addSuffix: true, locale: fr }) : 'Jamais'}
-              </TableCell>
-              <TableCell>
-                {user.cguv_accepted_at ? format(new Date(user.cguv_accepted_at), 'dd/MM/yy HH:mm', { locale: fr }) : 'Non accepté'}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button variant="outline" size="sm" onClick={() => setHistoryUser(user)}>
-                  Historique
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/statements?userId=${user.id}`)} title="Voir les relevés">
-                  <FileText className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleEditClick(user)} title="Modifier le client">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleSwitchUser(user.id)}
-                  disabled={isSwitchingUser === user.id}
-                  title="Se connecter en tant que ce client"
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Agence</span>
+                <Select
+                  value={user.agency ?? ''}
+                  onValueChange={(val) => handleUpdateAgency(user, val)}
+                  disabled={updatingAgencyFor === user.id}
                 >
-                  {isSwitchingUser === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                  <SelectTrigger className="h-8 w-44">
+                    <SelectValue placeholder="Sans agence" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Aucune</SelectItem>
+                    {AGENCIES.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <Checkbox
+                  checked={smartPricingActive}
+                  onCheckedChange={(val) => handleSmartPricingToggle(user, val === true)}
+                  disabled={updatingPricingFor === user.id}
+                />
+                <span>Smart Pricing <span className="text-muted-foreground">{smartPricingActive ? 'actif' : 'désactivé'}</span></span>
+              </label>
+
+              {user.stripe_account_id ? (
+                <Button variant="outline" size="sm" className="h-8" onClick={() => handleShowStripeDetails(user.stripe_account_id!)}>
+                  <CreditCard className="mr-2 h-4 w-4" />Compte Stripe
                 </Button>
-                {user.is_contract_terminated ? (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRestoreClient(user)}
-                    title="Remettre en client actif"
-                  >
-                    <RotateCcw className="h-4 w-4 text-emerald-600" />
-                  </Button>
-                ) : options?.showExitAction !== false && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => confirmDeleteOnboardingClient(user)}
-                    title="Sortie définitive du client"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                )}
-                {user.role !== 'admin' && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => { setHardDeleteConfirmText(''); setUserToHardDelete(user); }}
-                    title="Supprimer TOTALEMENT l'utilisateur (irréversible)"
-                  >
-                    <UserX className="h-4 w-4 text-red-700" />
-                  </Button>
-                )}
-
-              </TableCell>
-
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+              ) : (
+                <Button variant="secondary" size="sm" className="h-8" onClick={() => handleCreateStripeAccount(user)} disabled={creatingStripeAccountFor === user.id}>
+                  {creatingStripeAccountFor === user.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                  Créer compte Stripe
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 
   return (

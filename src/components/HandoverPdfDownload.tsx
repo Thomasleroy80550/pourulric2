@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, FileLock2, Loader2 } from "lucide-react";
+import { BookOpen, Download, FileLock2, Loader2 } from "lucide-react";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,21 @@ import { useSession } from "@/components/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerBlobDownload } from "@/lib/download-utils";
 
+type DocumentKind = "technical" | "guide";
+
+const documents: Record<DocumentKind, { filename: string; success: string }> = {
+  technical: { filename: "Hello-Keys-Passation-Technique.pdf", success: "Le PDF de passation technique a été téléchargé." },
+  guide: { filename: "Hello-Keys-Guide-Utilisation.pdf", success: "Le guide d'utilisation a été téléchargé." },
+};
+
+async function isPdf(blob: Blob) {
+  const signature = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+  return String.fromCharCode(...signature) === "%PDF-";
+}
+
 export default function HandoverPdfDownload() {
   const { session } = useSession();
-  const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState<DocumentKind | null>(null);
   const user = session?.user;
 
   if (
@@ -18,11 +30,11 @@ export default function HandoverPdfDownload() {
     !user.email_confirmed_at
   ) return null;
 
-  const download = async () => {
-    setDownloading(true);
+  const download = async (kind: DocumentKind) => {
+    setDownloading(kind);
     try {
       const { data, error } = await supabase.functions.invoke("download-handover", {
-        body: {},
+        body: { document: kind },
       });
       if (error) {
         if (error instanceof FunctionsHttpError) {
@@ -31,31 +43,37 @@ export default function HandoverPdfDownload() {
         }
         throw error;
       }
-      if (!(data instanceof Blob) || data.type !== "application/pdf") {
+      if (!(data instanceof Blob) || !(await isPdf(data))) {
         throw new Error("Le serveur n'a pas retourné un PDF valide.");
       }
-      triggerBlobDownload(data, "Hello-Keys-Passation-Technique.pdf");
-      toast.success("Le PDF de passation a été téléchargé.");
+      triggerBlobDownload(new Blob([data], { type: "application/pdf" }), documents[kind].filename);
+      toast.success(documents[kind].success);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Impossible de télécharger le PDF.");
     } finally {
-      setDownloading(false);
+      setDownloading(null);
     }
   };
 
   return (
-    <section className="my-4 flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-950 sm:flex-row sm:items-center sm:justify-between" aria-label="Documentation technique de passation">
+    <section className="my-4 flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-950 lg:flex-row lg:items-center lg:justify-between" aria-label="Documentation de passation">
       <div className="flex items-start gap-3">
         <FileLock2 className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" aria-hidden="true" />
         <div>
-          <h2 className="text-sm font-semibold">Documentation technique de passation</h2>
-          <p className="mt-1 text-xs text-sky-800">Document confidentiel · Documentation complète et annexe · Accès personnel</p>
+          <h2 className="text-sm font-semibold">Documentation de passation</h2>
+          <p className="mt-1 text-xs text-sky-800">Documents confidentiels · Passation technique et guide d'utilisation · Accès personnel</p>
         </div>
       </div>
-      <Button type="button" onClick={download} disabled={downloading} className="shrink-0 gap-2">
-        {downloading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
-        {downloading ? "Préparation du PDF…" : "Télécharger le PDF"}
-      </Button>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button type="button" variant="outline" onClick={() => download("guide")} disabled={downloading !== null} className="shrink-0 gap-2 border-sky-300 bg-white">
+          {downloading === "guide" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <BookOpen className="h-4 w-4" aria-hidden="true" />}
+          {downloading === "guide" ? "Préparation…" : "Guide d'utilisation (PDF)"}
+        </Button>
+        <Button type="button" onClick={() => download("technical")} disabled={downloading !== null} className="shrink-0 gap-2">
+          {downloading === "technical" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Download className="h-4 w-4" aria-hidden="true" />}
+          {downloading === "technical" ? "Préparation…" : "Passation technique (PDF)"}
+        </Button>
+      </div>
     </section>
   );
 }

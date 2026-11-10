@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 import { jsPDF } from "npm:jspdf@3.0.1";
 import { handoverDocuments } from "./document.ts";
+import { guideDocuments } from "./guide.ts";
 
 const authorizedUserId = "0d2816be-1b6f-4e13-a2d4-b7eb3d6daee5";
 const authorizedEmail = "thomasleroy80550@gmail.com";
@@ -13,7 +14,44 @@ const headers = {
   "Cache-Control": "private, no-store, max-age=0",
   "X-Content-Type-Options": "nosniff",
 };
-let cachedPdf: ArrayBuffer | null = null;
+
+type DocumentKind = "technical" | "guide";
+
+interface PdfDefinition {
+  filename: string;
+  header: string;
+  title: string;
+  subtitle: string;
+  intro: string[];
+  documents: { title: string; markdown: string }[];
+}
+
+const pdfDefinitions: Record<DocumentKind, PdfDefinition> = {
+  technical: {
+    filename: "Hello-Keys-Passation-Technique.pdf",
+    header: "Hello Keys - Passation technique - Confidentiel",
+    title: "Passation technique",
+    subtitle: "Documentation complète et inventaire du projet",
+    intro: [
+      "Architecture, données, intégrations, exploitation et points de vigilance.",
+      "Ce PDF contient la documentation technique puis son annexe d'inventaire. Il décrit le projet inspecté ; les éléments à confirmer sont indiqués dans le document.",
+    ],
+    documents: handoverDocuments,
+  },
+  guide: {
+    filename: "Hello-Keys-Guide-Utilisation.pdf",
+    header: "Hello Keys - Guide d'utilisation - Confidentiel",
+    title: "Guide d'utilisation",
+    subtitle: "Espace propriétaire, version mobile et administration",
+    intro: [
+      "Prise en main de la plateforme écran par écran : connexion, profil, menus propriétaire, espace d'administration, procédures de l'équipe Hello Keys et précautions.",
+      "Les libellés cités sont ceux affichés dans l'application au moment de la rédaction.",
+    ],
+    documents: guideDocuments,
+  },
+};
+
+const cachedPdfs: Partial<Record<DocumentKind, ArrayBuffer>> = {};
 
 function readableText(value: string): string {
   return value
@@ -27,10 +65,11 @@ function readableText(value: string): string {
     .replace(/×/g, " x ")
     .replace(/…/g, "...")
     .replace(/€/g, " EUR")
+    .replace(/⋯/g, "...")
     .replace(/[^\x20-\x7E\u00A0-\u00FF\n\t]/g, "");
 }
 
-function buildPdf(): ArrayBuffer {
+function buildPdf(definition: PdfDefinition): ArrayBuffer {
   const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const margin = 18;
   const width = 174;
@@ -54,21 +93,20 @@ function buildPdf(): ArrayBuffer {
   };
 
   pdf.setProperties({
-    title: "Hello Keys - Passation technique et inventaire",
+    title: `Hello Keys - ${definition.title}`,
     author: "Hello Keys",
-    subject: "Documentation interne de passation",
+    subject: definition.subtitle,
   });
   write("HELLO KEYS", 24, true);
   y += 6;
-  write("Passation technique", 20, true);
-  write("Documentation complète et inventaire du projet", 13);
+  write(definition.title, 20, true);
+  write(definition.subtitle, 13);
   y += 10;
   write("DOCUMENT INTERNE CONFIDENTIEL", 11, true);
   write(`Téléchargement réservé à ${authorizedEmail}`, 10);
-  write("Architecture, données, intégrations, exploitation et points de vigilance.");
-  write("Ce PDF contient la documentation technique puis son annexe d'inventaire. Il décrit le projet inspecté ; les éléments à confirmer sont indiqués dans le document.");
+  for (const paragraph of definition.intro) write(paragraph);
 
-  for (const document of handoverDocuments) {
+  for (const document of definition.documents) {
     newPage();
     write(document.title, 18, true);
     y += 3;
@@ -103,7 +141,7 @@ function buildPdf(): ArrayBuffer {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8);
     pdf.setTextColor(105, 115, 125);
-    pdf.text("Hello Keys - Passation technique - Confidentiel", margin, 12);
+    pdf.text(definition.header, margin, 12);
     pdf.text(`${authorizedEmail} | ${page} / ${pageCount}`, margin, 287);
   }
   return pdf.output("arraybuffer");
@@ -141,13 +179,17 @@ serve(async (req) => {
       return errorResponse(403, "Vous n'êtes pas autorisé à télécharger ce document.");
     }
 
-    if (!cachedPdf) cachedPdf = buildPdf();
-    console.info("[download-handover] Authorized PDF download", { userId: user.id });
-    return new Response(cachedPdf.slice(0), {
+    const body = await req.json().catch(() => ({}));
+    const kind: DocumentKind = body?.document === "guide" ? "guide" : "technical";
+    const definition = pdfDefinitions[kind];
+    if (!cachedPdfs[kind]) cachedPdfs[kind] = buildPdf(definition);
+    console.info("[download-handover] Authorized PDF download", { userId: user.id, document: kind });
+    // application/octet-stream : seul type binaire converti en Blob par supabase.functions.invoke().
+    return new Response(cachedPdfs[kind]!.slice(0), {
       headers: {
         ...headers,
-        "Content-Type": "application/pdf",
-        "Content-Disposition": 'attachment; filename="Hello-Keys-Passation-Technique.pdf"',
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": `attachment; filename="${definition.filename}"`,
       },
     });
   } catch (error) {

@@ -52,6 +52,7 @@ import MainLayout from "@/components/MainLayout";
 import BannedUserMessage from "@/components/BannedUserMessage";
 import WinterWelcomeDialog from "@/components/WinterWelcomeDialog";
 import AnnouncementsBanner from "@/components/AnnouncementsBanner";
+import HandoverPdfDownload from "@/components/HandoverPdfDownload";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -508,6 +509,7 @@ const DashboardPageV3: React.FC = () => {
     <MainLayout>
       <WinterWelcomeDialog previewOpen={showReveal} onPreviewClose={handleFinishReveal} />
       <div className="w-full max-w-full overflow-x-hidden break-words">
+        <HandoverPdfDownload />
         <AnnouncementsBanner />
         <Link to="/actualites/tarification-meteo" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-teal-50 p-5 text-teal-950 transition-colors hover:bg-teal-100">
           <div>

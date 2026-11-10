@@ -21,6 +21,7 @@ import RateAppV4 from "./RateAppV4";
 import { useSession } from "@/components/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useV4Rooms, useV4Reviews } from "./v4-data";
+import HandoverPdfDownload from "@/components/HandoverPdfDownload";
 
 const MoreV4: React.FC = () => {
   const navigate = useNavigate();
@@ -113,6 +114,7 @@ const MoreV4: React.FC = () => {
     <V4Layout>
       <div className="space-y-4 px-4 pt-5">
         <h1 className="text-2xl font-bold text-slate-900">Plus</h1>
+        <HandoverPdfDownload />
 
         {/* Profil */}
         <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">

@@ -63,6 +63,7 @@ import AdminNavigation from './AdminNavigation';
 import NotificationBell from './NotificationBell';
 import { useAdminPageUsage } from '@/hooks/useAdminPageUsage';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import HandoverPdfDownload from './HandoverPdfDownload';
 
 const ADMIN_BLOCKED = false;
 
@@ -369,6 +370,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
         {/* Main content */}
         <main className="flex-1 min-w-0 max-w-full overflow-x-auto flex flex-col gap-4 p-4 md:gap-8 md:p-8">
+          <HandoverPdfDownload />
           {children}
         </main>
       </div>

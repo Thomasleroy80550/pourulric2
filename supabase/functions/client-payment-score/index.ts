@@ -12,13 +12,11 @@ const API = 'https://app.pennylane.com/api/external/v2';
 interface Invoice extends ScoreInvoice {
   customer: { id: number } | null;
   credited_invoice: { id: number } | null;
-  remaining_amount_with_tax: string | null;
 }
 interface Customer { id: number; external_reference: string; name: string }
 interface Transaction {
   id: number;
   date: string;
-  amount: string;
   archived_at: string | null;
 }
 
@@ -124,24 +122,24 @@ serve(async req => {
         rows.push({ ...candidate, state: 'excluded', delayDays: null, reason: 'Facture associée à un avoir : validation nécessaire' });
         continue;
       }
-      if (!invoice.paid || candidate.reason !== 'Règlement bancaire complet non vérifiable') {
+      if (!invoice.paid || candidate.reason !== 'Aucune transaction bancaire rapprochée') {
         rows.push(candidate);
         continue;
       }
       const transactions = await listAll<Transaction>(`customer_invoices/${invoice.id}/matched_transactions`);
-      const valid = transactions.length > 0 && transactions.every(tx => validDate(tx.date) && tx.date <= today
-        && !tx.archived_at && Number.isFinite(Number(tx.amount)) && Number(tx.amount) > 0);
-      const total = transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
-      // Ne pas attribuer une date de règlement à un solde réglé par un avoir,
-      // un lettrage sans banque ou des montants qui ne justifient pas le total.
-      const fullyMatched = valid && Math.abs(total - Number(invoice.amount)) < 0.01
-        && (invoice.remaining_amount_with_tax === null || Number(invoice.remaining_amount_with_tax) === 0);
-      const paymentDate = fullyMatched ? transactions.map(tx => tx.date).sort().at(-1)! : null;
-      rows.push(makeScoreRow(invoice, paymentDate, today)!);
+      // Un virement groupé peut couvrir plusieurs factures : on retient la date de la
+      // dernière transaction bancaire active, Pennylane ayant déjà confirmé le solde (paid).
+      const dates = transactions
+        .filter(tx => !tx.archived_at && validDate(tx.date) && tx.date <= today)
+        .map(tx => tx.date)
+        .sort();
+      rows.push(makeScoreRow(invoice, dates.at(-1) ?? null, today)!);
     }
+    const reasons: Record<string, number> = {};
+    for (const row of rows) if (row.reason) reasons[row.reason] = (reasons[row.reason] ?? 0) + 1;
     rows.sort((a, b) => (b.deadline || '').localeCompare(a.deadline || ''));
     const summary = calculatePaymentScore(rows);
-    console.info('[client-payment-score] score calculated', { userId: body.userId, agency: profile.agency, eligibleCount: summary.eligibleCount, excludedCount: summary.excludedCount });
+    console.info('[client-payment-score] score calculated', { userId: body.userId, agency: profile.agency, invoiceCount: invoices.length, eligibleCount: summary.eligibleCount, excludedCount: summary.excludedCount, reasons });
     return json({ ...summary, rows, today, periodStart: scorePeriodStart(today), agency: profile.agency, customerName: customer.name, calculatedAt: new Date().toISOString() });
   } catch (error) {
     console.error('[client-payment-score] calculation failed', { message: error instanceof Error ? error.message : 'Unknown error' });

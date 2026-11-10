@@ -6,7 +6,6 @@ export interface ScoreInvoice {
   paid: boolean;
   status: string;
   draft: boolean;
-  installments: unknown;
 }
 
 export interface ScoreRow {
@@ -46,15 +45,15 @@ export function makeScoreRow(invoice: ScoreInvoice, paymentDate: string | null, 
   if (['archived', 'incomplete'].includes(invoice.status)) {
     return { ...row, reason: 'Facture archivée ou incomplète : validation nécessaire' };
   }
-  if (invoice.installments || invoice.status === 'partially_cancelled') {
-    return { ...row, reason: 'Échéancier ou annulation partielle : validation nécessaire' };
+  if (invoice.status === 'partially_cancelled') {
+    return { ...row, reason: 'Annulation partielle : validation nécessaire' };
   }
   if (!['paid', 'partially_paid', 'upcoming', 'late'].includes(invoice.status)
     || (invoice.status === 'paid') !== invoice.paid) {
     return { ...row, reason: 'Statut de règlement incohérent ou non pris en charge' };
   }
   if (invoice.paid && (!validDate(paymentDate) || paymentDate > today)) {
-    return { ...row, paymentDate: null, reason: 'Règlement bancaire complet non vérifiable' };
+    return { ...row, paymentDate: null, reason: 'Aucune transaction bancaire rapprochée' };
   }
   if (!invoice.paid && deadline === today) return null;
   const end = invoice.paid ? paymentDate! : today;

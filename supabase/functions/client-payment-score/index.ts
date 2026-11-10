@@ -27,6 +27,7 @@ function json(body: unknown, status = 200) {
 serve(async req => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Méthode non autorisée.' }, 405);
+  let persistError: ((message: string) => Promise<void>) | null = null;
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Authentification requise.' }, 401);
@@ -47,13 +48,28 @@ serve(async req => {
     const { data: profile, error: profileError } = await admin.from('profiles')
       .select('agency,pennylane_customer_id').eq('id', body.userId).single();
     if (profileError || !profile) return json({ error: 'Client introuvable.' }, 404);
+
+    // Mémorise le dernier résultat pour l'afficher dans la liste des clients sans recalcul.
+    const persist = async (values: Record<string, unknown>) => {
+      const { error } = await admin.from('client_payment_scores')
+        .upsert({ user_id: body.userId, computed_at: new Date().toISOString(), ...values });
+      if (error) console.error('[client-payment-score] failed to store score', { message: error.message });
+    };
+    persistError = (message: string) => persist({
+      score: null, grade: null, eligible_count: 0, excluded_count: 0, overdue_count: 0, max_late_days: 0, provisional: true, error: message,
+    });
+    const fail = async (message: string, status: number) => {
+      await persistError!(message);
+      return json({ error: message }, status);
+    };
+
     const reference = profile.pennylane_customer_id?.trim();
-    if (!reference) return json({ error: 'Identifiant client Pennylane absent du profil.' }, 422);
+    if (!reference) return fail('Identifiant client Pennylane absent du profil.', 422);
     const secretName = profile.agency === 'Baie de somme' ? 'PENNYLANE_SCORE_API_KEY_BAIE'
       : profile.agency === "Côte d'opal" ? 'PENNYLANE_SCORE_API_KEY_BERCK' : null;
-    if (!secretName) return json({ error: 'Agence du client non configurée : choisissez Baie de somme ou Côte d’opal dans son profil.' }, 422);
+    if (!secretName) return fail('Agence du client non configurée : choisissez Baie de somme ou Côte d’opal dans son profil.', 422);
     const key = Deno.env.get(secretName)?.trim();
-    if (!key) return json({ error: `Connexion à configurer : ajoutez le secret ${secretName} avec un jeton entreprise Pennylane API v2, permissions customers:readonly et customer_invoices:readonly.` }, 422);
+    if (!key) return fail(`Connexion à configurer : ajoutez le secret ${secretName} avec un jeton entreprise Pennylane API v2, permissions customers:readonly et customer_invoices:readonly.`, 422);
 
     const contextResponse = await fetch(`${API}/me`, {
       headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' },
@@ -65,7 +81,7 @@ serve(async req => {
     const normalizedName = companyName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const expectedName = profile.agency === 'Baie de somme' ? 'HELLOKEYS' : 'HELLOKEYSCOTEDOPALE';
     if (normalizedName !== expectedName) {
-      return json({ error: `Le jeton ${secretName} ne correspond pas à la société attendue pour cette agence. Utilisez un jeton entreprise HELLO KEYS ou HELLO KEYS CÔTE D’OPALE selon l’agence.` }, 422);
+      return fail(`Le jeton ${secretName} ne correspond pas à la société attendue pour cette agence. Utilisez un jeton entreprise HELLO KEYS ou HELLO KEYS CÔTE D’OPALE selon l’agence.`, 422);
     }
 
     async function listAll<T>(path: string, filter?: unknown[]): Promise<T[]> {
@@ -103,7 +119,7 @@ serve(async req => {
     // Ne pas l'utiliser comme un ID interne v2 : cela pourrait sélectionner un autre client.
     const customers = await listAll<Customer>('customers', [{ field: 'external_reference', operator: 'eq', value: reference }]);
     if (customers.length !== 1 || !Number.isSafeInteger(customers[0].id)) {
-      return json({ error: 'Correspondance client Pennylane introuvable ou ambiguë. Vérifiez que l’identifiant du profil est la référence externe (source_id v1), et que le jeton appartient à la bonne société.' }, 422);
+      return fail('Correspondance client Pennylane introuvable ou ambiguë. Vérifiez que l’identifiant du profil est la référence externe (source_id v1), et que le jeton appartient à la bonne société.', 422);
     }
     const customer = customers[0];
     const invoices = await listAll<Invoice>('customer_invoices', [{ field: 'customer_id', operator: 'eq', value: customer.id }]);
@@ -140,9 +156,15 @@ serve(async req => {
     rows.sort((a, b) => (b.deadline || '').localeCompare(a.deadline || ''));
     const summary = calculatePaymentScore(rows);
     console.info('[client-payment-score] score calculated', { userId: body.userId, agency: profile.agency, invoiceCount: invoices.length, eligibleCount: summary.eligibleCount, excludedCount: summary.excludedCount, reasons });
+    await persist({
+      score: summary.score, grade: summary.grade, eligible_count: summary.eligibleCount, excluded_count: summary.excludedCount,
+      overdue_count: summary.overdueCount, max_late_days: summary.maxLateDays, provisional: summary.provisional, error: null,
+    });
     return json({ ...summary, rows, today, periodStart: scorePeriodStart(today), agency: profile.agency, customerName: customer.name, calculatedAt: new Date().toISOString() });
   } catch (error) {
-    console.error('[client-payment-score] calculation failed', { message: error instanceof Error ? error.message : 'Unknown error' });
-    return json({ error: error instanceof Error && error.name !== 'TimeoutError' ? error.message : 'Connexion Pennylane interrompue. Réessayez.' }, 502);
+    const message = error instanceof Error && error.name !== 'TimeoutError' ? error.message : 'Connexion Pennylane interrompue. Réessayez.';
+    console.error('[client-payment-score] calculation failed', { message });
+    if (persistError) await persistError(message);
+    return json({ error: message }, 502);
   }
 });

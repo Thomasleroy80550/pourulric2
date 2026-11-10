@@ -63,6 +63,18 @@ export function makeScoreRow(invoice: ScoreInvoice, paymentDate: string | null, 
   };
 }
 
+export type PaymentGrade = 'A' | 'B' | 'C' | 'D' | 'E';
+
+// E = alerte mauvais payeur.
+export function scoreToGrade(score: number | null): PaymentGrade | null {
+  if (score === null) return null;
+  if (score >= 90) return 'A';
+  if (score >= 75) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 40) return 'D';
+  return 'E';
+}
+
 export function calculatePaymentScore(rows: ScoreRow[]) {
   const eligible = rows.filter(row => row.delayDays !== null);
   const late = eligible.filter(row => row.delayDays! > 0);
@@ -70,8 +82,10 @@ export function calculatePaymentScore(rows: ScoreRow[]) {
   const excludedCount = rows.length - count;
   const punctualityPoints = count ? 60 * (1 - late.length / count) : 0;
   const durationPoints = count ? 40 * (1 - eligible.reduce((sum, row) => sum + Math.min(row.delayDays!, 60), 0) / (60 * count)) : 0;
+  const score = count ? Math.round(punctualityPoints + durationPoints) : null;
   return {
-    score: count ? Math.round(punctualityPoints + durationPoints) : null,
+    score,
+    grade: scoreToGrade(score),
     punctualityPoints: Math.round(punctualityPoints * 10) / 10,
     durationPoints: Math.round(durationPoints * 10) / 10,
     eligibleCount: count,

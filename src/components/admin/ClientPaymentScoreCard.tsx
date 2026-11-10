@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { fetchClientPaymentScore, type PaymentScore } from '@/lib/payment-score-api';
+import { fetchClientPaymentScore, GRADE_LABELS, type PaymentScore } from '@/lib/payment-score-api';
 
 function dateLabel(value: string | null) {
   return value ? new Date(`${value}T00:00:00Z`).toLocaleDateString('fr-FR', { timeZone: 'UTC' }) : '—';
@@ -55,7 +55,8 @@ export default function ClientPaymentScoreCard({ userId }: { userId: string }) {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-muted-foreground">Score de ponctualité</p>
-              <p className={`mt-1 text-3xl font-bold ${color}`}>{data.score === null ? 'Non calculable' : `${data.score} / 100`}</p>
+              <p className={`mt-1 text-3xl font-bold ${color}`}>{data.score === null ? 'Non calculable' : `${data.grade} · ${data.score} / 100`}</p>
+              {data.grade && <p className={`text-sm ${data.grade === 'E' ? 'font-semibold text-red-600' : 'text-muted-foreground'}`}>{GRADE_LABELS[data.grade]}</p>}
               {data.score !== null && <Badge className="mt-2" variant="outline">{data.provisional ? 'Provisoire' : 'Historique exploitable'}</Badge>}
             </div>
             <div className="rounded-lg border p-4"><p className="text-sm text-muted-foreground">Sans retard</p><p className="mt-1 text-2xl font-semibold">{data.onTimeRate === null ? '—' : `${data.onTimeRate} %`}</p><p className="text-xs text-muted-foreground">{data.eligibleCount} factures prises en compte</p></div>

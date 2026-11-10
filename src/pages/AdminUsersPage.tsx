@@ -40,6 +40,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import OnboardingMiniProgress from '@/components/OnboardingMiniProgress';
 import { sendEmail, createNotification } from '@/lib/notifications-api';
 import UserAuthHistoryDialog from '@/components/admin/UserAuthHistoryDialog';
+import PaymentGradeBadge from '@/components/admin/PaymentGradeBadge';
+import { fetchClientPaymentScore, getStoredPaymentScores, type StoredPaymentScore } from '@/lib/payment-score-api';
 
 const getKycStatusText = (status?: string) => {
   switch (status) {
@@ -121,6 +123,8 @@ const AdminUsersPage: React.FC = () => {
   const [hardDeleteConfirmText, setHardDeleteConfirmText] = useState('');
   const [isHardDeleting, setIsHardDeleting] = useState(false);
   const [compactMode, setCompactMode] = useState(true);
+  const [paymentScores, setPaymentScores] = useState<Record<string, StoredPaymentScore>>({});
+  const [scoreProgress, setScoreProgress] = useState<{ done: number; total: number } | null>(null);
   const navigate = useNavigate();
 
   const ONBOARDING_STAGES: OnboardingStatus[] = [
@@ -189,6 +193,39 @@ const AdminUsersPage: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  const fetchPaymentScores = useCallback(async () => {
+    try {
+      setPaymentScores(await getStoredPaymentScores());
+    } catch (error: any) {
+      toast.error(`Scores de paiement indisponibles : ${error.message}`);
+    }
+  }, []);
+
+  useEffect(() => { fetchPaymentScores(); }, [fetchPaymentScores]);
+
+  const handleRecalculatePaymentScores = async () => {
+    const targets = users.filter(u => !u.is_contract_terminated && u.role !== 'admin' && u.pennylane_customer_id);
+    if (targets.length === 0) {
+      toast.info('Aucun client actif avec un identifiant Pennylane.');
+      return;
+    }
+    setScoreProgress({ done: 0, total: targets.length });
+    let failures = 0;
+    // Séquentiel : chaque calcul interroge Pennylane facture par facture.
+    for (const [index, user] of targets.entries()) {
+      try {
+        await fetchClientPaymentScore(user.id);
+      } catch {
+        failures += 1;
+      }
+      setScoreProgress({ done: index + 1, total: targets.length });
+    }
+    await fetchPaymentScores();
+    setScoreProgress(null);
+    if (failures === 0) toast.success(`${targets.length} score(s) de paiement recalculé(s).`);
+    else toast.warning(`${targets.length - failures} score(s) recalculé(s), ${failures} en erreur (voir l'infobulle « — » du client).`);
+  };
 
   const fetchRequests = useCallback(async () => {
     setRequestsLoading(true);
@@ -724,6 +761,7 @@ const AdminUsersPage: React.FC = () => {
           <TableHead>Téléphone</TableHead>
           <TableHead>Rôle</TableHead>
           <TableHead>Agence</TableHead>
+          <TableHead>Paiement</TableHead>
           <TableHead>Statut Intégration</TableHead>
           <TableHead>Statut KYC</TableHead>
           <TableHead>Smart Pricing</TableHead>
@@ -795,6 +833,9 @@ const AdminUsersPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </TableCell>
+              <TableCell>
+                <PaymentGradeBadge stored={paymentScores[user.id]} />
               </TableCell>
               <TableCell>
                 <Badge variant={user.onboarding_status === 'live' ? 'default' : 'secondary'}>
@@ -910,6 +951,18 @@ const AdminUsersPage: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Gestion des Clients</h1>
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              onClick={handleRecalculatePaymentScores}
+              disabled={scoreProgress !== null || loading}
+              title="Recalculer le score de ponctualité de paiement (A–E) de tous les clients actifs depuis Pennylane"
+            >
+              {scoreProgress ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Scores {scoreProgress.done}/{scoreProgress.total}</>
+              ) : (
+                'Recalculer les scores de paiement'
+              )}
+            </Button>
             <Button
               variant="outline"
               onClick={handleDisableSmartPricingForAll}

@@ -7,8 +7,6 @@ interface AttestationContentProps {
   profile: UserProfile;
   ownerAddress?: string;
   exclusiveRental?: boolean;
-  contractExcludesPersonalUse?: boolean;
-  contractReference?: string;
   propertyAddressOverride?: {
     address?: string;
     city?: string;
@@ -18,12 +16,12 @@ interface AttestationContentProps {
 }
 
 const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
-  ({ profile, ownerAddress, exclusiveRental = false, contractExcludesPersonalUse = false, contractReference, propertyAddressOverride, attestationYear }, ref) => {
+  ({ profile, ownerAddress, exclusiveRental = false, propertyAddressOverride, attestationYear }, ref) => {
     const today = format(new Date(), 'PPP', { locale: fr });
     const displayYear = attestationYear ?? new Date().getFullYear();
-    const contractStartDate =
-      profile.contract_start_date && isValid(parseISO(profile.contract_start_date))
-        ? format(parseISO(profile.contract_start_date), 'PPP', { locale: fr })
+    const cguvAcceptedDate =
+      profile.cguv_accepted_at && isValid(parseISO(profile.cguv_accepted_at))
+        ? format(parseISO(profile.cguv_accepted_at), 'PPP', { locale: fr })
         : 'Non renseignée';
     const propertyAddress = propertyAddressOverride?.address ?? profile.property_address ?? 'Non renseignée';
     const propertyCity = propertyAddressOverride?.city ?? profile.property_city ?? '';
@@ -34,7 +32,7 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
       <div ref={ref} className="p-10 bg-white text-black font-serif text-sm leading-relaxed" style={{ width: '21cm', minHeight: '29.7cm' }}>
         <header className="text-center mb-6">
           <img src="/logo.png" alt="Hello Keys Logo" className="w-32 mx-auto mb-3" />
-          <h1 className="text-xl font-bold uppercase">Attestation d'affectation exclusivement locative</h1>
+          <h1 className="text-xl font-bold uppercase">Attestation d'usage locatif</h1>
           <p className="mt-2">Déclaration sur l'honneur du propriétaire — Année {displayYear}</p>
           <p className="text-xs mt-2">Gestionnaire indiqué : HELLO KEYS – SARL – 1 Rue Carnot – 80550 Le Crotoy</p>
         </header>
@@ -45,21 +43,26 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
           <p><strong>Adresse du propriétaire :</strong> {ownerAddress || 'Non renseignée'}</p>
           <p><strong>Email :</strong> {profile.email || 'Non renseigné'}</p>
           <p><strong>Adresse du bien :</strong> {propertyAddress}, {propertyZip} {propertyCity}</p>
-          <p><strong>Date de début du contrat renseignée au profil :</strong> {contractStartDate}</p>
-          <p><strong>Contrat signé / clause ou avenant :</strong> {contractReference || 'Non renseigné'}</p>
+          <p><strong>Date d'acceptation des CGUV enregistrée au profil :</strong> {cguvAcceptedDate}</p>
+          <p><strong>Version des CGUV enregistrée au profil :</strong> {profile.cguv_version || 'Non renseignée'}</p>
         </section>
 
         <section className="mb-5 text-justify">
-          <h2 className="font-bold uppercase mb-2">Déclaration d'absence de jouissance personnelle</h2>
-          {exclusiveRental && contractExcludesPersonalUse ? (
+          <h2 className="font-bold uppercase mb-2">Déclaration d'usage du logement</h2>
+          {exclusiveRental && profile.cguv_accepted_at ? (
             <>
-              <p className="mb-2">Je soussigné(e), {ownerFullName}, déclare sur l'honneur que le logement identifié ci-dessus est exclusivement affecté à la location meublée saisonnière pour l'année {displayYear}, y compris au 1er janvier de cette année.</p>
-              <p className="mb-2">Je ne l'occupe pas à titre personnel et ne m'en réserve pas la disposition ou la jouissance, même en dehors des périodes effectivement louées. Je ne dispose pas de la possibilité de le réserver pour moi-même ou de l'utiliser comme résidence secondaire.</p>
-              <p>Je déclare que le contrat de gestion signé avec Hello Keys, ou son avenant référencé ci-dessus, exclut expressément mon accès au logement pour un usage personnel et toute faculté de jouissance personnelle pendant la période déclarée. Ce contrat et les justificatifs de l'exploitation locative sont à joindre à cette déclaration.</p>
+              <p className="mb-2">Je soussigné(e), {ownerFullName}, déclare sur l'honneur affecter le logement identifié ci-dessus uniquement à la location meublée saisonnière pour l'année {displayYear}, y compris au 1er janvier de cette année, dans le cadre des services de Hello Keys régis par les CGUV acceptées.</p>
+              <p className="mb-2">Je déclare n'y effectuer aucun séjour personnel et ne réserver aucune période à mon usage pour l'année indiquée, y compris en dehors des périodes effectivement louées.</p>
+              <p>Cette déclaration porte sur l'usage déclaré du logement. Elle n'atteste pas que les CGUV suppriment toute possibilité d'usage personnel et ne constitue pas une renonciation contractuelle à cette possibilité.</p>
             </>
           ) : (
-            <p>Les déclarations d'affectation exclusivement locative et d'exclusion contractuelle de l'usage personnel n'ont pas été confirmées. Ce document incomplet ne vaut pas attestation d'absence de jouissance personnelle.</p>
+            <p>La déclaration d'usage locatif ou l'acceptation des CGUV n'est pas renseignée. Ce document incomplet ne vaut pas attestation d'usage locatif.</p>
           )}
+        </section>
+
+        <section className="mb-5 text-justify">
+          <h2 className="font-bold uppercase mb-2">Portée des CGUV</h2>
+          <p>Les CGUV actuellement consultables prévoient une notification préalable des séjours du Client (article 4.4) et une reprise de possession aux périodes qui lui sont expressément réservées (article 7.1.3). Elles ne prévoient donc pas une exclusion générale de l'usage personnel. La version effectivement acceptée et sa preuve d'acceptation doivent être jointes au dossier ; la date et la version ci-dessus reproduisent les informations enregistrées au profil.</p>
         </section>
 
         <section className="mb-5 text-justify">
@@ -70,9 +73,9 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
         <section className="mb-5">
           <h2 className="font-bold uppercase mb-2">Pièces et démarches à prévoir</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Contrat de gestion signé et clause ou avenant excluant explicitement l'usage personnel, couvrant la période déclarée.</li>
+            <li>Version des CGUV acceptée et preuve de leur acceptation dans l'espace client.</li>
             <li>Justificatifs de mise en location et de gestion : annonces, calendrier de disponibilité, réservations, relevés de gestion.</li>
-            <li>Demande ou réclamation auprès du service des impôts compétent, accompagnée de ces pièces ; déclaration d'occupation selon les modalités demandées, notamment via « Gérer mes biens immobiliers ».</li>
+            <li>Demande au service des impôts compétent précisant les éléments supplémentaires nécessaires pour justifier l'absence de disposition personnelle ; déclaration d'occupation selon les modalités demandées, notamment via « Gérer mes biens immobiliers ».</li>
           </ul>
         </section>
 
@@ -83,7 +86,7 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
         </section>
 
         <footer className="border-t pt-3 text-xs text-gray-700">
-          Document établi à partir des déclarations du propriétaire, à signer avant transmission. Il ne constitue ni une certification des faits par Hello Keys, ni un avenant au contrat ou aux CGUV, ni une décision fiscale. Toute déclaration doit correspondre à la situation réelle et aux stipulations du contrat signé.
+          Document établi à partir des déclarations du propriétaire, à signer avant transmission. Il ne constitue ni une certification des faits par Hello Keys, ni une modification des CGUV acceptées, ni une décision fiscale. Toute déclaration doit correspondre à la situation réelle. L'acceptation des CGUV ne garantit aucune exonération.
         </footer>
       </div>
     );

@@ -25,8 +25,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
   const [propertyZip, setPropertyZip] = useState('');
   const [occasionalStay, setOccasionalStay] = useState(false);
   const [exclusiveRental, setExclusiveRental] = useState(false);
-  const [contractExcludesPersonalUse, setContractExcludesPersonalUse] = useState(false);
-  const [contractReference, setContractReference] = useState('');
+  const [acknowledgesCguvLimits, setAcknowledgesCguvLimits] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [attestationYear, setAttestationYear] = useState<string>(String(new Date().getFullYear()));
 
@@ -42,17 +41,16 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
       setAttestationYear(String(new Date().getFullYear()));
       setOccasionalStay(false);
       setExclusiveRental(false);
-      setContractExcludesPersonalUse(false);
-      setContractReference('');
+      setAcknowledgesCguvLimits(false);
     }
   }, [profile, open]);
 
   const canGenerate = useMemo(() => {
     const year = Number(attestationYear);
-    return !!profile && [firstName, lastName, ownerAddress, propertyAddress, propertyCity, propertyZip, contractReference].every((value) => value.trim())
+    return !!profile?.cguv_accepted_at && [firstName, lastName, ownerAddress, propertyAddress, propertyCity, propertyZip].every((value) => value.trim())
       && Number.isInteger(year) && year >= 2000 && year <= 2100
-      && exclusiveRental && contractExcludesPersonalUse && !occasionalStay;
-  }, [profile, firstName, lastName, ownerAddress, propertyAddress, propertyCity, propertyZip, contractReference, attestationYear, exclusiveRental, contractExcludesPersonalUse, occasionalStay]);
+      && exclusiveRental && acknowledgesCguvLimits && !occasionalStay;
+  }, [profile, firstName, lastName, ownerAddress, propertyAddress, propertyCity, propertyZip, attestationYear, exclusiveRental, acknowledgesCguvLimits, occasionalStay]);
 
   const handleGenerate = async () => {
     if (!profile || !canGenerate) return;
@@ -116,9 +114,9 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Attestation d'affectation exclusivement locative</DialogTitle>
+          <DialogTitle>Attestation d'usage locatif</DialogTitle>
           <DialogDescription>
-            Justificatif déclaratif pour votre dossier de taxe d'habitation. Confirmez uniquement des faits exacts et appuyés par votre contrat signé.
+            Déclaration du propriétaire pour votre dossier de taxe d'habitation, avec les informations d'acceptation des CGUV enregistrées dans votre profil. Confirmez uniquement des faits exacts.
           </DialogDescription>
         </DialogHeader>
 
@@ -129,8 +127,6 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
             profile={{ ...profile!, first_name: firstName, last_name: lastName }}
             ownerAddress={ownerAddress}
             exclusiveRental={exclusiveRental && !occasionalStay}
-            contractExcludesPersonalUse={contractExcludesPersonalUse}
-            contractReference={contractReference}
             propertyAddressOverride={{
               address: propertyAddress,
               city: propertyCity,
@@ -180,9 +176,11 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
             />
           </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="contractReference">Référence du contrat signé / article excluant l'usage personnel</Label>
-            <Input id="contractReference" value={contractReference} onChange={(e) => setContractReference(e.target.value)} placeholder="Contrat du …, article … ou avenant du …" />
+          <div className="md:col-span-2 rounded-md border p-3 text-sm space-y-1">
+            <p className="font-medium">CGUV acceptées dans votre espace client</p>
+            <p>Date enregistrée : {profile?.cguv_accepted_at && !Number.isNaN(Date.parse(profile.cguv_accepted_at)) ? new Date(profile.cguv_accepted_at).toLocaleDateString('fr-FR') : 'Non renseignée'}</p>
+            <p>Version enregistrée : {profile?.cguv_version || 'Non renseignée'}</p>
+            {!profile?.cguv_accepted_at && <p role="alert" className="text-destructive">Aucune acceptation des CGUV n'est enregistrée. Acceptez-les dans votre espace client ou contactez Hello Keys avant de générer l'attestation.</p>}
           </div>
           <div className="flex items-start gap-2 md:col-span-2">
             <Checkbox id="occasionalStay" checked={occasionalStay} onCheckedChange={(c) => setOccasionalStay(c === true)} />
@@ -195,16 +193,17 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
           )}
           <div className="flex items-start gap-2 md:col-span-2">
             <Checkbox id="exclusiveRental" checked={exclusiveRental} onCheckedChange={(c) => setExclusiveRental(c === true)} />
-            <Label htmlFor="exclusiveRental">Je déclare que le logement est exclusivement destiné à la location, sans occupation personnelle ni droit de jouissance réservé, y compris au 1er janvier de l'année indiquée.</Label>
+            <Label htmlFor="exclusiveRental">Je déclare affecter le logement uniquement à la location, sans séjour personnel ni période réservée à mon usage pour l'année indiquée, y compris au 1er janvier.</Label>
           </div>
           <div className="flex items-start gap-2 md:col-span-2">
-            <Checkbox id="contractExcludesPersonalUse" checked={contractExcludesPersonalUse} onCheckedChange={(c) => setContractExcludesPersonalUse(c === true)} />
-            <Label htmlFor="contractExcludesPersonalUse">Mon contrat de gestion signé ou un avenant exclut expressément l'accès au logement pour mon usage personnel et la possibilité de le réserver pour moi-même.</Label>
+            <Checkbox id="acknowledgesCguvLimits" checked={acknowledgesCguvLimits} onCheckedChange={(c) => setAcknowledgesCguvLimits(c === true)} />
+            <Label htmlFor="acknowledgesCguvLimits">Je comprends que l'acceptation des CGUV et l'absence de séjour ne prouvent pas, à elles seules, l'impossibilité d'un usage personnel et ne garantissent pas l'exonération.</Label>
           </div>
           <div className="md:col-span-2 text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/40 border rounded-md p-3 space-y-2">
-            <p>Complétez tous les champs et confirmez les deux déclarations pour télécharger le document, puis signez-le.</p>
-            <p>Joignez le contrat signé et sa clause d'exclusion d'usage personnel, ainsi que les justificatifs de location (annonces, calendrier, réservations ou relevés de gestion). Déposez votre demande ou réclamation auprès de votre service des impôts et effectuez la déclaration d'occupation demandée, notamment via « Gérer mes biens immobiliers ».</p>
-            <p>Ce document ne modifie pas votre contrat et ne garantit aucune exonération. Une simple absence de séjour ne suffit pas si vous conservez la possibilité d'utiliser le logement. Seule l'administration fiscale apprécie votre situation.</p>
+            <p>Complétez tous les champs et cochez les deux confirmations pour télécharger le document, puis signez-le.</p>
+            <p>Les CGUV actuellement consultables prévoient les séjours du propriétaire avec notification préalable (article 4.4) et les périodes qui lui sont expressément réservées (article 7.1.3). Elles n'excluent donc pas globalement l'usage personnel. Cette déclaration ne modifie pas les CGUV.</p>
+            <p>Joignez la version des CGUV acceptée et sa preuve d'acceptation, ainsi que les justificatifs de location (annonces, calendrier, réservations ou relevés de gestion). Demandez au service des impôts quels éléments supplémentaires sont nécessaires pour justifier l'absence de disposition personnelle. Effectuez la déclaration d'occupation demandée, notamment via « Gérer mes biens immobiliers ».</p>
+            <p>Seule l'administration fiscale apprécie votre situation. Si vous conservez la possibilité d'utiliser le logement, l'absence de séjour ne suffit pas à établir les conditions d'une exonération.</p>
           </div>
         </div>
 

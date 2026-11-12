@@ -72,6 +72,7 @@ import { Badge } from '@/components/ui/badge';
 import SharedSpaceBanner from './SharedSpaceBanner';
 import SpaceSwitcher from './SpaceSwitcher';
 import DesktopTopNav from './DesktopTopNav';
+import PaymentOverdueNotice from './PaymentOverdueNotice';
 import { PanelLeft } from 'lucide-react';
 
 const SIMPLE_NAV_KEY = 'hk_desktop_simple_nav';
@@ -616,6 +617,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             )}
           >
             <SharedSpaceBanner />
+            <PaymentOverdueNotice />
             {profile?.is_payment_suspended && (
               <Alert variant="destructive" className="mb-6 sticky top-0 z-10">
                 <Ban className="h-4 w-4" />

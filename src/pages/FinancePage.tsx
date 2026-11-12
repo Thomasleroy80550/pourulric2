@@ -17,14 +17,20 @@ import { HelpCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { useSearchParams } from 'react-router-dom';
 
 const FinancePage: React.FC = () => {
   const { profile } = useSession();
+  const [searchParams] = useSearchParams();
   const [showExpensesTab, setShowExpensesTab] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<string>('statements');
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') === 'invoices' ? 'invoices' : 'statements');
   const [showMoreAlert, setShowMoreAlert] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'invoices') setActiveTab('invoices');
+  }, [searchParams]);
 
   useEffect(() => {
     if (profile) {

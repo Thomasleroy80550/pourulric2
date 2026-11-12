@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.50.0";
 import { jsPDF } from "npm:jspdf@3.0.1";
 import { handoverDocuments } from "./document.ts";
 import { guideDocuments } from "./guide.ts";
+import { referenceDocuments } from "./reference.ts";
 
 const authorizedUserId = "0d2816be-1b6f-4e13-a2d4-b7eb3d6daee5";
 const authorizedEmail = "thomasleroy80550@gmail.com";
@@ -15,7 +16,7 @@ const headers = {
   "X-Content-Type-Options": "nosniff",
 };
 
-type DocumentKind = "technical" | "guide";
+type DocumentKind = "technical" | "guide" | "reference";
 
 interface PdfDefinition {
   filename: string;
@@ -49,14 +50,25 @@ const pdfDefinitions: Record<DocumentKind, PdfDefinition> = {
     ],
     documents: guideDocuments,
   },
+  reference: {
+    filename: "Hello-Keys-Reference-Ingenierie.pdf",
+    header: "Hello Keys - Référence d'ingénierie - Confidentiel",
+    title: "Référence d'ingénierie",
+    subtitle: "Architecture interne, code source, schémas SQL et invariants",
+    intro: [
+      "Document de niveau code destiné à un ingénieur logiciel senior : métriques du dépôt, chaîne de build, machine d'états de session, pipeline KrossBooking, formules des relevés, DDL et politiques RLS, fonctions PL/pgSQL, fonctions Edge, jobs cron, matrice de sécurité, invariants, dette technique et runbook.",
+      "Chaque extrait de code et chaque définition SQL a été relevé dans le dépôt ou dans le catalogue PostgreSQL du projet. Les valeurs des secrets ne figurent jamais dans ce document.",
+    ],
+    documents: referenceDocuments,
+  },
 };
 
 const cachedPdfs: Partial<Record<DocumentKind, ArrayBuffer>> = {};
 
-function readableText(value: string): string {
-  return value
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
-    .replace(/[*`]/g, "")
+function readableText(value: string, code = false): string {
+  // Dans un bloc de code, `*` et les accents graves font partie du code (SELECT *, a * b, template literals).
+  const text = code ? value : value.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)").replace(/[*`]/g, "");
+  return text
     .replace(/[’‘]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[—–]/g, "-")
@@ -82,7 +94,9 @@ function buildPdf(definition: PdfDefinition): ArrayBuffer {
     pdf.setFont(mono ? "courier" : "helvetica", bold ? "bold" : "normal");
     pdf.setFontSize(size);
     pdf.setTextColor(35, 45, 55);
-    const lines = pdf.splitTextToSize(readableText(text), width) as string[];
+    // Espaces insécables en tête de ligne : splitTextToSize ne les replie pas, l'indentation du code est conservée.
+    const content = mono ? readableText(text, true).replace(/^ +/, (s) => "\u00A0".repeat(s.length)) : readableText(text);
+    const lines = pdf.splitTextToSize(content, width) as string[];
     const lineHeight = size * 0.45;
     for (const line of lines) {
       if (y + lineHeight > 276) newPage();
@@ -122,16 +136,21 @@ function buildPdf(definition: PdfDefinition): ArrayBuffer {
         y += 2;
         continue;
       }
+      if (code) {
+        // Bloc de code : aucune interprétation Markdown (les schémas ASCII commencent souvent par "|" ou "---").
+        write(line, 8, false, true);
+        continue;
+      }
       if (/^\|[\s:|\-]+\|$/.test(line) || /^---+$/.test(line)) continue;
       const heading = /^(#{1,4})\s+(.+)$/.exec(line);
-      if (heading && !code) {
+      if (heading) {
         if (y > 253) newPage();
         y += 3;
         write(heading[2], heading[1].length <= 2 ? 14 : 11, true);
       } else if (line.startsWith("|")) {
         write(line.replace(/^\|\s*|\s*\|$/g, ""), 8);
       } else {
-        write(line.replace(/^>\s?/, "").replace(/^- \[[ x]\]\s*/, "- "), code ? 8 : 10, false, code);
+        write(line.replace(/^>\s?/, "").replace(/^- \[[ x]\]\s*/, "- "));
       }
     }
   }
@@ -180,7 +199,7 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const kind: DocumentKind = body?.document === "guide" ? "guide" : "technical";
+    const kind: DocumentKind = body?.document === "guide" || body?.document === "reference" ? body.document : "technical";
     const definition = pdfDefinitions[kind];
     if (!cachedPdfs[kind]) cachedPdfs[kind] = buildPdf(definition);
     console.info("[download-handover] Authorized PDF download", { userId: user.id, document: kind });

@@ -4,6 +4,7 @@ import { jsPDF } from "npm:jspdf@3.0.1";
 import { handoverDocuments } from "./document.ts";
 import { guideDocuments } from "./guide.ts";
 import { referenceDocuments } from "./reference.ts";
+import { financialDocuments } from "./finance.ts";
 
 const authorizedUserId = "0d2816be-1b6f-4e13-a2d4-b7eb3d6daee5";
 const authorizedEmail = "thomasleroy80550@gmail.com";
@@ -16,7 +17,7 @@ const headers = {
   "X-Content-Type-Options": "nosniff",
 };
 
-type DocumentKind = "technical" | "guide" | "reference";
+type DocumentKind = "technical" | "guide" | "reference" | "financial";
 
 interface PdfDefinition {
   filename: string;
@@ -60,6 +61,17 @@ const pdfDefinitions: Record<DocumentKind, PdfDefinition> = {
       "Chaque extrait de code et chaque définition SQL a été relevé dans le dépôt ou dans le catalogue PostgreSQL du projet. Les valeurs des secrets ne figurent jamais dans ce document.",
     ],
     documents: referenceDocuments,
+  },
+  financial: {
+    filename: "Hello-Keys-Dossier-Financier.pdf",
+    header: "Hello Keys - Dossier financier - Confidentiel",
+    title: "Dossier financier",
+    subtitle: "Coût global de la plateforme et estimation de sa valeur",
+    intro: [
+      "Coût de reconstruction (méthode bottom-up et contre-vérification COCOMO II), coût historique de production, coûts de fonctionnement et de maintenance, coût total de possession sur 3 ans, valeur d'usage et fourchette de valorisation.",
+      "Les mesures techniques et les volumes d'activité ont été relevés dans le dépôt et la base de production à la date de référence ; les hypothèses sont explicitées et regroupées en annexe. Ce dossier est une estimation documentée, pas une expertise indépendante.",
+    ],
+    documents: financialDocuments,
   },
 };
 
@@ -199,7 +211,7 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const kind: DocumentKind = body?.document === "guide" || body?.document === "reference" ? body.document : "technical";
+    const kind: DocumentKind = ["guide", "reference", "financial"].includes(body?.document) ? body.document : "technical";
     const definition = pdfDefinitions[kind];
     if (!cachedPdfs[kind]) cachedPdfs[kind] = buildPdf(definition);
     console.info("[download-handover] Authorized PDF download", { userId: user.id, document: kind });

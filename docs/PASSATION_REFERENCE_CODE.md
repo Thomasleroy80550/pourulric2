@@ -1148,7 +1148,7 @@ Journaux : filtrer les logs Edge sur `[krossbooking-proxy]`. Un message `IP ... 
 
 ### 17.4 Régénérer ou modifier les PDF de passation
 
-Les trois documents sont embarqués dans `supabase/functions/download-handover/{document,guide,reference}.ts` sous forme de tableaux `{ title, markdown }`. Le rendu (`buildPdf`) interprète : titres `#`/`##` (14 pt) et `###` (11 pt), tableaux (8 pt, pipes externes retirés), blocs ``` (Courier 8 pt) ; les caractères hors Latin-1 sont supprimés (`→`, `—`, `…`, `€` sont convertis au préalable). Le PDF est mis en cache **dans l'isolat** (`cachedPdfs`) : un redéploiement de la fonction suffit à invalider le cache.
+Les quatre documents sont embarqués dans `supabase/functions/download-handover/{document,guide,reference,finance}.ts` sous forme de tableaux `{ title, markdown }`. Le rendu (`buildPdf`) interprète : titres `#`/`##` (14 pt) et `###` (11 pt), tableaux (8 pt, pipes externes retirés), blocs ``` (Courier 8 pt) ; les caractères hors Latin-1 sont supprimés (`→`, `—`, `…`, `€` sont convertis au préalable). Le PDF est mis en cache **dans l'isolat** (`cachedPdfs`) : un redéploiement de la fonction suffit à invalider le cache.
 
 ### 17.5 Rotation d'un secret
 

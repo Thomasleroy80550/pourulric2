@@ -15,10 +15,18 @@ export default function MaintenancePage() {
   });
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-900 sm:py-16">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:py-10">
       <div className="mx-auto max-w-3xl space-y-8">
-        <header className="mx-auto max-w-2xl space-y-5 text-center">
+        <nav aria-label="Accès administrateur" className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-lg font-bold tracking-tight">Hello Keys<span className="text-red-700">.</span></p>
+          <Button asChild size="sm" className="bg-red-700 text-white hover:bg-red-800">
+            <Link to="/admin/status">
+              Accès administrateur
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        </nav>
+        <header className="mx-auto max-w-2xl space-y-5 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-red-200 bg-red-100 text-red-700">
             <Wrench className="h-8 w-8" aria-hidden="true" />
           </div>
@@ -91,7 +99,7 @@ export default function MaintenancePage() {
         </section>
 
         <footer className="border-t border-slate-200 pt-5 text-center">
-          <Link to="/login" className="inline-flex items-center gap-1 text-xs text-slate-500 underline-offset-4 hover:text-slate-900 hover:underline">Accès administration <ArrowRight className="h-3 w-3" aria-hidden="true" /></Link>
+          <Link to="/admin/status" className="inline-flex items-center gap-1 text-xs text-slate-500 underline-offset-4 hover:text-slate-900 hover:underline">Accès administration <ArrowRight className="h-3 w-3" aria-hidden="true" /></Link>
         </footer>
       </div>
     </main>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { getMaintenanceQuestions, questionsPageSize, submitMaintenanceQuestion } from "@/lib/maintenance-questions-api";
 import { formatMigrationNoteDate } from "@/lib/migration-notes-api";
 
-export default function MaintenanceQuestions() {
+export default function MaintenanceQuestions({ trigger }: { trigger?: ReactElement }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [website, setWebsite] = useState("");
@@ -42,8 +42,8 @@ export default function MaintenanceQuestions() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="outline" size="sm" className="h-7 gap-1.5 rounded-full border-slate-200 bg-white text-[10px] text-slate-600 hover:border-slate-300 hover:bg-slate-50"><MessageSquare className="h-3 w-3" aria-hidden="true" />Questions & réponses</Button></DialogTrigger>
-      <DialogContent className="max-h-[85dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl">
+      <DialogTrigger asChild>{trigger ?? <Button variant="outline" size="sm" className="h-7 gap-1.5 rounded-full border-slate-200 bg-white text-[10px] text-slate-600 hover:border-slate-300 hover:bg-slate-50"><MessageSquare className="h-3 w-3" aria-hidden="true" />Questions & réponses</Button>}</DialogTrigger>
+      <DialogContent className="bottom-0 left-0 top-auto max-h-[90dvh] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-3xl rounded-b-none border-x-0 border-b-0 pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:max-h-[85dvh] lg:w-[calc(100%-2rem)] lg:max-w-2xl lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:border">
         <DialogHeader><DialogTitle>Questions & réponses</DialogTitle><DialogDescription>Posez une question sans compte ni nom. Les questions et les réponses sont publiques. Notre équipe répondra selon ses disponibilités pendant la migration.</DialogDescription></DialogHeader>
         <form onSubmit={(event) => void send(event)} className="space-y-3 rounded-xl border bg-slate-50 p-4">
           <Label htmlFor="maintenance-public-question">Votre question</Label>

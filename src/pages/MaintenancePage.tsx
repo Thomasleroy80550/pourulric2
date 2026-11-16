@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import MigrationUpdates from "@/components/MigrationUpdates";
 import MaintenanceAdminAccess from "@/components/MaintenanceAdminAccess";
 import MaintenanceQuestions from "@/components/MaintenanceQuestions";
+import MobileMaintenance from "@/components/MobileMaintenance";
 import { getMigrationProgress, migrationSteps } from "@/lib/migration-api";
 import "@/styles/maintenance.css";
 
@@ -38,7 +39,9 @@ export default function MaintenancePage() {
   const completedCount = migration ? migrationSteps.filter((step) => migration[step.key] === 100).length : 0;
 
   return (
-    <main className="relative flex min-h-dvh flex-col justify-center overflow-x-clip bg-[#fafafa] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))] text-slate-900 selection:bg-red-100 sm:pb-[max(2rem,env(safe-area-inset-bottom))] sm:pt-[max(2rem,env(safe-area-inset-top))]">
+    <>
+    <MobileMaintenance migration={migration} online={online} pending={isPending} error={isError} fetching={isFetching} refresh={() => void refetch()} />
+    <main className="relative hidden min-h-dvh flex-col justify-center overflow-x-clip bg-[#fafafa] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))] text-slate-900 selection:bg-red-100 lg:flex sm:pb-[max(2rem,env(safe-area-inset-bottom))] sm:pt-[max(2rem,env(safe-area-inset-top))]">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-96 bg-[radial-gradient(#d4d4d8_0.6px,transparent_0.6px)] bg-[size:20px_20px] opacity-30 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
         <div className="absolute -right-28 top-0 h-96 w-96 rounded-full bg-rose-100/40 blur-3xl" />
@@ -124,7 +127,8 @@ export default function MaintenancePage() {
           <p className="flex items-center gap-1.5 whitespace-nowrap"><span className={`h-1 w-1 rounded-full ${online ? "bg-emerald-500" : "bg-amber-500"}`} /> Suivi actualisé toutes les 30 s</p>
         </footer>
       </div>
-      <MaintenanceAdminAccess />
     </main>
+    <MaintenanceAdminAccess />
+    </>
   );
 }

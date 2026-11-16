@@ -21,6 +21,32 @@
   animation: maintenance-active-glow 4s ease-in-out infinite;
 }
 
+@media (max-width: 1023px) and (max-height: 700px) {
+  .maintenance-mobile-summary { padding: 12px; }
+  .maintenance-mobile-detail { display: none; }
+  .maintenance-mobile-ring { width: 64px; height: 64px; }
+  .maintenance-mobile-summary h1 { font-size: 18px; }
+  .maintenance-mobile-step { padding: 8px; }
+}
+
+@media (max-width: 1023px) and (max-height: 600px) {
+  .maintenance-mobile-eyebrow { display: none; }
+  .maintenance-mobile-summary { padding: 10px 12px; }
+  .maintenance-mobile-summary h1 { margin-top: 0; font-size: 17px; }
+  .maintenance-mobile-ring { width: 56px; height: 56px; }
+  .maintenance-mobile-ring p { font-size: 16px; }
+  .maintenance-mobile-step { padding: 6px 8px; }
+  .maintenance-mobile-step > p { font-size: 9px; }
+  .maintenance-mobile-nav { height: 40px; gap: 2px; }
+}
+
+@media (min-width: 600px) and (max-width: 1023px) and (max-height: 600px) {
+  .maintenance-mobile-steps {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .maintenance-floating,
   .maintenance-active-step {

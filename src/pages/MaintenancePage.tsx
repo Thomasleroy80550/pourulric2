@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Check, Database, RefreshCw, ShieldCheck, WifiOff } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Database, Layers3, RefreshCw, Sparkles, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import MigrationUpdates from "@/components/MigrationUpdates";
 import { getMigrationProgress, migrationSteps } from "@/lib/migration-api";
 
 export default function MaintenancePage() {
   const [online, setOnline] = useState(() => navigator.onLine);
+  const [panel, setPanel] = useState<"progress" | "notes">("progress");
   const { data: migration, isPending, isError, isFetching, refetch } = useQuery({
     queryKey: ["migration-progress"],
     queryFn: getMigrationProgress,
@@ -20,7 +22,7 @@ export default function MaintenancePage() {
     window.addEventListener("offline", updateOnline);
     const themeColor = document.querySelector('meta[name="theme-color"]');
     const previousColor = themeColor?.getAttribute("content");
-    themeColor?.setAttribute("content", "#f8fafc");
+    themeColor?.setAttribute("content", "#fafafa");
     return () => {
       window.removeEventListener("online", updateOnline);
       window.removeEventListener("offline", updateOnline);
@@ -31,80 +33,85 @@ export default function MaintenancePage() {
   const completedCount = migration ? migrationSteps.filter((step) => migration[step.key]).length : 0;
 
   return (
-    <main className="relative flex min-h-dvh flex-col justify-center overflow-x-clip bg-slate-50 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))] text-slate-900 sm:pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pt-[max(1.5rem,env(safe-area-inset-top))]">
+    <main className="relative flex min-h-dvh flex-col justify-center overflow-x-clip bg-[#fafafa] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))] text-slate-900 selection:bg-red-100 sm:pb-[max(2rem,env(safe-area-inset-bottom))] sm:pt-[max(2rem,env(safe-area-inset-top))]">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-24 -top-32 h-80 w-80 rounded-full bg-red-100/60 blur-3xl" />
-        <div className="absolute -bottom-32 -right-24 h-96 w-96 rounded-full bg-rose-100/50 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-96 bg-[radial-gradient(#d4d4d8_0.6px,transparent_0.6px)] bg-[size:20px_20px] opacity-30 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+        <div className="absolute -right-28 top-0 h-96 w-96 rounded-full bg-rose-100/40 blur-3xl" />
       </div>
       <div className="relative mx-auto w-full max-w-5xl">
-        <header className="mb-4 flex items-center justify-between gap-2 sm:mb-8">
-          <p className="text-xl font-extrabold tracking-tight">Hello Keys<span className="text-red-600">.</span></p>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200/80 bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-red-700 sm:text-xs">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-600" /> Maintenance en cours
+        <header className="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-4 sm:pb-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-950 text-white shadow-sm"><Layers3 className="h-4 w-4" aria-hidden="true" /></span>
+            <p className="text-lg font-bold tracking-tight">Hello Keys<span className="text-red-600">.</span></p>
+            <span className="ml-2 hidden border-l border-slate-200 pl-3 text-xs text-slate-400 sm:inline">Journal de migration</span>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-50/80 px-2.5 py-1 text-[10px] font-medium text-amber-800 sm:text-xs">
+            <span className="relative flex h-1.5 w-1.5"><span className="absolute h-full w-full animate-ping rounded-full bg-amber-400 opacity-50 motion-reduce:animate-none" /><span className="relative h-1.5 w-1.5 rounded-full bg-amber-500" /></span>
+            Maintenance en cours
           </span>
         </header>
 
-        <div className="grid items-center gap-4 sm:gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
-          <section className="space-y-2.5 text-center lg:space-y-5 lg:text-left">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-white shadow-lg shadow-red-600/15 lg:mx-0 lg:h-14 lg:w-14 lg:rounded-2xl">
-              <Database className="h-5 w-5 lg:h-7 lg:w-7" aria-hidden="true" />
-            </div>
-            <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl lg:text-4xl">Un nouveau départ<br className="hidden lg:block" /> pour votre plateforme.</h1>
-            <p className="mx-auto max-w-md text-xs leading-relaxed text-slate-500 sm:text-sm lg:mx-0 lg:text-base">Vos données migrent vers notre nouveau logiciel hôtelier. L’espace propriétaire est temporairement indisponible.</p>
-            <p className="text-[11px] font-medium text-red-700 sm:text-xs">Du 16 au 18 novembre 2026</p>
-            <div className="hidden rounded-xl border border-slate-200/80 bg-white/60 p-4 text-sm leading-relaxed text-slate-500 lg:block">
-              Nos équipes se consacrent au transfert des données. Le support client est suspendu pendant cette période. Merci pour votre patience et votre confiance.
-            </div>
+        <div className="flex items-center justify-between gap-6 py-5 sm:py-8">
+          <section className="max-w-xl">
+            <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-red-600 sm:text-xs"><Sparkles className="h-3 w-3" aria-hidden="true" /> La prochaine étape de Hello Keys</p>
+            <h1 className="text-[30px] font-semibold leading-[1.12] tracking-[-0.045em] sm:text-5xl">On prépare la suite.<br /><span className="text-slate-400">Vous allez l’adorer.</span></h1>
+            <p className="mt-3 max-w-lg text-xs leading-relaxed text-slate-500 sm:mt-4 sm:text-sm">Nous transférons vos données vers notre nouveau logiciel hôtelier. Votre espace propriétaire revient bientôt, avec une nouvelle expérience.</p>
+            <p className="mt-3 inline-flex items-center gap-2 text-[10px] font-medium text-slate-500 sm:text-xs"><span className="h-1 w-1 rounded-full bg-slate-400" /> Migration du 16 au 18 novembre 2026</p>
           </section>
-
-          <section aria-labelledby="migration-progress-title" className="overflow-hidden rounded-2xl border border-white bg-white shadow-xl shadow-slate-200/60 sm:rounded-3xl">
-            <div className="space-y-4 p-4 sm:space-y-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h2 id="migration-progress-title" className="text-sm font-bold sm:text-base">Avancement de la migration</h2>
-                  <p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">Mis à jour par notre équipe</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => void refetch()} disabled={isFetching || !online} aria-label="Actualiser la progression" className="h-8 w-8 shrink-0 rounded-full text-slate-400 hover:bg-slate-50 hover:text-red-700">
-                  <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} aria-hidden="true" />
-                </Button>
-              </div>
-
-              {!online && <p role="status" className="flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800"><WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />Hors connexion. Les informations seront actualisées à votre retour en ligne.</p>}
-              {isPending && <p role="status" className="py-3 text-sm text-slate-500">{online ? "Chargement de la progression…" : "Connexion nécessaire pour consulter la progression."}</p>}
-              {isError && online && <p role="alert" className="flex items-start gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />Actualisation indisponible. Une nouvelle tentative sera effectuée automatiquement.</p>}
-              {migration && (
-                <>
-                  <div className="space-y-2.5">
-                    <div className="flex items-end justify-between">
-                      <p className="text-xs text-slate-500">{completedCount} étape{completedCount > 1 ? "s" : ""} sur 4 terminée{completedCount > 1 ? "s" : ""}</p>
-                      <p className="text-3xl font-extrabold leading-none tabular-nums tracking-tight text-red-600 sm:text-4xl">{migration.progress}<span className="ml-0.5 text-base font-semibold sm:text-lg">%</span></p>
-                    </div>
-                    <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-2 bg-red-50 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-500 [&>div]:duration-700" />
-                  </div>
-                  <ul className="divide-y divide-slate-100">
-                    {migrationSteps.map((step, index) => {
-                      const completed = migration[step.key];
-                      return (
-                        <li key={step.key} className="flex items-center gap-2.5 py-2.5 sm:gap-3 sm:py-3.5">
-                          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${completed ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`} aria-hidden="true">{completed ? <Check className="h-4 w-4" /> : String(index + 1).padStart(2, "0")}</span>
-                          <span className={`min-w-0 flex-1 text-xs font-medium leading-relaxed sm:text-sm ${completed ? "text-emerald-800" : "text-slate-600"}`}>{step.label}</span>
-                          <span className={`shrink-0 text-[9px] sm:text-[10px] ${completed ? "text-emerald-600" : "text-slate-400"}`}>{completed ? "Terminé" : "À venir"}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <p className="text-[10px] text-slate-400">Dernière mise à jour : {new Date(migration.updated_at).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} (Paris)</p>
-                </>
-              )}
-            </div>
-            <div className="flex items-center justify-center gap-1.5 border-t border-slate-100 bg-slate-50/80 px-3 py-2 text-[10px] text-slate-400">
-              <ShieldCheck className="h-3 w-3" aria-hidden="true" /> Suivi actualisé automatiquement toutes les 30 s
-            </div>
-          </section>
+          <div aria-hidden="true" className="relative hidden h-44 w-64 shrink-0 items-center justify-center sm:flex">
+            <div className="absolute h-44 w-44 rounded-full border border-slate-200/60" />
+            <div className="absolute h-32 w-32 rounded-full border border-slate-200/60" />
+            <div className="absolute h-20 w-20 rounded-full bg-red-50 blur-xl" />
+            <div className="absolute left-3 top-7 flex h-16 w-16 -rotate-12 items-center justify-center rounded-2xl border border-white bg-white shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)]"><Database className="h-6 w-6 text-slate-400" /></div>
+            <ArrowRight className="relative h-5 w-5 text-slate-300" />
+            <div className="absolute right-4 bottom-6 flex h-20 w-20 rotate-12 items-center justify-center rounded-2xl border border-red-200/50 bg-gradient-to-br from-white to-red-50 shadow-[0_12px_32px_-8px_rgba(220,38,38,0.2)]"><Layers3 className="h-8 w-8 text-red-600" /></div>
+            <span className="absolute right-9 top-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-medium text-slate-400">Une nouvelle expérience</span>
+          </div>
         </div>
-        <footer className="mt-3 text-center text-[10px] leading-relaxed text-slate-400 sm:mt-5 sm:text-xs">
-          <p className="lg:hidden">Support client suspendu pendant le transfert. Merci pour votre patience.</p>
-          <p className="hidden lg:block">Merci de nous accompagner dans cette nouvelle étape. — L’équipe Hello Keys</p>
+
+        {!online && <p role="status" className="mb-3 flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 p-2 text-xs text-amber-800"><WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />Hors connexion. Le suivi reprendra à votre retour en ligne.</p>}
+        <div aria-label="Affichage du suivi" className="mb-3 grid grid-cols-2 gap-1 rounded-xl border border-slate-200/80 bg-slate-100/70 p-1 lg:hidden">
+          <Button variant="ghost" aria-pressed={panel === "progress"} onClick={() => setPanel("progress")} className={`h-8 rounded-lg text-xs ${panel === "progress" ? "bg-white text-slate-900 shadow-sm hover:bg-white" : "text-slate-500"}`}>Progression</Button>
+          <Button variant="ghost" aria-pressed={panel === "notes"} onClick={() => setPanel("notes")} className={`h-8 rounded-lg text-xs ${panel === "notes" ? "bg-white text-slate-900 shadow-sm hover:bg-white" : "text-slate-500"}`}>Notes de l’équipe</Button>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+          <section aria-labelledby="migration-progress-title" className={`${panel === "progress" ? "block" : "hidden"} rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_4px_24px_-12px_rgba(15,23,42,0.12)] sm:p-5 lg:block`}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="migration-progress-title" className="text-sm font-semibold tracking-tight">Avancement du transfert</h2>
+              <Button variant="ghost" size="icon" onClick={() => void refetch()} disabled={isFetching || !online} aria-label="Actualiser la progression" className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50"><RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" /></Button>
+            </div>
+            {isPending && <p role="status" className="py-4 text-xs text-slate-500">{online ? "Chargement de la progression…" : "Connexion nécessaire pour consulter la progression."}</p>}
+            {isError && online && <p role="alert" className="mt-3 flex items-start gap-2 text-xs text-amber-800"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />Actualisation momentanément indisponible. Nouvelle tentative automatique.</p>}
+            {migration && (
+              <>
+                <div className="mb-4 mt-3 space-y-2.5">
+                  <div className="flex items-end justify-between gap-3">
+                    <p className="text-[11px] text-slate-400">{completedCount} / 4 étapes terminées</p>
+                    <p className="text-4xl font-semibold leading-none tabular-nums tracking-[-0.05em]">{migration.progress}<span className="ml-0.5 text-lg text-slate-400">%</span></p>
+                  </div>
+                  <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-1.5 bg-slate-100 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-400 [&>div]:duration-700 motion-reduce:[&>div]:transition-none" />
+                </div>
+                <ul className="space-y-0.5">
+                  {migrationSteps.map((step, index) => {
+                    const completed = migration[step.key];
+                    return (
+                      <li key={step.key} className="flex items-center gap-3 rounded-lg py-2.5">
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[9px] font-medium ${completed ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-slate-200 text-slate-400"}`} aria-hidden="true">{completed ? <Check className="h-3.5 w-3.5" /> : String(index + 1).padStart(2, "0")}</span>
+                        <span className={`min-w-0 flex-1 text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</span>
+                        <span className={`shrink-0 text-[9px] ${completed ? "text-emerald-600" : "text-slate-400"}`}>{completed ? "Terminé" : "À venir"}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="mt-3 border-t border-slate-100 pt-3 text-[10px] text-slate-400">Mis à jour le {new Date(migration.updated_at).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} · Paris</p>
+              </>
+            )}
+          </section>
+          <div className={`${panel === "notes" ? "block" : "hidden"} lg:block`}><MigrationUpdates /></div>
+        </div>
+        <footer className="mt-4 flex flex-col items-center justify-between gap-2 text-center text-[10px] leading-relaxed text-slate-400 sm:mt-5 sm:flex-row sm:text-left">
+          <p>Support client suspendu pendant le transfert. Merci pour votre patience.</p>
+          <p className="flex items-center gap-1.5 whitespace-nowrap"><span className={`h-1 w-1 rounded-full ${online ? "bg-emerald-500" : "bg-amber-500"}`} /> Suivi actualisé toutes les 30 s</p>
         </footer>
       </div>
     </main>

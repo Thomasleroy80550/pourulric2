@@ -91,7 +91,7 @@ export default function MaintenancePage() {
                   </div>
                   <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-1.5 bg-slate-100 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-400 [&>div]:duration-700 motion-reduce:[&>div]:transition-none" />
                 </div>
-                <ul aria-label="Étapes de la migration" tabIndex={0} className="max-h-60 space-y-0.5 overflow-y-auto overscroll-contain rounded-lg pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200">
+                <ul aria-label="Étapes de la migration" tabIndex={0} className="max-h-60 space-y-0.5 overflow-y-auto overscroll-contain rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200">
                   {migrationSteps.map((step, index) => {
                     const completed = migration[step.key];
                     return (

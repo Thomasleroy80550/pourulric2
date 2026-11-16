@@ -44,10 +44,16 @@ export default function AdminMigrationProgress() {
     try {
       const data = await updateMigrationProgress({
         progress: value,
+        backup_completed: migration.backup_completed,
         housing_transferred: migration.housing_transferred,
+        owners_transferred: migration.owners_transferred,
         reservations_transferred: migration.reservations_transferred,
+        upcoming_reservations_verified: migration.upcoming_reservations_verified,
+        rates_availability_synced: migration.rates_availability_synced,
         ota_connected: migration.ota_connected,
+        financial_documents_transferred: migration.financial_documents_transferred,
         tests_completed: migration.tests_completed,
+        platform_reopened: migration.platform_reopened,
       });
       setMigration(data);
       queryClient.setQueryData(["migration-progress"], data);
@@ -79,7 +85,7 @@ export default function AdminMigrationProgress() {
               <Progress value={valid ? value : 0} aria-label="Aperçu de la progression" aria-valuenow={valid ? value : 0} className="h-2 bg-red-100 [&>div]:bg-red-600" />
               {!valid && <p className="text-xs text-destructive">Saisissez un nombre entier entre 0 et 100.</p>}
             </div>
-            <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
               {migrationSteps.map((step) => (
                 <div key={step.key} className="flex items-center gap-3 rounded-lg border p-3">
                   <Checkbox id={`migration-${step.key}`} checked={migration[step.key]} onCheckedChange={(checked) => setMigration({ ...migration, [step.key]: checked === true })} />
@@ -87,6 +93,7 @@ export default function AdminMigrationProgress() {
                 </div>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">La case « Plateforme propriétaire réouverte » est informative : elle ne désactive ni la page de maintenance ni le verrou des connexions.</p>
             <Button onClick={() => void save()} disabled={!valid || saving}>
               <Save className="mr-2 h-4 w-4" aria-hidden="true" />{saving ? "Publication…" : "Publier la progression"}
             </Button>

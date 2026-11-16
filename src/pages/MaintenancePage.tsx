@@ -86,12 +86,12 @@ export default function MaintenancePage() {
               <>
                 <div className="mb-4 mt-3 space-y-2.5">
                   <div className="flex items-end justify-between gap-3">
-                    <p className="text-[11px] text-slate-400">{completedCount} / 4 étapes terminées</p>
+                    <p className="text-[11px] text-slate-400">{completedCount} / {migrationSteps.length} étapes terminées</p>
                     <p className="text-4xl font-semibold leading-none tabular-nums tracking-[-0.05em]">{migration.progress}<span className="ml-0.5 text-lg text-slate-400">%</span></p>
                   </div>
                   <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-1.5 bg-slate-100 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-400 [&>div]:duration-700 motion-reduce:[&>div]:transition-none" />
                 </div>
-                <ul className="space-y-0.5">
+                <ul aria-label="Étapes de la migration" tabIndex={0} className="max-h-60 space-y-0.5 overflow-y-auto overscroll-contain rounded-lg pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200">
                   {migrationSteps.map((step, index) => {
                     const completed = migration[step.key];
                     return (

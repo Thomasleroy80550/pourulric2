@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import MigrationUpdates from "@/components/MigrationUpdates";
 import MaintenanceAdminAccess from "@/components/MaintenanceAdminAccess";
+import MaintenanceQuestions from "@/components/MaintenanceQuestions";
 import { getMigrationProgress, migrationSteps } from "@/lib/migration-api";
 import "@/styles/maintenance.css";
 
@@ -119,7 +120,7 @@ export default function MaintenancePage() {
           <div className={`${panel === "notes" ? "block" : "hidden"} lg:block`}><MigrationUpdates /></div>
         </div>
         <footer className="mt-4 flex flex-col items-center justify-between gap-2 text-center text-[10px] leading-relaxed text-slate-400 sm:mt-5 sm:flex-row sm:text-left">
-          <p>Support client suspendu pendant le transfert. Merci pour votre patience.</p>
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start"><p>Support habituel suspendu. Réponses selon disponibilité.</p><MaintenanceQuestions /></div>
           <p className="flex items-center gap-1.5 whitespace-nowrap"><span className={`h-1 w-1 rounded-full ${online ? "bg-emerald-500" : "bg-amber-500"}`} /> Suivi actualisé toutes les 30 s</p>
         </footer>
       </div>

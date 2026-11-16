@@ -101,10 +101,10 @@ export default function MaintenancePage() {
                       <li key={step.key} className="space-y-1.5 rounded-lg py-1.5">
                         <div className="flex items-start justify-between gap-2">
                           <p className={`min-w-0 text-[10px] leading-snug sm:text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</p>
-                          <span className={`inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums ${completed ? "text-emerald-600" : percentage > 0 ? "text-red-600" : "text-slate-400"}`}>{completed && <Check className="h-3 w-3" aria-hidden="true" />}{percentage}%</span>
+                          <span className={`inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{completed && <Check className="h-3 w-3" aria-hidden="true" />}{percentage}%</span>
                         </div>
-                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`h-1 bg-slate-100 ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-red-500"}`} />
-                        <p className={`text-[9px] leading-none ${completed ? "text-emerald-600" : percentage > 0 ? "text-red-600" : "text-slate-400"}`}>
+                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`h-1 bg-slate-100 ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
+                        <p className={`text-[9px] leading-none ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>
                           {completed ? "Terminé" : percentage > 0 ? "En cours" : "À venir"}
                         </p>
                       </li>

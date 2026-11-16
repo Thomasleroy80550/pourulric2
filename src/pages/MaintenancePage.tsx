@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowRight, Check, Database, Layers3, RefreshCw, Sparkle
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import MigrationUpdates from "@/components/MigrationUpdates";
+import MaintenanceAdminAccess from "@/components/MaintenanceAdminAccess";
 import { getMigrationProgress, migrationSteps } from "@/lib/migration-api";
 
 export default function MaintenancePage() {
@@ -113,6 +114,7 @@ export default function MaintenancePage() {
           <p className="flex items-center gap-1.5 whitespace-nowrap"><span className={`h-1 w-1 rounded-full ${online ? "bg-emerald-500" : "bg-amber-500"}`} /> Suivi actualisé toutes les 30 s</p>
         </footer>
       </div>
+      <MaintenanceAdminAccess />
     </main>
   );
 }

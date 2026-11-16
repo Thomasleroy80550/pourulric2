@@ -172,6 +172,7 @@ import LoginV4 from "./pages/v4/LoginV4";
 import PinPreview from "./pages/PinPreview";
 import Index from "./pages/Index";
 import MigrationBanner from "./components/MigrationBanner";
+import MaintenanceGate from "./components/MaintenanceGate";
 
 const queryClient = new QueryClient();
 
@@ -202,6 +203,7 @@ function App() {
             <Sonner />
             <PwaUpdatePrompt />
             <BrowserRouter>
+              <MaintenanceGate>
               <InvoiceGenerationProvider>
                 <SessionContextProvider>
                   <GlobalAppErrorBoundary>
@@ -383,6 +385,7 @@ function App() {
                   </GlobalAppErrorBoundary>
                 </SessionContextProvider>
               </InvoiceGenerationProvider>
+              </MaintenanceGate>
             </BrowserRouter>
           </TooltipProvider>
         </ThemeProvider>

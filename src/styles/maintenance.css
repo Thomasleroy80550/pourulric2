@@ -1,0 +1,29 @@
+@keyframes maintenance-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -7px; }
+}
+
+.maintenance-floating {
+  animation: maintenance-float 8s ease-in-out infinite;
+}
+
+.maintenance-floating-offset {
+  animation-delay: -4s;
+}
+
+@keyframes maintenance-active-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgb(249 115 22 / 0.025); }
+  50% { box-shadow: 0 0 0 2px rgb(249 115 22 / 0.12); }
+}
+
+.maintenance-active-step {
+  background-color: rgb(255 247 237 / 0.4);
+  animation: maintenance-active-glow 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maintenance-floating,
+  .maintenance-active-step {
+    animation: none;
+  }
+}

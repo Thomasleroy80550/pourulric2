@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import MigrationUpdates from "@/components/MigrationUpdates";
 import MaintenanceAdminAccess from "@/components/MaintenanceAdminAccess";
 import { getMigrationProgress, migrationSteps } from "@/lib/migration-api";
+import "@/styles/maintenance.css";
 
 export default function MaintenancePage() {
   const [online, setOnline] = useState(() => navigator.onLine);
@@ -64,9 +65,9 @@ export default function MaintenancePage() {
             <div className="absolute h-44 w-44 rounded-full border border-slate-200/60" />
             <div className="absolute h-32 w-32 rounded-full border border-slate-200/60" />
             <div className="absolute h-20 w-20 rounded-full bg-red-50 blur-xl" />
-            <div className="absolute left-3 top-7 flex h-16 w-16 -rotate-12 items-center justify-center rounded-2xl border border-white bg-white shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)]"><Database className="h-6 w-6 text-slate-400" /></div>
+            <div className="maintenance-floating absolute left-3 top-7 flex h-16 w-16 -rotate-12 items-center justify-center rounded-2xl border border-white bg-white shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)]"><Database className="h-6 w-6 text-slate-400" /></div>
             <ArrowRight className="relative h-5 w-5 text-slate-300" />
-            <div className="absolute right-4 bottom-6 flex h-20 w-20 rotate-12 items-center justify-center rounded-2xl border border-red-200/50 bg-gradient-to-br from-white to-red-50 shadow-[0_12px_32px_-8px_rgba(220,38,38,0.2)]"><Layers3 className="h-8 w-8 text-red-600" /></div>
+            <div className="maintenance-floating maintenance-floating-offset absolute right-4 bottom-6 flex h-20 w-20 rotate-12 items-center justify-center rounded-2xl border border-red-200/50 bg-gradient-to-br from-white to-red-50 shadow-[0_12px_32px_-8px_rgba(220,38,38,0.2)]"><Layers3 className="h-8 w-8 text-red-600" /></div>
             <span className="absolute right-9 top-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-medium text-slate-400">Une nouvelle expérience</span>
           </div>
         </div>
@@ -98,12 +99,12 @@ export default function MaintenancePage() {
                     const percentage = migration[step.key];
                     const completed = percentage === 100;
                     return (
-                      <li key={step.key} className="space-y-1.5 rounded-lg py-1.5">
+                      <li key={step.key} className={`space-y-1.5 rounded-lg py-1.5 ${percentage > 0 && !completed ? "maintenance-active-step" : ""}`}>
                         <div className="flex items-start justify-between gap-2">
                           <p className={`min-w-0 text-[10px] leading-snug sm:text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</p>
                           <span className={`inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{completed && <Check className="h-3 w-3" aria-hidden="true" />}{percentage}%</span>
                         </div>
-                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`h-1 bg-slate-100 ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
+                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`h-1 bg-slate-100 [&>div]:duration-700 [&>div]:ease-out motion-reduce:[&>div]:transition-none ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
                         <p className={`text-[9px] leading-none ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>
                           {completed ? "Terminé" : percentage > 0 ? "En cours" : "À venir"}
                         </p>

@@ -40,9 +40,8 @@ export default function MaintenancePage() {
       </div>
       <div className="relative mx-auto w-full max-w-5xl">
         <header className="flex items-center justify-between gap-3 border-b border-slate-200/70 pb-4 sm:pb-5">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-950 text-white shadow-sm"><Layers3 className="h-4 w-4" aria-hidden="true" /></span>
-            <p className="text-lg font-bold tracking-tight">Hello Keys<span className="text-red-600">.</span></p>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <img src="/logo.png" alt="Hello Keys" className="h-8 w-auto max-w-[140px] object-contain sm:h-10 sm:max-w-[180px]" />
             <span className="ml-2 hidden border-l border-slate-200 pl-3 text-xs text-slate-400 sm:inline">Journal de migration</span>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-50/80 px-2.5 py-1 text-[10px] font-medium text-amber-800 sm:text-xs">

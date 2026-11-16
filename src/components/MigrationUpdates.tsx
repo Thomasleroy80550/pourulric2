@@ -16,7 +16,7 @@ function Note({ note, compact = false }: { note: MigrationNote; compact?: boolea
 }
 
 export default function MigrationUpdates() {
-  const { data: notes, isPending, isError } = useQuery({ queryKey: ["migration-notes"], queryFn: getMigrationNotes, refetchInterval: 30000, refetchOnWindowFocus: true });
+  const { data: notes, isPending, isError } = useQuery({ queryKey: ["migration-notes"], queryFn: getMigrationNotes, refetchInterval: 30000, refetchOnWindowFocus: true, retry: false, networkMode: "always" });
 
   return (
     <section aria-labelledby="migration-updates-title" className="flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5">

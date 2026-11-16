@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { maintenanceClient } from "@/integrations/supabase/maintenance-client";
 
 export interface MigrationNote {
   id: string;
@@ -8,7 +9,7 @@ export interface MigrationNote {
 }
 
 export async function getMigrationNotes(): Promise<MigrationNote[]> {
-  const { data, error } = await supabase.from("migration_notes").select("*").order("created_at", { ascending: false }).order("id", { ascending: false });
+  const { data, error } = await maintenanceClient.from("migration_notes").select("*").order("created_at", { ascending: false }).order("id", { ascending: false }).abortSignal(AbortSignal.timeout(12000));
   if (error) throw new Error("Impossible de charger les notes de migration.");
   return data;
 }

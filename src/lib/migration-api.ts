@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { maintenanceClient } from "@/integrations/supabase/maintenance-client";
 
 export interface MigrationProgress {
   id: number;
@@ -30,7 +31,7 @@ export const migrationSteps = [
 ] as const;
 
 export async function getMigrationProgress(): Promise<MigrationProgress> {
-  const { data, error } = await supabase.from("migration_progress").select("*").eq("id", 1).single();
+  const { data, error } = await maintenanceClient.from("migration_progress").select("*").eq("id", 1).abortSignal(AbortSignal.timeout(12000)).single();
   if (error) throw new Error("Impossible de charger la progression de la migration.");
   return data;
 }

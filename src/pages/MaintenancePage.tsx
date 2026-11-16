@@ -15,6 +15,8 @@ export default function MaintenancePage() {
     queryFn: getMigrationProgress,
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
+    retry: false,
+    networkMode: "always",
   });
 
   useEffect(() => {

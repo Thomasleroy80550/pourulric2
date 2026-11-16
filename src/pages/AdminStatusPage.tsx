@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/AdminLayout";
+import AdminMigrationProgress from "@/components/AdminMigrationProgress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -448,6 +449,7 @@ const AdminStatusPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        <AdminMigrationProgress />
         <Card>
           <CardHeader>
             <CardTitle>Test emails Krossbooking</CardTitle>

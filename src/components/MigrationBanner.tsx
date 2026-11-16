@@ -47,7 +47,7 @@ export default function MigrationBanner() {
             <Wrench className="h-4 w-4" aria-hidden="true" />
             Maintenance en cours
           </h2>
-          <p className="text-sm text-red-100">Le transfert des données a commencé. Le statut du transfert et des services est affiché directement sur la page de maintenance.</p>
+          <p className="text-sm text-red-100">Le transfert des données a commencé. La progression et les étapes de la migration sont affichées directement sur la page de maintenance et mises à jour par notre équipe.</p>
         </section>
 
         <section className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">

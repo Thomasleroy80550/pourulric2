@@ -91,14 +91,16 @@ export default function MaintenancePage() {
                   </div>
                   <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-1.5 bg-slate-100 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-400 [&>div]:duration-700 motion-reduce:[&>div]:transition-none" />
                 </div>
-                <ul aria-label="Étapes de la migration" tabIndex={0} className="max-h-60 space-y-0.5 overflow-y-auto overscroll-contain rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200">
+                <ul aria-label="Étapes de la migration" className="grid grid-cols-2 gap-x-3 gap-y-1 sm:gap-x-5">
                   {migrationSteps.map((step, index) => {
                     const completed = migration[step.key];
                     return (
-                      <li key={step.key} className="flex items-center gap-3 rounded-lg py-2.5">
-                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[9px] font-medium ${completed ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-slate-200 text-slate-400"}`} aria-hidden="true">{completed ? <Check className="h-3.5 w-3.5" /> : String(index + 1).padStart(2, "0")}</span>
-                        <span className={`min-w-0 flex-1 text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</span>
-                        <span className={`shrink-0 text-[9px] ${completed ? "text-emerald-600" : "text-slate-400"}`}>{completed ? "Terminé" : "À venir"}</span>
+                      <li key={step.key} className="flex items-start gap-2 rounded-lg py-1.5">
+                        <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[8px] font-medium ${completed ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-slate-200 text-slate-400"}`} aria-hidden="true">{completed ? <Check className="h-3 w-3" /> : String(index + 1).padStart(2, "0")}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-[10px] leading-snug sm:text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</p>
+                          <p className={`mt-0.5 text-[9px] ${completed ? "text-emerald-600" : "text-slate-400"}`}>{completed ? "Terminé" : "À venir"}</p>
+                        </div>
                       </li>
                     );
                   })}

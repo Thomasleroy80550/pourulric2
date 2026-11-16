@@ -104,6 +104,9 @@ export default function MaintenancePage() {
                           <span className={`inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums ${completed ? "text-emerald-600" : percentage > 0 ? "text-red-600" : "text-slate-400"}`}>{completed && <Check className="h-3 w-3" aria-hidden="true" />}{percentage}%</span>
                         </div>
                         <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`h-1 bg-slate-100 ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-red-500"}`} />
+                        <p className={`text-[9px] leading-none ${completed ? "text-emerald-600" : percentage > 0 ? "text-red-600" : "text-slate-400"}`}>
+                          {completed ? "Terminé" : percentage > 0 ? "En cours" : "À venir"}
+                        </p>
                       </li>
                     );
                   })}

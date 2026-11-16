@@ -2,16 +2,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { maintenanceClient } from "@/integrations/supabase/maintenance-client";
 
 export const migrationSteps = [
-  { key: "backup_completed", label: "Sauvegarde des données effectuée" },
-  { key: "housing_transferred", label: "Logements transférés" },
-  { key: "owners_transferred", label: "Comptes propriétaires transférés" },
-  { key: "reservations_transferred", label: "Historique des réservations transféré" },
-  { key: "upcoming_reservations_verified", label: "Réservations à venir vérifiées" },
-  { key: "rates_availability_synced", label: "Tarifs et disponibilités synchronisés" },
-  { key: "ota_connected", label: "Logements connectés aux OTA" },
-  { key: "financial_documents_transferred", label: "Documents et données financières transférés" },
-  { key: "tests_completed", label: "Contrôles et tests terminés" },
-  { key: "platform_reopened", label: "Plateforme propriétaire réouverte" },
+  { key: "backup_completed", label: "Sauvegarde des données" },
+  { key: "housing_transferred", label: "Transfert des logements" },
+  { key: "owners_transferred", label: "Transfert des comptes propriétaires" },
+  { key: "reservations_transferred", label: "Transfert de l’historique des réservations" },
+  { key: "upcoming_reservations_verified", label: "Vérification des réservations à venir" },
+  { key: "rates_availability_synced", label: "Synchronisation des tarifs et disponibilités" },
+  { key: "ota_connected", label: "Connexion des logements aux OTA" },
+  { key: "financial_documents_transferred", label: "Transfert des documents et données financières" },
+  { key: "tests_completed", label: "Contrôles et tests" },
+  { key: "platform_reopened", label: "Réouverture de la plateforme propriétaire" },
 ] as const;
 
 export type MigrationStepKey = typeof migrationSteps[number]["key"];

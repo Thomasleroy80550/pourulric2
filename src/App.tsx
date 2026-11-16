@@ -195,7 +195,6 @@ function App() {
   return (
 
     <div className="notranslate" translate="no" data-hk-app-shell="true">
-      <MigrationBanner />
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="light" themes={["light", "noel", "halloween"]}>
           <TooltipProvider>

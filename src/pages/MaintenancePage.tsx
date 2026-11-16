@@ -33,7 +33,7 @@ export default function MaintenancePage() {
     };
   }, []);
 
-  const completedCount = migration ? migrationSteps.filter((step) => migration[step.key]).length : 0;
+  const completedCount = migration ? migrationSteps.filter((step) => migration[step.key] === 100).length : 0;
 
   return (
     <main className="relative flex min-h-dvh flex-col justify-center overflow-x-clip bg-[#fafafa] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))] text-slate-900 selection:bg-red-100 sm:pb-[max(2rem,env(safe-area-inset-bottom))] sm:pt-[max(2rem,env(safe-area-inset-top))]">
@@ -89,20 +89,21 @@ export default function MaintenancePage() {
                 <div className="mb-4 mt-3 space-y-2.5">
                   <div className="flex items-end justify-between gap-3">
                     <p className="text-[11px] text-slate-400">{completedCount} / {migrationSteps.length} étapes terminées</p>
-                    <p className="text-4xl font-semibold leading-none tabular-nums tracking-[-0.05em]">{migration.progress}<span className="ml-0.5 text-lg text-slate-400">%</span></p>
+                    <p className="text-4xl font-semibold leading-none tabular-nums tracking-[-0.05em]">{migration.progress.toLocaleString("fr-FR")}<span className="ml-0.5 text-lg text-slate-400">%</span></p>
                   </div>
                   <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-1.5 bg-slate-100 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-400 [&>div]:duration-700 motion-reduce:[&>div]:transition-none" />
                 </div>
                 <ul aria-label="Étapes de la migration" className="grid grid-cols-2 gap-x-3 gap-y-1 sm:gap-x-5">
-                  {migrationSteps.map((step, index) => {
-                    const completed = migration[step.key];
+                  {migrationSteps.map((step) => {
+                    const percentage = migration[step.key];
+                    const completed = percentage === 100;
                     return (
-                      <li key={step.key} className="flex items-start gap-2 rounded-lg py-1.5">
-                        <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[8px] font-medium ${completed ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-slate-200 text-slate-400"}`} aria-hidden="true">{completed ? <Check className="h-3 w-3" /> : String(index + 1).padStart(2, "0")}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-[10px] leading-snug sm:text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</p>
-                          <p className={`mt-0.5 text-[9px] ${completed ? "text-emerald-600" : "text-slate-400"}`}>{completed ? "Terminé" : "À venir"}</p>
+                      <li key={step.key} className="space-y-1.5 rounded-lg py-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`min-w-0 text-[10px] leading-snug sm:text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</p>
+                          <span className={`inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums ${completed ? "text-emerald-600" : percentage > 0 ? "text-red-600" : "text-slate-400"}`}>{completed && <Check className="h-3 w-3" aria-hidden="true" />}{percentage}%</span>
                         </div>
+                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`h-1 bg-slate-100 ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-red-500"}`} />
                       </li>
                     );
                   })}

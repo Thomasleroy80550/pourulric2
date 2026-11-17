@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Check, Database, Layers3, RefreshCw, Sparkles, WifiOff } from "lucide-react";
+import { AlertTriangle, Check, RefreshCw, Sparkles, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import MigrationUpdates from "@/components/MigrationUpdates";
 import MaintenanceAdminAccess from "@/components/MaintenanceAdminAccess";
 import MaintenanceQuestions from "@/components/MaintenanceQuestions";
+import MaintenanceCountdown from "@/components/MaintenanceCountdown";
 import MobileMaintenance from "@/components/MobileMaintenance";
 import { getMigrationProgress, migrationSteps } from "@/lib/migration-api";
 import "@/styles/maintenance.css";
@@ -64,19 +65,9 @@ export default function MaintenancePage() {
             <h1 className="text-[30px] font-semibold leading-[1.12] tracking-[-0.045em] sm:text-5xl">On prépare la suite.<br /><span className="text-slate-400">Vous allez l’adorer.</span></h1>
             <p className="mt-3 max-w-lg text-xs leading-relaxed text-slate-500 sm:mt-4 sm:text-sm">Nous transférons vos données vers notre nouveau logiciel hôtelier. Votre espace propriétaire revient bientôt, avec une nouvelle expérience.</p>
             <p className="mt-3 inline-flex items-center gap-2 text-[10px] font-medium text-slate-500 sm:text-xs"><span className="h-1 w-1 rounded-full bg-slate-400" /> Migration du 16 au 18 novembre 2026</p>
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900 sm:text-sm">
-              <p>La réouverture de vos annonces et de la plateforme propriétaire est prévue le <strong>18 novembre à 19 h 30 (heure de Paris)</strong>.</p>
-              <p className="mt-1">En cas de retard, vous serez informés.</p>
-            </div>
           </section>
-          <div aria-hidden="true" className="relative hidden h-44 w-64 shrink-0 items-center justify-center sm:flex">
-            <div className="absolute h-44 w-44 rounded-full border border-slate-200/60" />
-            <div className="absolute h-32 w-32 rounded-full border border-slate-200/60" />
-            <div className="absolute h-20 w-20 rounded-full bg-red-50 blur-xl" />
-            <div className="maintenance-floating absolute left-3 top-7 flex h-16 w-16 -rotate-12 items-center justify-center rounded-2xl border border-white bg-white shadow-[0_8px_30px_-8px_rgba(15,23,42,0.15)]"><Database className="h-6 w-6 text-slate-400" /></div>
-            <ArrowRight className="relative h-5 w-5 text-slate-300" />
-            <div className="maintenance-floating maintenance-floating-offset absolute right-4 bottom-6 flex h-20 w-20 rotate-12 items-center justify-center rounded-2xl border border-red-200/50 bg-gradient-to-br from-white to-red-50 shadow-[0_12px_32px_-8px_rgba(220,38,38,0.2)]"><Layers3 className="h-8 w-8 text-red-600" /></div>
-            <span className="absolute right-9 top-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-medium text-slate-400">Une nouvelle expérience</span>
+          <div className="w-[380px] shrink-0">
+            <MaintenanceCountdown reopened={migration?.platform_reopened === 100} />
           </div>
         </div>
 
@@ -102,20 +93,21 @@ export default function MaintenancePage() {
                   </div>
                   <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-1.5 bg-slate-100 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-400 [&>div]:duration-700 motion-reduce:[&>div]:transition-none" />
                 </div>
-                <ul aria-label="Étapes de la migration" className="grid grid-cols-2 gap-x-3 gap-y-1 sm:gap-x-5">
-                  {migrationSteps.map((step) => {
+                <ul aria-label="Étapes de la migration" className="grid auto-rows-fr grid-cols-2 gap-3">
+                  {migrationSteps.map((step, index) => {
                     const percentage = migration[step.key];
                     const completed = percentage === 100;
                     return (
-                      <li key={step.key} className={`space-y-1.5 rounded-lg py-1.5 ${percentage > 0 && !completed ? "maintenance-active-step" : ""}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <p className={`min-w-0 text-[10px] leading-snug sm:text-xs ${completed ? "text-slate-900" : "text-slate-500"}`}>{step.label}</p>
-                          <span className={`inline-flex shrink-0 items-center gap-1 text-[10px] font-semibold tabular-nums ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{completed && <Check className="h-3 w-3" aria-hidden="true" />}{percentage}%</span>
+                      <li key={step.key} className={`flex flex-col rounded-xl border p-3 ${completed ? "border-emerald-100 bg-emerald-50/30" : percentage > 0 ? "border-orange-200/70 bg-orange-50/40" : "border-slate-100 bg-slate-50/50"}`}>
+                        <div className="flex flex-1 items-start gap-2">
+                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-semibold tabular-nums ${completed ? "bg-emerald-100 text-emerald-700" : percentage > 0 ? "bg-orange-100 text-orange-700" : "bg-slate-200/60 text-slate-400"}`}>{completed ? <Check className="h-3 w-3" aria-hidden="true" /> : String(index + 1).padStart(2, "0")}</span>
+                          <p className="min-h-8 text-[11px] font-medium leading-4 text-slate-700">{step.label}</p>
                         </div>
-                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`h-1 bg-slate-100 [&>div]:duration-700 [&>div]:ease-out motion-reduce:[&>div]:transition-none ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
-                        <p className={`text-[9px] leading-none ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>
-                          {completed ? "Terminé" : percentage > 0 ? "En cours" : "À venir"}
-                        </p>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <span className={`text-[9px] font-medium ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{completed ? "Terminé" : percentage > 0 ? "En cours" : "À venir"}</span>
+                          <span className={`text-xs font-semibold tabular-nums ${completed ? "text-emerald-700" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{percentage}%</span>
+                        </div>
+                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`mt-2 h-1.5 bg-slate-200/60 [&>div]:duration-700 [&>div]:ease-out motion-reduce:[&>div]:transition-none ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
                       </li>
                     );
                   })}

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
 
 const reopeningTime = new Date("2026-11-18T19:30:00+01:00").getTime();
+
+const labels = ["jours", "heures", "min", "sec"] as const;
+const shorts = ["j", "h", "min", "s"] as const;
 
 export default function MaintenanceCountdown({ compact = false, reopened = false }: { compact?: boolean; reopened?: boolean }) {
   const [remaining, setRemaining] = useState(() => Math.max(0, Math.ceil((reopeningTime - Date.now()) / 1000)));
@@ -12,32 +14,52 @@ export default function MaintenanceCountdown({ compact = false, reopened = false
     return () => window.clearInterval(interval);
   }, []);
 
-  const units = [
-    { label: "Jours", value: Math.floor(remaining / 86400) },
-    { label: "Heures", value: Math.floor(remaining / 3600) % 24 },
-    { label: "Minutes", value: Math.floor(remaining / 60) % 60 },
-    { label: "Secondes", value: remaining % 60 },
+  const values = [
+    Math.floor(remaining / 86400),
+    Math.floor(remaining / 3600) % 24,
+    Math.floor(remaining / 60) % 60,
+    remaining % 60,
   ];
 
-  return (
-    <section aria-label="Réouverture des annonces et de la plateforme propriétaire" className={compact ? "maintenance-countdown-compact mt-3 border-t border-white/10 pt-2.5" : "relative w-full overflow-hidden rounded-[28px] border border-white/10 bg-slate-950 p-7 text-white shadow-xl shadow-rose-950/15"}>
-      {!compact && <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-rose-500/25 blur-3xl" />}
-      <div className="relative">
-        {!compact && <p className="mb-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-rose-300"><Sparkles className="h-3.5 w-3.5" /> Le compte à rebours est lancé</p>}
-        <p className={compact ? "text-[10px] font-medium text-slate-300" : "text-sm font-medium text-slate-300"}>Réouverture des annonces et de l’espace propriétaire</p>
-        <p className={compact ? "mt-0.5 text-[11px] font-semibold text-white" : "mt-1 text-xl font-semibold tracking-tight"}>18 novembre · 19 h 30 <span className="text-[9px] font-normal text-slate-400">(Paris)</span></p>
-        {remaining > 0 && !reopened ? (
-          <div className={`grid grid-cols-4 ${compact ? "mt-2 gap-1.5" : "mt-6 gap-2"}`}>
-            {units.map(({ label, value }) => (
-              <div key={label} className={`flex flex-col items-center rounded-xl border border-white/10 bg-white/[0.06] ${compact ? "py-1" : "py-3"}`}>
-                <span className={`font-semibold tabular-nums tracking-tight ${compact ? "text-xl leading-none" : "text-4xl"}`}>{String(value).padStart(2, "0")}</span>
-                <span className={`font-medium uppercase tracking-wider text-slate-400 ${compact ? "mt-1 text-[7px]" : "mt-1.5 text-[8px]"}`}>{label}</span>
-              </div>
+  const counting = remaining > 0 && !reopened;
+
+  if (compact) {
+    return (
+      <section aria-label="Réouverture des annonces et de la plateforme propriétaire" className="shrink-0 pt-2.5">
+        <p className="text-[10px] text-slate-500">Réouverture prévue le <span className="font-medium text-slate-700">18 novembre · 19 h 30</span> <span className="text-slate-400">(Paris)</span></p>
+        {counting ? (
+          <p className="mt-1 flex items-baseline gap-2.5 text-lg font-medium tabular-nums tracking-tight text-slate-900">
+            {values.map((value, i) => (
+              <span key={labels[i]}>{String(value).padStart(2, "0")}<span className="ml-0.5 text-[10px] font-normal tracking-normal text-slate-400">{shorts[i]}</span></span>
             ))}
-          </div>
-        ) : <p role="status" className={`font-medium text-rose-200 ${compact ? "mt-2 text-[10px]" : "mt-6 text-sm"}`}>{reopened ? "Réouverture effectuée ✨" : "L’horaire prévu est atteint. Réouverture en cours de finalisation."}</p>}
-        <p className={compact ? "mt-1.5 text-[8px] text-slate-400" : "mt-5 text-xs leading-relaxed text-slate-400"}>Horaire prévisionnel · En cas de retard, vous serez informés.</p>
-      </div>
+          </p>
+        ) : (
+          <p role="status" className="mt-1 text-[10px] font-medium text-slate-600">{reopened ? "Réouverture effectuée" : "Horaire atteint · Finalisation en cours"}</p>
+        )}
+        <p className="mt-0.5 text-[8px] text-slate-400">En cas de retard, vous serez informés.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-label="Réouverture des annonces et de la plateforme propriétaire" className="mt-10 flex flex-col items-center text-center">
+      <p className="text-xs text-slate-500">Réouverture des annonces et de l’espace propriétaire · <span className="font-medium text-slate-700">18 novembre à 19 h 30</span> (Paris)</p>
+      {counting ? (
+        <div className="mt-5 flex items-start">
+          {values.map((value, i) => (
+            <div key={labels[i]} className="flex items-start">
+              {i > 0 && <span aria-hidden="true" className="mx-3 text-3xl font-light leading-none text-rose-300">:</span>}
+              <div className="flex w-16 flex-col items-center">
+                <span className="text-4xl font-semibold tabular-nums leading-none tracking-tight">{String(value).padStart(2, "0")}</span>
+                <span className="mt-2 text-[9px] font-medium uppercase tracking-[0.15em] text-slate-400">{labels[i]}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p role="status" className="mt-5 text-sm font-medium text-slate-700">{reopened ? "Réouverture effectuée ✨" : "Horaire prévu atteint · Finalisation en cours"}</p>
+      )}
+      <p className="mt-4 text-[10px] text-slate-400">Horaire prévisionnel · En cas de retard, vous serez informés.</p>
     </section>
   );
 }

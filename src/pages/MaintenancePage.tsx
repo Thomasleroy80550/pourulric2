@@ -65,10 +65,8 @@ export default function MaintenancePage() {
             <h1 className="text-[30px] font-semibold leading-[1.12] tracking-[-0.045em] sm:text-5xl">On prépare la suite.<br /><span className="text-slate-400">Vous allez l’adorer.</span></h1>
             <p className="mt-3 max-w-lg text-xs leading-relaxed text-slate-500 sm:mt-4 sm:text-sm">Nous transférons vos données vers notre nouveau logiciel hôtelier. Votre espace propriétaire revient bientôt, avec une nouvelle expérience.</p>
             <p className="mt-3 inline-flex items-center gap-2 text-[10px] font-medium text-slate-500 sm:text-xs"><span className="h-1 w-1 rounded-full bg-slate-400" /> Migration du 16 au 18 novembre 2026</p>
-          </section>
-          <div className="w-[380px] shrink-0">
             <MaintenanceCountdown reopened={migration?.platform_reopened === 100} />
-          </div>
+          </section>
         </div>
 
         {!online && <p role="status" className="mb-3 flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 p-2 text-xs text-amber-800"><WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />Hors connexion. Le suivi reprendra à votre retour en ligne.</p>}
@@ -76,8 +74,8 @@ export default function MaintenancePage() {
           <Button variant="ghost" aria-pressed={panel === "progress"} onClick={() => setPanel("progress")} className={`h-8 rounded-lg text-xs ${panel === "progress" ? "bg-white text-slate-900 shadow-sm hover:bg-white" : "text-slate-500"}`}>Progression</Button>
           <Button variant="ghost" aria-pressed={panel === "notes"} onClick={() => setPanel("notes")} className={`h-8 rounded-lg text-xs ${panel === "notes" ? "bg-white text-slate-900 shadow-sm hover:bg-white" : "text-slate-500"}`}>Notes de l’équipe</Button>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <section aria-labelledby="migration-progress-title" className={`${panel === "progress" ? "block" : "hidden"} rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_4px_24px_-12px_rgba(15,23,42,0.12)] sm:p-5 lg:block`}>
+        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+          <section aria-labelledby="migration-progress-title" className={`${panel === "progress" ? "block" : "hidden"} border-t border-slate-200/80 pt-4 lg:block`}>
             <div className="flex items-center justify-between gap-3">
               <h2 id="migration-progress-title" className="text-sm font-semibold tracking-tight">Avancement du transfert</h2>
               <Button variant="ghost" size="icon" onClick={() => void refetch()} disabled={isFetching || !online} aria-label="Actualiser la progression" className="h-7 w-7 rounded-lg text-slate-400 hover:bg-slate-50"><RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" /></Button>
@@ -93,21 +91,18 @@ export default function MaintenancePage() {
                   </div>
                   <Progress value={migration.progress} aria-label="Progression globale de la migration" aria-valuenow={migration.progress} className="h-1.5 bg-slate-100 [&>div]:bg-gradient-to-r [&>div]:from-red-600 [&>div]:to-rose-400 [&>div]:duration-700 motion-reduce:[&>div]:transition-none" />
                 </div>
-                <ul aria-label="Étapes de la migration" className="grid auto-rows-fr grid-cols-2 gap-3">
-                  {migrationSteps.map((step, index) => {
+                <ul aria-label="Étapes de la migration" className="grid auto-rows-fr grid-cols-2 gap-x-6 gap-y-4">
+                  {migrationSteps.map((step) => {
                     const percentage = migration[step.key];
                     const completed = percentage === 100;
                     return (
-                      <li key={step.key} className={`flex flex-col rounded-xl border p-3 ${completed ? "border-emerald-100 bg-emerald-50/30" : percentage > 0 ? "border-orange-200/70 bg-orange-50/40" : "border-slate-100 bg-slate-50/50"}`}>
-                        <div className="flex flex-1 items-start gap-2">
-                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[9px] font-semibold tabular-nums ${completed ? "bg-emerald-100 text-emerald-700" : percentage > 0 ? "bg-orange-100 text-orange-700" : "bg-slate-200/60 text-slate-400"}`}>{completed ? <Check className="h-3 w-3" aria-hidden="true" /> : String(index + 1).padStart(2, "0")}</span>
-                          <p className="min-h-8 text-[11px] font-medium leading-4 text-slate-700">{step.label}</p>
+                      <li key={step.key} className="flex flex-col">
+                        <p className="min-h-8 text-[11px] leading-4 text-slate-600">{step.label}</p>
+                        <div className="mt-auto flex items-center justify-between gap-2 pt-1">
+                          <span className={`text-[9px] ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{completed ? "Terminé" : percentage > 0 ? "En cours" : "À venir"}</span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-medium tabular-nums ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{completed && <Check className="h-2.5 w-2.5" aria-hidden="true" />}{percentage}%</span>
                         </div>
-                        <div className="mt-3 flex items-center justify-between gap-2">
-                          <span className={`text-[9px] font-medium ${completed ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{completed ? "Terminé" : percentage > 0 ? "En cours" : "À venir"}</span>
-                          <span className={`text-xs font-semibold tabular-nums ${completed ? "text-emerald-700" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{percentage}%</span>
-                        </div>
-                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`mt-2 h-1.5 bg-slate-200/60 [&>div]:duration-700 [&>div]:ease-out motion-reduce:[&>div]:transition-none ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
+                        <Progress value={percentage} aria-label={`Progression : ${step.label}`} aria-valuenow={percentage} className={`mt-1.5 h-[3px] bg-slate-200/60 [&>div]:duration-700 [&>div]:ease-out motion-reduce:[&>div]:transition-none ${completed ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
                       </li>
                     );
                   })}

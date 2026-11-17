@@ -37,20 +37,21 @@ export default function MobileMaintenance({ migration, online, pending, error, f
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col gap-3 px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-3">
-        <section className="maintenance-mobile-summary shrink-0 border-b border-slate-200/70 pb-3 pt-1">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="maintenance-mobile-eyebrow text-[9px] font-medium uppercase tracking-[0.16em] text-slate-400">Votre nouvelle plateforme</p>
-              <h1 className="mt-1.5 text-xl font-semibold leading-tight tracking-tight">On prépare la suite.</h1>
-              <p className="maintenance-mobile-detail mt-2 text-[10px] text-slate-400">{migration ? `${completed} / ${migrationSteps.length} étapes terminées` : "Suivi de la migration"}</p>
-            </div>
-            <div className="maintenance-mobile-ring relative h-14 w-14 shrink-0">
-              <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90" role="progressbar" aria-label="Progression globale de la migration" aria-valuemin={0} aria-valuemax={100} aria-valuenow={migration?.progress}>
-                <circle cx="40" cy="40" r="34" fill="none" stroke="#e2e8f0" strokeWidth="3" />
-                {migration && <circle cx="40" cy="40" r="34" fill="none" stroke="#f43f5e" strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - migration.progress / 100)} className="transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none" />}
-              </svg>
-              <p className="absolute inset-0 flex items-center justify-center text-sm font-medium tabular-nums tracking-tight">{migration ? `${migration.progress.toLocaleString("fr-FR")}%` : "—"}</p>
-            </div>
+        <section className="maintenance-mobile-summary relative shrink-0 overflow-hidden rounded-3xl bg-slate-950 p-4 text-white shadow-lg shadow-slate-950/10">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-12 h-40 w-40 rounded-full bg-rose-500/25 blur-2xl" />
+          <div className="relative flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="maintenance-mobile-eyebrow text-[9px] font-medium uppercase tracking-[0.16em] text-slate-400">Votre nouvelle plateforme</p>
+            <h1 className="mt-1.5 text-xl font-semibold leading-tight tracking-tight">On prépare la suite.</h1>
+            <p className="maintenance-mobile-detail mt-2 flex items-center gap-1.5 text-[10px] text-slate-300"><span className="h-1 w-1 rounded-full bg-emerald-400" />{migration ? `${completed} / ${migrationSteps.length} étapes terminées` : "Suivi de la migration"}</p>
+          </div>
+          <div className="maintenance-mobile-ring relative h-16 w-16 shrink-0">
+            <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90" role="progressbar" aria-label="Progression globale de la migration" aria-valuemin={0} aria-valuemax={100} aria-valuenow={migration?.progress}>
+              <circle cx="40" cy="40" r="34" fill="none" stroke="#334155" strokeWidth="4" />
+              {migration && <circle cx="40" cy="40" r="34" fill="none" stroke="#fb7185" strokeWidth="4" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - migration.progress / 100)} className="transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none" />}
+            </svg>
+            <p className="absolute inset-0 flex items-center justify-center text-lg font-semibold tabular-nums tracking-tight">{migration ? `${migration.progress.toLocaleString("fr-FR")}%` : "—"}</p>
+          </div>
           </div>
           <MaintenanceCountdown compact reopened={migration?.platform_reopened === 100} />
         </section>
@@ -67,11 +68,11 @@ export default function MobileMaintenance({ migration, online, pending, error, f
                   const done = percentage === 100;
                   const status = done ? "Terminé" : percentage > 0 ? "En cours" : "À venir";
                   return (
-                    <li key={step.key} title={step.label} aria-label={`${step.label} : ${percentage} %, ${status}`} className="maintenance-mobile-step flex min-h-0 flex-col justify-center py-1">
-                      <p className="line-clamp-2 min-h-[25px] shrink-0 text-[10px] leading-tight text-slate-600">{step.label}</p>
-                      <div className="maintenance-mobile-step-meter pt-1">
-                        <div className="flex items-center justify-between gap-1"><span className={`text-[8px] ${done ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{status}</span><span className={`inline-flex items-center gap-0.5 text-[10px] font-medium tabular-nums ${done ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-500"}`}>{done && <Check className="h-2.5 w-2.5" aria-hidden="true" />}{percentage}%</span></div>
-                        <Progress value={percentage} aria-label={step.label} aria-valuenow={percentage} className={`mt-1 h-[3px] shrink-0 bg-slate-200/60 [&>div]:duration-700 motion-reduce:[&>div]:transition-none ${done ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
+                    <li key={step.key} title={step.label} aria-label={`${step.label} : ${percentage} %, ${status}`} className={`maintenance-mobile-step flex min-h-0 flex-col rounded-xl border p-2.5 ${percentage > 0 && !done ? "border-orange-200/70 bg-orange-50/50" : done ? "border-emerald-100 bg-emerald-50/40" : "border-slate-200/70 bg-white"}`}>
+                      <p className="line-clamp-2 shrink-0 text-[10px] font-medium leading-tight text-slate-700">{step.label}</p>
+                      <div className="maintenance-mobile-step-meter mt-auto pt-1">
+                        <div className="flex items-center justify-between gap-1"><span className={`text-[8px] font-medium ${done ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-400"}`}>{status}</span><span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold tabular-nums ${done ? "text-emerald-600" : percentage > 0 ? "text-orange-600" : "text-slate-500"}`}>{done && <Check className="h-2.5 w-2.5" aria-hidden="true" />}{percentage}%</span></div>
+                        <Progress value={percentage} aria-label={step.label} aria-valuenow={percentage} className={`mt-1 h-1 shrink-0 bg-slate-200/60 [&>div]:duration-700 motion-reduce:[&>div]:transition-none ${done ? "[&>div]:bg-emerald-500" : "[&>div]:bg-orange-500"}`} />
                       </div>
                     </li>
                   );

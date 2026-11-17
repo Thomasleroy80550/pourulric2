@@ -42,6 +42,7 @@ export default function MobileMaintenance({ migration, online, pending, error, f
             <p className="maintenance-mobile-eyebrow text-[9px] font-medium uppercase tracking-[0.16em] text-slate-400">Votre nouvelle plateforme</p>
             <h1 className="mt-1.5 text-xl font-semibold leading-tight tracking-tight">On prépare la suite.</h1>
             <p className="mt-1 text-[10px] text-slate-400">Migration du 16 au 18 novembre</p>
+            <p className="mt-2 text-[10px] leading-snug text-amber-200">Réouverture de vos annonces et de la plateforme propriétaire prévue le <strong>18 novembre à 19 h 30 (Paris)</strong>. En cas de retard, vous serez informés.</p>
             <p className="maintenance-mobile-detail mt-3 flex items-center gap-1.5 text-[10px] text-slate-300"><span className="h-1 w-1 rounded-full bg-emerald-400" />{migration ? `${completed} / ${migrationSteps.length} étapes terminées` : "Suivi de la migration"}</p>
           </div>
           <div className="maintenance-mobile-ring relative h-20 w-20 shrink-0">

@@ -64,6 +64,10 @@ export default function MaintenancePage() {
             <h1 className="text-[30px] font-semibold leading-[1.12] tracking-[-0.045em] sm:text-5xl">On prépare la suite.<br /><span className="text-slate-400">Vous allez l’adorer.</span></h1>
             <p className="mt-3 max-w-lg text-xs leading-relaxed text-slate-500 sm:mt-4 sm:text-sm">Nous transférons vos données vers notre nouveau logiciel hôtelier. Votre espace propriétaire revient bientôt, avec une nouvelle expérience.</p>
             <p className="mt-3 inline-flex items-center gap-2 text-[10px] font-medium text-slate-500 sm:text-xs"><span className="h-1 w-1 rounded-full bg-slate-400" /> Migration du 16 au 18 novembre 2026</p>
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-900 sm:text-sm">
+              <p>La réouverture de vos annonces et de la plateforme propriétaire est prévue le <strong>18 novembre à 19 h 30 (heure de Paris)</strong>.</p>
+              <p className="mt-1">En cas de retard, vous serez informés.</p>
+            </div>
           </section>
           <div aria-hidden="true" className="relative hidden h-44 w-64 shrink-0 items-center justify-center sm:flex">
             <div className="absolute h-44 w-44 rounded-full border border-slate-200/60" />

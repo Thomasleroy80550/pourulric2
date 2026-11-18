@@ -12,6 +12,7 @@
 @media (max-width: 1023px) and (max-height: 600px) {
   .maintenance-mobile-ring { width: 36px; height: 36px; }
   .maintenance-mobile-ring p { font-size: 10px; }
+  .maintenance-mobile-delay p:last-child { display: none; }
   .maintenance-mobile-nav { height: 40px; gap: 2px; }
 }
 

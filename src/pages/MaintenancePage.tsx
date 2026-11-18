@@ -65,6 +65,11 @@ export default function MaintenancePage() {
           <p className="mt-3 text-xs font-medium text-slate-400">Migration du 16 au 19 novembre 2026</p>
         </section>
 
+        <section aria-label="Report de la réouverture" className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4">
+          <p className="flex items-center justify-center gap-2 text-sm font-semibold text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> Réouverture décalée de 24 h — incident chez notre partenaire Abritel</p>
+          <p className="mt-2 text-center text-xs leading-relaxed text-amber-900/80">Chaque équipe technique suit son propre calendrier de déploiement : <strong>le nôtre a été tenu et nos travaux étaient terminés dans les temps</strong>. La plateforme Abritel a accusé environ 6 h de retard dans le traitement de ses flux de synchronisation (API de distribution / channel manager). Ce retard, indépendant de notre volonté, bloque le déploiement et le mapping de vos logements sur ce canal — sans sa validation, nous ne pouvons pas rouvrir en toute sécurité.</p>
+        </section>
+
         <MaintenanceCountdown reopened={migration?.platform_reopened === 100} />
 
         <div aria-hidden="true" className="my-12 h-px w-full bg-slate-200/80" />

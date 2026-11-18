@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChartNoAxesCombined, MessageSquare, NotebookText, RefreshCw, WifiOff } from "lucide-react";
+import { AlertTriangle, Check, ChartNoAxesCombined, MessageSquare, NotebookText, RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import MigrationUpdates from "@/components/MigrationUpdates";
@@ -50,6 +50,11 @@ export default function MobileMaintenance({ migration, online, pending, error, f
             </svg>
             <p className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums tracking-tight">{migration ? `${migration.progress.toLocaleString("fr-FR")}%` : "—"}</p>
           </div>
+        </section>
+
+        <section aria-label="Report de la réouverture" className="maintenance-mobile-delay mt-2.5 shrink-0 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900"><AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" /> Réouverture décalée de 24 h — incident Abritel</p>
+          <p className="mt-0.5 text-[8px] leading-snug text-amber-800/90">Nos travaux étaient terminés dans les temps ; le partenaire Abritel a accusé ~6 h de retard sur ses flux de synchronisation, ce qui bloque le déploiement de vos logements.</p>
         </section>
 
         <MaintenanceCountdown compact reopened={migration?.platform_reopened === 100} />

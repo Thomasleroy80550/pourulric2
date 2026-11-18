@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import ChangePasswordDialog from '@/components/admin/ChangePasswordDialog';
 import DownloadUserStatementsButton from '@/components/admin/DownloadUserStatementsButton';
 import EstimationFromReference from '@/components/admin/EstimationFromReference';
+import ChannelPropertyAssignments from '@/components/admin/ChannelPropertyAssignments';
 
 const optionalPositiveNumberField = z.preprocess(
   (value) => value === '' || value === null || value === undefined ? null : value,
@@ -832,6 +833,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ isOpen, onOpenChange, u
                   </Card>
                 </TabsContent>
                 <TabsContent value="rooms" className="mt-4">
+                  <ChannelPropertyAssignments key={user.id} clientProfileId={user.id} />
                   <Card>
                     <CardHeader><CardTitle>Chambres Assignées</CardTitle></CardHeader>
                     <CardContent className="space-y-6">

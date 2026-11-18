@@ -1,8 +1,10 @@
 import HalloweenPrank from "@/components/HalloweenPrank";
+import OwnerChannelProperties from "@/components/OwnerChannelProperties";
 
 export default function Index() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#10091e] bg-[radial-gradient(ellipse_at_top,_#392047,_transparent_65%)] px-6 py-16 text-center text-white">
+      <div className="mb-8 w-full max-w-2xl text-foreground"><OwnerChannelProperties /></div>
       <span className="mb-8 text-7xl" aria-hidden="true">🎃</span>
       <p className="mb-4 text-xs uppercase tracking-[0.4em] text-orange-300">Le 31 octobre, tout peut arriver</p>
       <h1 className="max-w-2xl text-5xl font-black leading-tight sm:text-7xl">Une surprise<br /><span className="text-orange-400">mortellement drôle.</span></h1>

@@ -53,7 +53,7 @@ export default function MigrationBanner() {
         <section className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">
           <h2 className="flex items-center gap-2 font-bold">
             <CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />
-            Migration du 16 au 18 novembre
+            Migration du 16 au 19 novembre
           </h2>
           <p>Nos équipes seront principalement mobilisées pour le transfert de toutes les données vers notre nouveau logiciel.</p>
           <ul className="list-disc space-y-1.5 pl-5">

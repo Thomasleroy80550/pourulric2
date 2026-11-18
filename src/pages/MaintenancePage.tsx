@@ -62,7 +62,7 @@ export default function MaintenancePage() {
           <p className="flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-red-600"><Sparkles className="h-3 w-3" aria-hidden="true" /> La prochaine étape de Hello Keys</p>
           <h1 className="mt-3 text-5xl font-semibold leading-[1.1] tracking-[-0.045em]">On prépare la suite.<br /><span className="text-slate-400">Vous allez l’adorer.</span></h1>
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-500">Nous transférons vos données vers notre nouveau logiciel hôtelier. Votre espace propriétaire revient bientôt, avec une nouvelle expérience.</p>
-          <p className="mt-3 text-xs font-medium text-slate-400">Migration du 16 au 18 novembre 2026</p>
+          <p className="mt-3 text-xs font-medium text-slate-400">Migration du 16 au 19 novembre 2026</p>
         </section>
 
         <MaintenanceCountdown reopened={migration?.platform_reopened === 100} />

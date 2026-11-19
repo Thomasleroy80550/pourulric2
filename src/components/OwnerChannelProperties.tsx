@@ -45,11 +45,11 @@ export default function OwnerChannelProperties() {
   return <Card>
     <CardHeader>
       <CardTitle>Mes logements — nouveau channel</CardTitle>
-      <CardDescription>Seuls les logements attribués à votre profil sont affichés. Les réservations du nouveau channel sont consultables séparément ; Krossbooking reste actif.</CardDescription>
+      <CardDescription>Les réservations des logements attribués apparaissent automatiquement dans votre planning et votre liste de réservations.</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <Button asChild variant="secondary"><Link to="/channel-reservations">Réservations du nouveau channel</Link></Button>
+      <Button asChild variant="secondary"><Link to="/bookings">Mes réservations</Link></Button>
       <Button type="button" variant="outline" disabled={busy || !!retryAt} onClick={() => load(true)}>{busy ? "Chargement…" : loaded ? "Actualiser mes logements" : "Afficher mes logements"}</Button>
       <div className="grid gap-3 sm:grid-cols-2">
         {properties.map(property => <div key={`${property.id}:${property.agency_id}:${property.environment}`} className="rounded-lg border p-4 text-left">

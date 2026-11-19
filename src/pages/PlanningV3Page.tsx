@@ -15,12 +15,17 @@ import { useSession } from "@/components/SessionContextProvider";
 import { getUserRooms, UserRoom } from "@/lib/user-room-api";
 import { fetchKrossbookingReservations, KrossbookingReservation } from "@/lib/krossbooking";
 import BookingPlanningGridV2 from "@/components/BookingPlanningGridV2";
+import { useOwnerReservationFeed } from "@/hooks/use-owner-reservation-feed";
 
 const PlanningV3Page: React.FC = () => {
   const { profile } = useSession();
-  const [loading, setLoading] = useState(true);
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
-  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [loadingLegacy, setLoading] = useState(true);
+  const [legacyRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [legacyReservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const channelFeed = useOwnerReservationFeed(legacyRooms, legacyReservations);
+  const userRooms = channelFeed.rooms;
+  const reservations = channelFeed.reservations;
+  const loading = loadingLegacy || channelFeed.isLoading;
 
   useEffect(() => {
     if (profile?.is_banned || profile?.is_payment_suspended) {

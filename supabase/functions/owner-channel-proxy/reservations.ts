@@ -127,10 +127,25 @@ export async function handleReservations(
     return { reservations: data, next_cursor: data.length === 100 ? data[99].reservation_id : null, import: scope };
   }
   if (body.action === "reservation_sync_start") {
+    if (body.automatic === true) {
+      const { data: recent, error } = await db.from("channel_reservation_scopes").select("imported_at")
+        .eq("property_id", link.property_id).eq("agency_id", link.agency_id).eq("environment", link.environment)
+        .eq("scope_key", dates.key).maybeSingle();
+      if (error) throw error;
+      if (recent && Date.now() - Date.parse(recent.imported_at) < 5 * 60 * 1000) {
+        return { job_id: "", status: "completed", pages: 0, reservation_count: 0 };
+      }
+    }
     const detail = await propertyDetail({ property_id: link.property_id });
     if (detail.agency_id !== link.agency_id || detail.environment !== link.environment ||
         !detail.properties.some(property => property.id.toLowerCase() === link.property_id)) {
       throw new ReservationRequestError(403, "Le logement ou le périmètre de la clé ne correspond plus à l’attribution.");
+    }
+    const property = detail.properties.find(property => property.id.toLowerCase() === link.property_id) as Record<string, unknown>;
+    const propertyName = [property.name, property.title, property.property_name].find(value => typeof value === "string" && value.trim());
+    if (propertyName && propertyName !== link.property_name) {
+      const { error } = await db.from("channel_property_assignments").update({ property_name: propertyName }).eq("id", link.id);
+      if (error) throw error;
     }
     if (body.restart === true) {
       const { error } = await db.from("channel_reservation_sync_jobs").delete().eq("assignment_id", link.id)

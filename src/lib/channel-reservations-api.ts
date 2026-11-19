@@ -3,6 +3,7 @@ import { ChannelApiError, ChannelAssignment } from "./owner-channel-api";
 
 export interface ReservationSource extends ChannelAssignment {
   profiles: { first_name: string | null; last_name: string | null } | null;
+  property_name?: string | null;
 }
 export interface ImportedChannelReservation {
   reservation_id: string;
@@ -41,6 +42,6 @@ async function request<T>(body: Record<string, unknown>): Promise<T> {
 export const getReservationSources = (cursor: string | null = null) => request<{ sources: ReservationSource[]; next_cursor: string | null }>({ action: "reservation_sources", cursor });
 export const getImportedChannelReservations = (assignmentId: string, from: string, to: string, includeInactive: boolean, cursor: string | null = null) =>
   request<ReservationCachePage>({ action: "reservation_cache", assignment_id: assignmentId, from, to, include_inactive: includeInactive, cursor });
-export const startChannelReservationSync = (assignmentId: string, from: string, to: string, restart = false) =>
-  request<ReservationSyncProgress>({ action: "reservation_sync_start", assignment_id: assignmentId, from, to, restart });
+export const startChannelReservationSync = (assignmentId: string, from: string, to: string, restart = false, automatic = false) =>
+  request<ReservationSyncProgress>({ action: "reservation_sync_start", assignment_id: assignmentId, from, to, restart, automatic });
 export const advanceChannelReservationSync = (jobId: string) => request<ReservationSyncProgress>({ action: "reservation_sync_page", job_id: jobId });

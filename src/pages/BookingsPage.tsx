@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { fetchKrossbookingReservations } from '@/lib/krossbooking';
+import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
+import { useOwnerReservationFeed } from '@/hooks/use-owner-reservation-feed';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag, MessageSquare } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
@@ -31,36 +31,19 @@ import BannedUserMessage from "@/components/BannedUserMessage";
 import SuspendedAccountMessage from "@/components/SuspendedAccountMessage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface Booking {
-  id: string;
-  guest_name: string;
-  property_name: string;
-  check_in_date: string;
-  check_out_date: string;
-  status: string;
-  amount: string;
-  tourist_tax_amount?: number;
-  cleaning_fee_amount?: number;
-  cod_channel?: string;
-  email?: string;
-  phone?: string;
-  // Commissions OTA
-  ota_commissions_collected?: number;
-  ota_commissions_deducted?: number;
-  // V2 fields (optionnels) pour compatibilité avec BookingPlanningGridV2
-  krossbooking_room_id?: string;
-  channel_identifier?: string;
-  property_id?: number;
-  id_room_type?: string;
-}
+type Booking = KrossbookingReservation;
 
 const BookingsPage: React.FC = () => {
   const { profile } = useSession();
-  const [allBookings, setAllBookings] = useState<Booking[]>([]);
+  const [legacyBookings, setAllBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingLegacy, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [legacyRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const channelFeed = useOwnerReservationFeed(legacyRooms, legacyBookings);
+  const userRooms = channelFeed.rooms;
+  const allBookings = useMemo(() => channelFeed.reservations.filter(booking => parseISO(booking.check_in_date).getFullYear() === new Date().getFullYear()), [channelFeed.reservations]);
+  const loading = loadingLegacy || channelFeed.isLoading;
   const isMobile = useIsMobile();
 
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -252,7 +235,6 @@ const BookingsPage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
-        <Button asChild variant="outline" className="mb-4"><Link to="/channel-reservations">Réservations du nouveau channel</Link></Button>
         
         {/* Nouveaux onglets pour basculer entre V1 (Liste) et V2 (Planning) */}
         <Tabs defaultValue="list" className="space-y-4">
@@ -450,7 +432,7 @@ const BookingsPage: React.FC = () => {
                                       <Flag className="h-4 w-4" />
                                       <span className="ml-2 hidden md:inline-block">Signaler</span>
                                     </Button>
-                                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
+                                    <Button variant="outline" size="sm" disabled={booking.reservation_source === 'owner_channel'} onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
                                       <MessageSquare className="h-4 w-4" />
                                       <span className="ml-2 hidden md:inline-block">Messages</span>
                                     </Button>
@@ -504,7 +486,7 @@ const BookingsPage: React.FC = () => {
                                   <Flag className="h-4 w-4 mr-2" />
                                   Signaler un problème
                                 </Button>
-                                <Button variant="outline" size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
+                                <Button variant="outline" size="sm" className="w-full" disabled={booking.reservation_source === 'owner_channel'} onClick={(e) => { e.stopPropagation(); handleOpenMessages(booking); }}>
                                   <MessageSquare className="h-4 w-4 mr-2" />
                                   Messages
                                 </Button>

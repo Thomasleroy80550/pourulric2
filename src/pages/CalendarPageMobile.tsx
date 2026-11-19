@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, RefreshCw } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useOwnerReservationFeed } from '@/hooks/use-owner-reservation-feed';
 import BookingListMobile from '@/components/BookingListMobile';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchKrossbookingReservations, KrossbookingReservation, fetchKrossbookingRoomTypes, clearReservationsCache } from '@/lib/krossbooking';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
 import { getOverrides } from '@/lib/price-override-api';
-import { addDays, format, startOfDay, isAfter, isSameDay } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { useSession } from "@/components/SessionContextProvider";
 import EcowattForecastBox from "@/components/EcowattForecastBox";
 
@@ -31,8 +30,17 @@ interface Reservation {
 const CalendarPageMobile: React.FC = () => {
   const { toast } = useToast();
   const { profile } = useSession();
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [legacyBlocks, setReservations] = useState<Reservation[]>([]);
+  const [legacyRooms, setLegacyRooms] = useState<UserRoom[]>([]);
+  const [legacyBookings, setLegacyBookings] = useState<KrossbookingReservation[]>([]);
+  const channelFeed = useOwnerReservationFeed(legacyRooms, legacyBookings);
+  const reservations = useMemo(() => [...legacyBlocks, ...channelFeed.reservations.map(r => ({
+    id: r.id, room_id: r.krossbooking_room_id, room_name: r.property_name,
+    start_date: r.check_in_date, end_date: r.check_out_date, guest_name: r.guest_name,
+    status: r.status, platform: r.channel_identifier || r.cod_channel || 'Unknown', total_amount: parseFloat(r.amount) || 0,
+  }))], [legacyBlocks, channelFeed.reservations]);
+  const [loadingLegacyData, setLoadingData] = useState(true);
+  const loadingData = loadingLegacyData || channelFeed.isLoading;
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Fetch des données
@@ -47,6 +55,8 @@ const CalendarPageMobile: React.FC = () => {
       try {
         // 1. Récupérer les chambres configurées
         const configuredUserRooms = await getUserRooms();
+        setLegacyRooms(configuredUserRooms);
+        setLegacyBookings([]);
         
         if (configuredUserRooms.length === 0) {
           setReservations([]);
@@ -97,28 +107,8 @@ const CalendarPageMobile: React.FC = () => {
             total_amount: 0
           }));
 
-        // 6. Convertir les réservations Krossbooking au format local
-        const convertedReservations: Reservation[] = fetchedReservations.map(r => ({
-          id: r.id,
-          room_id: r.krossbooking_room_id || r.property_name,
-          room_name: r.property_name,
-          start_date: r.check_in_date,
-          end_date: r.check_out_date,
-          guest_name: r.guest_name,
-          status: r.status,
-          platform: r.channel_identifier || 'Unknown',
-          total_amount: parseFloat(r.amount) || 0
-        }));
-
-        // 7. Filtrer pour ne garder que les réservations futures et actuelles
-        const today = startOfDay(new Date());
-        const allReservations = [...convertedReservations, ...closedBlocks];
-        const futureReservations = allReservations.filter(reservation => {
-          const endDate = parseISO(reservation.end_date);
-          return isAfter(endDate, today) || isSameDay(endDate, today);
-        });
-
-        setReservations(futureReservations);
+        setLegacyBookings(fetchedReservations);
+        setReservations(closedBlocks);
 
       } catch (error) {
         console.error("Error fetching data for CalendarPageMobile:", error);

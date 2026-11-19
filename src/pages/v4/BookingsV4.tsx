@@ -4,7 +4,6 @@ import { ChevronRight } from "lucide-react";
 import V4Layout from "./V4Layout";
 import ChannelBadge from "./ChannelBadge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { GuestAvatar } from "./V4Thumb";
 import {
   useV4Reservations,
@@ -30,7 +29,6 @@ const BookingsV4: React.FC = () => {
     <V4Layout>
       <div className="space-y-4 px-4 pt-5">
         <h1 className="text-2xl font-bold text-slate-900">Réservations</h1>
-        <Button asChild variant="outline" className="w-full"><Link to="/channel-reservations">Réservations du nouveau channel</Link></Button>
 
         {/* Onglets */}
         <div className="flex rounded-full bg-white p-1 shadow-sm">

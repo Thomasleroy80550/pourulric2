@@ -21,26 +21,31 @@ import { getReviews } from "@/lib/reviews-api";
 import { getNotifications } from "@/lib/notifications-api";
 import { getTickets } from "@/lib/tickets-api";
 import { getPublishedFaqs } from "@/lib/faq-api";
+import { useOwnerReservationFeed } from "@/hooks/use-owner-reservation-feed";
+import { useSession } from "@/components/SessionContextProvider";
 
 export type V4Channel = "airbnb" | "booking" | "direct" | "other";
 
 // ---------- Hooks ----------
 
 export function useV4Rooms() {
-  return useQuery({ queryKey: ["v4-rooms"], queryFn: getUserRooms });
+  const { session } = useSession();
+  return useQuery({ queryKey: ["v4-rooms", session?.user.id], queryFn: getUserRooms, enabled: !!session });
 }
 
 export function useV4Reservations() {
   const rooms = useV4Rooms();
+  const { session } = useSession();
   const query = useQuery({
-    queryKey: ["v4-reservations", (rooms.data ?? []).map((r) => r.room_id)],
+    queryKey: ["v4-reservations", session?.user.id, (rooms.data ?? []).map((r) => r.room_id)],
     queryFn: () => fetchKrossbookingReservations(rooms.data ?? []),
     enabled: !!rooms.data && rooms.data.length > 0,
   });
+  const channelFeed = useOwnerReservationFeed(rooms.data, query.data);
   return {
-    reservations: query.data ?? [],
-    rooms: rooms.data ?? [],
-    isLoading: rooms.isLoading || (rooms.data?.length ? query.isLoading : false),
+    reservations: channelFeed.reservations,
+    rooms: channelFeed.rooms,
+    isLoading: rooms.isLoading || (rooms.data?.length ? query.isLoading : false) || channelFeed.isLoading,
   };
 }
 

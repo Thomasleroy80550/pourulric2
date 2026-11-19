@@ -32,6 +32,7 @@ import EcowattForecastBox from "@/components/EcowattForecastBox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useOwnerReservationFeed } from '@/hooks/use-owner-reservation-feed';
 
 const COOLDOWN_KEY = 'calendar_refresh_cooldown';
 const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
@@ -45,11 +46,15 @@ const CalendarPage: React.FC = () => {
   const [isAccessDeniedDialogOpen, setIsAccessDeniedDialogOpen] = useState(false);
   const [isFeatureUnavailableDialogOpen, setIsFeatureUnavailableDialogOpen] = useState(false);
   const [unavailableFeatureLabel, setUnavailableFeatureLabel] = useState('');
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [legacyRooms, setUserRooms] = useState<UserRoom[]>([]);
 
-  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [legacyReservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const channelFeed = useOwnerReservationFeed(legacyRooms, legacyReservations);
+  const userRooms = channelFeed.rooms;
+  const reservations = channelFeed.reservations;
   const [icalReservations, setIcalReservations] = useState<KrossbookingReservation[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [loadingLegacyData, setLoadingData] = useState(true);
+  const loadingData = loadingLegacyData || channelFeed.isLoading;
   const [loadingIcalData, setLoadingIcalData] = useState(false);
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);

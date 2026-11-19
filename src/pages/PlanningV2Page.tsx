@@ -14,6 +14,7 @@ import {
 import { getOverrides } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { addDays, format } from 'date-fns';
+import { useOwnerReservationFeed } from '@/hooks/use-owner-reservation-feed';
 
 /**
  * Version PRIVÉE / DEV du planning (Gantt horizontal).
@@ -22,9 +23,13 @@ import { addDays, format } from 'date-fns';
  */
 const PlanningV2Page: React.FC = () => {
   const { profile } = useSession();
-  const [userRooms, setUserRooms] = useState<UserRoom[]>([]);
-  const [reservations, setReservations] = useState<KrossbookingReservation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [legacyRooms, setUserRooms] = useState<UserRoom[]>([]);
+  const [legacyReservations, setReservations] = useState<KrossbookingReservation[]>([]);
+  const [loadingLegacy, setLoading] = useState(true);
+  const channelFeed = useOwnerReservationFeed(legacyRooms, legacyReservations);
+  const userRooms = channelFeed.rooms;
+  const reservations = channelFeed.reservations;
+  const loading = loadingLegacy || channelFeed.isLoading;
   const [isOwnerDialogOpen, setIsOwnerDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {

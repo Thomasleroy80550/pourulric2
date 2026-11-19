@@ -68,10 +68,10 @@ const BookingPlanningGridMobile: React.FC<BookingPlanningGridMobileProps> = ({
   // Obtenir les réservations pour une chambre et un jour spécifiques
   const getReservationsForRoomAndDay = (roomId: string, day: Date) => {
     return filteredReservations.filter(reservation => {
-      if (reservation.room_id !== roomId) return false;
+      if (reservation.room_id !== roomId || reservation.status.toUpperCase().includes('CANC')) return false;
       const startDate = parseISO(reservation.start_date);
       const endDate = parseISO(reservation.end_date);
-      return day >= startDate && day <= endDate;
+      return day >= startDate && day < endDate;
     });
   };
 

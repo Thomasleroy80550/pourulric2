@@ -184,6 +184,10 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   }, [selectedRoomId, allReservations, initialBooking]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (initialBooking?.reservation_source === 'owner_channel' || values.roomId.startsWith('channel:')) {
+      toast.error('Les réservations du nouveau channel sont consultables en lecture seule.');
+      return;
+    }
     if (!profile || !krossbookingPropertyId) {
       toast.error("L'ID de propriété Krossbooking n'est pas défini sur le profil de l'utilisateur. Veuillez le configurer dans la section admin.");
       return;
@@ -257,7 +261,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   };
 
   const cancelBlock = async () => {
-    if (!initialBooking || isLoading) return;
+    if (!initialBooking || isLoading || initialBooking.reservation_source === 'owner_channel') return;
     const roomType = initialBooking.id_room_type || krossbookingRoomTypes.find(type =>
       type.rooms.some(room => String(room.id_room) === initialBooking.krossbooking_room_id)
     )?.id_room_type.toString();
@@ -325,7 +329,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {userRooms.map((room) => (
+                      {userRooms.filter(room => !room.room_id.startsWith('channel:')).map((room) => (
                         <SelectItem key={room.id} value={room.room_id}>
                           {room.room_name}
                         </SelectItem>

@@ -149,7 +149,8 @@ const BookingPlanningGridV2Inner: React.FC<Props> = ({ userRooms, reservations }
 
                 {/* Reservations bars */}
                 {reservations
-                  .filter(r => r.property_name === room.room_name || r.krossbooking_room_id === room.room_id)
+                  .filter(r => !r.status.toUpperCase().includes('CANC') && (r.property_name === room.room_name || r.krossbooking_room_id === room.room_id)
+                    && parseISO(r.check_in_date) < addMonths(startOfMonth(currentMonth), 1) && parseISO(r.check_out_date) > startOfMonth(currentMonth))
                   .map((r) => {
                     const { clampedStart, clampedEnd } = clampToMonth(r.check_in_date, r.check_out_date);
                     const startIdx = daysInMonth.findIndex(d => isSameDay(d, clampedStart));

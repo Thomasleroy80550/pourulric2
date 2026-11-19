@@ -62,6 +62,10 @@ const CalendarV4: React.FC = () => {
   };
 
   const openBlock = (block: KrossbookingReservation) => {
+    if (block.reservation_source === "owner_channel") {
+      navigate(`/v4/reservations/${encodeURIComponent(block.id)}`);
+      return;
+    }
     setEditingBlock(block);
     setIsBlockDialogOpen(true);
   };

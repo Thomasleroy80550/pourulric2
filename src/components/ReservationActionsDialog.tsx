@@ -57,7 +57,7 @@ const ReservationActionsDialog: React.FC<ReservationActionsDialogProps> = ({
   const checkOut = isValid(parseISO(booking.check_out_date)) ? parseISO(booking.check_out_date) : null;
   const numberOfNights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
 
-  const isOwnerReservation = booking.status.toLowerCase() === 'propri' || booking.status.toLowerCase() === 'prop0';
+  const isOwnerReservation = booking.reservation_source !== 'owner_channel' && (booking.status.toLowerCase() === 'propri' || booking.status.toLowerCase() === 'prop0');
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

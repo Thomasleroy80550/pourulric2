@@ -16,6 +16,10 @@ export function isReopenedNow(): boolean {
   return Date.now() >= REOPENING_TIME;
 }
 
+export function isReopenPreview(): boolean {
+  return typeof window !== "undefined" && window.sessionStorage.getItem(PREVIEW_KEY) === "1";
+}
+
 export function useReopened(): boolean {
   const [reopened, setReopened] = useState(isReopenedNow);
   useEffect(() => {
